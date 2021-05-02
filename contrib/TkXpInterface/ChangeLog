@@ -1,6 +1,12 @@
 			CHANGELOG FILE
 
 -------------------------------------------------------------------------------
+Release 3.8.0 by Bert Gijsbers <bert@xpilot.org>
+
+  - Updated to use Tcl/Tk version 8.0
+  - Use meta.xpilot.org instead of xpilot.cs.uit.no.
+  
+-------------------------------------------------------------------------------
 Release 3.7.3
 
   - New update option in the Item Setup Menu from the Update server window.

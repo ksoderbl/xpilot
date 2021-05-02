@@ -1,10 +1,10 @@
-# Makefile for TkXpInterface-3.7.3
+# Makefile for TkXpInterface-3.8.0
+
+# Your TOP directory to install TkXpInterface
+TOPDIR = /usr/local
 
 # Where is wish installed ( Tcl path and filename) ?
 WISH = /usr/local/bin/wish
-
-# Your TOP directory to install TkXpInterface
-TOPDIR = /home/perms/berne
 
 # Directory where TkXpInterface is to be installed.
 BINDIR = $(TOPDIR)/bin
@@ -20,7 +20,7 @@ MAPDIR = $(TOPDIR)/lib/xpilot/maps
 TEMPDIR = /tmp
 
 # Directory to put the help and the shipshapes files (TkXpI.hlp,TkXpI.shp) ?
-LIBDIR = $(TOPDIR)/lib/xpilot
+LIBDIR = $(TOPDIR)/lib/xpilot/tkxpi
 
 # Path and filename of the xpilot default file
 DEFAULT = $(TOPDIR)/lib/xpilot/defaults
@@ -37,7 +37,7 @@ MOTDFILE= $(TOPDIR)/lib/xpilot/servermotd
 SCOREFILE=
 
 # Adress of the non-interactive meta-server (with port number)
-METASERVER = xpilot.cs.uit.no 4401
+METASERVER = meta.xpilot.org 4401
 
 # Filter of the remote servers list. You must set at least the 5 first
 # characters of the Xpilots version (dots included).
@@ -120,7 +120,7 @@ INSTALL= install
 
 #######################  Don't change the lines below ####################
 
-VERSION= 3.7.3
+VERSION= 3.8.0
 
 SEDOPT= -e 's;WISH;$(WISH);' \
 	-e 's;MAPDIR;$(MAPDIR);' \
@@ -148,16 +148,15 @@ SEDOPT= -e 's;WISH;$(WISH);' \
 
 all: TkXpInterface TkXpInterface.1 TkXpI.hlp
 
-TkXpInterface: src/TkXpInterface
+TkXpInterface: src/TkXpInterface Makefile
 	sed $(SEDOPT) src/TkXpInterface > TkXpInterface;\
 	chmod u+x TkXpInterface
 
-TkXpInterface.1: src/TkXpInterface.1
+TkXpInterface.1: src/TkXpInterface.1 Makefile
 	sed $(SEDOPT) src/TkXpInterface.1 > TkXpInterface.1
 
-TkXpI.hlp: src/TkXpI.hlp
+TkXpI.hlp: src/TkXpI.hlp Makefile
 	sed $(SEDOPT) src/TkXpI.hlp > TkXpI.hlp
-
 	@echo ""
 	@echo "Now type : make install "
 
@@ -172,9 +171,9 @@ install.man: TkXpInterface.1
 install.lib: TkXpI.hlp
 	$(INSTALL) src/TkXpI.shp $(LIBDIR) ; chmod 644 $(LIBDIR)/TkXpI.shp
 	$(INSTALL) TkXpI.hlp $(LIBDIR) ; chmod 644 $(LIBDIR)/TkXpI.hlp
-
 	@echo ""
 	@echo " Now type : make clean "
+
 clean:
 	rm -f TkXpInterface TkXpInterface.1 TkXpI.hlp
 	@echo ""
@@ -191,3 +190,4 @@ clean:
 	@echo " type :   nroff -man $(MANDIR)/TkXpInterface.1 | more "
 	@echo ""
 	@echo "Enjoy !!!!!!!"
+

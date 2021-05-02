@@ -1,4 +1,4 @@
-/* $Id: Local.rules,v 3.21 1998/01/28 08:50:00 bert Exp $
+/* $Id: Local.rules,v 4.0 1998/03/18 15:11:05 bert Exp $
  *
  * NO NEED TO EDIT THIS FILE; ONLY EDIT Local.config.
  */
@@ -31,6 +31,25 @@
  * explicitly too, besides, you might not have a manual page in this
  * directory, or at all.
  */
+#ifndef ProgramTarget
+#define	ProgramTarget(program,locallib,syslib)				@@\
+                                                                        @@\
+AllTarget($(PROGRAMS))							@@\
+                                                                        @@\
+program: $(OBJS) $(DEPLIBS)						@@\
+	RemoveTargetProgram($@)						@@\
+	$(CC) -o $@ $(LDOPTIONS) $(OBJS) locallib $(LDLIBS) syslib $(EXTRA_LOAD_FLAGS) @@\
+									@@\
+InstallProgram(program,$(INSTBINDIR))					@@\
+                                                                        @@\
+DependTarget()								@@\
+LintTarget()								@@\
+                                                                        @@\
+clean::									@@\
+	$(RM) $(PROGRAMS)
+#endif /* ProgramTarget */
+
+
 #ifndef ProgramTarget_1
 #define	ProgramTarget_1(program,locallib,syslib)			@@\
             OBJS = $(OBJS1) $(OBJS2) $(OBJS3)				@@\

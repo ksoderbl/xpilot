@@ -1,0 +1,118 @@
+/* $Id: Imakefile,v 4.0 1998/03/18 15:15:36 bert Exp $ */
+
+TOPDIR=../..
+
+#include "Local.config"
+
+/*
+ * Sound configuration
+ */
+#if defined(NCD_SOUND)
+  AUDIOINC = $(NCDAUDIOINC)
+  AUDIOLIB = $(NCDAUDIOLIB)
+  AUDIOSRC = ncdaudio.c
+  AUDIOOBJ = ncdaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(RPLAY_SOUND)
+  AUDIOINC = $(RPLAYAUDIOINC)
+  AUDIOLIB = $(RPLAYAUDIOLIB)
+  AUDIOSRC = rplayaudio.c
+  AUDIOOBJ = rplayaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(AF_SOUND)
+  AUDIOINC = $(AFAUDIOINC)
+  AUDIOLIB = $(AFAUDIOLIB)
+  AUDIOSRC = afaudio.c
+  AUDIOOBJ = afaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(HP_SOUND)
+  AUDIOINC = $(HPAUDIOINC)
+  AUDIOLIB = $(HPAUDIOLIB)
+  AUDIOSRC = hpaudio.c
+  AUDIOOBJ = hpaudio.o
+  AUDIODEF = -DSOUND
+#else	/* no sound */
+  AUDIOINC =
+  AUDIOLIB =
+  AUDIOSRC =
+  AUDIOOBJ =
+  AUDIODEF =
+#endif /* HP_SOUND */
+#endif /* AF_SOUND */
+#endif /* RPLAY_SOUND */
+#endif /* NCD_SOUND */
+
+#ifdef Erase
+DEFS_ERASE = -DERASE=1
+#endif
+#ifdef SparcCmapHack
+DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
+#endif
+#ifdef MultibufferExtension
+DEFS_MBX = -DMBX
+#endif
+#ifdef DoublebufferExtension
+DEFS_DBE = -DDBE
+#endif
+#ifdef Joystick
+DEFS_JOYSTICK = -DJOYSTICK
+#endif
+#ifdef WindowScaling
+DEFS_SCALING = -DWINDOWSCALING
+#endif
+
+/*
+ * Assemble defines and includes.
+ *
+ * The DEFS_OTHER variable can be specified on the make command line like:
+ *
+ *    make DEFS_OTHER=-DENABLE_SOME_HACK
+ *
+ * or in the Local.config file.
+ *
+ */
+DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
+       -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
+       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
+       $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
+       $(DEFS_OTHER)
+INCLUDES = $(AUDIOINC) -I../common/ -I../../lib/
+
+
+SRCS = \
+	about.c caudio.c client.c colors.c configure.c dbuff.c \
+	default.c join.c netclient.c paint.c paintdata.c painthud.c \
+	paintmap.c paintobjects.c paintradar.c query.c record.c \
+	syslimit.c talk.c texture.c usleep.c widget.c xevent.c \
+	xinit.c xpilot.c xpmread.c $(AUDIOSRC)
+
+OBJS = \
+	about.o caudio.o client.o colors.o configure.o dbuff.o \
+	default.o join.o netclient.o paint.o paintdata.o painthud.o \
+	paintmap.o paintobjects.o paintradar.o query.o record.o \
+	syslimit.o talk.o texture.o usleep.o widget.o xevent.o \
+	xinit.o xpilot.o xpmread.o $(AUDIOOBJ) $(STRDUP_OBJ)
+
+DEPLIBS = ../common/libxpcommon.a $(DEPXLIB)
+
+#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
+					/* that doesn't have XLIBONLY. */
+#if !defined(MultibufferExtension)	/* On the other hand you need the */
+					/* EXTENSIONLIB sometimes, though ;) */
+#if !defined(DoublebufferExtension)
+EXTENSIONLIB = 
+DEPEXTENSIONLIB = 
+#endif /* MultibufferExtension */
+#endif /* DoublebufferExtension */
+X_LIB = $(XLIB)
+#else
+X_LIB = $(XLIBONLY)
+#endif
+
+PROGRAMS = xpilot
+
+ProgramTarget(xpilot,../common/libxpcommon.a $(AUDIOLIB),$(X_LIB) $(MATHLIB) $(EXTRALIB))
+

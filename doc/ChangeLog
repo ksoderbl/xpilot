@@ -3,6 +3,406 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.0.0 compared to release 3.7.1
+
+The contributed packages maps2image and TkXpInterface have been updated.
+TkXpInterface has been updated to version 3.8.0 which supports the
+Tcl/Tk versions 8.0 patchlevel 2.
+
+Guido Koopman contributed a patch for automatically pausing idle players:
+    - Idle players are put in pause mode when they get killed. A player is idle
+      when there has been no keypress or -release for 60 seconds.
+
+Guido Koopman contributed a patch for preventing base mining:
+    - a new server option: baseMineRange
+      When set, players are not allowed to drop or throw mines within this many
+      blocks from someone's homebase. The default is 0, which allows basemining.
+
+Guido Koopman contributed a patch for a new item called deflector:
+    - a new item: deflector
+      When turned on, it pushes away objects that are moving towards your ship.
+      With more items, both the range and the force increase. The fuel cost does
+      not increase, just like with cloaks.
+    - a new server option: itemDeflectorProb
+      Default is "1e-9".
+    - a new server option: initialDeflectors
+      Default is "0".
+    - a new server option: maxDeflectors
+      Default is "10".
+    - a new client option: keyDeflector
+      Press to turn deflectors on. Press again to turn off. 
+      The default key is 'o'.
+    - incompatibility with older (i.e. plain 3.7.1 and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3503 (v3.5.0 and later
+      used 3500, 3501 is used by the hyperjump patch and 3502 by the phasing
+      device patch).
+
+Guido Koopman contributed a patch for a new item called hyperjump:
+    - a new item: hyperjump
+      When used, it teleports the player to a random map location.
+    - a new server option: itemHyperJumpProb
+      Default is 1e-9.
+    - a new server option: initialHyperJumps
+      Default is 0.
+    - a new server option: maxHyperJumps
+      Default is 10.
+    - a new client option: keyHyperJump
+      Press key to activate and use a hyperjump.
+      Default key is 'q'.
+    - incompatibility with older (i.e. plain 3.7.1 and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3501 (3.5.0 and later
+      used 3500).
+
+Guido Koopman contributed a patch for programmer privileges:
+    - the owner of a server can always watch other players in pause mode, not
+      just when they are on the same team.
+    - the owner of a server always gets the full framerate, not 1/3.
+    - these are not meant for cheating, but for robot developers to see how the
+      robots actually behave.
+    - ownership of the server is determined by checking the login name and the
+      network address of the client. The login name should be the same as the
+      one used to start the server and the network address should be 127.0.0.1
+      ie. localhost.
+
+Guido Koopman contributed a patch for a new item called phasing:
+    - a new item: phasing device
+      This item gives you four seconds in which you can fly through literally
+      everything. This in turn makes you invulnerable. On the other hand, you
+      also can't pick up items or balls, refuel, repair, fire, ecm, transport
+      or whatever, except fly around. Think of it as being in a different
+      dimension as the rest of the game. Nothing that happens there can affect
+      you, but you can't affect the game either. Any balls connected to your
+      ship when you turn on the phasing device are also phased. This only works
+      if they are connected by a solid line. The dashed connector lines are
+      broken by phasing. Any items you drop while phased are destroyed, whatever
+      the value of the loseItemdestroys server option. When the four second timer
+      (displayed in the same way as the emergency shield/thrust, shutdown and
+      selfdestruct timers) runs out, you drop back to normal space. Anything that
+      is still (partially) inside a wall when the timer runs out, is destroyed by
+      a wallcrash. A phased ship is drawn with dashed lines, like a cloaked ship,
+      but visible. You can still use shields (not useful) andcloaks when phased.
+    - a new server option: itemPhasingProb
+      Default is 1e-9.
+    - a new server option: initialPhasings
+      Default is 0.
+    - a new server option: maxPhasings
+      Default is 10.
+    - a new client option: keyPhasing
+      Pree key to activate and use some of your phasing.
+      Default key is 'p'.
+    - incompatibility with older (i.e. plain 3.7.0beta and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3502 (v3.5.0 and later
+      used 3500 and 3501 is used by the hyperjump patch).
+
+Guido Koopman contributed a patch for racemode:
+    - a new server option: roundDelay
+      This option gives the number of seconds the server waits before a new
+      round is started. This applies also to the first round. If a new player
+      logs in before the round has begun, the delay counter is restarted. The
+      default is "0". This keeps the first players to log in from starting
+      before the last one logs in.
+    - a new server option: maxRoundTime
+      This option sets the maximum duration of a round, in seconds. If the round
+      has not ended naturally before the timer expires, it is terminated. Scores
+      are updated as usual and a new round is started. The default is "0", which
+      means unlimited. This takes care of extremely slow racers (eg. robots), who
+      keep the others waiting too long.
+    - Both of these options work in unlimited lives mode too.
+    - Base order (race mode) is used when players log in the first time too.
+      Before, it was only used after each round.
+
+Changed some default key mappings:
+    The keys moved do not affect actual gameplay.  They are setup oriented.
+    This opens up some space on the keyboard for new "action" events.
+
+    Name              old key(s)  new key
+
+    Pause             p Pause     Pause
+    SelfDestruct      q           End
+    ToggleCompass     y           KP_7
+    ToggleOwnedItems  o           KP_8
+    ToggleMessages    0           KP_9
+
+    Deflector         N/A         o
+    HyperJump         N/A         q
+    Phasing           N/A         p
+
+Rodney R. Korte ported XPilot to OS/2.
+
+The hardcoded maxima for some player item limits have
+    been raised to values suggested by Rodney R. Korte.
+
+Sven Mascheck contributed improvements for drawing the screen scaled
+while the ERASE hack is active, including a bugfix for the WINSCALE macro.
+
+Lewis W. Beard has released XPShipEditor, a Win32 ship shape editor written
+    in Visual Basic.  As of XPilot-12, XPShipEditor will be included with the 
+    Windows binaries distribution.  XPShipEditor itself included the GPLed source 
+    can be found at http://lwb.org/xpilot/
+
+Guido Koopman contributed several more bugfixes and improvements:
+    - players could protect their teams' treasure by pausing while attached to it
+      pausing now releases the ball
+    - in unlimited races, all the players had to finish before the race was over
+      instead of just one player
+      replaced check on alive players by check on finished players
+    - robots sometimes chased an item too slowly
+      added check on harvest mode before slowing down
+    - robots didn't do anything with treasures
+      robots now try to connect to every ball they encounter
+    - robots didn't repair targets
+      actually they tried to, but didn't find any targets to repair, because
+      the distance was calculated the wrong way
+      distance now calculated correctly
+    - robots didn't dodge cannon bullets
+      because trying to dodge single bullets seemed overdone
+      now they do dodge them, because cannon bullets are quite dangerous
+    - robots often got stuck hanging under walls
+      I still don't know why they did, but I commented out some code that caused it
+      robot behavior didn't change, so it wasn't very important apparently
+    - someone (I believe is was Murx) complained that robots should be more
+      aggressive against players dragging balls
+      robots are now more likely to relock on those players
+    - robots attacked their own teammates
+      they don't anymore
+    - robots wasted time shooting targets of teams with no players
+      added check on playerlessness
+    - robots wasted time refueling when they didn't need to
+      problem only occurs when there's nothing to attack nearby
+      they now only refuel up to 90%
+    - players could get killed by cannon fire before a round started
+      disabled collision checking if the start is delayed
+    - robots detected cloaked ships even when cloakedExhaust was off
+      added check on cloakedExhaust
+
+Guido Koopman contributed a patch for having robots in teammode:
+    - new server option: robotTeam
+      indicates which team to use for robots. default 0
+    - new server option: restrictRobots
+      when on, keeps robots from joining teams other than the one indicated with
+      the robotTeam option. default on
+    - new server option: reserveRobotTeam
+      when on, keeps human players from joining the team indicated by robotTeam.
+      default on
+    - before this patch, robots always left one base free for new human players.
+      they can now (if maxRobots is high enough) fill a server completely
+      that's not a problem, because robots are automatically kicked out when
+      a human player wants to join the game, even if other teams have free
+      bases left
+    - robots are kicked (if necessary) before paused humans
+    - if a human didn't indicate which team to join, it is selected for her
+      if teamAssign is on. in this selection, the robot team is avoided if
+      possible
+    cool things to do with this patch:
+    - practice your teamplay even when you're alone
+      unset restrictRobots and set maxRobots to an odd number
+      then join your favorite team (robots are autokicked if that team happens
+      to be full)
+    - find out what it is like to be on team 0
+      unset reserveRobotTeam and join team 0
+    - find out how good these new (since the fix380-3 patch) robots really are
+      set robotTeam to something other than 0 (on most maps, team 0 is either
+      not available or very different from the other teams) and turn on
+      restrictRobots to keep them from joining other teams, then join an other
+      team
+    - find bugs in the teampicking and autokicking code
+      try out weird settings for robotTeam, restrictRobots, reserveRobotTeam,
+      maxRobots, teamAssign and mapFile in combination with different numbers
+      of human players
+
+Guido Koopman contributed several bugfixes:
+    - robots weren't kicked out of team games when a human player didn't specify
+      a team to join
+    - while firing, press phasingdevice key. when phasing ends, firing resumes
+      bug caused by keyrelease event being ignored while phased
+      only keypresses are ignored now
+    - robots that were killed in this round (limitedlives mode) are removed from
+      the game before the next round starts
+      I find it confusing to have different robots in my team every round, so
+      I disabled removal of robots in teamplay mode. use robotsleave options to
+      get robots out if you want
+    - robots weren't allowed to completely fill a server (ie. occupy all homebases)
+      I fixed that in the last fixpatch I submitted, but it was put back, probably
+      because of #1 (see ^)
+    - robots tried to kill phased ships
+    - robots picked up fuel items they didn't need
+    - robots didn't turn off cloaks when putting up shields
+      caused them to get shot/crash into wall when cloakedShield was off
+    - robots reconnected to balls they had just thrown
+      added 3 secs delay between detach and connect to any ball
+    - robots with large shipshapes got stuck on their bases
+      fixed by forcing thrust on when in homebase block
+    - phasingdevice/em.thrust/em.shield were turned off after each item ran out
+      next item is now automatically used
+    - implemented ball_handler in robotdef.c
+    bugs left:
+    - robots fly too fast when stealing treasures
+    - robots ignore balls outside treasureboxes
+    - robots ignore targets and other players when stealing treasures
+    - robots don't avoid balls (ie. they crash into them a lot)
+    - set rounddelay > 0 and before the counter reaches 0, turn on pause when
+      ships are replaced by numbers. for the rest of the round, all ships are that
+      number
+    - robot navigation still sucks (now also used in ballstealing code)
+    - I probably forgot some bugs
+    fun things to try:
+    - start server with a map with lots of open space and easy-to-get-to treasures
+      add a few (1..3) robots and enter pause mode. now watch the robots steal the
+      treasures and throw them into their own treasures. neat eh? works on maps
+      with less open space too, but you don't get long throws then
+
+Guido Koopman (Big Dog)
+Espen Skoglund contributed a patch for displaying ship wreckage parts when a
+ship explodes.
+
+The official XPilot map filename extension is now .xp.
+The .map extension still works but is deprecated.
+
+The fuel drainfactor feature from 3.7.0 is removed.
+
+The client now strips any control characters from server status reports.
+This should prevent garbage output on xterms (Winfried Truemper).
+
+The server now better checks client input parameters like user names
+and hostnames.
+
+Servers report the number of free homebases for each team to the meta server.
+
+The mouse pointer is now better centered in the talk window (Sven Mascheck).
+
+Guido Koopman contributed more code:
+    adds/fixes the following:
+    - new client option: refreshMotd. When on, a fresh version of the server MotD
+      is requested every time it is displayed. Default off. Handy for those
+      servers with ranking tables in the MotD.
+    - color for wreckage changed from RED to WHITE. Since wreckage consists of
+      parts of ships, I thought it should look like that, and ships are white.
+    - targets are now correctly displayed in targetRadarColor (was wallRadarColor).
+    - removed constraint on radar colors which kept me from using red and white.
+    - removed PAUSEd check from TEAM() macro. It caused negative points for kills
+      made while paused (eg. with mines).
+    - new server option: allowViewing. When on, every player is allowed to watch
+      any other player when paused, waiting or dead. Default off. Because this is
+      meant for inexperienced players, the framerate is not lowered to 1/3.
+    - new server option: wreckageCollisionMayKill. When on, being hit by wreckage
+      unshielded is deadly. Default off. Don't kill players from too close when
+      shields are not allowed and this option is on.
+    - new server options to tune scoring for various kinds of killing:
+      option:                   desc.:                      default:
+      shotKillScoreMult         ordinary bullet kills       1.0
+      torpedoKillScoreMult      direct torpedo hits         1.0
+      smartKillScoreMult        direct smart missile hits   1.0
+      heatKillScoreMult         direct heatseeker hits      1.0
+      clusterKillScoreMult      kills by cluster debris     1.0
+      laserKillScoreMult        laser kills                 1.0
+      tankKillScoreMult         tank runovers               0.44
+      runoverKillScoreMult      personal runovers           0.33
+      ballKillScoreMult         ball kills                  1.0
+      explosionKillScoreMult    'succumbed to explosion'    0.33
+      shoveKillScoreMult        assistance in wallcrashes   0.5
+      The actual score is calculated by multiplying the rated score (10 points for
+      players with equal score, less for players with score lower than yours, etc.)
+      with this factor. The factor for tank kills is an approximation of what it
+      used to be (tank's score = player's score - 500).
+    - new server option: crashScoreMult. Default 0.33. For crashing with another
+      player.
+    - new server option: mineScoreMult. Default 0.17. For hitting a mine.
+    - new server option: cannonSmartness. Can take four values. 0 gives really
+      dumb cannons that only fire straight ahead when a player is near. 1 is the
+      default and gives normal cannons that fire in a random direction when a
+      player is near. 2 gives cannons that fire more or less (small random error)
+      in the direction of the player who activated the cannon (ie. the first player
+      who is within range). If the player is not in front of the cannon (cannondir
+      +/- 60 degrees) it fires as close as possible. 3 gives the smartest cannons
+      (for now) that fire at the nearest player in front of the cannon. If there
+      is no player in front of the cannon (defined as above), the cannon won't
+      fire. Also, it doesn't aim at the player directly, but calculates where that
+      player will be when the shot reaches her. The default is 1.
+    - new server option: cannonsPickupItems. When on, items that hit a cannon are
+      added to that cannon's inventory, instead of just passing through it. Default
+      is off.
+    - For now the only items useful to cannons are wideangles and sensors. Sensors
+      are used to increase the activation range for one cannon. Cannons get the
+      same items as players initially. The smarter the cannon, the narrower the
+      stream of bullets it fires with wideangles.
+    - ecms disable cannons temporarily. The formula used is the same as that for
+      players. Having more sensors decreases the time a cannon is disabled.
+    - added check on rdelay > 0 in LaserCollision. Not executing LaserCollision
+      caused laser pulses to remain in the air between rounds.
+    - half-used phasing devices are now counted as defensive items too. Before,
+      only unused phasing devices were counted.
+    - added check on rdelay == 0 to KEY_SHIELD release to keep players from
+      lowering shields before a round starts.
+    - moved cannon activating code from frame.c to update.c. Cannons didn't
+      activate on robot players which gave them an unfair advantage, especially
+      with smartcannons.
+    - removed NOT_CONNECTED check in round delay countdown in the hope of curing
+      the problem where going into pause causes ships to remain digits forever.
+    - changed maximum speed of cluster debris when DRAINFACTOR is defined to
+      5 * minimum speed. This lowers the drain from one cluster particle from
+      +/- 1275 to +/- 25 times the drain of a standard bullet. Still a lot, but
+      that's cluster debris.
+    - cannon explosions now also generate wreckage.
+    - added longterm_mode to default robot struct. The robot_mode was only used
+      for calculations in one frame. longterm_mode is supposed to give them a
+      little longer memory.
+    - added some extra checks to keep robots from going after useless items.
+    - robots now also hyperjump for torpedoes.
+    bugs left:
+    - I'm not sure I cured the ships turning into digits bug.
+    - I'm not sure about the radar colors (I have only tested it on a truecolor
+      display without DB).
+    - no options to tune scoring for player vs. world (ie. wallcrashes,
+      cannonkills, etc.) yet.
+    - smartcannons don't use anything fancy yet. The problem is that most items
+      can only be used by players.
+    - aiming of smartcannons in mode 3 is off by about 1/2 ship size, or 1/2
+      block_sz, or 3 degrees, or .. (ie. I don't know what causes it). It's most
+      noticeable with multiple wideangles.
+    - smartcannons don't activate correctly across map edges.
+    fun things to try:
+    - any help in making the storing of things like ecms, transporters and pulses
+      more general so it can be used for cannons, would be appreciated.
+
+Guido Koopman contributed more bug fixes:
+    - activation distance for cannons changed
+      from 12*BLOCK_SZ to 0.5*VISIBILITY_DISTANCE
+    - smartcannons in mode 3 no longer fire on phased players
+    - semantics for server option maxRobots changed
+      maxRobots now specifies how many players there should be in total
+      if there are less then maxRobots players, robots will be added
+    - new server option: minRobots
+      specifies how many robots there should be at least
+      -1 sets minRobots to the same value as maxRobots
+      default is -1, which gives the old behaviour for maxRobots
+    - phasing device was not turned off when hoverpausing
+      fixed
+    - on some maps, when the robot manager tried to add a robot, the Pick_team()
+      function returned TEAM_NOT_SET even though there were free bases left
+      bug was caused by teamless bases being given to team 0 without increasing
+      the total number of bases for team 0
+      fixed
+    - deflectors are now turned on automagically when you have them
+    - Pick_team() used to avoid returning robotTeam if possible
+      Bert removed this, causing team 0 to be returned as first choice
+      put back old behaviour
+    - autopilot is now allowed when phased
+    bugs left:
+    - deflector code doesn't work OK with many (>10 or so) deflectors
+    - autopilot turns on emergency thrust, but doesn't turn it off again
+    - man pages are outdated
+
+===============================================================================
+
+Version 3.7.1 corrected some missing source code changes from 3.7.0.
+
+Version 3.7.0 was withdrawn from public distribution.
+
+===============================================================================
+
 This is a summary of changes of release 3.7.0 compared to release 3.6.2:
 
 Dick Balaska ported XPilot to the Windows NT and 95 platforms.
@@ -2984,5 +3384,7 @@ Changes in 3.0.5 compared to 3.0.4:
 * Hopefully removed the bug that hung the server when a tank was released
 * Several other small bug fixes
 
+===============================================================================
+==== $Id: ChangeLog,v 4.3 1998/04/20 10:20:34 bert Exp $
 ===============================================================================
 

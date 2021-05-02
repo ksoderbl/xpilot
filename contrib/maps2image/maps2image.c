@@ -45,7 +45,7 @@ PRIVATE void one2eight(char data, char *image);
 PRIVATE int build_char(char ch, char *image, int x, int y, int pos);
 PRIVATE void add_title(char *image, int x, int y, char *filename);
 PRIVATE char *convert_map(int width, int height, FILE *fl);
-PRIVATE void build_image(char *image, int x, int y, char *filename);
+PRIVATE void build_image(char *image, int x, int y, FILE *fl);
 
 
 /* Private variables
@@ -65,6 +65,7 @@ int	mapsize = 64;
 int	xcount = 0, ycount = 0;
 int	count;
 int	xsize, ysize;
+int	label = 1;		/* Produce a map label by default */
 int	invert = 0;
 int	verbose = 0;
 int	bitmap = 0;
@@ -88,7 +89,7 @@ PUBLIC int main(int ac, char **av)
 	/*
 	 * Deal with arguments
 	 */
-	while ((c = getopt(ac, av, "s:x:ivb")) != EOF)
+	while ((c = getopt(ac, av, "s:x:ivbl")) != EOF)
 	{
 		switch (c)
 		{
@@ -102,8 +103,10 @@ PUBLIC int main(int ac, char **av)
 				verbose = 1;
 			when 'b':
 				bitmap = 1;
+			when 'l':
+				label = 0;
 			when '?':
-				fprintf(stderr, "usage: %s [-s size][-x nmaps][-i][-v] xpmap ...\n", av[0]);
+				fprintf(stderr, "usage: %s [-s size][-x nmaps][-i][-v][-l] xpmap ...\n", av[0]);
 				exit(0);
 		}
 	}
@@ -140,7 +143,10 @@ PUBLIC int main(int ac, char **av)
 		fprintf(stderr, "%d images.  Using %d by %d\n", count, xcount, ycount);
 
 	xsize = (mapsize + 2) * xcount;
-	ysize = (mapsize + 2 + STRING_HEIGHT) * ycount;
+	if (label)
+		ysize = (mapsize + 2 + STRING_HEIGHT) * ycount;
+	else
+	    	ysize = (mapsize + 2) * ycount;
 
 	if (verbose)
 		fprintf(stderr, "Image size: %d x %d\n", xsize, ysize);
@@ -157,8 +163,32 @@ PUBLIC int main(int ac, char **av)
 	x = 0; y = 0;
 	for (i = optind; i < ac; i++)
 	{
-		build_image(image, x, y, av[i]);
-		add_title(image, x, y, av[i]);
+		char	*p = strrchr(av[i], '.');
+		char	command[100];
+		FILE	*fl;
+
+		command[0] = '\0';
+		if (p && strcmp(p, ".gz") == 0)
+			sprintf(command, "gunzip<%s", av[i]);
+		else if (p && strcmp(p, ".Z") == 0)
+			sprintf(command, "uncompress<%s", av[i]);
+		if (*command)
+			fl = popen(command, "r");
+		else
+			fl = fopen(av[i], "r");
+
+		if (!fl)
+			perror("open");
+
+		build_image(image, x, y, fl);
+		if (label)
+			add_title(image, x, y, av[i]);
+
+		if (*command)
+			pclose(fl);
+		else
+			fclose(fl);
+
 		x++;
 		if (x >= xcount)
 		{
@@ -173,15 +203,16 @@ PUBLIC int main(int ac, char **av)
 	if (bitmap)
 	{
 		int	count = 0;
+		int	Xsize = (xsize + 7) & 0xfff8;
 
-		printf("#define maps_width %d\n#define maps_height %d\n", xsize, ysize);
+		printf("#define maps_width %d\n#define maps_height %d\n", Xsize, ysize);
 		printf("static unsigned char maps_bits[] = {\n   ");
 		p = image;
+		value = 0;
+		i = 0x80;
 		for (y = 0; y < ysize; y++)
 		{
-			value = 0;
-			i = 0x80;
-			for (x = 0; x < xsize; x++)
+			for (x = 0; x < Xsize; x++)
 			{
 				if (*p)
 					value |= 0x80;
@@ -210,8 +241,13 @@ PUBLIC int main(int ac, char **av)
 					count = 0;
 					printf("\n   ");
 				}
+				i = 0x80;
+				value = 0;
 			}
+#if 0
 			value = 0;
+#endif
+			p -= Xsize - xsize;
 		}
 		printf("\n};\n");
 	}
@@ -248,13 +284,12 @@ PUBLIC int main(int ac, char **av)
 
 
 /**************************************************************************
- * PRIVATE void build_image(char *image, int x, int y, char *filename)
+ * PRIVATE void build_image(char *image, int x, int y, FILE *fl)
  *   Read a map and create the image for it. The image is placed
  *   at location (x, y)
  */
-PRIVATE void build_image(char *image, int x, int y, char *filename)
+PRIVATE void build_image(char *image, int x, int y, FILE *fl)
 {
-	FILE	*fl = fopen(filename, "r");
 	int	width, height;
 	char	buffer[1024];
 	char	*token;
@@ -265,7 +300,7 @@ PRIVATE void build_image(char *image, int x, int y, char *filename)
 	if (verbose)
 		fprintf(stderr, "\rbuilding %d x %d   ", x, y);
 
-	while (fgets(buffer, 10240, fl))
+	while (fgets(buffer, sizeof(buffer), fl))
 	{
 		if (strncasecmp(buffer, "mapwidth", 8) == 0)
 		{
@@ -288,7 +323,10 @@ PRIVATE void build_image(char *image, int x, int y, char *filename)
 			 *   Compute the top left location of this image in the big output
 			 *   image
 			 */
-			topleft = image + xsize * (mapsize + 2 + STRING_HEIGHT) * y + 1 + xsize + (mapsize + 2) * x;
+			if (label)
+				topleft = image + xsize * (mapsize + 2 + STRING_HEIGHT) * y + 1 + xsize + (mapsize + 2) * x;
+			else
+				topleft = image + xsize * (mapsize + 2) * y + 1 + xsize + (mapsize + 2) * x;
 			for (j = 0; j < mapsize; j++)
 			{
 				memcpy(topleft, p, mapsize);
@@ -444,17 +482,23 @@ PRIVATE char *convert_map(int width, int height, FILE *fl)
 		ly = 0;
 		px = 0;
 		py = 0;
-		while (fgets(buffer, 10240, fl) && y < height)
+		while (fgets(buffer, sizeof(buffer), fl) && y < height)
 		{
 			x = 0;
+			px = 0;
 			p = buffer;
 			while (*p && x < width)
 			{
-				lx = x * div;
+				lx = (x + 1) * div;
 				if (strchr("xswqa#", *p))
 				{
-					for (i = px; i <= lx; i++)
+					for (i = px; i < lx; i++)
 						output[ly * mapsize + i] = value;
+				}
+				else
+				{
+					for (i = px; i <= lx; i++)
+						output[ly * mapsize + i] = !value;
 				}
 				px = lx;
 				p++;
@@ -475,7 +519,7 @@ PRIVATE char *convert_map(int width, int height, FILE *fl)
 	}
 	else
 	{
-		while (fgets(buffer, 10240, fl) && y < height)
+		while (fgets(buffer, sizeof(buffer), fl) && y < height)
 		{
 			x = 0;
 			p = buffer;
@@ -483,7 +527,7 @@ PRIVATE char *convert_map(int width, int height, FILE *fl)
 			{
 				if (strchr("xswqa#", *p))
 				{
-					output[(int)(y * div) * mapsize + (int)(x * div)] = value;
+					output[(int)(y * div + 0.5) * mapsize + (int)(x * div + 0.5)] = value;
 				}
 				p++;
 				x++;

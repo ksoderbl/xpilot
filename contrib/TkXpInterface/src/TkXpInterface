@@ -20,6 +20,15 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# Changes by Bert Gijsbers to get it to work with Tcl/Tk version 8.0.
+#
+
+if { [ string compare $tcl_version 8.0 ] < 0 } {
+    puts stderr "Error: Incompatible Tcl/Tk version $tcl_version."
+    puts stderr "This version of TkXpInterface requires Tcl/Tk version 8.0 or later!"
+    exit 1
+}
 
 set temp_dir "TEMPDIR"
 set lib_dir  "LIBDIR"
@@ -313,7 +322,7 @@ proc mkupdserver { w wp } {
   entry $w.s.e -relief sunken -bd 2 -textvariable shutd \
         -fg $colact -bg $colbk -width 5
   checkbutton $w.s.lock -text "Lock the game" -anchor w \
-     -variable lock -relief flat -selector $colSe -fg $colact -bg $colbk
+     -variable lock -relief flat -selectcolor $colSe -fg $colact -bg $colbk
   bind $w.s.e <Return> " "
 
   pack $w.s.e $w.s.txt2 $w.s.lock -side left -anchor c
@@ -483,22 +492,22 @@ proc metaserversort { w wp } {
     frame $w.frame.right -bg $colbk
     pack $w.frame.left $w.frame.right -side left -expand yes
     checkbutton $w.frame.left.s1v -text "$s1v Frames per second" -width 20 -anchor w \
-            -variable s1 -relief flat -selector $colSe -command "setsort $w s1" -fg $colact -bg $colbk
+            -variable s1 -relief flat -selectcolor $colSe -command "setsort $w s1" -fg $colact -bg $colbk
     checkbutton $w.frame.left.s2v -text "$s2v Number of users" -width 20 -anchor w \
-            -variable s2 -relief flat -selector $colSe -command "setsort $w s2" -fg $colact -bg $colbk
+            -variable s2 -relief flat -selectcolor $colSe -command "setsort $w s2" -fg $colact -bg $colbk
     checkbutton $w.frame.left.s3v -text "$s3v Map names" -width 20 -anchor w \
-            -variable s3 -relief flat -selector $colSe -command "setsort $w s3" -fg $colact -bg $colbk
+            -variable s3 -relief flat -selectcolor $colSe -command "setsort $w s3" -fg $colact -bg $colbk
     checkbutton $w.frame.left.s4v -text "$s4v Version number" -width 20 -anchor w \
-            -variable s4 -relief flat -selector $colSe -command "setsort $w s4" -fg $colact -bg $colbk
+            -variable s4 -relief flat -selectcolor $colSe -command "setsort $w s4" -fg $colact -bg $colbk
     checkbutton $w.frame.left.s5v -text "$s5v Countries" -width 20 -anchor w \
-            -variable s5 -relief flat -selector $colSe -command "setsort $w s5" -fg $colact -bg $colbk
+            -variable s5 -relief flat -selectcolor $colSe -command "setsort $w s5" -fg $colact -bg $colbk
 
     pack $w.frame.left.s1v $w.frame.left.s2v $w.frame.left.s3v $w.frame.left.s4v \
             $w.frame.left.s5v -side top -pady 2 -anchor w
     radiobutton $w.frame.right.b1 -fg $colact -bg $colbk -text "Ascending" \
-            -variable metsens -relief flat -value 0 -selector $colSe
+            -variable metsens -relief flat -value 0 -selectcolor $colSe
     radiobutton $w.frame.right.b2 -fg $colact -bg $colbk -text "Descending" \
-            -variable metsens -relief flat -value 1 -selector $colSe
+            -variable metsens -relief flat -value 1 -selectcolor $colSe
     pack $w.frame.right.b1 $w.frame.right.b2 \
          -side top -pady 2 -anchor w
 
@@ -564,7 +573,7 @@ proc mkmetaserver w {
     frame $w.f -bg $colbk
     button $w.f.ok -fg $colact -bg $colbk -text Quit -width 12 -command "
                 if {$client == 1} {
-			 catch {eval exec rm -f /tmp/TkXpI.srv$cmpt}
+			 catch {eval exec rm -f $temp_dir/TkXpI.srv$cmpt}
                          destroy .
                          exit
                 } else {destroy $wor}
@@ -768,8 +777,8 @@ proc update_localist { w c } {
 
     catch {destroy $w.cc}
     frame $w.cc -bg $colbk
-    canvas $w.cc.c -yscroll "$w.cc.vscroll set" -scrollincrement 20 -bg $colbk
-    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -fg $colact -bg $colbk
+    canvas $w.cc.c -yscrollcommand "$w.cc.vscroll set" -yscrollincrement 20 -bg $colbk
+    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -activebackground $colact -bg $colbk
     $w.cc.c bind all <Any-Enter> "ChoosenLocal $w.cc.c $wor"
     $w.cc.c bind all <Button1-ButtonRelease> "set_local $w "
 
@@ -842,8 +851,8 @@ proc update_remotelist { w c } {
 
     catch {destroy $w.cc}
     frame $w.cc -bg $colbk
-    canvas $w.cc.c -yscroll "$w.cc.vscroll set" -scrollincrement 20 -bg $colbk
-    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -fg $colact -bg $colbk
+    canvas $w.cc.c -yscrollcommand "$w.cc.vscroll set" -yscrollincrement 20 -bg $colbk
+    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -activebackground $colact -bg $colbk
     $w.cc.c bind all <Any-Enter> "ChoosenMeta $w.cc.c $wor"
     $w.cc.c bind all <Button1-ButtonRelease> "set_remote $w "
 
@@ -1284,8 +1293,8 @@ proc mkmaps w {
    frame $w.mp -bg $colbk
    frame $w.mp.1 -bg $colbk
    checkbutton $w.mp.1.but -text "Check options" -variable chkopt \
-     -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
-   radiobutton $w.mp.1.rad -relief flat -selector $colSe -fg $colact -bg $colbk
+     -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+   radiobutton $w.mp.1.rad -relief flat -selectcolor $colSe -fg $colact -bg $colbk
    pack  $w.mp.1.but $w.mp.1.rad -side left -expand yes -fill both
    pack  $w.mp.1 -side bottom -expand yes -fill both
    $w.mp.1.rad configure -state disabled
@@ -1293,10 +1302,10 @@ proc mkmaps w {
 
     frame $w.mp.2 -bg $colbk
     scrollbar $w.mp.2.scroll  -relief sunken -command "$w.mp.2.list yview" \
-              -fg $colact -bg $colbk
-    listbox $w.mp.2.list -yscroll "$w.mp.2.scroll set" \
-            -relief sunken -geometry 17x21 -fg $colact -bg $colbk
-    tk_listboxSingleSelect $w.mp.2.list
+              -activebackground $colact -bg $colbk
+    listbox $w.mp.2.list -yscrollcommand "$w.mp.2.scroll set" \
+            -relief sunken -width 17 -height 21 -fg $colact -bg $colbk \
+            -selectmode single
     label $w.mp.2.msgt -text " Maps" -relief ridge -fg $colact -bg $colbk
     pack  $w.mp.2.msgt -side top -expand yes -fill both
 
@@ -1320,9 +1329,9 @@ proc mkship w  {
   pack $w.def -side bottom -fill both -expand no
 
   pack $w.ship -side bottom -fill both -expand yes
-  canvas $c -width 100 -yscroll "$w.ship.vscroll set" \
-         -scrollincrement 100 -relief sunken -bg $colbk
-  scrollbar $w.ship.vscroll  -relief sunken -command "$c yview" -fg $colact -bg $colbk
+  canvas $c -width 100 -yscrollcommand "$w.ship.vscroll set" \
+         -yscrollincrement 100 -relief sunken -bg $colbk
+  scrollbar $w.ship.vscroll  -relief sunken -command "$c yview" -activebackground $colact -bg $colbk
   pack $w.ship.vscroll -side right -fill y
   pack $c -in $w.ship -expand yes -fill both
 
@@ -1375,7 +1384,7 @@ proc mkship w  {
 #colG = foreground color of the polygonal shapes drawing
 #colR = foreground color of the other oval thrust shapes drawing
 
-   if {[tk colormodel .] == "color"} {# For color displays
+   if {[winfo screendepth .] > 2} {# For color displays
       set colY "yellow"; set colBl "blue"
       set colG "green" ; set colR  "red"
    } else {# If monchrome screen !
@@ -2221,8 +2230,7 @@ proc read_default {} {
          }
        }
        if {$index != {} } {
-             $w select from $index
-             $w select to $index
+             $w selection set $index $index
              $w yview [expr $index-12]
        } else {
            set item "$item*"
@@ -2233,8 +2241,7 @@ proc read_default {} {
               }
            }
            if {$index != {} } {
-             $w select from $index
-             $w select to $index
+             $w selection set $index $index
              $w yview [expr $index-12]
            }
        }
@@ -2402,18 +2409,18 @@ proc mkbitmap w {
     frame $g.b -bg $colbk
     checkbutton $g.b.gravityClockwise -text "Clockwise" -variable gravityClockwise \
      -anchor w -relief flat -command "gravity_check gravityClockwise" \
-     -selector $colSe -fg $colact -bg $colbk
+     -selectcolor $colSe -fg $colact -bg $colbk
 
     checkbutton $g.b.gravityAnticlockwise -text "Anticlockwise" \
-        -variable gravityAnticlockwise -selector $colSe -fg $colact -bg $colbk \
+        -variable gravityAnticlockwise -selectcolor $colSe -fg $colact -bg $colbk \
         -anchor w -relief flat -command "gravity_check gravityAnticlockwise"
 
     frame $g.l -bg $colbk
     checkbutton $g.l.gravityLine -text "Line" -variable gravityLine -fg $colact -bg $colbk\
-        -anchor w -relief flat -command "gravity_check gravityLine" -selector $colSe
+        -anchor w -relief flat -command "gravity_check gravityLine" -selectcolor $colSe
 
     checkbutton $g.l.gravityPointSource -text "PointSource" -variable gravityPointSource -fg $colact -bg $colbk\
-        -anchor w -relief flat -command "gravity_check gravityPointSource" -selector $colSe
+        -anchor w -relief flat -command "gravity_check gravityPointSource" -selectcolor $colSe
     pack $g.b.gravityClockwise $g.b.gravityAnticlockwise \
         -side left -expand yes -fill both
     pack $g.l.gravityPointSource $g.l.gravityLine \
@@ -2594,36 +2601,36 @@ proc mkcheck {w state} {
 
     frame $w -bg $colbk
     checkbutton $w.noQuit -text "Server keeps running" -variable noQuit \
-        -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
   if {$state != "U"} {
     checkbutton $w.teamPlay -text "Team play mode" -variable teamPlay -anchor w \
-       -relief flat -command " maj_buttons teamPlay " -selector $colSe -fg $colact -bg $colbk
+       -relief flat -command " maj_buttons teamPlay " -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U"} {
-    checkbutton $w.onePlayerOnly -text "One player only" -selector $colSe -variable onePlayerOnly\
+    checkbutton $w.onePlayerOnly -text "One player only" -selectcolor $colSe -variable onePlayerOnly\
        -anchor w -relief flat -command "maj_buttons onePlayerOnly" -fg $colact -bg $colbk
   }
 
   if {$state != "U"} {
     checkbutton $w.reportToMetaServer -text "Inform Meta-server" -fg $colact -bg $colbk \
-        -variable reportToMetaServer -anchor w -relief flat -selector $colSe
+        -variable reportToMetaServer -anchor w -relief flat -selectcolor $colSe
   }
 
   if {$state != "U"} {
     checkbutton $w.motdb -text "Use the server motd" -fg $colact -bg $colbk \
-        -variable motdb -anchor w -relief flat -selector $colSe
+        -variable motdb -anchor w -relief flat -selectcolor $colSe
   }
 
   if {$state != "U"} {
     checkbutton $w.scoreb -text "Use the score file" -fg $colact -bg $colbk \
-        -variable scoreb -anchor w -relief flat -selector $colSe
+        -variable scoreb -anchor w -relief flat -selectcolor $colSe
   }
 
   if {$state != "U"} {
     checkbutton $w.timing -text "Race mode" -variable timing \
-        -anchor w -relief flat -command " maj_buttons timing " -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -command " maj_buttons timing " -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U"} {
@@ -2729,10 +2736,10 @@ proc save_delete_map { w wp } {
     label $w.m.text3 -text " Size : $mapWidth x $mapHeight" -anchor w -fg $colact -bg $colbk
 
     checkbutton $w.m.dumpall -text "Save all options" -variable dumpall \
-       -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+       -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
     checkbutton $w.m.comprw -text "Compressed map file" -variable comprw \
-       -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+       -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
     pack $w.m.text1 $w.m.text2 $w.m.text3 $w.m.comprw $w.m.dumpall \
          -side top -fill both -pady 10 -padx 10
@@ -2961,13 +2968,13 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
     label $w.msg.choix -text " Which file do you want for shipShape:" \
           -anchor c -fg $colact -bg $colbk
     frame $w.msg.cho -bg $colbk
-    checkbutton $w.msg.cho.shp -text "TkXpI.shp" -selector $colSe -fg $colact -bg $colbk \
+    checkbutton $w.msg.cho.shp -text "TkXpI.shp" -selectcolor $colSe -fg $colact -bg $colbk \
         -variable shp -anchor w -relief flat -command "Verif_Choix $w.msg.cho shp "
-    checkbutton $w.msg.cho.xpi -text ".xpilotrc" -selector $colSe -fg $colact -bg $colbk \
+    checkbutton $w.msg.cho.xpi -text ".xpilotrc" -selectcolor $colSe -fg $colact -bg $colbk \
         -variable xpi -anchor w -relief flat -command "Verif_Choix $w.msg.cho xpi"
-    checkbutton $w.msg.cho.bot -text "Both" -selector $colSe -fg $colact -bg $colbk \
+    checkbutton $w.msg.cho.bot -text "Both" -selectcolor $colSe -fg $colact -bg $colbk \
         -variable bot -anchor w -relief flat -command "Verif_Choix $w.msg.cho bot"
-    checkbutton $w.msg.cho.noo -text "No one" -selector $colSe -fg $colact -bg $colbk \
+    checkbutton $w.msg.cho.noo -text "No one" -selectcolor $colSe -fg $colact -bg $colbk \
         -variable noo -anchor w -relief flat -command "Verif_Choix $w.msg.cho noo"
     pack $w.msg.cho.shp $w.msg.cho.xpi $w.msg.cho.bot $w.msg.cho.noo -side left -fill both -expand yes
 
@@ -3009,14 +3016,14 @@ proc tmkrobot { w wp state} {
     wm title $w "Robots"
     wm iconname $w "Robots"
 
-    checkbutton $w.robotsLeave -text "Robots leave the game" -selector $colSe -fg $colact -bg $colbk \
+    checkbutton $w.robotsLeave -text "Robots leave the game" -selectcolor $colSe -fg $colact -bg $colbk \
         -variable robotsLeave -anchor w -relief flat -command "Robots_leaving $w "
 
     checkbutton $w.idleRun -text "Robots keep playing" -variable idleRun \
-	-anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+	-anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
     checkbutton $w.robotsTalk -text "Robots talk" -variable robotsTalk \
-        -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
     frame $w.robotLeaveLife -bg $colbk
     label $w.robotLeaveLife.txt -text "Max life per robot" -fg $colact -bg $colbk
@@ -3083,7 +3090,7 @@ proc tmkteam { w wp state } {
             set v2 [string range $i [expr $pos+1] end]
             upvar #0 $v1 j
             checkbutton $w.$v1 -text $v2  -variable $v1 -fg $colact -bg $colbk \
-                      -anchor w -relief flat -selector $colSe
+                      -anchor w -relief flat -selectcolor $colSe
             pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
           }
      }
@@ -3102,19 +3109,19 @@ proc tmkshield { w wp state} {
 
   if {$state != "U"} {
     checkbutton $w.playerStartsShielded -text "Start shielded" -variable \
-            playerStartsShielded -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+            playerStartsShielded -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U"} {
     checkbutton $w.allowShields -text "Use shields" -variable allowShields \
-       -anchor w -relief flat -command "no_shield $w" -selector $colSe -fg $colact -bg $colbk
+       -anchor w -relief flat -command "no_shield $w" -selectcolor $colSe -fg $colact -bg $colbk
   }
 
     checkbutton $w.shieldedItemPickup -text "Pick up with shields on" \
-        -variable shieldedItemPickup -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -variable shieldedItemPickup -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
     checkbutton $w.shieldedMining -text "Drop/throw mine with shields on" \
-        -variable shieldedMining -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -variable shieldedMining -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
 
   if {$state != "U"} {
     pack $w.playerStartsShielded $w.allowShields $w.shieldedItemPickup \
@@ -3154,10 +3161,10 @@ proc tmkradar { w wp state } {
           upvar #0 $v1 j
           if { $v1=="playersOnRadar" } {
              checkbutton $w.$v1 -text $v2  -variable $v1 -anchor w -relief flat\
-             -command "no_visibility $w" -selector $colSe -fg $colact -bg $colbk
+             -command "no_visibility $w" -selectcolor $colSe -fg $colact -bg $colbk
           } else {
             checkbutton $w.$v1 -text $v2  -variable $v1 \
-                  -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+                  -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
           }
           pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
      }
@@ -3232,7 +3239,7 @@ proc tmkweapon { w wp state} {
 	if {($state == "U") && ($k != 1) && ($k != 5) } {
         } else {
           checkbutton $w.$v1 -text $v2  -variable $v1 -anchor w -relief flat \
-                      -selector $colSe -fg $colact -bg $colbk
+                      -selectcolor $colSe -fg $colact -bg $colbk
           pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
         }
      }
@@ -3277,22 +3284,22 @@ proc tmkplayer { w wp state } {
 
   if {$state != "U" } {
     checkbutton $w.allowPlayerCrashes -text "Players can crash into each other"\
-        -variable allowPlayerCrashes -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -variable allowPlayerCrashes -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U" } {
     checkbutton $w.allowPlayerKilling -text "Players can kill each other" \
-        -variable allowPlayerKilling -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -variable allowPlayerKilling -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U" } {
     checkbutton $w.allowPlayerBounces -text "Players bounce with other players" \
-        -variable allowPlayerBounces -anchor w -relief flat -selector $colSe -fg $colact -bg $colbk
+        -variable allowPlayerBounces -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U" } {
     checkbutton $w.limitedLives -text "Limited lives" -variable limitedLives \
-        -anchor w -relief flat -command "lim_worldLives $w " -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -command "lim_worldLives $w " -selectcolor $colSe -fg $colact -bg $colbk
   }
 
   if {$state != "U" } {
@@ -3334,11 +3341,11 @@ proc tmkbounce { w wp state } {
   if {$state != "U"} {
    frame $w.e -bg $colbk
    checkbutton $w.e.edgeWrap -text "Edge wrap" -variable edgeWrap -anchor w \
-        -relief flat -command "edges $w edgeWrap" -selector $colSe -fg $colact -bg $colbk
+        -relief flat -command "edges $w edgeWrap" -selectcolor $colSe -fg $colact -bg $colbk
    checkbutton $w.e.edgeBounce -text "Edge bouncing" -variable edgeBounce \
-        -anchor w -relief flat -command "edges $w edgeBounce" -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -command "edges $w edgeBounce" -selectcolor $colSe -fg $colact -bg $colbk
    checkbutton $w.e.extraBorder -text "Extra border" -variable extraBorder \
-        -anchor w -relief flat -command "edges $w extraBorder" -selector $colSe -fg $colact -bg $colbk
+        -anchor w -relief flat -command "edges $w extraBorder" -selectcolor $colSe -fg $colact -bg $colbk
 
    pack $w.e.extraBorder $w.e.edgeWrap $w.e.edgeBounce \
        -side left -expand yes -fill both
@@ -3358,7 +3365,7 @@ proc tmkbounce { w wp state } {
        set v2 [string range $i [expr $pos+1] end]
        upvar #0 $v1 j
        checkbutton $w.b.$v1 -text $v2  -variable $v1 -anchor w -relief flat \
-                   -selector $colSe -fg $colact -bg $colbk
+                   -selectcolor $colSe -fg $colact -bg $colbk
        pack $w.b.$v1 -side left -fill both -expand yes
    }
    pack $w.b -side top -expand yes -fill both -padx 10 -pady 5
@@ -3437,12 +3444,12 @@ proc tmkmisc { w wp state } {
      checkbutton $w.allowShipShapes \
        -text "Players allowed to define their own ship shape" \
        -variable allowShipShapes -anchor w -relief flat -padx 10 -pady 5 \
-       -selector $colSe -fg $colact -bg $colbk
+       -selectcolor $colSe -fg $colact -bg $colbk
   }
 
     checkbutton $w.shotsGravity -text "Are bullets affected by gravity" \
        -variable shotsGravity -anchor w -relief flat -pady 5 \
-       -selector $colSe -fg $colact -bg $colbk
+       -selectcolor $colSe -fg $colact -bg $colbk
      set k 0
      foreach i {shipMass=Ship\ mass \
         shotMass=Shot\ mass \
@@ -3563,7 +3570,7 @@ proc mkhelp { c x y } {
 
     button $w.ok -text Quit -command "destroy $w" -fg $colact -bg $colbk
     text $w.t -relief raised -bd 2 -yscrollcommand "$w.s set" -fg $colact -bg $colbk
-    scrollbar $w.s -relief flat -command "$w.t yview" -fg $colact -bg $colbk
+    scrollbar $w.s -relief flat -command "$w.t yview" -activebackground $colact -bg $colbk
     pack $w.ok -side bottom -fill x -expand yes
     pack $w.s -side right -fill y
 
@@ -3858,7 +3865,7 @@ catch {eval exec chmod 666 $temp_dir/TkXpI.cmt}
 	}
  }
 
- if {[tk colormodel .] != "color"} {# For monochrome displays
+ if {[winfo screendepth .] <= 2} {# For monochrome displays
    if $rev {
     set colact "white" ; set coldes "white" ; set colsc "black"
     set colSe  "white" ; set colbk  "black"

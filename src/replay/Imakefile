@@ -1,0 +1,32 @@
+/* $Id: Imakefile,v 4.0 1998/03/18 15:18:23 bert Exp $ */
+
+TOPDIR=../..
+
+#include "Local.config"
+
+SRCS = \
+	xp-replay.c buttons.c
+
+OBJS = \
+	xp-replay.o buttons.o
+
+INCLUDES = -I../common -I../client
+
+DEPLIBS = $(DEPXLIB)
+
+#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
+					/* that doesn't have XLIBONLY. */
+#if !defined(MultibufferExtension)	/* On the other hand you need the */
+					/* EXTENSIONLIB sometimes, though ;) */
+EXTENSIONLIB = 
+DEPEXTENSIONLIB = 
+#endif /* MultibufferExtension */
+X_LIB = $(XLIB)
+#else
+X_LIB = $(XLIBONLY)
+#endif
+
+PROGRAMS = xp-replay
+
+ProgramTarget(xp-replay,,$(X_LIB) $(MATHLIB) $(EXTRALIB))
+

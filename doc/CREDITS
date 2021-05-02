@@ -3,6 +3,15 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@xpilot.org.
 
+Release 4.0 credits:
+
+	Guido Koopman			Several patches + 3 new items
+					+ much improved robots.
+	Rodney R. Korte			Port to OS/2 + fixes.
+	Sven Mascheck			Bugfixes + snooping.
+	Mark Lambert			Memory leak fix.
+	Espen Skoglund			Ship wreckages.
+
 Release 3.7 credits:
 
 	Dick Balaska			Port to Windows NT & 95.

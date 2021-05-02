@@ -1,1 +1,0 @@
-This server is running XPilot-server 3.7.1-NT11

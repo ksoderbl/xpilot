@@ -12,7 +12,6 @@ TARGET	=	maps2image
 #
 # Change the FONT macro to point to whatever font you want
 # to use to display the map names below the images.
-# You can choose between: helvR08.bdf, helvR10.bdf, helvR12.bdf or helvR14.bdf.
 #
 FONT	=	helvR08.bdf
 
@@ -34,5 +33,6 @@ depend:
 	makedepend -- $(CFLAGS) -- $(OBJS:%.o=%.c)
 
 shar:
-	shar -c -p README COPYRIGHT Makefile maps2image.c bdf2c.c -B helvR*.bdf >maps2image.shar
+	gzip helvR*.bdf
+	shar -c -p README COPYRIGHT Makefile maps2image.c bdf2c.c -B helvR*.gz >maps2image.shar
 

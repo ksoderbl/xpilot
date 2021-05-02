@@ -1,0 +1,21 @@
+TOP=../..
+
+#include "Local.config"
+
+DEFINES = -DLIBDIR=\"$(INSTLIBDIR)/\" $(DEFS_OTHER)
+
+SRCS = main.c expose.c events.c tools.c file.c round.c help.c grow.c \
+       forms.c T_Toolkit.c T_Form.c T_Popup.c T_Handler.c
+
+OBJS = $(SRCS:.c=.o)
+
+#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
+					/* that doesn't have XLIBONLY. */
+X_LIB = $(XLIB)
+#else
+X_LIB = $(XLIBONLY)
+#endif
+
+PROGRAMS = xp-mapedit
+
+ProgramTarget(xp-mapedit,,$(X_LIB) $(MATHLIB) $(EXTRALIB))

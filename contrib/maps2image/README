@@ -55,6 +55,10 @@ The program has a couple of optional switches:
 	-v		Turn on verbose mode.  This will output progress
 			messages to stderr.  Useful only when bored.
 	-b		Instead of a pbm image, create an X11 bitmap
+	-l		Do not add a label to each image
+
+The list of files should be xpilot map files.  They may be compressed
+with gzip or compress.  (Standard extension looked for are .gz and .Z)
 
 PBM???  WHAT'S THAT?
 The PBM image is format is a simple Portable BitMap format.

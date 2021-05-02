@@ -1,0 +1,45 @@
+Changes to xmapedit V3.5.1c to bring it up to V3.5.1d
+
+* Fixed bug causing some of the yes/no options on the preference menu
+  to malfunction
+
+William Docter, Feb 22, 1997
+*********************************************************************
+Changes to xmapedit V3.5.1b to bring it up to V3.5.1c
+
+* Support for new items, including Currents, Item Concentrators, Base
+  facing specifiers.
+
+* Easier changing of editor colors.  More colors used for various items.
+
+* Target symbol now looks like target.
+
+* Help page updated
+
+* '^' Support Removed.  Space in current button array for 3 more items.
+
+* -DMONO option has not been updated and probably doesn't work at this time.
+
+  William Docter, Jan 12, 1997
+*********************************************************************
+Changes to xmapedit V1.00 to bring it up to V3.5.1b
+
+* I have updated the xmapedit editor to handle the new decorative
+  map pieces.
+
+* It now starts off with sensible options in the prefs window as
+  opposd to no options set at all.
+  
+* Also alterred is the prefs window, which now allows alterring of all
+  the options supported by xpilots3.5.1.  Unfortunately it doesn't
+  range or validate the floating point values entered, so ensure
+  they are correct before saving the map.
+  
+* It also has space on the menu for five other pieces, one is used
+  by a diamond shape that adds an '^' (for patches to my server, or
+  yours if you please!).  It needs the code fiddling to add more
+  pieces, but the basic template for more is there.
+
+  Robert Templeman, Jul 5, 1996.
+*********************************************************************
+$Id: README.UPDATE,v 1.2 1998/04/22 15:43:47 bert Exp $

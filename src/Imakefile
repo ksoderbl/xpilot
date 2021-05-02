@@ -1,171 +1,30 @@
-/* $Id: Imakefile,v 3.77 1997/07/16 18:20:04 bert Exp $ */
+/* $Id: Imakefile,v 4.1 1998/04/22 15:52:54 bert Exp $ */
+
+TOPDIR=..
 
 #include "Local.config"
 
 /*
- * Sound configuration
+ * Note that we provide our own *Subdirs calls, so there's no need
+ * to define IHaveSubdirs.
  */
-#if defined(NCD_SOUND)
-  AUDIOINC = $(NCDAUDIOINC)
-  AUDIOLIB = $(NCDAUDIOLIB)
-  AUDIOSRC = ncdaudio.c
-  AUDIOOBJ = ncdaudio.o
-  AUDIODEF = -DSOUND
-#else
-#if defined(RPLAY_SOUND)
-  AUDIOINC = $(RPLAYAUDIOINC)
-  AUDIOLIB = $(RPLAYAUDIOLIB)
-  AUDIOSRC = rplayaudio.c
-  AUDIOOBJ = rplayaudio.o
-  AUDIODEF = -DSOUND
-#else
-#if defined(AF_SOUND)
-  AUDIOINC = $(AFAUDIOINC)
-  AUDIOLIB = $(AFAUDIOLIB)
-  AUDIOSRC = afaudio.c
-  AUDIOOBJ = afaudio.o
-  AUDIODEF = -DSOUND
-#else
-#if defined(HP_SOUND)
-  AUDIOINC = $(HPAUDIOINC)
-  AUDIOLIB = $(HPAUDIOLIB)
-  AUDIOSRC = hpaudio.c
-  AUDIOOBJ = hpaudio.o
-  AUDIODEF = -DSOUND
-#else	/* no sound */
-  AUDIOINC =
-  AUDIOLIB =
-  AUDIOSRC =
-  AUDIOOBJ =
-  AUDIODEF =
-#endif /* HP_SOUND */
-#endif /* AF_SOUND */
-#endif /* RPLAY_SOUND */
-#endif /* NCD_SOUND */
+#define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
 
+          SUBDIRS = common client server replay mapedit		/* make all */
+  MAKEFILESUBDIRS = common client server replay mapedit		/* make Makefiles */
+     CLEANSUBDIRS = common client server replay mapedit		/* make clean */
+       DEPSUBDIRS = common client server replay mapedit		/* make depend */
+   INSTALLSUBDIRS =        client server replay mapedit		/* make install */
+  INCLUDESSUBDIRS = common					/* make includes */
+INSTALLMANSUBDIRS = 						/* make install.man */
+       TAGSUBDIRS = 						/* make tag */
 
-#ifdef Log
-DEFS_LOG = -DLOG
-#endif
-#ifdef TurnThrust
-DEFS_TURN_THRUST = -DTURN_THRUST
-#endif
-#ifdef Silent
-DEFS_SILENT = -DSILENT
-#endif
-#ifdef ServerSound
-DEFS_SERVER_SOUND = -DSERVER_SOUND
-#endif
-#ifdef Erase
-DEFS_ERASE = -DERASE=1
-#endif
-#ifdef SparcCmapHack
-DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
-#endif
-#ifdef MultibufferExtension
-DEFS_MBX = -DMBX
-#endif
-#ifdef DoublebufferExtension
-DEFS_DBE = -DDBE
-#endif
-#ifdef Joystick
-DEFS_JOYSTICK = -DJOYSTICK
-#endif
-#ifdef PlockServer
-DEFS_PLOCKSERVER = -DPLOCKSERVER
-#endif
-#ifdef WindowScaling
-DEFS_SCALING = -DWINDOWSCALING
-#endif
+MakeSubdirs($(SUBDIRS))
+DependSubdirs($(DEPSUBDIRS))
+CleanSubdirs($(CLEANSUBDIRS))
+MakefileSubdirs($(MAKEFILESUBDIRS))
+IncludesSubdirs($(INCLUDESSUBDIRS))
+InstallSubdirs($(INSTALLSUBDIRS))
+InstallManSubdirs($(INSTALLMANSUBDIRS))
+TagSubdirs($(TAGSUBDIRS))
 
-/*
- * Assemble defines and includes.
- *
- * The DEFS_OTHER variable can be specified on the make command line like:
- *
- *    make DEFS_OTHER=-DENABLE_SOME_HACK
- *
- * or in the Local.config file.
- *
- */
-DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
-       -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
-       $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
-       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
-       $(DEFS_JOYSTICK) $(DEFS_PLOCKSERVER) $(DEFS_OTHER) \
-       $(AUDIODEF) $(DEFS_SCALING)
-INCLUDES = $(AUDIOINC) -I../lib/
-
-
-/*
- * Do substitutions where necessary
- */
-MsubTarget(version.h,version.h.msub)
-includes:: version.h
-depend:: includes
-
-
-/*
- * Server program; xpilots
- */
-OBJS1 = server.o metaserver.o netserver.o contact.o event.o map.o math.o cmdline.o \
-	net.o play.o player.o rules.o update.o collision.o walls.o objpos.o error.o \
-        id.o frame.o portability.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
-        $(STRCASECMP_OBJ) $(STRDUP_OBJ)
-SRCS1 = server.c metaserver.c netserver.c contact.c event.c map.c math.c cmdline.c \
-	net.c play.c player.c rules.c update.c collision.c walls.c objpos.c error.c \
-        id.c frame.c portability.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
-DEPLIBS1 = 
-
-/*
- * Client program; xpilot
- */
-OBJS2 = \
-	xpilot.o client.o join.o net.o netclient.o \
-	xinit.o colors.o dbuff.o default.o xevent.o \
-	paint.o paintdata.o painthud.o paintmap.o \
-	paintobjects.o paintradar.o portability.o \
-	record.o talk.o about.o configure.o widget.o \
-	math.o syslimit.o error.o socklib.o query.o \
-	caudio.o usleep.o texture.o xpmread.o \
-	$(AUDIOOBJ) $(STRDUP_OBJ)
-SRCS2 = \
-	xpilot.c client.c join.c net.c netclient.c \
-	xinit.c colors.c dbuff.c default.c xevent.c \
-	paint.c paintdata.c painthud.c paintmap.c \
-	paintobjects.c paintradar.c portability.c \
-	record.c talk.c about.c configure.c widget.c \
-	math.c syslimit.c error.c socklib.c query.c \
-	caudio.c usleep.c texture.c xpmread.c \
-	$(AUDIOSRC)
-DEPLIBS2 = $(DEPXLIB)
-
-/*
- * Playback program; xp-replay
- */
-OBJS3 = xp-replay.o buttons.o
-SRCS3 = xp-replay.c buttons.c
-DEPLIBS3 = $(DEPXLIB)
-
-
-
-/*
- * Build the three targets
- */
-PROGRAMS = xpilot xpilots xp-replay
-
-#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
-					/* that doesn't have XLIBONLY. */
-#if !defined(MultibufferExtension)	/* On the other hand you need the */
-					/* EXTENSIONLIB sometimes, though ;) */
-EXTENSIONLIB = 
-DEPEXTENSIONLIB = 
-#endif /* MultibufferExtension */
-X_LIB = $(XLIB)
-#else
-X_LIB = $(XLIBONLY)
-#endif
-
-ProgramTarget_1(xpilots,$(AUDIOLIB),$(MATHLIB) $(EXTRALIB))
-ProgramTarget_2(xpilot,$(AUDIOLIB),$(X_LIB) $(MATHLIB) $(EXTRALIB))
-ProgramTarget_3(xp-replay,NullParameter,$(X_LIB) $(MATHLIB))

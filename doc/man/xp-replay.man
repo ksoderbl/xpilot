@@ -4,7 +4,7 @@
 .\"
 .TH XP-REPLAY  "Requires The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.7.1: Jan 28th, 1998
+.ds ]W XPilot 4.0.0: Apr 28th, 1998
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 

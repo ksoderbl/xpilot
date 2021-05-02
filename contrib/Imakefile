@@ -1,10 +1,10 @@
-/* $Id: Imakefile,v 3.7 1998/01/08 19:40:42 bert Exp $ */
+/* $Id: Imakefile,v 4.1 1998/03/21 20:12:19 bert Exp $ */
 
 #include "Local.config"
 
 #define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
 
-SUBDIRS = msub/ NT/
+SUBDIRS = msub/
 
 MakeSubdirs($(SUBDIRS))
 DependSubdirs($(SUBDIRS))

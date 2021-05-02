@@ -1,0 +1,56 @@
+/* $Id: Imakefile,v 4.0 1998/03/18 15:18:41 bert Exp $ */
+
+TOP=../..
+
+#include "Local.config"
+
+#ifdef Log
+DEFS_LOG = -DLOG
+#endif
+#ifdef TurnThrust
+DEFS_TURN_THRUST = -DTURN_THRUST
+#endif
+#ifdef Silent
+DEFS_SILENT = -DSILENT
+#endif
+#ifdef ServerSound
+DEFS_SERVER_SOUND = -DSERVER_SOUND
+#endif
+#ifdef PlockServer
+DEFS_PLOCKSERVER = -DPLOCKSERVER
+#endif
+
+/*
+ * Assemble defines and includes.
+ *
+ * The DEFS_OTHER variable can be specified on the make command line like:
+ *
+ *    make DEFS_OTHER=-DENABLE_SOME_HACK
+ *
+ * or in the Local.config file.
+ *
+ */
+DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
+       -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
+       $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
+       $(DEFS_PLOCKSERVER) $(DEFS_OTHER)
+INCLUDES = $(AUDIOINC) -I../common/ -I../lib/
+
+SRCS = \
+	cmdline.c collision.c contact.c event.c frame.c id.c map.c \
+	metaserver.c netserver.c objpos.c option.c play.c player.c \
+	robot.c robotdef.c rules.c saudio.c sched.c server.c \
+	update.c walls.c
+
+OBJS = \
+	cmdline.o collision.o contact.o event.o frame.o id.o map.o \
+	metaserver.o netserver.o objpos.o option.o play.o player.o \
+	robot.o robotdef.o rules.o saudio.o sched.o server.o \
+	update.o walls.o
+
+DEPLIBS = ../common/libxpcommon.a 
+
+PROGRAMS = xpilots
+
+ProgramTarget(xpilots,../common/libxpcommon.a,$(MATHLIB) $(EXTRALIB))
+

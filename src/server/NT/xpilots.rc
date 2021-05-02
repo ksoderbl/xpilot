@@ -1,0 +1,325 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\xpilots.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\xpilots.ico"
+IDI_XPILOT              ICON    DISCARDABLE     "res\\icon1.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 287, 94
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About XPilot-server"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,18,20
+    LTEXT           "version x",IDC_VERSION,40,23,119,8,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,248,7,32,14,WS_GROUP
+    LTEXT           "XPilot is copyright © 1991-98 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
+                    IDC_STATIC,10,41,270,22
+    PUSHBUTTON      "www.xpilot.org",IDC_BUTTON_WWW_XPILOT_ORG,32,73,103,14
+    PUSHBUTTON      "www.buckosoft.com/xpilot/",IDC_BUTTON_WWW_BUCKOSOFT_COM,
+                    151,73,103,14
+END
+
+IDD_XPILOTS_DIALOG DIALOGEX 0, 0, 237, 143
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | 
+    WS_THICKFRAME
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_CONTEXTHELP | WS_EX_APPWINDOW
+CAPTION "XPilot-server"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    PUSHBUTTON      "&Start Server",IDC_START_SERVER,7,7,50,14
+    PUSHBUTTON      "&Configure",IDC_CONFIGURE,7,26,50,14
+    LTEXT           "Map:",IDC_STATIC,62,9,19,8
+    LTEXT           "Active Map Here",IDC_MAPNAME,112,9,118,8
+    GROUPBOX        "",IDC_STATIC,107,4,123,16
+    EDITTEXT        IDC_EDIT1,7,71,223,65,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Player count",IDC_STATIC,62,28,40,8
+    LTEXT           "0",IDC_PLAYERCOUNT,112,28,11,8
+    GROUPBOX        "",IDC_STATIC,107,22,19,16
+END
+
+IDD_CONFIG_DLG DIALOG DISCARDABLE  0, 0, 270, 222
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Configure"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_COMMANDLINE,7,25,204,70,ES_MULTILINE | WS_VSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,213,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,213,24,50,14
+    LTEXT           "Command line",IDC_STATIC,7,14,45,8
+    PUSHBUTTON      "&Set Options",IDC_SETOPTIONS,213,44,50,14
+END
+
+IDD_EXITXPILOTS DIALOG DISCARDABLE  0, 0, 185, 94
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Exit xpilots?"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Yes, Exit",IDOK,16,73,68,14
+    PUSHBUTTON      "No, Keep Playing",IDCANCEL,100,73,68,14
+    CTEXT           "Game is in progress, exit anyways?",IDC_STATIC,34,22,
+                    114,8
+END
+
+IDD_REALLYSHUTDOWN DIALOG DISCARDABLE  0, 0, 186, 58
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Really Shutdown the Server?"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Cancel",IDCANCEL,129,24,50,14
+    EDITTEXT        IDC_EDIT1,75,11,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    LTEXT           "Number of seconds\nbefore Shutdown",IDC_STATIC,7,9,70,
+                    19
+    DEFPUSHBUTTON   "OK",IDOK,129,7,50,14
+END
+
+IDD_EXPIRED DIALOG DISCARDABLE  0, 0, 274, 126
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Uh-oh"
+FONT 10, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,112,105,50,14
+    CTEXT           "This version of XPilotNT-Server has expired",IDC_STATIC,
+                    7,17,260,8
+    CTEXT           "Information about updates can be obtained at",
+                    IDC_STATIC,7,34,260,8
+    CTEXT           "www.buckosoft.com",IDC_STATIC,7,52,260,8
+    CTEXT           "or",IDC_STATIC,99,66,75,8
+    CTEXT           "news:rec.computer.games.xpilot",IDC_STATIC,7,85,260,8
+    ICON            IDR_MAINFRAME,IDC_STATIC,66,60,20,20
+    ICON            IDI_XPILOT,IDC_STATIC,186,60,20,20
+END
+
+IDD_EXPIRE_SOON DIALOG DISCARDABLE  0, 0, 272, 91
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Dialog"
+FONT 12, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,111,70,50,14
+    CTEXT           "This version of XPilotNT-Server will expire soon.\nInformation about updates can be obtained from\nwww.buckosoft.com\nor\nnews:rec.games.computer.xpilot",
+                    IDC_STATIC,7,17,258,45
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "BuckoSoft, Inc.\0"
+            VALUE "FileDescription", "XPILOTS MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "XPILOTS\0"
+            VALUE "LegalCopyright", "Copyright © 1996-1997 BuckoSoft, Inc.\0"
+            VALUE "OriginalFilename", "XPILOTS.EXE\0"
+            VALUE "ProductName", "XPilotNT Server\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 280
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_XPILOTS_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 136
+    END
+
+    IDD_CONFIG_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 263
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 215
+    END
+
+    IDD_EXITXPILOTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 178
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_REALLYSHUTDOWN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    IDD_EXPIRED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 267
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_EXPIRE_SOON, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 265
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About XPilot-server..."
+    IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDD_CONFIG_DLG          "Configure Server Parameters"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\xpilots.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
