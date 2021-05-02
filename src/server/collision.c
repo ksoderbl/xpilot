@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 4.14 1998/10/05 08:52:59 bert Exp $
+/* $Id: collision.c,v 4.23 1999/11/08 04:56:08 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -25,6 +25,7 @@
 #ifdef	_WINDOWS
 #include "NT/winServer.h"
 #include <math.h>
+#include <limits.h>
 #else
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +52,7 @@ char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 4.14 1998/10/05 08:52:59 bert Exp $";
+    "@(#)$Id: collision.c,v 4.23 1999/11/08 04:56:08 dick Exp $";
 #endif
 
 #if 0
@@ -553,23 +554,54 @@ static void PlayerCollision(void)
 		if (!BIT(World.rules->mode, CRASH_WITH_PLAYER)) {
 		    continue;
 		}
-		if (pl->fuel.sum <= 0 || !BIT(pl->used, OBJ_SHIELD))
+
+		if (pl->fuel.sum <= 0
+		    || (!BIT(pl->used, OBJ_SHIELD)
+			&& !BIT(pl->have, OBJ_ARMOR))) {
 		    SET_BIT(pl->status, KILLED);
+		}
 		if (Players[j]->fuel.sum <= 0
-		    || !BIT(Players[j]->used, OBJ_SHIELD))
+		    || (!BIT(Players[j]->used, OBJ_SHIELD)
+			&& !BIT(Players[j]->have, OBJ_ARMOR))) {
 		    SET_BIT(Players[j]->status, KILLED);
+		}
+
+		if (!BIT(pl->used, OBJ_SHIELD)
+		    && BIT(pl->have, OBJ_ARMOR)) {
+		    Player_hit_armor(i);
+		}
+		if (!BIT(Players[j]->used, OBJ_SHIELD)
+		    && BIT(Players[j]->have, OBJ_ARMOR)) {
+		    Player_hit_armor(j);
+		}
 
 		if (BIT(Players[j]->status, KILLED)) {
 		    if (BIT(pl->status, KILLED)) {
 			sprintf(msg, "%s and %s crashed.",
 				pl->name, Players[j]->name);
 			Set_message(msg);
-			sc = (int)floor(Rate(Players[j]->score, pl->score)
-				   * crashScoreMult);
-			sc2 = (int)floor(Rate(pl->score, Players[j]->score)
-				    * crashScoreMult);
-			Score_players(i, -sc, Players[j]->name,
-				      j, -sc2, pl->name);
+			if (!IS_TANK_IND(i) && !IS_TANK_IND(j)) {
+			    sc = (int)floor(Rate(Players[j]->score, pl->score)
+			 		    * crashScoreMult);
+			    sc2 = (int)floor(Rate(pl->score, Players[j]->score)
+					     * crashScoreMult);
+			    Score_players(i, -sc, Players[j]->name,
+					  j, -sc2, pl->name);
+			} else if (IS_TANK_IND(i)) {
+			    int i_tank_owner = GetInd[Players[i]->lock.pl_id];
+			    sc = (int)floor(Rate(Players[i_tank_owner]->score,
+						 Players[j]->score)
+					    * tankKillScoreMult);
+			    Score_players(i_tank_owner, sc, Players[j]->name,
+					  j, -sc, pl->name);
+			} else if (IS_TANK_IND(j)) {
+			    int j_tank_owner = GetInd[Players[j]->lock.pl_id];
+			    sc = (int)floor(Rate(Players[j_tank_owner]->score,
+						 pl->score)
+					    * tankKillScoreMult);
+			    Score_players(j_tank_owner, sc, pl->name,
+					  i, -sc, Players[j]->name);
+			} /* don't bother scoring two tanks */
 		    } else {
 			int i_tank_owner = i;
 			if (IS_TANK_IND(i)) {
@@ -587,11 +619,11 @@ static void PlayerCollision(void)
 			pl->kills++;
 			if (IS_TANK_IND(i)) {
 			    sc = (int)floor(Rate(Players[i_tank_owner]->score,
-					    Players[j]->score)
-				       * tankKillScoreMult);
+						 Players[j]->score)
+					    * tankKillScoreMult);
 			} else {
 			    sc = (int)floor(Rate(pl->score, Players[j]->score)
-				       * runoverKillScoreMult);
+					    * runoverKillScoreMult);
 			}
 			Score_players(i_tank_owner, sc, Players[j]->name,
 				      j, -sc, pl->name);
@@ -655,6 +687,8 @@ static void PlayerCollision(void)
 		       not the team the ball belongs to. the latter is
 		       found through the ball's treasure */
 		    ball->team = pl->team;
+		    if (ball->owner == -1)
+			ball->life=LONG_MAX;  /* for frame counter */
 		    ball->owner = pl->id;
 		    ball->length = distance;
 		    SET_BIT(ball->status, GRAVITY);
@@ -671,11 +705,12 @@ static void PlayerCollision(void)
 	     * We want a separate list of balls to avoid searching
 	     * the object list for balls.
 	     */
+	    int dist, mindist = BALL_STRING_LENGTH;
 	    for (j = 0; j < NumObjs; j++) {
 		if (BIT(Obj[j]->type, OBJ_BALL) && Obj[j]->id == -1) {
-		    if (Wrap_length(pl->pos.x - Obj[j]->pos.x,
-				    pl->pos.y - Obj[j]->pos.y)
-			  < BALL_STRING_LENGTH) {
+		    dist = Wrap_length(pl->pos.x - Obj[j]->pos.x,
+				       pl->pos.y - Obj[j]->pos.y);
+		    if (dist < mindist) {
 			object *ball = Obj[j];
 			int bteam = -1;
 
@@ -683,18 +718,18 @@ static void PlayerCollision(void)
 			    bteam = World.treasures[ball->treasure].team;
 
 			/*
-			 * If the treasure's team cannot connect before
-			 * other non-team members wait until somebody has
-			 * else has owned the ball before allowing a
-			 * connection.  This was done to stop team members
+			 * The treasure's team cannot connect before
+			 * somebody else has owned the ball.
+			 * This was done to stop team members
 			 * taking and hiding with the ball... this was
 			 * considered bad gamesmanship.
 			 */
 			if (ball->owner != -1
 			    || (   pl->team != TEAM_NOT_SET
-				&& pl->team != bteam))
+				&& pl->team != bteam)) {
 			    pl->ball = Obj[j];
-			break;
+			    mindist = dist;
+			}
 		    }
 		}
 	    }
@@ -786,7 +821,8 @@ int IsDefensiveItem(enum Item i)
 	    ITEM_BIT_DEFLECTOR |
 	    ITEM_BIT_HYPERJUMP |
 	    ITEM_BIT_PHASING |
-	    ITEM_BIT_TANK)) {
+	    ITEM_BIT_TANK |
+	    ITEM_BIT_ARMOR)) {
 	return true;
     }
     return false;
@@ -803,7 +839,7 @@ int CountDefensiveItems(player *pl)
 {
     int count;
 
-    count = pl->item[ITEM_CLOAK] + pl->item[ITEM_ECM] + 
+    count = pl->item[ITEM_CLOAK] + pl->item[ITEM_ECM] + pl->item[ITEM_ARMOR] +
 	    pl->item[ITEM_TRANSPORTER] + pl->item[ITEM_TRACTOR_BEAM] + 
 	    pl->item[ITEM_EMERGENCY_SHIELD] + pl->fuel.num_tanks +
 	    pl->item[ITEM_DEFLECTOR] + pl->item[ITEM_HYPERJUMP] +
@@ -922,10 +958,13 @@ static void PlayerObjectCollision(int ind)
 		    obj->life = 0;
 		}
 	    }
-	    if (pl->fuel.sum > 0
-		&& (!treasureCollisionMayKill
-		    || BIT(pl->used,OBJ_SHIELD))) {
-		continue;
+	    if (pl->fuel.sum > 0) {
+		if (!treasureCollisionMayKill || BIT(pl->used, OBJ_SHIELD))
+		    continue;
+		if (!BIT(pl->used, OBJ_SHIELD) && BIT(pl->have, OBJ_ARMOR)) {
+		    Player_hit_armor(ind);
+		    continue;
+		}
 	    }
 	    if (obj->owner == -1) {
 		sprintf(msg, "%s was killed by a ball.", pl->name);
@@ -996,6 +1035,14 @@ static void PlayerObjectCollision(int ind)
 		pl->item[item_index] += obj->count;
 		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, ECM_PICKUP_SOUND);
+		break;
+	    case ITEM_ARMOR:
+		pl->item[item_index]++;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_ARMOR);
+		sound_play_sensors(pl->pos.x, pl->pos.y,
+				   ARMOR_PICKUP_SOUND);
 		break;
 	    case ITEM_TRANSPORTER:
 		pl->item[item_index] += obj->count;
@@ -1197,7 +1244,8 @@ static void PlayerObjectCollision(int ind)
 		if (pl->fuel.sum == 0
 		    || (obj->type == OBJ_WRECKAGE
 			&& wreckageCollisionMayKill
-			&& !BIT(pl->used, OBJ_SHIELD))) {
+			&& !BIT(pl->used, OBJ_SHIELD)
+			&& !BIT(pl->have, OBJ_ARMOR))) {
 		    SET_BIT(pl->status, KILLED);
 		    sprintf(msg, "%s succumbed to an explosion.", pl->name);
 		    killer = -1;
@@ -1224,6 +1272,12 @@ static void PlayerObjectCollision(int ind)
 		    }
 		    return;
 		}
+		if (obj->type == OBJ_WRECKAGE
+		    && wreckageCollisionMayKill
+		    && !BIT(pl->used, OBJ_SHIELD)
+		    && BIT(pl->have, OBJ_ARMOR)) {
+		    Player_hit_armor(ind);
+		}
 	    }
 	    break;
 
@@ -1249,9 +1303,10 @@ static void PlayerObjectCollision(int ind)
 	 */
 
 	if (BIT(pl->used, OBJ_SHIELD)
+	    || BIT(pl->have, OBJ_ARMOR)
 	    || (obj->type == OBJ_TORPEDO
 		&& BIT(obj->mods.nuclear, NUCLEAR)
-		&& (rand()&3))) {
+		&& (int)(rfrac() >= 0.25f))) {
 	    switch (obj->type) {
 	    case OBJ_TORPEDO:
 		sound_play_sensors(pl->pos.x, pl->pos.y,
@@ -1313,6 +1368,9 @@ static void PlayerObjectCollision(int ind)
 	    }
 	    if (pl->fuel.sum <= 0) {
 		CLR_BIT(pl->used, OBJ_SHIELD);
+	    }
+	    if (!BIT(pl->used, OBJ_SHIELD) && BIT(pl->have, OBJ_ARMOR)) {
+		Player_hit_armor(ind);
 	    }
 	} else {
 	    switch (obj->type) {
@@ -1584,11 +1642,13 @@ static void LaserCollision(void)
 	    Object_position_init_pixels(obj, x1, y1);
 
 	    for (i = hits = 0; i <= max; i += PULSE_SAMPLE_DISTANCE) {
-
 		x = x1 + (i * dx) / max;
 		y = y1 + (i * dy) / max;
-		obj->vel.x = x - obj->pos.x;
-		obj->vel.y = y - obj->pos.y;
+		obj->vel.x = (x - CLICK_TO_FLOAT(obj->pos.cx));
+		obj->vel.y = (y - CLICK_TO_FLOAT(obj->pos.cy));
+		/* changed from = x - obj->pos.x to make lasers disappear
+		   less frequently when wrapping. There's still a small
+		   chance of it happening though. */
 		Move_object(objnum);
 		if (obj->life == 0) {
 		    break;
@@ -1620,7 +1680,7 @@ static void LaserCollision(void)
 			vic = Players[victims[j].ind];
 			vic->forceVisible++;
 			if (BIT(vic->have, OBJ_MIRROR)
-			    && rand() % (2 * vic->item[ITEM_MIRROR])) {
+			    && (rfrac() * (2 * vic->item[ITEM_MIRROR])) >= 1) {
 			    pulse->pos.x = x - tcos(pulse->dir) * 0.5
 						* PULSE_SAMPLE_DISTANCE;
 			    pulse->pos.y = y - tsin(pulse->dir) * 0.5
@@ -1671,7 +1731,8 @@ static void LaserCollision(void)
 				Record_shove(vic, pl, frame_loops + FPS + 6);
 			} else {
 			    Add_fuel(&(vic->fuel), (long)ED_LASER_HIT);
-			    if (BIT(vic->used, OBJ_SHIELD) == 0) {
+			    if (!BIT(vic->used, OBJ_SHIELD)
+				&& !BIT(vic->have, OBJ_ARMOR)) {
 				SET_BIT(vic->status, KILLED);
 				if (pl) {
 				    sprintf(msg,
@@ -1709,6 +1770,11 @@ static void LaserCollision(void)
 				    Robot_war(victims[j].ind, ind);
 				}
 			    }
+			    if (!BIT(vic->used, OBJ_SHIELD)
+				&& BIT(vic->have, OBJ_ARMOR)) {
+				Player_hit_armor(victims[j].ind);
+			    }
+
 			}
 		    }
 		    else if (dist >= victims[j].prev_dist) {

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: defaults.h,v 1.4 1998/04/22 17:23:32 bert Exp $
+ * $Id: defaults.h,v 1.5 2000/03/11 20:25:58 bert Exp $
  */
 
 /* defaults
@@ -44,7 +44,7 @@
 
 #define PREF_X                -1
 #define PREF_Y                -1
-#define PREF_WIDTH            1024
+#define PREF_WIDTH            1500 /*1024*/
 #define PREF_HEIGHT           860
 #define PREF_BTN_WIDTH        60
 #define PREF_BTN_HEIGHT       18

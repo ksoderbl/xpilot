@@ -1,4 +1,4 @@
-/* $Id: option.c,v 4.6 1998/04/16 17:41:45 bert Exp $
+/* $Id: option.c,v 4.7 1999/11/07 11:57:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -631,8 +631,8 @@ static int	usePclose;
 static int isCompressed(const char *filename)
 {
     int fnlen = strlen(filename);
-    int celen = strlen(ZCAT_EXT);
-    if (fnlen > celen && !strcmp(&filename[fnlen - celen], ZCAT_EXT)) {
+    int celen = strlen(Conf_zcat_ext());
+    if (fnlen > celen && !strcmp(&filename[fnlen - celen], Conf_zcat_ext())) {
 	return 1;
     }
     return 0;
@@ -665,16 +665,16 @@ static FILE *openCompressedFile(const char *filename)
 	if (access(filename, 4) == 0) {
 	    return fileOpen(filename);
 	}
-	newname = fileAddExtension(filename, ZCAT_EXT);
+	newname = fileAddExtension(filename, Conf_zcat_ext());
 	if (!newname) {
 	    return NULL;
 	}
 	filename = newname;
     }
     if (access(filename, 4) == 0) {
-	cmdline = (char *) malloc(strlen(ZCAT_FORMAT) + strlen(filename) + 1);
+	cmdline = (char *) malloc(strlen(Conf_zcat_format()) + strlen(filename) + 1);
 	if (cmdline) {
-	    sprintf(cmdline, ZCAT_FORMAT, filename);
+	    sprintf(cmdline, Conf_zcat_format(), filename);
 	    fp = popen(cmdline, "r");
 	    if (fp) {
 		usePclose = 1;
@@ -753,7 +753,7 @@ static FILE *openMapFile(const char *filename)
 	}
     }
     if (!hasDirectoryPrefix(filename)) {
-	newpath = fileJoin(MAPDIR, filename);
+	newpath = fileJoin(Conf_mapdir(), filename);
 	if (!newpath) {
 	    return NULL;
 	}

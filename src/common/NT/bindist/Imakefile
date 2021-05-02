@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 1.3 1998/04/21 12:06:07 dick Exp $ */
+/* $Id: Imakefile,v 1.4 1999/10/16 10:57:31 bert Exp $ */
 
 TOPDIR=../../../..
 #include "Local.config"
@@ -8,4 +8,4 @@ TOPDIR=../../../..
 MsubTarget(README.txt,README.txt.msub)
 MsubTarget(READMEbin.txt,READMEbin.txt.msub)
 MsubTarget(ServerMOTD.txt,ServerMOTD.txt.msub)
-
+MsubDepend

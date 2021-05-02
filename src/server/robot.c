@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 4.6 1998/08/29 19:49:56 bert Exp $
+/* $Id: robot.c,v 4.9 1999/10/16 13:12:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -686,7 +686,7 @@ static void Robot_talks(enum robot_talk_t says_what,
     }
 
     if (next_msg == -1) {
-	next_msg = rand();
+	next_msg = (int)(rfrac() * 997);
     }
     if (++next_msg > 997) {
 	next_msg = 0;
@@ -743,7 +743,7 @@ static void Robot_create(void)
 	    least_used = i;
 	}
     }
-    num = rand() % MAX_ROBOTS;
+    num = (int)(rfrac() * MAX_ROBOTS);
     while (Robots[num].used > Robots[least_used].used) {
 	if (++num >= MAX_ROBOTS) {
 	    num = 0;
@@ -954,7 +954,7 @@ void Robot_war(int ind, int killer)
     }
 
     if (IS_ROBOT_PTR(pl)
-	&& rand()%100 < kp->score - pl->score
+	&& (int)(rfrac() * 100) < kp->score - pl->score
 	&& !(BIT(World.rules->mode, TEAM_PLAY) && pl->team == kp->team)) {
 
 	Robot_talks(ROBOT_TALK_WAR, pl->name, kp->name);
@@ -1010,17 +1010,64 @@ static void Robot_play(int ind)
 }
 
 
+/*
+ * Check if robot is still considered good enough to continue playing.
+ * Return FALSE if robot continues playing,
+ * return TRUE if robot leaves the game.
+ */
+static int Robot_check_leave(int ind)
+{
+    player		*pl = Players[ind];
+    char		msg[MSG_LEN];
+
+    if (robotsLeave
+	&& pl->life > 0
+	&& !BIT(World.rules->mode, LIMITED_LIVES)) {
+	msg[0] = '\0';
+	if (robotLeaveLife > 0 && pl->life >= robotLeaveLife) {
+	    sprintf(msg, "%s retired.", pl->name);
+	} else if (robotLeaveScore != 0 && pl->score < robotLeaveScore) {
+	    sprintf(msg, "%s left out of disappointment.", pl->name);
+	} else if (robotLeaveRatio != 0 && pl->score / (pl->life + 1)
+		   < robotLeaveRatio) {
+	    sprintf(msg, "%s played too badly.", pl->name);
+	}
+	if (msg[0] != '\0') {
+	    Robot_talks(ROBOT_TALK_LEAVE, pl->name, "");
+	    Set_message(msg);
+	    Robot_delete(ind, false);
+	    return TRUE;
+	}
+    }
+
+    return FALSE;
+}
+
+/*
+ * Update tanks here.
+ */
+static void Tank_play(int ind)
+{
+    player		*pl = Players[ind];
+    int			t = frame_loops % (TANK_NOTHRUST_TIME + TANK_THRUST_TIME);
+
+    if (t == 0) {
+	SET_BIT(pl->status, THRUSTING);
+    } else if (t == TANK_THRUST_TIME) {
+	CLR_BIT(pl->status, THRUSTING);
+    }
+}
+
 void Robot_update(void)
 {
     player		*pl;
     int			i;
-    char		msg[MSG_LEN];
     static int		new_robot_delay;
 
 
     if ((NumPlayers - NumPseudoPlayers < maxRobots
 	 || NumRobots < minRobots)
-	&& NumPlayers - NumPseudoPlayers < World.NumBases
+	&& NumPlayers - NumPseudoPlayers - login_in_progress < World.NumBases
 	&& NumRobots < MAX_ROBOTS
 	&& !(BIT(World.rules->mode, TEAM_PLAY)
 	     && restrictRobots
@@ -1042,62 +1089,31 @@ void Robot_update(void)
 
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
-	if (IS_HUMAN_PTR(pl)) {
-	    /*
-	     * Ignore human players here.
-	     */
-	    continue;
-	}
+
 	if (IS_TANK_PTR(pl)) {
-	    /*
-	     * Update tanks here.
-	     * This could be moved into its own robot type function...
-	     */
+	    Tank_play(i);
+	    continue;
+	}
 
-	    int         t = frame_loops % (TANK_NOTHRUST_TIME + TANK_THRUST_TIME);
+	if (!IS_ROBOT_PTR(pl)) {
+	    /* Ignore non-robots. */
+	    continue;
+	}
 
-	    if (t == 0) {
-		SET_BIT(pl->status, THRUSTING);
-	    } else if (t == TANK_THRUST_TIME) {
-		CLR_BIT(pl->status, THRUSTING);
+	if (BIT(pl->status, PLAYING|GAME_OVER) != PLAYING) {
+	    /* Only check for leave if not being transported to homebase. */
+	    if (!pl->count) {
+		if (Robot_check_leave(i)) {
+		    i--;
+		}
 	    }
 	    continue;
 	}
 
-	/* Bucko sez: I had a server crash here as i was exiting play.  Seems the type_ext for me
-	   was 0 (?) so it defaulted to robot handling, which is a bad thing (robot_data_ptr == NULL)
-	   so i added this check for real robots.  I'm not sure if the Player[ind] will clean up
-	   or just leak.
-	*/
-	if (!IS_ROBOT_PTR(pl))
-		continue;
-	/*
-	 * So it is a genuine robot...
-	 * Check if it is still considered good enough to continue playing...
-	 */
-	if (robotsLeave
-	    && pl->life > 0
-	    && !BIT(World.rules->mode, LIMITED_LIVES)) {
-	    msg[0] = '\0';
-	    if (robotLeaveLife > 0 && pl->life >= robotLeaveLife) {
-		sprintf(msg, "%s retired.", pl->name);
-	    } else if (robotLeaveScore != 0 && pl->score < robotLeaveScore) {
-		sprintf(msg, "%s left out of disappointment.", pl->name);
-	    } else if (robotLeaveRatio != 0 && pl->score / (pl->life + 1)
-		       < robotLeaveRatio) {
-		sprintf(msg, "%s played too badly.", pl->name);
-	    }
-	    if (msg[0] != '\0') {
-		Robot_talks(ROBOT_TALK_LEAVE, pl->name, "");
-		Set_message(msg);
-		Robot_delete(i, false);
-		i--;
-		continue;
-	    }
-	}
-
-	if (BIT(pl->status, PLAYING|GAME_OVER) != PLAYING)
+	if (Robot_check_leave(i)) {
+	    i--;
 	    continue;
+	}
 
 	if (rdelay > 0)
 	    continue;

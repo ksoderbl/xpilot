@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 4.3 1998/09/09 00:22:16 dick Exp $
+/* $Id: configure.c,v 4.14 2000/03/12 14:19:31 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -164,6 +164,7 @@ static int Config_create_threadedDraw(int widget_desc, int *height);
 #endif
 #ifdef	WINDOWSCALING
 static int Config_create_scaleFactor(int widget_desc, int *height);
+static int Config_create_altScaleFactor(int widget_desc, int *height);
 #endif
 
 static int Config_create_save(int widget_desc, int *height);
@@ -186,6 +187,7 @@ static int Config_update_autoShield(int widget_desc, void *data, bool *val);
 static int Config_update_maxFPS(int widget_desc, void *data, int *val);
 #ifdef	WINDOWSCALING
 static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val);
+static int Config_update_altScaleFactor(int widget_desc, void *data, DFLOAT *val);
 #endif
 
 static int Config_close(int widget_desc, void *data, const char **strptr);
@@ -289,9 +291,11 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
 #endif
 #ifdef	WINDOWSCALING
 	Config_create_scaleFactor,
+    Config_create_altScaleFactor,
 #endif
     Config_create_save			/* must be last */
 };
+static int		config_widget_ids[NELEM(config_creator)];
 
 static void Create_config(void)
 {
@@ -405,7 +409,8 @@ static void Create_config(void)
 	    }
 	    height = config_space;
 	}
-	if ((*config_creator[i])(config_widget_desc[num], &height) == 0) {
+	if ((config_widget_ids[i] =
+	     (*config_creator[i])(config_widget_desc[num], &height)) == 0) {
 	    i--;
 	    full = true;
 	    if (height == config_space) {
@@ -474,7 +479,8 @@ static int Config_create_bool(int widget_desc, int *height,
 			      void *data)
 {
     int			offset,
-			label_width;
+			label_width,
+			boolw;
 
     if (*height + 2*config_entry_height + 2*config_space >= config_height) {
 	return 0;
@@ -496,7 +502,7 @@ static int Config_create_bool(int widget_desc, int *height,
     if (config_space + label_width > offset) {
 	*height += config_entry_height;
     }
-    Widget_create_bool(widget_desc,
+    boolw = Widget_create_bool(widget_desc,
 		       offset, *height
 			   + (config_entry_height - config_bool_height) / 2,
 		       config_bool_width,
@@ -504,7 +510,7 @@ static int Config_create_bool(int widget_desc, int *height,
 		       0, val, callback, data);
     *height += config_entry_height + config_space;
 
-    return 1;
+    return boolw;
 }
 
 static int Config_create_int(int widget_desc, int *height,
@@ -551,7 +557,7 @@ static int Config_create_int(int widget_desc, int *height,
 			      0, intw);
     *height += config_entry_height + config_space;
 
-    return 1;
+    return intw;
 }
 
 static int Config_create_float(int widget_desc, int *height,
@@ -600,7 +606,7 @@ static int Config_create_float(int widget_desc, int *height,
 			      0, floatw);
     *height += config_entry_height + config_space;
 
-    return 1;
+    return floatw;
 }
 
 static int Config_create_power(int widget_desc, int *height)
@@ -971,7 +977,7 @@ static int Config_create_maxVolume(int widget_desc, int *height)
 static int Config_create_maxFPS(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
-			     "maxFPS", &maxFPS, 0, 30,
+			     "maxFPS", &maxFPS, FPS / 2, FPS,
 			     Config_update_maxFPS, NULL);
 }
 
@@ -1078,8 +1084,15 @@ static int Config_create_scaleFactor(int widget_desc, int *height)
 {
     return Config_create_float(widget_desc, height,
 			       "scaleFactor", &scaleFactor,
-			       0.1, 2.0,
+			       MIN_SCALEFACTOR, MAX_SCALEFACTOR,
 			       Config_update_scaleFactor, NULL);
+}
+static int Config_create_altScaleFactor(int widget_desc, int *height)
+{
+    return Config_create_float(widget_desc, height,
+                               "altScaleFactor", &scaleFactor_s,
+                               MIN_SCALEFACTOR, MAX_SCALEFACTOR,
+                               Config_update_altScaleFactor, NULL);
 }
 #endif
 
@@ -1163,6 +1176,10 @@ static int Config_update_instruments(int widget_desc, void *data, bool *val)
     if (BIT(bit, SHOW_PACKET_DROP_METER | SHOW_PACKET_LOSS_METER)) {
 	Net_init_measurement();
     }
+    if (BIT(bit, SHOW_REVERSE_SCROLL)) {
+	/* a callback for `reverseScroll' in the config menu */
+	IFNWINDOWS( Talk_reverse_cut(); )
+    }
 
     return 0;
 }
@@ -1221,17 +1238,9 @@ static int Config_update_sparkProb(int widget_desc, void *data, DFLOAT *val)
     return 0;
 }
 
-static int Config_update_showNastyShots(int widget_desc, void *data, bool *val)
-{
-    Set_toggle_shield(*val != false);
-    return 0;
-}
-
-
 static int Config_update_charsPerSecond(int widget_desc, void *data, int *val)
 {
     charsPerTick = (DFLOAT)charsPerSecond / FPS;
-    Send_display();
     return 0;
 }
 
@@ -1256,8 +1265,17 @@ static int Config_update_maxFPS(int widget_desc, void *data, int *val)
 #ifdef	WINDOWSCALING
 static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val)
 {
-	init_ScaleArray();
-	Resize(top, top_width, top_height);
+    Init_scale_array();
+    Resize(top, top_width, top_height);
+    Scale_dashes();
+    return 0;
+}
+
+static int Config_update_altScaleFactor(int widget_desc, void *data, DFLOAT *val)
+{
+    Init_scale_array();
+    Resize(top, top_width, top_height);
+    Scale_dashes();
     return 0;
 }
 #endif
@@ -1361,7 +1379,7 @@ static void Config_save_resource(FILE *fp, const char *resource, char *value)
     Xpilotrc_use(buf);
     fprintf(fp, "%s", buf);
 #else
-	WritePrivateProfileString("Settings", resource, value, Get_xpilotini_file(1));
+    WritePrivateProfileString("Settings", resource, value, Get_xpilotini_file(1));
 #endif
 
 }
@@ -1399,9 +1417,9 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     const char		*str,
 			*res;
 #ifdef VMS
-	static char	base[] = "DECW$USER_DEFAULTS:xpilot.dat";
+    static char	base[] = "DECW$USER_DEFAULTS:xpilot.dat";
 #elif defined(_WINDOWS)
-	static char	base[] = "XPilot.ini";
+    static char	base[] = "XPilot.ini";
 #endif
     char		buf[512],
 			oldfile[PATH_MAX + 1],
@@ -1479,7 +1497,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_float(fp, "sparkProb", spark_prob);
     Config_save_int(fp, "shotSize", shot_size);
     Config_save_int(fp, "teamShotSize", teamshot_size);
-	Config_save_bool(fp, "showNastyShots", showNastyShots);
+    Config_save_bool(fp, "showNastyShots", showNastyShots);
     Config_save_int(fp, "hudColor", hudColor);
     Config_save_int(fp, "hudLockColor", hudLockColor);
     Config_save_int(fp, "wallColor", wallColor);
@@ -1502,6 +1520,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 #endif
 #ifdef	WINDOWSCALING
     Config_save_float(fp, "scaleFactor", scaleFactor);
+    Config_save_float(fp, "altScaleFactor", scaleFactor_s);
 #endif
     /* don't save this one: Config_save_int(fp, "maxFPS", maxFPS); */
     buf[0] = '\0';
@@ -1539,29 +1558,29 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 #endif
 
 #ifdef	_WINDOWS
-	/* save our window's position */
+    /* save our window's position */
+    {
+	WINDOWPLACEMENT	wp;
+	Window w;
+	RECT rect;
+	char	s[50];
+	w = WinXGetParent(top);
+	WinXGetWindowRect(w, &rect);
+	WinXGetWindowPlacement(w, &wp);
+	if (wp.showCmd != SW_SHOWMINIMIZED)
 	{
-		WINDOWPLACEMENT	wp;
-		Window w;
-		RECT rect;
-		char	s[50];
-		w = WinXGetParent(top);
-		WinXGetWindowRect(w, &rect);
-		WinXGetWindowPlacement(w, &wp);
-		if (wp.showCmd != SW_SHOWMINIMIZED)
-		{
-			extern	const char* s_WindowMet;
-			extern	const char* s_L;
-			extern	const char* s_T;
-			extern	const char* s_R;
-			extern	const char* s_B;
-			itoa(rect.left, s, 10);
-			WritePrivateProfileString(s_WindowMet, s_L, itoa(rect.left, s, 10), Get_xpilotini_file(1));
-			WritePrivateProfileString(s_WindowMet, s_T, itoa(rect.top, s, 10), Get_xpilotini_file(1));
-			WritePrivateProfileString(s_WindowMet, s_R, itoa(rect.right, s, 10), Get_xpilotini_file(1));
-			WritePrivateProfileString(s_WindowMet, s_B, itoa(rect.bottom, s, 10), Get_xpilotini_file(1));
-		}
+	    extern	const char* s_WindowMet;
+	    extern	const char* s_L;
+	    extern	const char* s_T;
+	    extern	const char* s_R;
+	    extern	const char* s_B;
+	    itoa(rect.left, s, 10);
+	    WritePrivateProfileString(s_WindowMet, s_L, itoa(rect.left, s, 10), Get_xpilotini_file(1));
+	    WritePrivateProfileString(s_WindowMet, s_T, itoa(rect.top, s, 10), Get_xpilotini_file(1));
+	    WritePrivateProfileString(s_WindowMet, s_R, itoa(rect.right, s, 10), Get_xpilotini_file(1));
+	    WritePrivateProfileString(s_WindowMet, s_B, itoa(rect.bottom, s, 10), Get_xpilotini_file(1));
 	}
+    }
 #endif
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy(config_save_confirm_desc);
@@ -1583,7 +1602,7 @@ static int Config_save_confirm_callback(int widget_desc, void *popup_desc, const
 
 int Config(bool doit)
 {
-	IFWINDOWS( Trace("***Config %d\n", doit); )
+    IFWINDOWS( Trace("***Config %d\n", doit); )
     if (config_created == false) {
 	if (doit == false) {
 	    return 0;
@@ -1636,5 +1655,17 @@ void Config_resize(void)
 	if (mapped == true) {
 	    Config(mapped);
 	}
+    }
+}
+
+void Config_redraw(void)
+{
+    int i;
+
+    if (!config_mapped)
+	return;
+
+    for (i = 0; i < NELEM(config_creator); i++) {
+	Widget_draw(config_widget_ids[i]);
     }
 }

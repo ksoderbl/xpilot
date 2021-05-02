@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 4.3 1998/08/29 19:49:57 bert Exp $
+/* $Id: rules.c,v 4.4 1999/10/05 20:25:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -44,7 +44,7 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 4.3 1998/08/29 19:49:57 bert Exp $";
+    "@(#)$Id: rules.c,v 4.4 1999/10/05 20:25:26 bert Exp $";
 #endif
 
 #define MAX_FUEL                10000
@@ -56,6 +56,7 @@ static char sourceid[] =
 #define MAX_MINE                99
 #define MAX_MISSILE             99
 #define MAX_ECM                 99
+#define MAX_ARMOR		99
 #define MAX_EMERGENCY_THRUST    99
 #define MAX_AUTOPILOT           99
 #define MAX_EMERGENCY_SHIELD    99
@@ -74,7 +75,7 @@ long	DEF_HAVE =
 	|OBJ_SHOT|OBJ_LASER);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
 long	USED_KILL =
-	(OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_SHOT|OBJ_LASER
+	(OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_SHOT|OBJ_LASER|OBJ_ARMOR
 	|OBJ_TRACTOR_BEAM|OBJ_CLOAKING_DEVICE|OBJ_PHASING_DEVICE
 	|OBJ_DEFLECTOR|OBJ_MIRROR|OBJ_EMERGENCY_SHIELD|OBJ_EMERGENCY_THRUST);
 
@@ -204,6 +205,7 @@ void Set_initial_resources(void)
     LIMIT(World.items[ITEM_PHASING].limit, 0, MAX_PHASING);
     LIMIT(World.items[ITEM_HYPERJUMP].limit, 0, MAX_HYPERJUMP);
     LIMIT(World.items[ITEM_MIRROR].limit, 0, MAX_MIRROR);
+    LIMIT(World.items[ITEM_ARMOR].limit, 0, MAX_ARMOR);
 
     for (i = 0; i < NUM_ITEMS; i++) {
 	LIMIT(World.items[i].initial, 0, World.items[i].limit);
@@ -217,7 +219,8 @@ void Set_initial_resources(void)
 	OBJ_TRACTOR_BEAM |
 	OBJ_AUTOPILOT |
 	OBJ_DEFLECTOR |
-	OBJ_MIRROR);
+	OBJ_MIRROR |
+	OBJ_ARMOR);
 
     if (World.items[ITEM_CLOAK].initial > 0)
 	SET_BIT(DEF_HAVE, OBJ_CLOAKING_DEVICE);
@@ -235,6 +238,8 @@ void Set_initial_resources(void)
 	SET_BIT(DEF_HAVE, OBJ_DEFLECTOR);
     if (World.items[ITEM_MIRROR].initial > 0)
 	SET_BIT(DEF_HAVE, OBJ_MIRROR);
+    if (World.items[ITEM_ARMOR].initial > 0)
+	SET_BIT(DEF_HAVE, OBJ_ARMOR);
 }
 
 
@@ -258,6 +263,7 @@ void Set_world_items(void)
     Init_item(ITEM_FUEL, 0, 0);
     Init_item(ITEM_TANK, 1, 1);
     Init_item(ITEM_ECM, 1, 1);
+    Init_item(ITEM_ARMOR, 1, 1);
     Init_item(ITEM_MINE, 1, maxMinesPerPack);
     Init_item(ITEM_MISSILE, 1, maxMissilesPerPack);
     Init_item(ITEM_CLOAK, 1, 1);

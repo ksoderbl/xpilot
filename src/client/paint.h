@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 4.2 1998/04/16 17:39:31 bert Exp $
+/* $Id: paint.h,v 4.9 2000/03/12 11:45:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -47,6 +47,7 @@ int Handle_self(int x, int y, int vx, int vy, int dir,
     int nextCheckPoint, int autopilotLight,
     u_byte *newNumItems,
     int currentTank, int fuel_sum, int fuel_max, int packet_size);
+int Handle_self_items(u_byte *newNumItems);
 int Handle_modifiers(char *m);
 int Handle_damaged(int damaged);
 int Handle_destruct(int count);
@@ -94,6 +95,7 @@ void Paint_score_start(void);
 void Paint_score_objects(void);
 void Paint_meters(void);
 void Paint_HUD(void);
+int  Get_message(int* pos, char * message, int req_length, int key );
 void Paint_messages(void);
 void Paint_recording(void);
 void Paint_frame(void);
@@ -119,6 +121,13 @@ typedef struct {
     short		pixelLen;
     int			life;
 } message_t;
+
+/* which index a message actually has (consider SHOW_REVERSE_SCROLL) */
+#define TALK_MSG_SCREENPOS(_total,_pos) \
+    (BIT(instruments, SHOW_REVERSE_SCROLL)?(_total)-(_pos):(_pos))
+
+/* how to draw a selection */
+#define DRAW_EMPHASIZED                BLUE
 
 /*
  * Global objects.
@@ -185,6 +194,10 @@ extern int	decorRadarColor;	/* Color index for decorations on radar */
 extern bool	gotFocus;
 extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */
+extern int	real_view_width;	/* Width of map area displayed. */
+extern int	real_view_height;	/* Height of map area displayed. */
+extern int	view_x_offset;		/* Offset of view_width */
+extern int	view_y_offset;		/* Offset of view_height */
 extern u_byte	debris_colors;		/* Number of debris intensities */
 extern u_byte	spark_rand;		/* Sparkling effect */
 extern DFLOAT	charsPerTick;		/* Output speed of messages */
@@ -197,12 +210,23 @@ extern char	*wallTextureFile;	/* Filename of wall texture */
 extern char	*decorTextureFile;	/* Filename of decor texture */
 extern char	*ballTextureFile;	/* Filename of ball texture */
 
-extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
+extern int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
 		(Display *disp, Drawable d, GC gc,
 		 int x, int y, unsigned width, unsigned height);
 
 extern int	maxKeyDefs;
 extern long	loops;
 extern int	maxMessages;
+extern bool	selectionAndHistory;
+
+#ifdef	WINDOWSCALING
+extern DFLOAT	scaleFactor;		/* scale the draw (main playfield) window */
+extern DFLOAT	scaleFactor_s;
+extern short	scaleArray[];
+extern void	Init_scale_array(void);
+#define	WINSCALE(__n)	((__n) >= 0 ? scaleArray[(__n)] : -scaleArray[-(__n)])
+#else
+#define	WINSCALE(__n)	(__n)
+#endif
 
 #endif

@@ -1,3 +1,55 @@
+*********************************************************************
+Changes to xmapedit V4.2.0b to bring it up to V4.2.0c
+
+Removed armorHits, as this option
+won't be included in xpilot-4.2.0
+
+Daedlaes (jlmiller@ctitech.com) Mar 13, 2000.
+
+*********************************************************************
+Changes to xmapedit V4.2.0a to bring it up to V4.2.0b
+
+Switched to source code included in Xpilot distribution as it
+was more recent.
+
+Total check of all supported map options, out of date options removed
+current ones installed and updated.
+
+Alternative option names supported as of xpilot4.2.0
+
+Set some more reasomable defaults for some of the options.
+
+Xmapedit should now compile out as xp-mapedit.
+
+Added Install script for stand alone compilation.
+
+
+Daedlaes (jlmiller@ctitech.com) Mar 8, 2000.
+*********************************************************************
+Changes to xmapedit V3.6.2 to bring it up to V4.2.0a
+
+Reorgaized some of the preferences, adding the latest options
+that have shown up since the last release, now should be current
+with 4.2.0beta2.
+
+I've included the Imakefile that can be used if xmapedit is placed 
+in the xpilot source tree, in the folder "mapedit"
+
+Daedlaes (jlmiller@ctitech.com) Mar 5, 2000.
+*********************************************************************
+
+Changes to xmapedit V3.5.1c+Tuneup to V3.6.2
+
+Applied Vincent's patches.
+
+Put reasonable defaults in Imakefile.
+
+renamed to xmapedit 3.6.2 because that is the XPilot featureset 
+supported.
+
+Bucko (bucko@xpilot.org) Mar 3, 1998.
+
+*********************************************************************
 Changes to xmapedit V3.5.1c to bring it up to V3.5.1d
 
 * Fixed bug causing some of the yes/no options on the preference menu
@@ -42,4 +94,4 @@ Changes to xmapedit V1.00 to bring it up to V3.5.1b
 
   Robert Templeman, Jul 5, 1996.
 *********************************************************************
-$Id: README.UPDATE,v 1.2 1998/04/22 15:43:47 bert Exp $
+$Id: README.UPDATE,v 1.4 2000/03/13 18:20:04 bert Exp $

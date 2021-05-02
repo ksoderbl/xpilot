@@ -1,4 +1,4 @@
-/* $Id: Local.rules,v 4.0 1998/03/18 15:11:05 bert Exp $
+/* $Id: Local.rules,v 4.4 1999/10/12 18:55:04 bert Exp $
  *
  * NO NEED TO EDIT THIS FILE; ONLY EDIT Local.config.
  */
@@ -97,29 +97,22 @@ InstallProgram(program,$(INSTBINDIR))
 */
 #define MsubTarget(dest,src)						@@\
 AllTarget(dest)								@@\
-src:: $(MSUB)								@@\
-                                                                        @@\
-$(MSUB)::  								@@\
-	@echo "Checking $@ over in $(MSUBSRC) first.."; \		@@\
-	cd $(MSUBSRC); $(MAKE); \					@@\
-	echo "Okay, continuing in $(CURRENT_DIR)"			@@\
-                                                                        @@\
-dest: src								@@\
+dest: $(MSUB) src							@@\
 	$(MSUB) $(MSUBFLAGS) src >dest					@@\
 StuffToClean(dest)
 
 #define MsubTargetPersistent(dest,src)					@@\
 AllTarget(dest)								@@\
-src:: $(MSUB)								@@\
-                                                                        @@\
-$(MSUB)::  								@@\
-	@echo "Checking $@ over in $(MSUBSRC) first.."; \		@@\
-	cd $(MSUBSRC); $(MAKE); \					@@\
-	echo "Okay, continuing in $(CURRENT_DIR)"			@@\
-                                                                        @@\
-dest: src								@@\
+dest: $(MSUB) src							@@\
 	$(RM) dest							@@\
 	$(MSUB) $(MSUBFLAGS) src >dest
+
+/* Add MsubDepend once to each Imakefile which uses Msub Targets. */
+#define MsubDepend							@@\
+$(MSUB): $(MSUB).o $(MSUB).c						@@\
+	@echo "Checking $@ over in $(MSUBSRC) first.."; \		@@\
+	cd $(MSUBSRC) || exit 1; $(MAKE) || exit 1; \			@@\
+	echo "Okay, continuing in $(CURRENT_DIR)"
 
 
 /*
@@ -210,7 +203,7 @@ target::								@@\
 		*) imaketop=$$newtop/$(TOP) \				@@\
 		   imakeprefix=$$newtop/ ;; \				@@\
 		esac; \							@@\
-		cd $$i; \						@@\
+		cd $$i || exit 1; \					@@\
 		$(RM) Makefile.bak;	 \				@@\
 		if [ -f Makefile ]; then \				@@\
 			echo "	$(MV) Makefile Makefile.bak"; \		@@\
@@ -222,7 +215,7 @@ target::								@@\
 			ImakeSubCmdHelper -DTOPDIR=$$imaketop -DCURDIR=$$curdir$$i; \ @@\
 		fi; \							@@\
 		$(MAKE) $(MFLAGS) Makefiles; \				@@\
-		cd $$newtop; \						@@\
+		cd $$newtop || exit 1; \				@@\
 	done
 
 #ifdef ImakeSubCmdHelper
@@ -234,6 +227,26 @@ target::								@@\
 #define ImakeSubCmdHelper $$imakeprefix$(IMAKE) -I$$imakeprefix$(IRULESRC) $(IMAKE_DEFINES)
 #endif
 
+
+
+#ifndef CtagFiles
+#define CtagFiles(extra)						@@\
+ctags::									@@\
+	$(CTAGS) $(CTAGOPTIONS) extra
+#endif /* CtagFiles */
+
+
+#ifndef CtagSubdirs
+#define CtagSubdirs(extra)						@@\
+ctags::									@@\
+	@for flag in ${MAKEFLAGS} ''; do \				@@\
+	case "$$flag" in *=*) ;; *[ik]*) set +e;; esac; done; \		@@\
+	for i in extra ;\						@@\
+	do \								@@\
+	echo "tagging" "in $(CURRENT_DIR)/$$i..."; \			@@\
+	$(MAKE) -C $$i CTAGS='$(CTAGS)' CTAGOPTIONS='$(CTAGOPTIONS)' ctags; \	@@\
+	done
+#endif /* CtagSubdirs */
 
 
 #ifndef StuffToClean

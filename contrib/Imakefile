@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.1 1998/03/21 20:12:19 bert Exp $ */
+/* $Id: Imakefile,v 4.2 1999/10/08 17:26:36 bert Exp $ */
 
 #include "Local.config"
 
@@ -13,4 +13,4 @@ MakefileSubdirs($(SUBDIRS))
 CleanSubdirs($(SUBDIRS))
 InstallSubdirs($(SUBDIRS))
 InstallManSubdirs($(SUBDIRS))
-TagSubdirs($(SUBDIRS))
+/* CtagSubdirs($(SUBDIRS)) */

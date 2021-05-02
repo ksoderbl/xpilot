@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 4.1 1998/04/16 17:40:51 bert Exp $
+/* $Id: portability.h,v 4.2 1999/10/20 19:35:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -106,5 +106,10 @@ extern	int ServerKilled;
  */
 extern int Get_process_id(void);	/* getpid */
 extern void Get_login_name(char *buf, int size);
+
+/*
+ * Prototypes for other (ANSI C library) wrapper functions.
+ */
+extern void move_memory(void *dst, void *src, size_t len);
 
 #endif /* PORTABILITY_H_INCLUDED */

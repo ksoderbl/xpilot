@@ -1,4 +1,4 @@
-/* $Id: winX.c,v 4.1 1998/04/16 17:41:05 bert Exp $
+/* $Id: winX.c,v 4.2 1999/11/06 16:33:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -28,7 +28,7 @@
 *  This file is mostly Win32 translations of the X calls that xpilot uses.	*
 *  Anything starting with WinX is a special wedge function that i needed	*
 *																			*
-*  $Id: winX.c,v 4.1 1998/04/16 17:41:05 bert Exp $						*
+*  $Id: winX.c,v 4.2 1999/11/06 16:33:48 bert Exp $						*
 \***************************************************************************/
 #include "winX.h"
 #include "windows.h"
@@ -116,7 +116,7 @@ static void WinXSetupRadarWindow()
 				if (bHasPal)
 				{
 					SelectPalette(hNewDC, myPal, FALSE);
-					RealizePalette(myPal);
+					RealizePalette(hNewDC);
 				}
 			}
 		}

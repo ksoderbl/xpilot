@@ -1,4 +1,4 @@
-/* $Id: metaserver.c,v 4.5 1998/04/16 17:41:37 bert Exp $
+/* $Id: metaserver.c,v 4.7 1999/10/17 12:48:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -64,7 +64,7 @@ char metaserver_version[] = VERSION;
 
 #ifndef	lint
 char sourceid[] =
-    "@(#)$Id: metaserver.c,v 4.5 1998/04/16 17:41:37 bert Exp $";
+    "@(#)$Id: metaserver.c,v 4.7 1999/10/17 12:48:09 bert Exp $";
 #endif
 
 struct MetaServer {
@@ -138,7 +138,7 @@ void Meta_init(int fd)
     }
 
 #ifndef SILENT
-    xpprintf("%s Locating Meta... ", showtime()); fflush(stdout);
+    xpprintf("%s Locating Internet Meta server... ", showtime()); fflush(stdout);
 #endif
     for (i = 0; i < NELEM(meta_servers); i++) {
 	addr = GetAddrByName(meta_servers[i].name);
@@ -237,7 +237,7 @@ void Meta_update(int change)
 	if (j) { freebases[j-1] = '\0'; }
     }
     else {
-	sprintf(freebases, "=%d", World.NumBases - num_active_players);
+	sprintf(freebases, "=%d", World.NumBases - num_active_players - login_in_progress);
     }
 
     sprintf(string,

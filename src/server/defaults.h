@@ -1,4 +1,4 @@
-/* $Id: defaults.h,v 4.1 1998/04/16 17:41:28 bert Exp $
+/* $Id: defaults.h,v 4.3 1999/08/31 19:36:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,6 +53,7 @@ typedef struct {
     enum valType	type;
     void		(*tuner)(void);
     const char		*helpLine;
+    const char*		mapperPos;	/* where in the xpmapper table this item appears */
 } optionDesc;
 
 optionDesc*	findOption(const char* name);

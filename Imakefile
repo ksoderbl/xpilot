@@ -1,8 +1,9 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:11:02 bert Exp $ */
+/* $Id: Imakefile,v 4.2 1999/10/16 10:57:27 bert Exp $ */
 
 #include "Local.config"
 
 MsubTargetPersistent(README.txt,README.txt.msub)
+MsubDepend
 AllTarget(README.txt)
 
 /*
@@ -18,7 +19,7 @@ AllTarget(README.txt)
    INSTALLSUBDIRS =             src lib			/* make install */
   INCLUDESSUBDIRS =             src			/* make includes */
 INSTALLMANSUBDIRS = doc					/* make install.man */
-       TAGSUBDIRS = 					/* make tag */
+       TAGSUBDIRS =             src			/* make tag */
 
 MakeSubdirs($(SUBDIRS))
 DependSubdirs($(DEPSUBDIRS))
@@ -27,4 +28,4 @@ MakefileSubdirs($(MAKEFILESUBDIRS))
 IncludesSubdirs($(INCLUDESSUBDIRS))
 InstallSubdirs($(INSTALLSUBDIRS))
 InstallManSubdirs($(INSTALLMANSUBDIRS))
-TagSubdirs($(TAGSUBDIRS))
+CtagSubdirs($(TAGSUBDIRS))

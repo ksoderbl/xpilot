@@ -1,4 +1,4 @@
-/* $Id: const.h,v 4.5 1998/08/29 19:49:53 bert Exp $
+/* $Id: const.h,v 4.14 1999/11/10 21:03:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -233,7 +233,10 @@ extern DFLOAT		tbl_cos[];
 
 #define NUM_MODBANKS		4
 
-#define MAX_TOTAL_SHOTS		16384
+#define MAX_TOTAL_SHOTS		16384	/* must be <= 65536 */
+#define MAX_TOTAL_PULSES	(5 * 64)
+#define MAX_TOTAL_ECMS		64
+#define MAX_TOTAL_TRANSPORTERS	(2 * 64)
 
 #define SPEED_LIMIT		65.0
 #define MAX_PLAYER_TURNSPEED	64.0
@@ -254,7 +257,7 @@ extern DFLOAT		tbl_cos[];
 #define REFUEL_RATE		(5<<FUEL_SCALE_BITS)
 #define ENERGY_PACK_FUEL        ((500+(rand()&511))<<FUEL_SCALE_BITS)
 #define DEFAULT_PLAYER_FUEL	(1000<<FUEL_SCALE_BITS)
-#define FUEL_NOTIFY             (16*FPS)
+#define FUEL_NOTIFY             (3*FPS)
 
 #define TARGET_DEAD_TIME	(FPS * 60)
 #define TARGET_DAMAGE		(250<<FUEL_SCALE_BITS)
@@ -282,6 +285,8 @@ extern DFLOAT		tbl_cos[];
 
 #define THRUST_MASS             0.7
 
+#define ARMOR_MASS		(ShipMass / 14)
+
 #define MAX_TANKS               8
 #define TANK_MASS               (ShipMass/10)
 #define TANK_CAP(n)             (!(n)?MAX_PLAYER_FUEL:(MAX_PLAYER_FUEL/3))
@@ -293,7 +298,12 @@ extern DFLOAT		tbl_cos[];
 
 #define GRAVS_POWER		2.7
 
-#define SHIP_SZ		        14  /* Size (pixels) of radius for legal HIT! */
+/*
+ * Size (pixels) of radius for legal HIT!
+ * Was 14 until 4.2. Increased due to `analytical collision detection'
+ * which inspects a real circle and not just a square anymore.
+ */
+#define SHIP_SZ		        16
 #define VISIBILITY_DISTANCE	1000.0
 #define WARNING_DISTANCE	(VISIBILITY_DISTANCE*0.8)
 
@@ -386,8 +396,18 @@ extern DFLOAT		tbl_cos[];
 
 #define ENERGY_RANGE_FACTOR	(2.5/FUEL_SCALE_FACT)
 
+/* map dimension limitation: ((0x7FFF - 1280) / 35) */
+#define MAX_MAP_SIZE		900
+
 #define WORM_BRAKE_FACTOR	1
 #define WORMCOUNT		64
+
+#ifndef FALSE
+#define FALSE   0
+#endif
+#ifndef TRUE
+#define TRUE    1
+#endif
 
 #ifdef __GNUC__
 #define	INLINE	inline

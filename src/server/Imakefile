@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.1 1998/08/30 12:15:34 bert Exp $ */
+/* $Id: Imakefile,v 4.6 1999/11/07 11:57:30 bert Exp $ */
 
 TOP=../..
 
@@ -19,6 +19,9 @@ DEFS_SERVER_SOUND = -DSERVER_SOUND
 #ifdef PlockServer
 DEFS_PLOCKSERVER = -DPLOCKSERVER
 #endif
+#ifdef XPilotDevelopment
+DEFS_DEBUG = -DDEVELOPMENT
+#endif
 
 /*
  * Assemble defines and includes.
@@ -30,22 +33,23 @@ DEFS_PLOCKSERVER = -DPLOCKSERVER
  * or in the Local.config file.
  *
  */
-DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
-       -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
+DEFINES = \
        $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
-       $(DEFS_PLOCKSERVER) $(DEFS_OTHER)
+       $(DEFS_PLOCKSERVER) $(DEFS_OTHER) $(DEFS_DEBUG)
 INCLUDES = $(AUDIOINC) -I../common/ -I../lib/
 
+# keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = \
-	cannon.c cmdline.c collision.c contact.c event.c frame.c id.c map.c \
-	metaserver.c netserver.c objpos.c option.c play.c player.c \
-	robot.c robotdef.c rules.c saudio.c sched.c server.c \
+	cannon.c cmdline.c collision.c contact.c event.c frame.c id.c item.c \
+	map.c metaserver.c netserver.c objpos.c option.c play.c player.c \
+	robot.c robotdef.c rules.c saudio.c sched.c server.c ship.c shot.c \
 	update.c walls.c
 
+# keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = \
-	cannon.o cmdline.o collision.o contact.o event.o frame.o id.o map.o \
-	metaserver.o netserver.o objpos.o option.o play.o player.o \
-	robot.o robotdef.o rules.o saudio.o sched.o server.o \
+	cannon.o cmdline.o collision.o contact.o event.o frame.o id.o item.o \
+	map.o metaserver.o netserver.o objpos.o option.o play.o player.o \
+	robot.o robotdef.o rules.o saudio.o sched.o server.o ship.o shot.o \
 	update.o walls.o
 
 DEPLIBS = ../common/libxpcommon.a 
@@ -53,4 +57,5 @@ DEPLIBS = ../common/libxpcommon.a
 PROGRAMS = xpilots
 
 ProgramTarget(xpilots,../common/libxpcommon.a,$(MATHLIB) $(EXTRALIB))
-
+COMMON = ../common/
+CtagFiles(*.[ch] $(COMMON)*.[ch])

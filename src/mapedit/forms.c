@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: forms.c,v 1.3 1998/04/23 19:44:10 bert Exp $
+ * $Id: forms.c,v 1.4 2000/03/11 20:25:58 bert Exp $
  */
 
 #include                 "main.h"
@@ -80,9 +80,9 @@ void BuildMapwinForm(void)
         ZoomOut);
 
    T_FormStringEntry(mapwin,"map_name",5,TOOLSHEIGHT-TOOLSWIDTH-90,
-        TOOLSWIDTH-10,20,0,-20,"Map Name:",map.name,sizeof(max_str_t)-1,NULL);
+        TOOLSWIDTH-10,20,0,-20,"Map Name:",map.mapName,sizeof(max_str_t)-1,NULL);
    T_FormStringEntry(mapwin,"map_author",5,TOOLSHEIGHT-TOOLSWIDTH-50,
-        TOOLSWIDTH-10,20,0,-20,"Map Author:",map.author,
+        TOOLSWIDTH-10,20,0,-20,"Map Author:",map.mapAuthor,
         sizeof(max_str_t)-1,NULL);
    T_FormStringEntry(mapwin,"map_width",(int)(TOOLSWIDTH/2-45),
         TOOLSHEIGHT-TOOLSWIDTH-25, 40,20,-50,0,"Width:", map.width_str,

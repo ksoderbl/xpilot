@@ -1,4 +1,4 @@
-/* $Id: config.h,v 4.2 1998/04/17 11:40:51 bert Exp $
+/* $Id: config.h,v 4.4 1999/11/07 12:24:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -24,108 +24,6 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-
-/*
- * Configure these, that's what they're here for.
- * Explanation about all these compile time configuration options
- * is in the Makefile.std and in the Imakefile.
- */
-#ifndef LOCALGURU
-#    define LOCALGURU		"xpilot@xpilot.org"
-#endif
-
-#ifndef	DEFAULT_MAP
-#	ifdef	_WINDOWS
-#		define DEFAULT_MAP		"default.xp"
-#	else
-#		define DEFAULT_MAP		"globe.xp"
-#	endif
-#endif
-
-#ifndef LIBDIR
-#    ifdef VMS
-#        define LIBPREFIX	"lib_disk:[lib.xgames.xpilot341.lib"
-#        define LIBDIR		LIBPREFIX "]"
-#    elif defined(_WINDOWS)
-#        define LIBDIR		"lib/"
-#	 else
-#        define LIBDIR		"/usr/local/games/lib/xpilot/"
-#    endif
-#endif
-
-#ifndef DEFAULTS_FILE_NAME
-#    if defined(_WINDOWS)
-#        define DEFAULTS_FILE_NAME	LIBDIR "defaults.txt"
-#    else
-#        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
-#    endif
-#endif
-#ifndef ROBOTFILE
-#    if defined(_WINDOWS)
-#		 define	ROBOTFILE	LIBDIR "robots.txt"
-#    else
-#        define ROBOTFILE	LIBDIR "robots"
-#    endif
-#endif
-#ifndef SERVERMOTDFILE
-#    if defined(_WINDOWS)
-#		 define	SERVERMOTDFILE	LIBDIR "servermotd.txt"
-#	 else
-#        define SERVERMOTDFILE	LIBDIR "servermotd"
-#    endif
-#endif
-#ifndef LOCALMOTDFILE
-#    if defined(_WINDOWS)
-#		 define	LOCALMOTDFILE	LIBDIR "localmotd.txt"
-#    else
-#        define LOCALMOTDFILE	LIBDIR "localmotd"
-#    endif
-#endif
-#ifndef LOGFILE
-#	 if defined(_WINDOWS)
-#		define	LOGFILE		LIBDIR "log.txt"
-#    else
-#        define LOGFILE		LIBDIR "log"
-#    endif
-#endif
-#ifndef MAPDIR
-#    ifdef VMS
-#        define MAPDIR		LIBPREFIX ".maps]"
-#    else
-#        define MAPDIR		LIBDIR "maps/"
-#    endif
-#endif
-#ifndef SHIP_FILE
-#    ifdef VMS
-#        define SHIP_FILE       LIBDIR "tkxpi.shp"
-#    elif defined(_WINDOWS)
-#		 define SHIP_FILE		"XPilot.shp"
-#	 else
-#        define SHIP_FILE       ""
-#    endif
-#endif
-#ifndef TEXTUREDIR
-#    ifdef VMS
-#        define TEXTUREDIR	LIBPREFIX ".textures]"
-#    else
-#        define TEXTUREDIR	LIBDIR "textures/"
-#    endif
-#endif
-#ifndef	SOUNDDIR
-#    ifdef VMS
-#        define SOUNDDIR	LIBPREFIX ".sound]"
-#    else
-#        define SOUNDDIR	LIBDIR "sound/"
-#    endif
-#endif
-
-#ifndef SOUNDFILE
-#    if defined(_WINDOWS)
-#        define SOUNDFILE	SOUNDDIR "sounds.txt"
-#    else
-#        define SOUNDFILE	SOUNDDIR "sounds"
-#    endif
-#endif
 
 #ifdef MOD2
 #error "MOD2 already defined - config.h should be included before const.h"
@@ -164,19 +62,6 @@
 #    define COMPRESSED_MAPS
 #endif
 
-#ifndef ZCAT_EXT
-#    define ZCAT_EXT	".gz"
-#endif
-
-#ifndef ZCAT_FORMAT
-#    define ZCAT_FORMAT "gzip -d -c < %s"
-#endif
-
-/*
- * Leave these alone.
- */
-#define REPORT_ADDRESS	"xpilot@xpilot.org"
-
 #ifdef	_WINDOWS
 #	ifdef	_DEBUG
 #		define	DEBUG	1
@@ -205,5 +90,22 @@
 #else
 #	define	xpprintf	printf
 #endif
+
+char *Conf_libdir(void);
+char *Conf_defaults_file_name(void);
+char *Conf_mapdir(void);
+char *Conf_default_map(void);
+char *Conf_servermotdfile(void);
+char *Conf_localmotdfile(void);
+char *Conf_logfile(void);
+char *Conf_ship_file(void);
+char *Conf_mapdir(void);
+char *Conf_texturedir(void);
+char *Conf_sounddir(void);
+char *Conf_soundfile(void);
+char *Conf_localguru(void);
+char *Conf_robotfile(void);
+char *Conf_zcat_ext(void);
+char *Conf_zcat_format(void);
 
 #endif /* CONFIG_H */

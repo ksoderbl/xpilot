@@ -1,4 +1,4 @@
-/* $Id: event.c,v 4.6 1998/09/25 14:21:46 bert Exp $
+/* $Id: event.c,v 4.13 1999/09/23 14:32:40 svenske Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -47,7 +47,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 4.6 1998/09/25 14:21:46 bert Exp $";
+    "@(#)$Id: event.c,v 4.13 1999/09/23 14:32:40 svenske Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}
@@ -169,6 +169,22 @@ bool Player_lock_allowed(int ind, int lock)
     return false;
 }
 
+/*
+ * Sven Mascheck:
+ * If all _opponents are paused, then even LOCK_NEXT (ot LOCK_PREV)
+ * might not lock_next (or lock_prev), as Player_lock_closest() might
+ * be called  [ "event.c" line 466 ] :
+ * This happens when the player is not locked on any one anymore -
+ * and this happens if he tried to lock_closest before (if all
+ * opponents are paused).
+ * Player_lock_closest() is called with (ind, 0) and that means that
+ * the lock is cleared in _any case_ with the current code - that could
+ * be done without calling Player_lock_closest().
+ * (btw, code in Player_lock_closest() looks like 'evolutionary code :)
+ * I am not sure where to fix that locking problem
+ * ( in "case KEY_LOCK_NEXT" or in Player_lock_closest() ).
+ * I tried to find a solution but now i am bit screwed up..  :)
+ */
 int Player_lock_closest(int ind, int next)
 {
     player *pl = Players[ind];
@@ -192,7 +208,8 @@ int Player_lock_closest(int ind, int next)
     for (i = 0; i < NumPlayers; i++) {
 	if (i == lock
 	    || (BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING)
-	    || !Player_lock_allowed(ind, i)) {
+	    || !Player_lock_allowed(ind, i)
+	    || TEAM(ind,i)) {
 	    continue;
 	}
 	l = Wrap_length(Players[i]->pos.x - pl->pos.x,
@@ -295,7 +312,8 @@ int Handle_keyboard(int ind)
 	}
 	pressed = BITV_ISSET(pl->last_keyv, key) != 0;
 	BITV_TOGGLE(pl->prev_keyv, key);
-	pl->frame_last_busy = frame_loops;
+	if (key != KEY_SHIELD)	/* would interfere with auto-idle-pause.. */
+	    pl->frame_last_busy = frame_loops;	/* due to client auto-shield */
 
 	/*
 	 * Allow these functions before a round has started.
@@ -478,7 +496,7 @@ int Handle_keyboard(int ind)
 		    if (i == j)
 			break;
 		} while (i == ind
-			 || BIT(Players[i]->status, GAME_OVER)
+			 || BIT(Players[i]->status, GAME_OVER|PAUSE)
 			 || !Player_lock_allowed(ind, i));
 		if (i == ind) {
 		    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
@@ -715,7 +733,8 @@ int Handle_keyboard(int ind)
 			*l = pl->lock.pl_id;
 		    }
 		} else {
-		    if (Player_lock_allowed(ind, *l)) {
+		    if (*l != NOT_CONNECTED
+			    && Player_lock_allowed(ind, GetInd[*l])) {
 			pl->lock.pl_id = *l;
 			SET_BIT(pl->lock.tagged, LOCK_PLAYER);
 		    }
@@ -782,7 +801,7 @@ int Handle_keyboard(int ind)
 		    j = World.base[pl->home_base].pos.x;
 		    k = World.base[pl->home_base].pos.y;
 		    if (j == xi && k == yi) {
-			minv = 1.0f;
+			minv = 3.0f;
 			i = PAUSE;
 		    } else {
 			/*

@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.1 1998/04/22 15:52:54 bert Exp $ */
+/* $Id: Imakefile,v 4.2 1999/10/08 17:26:37 bert Exp $ */
 
 TOPDIR=..
 
@@ -17,7 +17,7 @@ TOPDIR=..
    INSTALLSUBDIRS =        client server replay mapedit		/* make install */
   INCLUDESSUBDIRS = common					/* make includes */
 INSTALLMANSUBDIRS = 						/* make install.man */
-       TAGSUBDIRS = 						/* make tag */
+       TAGSUBDIRS = common client server					/* make tag */
 
 MakeSubdirs($(SUBDIRS))
 DependSubdirs($(DEPSUBDIRS))
@@ -26,5 +26,5 @@ MakefileSubdirs($(MAKEFILESUBDIRS))
 IncludesSubdirs($(INCLUDESSUBDIRS))
 InstallSubdirs($(INSTALLSUBDIRS))
 InstallManSubdirs($(INSTALLMANSUBDIRS))
-TagSubdirs($(TAGSUBDIRS))
+CtagSubdirs($(TAGSUBDIRS))
 

@@ -1,4 +1,4 @@
-/* $Id: object.h,v 4.2 1998/08/29 19:49:55 bert Exp $
+/* $Id: object.h,v 4.5 1999/10/10 18:44:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -85,6 +85,7 @@
 #define OBJ_ITEM		(1U<<25)
 #define OBJ_WRECKAGE		(1U<<26)
 #define OBJ_MIRROR		(1U<<27)
+#define OBJ_ARMOR		(1U<<28)
 
 /*
  * Some object types are overloaded.
@@ -344,7 +345,7 @@ struct player {
     int		lose_item_state;	/* lose item key state, 2=up,1=down */
 
     DFLOAT	auto_power_s;		/* autopilot saves of current */
-    DFLOAT	auto_turnacc_s;		/* power, turnacc, turnspeed and */
+					/* power, turnspeed and */
     DFLOAT	auto_turnspeed_s;	/* turnresistance settings. Restored */
     DFLOAT	auto_turnresistance_s;	/* when autopilot turned off */
     modifiers	modbank[NUM_MODBANKS];	/* useful modifier settings */

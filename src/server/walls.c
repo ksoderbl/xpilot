@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 4.10 1998/09/04 15:04:23 dick Exp $
+/* $Id: walls.c,v 4.17 1999/11/16 18:05:15 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -760,7 +760,8 @@ static void Move_segment(move_state_t *ms)
 	if (!mi->cannon_crashes) {
 	    break;
 	}
-	if (BIT(mi->obj->status, FROMCANNON)) {
+	if (BIT(mi->obj->status, FROMCANNON)
+	    && !BIT(World.rules->mode, TEAM_PLAY)) {
 	    break;
 	}
 	for (i = 0; ; i++) {
@@ -772,7 +773,8 @@ static void Move_segment(move_state_t *ms)
 	ms->cannon = i;
 
 	if (BIT(World.rules->mode, TEAM_PLAY)
-	    && teamImmunity
+	    && (teamImmunity
+		|| BIT(mi->obj->status, FROMCANNON))
 	    && mi->obj->team == World.cannon[i].team) {
 	    break;
 	}
@@ -990,8 +992,8 @@ static void Move_segment(move_state_t *ms)
 		    Set_message(msg);
 		    break;
 		}
-		mi->obj->life = 0;
 		if (mi->obj->owner == -1) {
+		    mi->obj->life = 0;
 		    return;
 		}
 		if (World.treasures[ms->treasure].team ==
@@ -1000,10 +1002,14 @@ static void Move_segment(move_state_t *ms)
 		     * Ball has been brought back to home treasure.
 		     * The team should be punished.
 		     */
+		    sprintf(msg," < The ball was loose for %ld frames >",
+			    LONG_MAX - mi->obj->life);
+		    Set_message(msg);
 		    if (Punish_team(GetInd[mi->obj->owner],
 				    mi->obj->treasure, ms->treasure))
 			CLR_BIT(mi->obj->status, RECREATE);
 		}
+		mi->obj->life = 0;
 		return;
 	    }
 	}
@@ -1492,7 +1498,7 @@ static void Move_segment(move_state_t *ms)
 	     * More than one bounce possible.
 	     * Pick one randomly.
 	     */
-	    count = rand() % count;
+	    count = (int)(rfrac() * count);
 	    for (bit = 1; bit <= wall_bounce; bit <<= 1) {
 		if (wall_bounce & bit) {
 		    if (count == 0) {
@@ -1817,6 +1823,27 @@ static void Object_crash(move_state_t *ms)
 
     case CrashWall:
 	obj->life = 0;
+#if 0
+/* GK: - Added sparks to wallcrashes for objects != OBJ_SPARK|OBJ_DEBRIS.
+**       I'm not sure of the amount of sparks or the direction.
+*/
+	if (!BIT(obj->type, OBJ_SPARK | OBJ_DEBRIS)) {
+	    Make_debris(CLICK_TO_FLOAT(ms->pos.x),
+			CLICK_TO_FLOAT(ms->pos.y),
+			0, 0,
+			obj->owner,
+			obj->team,
+			OBJ_SPARK,
+			(obj->mass * VECTOR_LENGTH(obj->vel)) / 3,
+			GRAVITY,
+			RED,
+			1,
+			5, 10,
+			MOD2(ms->dir - RES/4, RES), MOD2(ms->dir + RES/4, RES),
+			15, 25,
+			5, 15);
+	}
+#endif
 	break;
 
     case CrashUniverse:
@@ -1828,7 +1855,10 @@ static void Object_crash(move_state_t *ms)
 	if (BIT(obj->type, OBJ_ITEM)) {
 	    Cannon_add_item(ms->cannon, obj->info, obj->count);
 	} else {
-	    Cannon_dies(ms);
+	    if (World.cannon[ms->cannon].item[ITEM_ARMOR] > 0)
+		World.cannon[ms->cannon].item[ITEM_ARMOR]--;
+	    else
+		Cannon_dies(ms);
 	}
 	break;
 
@@ -1893,7 +1923,8 @@ void Move_object(int ind)
 		break;
 	    }
 	    if (ms.bounce && ms.bounce != BounceEdge) {
-		obj->life = (long)(obj->life * objectWallBounceLifeFactor);
+		if (obj->type != OBJ_BALL)
+		    obj->life = (long)(obj->life * objectWallBounceLifeFactor);
 		if (obj->life <= 0) {
 		    break;
 		}
@@ -2290,7 +2321,7 @@ void Move_player(int ind)
 		}
 		else if ((ms[bounce].bounce == BounceEdge)
 		    == (ms[i].bounce == BounceEdge)) {
-		    if ((rand() % (pl->ship->num_points - bounce)) == i) {
+		    if ((int)(rfrac() * (pl->ship->num_points - bounce)) == i) {
 			bounce = i;
 		    }
 		}

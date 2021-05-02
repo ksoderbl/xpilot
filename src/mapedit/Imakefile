@@ -9,8 +9,8 @@ SRCS = main.c expose.c events.c tools.c file.c round.c help.c grow.c \
 
 OBJS = $(SRCS:.c=.o)
 
-#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
-					/* that doesn't have XLIBONLY. */
+#if !defined(sgiCCoptions)/* A hack that should mack everyone */
+/* that doesn't have XLIBONLY. */
 X_LIB = $(XLIB)
 #else
 X_LIB = $(XLIBONLY)

@@ -1,4 +1,11 @@
-* Alter the Imakefile.  Specify the compiler.
+* if xmapedit is being installed with xpilot, simply build xpilot as instructed
+  by */xpilot-****/Install.txt
+
+
+* If xmapedit is being installed apart from the xpilot source,
+  run "Install". (This sets up the local Imakefile).
+
+* Alter the new Imakefile.  Specify the compiler.
   Edit the MAPDIR variable to point to the place where you keep your XPilot maps.
 
 * Alter the defaults.h file if you want to, otherwise leave alone
@@ -8,17 +15,19 @@
 
 * make
 
-Or if you don't have xmkmf or it doesn't work try fiddling with the original
-makefile, called Makefile.dist
 
-Send bugs, comments, etc. to  wad2@lehigh.edu
+Or if you don't have xmkmf or it doesn't work try fiddling with the original makefile,
+called Makefile.dist.
+
+Send bugs, comments, etc. to  jlmiller@ctitech.com
+or                            wad2@lehigh.edu
 or                            mbcaprt@mphhpd.ph.man.ac.uk
 
 The original author Aaron Averill can no longer be contacted.
 He donated xmapedit to XPilot <xpilot@xpilot.org> provided that his
 name remains clearly recognizable as the principal author of xmapedit.
-The changes made by William Docter and Robert Templeman were donated
-to XPilot provided that xmapedit remains free and the source code
+The changes made by William Docter, Robert Templeman, and Jarrod Miller were
+donated to XPilot provided that xmapedit remains free and the source code
 available to the public.
 
-$Id: README,v 1.2 1998/04/22 15:43:46 bert Exp $
+$Id: README,v 1.3 2000/03/11 20:25:58 bert Exp $

@@ -1,4 +1,4 @@
-/* $Id: protoclient.h,v 4.1 1998/04/16 17:39:39 bert Exp $
+/* $Id: protoclient.h,v 4.7 1999/11/06 17:37:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -51,10 +51,18 @@ int Colors_init(void);
 void Colors_cleanup(void);
 
 /*
+ * datagram.c
+ */
+int create_dgram_addr_socket(char *dotaddr, int port);
+int create_dgram_socket(int port);
+void close_dgram_socket(int fd);
+
+/*
  * default.c
  */
 extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-			  int *my_team, int *list, int *join, int *noLocalMotd,
+			  int *my_team, int *text, int *list,
+			  int *join, int *noLocalMotd,
 			  char *nickName, char *dispName, char *shut_msg);
 extern void defaultCleanup(void);				/* memory cleanup */
 
@@ -86,15 +94,6 @@ extern int OFF(char *optval);
  */
 extern void paintdataCleanup(void);		/* memory cleanup */
 
-#ifdef	WINDOWSCALING
-extern int	scaleArray[];
-extern void	init_ScaleArray();
-#define	WINSCALE(__n)	((__n) >= 0 ? scaleArray[(__n)] : -scaleArray[-(__n)])
-#else
-#define	WINSCALE(__n)	(__n)
-#endif
-
-
 /*
  * paintobjects.c
  */
@@ -117,9 +116,31 @@ extern void Record_cleanup(void);
 extern void Record_init(char *filename);
 
 /*
+ * textinterface.c
+ */
+#ifdef CONNECTPARAM_H
+int Connect_to_server(int auto_connect, int list_servers,
+		      int auto_shutdown, char *shutdown_reason,
+		      Connect_param_t *conpar);
+int Contact_servers(int count, char **servers,
+                    int auto_connect, int list_servers,
+                    int auto_shutdown, char *shutdown_message,
+                    int find_max, int *num_found,
+                    char **server_addresses, char **server_names,
+                    Connect_param_t *conpar);
+#endif
+
+/*
  * usleep.c
  */
 extern int micro_delay(unsigned usec);
+
+/*
+ * welcome.c
+ */
+#ifdef CONNECTPARAM_H
+int Welcome_screen(Connect_param_t *conpar);
+#endif
 
 /*
  * widget.c

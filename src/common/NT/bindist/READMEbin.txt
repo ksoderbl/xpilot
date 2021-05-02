@@ -1,7 +1,7 @@
 This is the README for XPilot.exe Release 13 .
-XPilot.exe is based on 4.1.0 .
+XPilot.exe is based on 4.2.0 .
 
-Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
+Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
 The documentation for XPilot is far from complete.
 
@@ -25,4 +25,4 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
 
-$Id: READMEbin.txt.msub,v 1.2 1998/04/19 19:27:20 dick Exp $
+$Id: READMEbin.txt,v 1.34 2000/03/13 19:09:52 bert Exp $

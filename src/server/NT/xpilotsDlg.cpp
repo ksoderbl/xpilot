@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.cpp,v 4.2 1998/04/16 17:42:24 bert Exp $
+/* $Id: xpilotsDlg.cpp,v 4.3 1999/01/14 08:47:42 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.cpp - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.cpp,v 4.2 1998/04/16 17:42:24 bert Exp $				*
+*  $Id: xpilotsDlg.cpp,v 4.3 1999/01/14 08:47:42 dick Exp $				*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -225,7 +225,7 @@ BOOL CXpilotsDlg::OnInitDialog()
 	rect.left = theApp.GetProfileInt(s_WindowMet, s_L, -1);
 	rect.top = theApp.GetProfileInt(s_WindowMet, s_T, -1);
 	m_commandline = theApp.GetProfileString(s_Commline, s_Commline, NULL);
-	if (!(rect.left == rect.right == -1))	// only move window to valid coordinates
+	if (!(rect.left = rect.right == -1))	// only move window to valid coordinates
 		MoveWindow(rect.left, rect.top, width, height);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control

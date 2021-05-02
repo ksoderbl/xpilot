@@ -1,4 +1,4 @@
-/* $Id: configure.h,v 4.1 1998/04/16 17:39:17 bert Exp $
+/* $Id: configure.h,v 4.2 1999/10/07 16:45:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -26,6 +26,7 @@
 #define	CONFIGURE_H
 
 int Config(bool);
+void Config_redraw(void);
 void Config_resize(void);
 void Config_destroy(void);
 

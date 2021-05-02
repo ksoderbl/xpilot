@@ -23,24 +23,23 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: default_colors.h,v 1.2 1998/04/22 15:43:59 bert Exp $
+ * $Id: default_colors.h,v 1.3 2000/03/11 20:25:58 bert Exp $
  */
-
 #define COLOR_BACKGROUND "black"
-#define COLOR_FOREGROUND  "gray85"
+#define COLOR_FOREGROUND  "gray"
 #define COLOR_HIGHLIGHT  "white"
-#define COLOR_SHADOW     "gray80"
+#define COLOR_SHADOW     "black"
 
-#define COLOR_WALL      "cyan"
-#define COLOR_DECOR     "orange"
+#define COLOR_WALL      "blue"
+#define COLOR_DECOR     "green"
 #define COLOR_FUEL      "red"
-#define COLOR_TREASURE  "pink"
-#define COLOR_TARGET    "pink"
-#define COLOR_ITEM_CONC "pink"
+#define COLOR_TREASURE  "white"
+#define COLOR_TARGET    "red"
+#define COLOR_ITEM_CONC "red"
 
-#define COLOR_GRAVITY   "green"
-#define COLOR_CURRENT   "green"
-#define COLOR_WORMHOLE  "green"
+#define COLOR_GRAVITY   "red"
+#define COLOR_CURRENT   "red"
+#define COLOR_WORMHOLE  "red"
 
 #define COLOR_BASE      "white"
-#define COLOR_CANNON    "purple"
+#define COLOR_CANNON    "white"

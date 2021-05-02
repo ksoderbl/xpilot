@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 4.3 1998/08/30 20:12:18 bert Exp $
+# $Id: Makefile.std,v 4.10 2000/03/11 19:18:03 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993-98 by
 #
@@ -139,7 +139,7 @@ LINUX_PROF = -pg -O2
 LINUX_CHECKER = -checker
 LINUX_PLUS = -g -O2 -x c++
 LINUX_MLIB = -lm
-LINUX_XLIB = -lX11
+LINUX_XLIB = -L/usr/X11R6/lib -lX11
 LINUX_LPLUS = $(LINUX_CFLAGS)
 
 
@@ -253,35 +253,43 @@ INCS = $(AUDIOINC) -I../common -I../client -I../../lib
 #
 # Common library libxpcommon.a
 #
-OBJS0 = checknames.o cmw.o error.o math.o net.o portability.o \
+OBJS0 = checknames.o cmw.o error.o list.o math.o net.o portability.o \
 	shipshape.o socklib.o strcasecmp.o strdup.o
 
-SRCS0 = checknames.c cmw.c error.c math.c net.c portability.c \
+SRCS0 = checknames.c cmw.c error.c list.c math.c net.c portability.c \
 	shipshape.c socklib.c strcasecmp.c strdup.c
 
 #
 # Client program xpilot
 #
-OBJS1 = about.o caudio.o client.o colors.o configure.o dbuff.o default.o \
-	join.o netclient.o paint.o paintdata.o painthud.o paintmap.o \
-	paintobjects.o paintradar.o query.o record.o syslimit.o talk.o \
-	texture.o usleep.o widget.o xevent.o xinit.o xpilot.o xpmread.o \
+OBJS1 = about.o caudio.o client.o colors.o configure.o \
+	datagram.o dbuff.o default.o gfx3d.o guimap.o guiobjects.o \
+	join.o netclient.o \
+	paint.o paintdata.o painthud.o paintmap.o \
+	paintobjects.o paintradar.o query.o record.o \
+	syslimit.o talk.o talkmacros.o textinterface.o texture.o \
+	usleep.o welcome.o widget.o \
+	xevent.o xinit.o xpilot.o xpmread.o \
 	$(AUDIOOBJ)
-SRCS1 = about.c caudio.c client.c colors.c configure.c dbuff.c default.c \
-	join.c netclient.c paint.c paintdata.c painthud.c paintmap.c \
-	paintobjects.c paintradar.c query.c record.c syslimit.c talk.c \
-	texture.c usleep.c widget.c xevent.c xinit.c xpilot.c xpmread.c \
+SRCS1 = about.c caudio.c client.c colors.c configure.c \
+	datagram.c dbuff.c default.c gfx3d.c guimap.c guiobjects.c \
+	join.c netclient.c \
+	paint.c paintdata.c painthud.c paintmap.c \
+	paintobjects.c paintradar.c query.c record.c \
+	syslimit.c talk.c talkmacros.c textinterface.c texture.c \
+	usleep.c welcome.c widget.c \
+	xevent.c xinit.c xpilot.c xpmread.c \
 	$(AUDIOSRC)
 
 #
 # Server program xpilots
 #
-OBJS2 = cannon.o cmdline.o collision.o contact.o event.o frame.o id.o map.o \
-	metaserver.o netserver.o objpos.o option.o play.o player.o robot.o \
-	robotdef.o rules.o saudio.o sched.o server.o update.o walls.o
-SRCS2 = cannon.c cmdline.c collision.c contact.c event.c frame.c id.c map.c \
-	metaserver.c netserver.c objpos.c option.c play.c player.c robot.c \
-	robotdef.c rules.c saudio.c sched.c server.c update.c walls.c
+OBJS2 = cannon.o cmdline.o collision.o contact.o event.o frame.o id.o item.o \
+	map.o metaserver.o netserver.o objpos.o option.o play.o player.o robot.o \
+	robotdef.o rules.o saudio.o sched.o server.o ship.o shot.o update.o walls.o
+SRCS2 = cannon.c cmdline.c collision.c contact.c event.c frame.c id.c item.o \
+	map.c metaserver.c netserver.c objpos.c option.c play.c player.c robot.c \
+	robotdef.c rules.c saudio.c sched.c server.c ship.c shot.c update.c walls.c
 
 #
 # Playback program xp-replay
@@ -670,100 +678,123 @@ xp-replay.o: ../client/items/itemEmergencyShield.xbm tools/eject.xbm
 xp-replay.o: tools/fastf.xbm tools/pause.xbm tools/play.xbm tools/record.xbm
 xp-replay.o: tools/revplay.xbm tools/rewind.xbm tools/stop.xbm
 buttons.o: buttons.h xp-replay.h tools/grey.xbm
-cmdline.o: ../common/version.h ../common/config.h ../common/const.h
-cmdline.o: ../common/types.h global.h object.h ../common/keys.h
-cmdline.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-cmdline.o: ../common/rules.h proto.h defaults.h ../common/error.h
-collision.o: ../common/version.h ../common/config.h ../common/const.h
-collision.o: ../common/types.h global.h object.h ../common/keys.h
-collision.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-collision.o: ../common/rules.h proto.h score.h saudio.h ../common/audio.h
-collision.o: netserver.h ../common/pack.h ../common/error.h objpos.h
-contact.o: ../common/version.h ../common/config.h ../common/types.h
-contact.o: ../common/const.h global.h object.h ../common/keys.h
-contact.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-contact.o: ../common/rules.h proto.h ../common/socklib.h ../common/pack.h
-contact.o: ../common/net.h netserver.h sched.h ../common/error.h
-event.o: ../common/version.h ../common/config.h ../common/const.h
-event.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-event.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-event.o: proto.h score.h saudio.h ../common/audio.h netserver.h
-frame.o: ../common/version.h ../common/config.h ../common/const.h
-frame.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-frame.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-frame.o: proto.h netserver.h saudio.h ../common/audio.h ../common/error.h
-id.o: ../common/version.h ../common/const.h ../common/types.h global.h
-id.o: object.h ../common/keys.h ../common/bit.h ../common/draw.h
-id.o: ../common/item.h click.h map.h ../common/rules.h proto.h
-id.o: ../common/error.h
-map.o: ../common/version.h ../common/config.h ../common/const.h
-map.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-map.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-map.o: proto.h ../common/error.h
-metaserver.o: ../common/config.h ../common/version.h ../common/const.h
-metaserver.o: ../common/types.h global.h object.h ../common/keys.h
-metaserver.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-metaserver.o: ../common/rules.h proto.h ../common/socklib.h ../common/pack.h
-metaserver.o: metaserver.h saudio.h ../common/audio.h ../common/error.h
-metaserver.o: netserver.h
-netserver.o: ../common/types.h ../common/version.h ../common/config.h
-netserver.o: ../common/const.h global.h object.h ../common/keys.h
-netserver.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-netserver.o: ../common/rules.h proto.h ../common/pack.h ../common/socklib.h
-netserver.o: sched.h ../common/net.h ../common/error.h netserver.h
-netserver.o: ../common/packet.h ../common/setup.h saudio.h ../common/audio.h
-objpos.o: ../common/version.h ../common/config.h ../common/const.h
-objpos.o: ../common/types.h global.h object.h ../common/keys.h
-objpos.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-objpos.o: ../common/rules.h proto.h objpos.h
-option.o: ../common/types.h ../common/version.h ../common/config.h
-option.o: ../common/const.h global.h object.h ../common/keys.h
-option.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-option.o: ../common/rules.h proto.h defaults.h ../common/error.h
-play.o: ../common/version.h ../common/config.h ../common/const.h
-play.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-play.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-play.o: proto.h score.h saudio.h ../common/audio.h netserver.h
-play.o: ../common/error.h objpos.h
-player.o: ../common/version.h ../common/config.h ../common/const.h
-player.o: ../common/types.h global.h object.h ../common/keys.h
-player.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-player.o: ../common/rules.h proto.h score.h netserver.h saudio.h
-player.o: ../common/audio.h ../common/error.h objpos.h
-robot.o: ../common/version.h ../common/config.h ../common/const.h
-robot.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-robot.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-robot.o: proto.h score.h saudio.h ../common/audio.h netserver.h
-robot.o: ../common/pack.h robot.h ../common/error.h
-robotdef.o: ../common/version.h ../common/config.h ../common/const.h
-robotdef.o: ../common/types.h global.h object.h ../common/keys.h
-robotdef.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-robotdef.o: ../common/rules.h proto.h score.h saudio.h ../common/audio.h
-robotdef.o: netserver.h ../common/pack.h robot.h ../common/error.h
-rules.o: ../common/version.h ../common/config.h ../common/const.h
-rules.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-rules.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-rules.o: proto.h
-saudio.o: ../common/version.h ../common/config.h ../common/const.h
-saudio.o: ../common/types.h global.h object.h ../common/keys.h
-saudio.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-saudio.o: ../common/rules.h proto.h netserver.h saudio.h ../common/audio.h
-sched.o: ../common/version.h ../common/config.h ../common/const.h
-sched.o: ../common/types.h ../common/error.h sched.h global.h object.h
-sched.o: ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h
-sched.o: click.h map.h ../common/rules.h ../common/portability.h
-server.o: ../common/version.h ../common/config.h ../common/types.h
-server.o: ../common/const.h global.h object.h ../common/keys.h
-server.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-server.o: ../common/rules.h proto.h ../common/socklib.h sched.h netserver.h
-server.o: ../common/error.h ../common/portability.h
-update.o: ../common/version.h ../common/config.h ../common/const.h
-update.o: ../common/types.h global.h object.h ../common/keys.h
-update.o: ../common/bit.h ../common/draw.h ../common/item.h click.h map.h
-update.o: ../common/rules.h proto.h score.h saudio.h ../common/audio.h
-update.o: objpos.h
-walls.o: ../common/version.h ../common/config.h ../common/const.h
-walls.o: ../common/types.h global.h object.h ../common/keys.h ../common/bit.h
-walls.o: ../common/draw.h ../common/item.h click.h map.h ../common/rules.h
-walls.o: proto.h score.h saudio.h ../common/audio.h netserver.h
-walls.o: ../common/pack.h ../common/error.h walls.h objpos.h
+cannon.o: cannon.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h \
+ ../common/error.h objpos.h walls.h cannon.h
+cmdline.o: cmdline.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h \
+ ../common/portability.h
+collision.o: collision.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
+ ../common/pack.h ../common/error.h objpos.h
+contact.o: contact.c ../common/version.h ../common/config.h \
+ ../common/types.h ../common/const.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h ../common/socklib.h \
+ ../common/pack.h ../common/net.h netserver.h sched.h \
+ ../common/error.h ../common/checknames.h server.h
+event.o: event.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h
+frame.o: frame.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h netserver.h saudio.h \
+ ../common/error.h
+id.o: id.c ../common/version.h ../common/const.h ../common/types.h \
+ global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h proto.h \
+ ../common/error.h
+item.o: item.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h saudio.h score.h netserver.h \
+ ../common/error.h objpos.h
+map.o: map.c ../common/version.h ../common/config.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ proto.h ../common/error.h
+metaserver.o: metaserver.c ../common/config.h ../common/version.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h ../common/socklib.h \
+ ../common/pack.h metaserver.h saudio.h ../common/error.h netserver.h
+netserver.o: netserver.c ../common/types.h ../common/version.h \
+ ../common/config.h ../common/const.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h ../common/pack.h \
+ ../common/socklib.h sched.h ../common/net.h ../common/error.h \
+ netserver.h ../common/packet.h ../common/setup.h saudio.h \
+ ../common/checknames.h server.h
+objpos.o: objpos.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h objpos.h
+option.o: option.c ../common/types.h ../common/version.h \
+ ../common/config.h ../common/const.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h
+play.o: play.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h saudio.h score.h objpos.h
+player.o: player.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h netserver.h saudio.h \
+ ../common/error.h objpos.h
+robot.o: robot.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
+ ../common/pack.h robot.h ../common/error.h server.h
+robotdef.o: robotdef.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
+ ../common/pack.h robot.h ../common/error.h
+rules.o: rules.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h cannon.h
+saudio.o: saudio.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h netserver.h saudio.h
+sched.o: sched.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h ../common/error.h sched.h \
+ global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h \
+ ../common/portability.h
+server.o: server.c ../common/version.h ../common/config.h \
+ ../common/types.h ../common/const.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h ../common/socklib.h sched.h \
+ netserver.h ../common/error.h ../common/portability.h server.h
+ship.o: ship.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h saudio.h ../common/error.h \
+ objpos.h netserver.h
+shot.o: shot.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h cannon.h \
+ objpos.h netserver.h
+update.o: update.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h objpos.h \
+ cannon.h
+walls.o: walls.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
+ ../common/pack.h ../common/error.h walls.h objpos.h

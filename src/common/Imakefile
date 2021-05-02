@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.3 1998/04/17 14:32:58 bert Exp $ */
+/* $Id: Imakefile,v 4.7 1999/11/07 11:57:30 bert Exp $ */
 
 TOP=../..
 
@@ -15,7 +15,7 @@ TOP=../..
  *
  */
 DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
-       -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" $(DEFS_OTHER)
+       $(DEFS_OTHER)
 INCLUDES = -I../../lib/
 
 
@@ -23,14 +23,17 @@ INCLUDES = -I../../lib/
  * Do substitutions where necessary
  */
 MsubTarget(version.h,version.h.msub)
+MsubDepend
 includes:: version.h
 depend:: includes
 
-SRCS = checknames.c cmw.c error.c math.c net.c portability.c \
-	shipshape.c socklib.c strcasecmp.c strdup.c
+# keep this variable consistent with its counterpart in ../Makefile.std
+SRCS = checknames.c config.c cmw.c error.c list.c math.c net.c \
+	portability.c shipshape.c socklib.c strcasecmp.c strdup.c
 
-OBJS = checknames.o cmw.o error.o math.o net.o portability.o \
-	shipshape.o socklib.o strcasecmp.o strdup.o
+# keep this variable consistent with its counterpart in ../Makefile.std
+OBJS = checknames.o config.o cmw.o error.o list.o math.o net.o \
+	portability.o shipshape.o socklib.o strcasecmp.o strdup.o
 
 NormalLibraryTarget(xpcommon,$(OBJS))
 
@@ -59,5 +62,5 @@ MakefileSubdirs($(MAKEFILESUBDIRS))
 /* InstallSubdirs($(INSTALLSUBDIRS)) */
 /* IncludesSubdirs($(INCLUDESSUBDIRS))	*/
 /* InstallManSubdirs($(INSTALLMANSUBDIRS)) */
-/* TagSubdirs($(TAGSUBDIRS)) */
-
+/* CtagSubdirs($(TAGSUBDIRS)) */
+CtagFiles(*.[ch])

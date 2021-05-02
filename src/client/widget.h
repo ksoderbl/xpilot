@@ -1,4 +1,4 @@
-/* $Id: widget.h,v 4.1 1998/04/16 17:39:52 bert Exp $
+/* $Id: widget.h,v 4.3 1999/10/17 11:43:10 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -153,6 +153,7 @@ typedef struct widget_slider {
     int				viewer_desc;
 } widget_slider_t;
 
+void Widget_destroy_children(int widget_desc);
 void Widget_destroy(int widget_desc);
 Window Widget_window(int widget_desc);
 void Widget_draw(int widget_desc);
@@ -203,9 +204,11 @@ int Widget_create_popup(int width, int height, int border,
 int Widget_create_confirm(const char *confirm_str,
 			  int (*callback)(int, void *, const char **));
 int Widget_backing_store(int widget_desc, int mode);
+int Widget_set_background(int widget_desc, int bgcolor);
 int Widget_map_sub(int widget_desc);
 int Widget_map(int widget_desc);
 int Widget_raise(int widget_desc);
+int Widget_get_dimensions(int widget_desc, int *width, int *height);
 int Widget_unmap(int widget_desc);
 int Widget_resize(int widget_desc, int width, int height);
 int Widget_create_viewer(const char *buf, int len,

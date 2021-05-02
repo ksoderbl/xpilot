@@ -1,4 +1,4 @@
-/* $Id: paintdata.h,v 4.2 1998/08/30 15:18:54 bert Exp $
+/* $Id: paintdata.h,v 4.4 1999/10/06 17:38:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -254,6 +254,9 @@ extern XArc		*arc_ptr[MAX_COLORS];
 extern int		num_arc[MAX_COLORS], max_arc[MAX_COLORS];
 extern XSegment		*seg_ptr[MAX_COLORS];
 extern int		num_seg[MAX_COLORS], max_seg[MAX_COLORS];
+
+extern int		eyesId;		/* Player we get frame updates for */
+extern short		snooping;	/* are we snooping on someone else? */
 
 extern void Erase_do_start(void);
 extern void Erase_do_end(void);

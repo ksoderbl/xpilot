@@ -1,4 +1,4 @@
-/* $Id: winSvrThread.c,v 4.4 1998/04/18 09:02:15 dick Exp $
+/* $Id: winSvrThread.c,v 4.5 1999/01/14 09:08:10 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.c - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.c,v 4.4 1998/04/18 09:02:15 dick Exp $					*
+*  $Id: winSvrThread.c,v 4.5 1999/01/14 09:08:10 dick Exp $					*
 \***************************************************************************/
 
 /* Entry point for Windows Server Thread */
@@ -126,7 +126,8 @@ UINT ServerThreadProc(LPVOID pParam)
 
 		// Reset event to indicate "not done", that is, game is in progress.
 		ResetEvent(pServerInfo->m_hEventGameTerminated);
-		main(zargc, zargv);
+		if (!main(zargc, zargv))
+			return(0);
 		SendMessage(pServerInfo->m_hwndNotifyProgress, WM_STARTTIMER, 0, (LPARAM)framesPerSecond);
 
 	    sched_running = 1;
@@ -210,7 +211,7 @@ void xpprintfW(const char *fmt, ...)
 	}
     va_start(ap, fmt);
     vsprintf(u, fmt, ap);
-	_Trace("Message: %s\n", s);
+	_Trace("Message: %s", s);
 	/* the stupid edit control (text window) needs \r\n to function within reason */
 	t = s;
 	w = u;

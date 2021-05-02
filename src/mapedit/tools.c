@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: tools.c,v 1.2 1998/04/22 15:44:21 bert Exp $
+ * $Id: tools.c,v 1.3 2000/03/11 20:25:58 bert Exp $
  */
 
 #include                 "main.h"
@@ -598,8 +598,8 @@ int NewMap(HandlerInfo info)
    }
    free(map.comments);
    map.comments = (char *) NULL;
-   map.name[0] = map.author[0] = map.filename[0] = map.gravity[0] = (char)NULL;
-   map.shipmass[0] = map.maxrobots[0] = map.maxlives[0] = (char) NULL;
+   map.mapName[0] = map.mapAuthor[0] = map.mapFileName[0] = map.gravity[0] = (char)NULL;
+   map.shipMass[0] = map.maxRobots[0] = map.worldLives[0] = (char) NULL;
    map.width = DEFAULT_WIDTH;
    map.height = DEFAULT_HEIGHT;
    sprintf(map.width_str, "%d", map.width);
@@ -608,9 +608,9 @@ int NewMap(HandlerInfo info)
    for ( j=0; j<MAX_MAP_SIZE; j++)
    map.data[i][j] = ' ';
    map.view_zoom = DEFAULT_MAP_ZOOM;
-   map.changed = map.edgewrap = map.edgebounce = map.teamplay = 0;
-   map.oneplay = map.timing = map.playercrashes = map.playerkills = 0;
-   map.visibility = map.shielding = 0;
+   map.changed = map.edgeWrap = map.edgeBounce = map.teamPlay = 0;
+   map.onePlayerOnly = map.timing = map.allowPlayerCrashes = map.allowPlayerKilling = 0;
+   map.limitedVisibility = map.allowShields = 0;
    ResetMap();
    ClearUndo();
    return 0;

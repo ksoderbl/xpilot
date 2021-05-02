@@ -1,10 +1,13 @@
-$Id: xmkmf-patch,v 4.0 1998/03/18 15:11:24 bert Exp $
+$Id: xmkmf-patch,v 4.1 1999/10/17 01:01:54 svenske Exp $
 
 This patch adds functionality to xmkmf to specify additional defines.  It
 can be used to specify your own config file to override the values
 specified in Local.config, e.g.:
 
-	xmkmf -a -DMY_CONFIG_FILE=\"My.config\"
+	xmkmf -a -DMY_CONFIG
+
+Local.config by default includes My.config, which should contain just
+the values that override.
 
 950317 <bjoerns@acm.org>
 980316 <bert@xpilot.org>

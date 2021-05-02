@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 4.4 1998/09/04 07:03:36 bert Exp $
+/* $Id: paint.c,v 4.5 2000/03/12 11:45:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -122,7 +122,13 @@ Colormap	colormap;	/* Private colormap */
 int	maxColors;		/* Max. number of colors to use */
 bool	gotFocus;
 bool	players_exposed;
-short	view_width, view_height;	/* Visible area according to server */
+short	view_width;		/* Width of visible area according to server */
+short	view_height;		/* Height of visible area according to server */
+int	real_view_width;	/* Width of map area displayed. */
+int	real_view_height;	/* Height of map area displayed. */
+int	view_x_offset;		/* Offset of view_width wrt. real_view_width */
+int	view_y_offset;		/* Offset of view_height wrt. real_view_height */
+
 u_byte	spark_rand;		/* Sparkling effect */
 int	titleFlip;		/* Do special title bar flipping? */
 int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */

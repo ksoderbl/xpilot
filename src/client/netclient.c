@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 4.7 1998/08/30 16:36:50 bert Exp $
+/* $Id: netclient.c,v 4.35 2000/03/12 14:20:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -78,6 +78,7 @@
 #include "socklib.h"
 #include "protoclient.h"
 #include "portability.h"
+#include "talk.h"
 
 #ifdef	SOUND
 #include "audio.h"
@@ -162,6 +163,7 @@ static void Receive_init(void)
     receive_tbl[PKT_MISSILE]	= Receive_missile;
     receive_tbl[PKT_SHUTDOWN]	= Receive_shutdown;
     receive_tbl[PKT_DESTRUCT]	= Receive_destruct;
+    receive_tbl[PKT_SELF_ITEMS]	= Receive_self_items;
     receive_tbl[PKT_FUEL]	= Receive_fuel;
     receive_tbl[PKT_CANNON]	= Receive_cannon;
     receive_tbl[PKT_TARGET]	= Receive_target;
@@ -715,7 +717,12 @@ int Net_start(void)
 		return -1;
 	    }
 	    Sockbuf_clear(&wbuf);
-	    if (Send_shape(shipShape) == -1
+	    /*
+	     * Some networks have trouble receiving big packets.
+	     * Therefore we don't transmit the shipshape when
+	     * we have had 5 unsuccesful attempts.
+	     */
+	    if ((retries < 5 && Send_shape(shipShape) == -1)
 		|| Packet_printf(&wbuf, "%c", PKT_PLAY) <= 0
 		|| Client_power() == -1
 #ifdef SOUND
@@ -1390,6 +1397,70 @@ int Net_ask_for_motd(long offset, long maxlen)
     return 0;
 }
 
+
+static void Check_view_dimensions(void)
+{
+    int			width_wanted = draw_width;
+    int			height_wanted = draw_height;
+
+#ifdef	WINDOWSCALING
+    width_wanted = (int)(width_wanted * scaleFactor + 0.5);
+    height_wanted = (int)(height_wanted * scaleFactor + 0.5);
+#endif
+
+    if (view_width != width_wanted ||
+	view_height != height_wanted) {
+	Send_display();
+    }
+
+    real_view_width = view_width;
+    real_view_height = view_height;
+    view_x_offset = 0;
+    view_y_offset = 0;
+    if (width_wanted > view_width) {
+	view_width = width_wanted;
+	view_x_offset = (width_wanted - real_view_width) / 2;
+    }
+    if (height_wanted > view_height) {
+	view_height = height_wanted;
+	view_y_offset = (height_wanted - real_view_height) / 2;
+    }
+}
+  
+
+/*
+ * Receive the packet with counts for all the items.
+ * New since pack version 4203.
+ */
+int Receive_self_items(void)
+{
+    unsigned		mask;
+    int			i, n;
+    u_byte		ch;
+    char		*rbuf_ptr_start = rbuf.ptr;
+    u_byte		num_items[NUM_ITEMS];
+
+    n = Packet_scanf(&rbuf, "%c%u", &ch, &mask);
+    if (n <= 0) {
+	return n;
+    }
+    memset(num_items, 0, sizeof num_items);
+    for (i = 0; mask != 0; i++) {
+	if (mask & (1 << i)) {
+	    mask ^= (1 << i);
+	    if (rbuf.ptr - rbuf.buf < rbuf.len) {
+		if (i < NUM_ITEMS) {
+		    num_items[i] = *rbuf.ptr++;
+		} else {
+		    rbuf.ptr++;
+		}
+	    }
+	}
+    }
+    Handle_self_items(num_items);
+    return (rbuf.ptr - rbuf_ptr_start);
+}
+
 /*
  * Receive the packet with all player information for the HUD.
  * If this packet is missing from the frame update then the player
@@ -1410,35 +1481,49 @@ int Receive_self(void)
 		     "%hd%hd%hd%hd%c"
 		     "%c%c%c"
 		     "%hd%hd%c%c"
-		     "%c%c%c%c%c"
-		     "%c%c%c%c%c"
-		     "%c%c%c%c"
-		     "%c%hd%hd"
-		     "%hd%hd%c"
-		     "%c%c"
 		     ,
 		     &ch,
 		     &x, &y, &vx, &vy, &heading,
 		     &power, &turnspeed, &turnresistance,
-		     &lockId, &lockDist, &lockDir, &nextCheckPoint,
+		     &lockId, &lockDist, &lockDir, &nextCheckPoint);
+    if (n <= 0) {
+	return n;
+    }
 
-		     &(num_items[ITEM_CLOAK]),
-		     &(num_items[ITEM_SENSOR]),
-		     &(num_items[ITEM_MINE]),
-		     &(num_items[ITEM_MISSILE]),
-		     &(num_items[ITEM_ECM]),
+    if (version >= 0x4203) {
+	memset(num_items, 0, sizeof num_items);
+    }
+    else {
+	n = Packet_scanf(&rbuf,
+			 "%c%c%c%c%c"
+			 "%c%c%c%c%c"
+			 "%c%c%c%c"
+			 ,
+			 &(num_items[ITEM_CLOAK]),
+			 &(num_items[ITEM_SENSOR]),
+			 &(num_items[ITEM_MINE]),
+			 &(num_items[ITEM_MISSILE]),
+			 &(num_items[ITEM_ECM]),
 
-		     &(num_items[ITEM_TRANSPORTER]),
-		     &(num_items[ITEM_WIDEANGLE]),
-		     &(num_items[ITEM_REARSHOT]),
-		     &(num_items[ITEM_AFTERBURNER]),
-		     &(num_items[ITEM_TANK]),
+			 &(num_items[ITEM_TRANSPORTER]),
+			 &(num_items[ITEM_WIDEANGLE]),
+			 &(num_items[ITEM_REARSHOT]),
+			 &(num_items[ITEM_AFTERBURNER]),
+			 &(num_items[ITEM_TANK]),
 
-		     &(num_items[ITEM_LASER]),
-		     &(num_items[ITEM_EMERGENCY_THRUST]),
-		     &(num_items[ITEM_TRACTOR_BEAM]),
-		     &(num_items[ITEM_AUTOPILOT]),
-
+			 &(num_items[ITEM_LASER]),
+			 &(num_items[ITEM_EMERGENCY_THRUST]),
+			 &(num_items[ITEM_TRACTOR_BEAM]),
+			 &(num_items[ITEM_AUTOPILOT]));
+	if (n <= 0) {
+	    return n;
+	}
+    }
+    n = Packet_scanf(&rbuf,
+		     "%c%hd%hd"
+		     "%hd%hd%c"
+		     "%c%c"
+		     ,
 		     &currentTank, &fuelSum, &fuelMax,
 		     &view_width, &view_height, &debris_colors,
 		     &stat, &autopilotLight
@@ -1446,49 +1531,62 @@ int Receive_self(void)
     if (n <= 0) {
 	return n;
     }
-    if (version >= 0x3720) {
-	n = Packet_scanf(&rbuf, "%c%c%c%c",
-			 &(num_items[ITEM_EMERGENCY_SHIELD]),
-			 &(num_items[ITEM_DEFLECTOR]),
-			 &(num_items[ITEM_HYPERJUMP]),
-			 &(num_items[ITEM_PHASING])
-			 );
-	if (n <= 0) {
-	    return n;
-	}
-	if (version >= 0x4100) {
-	    n = Packet_scanf(&rbuf, "%c", &(num_items[ITEM_MIRROR]));
+
+    if (version < 0x4203) {
+	if (version >= 0x3720) {
+	    n = Packet_scanf(&rbuf, "%c%c%c%c",
+			     &(num_items[ITEM_EMERGENCY_SHIELD]),
+			     &(num_items[ITEM_DEFLECTOR]),
+			     &(num_items[ITEM_HYPERJUMP]),
+			     &(num_items[ITEM_PHASING])
+			     );
 	    if (n <= 0) {
 		return n;
 	    }
+	    if (version >= 0x4100) {
+		n = Packet_scanf(&rbuf, "%c", &(num_items[ITEM_MIRROR]));
+		if (n <= 0) {
+		    return n;
+		}
+		if (version >= 0x4201) {
+		    n = Packet_scanf(&rbuf, "%c", &(num_items[ITEM_ARMOR]));
+		    if (n <= 0) {
+			return n;
+		    }
+		} else {
+		    num_items[ITEM_ARMOR] = 0;
+		}
+	    }
+	    else {
+		num_items[ITEM_MIRROR] = 0;
+		num_items[ITEM_ARMOR] = 0;
+	    }
 	}
 	else {
+	    if (version >= 0x3200) {
+		n = Packet_scanf(&rbuf, "%c",
+				 &(num_items[ITEM_EMERGENCY_SHIELD]));
+		if (n <= 0) {
+		    return n;
+		}
+	    }
+	    else {
+		num_items[ITEM_EMERGENCY_SHIELD] = 0;
+	    }
+	    num_items[ITEM_DEFLECTOR] = 0;
+	    num_items[ITEM_HYPERJUMP] = 0;
+	    num_items[ITEM_PHASING] = 0;
 	    num_items[ITEM_MIRROR] = 0;
+	    num_items[ITEM_ARMOR] = 0;
 	}
-    }
-    else {
-	if (version >= 0x3200) {
-	    n = Packet_scanf(&rbuf, "%c",
-			     &(num_items[ITEM_EMERGENCY_SHIELD]));
-	    if (n <= 0) {
-		return n;
-	    }
-	}
-	else {
-	    num_items[ITEM_EMERGENCY_SHIELD] = 0;
-	}
-	num_items[ITEM_DEFLECTOR] = 0;
-	num_items[ITEM_HYPERJUMP] = 0;
-	num_items[ITEM_PHASING] = 0;
-	num_items[ITEM_MIRROR] = 0;
     }
 
     if (debris_colors > num_spark_colors) {
 	debris_colors = num_spark_colors;
     }
-    if (view_width != draw_width || view_height != draw_height) {
-	Send_display();
-    }
+
+    Check_view_dimensions();
+
     Game_over_action(stat);
     Handle_self(x, y, vx, vy, heading,
 		(float) power,
@@ -1791,6 +1889,10 @@ int Receive_wreckage(void)	/* since 3.8.0 */
     if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c%c%c", &ch, &x, &y,
 			  &wrecktype, &size, &rot)) <= 0) {
 	return n;
+    }
+    if (version < 0x4202) {
+	/* always color red. */
+	wrecktype &= 0x7F;
     }
     if ((n = Handle_wreckage(x, y, wrecktype, size, rot)) == -1) {
 	return -1;
@@ -2428,14 +2530,27 @@ int Send_talk(void)
 
 int Send_display(void)
 {
-    if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
-#ifndef	WINDOWSCALING
-		      draw_width, draw_height, num_spark_colors, spark_rand) == -1) {
-#else
-		      (int)(draw_width*scaleFactor), (int)(draw_height*scaleFactor), num_spark_colors, spark_rand) == -1) {
-	draw_width  = (int)(draw_width*scaleFactor);
-	draw_height = (int)(draw_height*scaleFactor);
+    int			width_wanted = draw_width;
+    int			height_wanted = draw_height;
+
+#ifdef	WINDOWSCALING
+    width_wanted = (int)(width_wanted * scaleFactor);
+    height_wanted = (int)(height_wanted * scaleFactor);
 #endif
+
+    LIMIT(width_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+    LIMIT(height_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+
+    if (width_wanted == view_width &&
+	height_wanted == view_height &&
+	debris_colors == num_spark_colors &&
+	last_loops != 0) {
+	return 0;
+    }
+
+    if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
+		      width_wanted, height_wanted,
+		      num_spark_colors, spark_rand) == -1) {
 	return -1;
     }
     return 0;

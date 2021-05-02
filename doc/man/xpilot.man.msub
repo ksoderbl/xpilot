@@ -909,6 +909,21 @@ to drop, tanks can only be released (see the \fIkeyTankDetach\fP option).
 Drop the item selected with the \fIkeySelectItem\fP key.  The
 server can either delete the item or drop it back into the map
 depending upon the value of the \fIloseItemDestroys\fP option.
+.TP 12
+.B keyPrintMessagesStdout {Print}
+Print the current messages to stdout.
+.TP 12
+.B keyTalkCursorLeft {Left}
+Move Cursor to the left in the talk window.
+.TP 12
+.B keyTalkCursorRight {Right}
+Move Cursor to the right in the talk window.
+.TP 12
+.B keyTalkCursorUp {Up}
+Browsing up in the history of the talk window.
+.TP 12
+.B keyTalkCursorDown {Down}
+Browsing down in the history of the talk window.
 
 .RS -5
 .TP 4
@@ -1061,6 +1076,15 @@ Valid values are in the range [0.0-1.0]
 .TP 12
 .B sparkSize
 Size of sparks in pixels.
+.TP 12
+.B selectionAndHistory
+Provide cut-and-paste for the player messages and the talk window and
+a `history' for the talk window.
+.TP 12
+.B -maxLinesInHistory
+Number of your messages saved in the `history' of the talk window.
+`History' is accessible with `keyTalkCursorUp/Down'.
+Valid values are in the range [1-128]. The default value is: 32.
 .TP 12
 .B shotSize
 Size of shots in pixels.

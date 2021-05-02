@@ -1,26 +1,92 @@
+---- Cut Here and feed the following to sh ----
 #!/bin/sh
-# This is a shell archive (shar 3.47)
-# made 04/07/1994 18:11 UTC by turtle@ender
-# Source directory /home/turtle/c/X/xp-maps/maps2image
+# This is a shell archive (produced by GNU sharutils 4.2c).
+# To extract the files from this archive, save it to some FILE, remove
+# everything before the `!/bin/sh' line above, then type `sh FILE'.
 #
-# existing files will NOT be overwritten unless -c is specified
+# Made on 1999-10-16 18:01 MEST by <root@nail>.
+# Source directory was `/tmp/maps2image'.
+#
+# Existing files will *not* be overwritten unless `-c' is specified.
 #
 # This shar contains:
-# length  mode       name
+# length mode       name
 # ------ ---------- ------------------------------------------
 #   3164 -rw-rw-r-- README
 #    863 -rw-rw-rw- COPYRIGHT
-#    953 -rw-rw-r-- Makefile
+#   1027 -rw-rw-r-- Makefile
 #  10965 -rw-rw-r-- maps2image.c
 #   5637 -rw-rw-r-- bdf2c.c
 #   5025 -r--r--r-- helvR08.bdf.gz
 #
-# ============= README ==============
-if test -f 'README' -a X"$1" != X"-c"; then
-	echo 'x - skipping README (File already exists)'
+save_IFS="${IFS}"
+IFS="${IFS}:"
+gettext_dir=FAILED
+locale_dir=FAILED
+first_param="$1"
+for dir in $PATH
+do
+  if test "$gettext_dir" = FAILED && test -f $dir/gettext \
+     && ($dir/gettext --version >/dev/null 2>&1)
+  then
+    set `$dir/gettext --version 2>&1`
+    if test "$3" = GNU
+    then
+      gettext_dir=$dir
+    fi
+  fi
+  if test "$locale_dir" = FAILED && test -f $dir/shar \
+     && ($dir/shar --print-text-domain-dir >/dev/null 2>&1)
+  then
+    locale_dir=`$dir/shar --print-text-domain-dir`
+  fi
+done
+IFS="$save_IFS"
+if test "$locale_dir" = FAILED || test "$gettext_dir" = FAILED
+then
+  echo=echo
 else
-echo 'x - extracting README (Text)'
-sed 's/^X//' << 'SHAR_EOF' > 'README' &&
+  TEXTDOMAINDIR=$locale_dir
+  export TEXTDOMAINDIR
+  TEXTDOMAIN=sharutils
+  export TEXTDOMAIN
+  echo="$gettext_dir/gettext -s"
+fi
+if (echo "testing\c"; echo 1,2,3) | grep c >/dev/null; then
+  if (echo -n testing; echo 1,2,3) | sed s/-n/xn/ | grep xn >/dev/null; then
+    shar_n= shar_c='
+'
+  else
+    shar_n=-n shar_c=
+  fi
+else
+  shar_n= shar_c='\c'
+fi
+touch -am 1231235999 $$.touch >/dev/null 2>&1
+if test ! -f 1231235999 && test -f $$.touch; then
+  shar_touch=touch
+else
+  shar_touch=:
+  echo
+  $echo 'WARNING: not restoring timestamps.  Consider getting and'
+  $echo "installing GNU \`touch', distributed in GNU File Utilities..."
+  echo
+fi
+rm -f 1231235999 $$.touch
+#
+$echo $shar_n 'x -' 'lock directory' "\`_sh02319': "$shar_c
+if mkdir _sh02319; then
+  $echo 'created'
+else
+  $echo 'failed to create'
+  exit 1
+fi
+# ============= README ==============
+if test -f 'README' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'README' '(file already exists)'
+else
+  $echo 'x -' extracting 'README' '(text)'
+  sed 's/^X//' << 'SHAR_EOF' > 'README' &&
 README for maps2image -- a xpilot maps to image converter.
 X
 WHAT IS IT?
@@ -104,18 +170,27 @@ suggestions, let me know. I have only compiled this on a Sun
 using both gcc 2.5.8 and Sun's acc. (We run SunOS 4.1.3_U1)
 X
 SHAR_EOF
-chmod 0664 README ||
-echo 'restore of README failed'
-Wc_c="`wc -c < 'README'`"
-test 3164 -eq "$Wc_c" ||
-	echo 'README: original size 3164, current size' "$Wc_c"
+  $shar_touch -am 1016175999 'README' &&
+  chmod 0664 'README' ||
+  $echo 'restore of' 'README' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'README:' 'MD5 check failed'
+5f7c7c1b3eb209cd3112d9fe9452fe30  README
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'README'`"
+    test 3164 -eq "$shar_count" ||
+    $echo 'README:' 'original size' '3164,' 'current size' "$shar_count!"
+  fi
 fi
 # ============= COPYRIGHT ==============
-if test -f 'COPYRIGHT' -a X"$1" != X"-c"; then
-	echo 'x - skipping COPYRIGHT (File already exists)'
+if test -f 'COPYRIGHT' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'COPYRIGHT' '(file already exists)'
 else
-echo 'x - extracting COPYRIGHT (Text)'
-sed 's/^X//' << 'SHAR_EOF' > 'COPYRIGHT' &&
+  $echo 'x -' extracting 'COPYRIGHT' '(text)'
+  sed 's/^X//' << 'SHAR_EOF' > 'COPYRIGHT' &&
 Copyright (c) 1994 by Andrew Scherpbier.
 You may do what you wish with this package as long as it
 isn't going to cost me anything! If you find it so useful
@@ -136,18 +211,27 @@ ____________________________________________________________________________
 X
 X
 SHAR_EOF
-chmod 0666 COPYRIGHT ||
-echo 'restore of COPYRIGHT failed'
-Wc_c="`wc -c < 'COPYRIGHT'`"
-test 863 -eq "$Wc_c" ||
-	echo 'COPYRIGHT: original size 863, current size' "$Wc_c"
+  $shar_touch -am 1016175999 'COPYRIGHT' &&
+  chmod 0666 'COPYRIGHT' ||
+  $echo 'restore of' 'COPYRIGHT' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'COPYRIGHT:' 'MD5 check failed'
+e82fb9dfc0edcf9cb955deef0c4944a6  COPYRIGHT
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'COPYRIGHT'`"
+    test 863 -eq "$shar_count" ||
+    $echo 'COPYRIGHT:' 'original size' '863,' 'current size' "$shar_count!"
+  fi
 fi
 # ============= Makefile ==============
-if test -f 'Makefile' -a X"$1" != X"-c"; then
-	echo 'x - skipping Makefile (File already exists)'
+if test -f 'Makefile' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'Makefile' '(file already exists)'
 else
-echo 'x - extracting Makefile (Text)'
-sed 's/^X//' << 'SHAR_EOF' > 'Makefile' &&
+  $echo 'x -' extracting 'Makefile' '(text)'
+  sed 's/^X//' << 'SHAR_EOF' > 'Makefile' &&
 #
 # Makefile for maps2image.
 #
@@ -168,22 +252,22 @@ X
 all:		$(FONT) font.h maps2image bdf2c
 X
 helvR08.bdf:	helvR08.bdf.gz
-X	gunzip helvR08.bdf.gz
+X	gzip -cd < helvR08.bdf.gz > helvR08.bdf
 X
 helvR10.bdf:	helvR10.bdf.gz
-X	gunzip helvR10.bdf.gz
+X	gzip -cd < helvR10.bdf.gz > helvR10.bdf
 X
 helvR12.bdf:	helvR12.bdf.gz
-X	gunzip helvR12.bdf.gz
+X	gzip -cd < helvR12.bdf.gz > helvR12.bdf
 X
 helvR14.bdf:	helvR14.bdf.gz
-X	gunzip helvR14.bdf.gz
+X	gzip -cd < helvR14.bdf.gz > helvR14.bdf
 X
 $(TARGET):	$(OBJS) font.h
 X	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
 X
 font.h:	bdf2c Makefile
-X	bdf2c $(FONT) >font.h
+X	./bdf2c $(FONT) >font.h
 X
 bdf2c:	bdf2c.o
 X	$(CC) $(CFLAGS) -o bdf2c bdf2c.o
@@ -199,18 +283,27 @@ X	gzip helvR*.bdf
 X	shar -c -p README COPYRIGHT Makefile maps2image.c bdf2c.c -B helvR*.gz >maps2image.shar
 X
 SHAR_EOF
-chmod 0664 Makefile ||
-echo 'restore of Makefile failed'
-Wc_c="`wc -c < 'Makefile'`"
-test 953 -eq "$Wc_c" ||
-	echo 'Makefile: original size 953, current size' "$Wc_c"
+  $shar_touch -am 1016180099 'Makefile' &&
+  chmod 0664 'Makefile' ||
+  $echo 'restore of' 'Makefile' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'Makefile:' 'MD5 check failed'
+f86501324f9df682ed612f7c261fe603  Makefile
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'Makefile'`"
+    test 1027 -eq "$shar_count" ||
+    $echo 'Makefile:' 'original size' '1027,' 'current size' "$shar_count!"
+  fi
 fi
 # ============= maps2image.c ==============
-if test -f 'maps2image.c' -a X"$1" != X"-c"; then
-	echo 'x - skipping maps2image.c (File already exists)'
+if test -f 'maps2image.c' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'maps2image.c' '(file already exists)'
 else
-echo 'x - extracting maps2image.c (Text)'
-sed 's/^X//' << 'SHAR_EOF' > 'maps2image.c' &&
+  $echo 'x -' extracting 'maps2image.c' '(text)'
+  sed 's/^X//' << 'SHAR_EOF' > 'maps2image.c' &&
 /**********************************************************************/
 /*                                                                    */
 /*  File:          maps2image.c                                       */
@@ -754,18 +847,27 @@ X
 X
 X
 SHAR_EOF
-chmod 0664 maps2image.c ||
-echo 'restore of maps2image.c failed'
-Wc_c="`wc -c < 'maps2image.c'`"
-test 10965 -eq "$Wc_c" ||
-	echo 'maps2image.c: original size 10965, current size' "$Wc_c"
+  $shar_touch -am 1016175999 'maps2image.c' &&
+  chmod 0664 'maps2image.c' ||
+  $echo 'restore of' 'maps2image.c' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'maps2image.c:' 'MD5 check failed'
+67d4b9394ded98a2586f43bcca6b2e47  maps2image.c
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'maps2image.c'`"
+    test 10965 -eq "$shar_count" ||
+    $echo 'maps2image.c:' 'original size' '10965,' 'current size' "$shar_count!"
+  fi
 fi
 # ============= bdf2c.c ==============
-if test -f 'bdf2c.c' -a X"$1" != X"-c"; then
-	echo 'x - skipping bdf2c.c (File already exists)'
+if test -f 'bdf2c.c' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'bdf2c.c' '(file already exists)'
 else
-echo 'x - extracting bdf2c.c (Text)'
-sed 's/^X//' << 'SHAR_EOF' > 'bdf2c.c' &&
+  $echo 'x -' extracting 'bdf2c.c' '(text)'
+  sed 's/^X//' << 'SHAR_EOF' > 'bdf2c.c' &&
 /**********************************************************************/
 /*                                                                    */
 /*  File:          bdf2c.c                                            */
@@ -1051,18 +1153,27 @@ X
 X
 X
 SHAR_EOF
-chmod 0664 bdf2c.c ||
-echo 'restore of bdf2c.c failed'
-Wc_c="`wc -c < 'bdf2c.c'`"
-test 5637 -eq "$Wc_c" ||
-	echo 'bdf2c.c: original size 5637, current size' "$Wc_c"
+  $shar_touch -am 1016175999 'bdf2c.c' &&
+  chmod 0664 'bdf2c.c' ||
+  $echo 'restore of' 'bdf2c.c' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'bdf2c.c:' 'MD5 check failed'
+be4a3836c11344c97da2d788c2c37ecf  bdf2c.c
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'bdf2c.c'`"
+    test 5637 -eq "$shar_count" ||
+    $echo 'bdf2c.c:' 'original size' '5637,' 'current size' "$shar_count!"
+  fi
 fi
 # ============= helvR08.bdf.gz ==============
-if test -f 'helvR08.bdf.gz' -a X"$1" != X"-c"; then
-	echo 'x - skipping helvR08.bdf.gz (File already exists)'
+if test -f 'helvR08.bdf.gz' && test "$first_param" != -c; then
+  $echo 'x -' SKIPPING 'helvR08.bdf.gz' '(file already exists)'
 else
-echo 'x - extracting helvR08.bdf.gz (Binary)'
-sed 's/^X//' << 'SHAR_EOF' | uudecode &&
+  $echo 'x -' extracting 'helvR08.bdf.gz' '(binary)'
+  sed 's/^X//' << 'SHAR_EOF' | uudecode &&
 begin 600 helvR08.bdf.gz
 M'XL(""!`<BT``VAE;'92,#@N8F1F`*U=77?B.).^]Z_PR=7NGJ2/OS\N'3`=
 M=@GD!?+V9&[Z..`DW@;,V-`]F5^_DHVMDERRS.S,^&0@@>>12O4E5=FS6D?+
@@ -1179,10 +1290,25 @@ MMLM)*%>J)[\-8-8@W/#27CA7D0AW=(`YP-S6;ME\+E<WFRV4U<O3_N\*KDC_
 `
 end
 SHAR_EOF
-chmod 0444 helvR08.bdf.gz ||
-echo 'restore of helvR08.bdf.gz failed'
-Wc_c="`wc -c < 'helvR08.bdf.gz'`"
-test 5025 -eq "$Wc_c" ||
-	echo 'helvR08.bdf.gz: original size 5025, current size' "$Wc_c"
+  $shar_touch -am 1016175999 'helvR08.bdf.gz' &&
+  chmod 0444 'helvR08.bdf.gz' ||
+  $echo 'restore of' 'helvR08.bdf.gz' 'failed'
+  if ( md5sum --help </dev/null 2>&1 | grep 'sage: md5sum \[' ) >/dev/null 2>&1 \
+  && ( md5sum --version </dev/null 2>&1 | grep -v 'textutils 1.12' ) >/dev/null; then
+    md5sum -c << SHAR_EOF >/dev/null 2>&1 \
+    || $echo 'helvR08.bdf.gz:' 'MD5 check failed'
+d8c268940f03cf6ad7250af75fab556b  helvR08.bdf.gz
+SHAR_EOF
+  else
+    shar_count="`LC_ALL=C wc -c < 'helvR08.bdf.gz'`"
+    test 5025 -eq "$shar_count" ||
+    $echo 'helvR08.bdf.gz:' 'original size' '5025,' 'current size' "$shar_count!"
+  fi
+fi
+$echo $shar_n 'x -' 'lock directory' "\`_sh02319': " $shar_c
+if rm -fr _sh02319; then
+  $echo 'removed'
+else
+  $echo 'failed to remove'
 fi
 exit 0

@@ -1,4 +1,4 @@
-/* $Id: error.h,v 4.0 1998/03/18 15:17:48 bert Exp $
+/* $Id: error.h,v 4.1 2000/03/12 11:13:53 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -41,7 +41,7 @@
 extern void init_error(const char *prog);
 
 #ifdef	_WINDOWS
-// extern	HWND	alarmWnd;		// Window for alarm timers
+/* extern	HWND	alarmWnd;		Window for alarm timers */
 #endif
 /*
  * memory leak checking

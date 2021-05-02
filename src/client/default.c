@@ -1,4 +1,4 @@
-/* $Id: default.c,v 4.7 1998/10/06 14:52:19 bert Exp $
+/* $Id: default.c,v 4.19 1999/11/07 11:57:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -68,12 +68,17 @@ extern	int		Argc;
 #include "error.h"
 #include "protoclient.h"
 #include "audio.h"
+#include "talk.h"
 
 char default_version[] = VERSION;
 
+extern char *talk_fast_msgs[];	/* talk macros */
+char talk_fast_temp_buf[7];		/* can handle up to 999 fast msgs */
+char *talk_fast_temp_buf_big;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.7 1998/10/06 14:52:19 bert Exp $";
+    "@(#)$Id: default.c,v 4.19 1999/11/07 11:57:30 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -119,6 +124,11 @@ const char*	winHelpFile;
 #endif
 
 keys_t buttonDefs[MAX_POINTER_BUTTONS];
+
+/* from common/config.c */
+extern char conf_ship_file_string[];
+extern char conf_texturedir_string[];
+extern char conf_soundfile_string[];
 
 /*
  * Structure to store all the client options.
@@ -188,6 +198,14 @@ struct option {
 	"No",
 	KEY_DUMMY,
 	"Get a fresh copy of the server MOTD every time it is displayed.\n"
+    },
+    {
+	"text",
+	"Yes",
+	"No",
+	KEY_DUMMY,
+	"Use the simple text interface to contact a server\n"
+	"instead of the graphical user interface.\n"
     },
     {
 	"list",
@@ -272,7 +290,7 @@ struct option {
     {
 	"shipShapeFile",
 	NULL,
-	SHIP_FILE,
+	conf_ship_file_string,
 	KEY_DUMMY,
 	"An optional file where shipshapes can be stored.\n"
 	"If this resource is defined and it refers to an existing file\n"
@@ -491,7 +509,7 @@ struct option {
     {
 	"texturePath",
 	NULL,
-	TEXTUREDIR,
+	conf_texturedir_string,
 	KEY_DUMMY,
 	"Optional search path for XPM texture files.\n"
 	"This is a list of one or more directories separated by colons.\n"
@@ -615,6 +633,24 @@ struct option {
 	KEY_DUMMY,
 	"Reverse scroll direction of messages.\n"
     },
+#ifndef _WINDOWS
+    {
+	"selectionAndHistory",
+	NULL,
+	"Yes",
+	KEY_DUMMY,
+	"Provide cut&paste for the player messages and the talk window and\n"
+	"a `history' for the talk window.\n"
+    },
+    {
+	"maxLinesInHistory",
+	NULL,
+	"32",
+	KEY_DUMMY,
+	"Number of your messages saved in the `history' of the talk window.\n"
+	"`history' is accessible with `keyTalkCursorUp/Down'.\n"
+    },
+#endif
     {
 	"shotSize",
 	NULL,
@@ -1236,6 +1272,14 @@ struct option {
 	"These are the power, turn speed and turn resistance settings.\n"
     },
     {
+        "keySwapScaleFactor",
+        NULL,
+        "",
+        KEY_SWAP_SCALEFACTOR,
+        "Swap scalefactor settings.\n"
+        "These are the scalefactor settings.\n"
+    },
+    {
 	"keyChangeHome",
 	NULL,
 	"Home h",
@@ -1544,6 +1588,43 @@ struct option {
 	KEY_LOSE_ITEM,
 	"Lose the selected item.\n"
     },
+#ifndef _WINDOWS
+    {
+	"keyPrintMessagesStdout",
+	NULL,
+	"Print",
+	KEY_PRINT_MSGS_STDOUT,
+	"Print the current messages to stdout.\n"
+    },
+    {
+	"keyTalkCursorLeft",
+	NULL,
+	"Left",
+	KEY_TALK_CURSOR_LEFT,
+	"Move Cursor to the left in the talk window.\n"
+    },
+    {
+	"keyTalkCursorRight",
+	NULL,
+	"Right",
+	KEY_TALK_CURSOR_RIGHT,
+	"Move Cursor to the right in the talk window.\n"
+    },
+    {
+	"keyTalkCursorUp",
+	NULL,
+	"Up",
+	KEY_TALK_CURSOR_UP,
+	"Browsing in the history of the talk window.\n"
+    },
+    {
+	"keyTalkCursorDown",
+	NULL,
+	"Down",
+	KEY_TALK_CURSOR_DOWN,
+	"Browsing in the history of the talk window.\n"
+    },
+#endif
     {
 	"keyPointerControl",
 	NULL,
@@ -1624,13 +1705,20 @@ struct option {
 	"1.0",
 	KEY_DUMMY,
 	"Specifies scaling factor for the drawing window.\n"
-	},
+    },
+    {
+        "altScaleFactor",
+        NULL,
+        "2.0",
+        KEY_DUMMY,
+        "Specifies alternative scaling factor for the drawing window.\n"
+    },
 #endif
 #ifdef SOUND
     {
 	"sounds",
 	NULL,
-	SOUNDFILE,
+	conf_soundfile_string,
 	KEY_DUMMY,
 	"Specifies the sound file.\n"
     },
@@ -1658,7 +1746,287 @@ struct option {
 	"Specifies the device name of the frame buffer.\n"
     },
 #endif    
-
+/* talk macros: */
+    {
+	"keySendMsg1",
+	NULL,
+	"F1",
+	KEY_MSG_1,
+	"Sends the talkmessage stored in msg1.\n"
+    },
+    {
+	"msg1",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 1.\n"
+    },
+    {
+	"keySendMsg2",
+	NULL,
+	"F2",
+	KEY_MSG_2,
+	"Sends the talkmessage stored in msg2.\n"
+    },
+    {
+	"msg2",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 2.\n"
+    },
+    {
+	"keySendMsg3",
+	NULL,
+	"F3",
+	KEY_MSG_3,
+	"Sends the talkmessage stored in msg3.\n"
+    },
+    {
+	"msg3",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 3.\n"
+    },
+    {
+	"keySendMsg4",
+	NULL,
+	"F4",
+	KEY_MSG_4,
+	"Sends the talkmessage stored in msg4.\n"
+    },
+    {
+	"msg4",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 4.\n"
+    },
+    {
+	"keySendMsg5",
+	NULL,
+	"F5",
+	KEY_MSG_5,
+	"Sends the talkmessage stored in msg5.\n"
+    },
+    {
+	"msg5",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 5.\n"
+    },
+    {
+	"keySendMsg6",
+	NULL,
+	"F6",
+	KEY_MSG_6,
+	"Sends the talkmessage stored in msg6.\n"
+    },
+    {
+	"msg6",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 6.\n"
+    },
+    {
+	"keySendMsg7",
+	NULL,
+	"F7",
+	KEY_MSG_7,
+	"Sends the talkmessage stored in msg7.\n"
+    },
+    {
+	"msg7",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 7.\n"
+    },
+    {
+	"keySendMsg8",
+	NULL,
+	"F8",
+	KEY_MSG_8,
+	"Sends the talkmessage stored in msg8.\n"
+    },
+    {
+	"msg8",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 8.\n"
+    },
+    {
+	"keySendMsg9",
+	NULL,
+	"F9",
+	KEY_MSG_9,
+	"Sends the talkmessage stored in msg9.\n"
+    },
+    {
+	"msg9",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 9.\n"
+    },
+    {
+	"keySendMsg10",
+	NULL,
+	"F10",
+	KEY_MSG_10,
+	"Sends the talkmessage stored in msg10.\n"
+    },
+    {
+	"msg10",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 10.\n"
+    },
+    {
+	"keySendMsg11",
+	NULL,
+	"F11",
+	KEY_MSG_11,
+	"Sends the talkmessage stored in msg11.\n"
+    },
+    {
+	"msg11",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 11.\n"
+    },
+    {
+	"keySendMsg12",
+	NULL,
+	"F12",
+	KEY_MSG_12,
+	"Sends the talkmessage stored in msg12.\n"
+    },
+    {
+	"msg12",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 12.\n"
+    },
+    {
+	"keySendMsg13",
+	NULL,
+	"",
+	KEY_MSG_13,
+	"Sends the talkmessage stored in msg13.\n"
+    },
+    {
+	"msg13",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 13.\n"
+    },
+    {
+	"keySendMsg14",
+	NULL,
+	"",
+	KEY_MSG_14,
+	"Sends the talkmessage stored in msg14.\n"
+    },
+    {
+	"msg14",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 14.\n"
+    },
+    {
+	"keySendMsg15",
+	NULL,
+	"",
+	KEY_MSG_15,
+	"Sends the talkmessage stored in msg15.\n"
+    },
+    {
+	"msg15",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 15.\n"
+    },
+    {
+	"keySendMsg16",
+	NULL,
+	"",
+	KEY_MSG_16,
+	"Sends the talkmessage stored in msg16.\n"
+    },
+    {
+	"msg16",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 16.\n"
+    },
+    {
+	"keySendMsg17",
+	NULL,
+	"",
+	KEY_MSG_17,
+	"Sends the talkmessage stored in msg17.\n"
+    },
+    {
+	"msg17",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 17.\n"
+    },
+    {
+	"keySendMsg18",
+	NULL,
+	"",
+	KEY_MSG_18,
+	"Sends the talkmessage stored in msg18.\n"
+    },
+    {
+	"msg18",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 18.\n"
+    },
+    {
+	"keySendMsg19",
+	NULL,
+	"",
+	KEY_MSG_19,
+	"Sends the talkmessage stored in msg19.\n"
+    },
+    {
+	"msg19",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 19.\n"
+    },
+    {
+	"keySendMsg20",
+	NULL,
+	"",
+	KEY_MSG_20,
+	"Sends the talkmessage stored in msg20.\n"
+    },
+    {
+	"msg20",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Talkmessage 20.\n"
+    },
 };
 
 
@@ -2038,7 +2406,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
 			path[PATH_MAX + 1];
     XrmDatabase		tmpDB;
 
-    sprintf(path, "%s%s", LIBDIR, myClass);
+    sprintf(path, "%s%s", Conf_libdir(), myClass);
     *rDBptr = XrmGetFileDatabase(path);
 
 #ifdef VMS
@@ -2124,31 +2492,32 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
 #endif	/* _WINDOWS*/
 
 void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-		   int *my_team, int *list, int *join, int *noLocalMotd,
+		   int *my_team, int *text, int *list,
+		   int *join, int *noLocalMotd,
 		   char *nickName, char *dispName, char *shut_msg)
 {
     char		*ptr;
-	char		*str;
+    char		*str;
     int			i;
-	int			j;
-	int			num;
-	int			firstKeyDef;
+    int			j;
+    int			num;
+    int			firstKeyDef;
     keys_t		key;
     KeySym		ks;
 #ifndef	_WINDOWS
 #endif
 
 #ifdef VMS
-	char		resValue[PATH_MAX + 1];
+    char		resValue[PATH_MAX + 1];
 #else
-	char		resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
+    char		resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
 #endif
     XrmDatabase		argDB = 0, rDB = 0;
 
     extern void		Record_init(char *filename);
 #ifndef	_WINDOWS
     XrmOptionDescRec	*xopt;
-	int					size;
+    int			size;
 
 
     XrmInitialize();
@@ -2230,6 +2599,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	    *my_team = TEAM_NOT_SET;
 	    Get_int_resource(argDB, "port", port);
 	    Get_bool_resource(argDB, "list", list);
+	    *text = true;
 	    *join = false;
 	    *noLocalMotd = true;
 	    XrmDestroyDatabase(argDB);
@@ -2266,10 +2636,22 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_string_resource(rDB, "geometry", resValue, sizeof resValue);
     geometry = strdup(resValue);
 #else	/* _WINDOWS */
-	/* Windows needs to know about -serverIni first */
-
-
+    /* Windows needs to know about -serverIni first */
 #endif	/* _WINDOWS */
+
+    if ((talk_fast_temp_buf_big = (char *)malloc(TALK_FAST_MSG_SIZE)) != NULL) {
+        for (i = 0; i < TALK_FAST_NR_OF_MSGS; ++i) {
+            sprintf (talk_fast_temp_buf, "msg%d", i + 1);
+            Get_resource(rDB, talk_fast_temp_buf, talk_fast_temp_buf_big, TALK_FAST_MSG_SIZE);
+            talk_fast_msgs[i] = strdup (talk_fast_temp_buf_big);
+        }
+        free (talk_fast_temp_buf_big);
+    }
+    else {
+	for (i = 0; i < TALK_FAST_NR_OF_MSGS; ++i) {
+	    talk_fast_msgs[i] = NULL;
+	}
+    }
 
     Get_bool_resource(rDB, "ignoreWindowManager", &ignoreWindowManager);
 
@@ -2296,15 +2678,20 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     strncpy(name, nickName, sizeof(name) - 1);
 
 #ifdef	_WINDOWS
-	if (*name == '\0')	/* Windows can have no default name */
-		strcpy(name, "NoName");
-	if (Argc >2)
-	{
-		if (Argv[2] && !strncmp(Argv[2], "-team", 5))		/* oh, it's those fixed pos variables again! */
-			*my_team = Argv[2][6] & 0x0f;					/* i've really got to fix that... */
+    if (*name == '\0') {
+	/* Windows can have no default name */
+	strcpy(name, "NoName");
+    }
+    if (Argc > 2) {
+	/* oh, it's those fixed pos variables again! */
+	if (Argv[2] && !strncmp(Argv[2], "-team", 5)) {
+	    /* i've really got to fix that... */
+	    *my_team = Argv[2][6] & 0x0f;
 	}
-	else
-		Get_int_resource(rDB, "team", my_team);
+	else {
+	    Get_int_resource(rDB, "team", my_team);
+	}
+    }
 #else
     Get_int_resource(rDB, "team", my_team);
 #endif
@@ -2314,6 +2701,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     team = *my_team;
 
     Get_int_resource(rDB, "port", port);
+    Get_bool_resource(rDB, "text", text);
     Get_bool_resource(rDB, "list", list);
     Get_bool_resource(rDB, "join", join);
     Get_bool_resource(rDB, "noLocalMotd", noLocalMotd);
@@ -2483,6 +2871,11 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_resource(rDB, "motdFont", motdFontName, sizeof motdFontName);
 
     Get_int_resource(rDB, "maxMessages", &maxMessages);
+#ifndef _WINDOWS
+    Get_bool_resource(rDB, "selectionAndHistory", &selectionAndHistory);
+    Get_int_resource(rDB, "maxLinesInHistory", &maxLinesInHistory);
+    LIMIT(maxLinesInHistory, 1, MAX_HIST_MSGS);
+#endif
 
     Get_int_resource(rDB, "receiveWindowSize", &receive_window_size);
     LIMIT(receive_window_size, MIN_RECEIVE_WINDOW_SIZE, MAX_RECEIVE_WINDOW_SIZE);
@@ -2515,7 +2908,12 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     if (scaleFactor == 0.0) {
 	scaleFactor = 1.0;
     }
-    /* init_ScaleArray(); */
+    LIMIT(scaleFactor, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
+    Get_float_resource(rDB, "altScaleFactor", &scaleFactor_s);
+    if (scaleFactor == 0.0) {
+        scaleFactor = 2.0;
+    }
+    LIMIT(scaleFactor, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
 #endif
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
@@ -2575,7 +2973,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		}
 	    }
 
-#ifdef DEVELOPMENT
+#ifndef NO_KEYSORT
 	    /* insertion sort. */
 	    for (j = num; j > 0; j--) {
 		if (ks >= keyDefs[j - 1].keysym) {

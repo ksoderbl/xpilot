@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 4.2 1998/08/30 15:23:15 bert Exp $
+/* $Id: pack.h,v 4.8 1999/11/10 19:24:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -89,8 +89,12 @@
  * 3.5.0.0: Player waiting queue.
  * 3.8.0.0: new items (deflector, hyperjump, phasing), keyboardsize and rounddelay.
  * 4.1.0.0: new item (mirror).
+ * 4.2.0.0: new power/turnspeed behavior
+ * 4.2.0.1: new item (armor).
+ * 4.2.0.2: highest bit on in wreckagetype when deadly.
+ * 4.2.0.3: different way of sending player item info.
  */
-#define	MAGIC		0x4100F4ED
+#define	MAGIC		0x4203F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))

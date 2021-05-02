@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.4 1998/04/20 10:52:16 bert Exp $
+/* $Id: list.c,v 1.6 1999/11/01 16:16:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include "list.h"
 
+/* store a list node. */
 struct ListNode {
     struct ListNode	*next;
     struct ListNode	*prev;
@@ -36,6 +37,7 @@ struct ListNode {
 };
 typedef struct ListNode list_node_t;
 
+/* store the list header. */
 struct List {
     list_node_t		tail;
     int			size;
@@ -43,17 +45,23 @@ struct List {
 /* typedef struct List *list_t; */
 /* typedef struct ListNode *list_iter_t; */
 
+static int		lists_allocated;
+static int		nodes_allocated;
+
 /* create a new list. */
 list_t List_new(void)
 {
-    list_t list = (list_t) malloc(sizeof(*list));
-    if (!list) {
-	return NULL;
+    list_t		list = (list_t) malloc(sizeof(*list));
+
+    if (list) {
+	lists_allocated++;
+
+	list->tail.next = &list->tail;
+	list->tail.prev = &list->tail;
+	list->tail.data = NULL;
+	list->size = 0;
     }
-    list->tail.next = &list->tail;
-    list->tail.prev = &list->tail;
-    list->tail.data = NULL;
-    list->size = 0;
+
     return list;
 }
 
@@ -64,6 +72,8 @@ void List_delete(list_t list)
 	List_clear(list);
 	list->tail.next = list->tail.prev = NULL;
 	free(list);
+
+	lists_allocated--;
     }
 }
 
@@ -124,7 +134,9 @@ list_iter_t List_erase(list_t list, list_iter_t pos)
     pos->next = NULL;
     pos->data = NULL;
     free(pos);
-    
+
+    nodes_allocated--;
+
     return next;
 }
 
@@ -141,16 +153,19 @@ list_iter_t List_erase_range(list_t list, list_iter_t first, list_iter_t last)
  * and return new position or NULL on failure. */
 list_iter_t List_insert(list_t list, list_iter_t pos, void *data)
 {
-    list_iter_t node = (list_iter_t) malloc(sizeof(*node));
-    if (!node) {
-	return NULL;
+    list_iter_t		node = (list_iter_t) malloc(sizeof(*node));
+
+    if (node) {
+	node->next = pos;
+	node->prev = pos->prev;
+	node->data = data;
+	node->prev->next = node;
+	node->next->prev = node;
+	list->size++;
+
+	nodes_allocated++;
     }
-    node->next = pos;
-    node->prev = pos->prev;
-    node->data = data;
-    node->prev->next = node;
-    node->next->prev = node;
-    list->size++;
+
     return node;
 }
 

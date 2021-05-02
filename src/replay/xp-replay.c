@@ -1,4 +1,4 @@
-/* $Id: xp-replay.c,v 4.2 1998/04/18 12:53:08 bert Exp $
+/* $Id: xp-replay.c,v 4.4 1999/11/07 09:39:11 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
  *
@@ -84,6 +84,8 @@
 #include "items/itemHyperJump.xbm"
 #include "items/itemPhasingDevice.xbm"
 #include "items/itemLaser.xbm"
+#include "items/itemMirror.xbm"
+#include "items/itemArmor.xbm"
 #include "items/itemEmergencyThrust.xbm"
 #include "items/itemTractorBeam.xbm"
 #include "items/itemAutopilot.xbm"
@@ -1386,7 +1388,9 @@ static char		*itemData[NUM_ITEMS] = {
     itemEmergencyShield_bits,
     itemDeflector_bits,
     itemHyperJump_bits,
-    itemPhasingDevice_bits
+    itemPhasingDevice_bits,
+    itemMirror_bits,
+    itemArmor_bits
 };
 
 static XFontStruct *loadQueryFont(const char *fontName, GC gc)

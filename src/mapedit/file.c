@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: file.c,v 1.5 1998/04/23 18:18:28 bert Exp $
+ * $Id: file.c,v 1.6 2000/03/11 20:25:58 bert Exp $
  */
 
 #include                 "main.h"
@@ -102,7 +102,7 @@ int SavePrompt(HandlerInfo info)
    T_PopupClose(changedwin);
    T_PopupClose(filepromptwin);
 
-   strcpy(filepromptname,map.filename);
+   strcpy(filepromptname,map.mapFileName);
    filepromptwin = T_PopupPrompt(-1,-1,300,150,"Save Map",
         "Enter file name to save:","Save",NULL,filepromptname,sizeof(max_str_t),
         SaveOk);
@@ -154,7 +154,7 @@ int SaveMap(char *file)
       fprintf(ofile,"%s\n",map.comments);
    }
 
-   if ( (map.maxlives != NULL) && (atoi(map.maxlives) != 0) )
+   if ( (map.worldLives != NULL) && (atoi(map.worldLives) != 0) )
       fprintf(ofile,"limitedlives : yes\n");
 
    for ( n=0; n< numprefs; n++ ) {
@@ -195,7 +195,7 @@ int SaveMap(char *file)
    }
 
    fclose(ofile);
-   strcpy(map.filename, file);
+   strcpy(map.mapFileName, file);
    return 0;
 }
 
@@ -315,17 +315,17 @@ int LoadMap(char *file)
    if (map.comments)
       free(map.comments);
    map.comments = (char *) NULL;
-   map.name[0] = map.author[0] = map.gravity[0] = map.shipmass[0] = (char) NULL;
-   map.maxrobots[0] = map.maxlives[0] = (char) NULL;
+   map.mapName[0] = map.mapAuthor[0] = map.gravity[0] = map.shipMass[0] = (char) NULL;
+   map.maxRobots[0] = map.worldLives[0] = (char) NULL;
    map.view_zoom = DEFAULT_MAP_ZOOM;
-   map.changed = map.edgewrap = map.edgebounce = map.teamplay = 0;
-   map.oneplay = map.timing = 0;
-   map.visibility = map.shielding = 0;
+   map.changed = map.edgeWrap = map.edgeBounce = map.teamPlay = 0;
+   map.onePlayerOnly = map.timing = 0;
+   map.limitedVisibility = map.allowShields = 0;
    for ( i=0; i<MAX_MAP_SIZE; i++) 
       for ( j=0; j<MAX_MAP_SIZE; j++)
          map.data[i][j] = ' ';
 
-   strcpy(map.filename, filename);
+   strcpy(map.mapFileName, filename);
    tmpstr = strrchr(filename,(int) '.');
    if (tmpstr != NULL) {
       if (strcmp(tmpstr, ".xbm") == 0) {
@@ -456,16 +456,16 @@ int LoadOldMap(char *file)
    rule = atoi ( line );
    switch (rule) {
       case 6:
-         map.edgewrap = 2;
+         map.edgeWrap = 2;
          break;
    }
 /* get map name and author */
    fgets(line, sizeof(max_str_t), fp);
-   strncpy(map.name, line, strlen(line) - 1);
-   map.name[strlen(line) - 1] = (char) NULL;
+   strncpy(map.mapName, line, strlen(line) - 1);
+   map.mapName[strlen(line) - 1] = (char) NULL;
    fgets(line, sizeof(max_str_t), fp);
-   strncpy(map.author, line, strlen(line) - 1);
-   map.author[strlen(line) - 1] = (char) NULL;
+   strncpy(map.mapAuthor, line, strlen(line) - 1);
+   map.mapAuthor[strlen(line) - 1] = (char) NULL;
  
 /* read in map */
    shortline = corrupted =0;
@@ -737,9 +737,13 @@ int AddOption(char *name, char *value)
    for (i=0; i< strlen(name); i++) {
       if (isupper(name[i])) name[i] = tolower(name[i]);
    }
-   for (option = 0; option < numprefs; option++) 
+   for (option = 0; option < numprefs; option++)
+   {
       if(!strcmp(name, prefs[option].name))
          break;
+      if(!strcmp(name, prefs[option].altname))
+         break;
+   }
    if ( option >= numprefs ) {
       if (map.comments == NULL) {
          map.comments = malloc(strlen(name)+strlen(value)+3);

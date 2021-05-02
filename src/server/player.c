@@ -1,4 +1,4 @@
-/* $Id: player.c,v 4.7 1998/09/18 15:28:00 bert Exp $
+/* $Id: player.c,v 4.12 1999/10/16 13:12:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -49,7 +49,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 4.7 1998/09/18 15:28:00 bert Exp $";
+    "@(#)$Id: player.c,v 4.12 1999/10/16 13:12:25 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -112,7 +112,7 @@ void Pick_startpos(int ind)
 	    }
 	}
     } else {
-	pick = rand() % num_free;
+	pick = (int)(rfrac() * num_free);
 	seen = 0;
 	for (i = 0; i < World.NumBases; i++) {
 	    if (free_bases[i] != 0) {
@@ -274,6 +274,7 @@ void Player_add_tank(int ind, long tank_fuel)
 	pl->fuel.max += tank_cap;
 	pl->fuel.tank[pl->fuel.num_tanks] = add_fuel;
 	pl->emptymass += TANK_MASS;
+	pl->item[ITEM_TANK] = pl->fuel.num_tanks;
     }
 }
 
@@ -302,7 +303,16 @@ void Player_remove_tank(int ind, int which_tank)
 		pl->fuel.tank[i] = pl->fuel.tank[i + 1];
 	    }
 	}
+	pl->item[ITEM_TANK] = pl->fuel.num_tanks;
     }
+}
+
+void Player_hit_armor(int ind)
+{
+    player		*pl = Players[ind];
+
+    if (--pl->item[ITEM_ARMOR] <= 0)
+	CLR_BIT(pl->have, OBJ_ARMOR);
 }
 
 /*
@@ -321,6 +331,7 @@ static void Player_init_fuel(int ind, long total_fuel)
     pl->fuel.sum	= MIN(fuel, pl->fuel.max);
     pl->fuel.tank[0]	= pl->fuel.sum;
     pl->emptymass	= ShipMass;
+    pl->item[ITEM_TANK]	= pl->fuel.num_tanks;
 
     fuel -= pl->fuel.sum;
 
@@ -1793,7 +1804,7 @@ void Player_death_reset(int ind)
 
     pl->fuel.sum       	= (long)(pl->fuel.sum*0.90);		/* Loose 10% of fuel */
     minfuel		= (World.items[ITEM_FUEL].initial * FUEL_SCALE_FACT);
-    minfuel		+= (rand() % (1 + minfuel) / 5);
+    minfuel		+= (int)(rfrac() * (1 + minfuel) * 0.2f);
     pl->fuel.sum	= MAX(pl->fuel.sum, minfuel);
     Player_init_fuel(ind, pl->fuel.sum);
 

@@ -1,4 +1,4 @@
-/* $Id: winX11.c,v 4.1 1998/04/16 17:41:07 bert Exp $
+/* $Id: winX11.c,v 4.2 2000/03/11 19:18:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -860,9 +860,13 @@ XWarpPointer(Display *display, Window src_w, Window dest_w,
 					 unsigned int src_width, unsigned int src_height,
 					 int dest_x, int dest_y)
 {
+#ifdef _WINDOWS
+	SetCursorPos(dest_x, dest_y);
+#else
 	RECT	rect;
 	GetWindowRect(xid[dest_w].hwnd.hWnd, &rect);
 	SetCursorPos(rect.left+dest_x, rect.top+dest_y);
+#endif
 	return(0); 
 }
 /*****************************************************************************/

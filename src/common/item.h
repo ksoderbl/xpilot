@@ -1,4 +1,4 @@
-/* $Id: item.h,v 4.2 1998/08/29 19:49:53 bert Exp $
+/* $Id: item.h,v 4.3 1999/10/05 20:25:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -46,7 +46,8 @@ enum Item {
     ITEM_HYPERJUMP		= 17,
     ITEM_PHASING		= 18,
     ITEM_MIRROR			= 19,
-    NUM_ITEMS			= 20
+    ITEM_ARMOR			= 20,
+    NUM_ITEMS			= 21
 };
 
 #define ITEM_BIT_FUEL			(1U << ITEM_FUEL)
@@ -69,6 +70,7 @@ enum Item {
 #define ITEM_BIT_HYPERJUMP		(1U << ITEM_HYPERJUMP)
 #define ITEM_BIT_PHASING		(1U << ITEM_PHASING)
 #define ITEM_BIT_MIRROR			(1U << ITEM_MIRROR)
+#define ITEM_BIT_ARMOR			(1U << ITEM_ARMOR)
 
 /* Each item is ITEM_SIZE x ITEM_SIZE */
 #define ITEM_SIZE		16

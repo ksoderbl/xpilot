@@ -1,4 +1,4 @@
-/* $Id: shipshape.c,v 1.4 1998/04/16 17:40:56 bert Exp $
+/* $Id: shipshape.c,v 1.5 1999/12/13 01:25:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -48,7 +48,7 @@ char shipshape_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shipshape.c,v 1.4 1998/04/16 17:40:56 bert Exp $";
+    "@(#)$Id: shipshape.c,v 1.5 1999/12/13 01:25:57 bert Exp $";
 #endif
 
 
@@ -1178,7 +1178,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
     if (shape_version >= 0x3200) {
 	strcpy(buf, "(SH:");
 	buflen = strlen(&buf[0]);
-	for (i = 0; i < w->num_points; i++) {
+	for (i = 0; i < w->num_points && i < MAX_SHIP_PTS; i++) {
 	    sprintf(&buf[buflen], " %d,%d",
 		    (int)w->pts[i][0].x, (int)w->pts[i][0].y);
 	    buflen += strlen(&buf[buflen]);
@@ -1202,7 +1202,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_l_gun > 0) {
 	    strcpy(&tmp[0], "(LG:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_l_gun; i++) {
+	    for (i = 0; i < w->num_l_gun && i < MAX_GUN_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->l_gun[i][0].x, (int)w->l_gun[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1213,7 +1213,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1221,7 +1221,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_r_gun > 0) {
 	    strcpy(&tmp[0], "(RG:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_r_gun; i++) {
+	    for (i = 0; i < w->num_r_gun && i < MAX_GUN_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->r_gun[i][0].x, (int)w->r_gun[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1232,7 +1232,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1240,7 +1240,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_l_rgun > 0) {
 	    strcpy(&tmp[0], "(LR:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_l_rgun; i++) {
+	    for (i = 0; i < w->num_l_rgun && i < MAX_GUN_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->l_rgun[i][0].x, (int)w->l_rgun[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1251,7 +1251,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1259,7 +1259,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_r_rgun > 0) {
 	    strcpy(&tmp[0], "(RR:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_r_rgun; i++) {
+	    for (i = 0; i < w->num_r_rgun && i < MAX_GUN_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->r_rgun[i][0].x, (int)w->r_rgun[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1270,7 +1270,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1278,7 +1278,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_l_light > 0) {
 	    strcpy(&tmp[0], "(LL:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_l_light; i++) {
+	    for (i = 0; i < w->num_l_light && i < MAX_LIGHT_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->l_light[i][0].x, (int)w->l_light[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1289,7 +1289,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1297,7 +1297,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_r_light > 0) {
 	    strcpy(&tmp[0], "(RL:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_r_light; i++) {
+	    for (i = 0; i < w->num_r_light && i < MAX_LIGHT_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->r_light[i][0].x, (int)w->r_light[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1308,7 +1308,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }
@@ -1316,7 +1316,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	if (w->num_m_rack > 0) {
 	    strcpy(&tmp[0], "(MR:");
 	    tmplen = strlen(&tmp[0]);
-	    for (i = 0; i < w->num_m_rack; i++) {
+	    for (i = 0; i < w->num_m_rack && i < MAX_RACK_PTS; i++) {
 		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->m_rack[i][0].x, (int)w->m_rack[i][0].y);
 		tmplen += strlen(&tmp[tmplen]);
@@ -1327,7 +1327,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		strcpy(&buf[buflen], tmp);
 		buflen += tmplen;
 	    }
-	    else {
+	    else if (extlen + tmplen < MSG_LEN) {
 		strcpy(&ext[extlen], tmp);
 		extlen += tmplen;
 	    }

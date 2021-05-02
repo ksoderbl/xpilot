@@ -550,7 +550,7 @@ proc setsort { w sx } {
 ##################################
 proc mkmetaserver w {
   global metsort oldmetsort colbk colact coldes colsc maxframesPerSecond \
-         remoteServer team client cfont nick qui cmpt
+         remoteServer team client cfont nick qui cmpt temp_dir
 
     set remoteServer "No remote server selected"
     if {$client == 1 } {

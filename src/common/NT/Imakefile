@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 1.1 1998/04/17 06:52:01 dick Exp $ */
+/* $Id: Imakefile,v 1.2 1999/10/08 17:26:37 bert Exp $ */
 
 TOPDIR=../../..
 
@@ -26,5 +26,5 @@ MakefileSubdirs($(MAKEFILESUBDIRS))
 IncludesSubdirs($(INCLUDESSUBDIRS))
 InstallSubdirs($(INSTALLSUBDIRS))
 InstallManSubdirs($(INSTALLMANSUBDIRS))
-TagSubdirs($(TAGSUBDIRS))
+/* CtagSubdirs($(TAGSUBDIRS)) */
 

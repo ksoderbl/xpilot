@@ -1,11 +1,13 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:14:42 bert Exp $ */
+/* $Id: Imakefile,v 4.1 1999/10/16 10:57:28 bert Exp $ */
 
 #include "Local.config"
 
 MsubTarget(xpilot.man,xpilot.man.msub)
 MsubTarget(xpilots.man,xpilots.man.msub)
 MsubTarget(xp-replay.man,xp-replay.man.msub)
+MsubDepend
 
 InstallManPage(xpilot,$(INSTMANDIR))
 InstallManPage(xpilots,$(INSTMANDIR))
 InstallManPage(xp-replay,$(INSTMANDIR))
+

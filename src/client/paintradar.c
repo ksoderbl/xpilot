@@ -1,4 +1,4 @@
-/* $Id: paintradar.c,v 4.3 1998/09/18 15:38:00 bert Exp $
+/* $Id: paintradar.c,v 4.7 2000/02/21 20:22:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -63,7 +63,7 @@ int	wallRadarColor;		/* Color index for walls on radar. */
 int	targetRadarColor;	/* Color index for targets on radar. */
 int	decorRadarColor;	/* Color index for decorations on radar. */
 int	radar_exposures;
-int	(*radarPlayerRectFN)	/* Function to draw player on radar */
+int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
 	(Display *disp, Drawable d, GC gc,
 	 int x, int y, unsigned width, unsigned height);
 
@@ -143,31 +143,38 @@ void Paint_radar(void)
 	    }
 	}
     }
-    for (i = 0; i<num_radar; i++) {
-	int s;
-	if ((s = radar_ptr[i].size) <= 0)
-	    s = 1;
+    for (i = 0; i < num_radar; i++) {
+        int s = radar_ptr[i].size;
+
+        if (s >= 0x80) {  /* from the same team */
+	    XSetForeground(dpy, radarGC, colors[4].pixel);
+            s -= 0x80;
+        }
+
+        if (s <= 0)
+            s = 1;
 	x = (int)(radar_ptr[i].x * xf + 0.5) - s / 2;
 	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1 - s / 2;
-	(*radarPlayerRectFN)(dpy, p_radar, radarGC, x, y, s, s);
+	(*radarDrawRectanglePtr)(dpy, p_radar, radarGC, x, y, s, s);
 	if (BIT(Setup->mode, WRAP_PLAY)) {
 	    xw = (x < 0) ? -256 : (x + s >= 256) ? 256 : 0;
 	    yw = (y < 0) ? -RadarHeight
 			     : (y + s >= RadarHeight) ? RadarHeight : 0;
 	    if (xw != 0) {
-		(*radarPlayerRectFN)(dpy, p_radar, radarGC,
-				     x - xw, y, s, s);
+		(*radarDrawRectanglePtr)(dpy, p_radar, radarGC,
+					 x - xw, y, s, s);
 	    }
 	    if (yw != 0) {
-		(*radarPlayerRectFN)(dpy, p_radar, radarGC,
-				     x, y - yw, s, s);
+		(*radarDrawRectanglePtr)(dpy, p_radar, radarGC,
+					 x, y - yw, s, s);
 
 		if (xw != 0) {
-		    (*radarPlayerRectFN)(dpy, p_radar, radarGC,
-					 x - xw, y - yw, s, s);
+		    (*radarDrawRectanglePtr)(dpy, p_radar, radarGC,
+					     x - xw, y - yw, s, s);
 		}
 	    }
 	}
+	XSetForeground(dpy, radarGC, colors[WHITE].pixel);
     }
     if (num_radar) {
 	RELEASE(radar_ptr, num_radar, max_radar);

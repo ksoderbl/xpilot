@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.2 1998/04/16 11:00:08 bert Exp $
+/* $Id: list.h,v 1.3 1999/10/25 16:07:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -74,11 +74,11 @@ void*		List_pop_back(list_t);
 
 /* add a new element to the beginning of the list.
  * and return the new position or NULL on failure. */
-list_iter_t List_push_front(list_t list, void *data);
+list_iter_t	List_push_front(list_t list, void *data);
 
 /* append a new element at the end of the list.
  * and return the new position or NULL on failure. */
-list_iter_t List_push_back(list_t list, void *data);
+list_iter_t	List_push_back(list_t list, void *data);
 
 /* return the number of elements in the list. */
 int		List_size(list_t);

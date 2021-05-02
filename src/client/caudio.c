@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 4.2 1998/08/30 12:15:33 bert Exp $
+/* $Id: caudio.c,v 4.3 1999/11/07 11:57:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -30,16 +30,6 @@
 
 #define	MAX_RANDOM_SOUNDS	6
 
-#ifdef _WINDOWS
-#include "NT/winClient.h"
-#include "NT/winAudio.h"
-#define SOUNDDIR snddir
-#endif
-
-#ifndef SOUNDDIR
-#define SOUNDDIR LIBDIR "sound/"
-#endif
-
 #define _CAUDIO_C_
 
 #include <stdlib.h>
@@ -70,9 +60,6 @@ void audioInit(char *display)
     FILE           *fp;
     char            buf[512], *file, *sound, *ifile, *p;
     int             i, j;
-#ifdef _WINDOWS
-    char	    snddir[MAX_CHARS];
-#endif
 
     if (!maxVolume) {
 	printf("maxVolume is 0: no sound.\n");
@@ -82,21 +69,6 @@ void audioInit(char *display)
 	error("Could not open soundfile %s", sounds);
 	return;
     }
-
-#ifdef _WINDOWS
-    strcpy(snddir, sounds);
-    p = strrchr(snddir, '\\');
-    if (p != NULL) {
-	*++p = '\0';
-    } else {
-	p = strrchr(snddir, '/');
-	if (snddir != NULL) {
-	    *++p = '\0';
-	} else {
-	    snddir[0] = '\0';
-	}
-    }
-#endif
 
     while (fgets(buf, sizeof(buf), fp)) {
 	/* ignore comments */
@@ -117,8 +89,8 @@ void audioInit(char *display)
 		    if (*ifile == '/')
 			table[i].filenames[j] = strdup(ifile);
 		    else if (table[i].filenames[j] =
-			     (char *)malloc(strlen(SOUNDDIR) + strlen(ifile) + 1)) {
-			strcpy(table[i].filenames[j], SOUNDDIR);
+			     (char *)malloc(strlen(Conf_sounddir()) + strlen(ifile) + 1)) {
+			strcpy(table[i].filenames[j], Conf_sounddir());
 			strcat(table[i].filenames[j], ifile);
 		    }
 		    j++;

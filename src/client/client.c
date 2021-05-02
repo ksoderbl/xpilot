@@ -1,4 +1,4 @@
-/* $Id: client.c,v 4.2 1998/09/09 00:22:15 dick Exp $
+/* $Id: client.c,v 4.17 2000/03/11 19:18:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #if defined(__hpux)
 #include <time.h>
@@ -51,13 +52,17 @@
 #include "xinit.h"
 #include "protoclient.h"
 #include "portability.h"
+#include "talk.h"
 
 char client_version[] = VERSION;
 
 #define MAX_CHECKPOINT	26
 
+char	*talk_fast_msgs[TALK_FAST_NR_OF_MSGS];	/* talk macros */
+
 int			scoresChanged = 0;
 int			RadarHeight = 0;
+int			RadarWidth = 256;	/* must always be 256! */
 
 ipos	pos;
 ipos	vel;
@@ -116,6 +121,9 @@ DFLOAT	turnspeed;		/* How fast player acc-turns */
 DFLOAT	turnspeed_s;		/* Saved turnspeed */
 DFLOAT	turnresistance;		/* How much is lost in % */
 DFLOAT	turnresistance_s;	/* Saved (see above) */
+DFLOAT	displayedPower;		/* What the server is sending us */
+DFLOAT	displayedTurnspeed;	/* What the server is sending us */
+DFLOAT	displayedTurnresistance;/* What the server is sending us */
 DFLOAT	spark_prob;		/* Sparkling effect user configurable */
 int     charsPerSecond;         /* Message output speed (configurable) */
 
@@ -147,6 +155,7 @@ int	lose_item_active;	/* one of the lose keys is pressed */
 
 #ifdef	WINDOWSCALING
 DFLOAT scaleFactor;
+DFLOAT scaleFactor_s;
 #endif
 
 #ifdef SOUND
@@ -176,6 +185,14 @@ static checkpoint_t	checks[MAX_CHECKPOINT];
 score_object_t		score_objects[MAX_SCORE_OBJECTS];
 int			score_object = 0;
 
+#ifndef  _WINDOWS
+/* provide cut&paste and message history */
+extern	selection_t	selection;
+static	char		*HistoryBlock = NULL;
+extern	char		*HistoryMsg[MAX_HIST_MSGS];
+#endif
+bool			selectionAndHistory = false;
+int			maxLinesInHistory;
 
 static fuelstation_t *Fuelstation_by_pos(int x, int y)
 {
@@ -1366,6 +1383,49 @@ void Client_score_table(void)
     scoresChanged = 0;
 }
 
+#ifndef _WINDOWS
+static int Alloc_history(void)
+{
+    char	*hist_ptr;
+    int		i;
+
+    /* maxLinesInHistory is a runtime constant */
+    if ((hist_ptr = (char *)malloc(maxLinesInHistory * MAX_CHARS)) == NULL) {
+	error("No memory for history");
+	return -1;
+    }
+    HistoryBlock	= hist_ptr;
+
+    for (i = 0; i < maxLinesInHistory; i++) {
+	HistoryMsg[i]	= hist_ptr;
+	hist_ptr[0]	= '\0';
+	hist_ptr	+= MAX_CHARS;
+    }
+    return 0;
+}
+
+static void Free_selectionAndHistory(void)
+{
+    if (HistoryBlock) {
+	free(HistoryBlock);
+	HistoryBlock = NULL;
+    }
+    if (selection.txt) {
+	free(selection.txt);
+	selection.txt = NULL;
+    }
+}
+#else
+static int Alloc_history(void)
+{
+    return 0;
+}
+
+static void Free_selectionAndHistory(void)
+{
+}
+#endif
+
 int Client_init(char *server, unsigned server_version)
 {
     extern void Make_table(void);
@@ -1374,7 +1434,7 @@ int Client_init(char *server, unsigned server_version)
 
     Make_table();
 #ifdef	WINDOWSCALING
-    init_ScaleArray();
+    Init_scale_array();
 #endif
 
     if ( Init_wreckage() == -1 )
@@ -1394,21 +1454,23 @@ int Client_setup(void)
     Map_restore(0, 0, Setup->x, Setup->y);
     Map_blue(0, 0, Setup->x, Setup->y);
 
-    RadarHeight = (int)((256.0/Setup->x) * Setup->y + 0.5);
+    RadarHeight = (RadarWidth * Setup->y) / Setup->x;
 
-    if (Init_windows() == -1) {
+    if (Init_playing_windows() == -1) {
 	return -1;
     }
     if (Alloc_msgs() == -1) {
 	return -1;
     }
+    if (Alloc_history() == -1) {
+	return -1;
+    }
     return 0;
 }
 
-int Client_fps_request()
+int Client_fps_request(void)
 {
-    if (maxFPS > FPS) maxFPS = FPS;
-    if (maxFPS < (FPS / 2)) maxFPS = FPS / 2;
+    LIMIT(maxFPS, FPS / 2, FPS);
     oldMaxFPS = maxFPS;
     return Send_fps_request(maxFPS);
 }
@@ -1445,6 +1507,7 @@ void Client_cleanup(void)
 	int		i;
 
     Quit();
+    Free_selectionAndHistory();
     if (max_others > 0) {
 		for (i=0; i<num_others; i++)
 		{
@@ -1496,8 +1559,7 @@ int Client_wrap_mode(void)
 int Check_client_fps(void) 
 {
     if (oldMaxFPS != maxFPS) {
-	if (maxFPS > FPS) maxFPS = FPS;
-	if (maxFPS < (FPS / 2)) maxFPS = FPS / 2;
+	LIMIT(maxFPS, FPS / 2, FPS);
 	oldMaxFPS = maxFPS;
 	return Send_fps_request(maxFPS);
     }

@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 4.5 1998/09/18 15:38:02 bert Exp $
+ * RCS:      $Id: socklib.c,v 4.13 2000/03/12 12:08:32 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 4.5 1998/09/18 15:38:02 bert Exp $";
+    "@(#)$Id: socklib.c,v 4.13 2000/03/12 12:08:32 bert Exp $";
 #endif
 
 #ifdef TERMNET
@@ -452,7 +452,6 @@ int CreateClientSocket(char *host, int port)
     memset((char *)&peer, 0, sizeof(struct sockaddr_in));
     peer.sin_family = AF_INET;
     peer.sin_port   = htons((u_short)port);
-
     peer.sin_addr.s_addr = inet_addr(host);
     if (peer.sin_addr.s_addr == (int)-1)
     {
@@ -482,6 +481,91 @@ int CreateClientSocket(char *host, int port)
 
     return (fd);
 } /* CreateClientSocket */
+
+
+/*
+ *******************************************************************************
+ *
+ *	CreateClientSocketNonBlocking()
+ *
+ *******************************************************************************
+ * Description
+ *	Creates a client TCP/IP socket in the Internet domain,
+ *	but using non-blocking mode.  The programmer will have to wait
+ *	for select to indicate that the connection has been established.
+ *
+ * Input Parameters
+ *	host		- Pointer to string containing name of the peer
+ *			  host on either dot-format or ascii-name format.
+ *	port		- The requested port number.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	Returns the socket descriptor or the error value -1.
+ *
+ * Globals Referenced
+ *	sl_errno	- If errors occured: SL_EHOSTNAME, SL_ESOCKET,
+ *			  SL_ECONNECT.
+ *
+ * External Calls
+ *	memset
+ *	gethostbyname
+ *	socket
+ *	connect
+ *	close
+ *	SetSocketNonBlocking
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers, derived from CreateClientSocket.
+ */
+int CreateClientSocketNonBlocking(char *host, int port)
+{
+    struct sockaddr_in	peer;
+    struct hostent	*hp;
+    int			fd;
+
+    memset((char *)&peer, 0, sizeof(struct sockaddr_in));
+    peer.sin_family = AF_INET;
+    peer.sin_port   = htons((u_short)port);
+    peer.sin_addr.s_addr = inet_addr(host);
+    if (peer.sin_addr.s_addr == (int)-1)
+    {
+	hp = gethostbyname(host);
+	if (hp == NULL)
+	{
+	    sl_errno = SL_EHOSTNAME;
+	    return (-1);
+	}
+	else
+	    peer.sin_addr.s_addr = ((struct in_addr*)(hp->h_addr))->s_addr;
+    }
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0)
+    {
+	sl_errno = SL_ESOCKET;
+	return (-1);
+    }
+
+    /* no need to check return code since a message would be printed already. */
+    SetSocketNonBlocking(fd, 1);
+
+#ifndef _WINDOWS
+    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0
+	&& errno != EINPROGRESS)
+    {
+	sl_errno = SL_ECONNECT;
+	close(fd);
+	return (-1);
+    }
+#endif
+
+    return (fd);
+} /* CreateClientSocketNonBlocking */
 
 
 /*
@@ -1227,6 +1311,7 @@ int CreateDgramSocket(int port)
  *
  * Input Parameters
  *	dotaddr		- Pointer to string containing of IP address in dot-format.
+ *			  This value may be set to NULL.
  *	port		- The port number. A value of zero may be specified in
  *			  clients to assign any available port number.
  *
@@ -1265,8 +1350,10 @@ int CreateDgramAddrSocket(char *dotaddr, int port)
 
     memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
     addr_in.sin_family		= AF_INET;
-    addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
     addr_in.sin_port		= htons((u_short)port);
+    if (dotaddr != NULL) {
+	addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
+    }
     retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
     if (retval < 0)
     {
@@ -2010,6 +2097,7 @@ void DgramClose(int fd)
  *
  * Input Parameters
  *	Size of output array.
+ *	Flag to request searching domain for xpilot.domain.edu.
  *
  * Output Parameters
  *	Array of size bytes to store the hostname.
@@ -2032,16 +2120,17 @@ void DgramClose(int fd)
 #ifdef VMS
 #define MAXHOSTNAMELEN  256
 #endif
-void GetLocalHostName(char *name, unsigned size)
+void GetLocalHostName(char *name, unsigned size,
+		      int search_domain_for_xpilot)
 {
     struct hostent	*he = NULL;
     struct hostent 	*xpilot_he = NULL;
 #ifndef	_WINDOWS
     struct hostent	tmp;
-#endif
     int			xpilot_len;
-    char		*alias, *dot; 
-    char		xpilot_hostname[MAXHOSTNAMELEN]; /* unused */
+    char		*alias, *dot;
+    char		xpilot_hostname[MAXHOSTNAMELEN];
+#endif
     static const char	xpilot[] = "xpilot";
 #ifdef VMS
     char                vms_inethost[MAXHOSTNAMELEN]   = "UCX$INET_HOST";
@@ -2105,6 +2194,10 @@ void GetLocalHostName(char *name, unsigned size)
 	    gethostname(name, size);
 	    return;
 	}
+    }
+
+    if (search_domain_for_xpilot != 1) {
+	return;
     }
 
 #ifndef	_WINDOWS	/* the lookup of xpilot can take FOREVER! zzzz...  */

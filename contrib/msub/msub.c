@@ -24,28 +24,31 @@
 			Added unistd, stdio, stdlib, string header files.
 			Commented out malloc declaration (now in stdlib.h).
 			Removed unused variable pi.
+	04 Oct 1999	Bert Gijsbers   bert@xpilot.org
+			Also commented out other prototype declarations
+			for strcpy, strncpy, strcat and getenv.
 
-	$Id: msub.c,v 4.2 1998/09/18 15:12:50 bert Exp $
+	$Id: msub.c,v 4.3 1999/10/04 19:56:03 bert Exp $
 */
 
-# include	<unistd.h>
-# include	<stdio.h>
-# include	<stdlib.h>
-# include	<string.h>
-# include	<ctype.h>
-# include	<sys/types.h>
-# include	<sys/stat.h>
+#include	<unistd.h>
+#include	<stdlib.h>
+#include	<stdio.h>
+#include	<string.h>
+#include	<ctype.h>
+#include	<sys/types.h>
+#include	<sys/stat.h>
 
-# define	bufSiz	2048
+#define	bufSiz	2048
 
-# define	FromMakefile(vp)	(vp->source == precMakefile)
+#define	FromMakefile(vp)	(vp->source == precMakefile)
 
 
 /* extern char	*malloc (); */
-extern char	*strcpy ();
-extern char	*strncpy ();
-extern char	*strcat ();
-extern char	*getenv ();
+/* extern char	*strcpy (); */
+/* extern char	*strncpy (); */
+/* extern char	*strcat (); */
+/* extern char	*getenv (); */
 
 
 typedef	struct Var	Var;
@@ -428,13 +431,13 @@ char	*val;
 
 	if ((vp = FindVar (var)) == (Var *) NULL)
 	{
-		if ((val = getenv (var)) == (char *) NULL)
+		if ((val = (char *) getenv (var)) == (char *) NULL)
 			val = "";
 		vp = AddVar (var, val, precEnvVar);
 	}
 	else if (FromMakefile (vp) && precMakefile < precEnvVar)
 	{
-		if ((val = getenv (var)) != (char *) NULL)
+		if ((val = (char *) getenv (var)) != (char *) NULL)
 			vp = AddVar (var, val, precEnvVar);
 	}
 	return (vp);

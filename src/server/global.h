@@ -1,4 +1,4 @@
-/* $Id: global.h,v 4.6 1998/09/01 10:06:02 bert Exp $
+/* $Id: global.h,v 4.10 1999/10/10 18:44:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -242,6 +242,9 @@ extern int		rdelay;
 extern int		rdelaySend;
 extern int		maxRoundTime;
 extern int		roundtime;
+
+extern bool		useWreckage;
+extern bool		ignore20MaxFPS;
 
 #endif
 

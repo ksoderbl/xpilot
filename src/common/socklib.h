@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.h,v 4.0 1998/03/18 15:18:04 bert Exp $
+ * RCS:      $Id: socklib.h,v 4.2 2000/03/12 12:08:32 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -57,6 +57,7 @@ extern int	GetPortNum(int);
 extern char	*GetSockAddr(int);
 extern int	GetRemoteHostName(int, char *, int);
 extern int	CreateClientSocket(char *, int);
+extern int	CreateClientSocketNonBlocking(char *, int);
 extern int	SocketAccept(int);
 extern int	SocketLinger(int);
 extern int	SetSocketReceiveBufferSize(int, int);
@@ -85,7 +86,8 @@ extern char	*DgramLastname(void);
 extern int	DgramLastport(void);
 extern void	DgramClose(int);
 extern unsigned long GetInetAddr(char *name);
-extern void	GetLocalHostName(char *, unsigned);
+extern void	GetLocalHostName(char *name, unsigned size,
+				 int search_domain_for_xpilot);
 extern char	*GetAddrByName(const char *name);
 extern int	GetNameByAddr(const char *addr, char *name, int size);
 

@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 4.6 1998/08/29 19:49:56 bert Exp $
+/* $Id: proto.h,v 4.10 1999/10/15 22:47:54 svenske Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -96,7 +96,7 @@ void Make_table(void);
  * Prototypes for cmdline.c
  */
 int Parse_list(int *index, char *buf);
-void Parser(int argc, char **argv);
+int Parser(int argc, char **argv);
 int Tune_option(char *opt, char *val);
 
 /*
@@ -187,7 +187,7 @@ void Explode(int ind);
 void Explode_fighter(int ind);
 void Throw_items(int ind);
 void Detonate_items(int ind);
-void add_temp_wormhole(int x, int y, bool inout);
+void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind);
 void remove_temp_wormhole(int ind);
 
 /*
@@ -196,6 +196,7 @@ void remove_temp_wormhole(int ind);
 void Cannon_init(int ind);
 void Cannon_add_item(int ind, int item, int amount);
 void Cannon_throw_items(int ind);
+void Cannon_check_fire(int ind);
 int Cannon_select_weapon(int ind);
 void Cannon_aim(int ind, int weapon, int *target, int *dir);
 void Cannon_fire(int ind, int weapon, int target, int dir);
@@ -208,6 +209,7 @@ void Go_home(int ind);
 void Compute_sensor_range(player *);
 void Player_add_tank(int ind, long tank_fuel);
 void Player_remove_tank(int ind, int which_tank);
+void Player_hit_armor(int ind);
 int Init_player(int ind, wireobj *ship);
 void Alloc_players(int number);
 void Free_players(void);

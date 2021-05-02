@@ -1,4 +1,4 @@
-/* $Id: client.h,v 4.3 1998/09/09 00:22:15 dick Exp $
+/* $Id: client.h,v 4.10 2000/03/11 19:56:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -90,6 +90,18 @@
 #define MIN_SHOW_ITEMS_TIME	0.0
 #define MAX_SHOW_ITEMS_TIME	10.0
 
+#define MIN_SCALEFACTOR		0.2
+#define MAX_SCALEFACTOR		8.0
+
+
+#define FIND_NAME_WIDTH(other)						\
+    if ((other)->name_width == 0) {					\
+	(other)->name_len = strlen((other)->name);			\
+	(other)->name_width = 2 + XTextWidth(gameFont, (other)->name,	\
+					 (other)->name_len);		\
+    }
+
+
 typedef struct {
     DFLOAT	ratio;
     short	id;
@@ -152,6 +164,40 @@ typedef struct {
 } score_object_t;
 
 
+/*
+ * is a selection pending (in progress), done, drawn emphasized?
+ */
+#define SEL_NONE       (1 << 0)
+#define SEL_PENDING    (1 << 1)
+#define SEL_SELECTED   (1 << 2)
+#define SEL_EMPHASIZED (1 << 3)
+
+/*
+ * a selection (text, string indices, state,...)
+ */
+typedef struct {
+    /* a selection in the talk window */
+    struct {
+        bool    state;	/* current state of the selection */
+        int     x1;	/* string indices */
+        int     x2;
+        bool    incl_nl;/* include a `\n'? */
+    } talk ;
+    /* a selection in the draw window */
+    struct {
+        bool    state;
+        int     x1;	/* string indices (for TalkMsg[].txt) */
+        int     x2;	/* they are modified when the emphasized area */
+        int     y1;	/* is scrolled down by new messages coming in */
+        int     y2;
+    } draw;
+    char	*txt;   /* allocated when needed */
+    int		len;
+    /* when a message `jumps' from talk window to the player messages: */
+    bool	keep_emphasizing;
+} selection_t;
+
+
 extern ipos	pos;
 extern ipos	vel;
 extern ipos	world;
@@ -185,6 +231,7 @@ extern short	phasingtimemax;
 extern int		roundDelay;
 extern int		roundDelayMax;
 
+extern int	RadarWidth;
 extern int	RadarHeight;
 extern int	map_point_distance;	/* spacing of navigation points */
 extern int	map_point_size;		/* size of navigation points */
@@ -210,6 +257,9 @@ extern DFLOAT	turnspeed;		/* How fast player acc-turns */
 extern DFLOAT	turnspeed_s;		/* Saved turnspeed */
 extern DFLOAT	turnresistance;		/* How much is lost in % */
 extern DFLOAT	turnresistance_s;	/* Saved (see above) */
+extern DFLOAT	displayedPower;		/* What the server is sending us */
+extern DFLOAT	displayedTurnspeed;	/* What the server is sending us */
+extern DFLOAT	displayedTurnresistance;/* What the server is sending us */
 extern DFLOAT	spark_prob;		/* Sparkling effect configurable */
 extern int	charsPerSecond;		/* Message output speed (config) */
 
@@ -242,15 +292,14 @@ extern int 	oldMaxFPS;
 extern byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */
 
-#ifdef	WINDOWSCALING
-extern DFLOAT	scaleFactor;		/* scale the draw (main playfield) window */
-#endif
-
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
 extern char 	audioServer[MAX_CHARS];	/* audio server */
 extern int 	maxVolume;		/* maximum volume (in percent) */
 #endif /* SOUND */
+
+extern int	maxLinesInHistory;	/* number of lines to save in history */
+#define MAX_HIST_MSGS	128		/* maximum */
 
 int Fuel_by_pos(int x, int y);
 int Target_alive(int x, int y, int *damage);

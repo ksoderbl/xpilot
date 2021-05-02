@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 4.6 1998/09/04 15:04:22 dick Exp $
+/* $Id: frame.c,v 4.15 2000/03/07 20:54:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -54,7 +54,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 4.6 1998/09/04 15:04:22 dick Exp $";
+    "@(#)$Id: frame.c,v 4.15 2000/03/07 20:54:24 bert Exp $";
 #endif
 
 
@@ -84,8 +84,17 @@ typedef struct {
     unsigned char	x, y;
 } debris_t;
 
+typedef struct {
+    short		x, y, size;
+} radar_t;
+
 
 long			frame_loops = 1;
+static long		last_frame_shuffle;
+static unsigned short	object_shuffle[MAX_TOTAL_SHOTS];
+static unsigned short	player_shuffle[64 + MAX_PSEUDO_PLAYERS];
+static radar_t		*radar_ptr;
+static int		num_radar, max_radar;
 
 static pixel_visibility_t pv;
 static int		view_width,
@@ -98,11 +107,38 @@ static int		view_width,
 			debris_colors,
 			spark_rand;
 static debris_t		*debris_ptr[DEBRIS_TYPES];
-static unsigned int		debris_num[DEBRIS_TYPES],
+static unsigned		debris_num[DEBRIS_TYPES],
 			debris_max[DEBRIS_TYPES];
 static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
-static unsigned int		fastshot_num[DEBRIS_TYPES * 2],
+static unsigned		fastshot_num[DEBRIS_TYPES * 2],
 			fastshot_max[DEBRIS_TYPES * 2];
+
+/*
+ * Macro to make room in a given dynamic array for new elements.
+ * P is the pointer to the array memory.
+ * N is the current number of elements in the array.
+ * M is the current size of the array.
+ * T is the type of the elements.
+ * E is the number of new elements to store in the array.
+ * The goal is to keep the number of malloc/realloc calls low
+ * while not wasting too much memory because of over-allocation.
+ */
+#define EXPAND(P,N,M,T,E)						\
+    if ((N) + (E) > (M)) {						\
+	if ((M) <= 0) {							\
+	    M = (E) + 2;						\
+	    P = (T *) malloc((M) * sizeof(T));				\
+	    N = 0;							\
+	} else {							\
+	    M = ((M) << 1) + (E);					\
+	    P = (T *) realloc(P, (M) * sizeof(T));			\
+	}								\
+	if (P == NULL) {						\
+	    error("No memory");						\
+	    N = M = 0;							\
+	    return;	/* ! */						\
+	}								\
+    }
 
 #define inview(x_, y_) 								\
     (   (   ((x_) > pv.world.x && (x_) < pv.world.x + view_width)		\
@@ -206,6 +242,66 @@ static void debris_end(int conn)
 	}
     }
 }
+
+static void Frame_radar_buffer_reset(void)
+{
+    num_radar = 0;
+}
+
+static void Frame_radar_buffer_add(int x, int y, int s)
+{
+    radar_t		*p;
+
+    EXPAND(radar_ptr, num_radar, max_radar, radar_t, 1);
+    p = &radar_ptr[num_radar++];
+    p->x = x;
+    p->y = y;
+    p->size = s;
+}
+
+static void Frame_radar_buffer_send(int conn)
+{
+    int			i;
+    int			dest;
+    int			tmp;
+    radar_t		*p;
+    const int		radar_width = 256;
+    int			radar_height = (radar_width * World.y) / World.x;
+    int			radar_x;
+    int			radar_y;
+    int			send_x;
+    int			send_y;
+    unsigned short	radar_shuffle[MAX_TOTAL_SHOTS];
+
+    for (i = 0; i < num_radar; i++) {
+	radar_shuffle[i] = i;
+    }
+    /* permute. */
+    for (i = 0; i < num_radar; i++) {
+	dest = (int)(rfrac() * num_radar);
+	tmp = radar_shuffle[i];
+	radar_shuffle[i] = radar_shuffle[dest];
+	radar_shuffle[dest] = tmp;
+    }
+
+    for (i = 0; i < num_radar; i++) {
+	p = &radar_ptr[radar_shuffle[i]];
+	radar_x = (radar_width * p->x) / World.width;
+	radar_y = (radar_height * p->y) / World.height;
+	send_x = (World.width * radar_x) / radar_width;
+	send_y = (World.height * radar_y) / radar_height;
+	Send_radar(conn, send_x, send_y, p->size);
+    }
+}
+
+static void Frame_radar_buffer_free(void)
+{
+    free(radar_ptr);
+    radar_ptr = NULL;
+    num_radar = 0;
+    max_radar = 0;
+}
+
 
 /*
  * Fast conversion of `num' into `str' starting at position `i', returns
@@ -422,14 +518,47 @@ static void Frame_map(int conn, int ind)
     }
 }
 
+static void Frame_shuffle(void)
+{
+    int			i;
+    unsigned short	tmp, dest;
+
+    if (last_frame_shuffle != frame_loops) {
+	last_frame_shuffle = frame_loops;
+
+	for (i = 0; i < NumObjs; i++) {
+	    object_shuffle[i] = i;
+	}
+	/* permute. */
+	for (i = 0; i < NumObjs; i++) {
+	    dest = (int)(rfrac() * NumObjs);
+	    tmp = object_shuffle[i];
+	    object_shuffle[i] = object_shuffle[dest];
+	    object_shuffle[dest] = tmp;
+	}
+
+	for (i = 0; i < NumPlayers; i++) {
+	    player_shuffle[i] = i;
+	}
+	/* permute. */
+	for (i = 0; i < NumPlayers; i++) {
+	    dest = (int)(rfrac() * NumPlayers);
+	    tmp = player_shuffle[i];
+	    player_shuffle[i] = player_shuffle[dest];
+	    player_shuffle[dest] = tmp;
+	}
+
+    }
+}
+
 static void Frame_shots(int conn, int ind)
 {
-    player		*pl = Players[ind];
-    int			i, color, x, y, fuzz = 0, teamshot, len;
-    object		*shot;
+    player			*pl = Players[ind];
+    int				i, color, x, y, fuzz = 0, teamshot, len;
+    object			*shot;
 
     for (i = 0; i < NumObjs; i++) {
-	shot = Obj[i];
+	shot = Obj[object_shuffle[i]];
 	x = shot->pos.x;
 	y = shot->pos.y;
 	if (!inview(x, y)) {
@@ -484,7 +613,10 @@ static void Frame_shots(int conn, int ind)
 	    break;
 
 	case OBJ_WRECKAGE:
-	    Send_wreckage(conn, x, y, (u_byte)shot->info, shot->size, shot->rotation);
+	    if (spark_rand != 0 || wreckageCollisionMayKill) {
+		Send_wreckage(conn, x, y,
+			      (u_byte)shot->info, shot->size, shot->rotation);
+	    }
 	    break;
 
 	case OBJ_SHOT:
@@ -546,7 +678,7 @@ static void Frame_shots(int conn, int ind)
 				    && shot->owner == pl->id));
 		if (confused) {
 		    id = 0;
-		    laid_by_team = rand() & 0x01;
+		    laid_by_team = (rfrac() < 0.5f);
 		}
 		Send_mine(conn, x, y, laid_by_team, id);
 	    }
@@ -563,11 +695,11 @@ static void Frame_shots(int conn, int ind)
 
 static void Frame_ships(int conn, int ind)
 {
-    player		*pl = Players[ind],
-			*pl_i;
-    pulse_t		*pulse;
-    int			i, j, color, dir;
-    DFLOAT		x, y;
+    player			*pl = Players[ind],
+				*pl_i;
+    pulse_t			*pulse;
+    int				i, j, k, color, dir;
+    DFLOAT			x, y;
 
     for (j = 0; j < NumPulses; j++) {
 	pulse = Pulses[j];
@@ -654,7 +786,9 @@ static void Frame_ships(int conn, int ind)
 	    }
 	}
     }
-    for (i = 0; i < NumPlayers; i++) {
+
+    for (k = 0; k < NumPlayers; k++) {
+	i = player_shuffle[k];
 	pl_i = Players[i];
 	if (!BIT(pl_i->status, PLAYING|PAUSE)) {
 	    continue;
@@ -757,7 +891,7 @@ static void Frame_radar(int conn, int ind)
 
     if (mask) {
 	for (i = 0; i < NumObjs; i++) {
-	    shot = Obj[i];
+	    shot = Obj[object_shuffle[i]];
 	    if (! BIT(shot->type, mask))
 		continue;
 
@@ -786,11 +920,12 @@ static void Frame_radar(int conn, int ind)
 	    y = shot->pos.y;
 	    if (Wrap_length(pl->pos.x - x,
 			    pl->pos.y - y) <= pl->sensor_range) {
-		Send_radar(conn, (int)x, (int)y, s);
+		Frame_radar_buffer_add((int)x, (int)y, s);
 	    }
 	}
     }
 #endif
+
     if (playersOnRadar || BIT(World.rules->mode, TEAM_PLAY)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    /*
@@ -819,7 +954,7 @@ static void Frame_radar(int conn, int ind)
 		&& frame_loops % 5 >= 3) {
 		continue;
 	    }
-	    Send_radar(conn, (int)x, (int)y, 3);
+	    Frame_radar_buffer_add((int)x, (int)y, 3);
 	}
     }
 }
@@ -867,6 +1002,8 @@ void Frame_update(void)
 
     if (++frame_loops >= LONG_MAX)	/* Used for misc. timing purposes */
 	frame_loops = 0;
+
+    Frame_shuffle();
 
     if (gameDuration > 0.0
 	&& game_over_called == false
@@ -959,7 +1096,9 @@ void Frame_update(void)
 	    Frame_map(conn, ind);
 	    Frame_shots(conn, ind);
 	    Frame_ships(conn, ind);
+	    Frame_radar_buffer_reset();
 	    Frame_radar(conn, ind);
+	    Frame_radar_buffer_send(conn);
 	    if (pl->lose_item_state != 0) {
 		Send_loseitem(pl->lose_item, conn);
 		if (pl->lose_item_state == 1)
@@ -974,6 +1113,8 @@ void Frame_update(void)
 	Send_end_of_frame(conn);
     }
     oldTimeLeft = newTimeLeft;
+
+    Frame_radar_buffer_free();
 }
 
 void Set_message(const char *message)

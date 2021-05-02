@@ -1,4 +1,4 @@
-/* $Id: keys.h,v 4.1 1998/04/16 17:40:42 bert Exp $
+/* $Id: keys.h,v 4.5 1999/11/06 16:33:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -116,11 +116,38 @@ typedef enum {
      * retaining compatibility.  Change this at the next major cleanup.
      */
     ,
+    KEY_MSG_1, /* talk macros */
+    KEY_MSG_2,
+    KEY_MSG_3,
+    KEY_MSG_4,
+    KEY_MSG_5,
+    KEY_MSG_6,
+    KEY_MSG_7,
+    KEY_MSG_8,
+    KEY_MSG_9,
+    KEY_MSG_10,
+    KEY_MSG_11,
+    KEY_MSG_12,
+    KEY_MSG_13,
+    KEY_MSG_14,
+    KEY_MSG_15,
+    KEY_MSG_16,
+    KEY_MSG_17,
+    KEY_MSG_18,
+    KEY_MSG_19,
+    KEY_MSG_20,
+
     KEY_ID_MODE,
     KEY_TOGGLE_OWNED_ITEMS,
     KEY_TOGGLE_MESSAGES,
     KEY_POINTER_CONTROL,
     KEY_TOGGLE_RECORD,
+    KEY_PRINT_MSGS_STDOUT,
+    KEY_TALK_CURSOR_LEFT,
+    KEY_TALK_CURSOR_RIGHT,
+    KEY_TALK_CURSOR_UP,
+    KEY_TALK_CURSOR_DOWN,
+    KEY_SWAP_SCALEFACTOR,
     NUM_CLIENT_KEYS	/* The number of keys really used by the client. */
 #endif
 } keys_t;

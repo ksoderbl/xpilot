@@ -1,4 +1,4 @@
-/* $Id: map.c,v 4.5 1998/08/29 19:49:55 bert Exp $
+/* $Id: map.c,v 4.10 2000/03/11 20:17:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -50,7 +50,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 4.5 1998/08/29 19:49:55 bert Exp $";
+    "@(#)$Id: map.c,v 4.10 2000/03/11 20:17:16 bert Exp $";
 #endif
 
 
@@ -233,8 +233,15 @@ void Grok_map(void)
 
     Init_map();
 
-    World.x = mapWidth;
-    World.y = mapHeight;
+    if (mapWidth > MAX_MAP_SIZE || mapHeight > MAX_MAP_SIZE) {
+	errno = 0;
+	error("mapWidth or mapHeight exceeds map size limit %d", MAX_MAP_SIZE);
+	free(mapData);
+	mapData = NULL;
+    } else {
+	World.x = mapWidth;
+	World.y = mapHeight;
+    }
     if (extraBorder) {
 	World.x += 2;
 	World.y += 2;
@@ -799,9 +806,9 @@ void Grok_map(void)
 
 	if (!wormTime) {
 	    for (i = 0; i < World.NumWormholes; i++) {
-		int j = rand() % World.NumWormholes;
+		int j = (int)(rfrac() * World.NumWormholes);
 		while (World.wormHoles[j].type == WORM_IN)
-		    j = rand() % World.NumWormholes;
+		    j = (int)(rfrac() * World.NumWormholes);
 		World.wormHoles[i].lastdest = j;
 	    }
 	}
@@ -892,11 +899,11 @@ void Generate_random_map(void)
 			i,
 			size,
 			num_bases = 25,
-			num_fuels = (World.x * World.y) / (1000 + rand()%1000),
-			num_cannons = (World.x * World.y) / (100 + rand()%100),
-			num_blocks = (World.x * World.y) / (50 + rand()%50),
-			num_gravs = (World.x * World.y) / (2000 + rand()%2000),
-			num_worms = (World.x * World.y) / (2000 + rand()%2000);
+			num_fuels = (World.x * World.y) / (1000 * (1.0f + rfrac())),
+			num_cannons = (World.x * World.y) / (100 * (1.0f + rfrac())),
+			num_blocks = (World.x * World.y) / (50 * (1.0f + rfrac())),
+			num_gravs = (World.x * World.y) / (2000 * (1.0f + rfrac())),
+			num_worms = (World.x * World.y) / (2000 * (1.0f + rfrac()));
 
     strcpy(World.name, "Random Land");
     strcpy(World.author, "The Computer");
@@ -909,7 +916,7 @@ void Generate_random_map(void)
     memset(mapData, ' ', size);
 
     while (--num_blocks >= 0) {
-	switch (rand()%5) {
+	switch ((int)(rfrac() * 5)) {
 	case 0: i = 'a'; break;
 	case 1: i = 'w'; break;
 	case 2: i = 'q'; break;
@@ -991,9 +998,21 @@ void Find_base_direction(void)
 	    dir = MOD2(dir, RES);
 	}
 	att = -1;
+	/*BASES SNAP TO UPWARDS ATTRACTOR FIRST*/
+        if (y == World.y - 1 && World.block[x][0] == BASE_ATTRACTOR && BIT(World.rules->mode, WRAP_PLAY)) {  /*check wrapped*/
+	    if (att == -1 || dir == DIR_UP) {
+		att = DIR_UP;
+	    }
+	}
 	if (y < World.y - 1 && World.block[x][y + 1] == BASE_ATTRACTOR) {
 	    if (att == -1 || dir == DIR_UP) {
 		att = DIR_UP;
+	    }
+	}
+	/*THEN DOWNWARDS ATTRACTORS*/
+        if (y == 0 && World.block[x][World.y-1] == BASE_ATTRACTOR && BIT(World.rules->mode, WRAP_PLAY)) { /*check wrapped*/
+	    if (att == -1 || dir == DIR_DOWN) {
+		att = DIR_DOWN;
 	    }
 	}
 	if (y > 0 && World.block[x][y - 1] == BASE_ATTRACTOR) {
@@ -1001,9 +1020,21 @@ void Find_base_direction(void)
 		att = DIR_DOWN;
 	    }
 	}
+	/*THEN RIGHTWARDS ATTRACTORS*/
+	if (x == World.x - 1 && World.block[0][y] == BASE_ATTRACTOR && BIT(World.rules->mode, WRAP_PLAY)) { /*check wrapped*/
+	    if (att == -1 || dir == DIR_RIGHT) {
+		att = DIR_RIGHT;
+	    }
+	}
 	if (x < World.x - 1 && World.block[x + 1][y] == BASE_ATTRACTOR) {
 	    if (att == -1 || dir == DIR_RIGHT) {
 		att = DIR_RIGHT;
+	    }
+	}
+	/*THEN LEFTWARDS ATTRACTORS*/
+	if (x == 0 && World.block[World.x-1][y] == BASE_ATTRACTOR && BIT(World.rules->mode, WRAP_PLAY)) { /*check wrapped*/
+	    if (att == -1 || dir == DIR_LEFT) {
+		att = DIR_LEFT;
 	    }
 	}
 	if (x > 0 && World.block[x - 1][y] == BASE_ATTRACTOR) {
@@ -1292,3 +1323,52 @@ void Compute_gravity(void)
     Compute_global_gravity();
     Compute_local_gravity();
 }
+
+
+void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind)
+{
+    wormhole_t inhole, outhole, *wwhtemp;
+
+    if ((wwhtemp = (wormhole_t *)realloc(World.wormHoles,
+					 (World.NumWormholes + 2)
+					 * sizeof(wormhole_t)))
+	== NULL) {
+	error("No memory for temporary wormholes.");
+	return;
+    }
+    World.wormHoles = wwhtemp;
+
+    inhole.pos.x = xin;
+    inhole.pos.y = yin;
+    outhole.pos.x = xout;
+    outhole.pos.y = yout;
+    inhole.countdown = outhole.countdown = wormTime * FPS;
+    inhole.lastdest = World.NumWormholes + 1;
+    inhole.lastplayer = outhole.lastplayer = ind;
+    inhole.temporary = outhole.temporary = 1;
+    inhole.type = WORM_IN;
+    outhole.type = WORM_OUT;
+    World.wormHoles[World.NumWormholes] = inhole;
+    World.wormHoles[World.NumWormholes + 1] = outhole;
+    World.block[xin][yin] = World.block[xout][yout] = WORMHOLE;
+    World.itemID[xin][yin] = World.NumWormholes;
+    World.itemID[xout][yout] = World.NumWormholes + 1;
+    World.NumWormholes += 2;
+}
+
+void remove_temp_wormhole(int ind)
+{
+    wormhole_t hole;
+
+    hole = World.wormHoles[ind];
+    World.block[hole.pos.x][hole.pos.y] = SPACE;
+    World.itemID[hole.pos.x][hole.pos.y] = (u_short) -1;
+    World.NumWormholes--;
+    if (ind != World.NumWormholes) {
+	World.wormHoles[ind] = World.wormHoles[World.NumWormholes];
+    }
+    World.wormHoles = (wormhole_t *)realloc(World.wormHoles,
+					    World.NumWormholes
+					    * sizeof(wormhole_t));
+}
+

@@ -1,4 +1,4 @@
-/* $Id: server.c,v 4.6 1998/08/29 19:49:57 bert Exp $
+/* $Id: server.c,v 4.13 2000/03/12 12:11:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -75,7 +75,7 @@ char server_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 4.6 1998/08/29 19:49:57 bert Exp $";
+    "@(#)$Id: server.c,v 4.13 2000/03/12 12:11:11 bert Exp $";
 #endif
 
 /*
@@ -88,12 +88,13 @@ int			NumEcms = 0;
 int			NumTransporters = 0;
 player			**Players;
 object			*Obj[MAX_TOTAL_SHOTS];
-pulse_t			*Pulses[MAX_TOTAL_SHOTS>>1];
-ecm_t			*Ecms[MAX_TOTAL_SHOTS>>1];
-trans_t			*Transporters[MAX_TOTAL_SHOTS>>1];
+pulse_t			*Pulses[MAX_TOTAL_PULSES];
+ecm_t			*Ecms[MAX_TOTAL_ECMS];
+trans_t			*Transporters[MAX_TOTAL_TRANSPORTERS];
 int			GetInd[NUM_IDS+1];
 server			Server;
-int			ShutdownServer = -1, ShutdownDelay = 1000;
+int			ShutdownServer = -1;
+int			ShutdownDelay = 1000;
 char			ShutdownReason[MAX_CHARS];
 int 			framesPerSecond = 18;
 long			main_loops = 0;		/* needed in events.c */
@@ -139,7 +140,12 @@ int main(int argc, char **argv)
     init_error(argv[0]);
     srand(time((time_t *)0) * Get_process_id());
     Check_server_versions();
-    Parser(argc, argv);
+    if (!Parser(argc, argv))
+#ifndef	_WINDOWS
+		exit(0);
+#else
+		return(0);
+#endif
     plock_server(pLockServer);           /* Lock the server into memory */
     Make_table();			/* Make trigonometric tables */
     Compute_gravity();
@@ -165,7 +171,7 @@ int main(int argc, char **argv)
     /*
      * Get server's official name.
      */
-    GetLocalHostName(Server.host, sizeof Server.host);
+    GetLocalHostName(Server.host, sizeof Server.host, (reportToMetaServer != 0));
 
     Get_login_name(Server.name, sizeof Server.name);
 
@@ -402,6 +408,7 @@ int Pick_team(int pick_for_type)
     } else {
 	least_players = NumPlayers;
 	for (i = 0; i < MAX_TEAMS; i++) {
+	    /* We fill teams with players first. */
 	    if (playing[i] > 0 && free_bases[i] > 0) {
 		if (playing[i] < least_players) {
 		    least_players = playing[i];
@@ -606,8 +613,8 @@ void Log_game(const char *heading)
 	    World.name,
 	    heading);
 
-    if ((fp = fopen(LOGFILE, "a")) == NULL) {	/* Couldn't open file */
-	error("Couldn't open log file, contact " LOCALGURU "");
+    if ((fp = fopen(Conf_logfile(), "a")) == NULL) {	/* Couldn't open file */
+	error("Couldn't open log file, contact %s", Conf_localguru());
 	return;
     }
 
@@ -719,6 +726,7 @@ static void Check_server_versions(void)
 			event_version[],
 			frame_version[],
 			id_version[],
+			item_version[],
 			map_version[],
 			math_version[],
 			metaserver_version[],
@@ -734,6 +742,8 @@ static void Check_server_versions(void)
 			server_version[],
 			socklib_version[],
 			sched_version[],
+			ship_version[],
+			shot_version[],
 			update_version[],
 			walls_version[];
     static struct file_version {
@@ -747,6 +757,7 @@ static void Check_server_versions(void)
 	{ "event", event_version },
 	{ "frame", frame_version },
 	{ "id", id_version },
+	{ "item", item_version },
 	{ "map", map_version },
 	{ "math", math_version },
 	{ "metaserver", metaserver_version },
@@ -762,6 +773,8 @@ static void Check_server_versions(void)
 	{ "server", server_version },
 	{ "socklib", socklib_version },
 	{ "sched", sched_version },
+	{ "ship", ship_version },
+	{ "shot", shot_version },
 	{ "update", update_version },
 	{ "walls", walls_version },
     };

@@ -1,4 +1,4 @@
-/* $Id: xinit.h,v 4.4 1998/09/30 14:00:33 bert Exp $
+/* $Id: xinit.h,v 4.7 1999/10/16 19:08:42 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -62,7 +62,7 @@ extern int		ignoreWindowManager;
  */
 extern const char* Item_get_text(int i);
 extern int Init_top(void);
-extern int Init_windows(void);
+extern int Init_playing_windows(void);
 extern int Alloc_msgs(void);
 extern void Free_msgs(void);
 extern void Expose_info_window(void);
@@ -72,6 +72,13 @@ extern void Talk_resize(void);
 extern void Talk_cursor(bool visible);
 extern void Talk_map_window(bool map);
 extern int Talk_do_event(XEvent *event);
+extern int Talk_paste(char* data, int len, bool overwrite);
+extern int Talk_place_cursor(XButtonEvent *xbutton, bool pending);
+extern void Talk_window_cut(XButtonEvent *xbutton);
+extern void Talk_cut_from_messages(XButtonEvent *xbutton);
+extern void Clear_selection(void);
+extern void Print_messages_to_stdout(void);
+extern void Talk_reverse_cut(void);
 extern void Quit(void);
 extern int FatalError(Display *dpy);
 extern void Draw_score_table(void);
@@ -93,6 +100,7 @@ extern void About(Window w);
 extern int Motd_callback(int, void *, const char **);
 extern void Motd_destroy(void);
 extern void Expose_about_window(void);
+extern void Scale_dashes(void);
 #ifdef	_WINDOWS
 extern int Credits_callback(int, void *, const char **);
 #endif

@@ -1,4 +1,4 @@
-/* $Id: sched.c,v 4.4 1998/04/22 13:56:43 bert Exp $
+/* $Id: sched.c,v 4.5 1999/01/14 09:07:12 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -596,9 +596,11 @@ void sched(void)
 	if (io_todo == 0 && timers_used < timer_ticks) {
 	    io_todo = 1 + (timer_ticks - timers_used);
 	    tvp = &tv;
+#ifndef	_WINDOWS
 	    if (timer_handler) {
 		(*timer_handler)();
 	    }
+#endif
 	    do {
 		++timers_used;
 		if (--ticks_till_second <= 0) {

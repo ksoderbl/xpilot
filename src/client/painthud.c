@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 4.4 1998/09/13 10:29:26 bert Exp $
+/* $Id: painthud.c,v 4.17 2000/03/13 18:26:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -57,12 +57,6 @@ char painthud_version[] = VERSION;
 #define X(co)  ((int) ((co) - world.x))
 #define Y(co)  ((int) (world.y + view_height - (co)))
 
-#define FIND_NAME_WIDTH(other)						\
-    if ((other)->name_width == 0) {					\
-	(other)->name_len = strlen((other)->name);			\
-	(other)->name_width = 2 + XTextWidth(gameFont, (other)->name,	\
-					 (other)->name_len);		\
-    }
 
 extern setup_t		*Setup;
 extern int		RadarHeight;
@@ -75,6 +69,17 @@ int	hudLockColor;		/* Color index for lock on HUD drawing */
 DFLOAT	charsPerTick = 0.0;	/* Output speed of messages */
 
 message_t	*TalkMsg[MAX_MSGS], *GameMsg[MAX_MSGS];
+/* store incoming messages while a cut is pending */
+message_t	*TalkMsg_pending[MAX_MSGS], *GameMsg_pending[MAX_MSGS];
+/* history of the talk window */
+char		*HistoryMsg[MAX_HIST_MSGS];
+
+#ifndef _WINDOWS
+/* selection in talk- or draw-window */
+extern selection_t selection;
+extern void Delete_pending_messages(void);
+#endif
+
 
 /*
  * Draw a meter of some kind on screen.
@@ -96,7 +101,7 @@ static void Paint_meter(int xoff, int y, const char *title, int val, int max)
 
     if (xoff >= 0) {
 	x = xoff;
-        xstr = WINSCALE(x) + METER_WIDTH + BORDER;
+        xstr = WINSCALE(x + METER_WIDTH) + BORDER;
     } else {
 	x = view_width - (METER_WIDTH - xoff);
         xstr = WINSCALE(x) - (BORDER + XTextWidth(gameFont, title, strlen(title)));
@@ -104,7 +109,7 @@ static void Paint_meter(int xoff, int y, const char *title, int val, int max)
 
     Rectangle_add(RED,
 		  x+2, y+2,
-		  (int)(((METER_WIDTH-3)*val)/(max?max:1)), WINSCALE(METER_HEIGHT-3));
+		  (int)(((METER_WIDTH-3)*val)/(max?max:1)), METER_HEIGHT-3);
     SET_FG(colors[WHITE].pixel);
     rd.drawRectangle(dpy, p_draw, gc,
 		   WINSCALE(x), WINSCALE(y), WINSCALE(METER_WIDTH), WINSCALE(METER_HEIGHT));
@@ -128,6 +133,7 @@ static void Paint_meter(int xoff, int y, const char *title, int val, int max)
 		    gameFont->ascent + gameFont->descent + 1);
 }
 
+
 static int wrap(int *xp, int *yp)
 {
     int			x = *xp, y = *yp;
@@ -147,6 +153,7 @@ static int wrap(int *xp, int *yp)
     return 1;
 }
 
+
 void Paint_score_objects(void)
 {
     int		i, x, y;
@@ -155,17 +162,17 @@ void Paint_score_objects(void)
 	score_object_t*	sobj = &score_objects[i];
 	if (sobj->count > 0) {
 	    if (sobj->count%3) {
-		x = sobj->x * BLOCK_SZ + BLOCK_SZ/2 - sobj->msg_width/2;
-		y = sobj->y * BLOCK_SZ + BLOCK_SZ/2 - gameFont->ascent/2;
+		x = sobj->x * BLOCK_SZ + BLOCK_SZ/2;
+		y = sobj->y * BLOCK_SZ + BLOCK_SZ/2;
 		if (wrap(&x, &y)) {
 		    SET_FG(colors[hudColor].pixel);
+		    x = WINSCALE(X(x)) - sobj->msg_width / 2,
+		    y = WINSCALE(Y(y)) - gameFont->ascent / 2,
 		    rd.drawString(dpy, p_draw, gc,
-				WINSCALE(X(x)),
-				WINSCALE(Y(y)),
+				x, y,
 				sobj->msg,
 				sobj->msg_len);
-		    Erase_rectangle(WINSCALE(X(x) - 1),
-				    WINSCALE(Y(y)) - gameFont->ascent ,
+		    Erase_rectangle(x - 1, y - gameFont->ascent,
 				    sobj->msg_width + 2,
 				    gameFont->ascent + gameFont->descent);
 		}
@@ -185,10 +192,10 @@ void Paint_meters(void)
     if (BIT(instruments, SHOW_FUEL_METER))
 	Paint_meter(-10, 20, "Fuel", (int)fuelSum, (int)fuelMax);
     if (BIT(instruments, SHOW_POWER_METER) || control_count)
-	Paint_meter(-10, 40, "Power", (int)power, (int)MAX_PLAYER_POWER);
+	Paint_meter(-10, 40, "Power", (int)displayedPower, (int)MAX_PLAYER_POWER);
     if (BIT(instruments, SHOW_TURNSPEED_METER) || control_count)
 	Paint_meter(-10, 60, "Turnspeed",
-		    (int)turnspeed, (int)MAX_PLAYER_TURNSPEED);
+		    (int)displayedTurnspeed, (int)MAX_PLAYER_TURNSPEED);
     if (control_count > 0)
 	control_count--;
     if (BIT(instruments, SHOW_PACKET_SIZE_METER))
@@ -262,29 +269,51 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 		    target->name_width + 2,
 		    gameFont->ascent + gameFont->descent);
 
-    ship = Ship_by_id(lock_id);
-    for (i = 0; i < ship->num_points; i++) {
-	points[i].x = WINSCALE((int)(hud_pos_x + ship->pts[i][dir].x / 2 + 60));
-	points[i].y = WINSCALE((int)(hud_pos_y + ship->pts[i][dir].y / 2 - 80));
-    }
-    points[i++] = points[0];
-    SET_FG(colors[hudShipColor].pixel);
-    if (useErase){
-	rd.drawLines(dpy, p_draw, gc, points, i, 0);
+    /* Only show the mini-ship for the locked player if it will be big enough
+     * to even tell what the heck it is!  I choose the arbitrary size of
+     * 10 pixels wide, which in practice is a scaleFactor <= 1.5.
+     */
+    if (
+#ifdef WINDOWSCALING
+	10 * scaleFactor <= 15
+#else
+	1
+#endif
+		              ) {
+	ship = Ship_by_id(lock_id);
+	for (i = 0; i < ship->num_points; i++) {
+	    points[i].x = WINSCALE((int)(hud_pos_x + ship->pts[i][dir].x / 2 + 60));
+	    points[i].y = WINSCALE((int)(hud_pos_y + ship->pts[i][dir].y / 2 - 80));
+	}
+	points[i++] = points[0];
+	SET_FG(colors[hudShipColor].pixel);
+	if (useErase){
+	    rd.drawLines(dpy, p_draw, gc, points, i, 0);
 	    Erase_points(0, points, i);
-    } else {
-	rd.fillPolygon(dpy, p_draw, gc,
+	} else {
+	    rd.fillPolygon(dpy, p_draw, gc,
 		   points, i,
 		   Complex, CoordModeOrigin);
+	}
     }
-    SET_FG(colors[hudColor].pixel);
 
-    if (lock_dist != 0) {
+    if (BIT(Setup->mode, LIMITED_LIVES)) { /* lives left is a better info than distance in team games MM */
+	sprintf(str, "%03d", target->life); 
+    } else {
 	sprintf(str, "%03d", lock_dist / BLOCK_SZ);
+    }
+
+    if (BIT(Setup->mode, LIMITED_LIVES) || lock_dist !=0) {
+
+ 	if (BIT(Setup->mode, LIMITED_LIVES) && target->life == 0) 
+	    SET_FG(colors[RED].pixel);
+	else
+	    SET_FG(colors[hudColor].pixel);
+
 	rd.drawString(dpy, p_draw, gc,
 		    WINSCALE(hud_pos_x + HUD_SIZE - HUD_OFFSET + BORDER),
-		    WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET
-					 - gameFont->descent - BORDER),
+		    WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER)
+					 - gameFont->descent,
 		    str, 3);
 	Erase_rectangle(WINSCALE(hud_pos_x + HUD_SIZE - HUD_OFFSET
 			 + BORDER) - 1,
@@ -292,6 +321,11 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			 - gameFont->descent - gameFont->ascent ,
 			XTextWidth(gameFont, str, 3) + 2,
 			gameFont->ascent + gameFont->descent);
+    }
+    SET_FG(colors[hudColor].pixel);
+
+    if (lock_dist != 0) {
+
 	if (lock_dist > WARNING_DISTANCE || warningCount++ % 2 == 0) {
 	    int size = MIN(mapdiag / lock_dist, 10);
 
@@ -332,6 +366,7 @@ void Paint_HUD(void)
     char		str[50];
     int			hud_pos_x;
     int			hud_pos_y;
+    int			did_fuel = 0;
     int			i, j, maxWidth = -1,
 			rect_x, rect_y, rect_width, rect_height;
     static int		vertSpacing = -1;
@@ -410,10 +445,10 @@ void Paint_HUD(void)
 
     /* Special itemtypes */
     if (vertSpacing < 0)
-	vertSpacing
-	    = MAX(ITEM_SIZE, gameFont->ascent + gameFont->descent) + 1;
-    vert_pos = hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER;
-    horiz_pos = hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER;
+	vertSpacing = MAX(ITEM_SIZE, gameFont->ascent + gameFont->descent) + 1;
+    /* find the scaled location, then work in pixels */
+    vert_pos = WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER);
+    horiz_pos = WINSCALE(hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER);
     rect_width = 0;
     rect_height = 0;
     rect_x = horiz_pos;
@@ -445,8 +480,8 @@ void Paint_HUD(void)
 
 	    /* Paint item symbol */
 	    Paint_item_symbol((u_byte)i, p_draw, gc, 
-			WINSCALE(horiz_pos - ITEM_SIZE),
-			WINSCALE(vert_pos), 
+			horiz_pos - ITEM_SIZE,
+			vert_pos, 
 			ITEM_HUD);
 
 	    if (i == lose_item) {
@@ -455,8 +490,8 @@ void Paint_HUD(void)
 			lose_item_active++;
 		    }
 		    rd.drawRectangle(dpy, p_draw, gc, 
-				WINSCALE(horiz_pos-ITEM_SIZE-2),
-				WINSCALE(vert_pos-2), ITEM_SIZE+2, ITEM_SIZE+2);
+				horiz_pos-ITEM_SIZE-2,
+				vert_pos-2, ITEM_SIZE+2, ITEM_SIZE+2);
 		}
 	    }
 
@@ -465,18 +500,18 @@ void Paint_HUD(void)
 	    len = strlen(str);
 	    width = XTextWidth(gameFont, str, len);
 	    rd.drawString(dpy, p_draw, gc,
-			WINSCALE(horiz_pos - ITEM_SIZE - BORDER - width),
-			WINSCALE(vert_pos + ITEM_SIZE/2) + gameFont->ascent/2,
+			horiz_pos - ITEM_SIZE - BORDER - width,
+			vert_pos + ITEM_SIZE/2 + gameFont->ascent/2,
 			str, len);
 
 	    maxWidth = MAX(maxWidth, width + BORDER + ITEM_SIZE);
 	    vert_pos += vertSpacing;
 
-	    if (vert_pos+vertSpacing > hud_pos_y+HUD_SIZE-HUD_OFFSET-BORDER) {
+	    if (vert_pos+vertSpacing > WINSCALE(hud_pos_y+HUD_SIZE-HUD_OFFSET-BORDER)) {
 		rect_width += maxWidth + 2*BORDER;
-		rect_height = vert_pos - rect_y;
+		rect_height = MAX(rect_height, vert_pos - rect_y);
 		horiz_pos -= maxWidth + 2*BORDER;
-		vert_pos = hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER;
+		vert_pos = WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER);
 		maxWidth = -1;
 	    }
 	}
@@ -489,12 +524,13 @@ void Paint_HUD(void)
 	    rect_height = vert_pos - rect_y;
 	}
 	rect_x -= rect_width;
-	Erase_rectangle(WINSCALE(rect_x) - 1, WINSCALE(rect_y) - 4,
-			WINSCALE(rect_width) + 10, WINSCALE(rect_height) + 9);
+	Erase_rectangle(rect_x - 1, rect_y - 4,
+			rect_width + 2, rect_height + 8);
     }
 
     /* Fuel notify, HUD meter on */
     if (fuelCount || fuelSum < fuelLevel3) {
+	did_fuel = 1;
 	sprintf(str, "%04d", (int)fuelSum);
 	rd.drawString(dpy, p_draw, gc,
 		    WINSCALE(hud_pos_x + HUD_SIZE-HUD_OFFSET+BORDER),
@@ -532,13 +568,17 @@ void Paint_HUD(void)
 	score_object_t*	sobj
 	    = &score_objects[(i+score_object)%MAX_SCORE_OBJECTS];
 	if (sobj->hud_msg_len > 0) {
+	    if (j == 0 &&
+		sobj->hud_msg_width > WINSCALE(2*HUD_SIZE-HUD_OFFSET*2) &&
+	        (did_fuel || BIT(instruments, SHOW_HUD_VERTICAL)))
+			++j;
 	    rd.drawString(dpy, p_draw, gc,
-			WINSCALE(hud_pos_x - sobj->hud_msg_width/2),
+			WINSCALE(hud_pos_x) - sobj->hud_msg_width/2,
 			WINSCALE(hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER)
 			+ gameFont->ascent
 			+ j * (gameFont->ascent + gameFont->descent),
 			sobj->hud_msg, sobj->hud_msg_len);
-	    Erase_rectangle(WINSCALE(hud_pos_x - sobj->hud_msg_width/2) - 1,
+	    Erase_rectangle(WINSCALE(hud_pos_x) - sobj->hud_msg_width/2 - 1,
 			    WINSCALE(hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER)
 				+ j * (gameFont->ascent + gameFont->descent),
 			    sobj->hud_msg_width + 2,
@@ -581,16 +621,20 @@ void Paint_HUD(void)
     if (autopilotLight) {
 	int text_width = XTextWidth(gameFont, autopilot, sizeof(autopilot)-1);
 	rd.drawString(dpy, p_draw, gc,
-		    WINSCALE(hud_pos_x - text_width/2),
+		    WINSCALE(hud_pos_x) - text_width/2,
 		    WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER)
 				 - gameFont->descent * 2 - gameFont->ascent,
 		    autopilot, sizeof(autopilot)-1);
 
-	Erase_rectangle(WINSCALE(hud_pos_x - text_width/2),
+	Erase_rectangle(WINSCALE(hud_pos_x) - text_width/2,
 			WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER)
 			    - gameFont->descent * 2 - gameFont->ascent * 2,
 			text_width + 2,
 			gameFont->ascent + gameFont->descent);
+    }
+
+    if (fuelCount > 0) {
+	fuelCount--;
     }
 
     /* Fuel gauge, must be last */
@@ -603,10 +647,6 @@ void Paint_HUD(void)
 		      && (loops%8) < 4)
 		  || (fuelSum > fuelLevel2)))))
 	return;
-
-    if (fuelCount > 0) {
-	fuelCount--;
-    }
 
     rd.drawRectangle(dpy, p_draw, gc,
 		  WINSCALE(hud_pos_x + HUD_SIZE - HUD_OFFSET 
@@ -638,12 +678,15 @@ void Paint_HUD(void)
 
 }
 
+
 void Paint_messages(void)
 {
     int		i, x, y, top_y, bot_y, width, len;
     const int	BORDER = 10,
 		SPACING = messageFont->ascent+messageFont->descent+1;
     message_t	*msg;
+    int		msg_color;
+    int		last_msg_index = 0;
 
     if (charsPerTick <= 0.0)
 	charsPerTick = (float)charsPerSecond / FPS;
@@ -651,7 +694,18 @@ void Paint_messages(void)
     top_y = BORDER + messageFont->ascent;
     bot_y = WINSCALE(view_height) - messageFont->descent - BORDER;
 
-    for (i = (BIT(instruments, SHOW_REVERSE_SCROLL) ? 2 * maxMessages : 0); (BIT(instruments, SHOW_REVERSE_SCROLL) ? i >= 0 : i < 2 * maxMessages); i+= (BIT(instruments, SHOW_REVERSE_SCROLL) ? -1 : 1)) {
+    /* get number of player messages */
+    if (selectionAndHistory) {
+	while (last_msg_index < maxMessages
+		&& TalkMsg[last_msg_index]->len != 0) {
+	    last_msg_index++;
+	}
+	last_msg_index--; /* make it an index */
+    }
+
+    for (i = (BIT(instruments, SHOW_REVERSE_SCROLL) ? 2 * maxMessages - 1 : 0);
+	 (BIT(instruments, SHOW_REVERSE_SCROLL) ? i >= 0 : i < 2 * maxMessages);
+	 i += (BIT(instruments, SHOW_REVERSE_SCROLL) ? -1 : 1)) {
 	if (i < maxMessages) {
 	    msg = TalkMsg[i];
 	} else {
@@ -659,12 +713,28 @@ void Paint_messages(void)
 	}
 	if (msg->len == 0)
 	    continue;
-	if (msg->life-- <= 0) {
-	    msg->txt[0] = '\0';
-	    msg->len = 0;
-	    msg->life = 0;
-	    continue;
+
+	/*
+	 * while there is something emphasized, freeze the life time counter
+	 * of a message if it is not drawn `flashed' (red) anymore
+	 */
+	if (
+	    msg->life > MSG_FLASH
+#ifndef _WINDOWS
+	    || !selectionAndHistory
+	    || (selection.draw.state != SEL_PENDING
+		&& selection.draw.state != SEL_EMPHASIZED)
+#endif
+	    ) {
+
+	    if (msg->life-- <= 0) {
+		msg->txt[0] = '\0';
+		msg->len = 0;
+		msg->life = 0;
+		continue;
+	    }
 	}
+
 	if (i < maxMessages) {
 	    x = BORDER;
 	    y = top_y;
@@ -677,15 +747,125 @@ void Paint_messages(void)
 	    y = bot_y;
 	    bot_y -= SPACING;
 	}
-	if (msg->life > MSG_FLASH)
-	    XSetForeground(dpy, messageGC, colors[RED].pixel);
-	else
-	    XSetForeground(dpy, messageGC, colors[WHITE].pixel);
 	len = (int)(charsPerTick * (MSG_DURATION - msg->life));
 	len = MIN(msg->len, len);
-	rd.drawString(dpy, p_draw, messageGC,
-		      x, y,
-		      msg->txt, len);
+	if (msg->life > MSG_FLASH)
+	    msg_color = RED;
+	else
+	    msg_color = WHITE;
+
+#ifndef _WINDOWS
+	/*
+	 * it's an emphasized talk message 
+	 */
+	if (selectionAndHistory && selection.draw.state == SEL_EMPHASIZED
+	    && i < maxMessages
+	    && TALK_MSG_SCREENPOS(last_msg_index,i) >= selection.draw.y1
+	    && TALK_MSG_SCREENPOS(last_msg_index,i) <= selection.draw.y2) {
+
+	    /*
+	     * three strings (ptr), where they begin (xoff) and their
+	     * length (l):
+	     *   1st is an umemph. string to the left of a selection,
+	     *   2nd an emphasized part itself,
+	     *   3rd an unemph. part to the right of a selection.
+	     * set the according variables if a part exists.
+	     * e.g: a selection of several lines `stopping' somewhere in
+	     *   the middle of a line -> ptr2,ptr3 are needed to draw
+	     *   this line
+	     */
+	    char	*ptr  = NULL;
+	    int		xoff  = 0, l = 0;
+	    char	*ptr2 = NULL;
+	    int		xoff2 = 0, l2 = 0;
+	    char	*ptr3 = NULL;
+	    int		xoff3 = 0, l3 = 0;
+
+	    if (TALK_MSG_SCREENPOS(last_msg_index,i) > selection.draw.y1
+		 && TALK_MSG_SCREENPOS(last_msg_index,i) < selection.draw.y2) {
+		    /* all emphasized on this line */
+		    /*xxxxxxxxx*/
+		ptr2 = msg->txt;
+		l2 = len;
+		xoff2 = 0;
+	    } else if (TALK_MSG_SCREENPOS(last_msg_index,i) == selection.draw.y1) {
+		    /* first/only line */
+		    /*___xxx[___]*/
+		ptr = msg->txt;
+		xoff = 0;
+		if ( len < selection.draw.x1) {
+		    l = len;
+		} else {
+			/* at least two parts */
+			/*___xxx[___]*/
+			/*    ^      */
+		    l = selection.draw.x1;
+		    ptr2 = &(msg->txt[selection.draw.x1]);
+		    xoff2 = XTextWidth(messageFont, msg->txt, selection.draw.x1);
+
+		    if (TALK_MSG_SCREENPOS(last_msg_index,i) < selection.draw.y2) {
+			    /* first line */
+			    /*___xxxxxx*/
+			    /*     ^   */
+			l2 = len - selection.draw.x1;
+		    } else {
+			    /* only line */
+			    /*___xxx___*/
+			if (len <= selection.draw.x2) {
+				/*___xxx___*/
+				/*    ^    */
+			    l2 = len - selection.draw.x1;
+			} else {
+				/*___xxx___*/
+				/*       ^ */
+			    l2 = selection.draw.x2 - selection.draw.x1 + 1;
+			    ptr3 = &(msg->txt[selection.draw.x2 + 1]);
+			    xoff3 = XTextWidth(messageFont, msg->txt, selection.draw.x2 + 1);
+			    l3 = len - selection.draw.x2 - 1;
+			}
+		    } /* only line */
+		} /* at least two parts */
+	    } else {
+		    /* last line */
+		    /*xxxxxx[___]*/
+		ptr2 = msg->txt;
+		xoff2 = 0;
+		if (len <= selection.draw.x2 + 1) {
+			/* all blue */
+			/*xxxxxx[___]*/
+			/*  ^        */
+		    l2 = len;
+		} else {
+			/*xxxxxx___*/
+			/*       ^ */
+		    l2 = selection.draw.x2 + 1;
+		    ptr3 = &(msg->txt[selection.draw.x2 + 1]);
+		    xoff3 = XTextWidth(messageFont, msg->txt, selection.draw.x2 + 1);
+		    l3 = len - selection.draw.x2 - 1;
+		}
+	    } /* last line */
+		
+
+	    if (ptr) {
+		XSetForeground(dpy, messageGC, colors[msg_color].pixel);
+		rd.drawString(dpy, p_draw, messageGC, x + xoff, y, ptr, l);
+	    }
+	    if (ptr2) {
+		XSetForeground(dpy, messageGC, colors[DRAW_EMPHASIZED].pixel);
+		rd.drawString(dpy, p_draw, messageGC, x + xoff2, y, ptr2, l2);
+	    }
+	    if (ptr3) {
+		XSetForeground(dpy, messageGC, colors[msg_color].pixel);
+		rd.drawString(dpy, p_draw, messageGC, x + xoff3, y, ptr3, l3);
+	    }
+
+	} else /* not emphasized */
+#endif
+	{
+	    XSetForeground(dpy, messageGC, colors[msg_color].pixel);
+	    rd.drawString(dpy, p_draw, messageGC, x, y, msg->txt, len);
+	}
+
 	if (len < msg->len) {
 	    width = XTextWidth(messageFont, msg->txt, len);
 	} else {
@@ -699,17 +879,86 @@ void Paint_messages(void)
 }
 
 
+/*
+ * add an incoming talk/game message.
+ * however, buffer new messages if there is a pending selection.
+ * Add_pending_messages() will be called later in Talk_cut_from_messages().
+ */
 void Add_message(char *message)
 {
     int			i, len;
     message_t		*tmp, **msg_set;
 
+#ifndef _WINDOWS
+    bool		is_drawn_talk_message	= false; /* not pending */
+    int			last_msg_index;
+    bool		show_reverse_scroll	= false;
+    bool		scrolling		= false; /* really moving */
+
+    show_reverse_scroll = BIT(instruments, SHOW_REVERSE_SCROLL);
+#endif
+
     len = strlen(message);
     if (message[len - 1] == ']' || strncmp(message, " <", 2) == 0) {
-	msg_set = TalkMsg;
+#ifndef _WINDOWS
+	if (selectionAndHistory && selection.draw.state == SEL_PENDING) {
+	    /* the buffer for the pending messages */
+	    msg_set = TalkMsg_pending;
+	} else
+#endif
+	{
+	    msg_set = TalkMsg;
+#ifndef _WINDOWS
+	    is_drawn_talk_message = true;
+#endif
+	}
     } else {
-	msg_set = GameMsg;
+#ifndef _WINDOWS
+	if (selectionAndHistory && selection.draw.state == SEL_PENDING) {
+	    msg_set = GameMsg_pending;
+	} else
+#endif
+	{
+	    msg_set = GameMsg;
+	}
     }
+
+#ifndef _WINDOWS
+    if (selectionAndHistory && is_drawn_talk_message) {
+	/* how many talk messages */
+        last_msg_index = 0;
+        while (last_msg_index < maxMessages
+		&& TalkMsg[last_msg_index]->len != 0) {
+            last_msg_index++;
+        }
+        last_msg_index--; /* make it an index */
+
+	/*
+	 * if show_reverse_scroll, it will really _scroll if there were
+	 * already maxMessages (one will be added now)
+	 */
+	if (show_reverse_scroll && last_msg_index == maxMessages - 1) {
+	    scrolling = true;
+	}
+	
+	/*
+	 * keep the emphasizing (`jumping' from talk window to talk messages)
+	 */
+	if (selection.keep_emphasizing) {
+	    selection.keep_emphasizing = false;
+	    selection.talk.state = SEL_NONE;
+	    selection.draw.state = SEL_EMPHASIZED;
+	    if (!show_reverse_scroll) {
+		selection.draw.y1 = -1;
+		selection.draw.y2 = -1;
+	    } else if (show_reverse_scroll) {
+		selection.draw.y1 = last_msg_index + 1;
+		selection.draw.y2 = last_msg_index + 1;
+	    }
+	} /* talk window emphasized */
+    } /* talk messages */
+#endif
+
     tmp = msg_set[maxMessages - 1];
     for (i = maxMessages - 1; i > 0; i--) {
 	msg_set[i] = msg_set[i - 1];
@@ -719,6 +968,40 @@ void Add_message(char *message)
     msg_set[0]->life = MSG_DURATION;
     strcpy(msg_set[0]->txt, message);
     msg_set[0]->len = len;
+
+#ifndef _WINDOWS
+    /*
+     * scroll also the emphasizing
+     */
+    if (selectionAndHistory && is_drawn_talk_message
+	  && selection.draw.state == SEL_EMPHASIZED ) {
+
+	if ((scrolling && selection.draw.y2 == 0)
+	      || (!show_reverse_scroll && selection.draw.y1 == maxMessages - 1)) {
+	    /*
+	     * the emphasizing vanishes, as it's `last' line
+	     * is `scrolled away'
+	     */
+	    selection.draw.state = SEL_SELECTED;	
+	} else {
+	    if (scrolling) {
+		selection.draw.y2--;
+		if ( selection.draw.y1 == 0) {
+		    selection.draw.x1 = 0;
+		} else {
+		    selection.draw.y1--;
+		}
+	    } else if (!show_reverse_scroll) {
+		selection.draw.y1++;
+		if (selection.draw.y2 == maxMessages - 1) {
+		    selection.draw.x2 = msg_set[selection.draw.y2]->len - 1;
+		} else {
+		    selection.draw.y2++;
+		}
+	    }
+	}
+    }
+#endif
 
 #ifdef DEVELOPMENT
     /* anti-censor hack */
@@ -738,6 +1021,57 @@ void Add_message(char *message)
 
     msg_set[0]->pixelLen = XTextWidth(messageFont, msg_set[0]->txt, msg_set[0]->len);
 }
+
+
+#ifndef _WINDOWS
+/*
+ * clear the buffer for the pending messages
+ */
+void Delete_pending_messages(void)
+{
+    message_t* msg;
+    int i;
+    if (!selectionAndHistory)
+	return;
+
+    for (i = 0; i < maxMessages; i++) {
+	msg = TalkMsg_pending[i];
+	if (msg->len > 0) {
+            msg->txt[0] = '\0';
+            msg->len = 0;
+	}
+	msg = GameMsg_pending[i];
+	if (msg->len > 0) {
+            msg->txt[0] = '\0';
+            msg->len = 0;
+	}
+    }
+}
+
+
+/*
+ * after a pending cut has been completed,
+ * add the (buffered) messages which were ocming in meanwhile.
+ */
+void Add_pending_messages(void)
+{
+    int			i;
+
+    if (!selectionAndHistory)
+	return;
+    /* just through all messages */
+    for (i = maxMessages-1; i >= 0; i--) {
+	if (TalkMsg_pending[i]->len > 0) {
+	    Add_message(TalkMsg_pending[i]->txt);
+	}
+	if (GameMsg_pending[i]->len > 0) {
+	    Add_message(GameMsg_pending[i]->txt);
+	}
+    }
+    Delete_pending_messages();
+}
+#endif
+
 
 void Paint_recording(void)
 {

@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 4.7 1998/08/30 15:23:16 bert Exp $
+/* $Id: netserver.c,v 4.24 1999/11/11 20:08:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -714,7 +714,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	return -1;
     }
 #endif
-    if ((my_port = GetPortNum(sock)) == 0) {
+    if ((my_port = GetPortNum(sock)) == -1) {
 	error("Cannot get port from socket");
 	DgramClose(sock);
 	return -1;
@@ -1304,6 +1304,60 @@ int Send_reply(int ind, int replyto, int result)
     return n;
 }
 
+static int Send_modifiers(int ind, char *mods)
+{
+    return Packet_printf(&Conn[ind].w, "%c%s", PKT_MODIFIERS, mods);
+}
+
+/*
+ * Send items.
+ * The advantage of this scheme is that it only uses bytes for items
+ * which the player actually owns.  This reduces the packet size.
+ * Another advantage is that here it doesn't matter if an old client
+ * receives counts for items it doesn't know about.
+ * This is new since pack version 4203.
+ */
+static int Send_self_items(int ind, player *pl)
+{
+    connection_t	*connp = &Conn[ind];
+    unsigned		item_mask = 0;
+    int			i, n;
+    int			item_count = 0;
+
+    /* older clients should have the items sent as part of the self packet. */
+    if (connp->version < 0x4203) {
+	return 1;
+    }
+    /* build mask with one bit for each item type which the player owns. */
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (pl->item[i] > 0) {
+	    item_mask |= (1 << i);
+	    item_count++;
+	}
+    }
+    /* don't send anything if there are no items. */
+    if (item_count == 0) {
+	return 1;
+    }
+    /* check if enough buffer space is available for the complete packet. */
+    if (connp->w.size - connp->w.len <= 5 + item_count) {
+	return 0;
+    }
+    /* build the header. */
+    n = Packet_printf(&connp->w, "%c%u", PKT_SELF_ITEMS, item_mask);
+    if (n <= 0) {
+	return n;
+    }
+    /* build rest of packet containing the per item counts. */
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (item_mask & (1 << i)) {
+	    connp->w.buf[connp->w.len++] = pl->item[i];
+	}
+    }
+    /* return the number of bytes added to the packet. */
+    return 5 + item_count;
+}
+
 /*
  * Send all frame data related to the player self and his HUD.
  */
@@ -1320,6 +1374,47 @@ int Send_self(int ind,
     int			n;
     u_byte		stat = (u_byte)status;
     int			sbuf_len = connp->w.len;
+
+    if (connp->version >= 0x4203) {
+	n = Packet_printf(&connp->w,
+			  "%c"
+			  "%hd%hd%hd%hd%c"
+			  "%c%c%c"
+			  "%hd%hd%c%c"
+			  "%c%hd%hd"
+			  "%hd%hd%c"
+			  "%c%c"
+			  ,
+			  PKT_SELF,
+			  (int) (pl->pos.x + 0.5), (int) (pl->pos.y + 0.5),
+			  (int) pl->vel.x, (int) pl->vel.y,
+			  pl->dir,
+			  (int) (pl->power + 0.5),
+			  (int) (pl->turnspeed + 0.5),
+			  (int) (pl->turnresistance * 255.0 + 0.5),
+			  lock_id, lock_dist, lock_dir,
+			  pl->check,
+
+			  pl->fuel.current,
+			  pl->fuel.sum >> FUEL_SCALE_BITS,
+			  pl->fuel.max >> FUEL_SCALE_BITS,
+
+			  connp->view_width, connp->view_height,
+			  connp->debris_colors,
+
+			  stat,
+			  autopilotlight
+
+			  );
+	if (n <= 0) {
+	    return n;
+	}
+	n = Send_self_items(ind, pl);
+	if (n <= 0) {
+	    return n;
+	}
+	return Send_modifiers(ind, mods);
+    }
 
     n = Packet_printf(&connp->w,
 		      "%c"
@@ -1385,6 +1480,7 @@ int Send_self(int ind,
 			  );
 	if (n <= 0) {
 	    connp->w.len = sbuf_len;
+	    return n;
 	}
 	if (connp->version >= 0x4100) {
 	    n = Packet_printf(&connp->w,
@@ -1393,6 +1489,17 @@ int Send_self(int ind,
 			      );
 	    if (n <= 0) {
 		connp->w.len = sbuf_len;
+		return n;
+	    }
+	    if (connp->version >= 0x4201) {
+		n = Packet_printf(&connp->w,
+				  "%c",
+				  pl->item[ITEM_ARMOR]
+				  );
+		if (n <= 0) {
+		    connp->w.len = sbuf_len;
+		    return n;
+		}
 	    }
 	}
     }
@@ -1402,14 +1509,11 @@ int Send_self(int ind,
 			  pl->item[ITEM_EMERGENCY_SHIELD]);
 	if (n <= 0) {
 	    connp->w.len = sbuf_len;
+	    return n;
 	}
     }
-    n = Packet_printf(&Conn[ind].w, "%c%s", PKT_MODIFIERS, mods);
-    if (n <= 0) {
-	connp->w.len = sbuf_len;
-    }
 
-    return n;
+    return Send_modifiers(ind, mods);
 }
 
 /*
@@ -1651,6 +1755,14 @@ int Send_wreckage(int ind, int x, int y, u_byte wrtype, u_byte size, u_byte rot)
     if (Conn[ind].version < 0x3800) {
 	return 1;
     }
+
+    if (wreckageCollisionMayKill && Conn[ind].version > 0x4201) {
+	/* Set the highest bit when wreckage is deadly. */
+	wrtype |= 0x80;
+    } else {
+	wrtype &= ~0x80;
+    }
+
     return Packet_printf(&Conn[ind].w, "%c%hd%hd%c%c%c", PKT_WRECKAGE,
 			 x, y, wrtype, size, rot);
 }
@@ -1774,7 +1886,7 @@ int Send_laser(int ind, int color, int x, int y, int len, int dir)
 
 int Send_radar(int ind, int x, int y, int size)
 {
-    connection_t	*connp = &Conn[ind];
+    connection_t *connp = &Conn[ind];
 
     return Packet_printf(&connp->w, "%c%hd%hd%c", PKT_RADAR, x, y, size);
 }
@@ -1999,6 +2111,7 @@ static int Receive_power(int ind)
     short		tmp;
     int			n;
     DFLOAT		power;
+    int			autopilot;
 
     if ((n = Packet_scanf(&connp->r, "%c%hd", &ch, &tmp)) <= 0) {
 	if (n == -1) {
@@ -2008,21 +2121,35 @@ static int Receive_power(int ind)
     }
     power = (DFLOAT) tmp / 256.0F;
     pl = Players[GetInd[connp->id]];
+    autopilot = BIT(pl->used, OBJ_AUTOPILOT);
+    /* old client are going to send autopilot-mangled data, ignore it */
+    if (autopilot && pl->version < 0x4200)
+	return 1;
+
     switch (ch) {
     case PKT_POWER:
-	pl->power = power;
+	if (autopilot)
+	    pl->auto_power_s = power;
+	else
+	    pl->power = power;
 	break;
     case PKT_POWER_S:
 	pl->power_s = power;
 	break;
     case PKT_TURNSPEED:
-	pl->turnspeed = power;
+	if (autopilot)
+	    pl->auto_turnspeed_s = power;
+	else
+	    pl->turnspeed = power;
 	break;
     case PKT_TURNSPEED_S:
 	pl->turnspeed_s = power;
 	break;
     case PKT_TURNRESISTANCE:
-	pl->turnresistance = power;
+	if (autopilot)
+	    pl->auto_turnresistance_s = power;
+	else
+	    pl->turnresistance = power;
 	break;
     case PKT_TURNRESISTANCE_S:
 	pl->turnresistance_s = power;
@@ -2436,7 +2563,7 @@ static void Handle_talk(int ind, char *str)
 	}
     }
     else if (strcasecmp(str, "god") == 0) {
-	FILE *fp = fopen(LOGFILE, "a");
+	FILE *fp = fopen(Conf_logfile(), "a");
 	if (fp) {
 	    fprintf(fp,
 		    "%s[%s]{%s@%s(%s)|%s}:\n"
@@ -2733,7 +2860,7 @@ int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)
 
 	motd_loops = main_loops;
 
-	if ((fd = open(SERVERMOTDFILE, O_RDONLY)) == -1) {
+	if ((fd = open(Conf_servermotdfile(), O_RDONLY)) == -1) {
 	    motd_size = 0;
 	    return -1;
 	}
@@ -2845,8 +2972,11 @@ static int Receive_pointer_move(int ind)
 	return n;
     }
     pl = Players[GetInd[connp->id]];
+    if (BIT(pl->status, HOVERPAUSE))
+	return 1;
+
     if (BIT(pl->used, OBJ_AUTOPILOT))
-	Autopilot(ind, 0);
+	Autopilot(GetInd[connp->id], 0);
     turnspeed = movement * pl->turnspeed / MAX_PLAYER_TURNSPEED;
     if (turnspeed < 0) {
 	turndir = -1.0;
@@ -2855,7 +2985,19 @@ static int Receive_pointer_move(int ind)
     else {
 	turndir = 1.0;
     }
-    LIMIT(turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
+    if (pl->turnresistance)
+	LIMIT(turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
+      /* Minimum amount of turning if you want to turn at all?
+	And the only effect of that maximum is making
+        finding the correct settings harder for new mouse players,
+        because the limit is checked BEFORE multiplying by turnres!
+        Kept here to avoid changing the feeling for old players who
+        are already used to this odd behavior. New players should set
+        turnresistance to 0.
+      */
+    else
+	LIMIT(turnspeed, 0, 5*RES);
+
     pl->turnvel -= turndir * turnspeed;
 
     return 1;
@@ -2879,8 +3021,9 @@ static int Receive_fps_request(int ind)
 	pl = Players[GetInd[connp->id]];
 	pl->player_fps = fps;
 	if (fps > FPS) pl->player_fps = FPS;
-	if (fps < (FPS / 2)) pl->player_fps = FPS / 2;
+	if (fps < (FPS / 2)) pl->player_fps = (FPS+1) / 2;
 	if (fps == 0) pl->player_fps = FPS;
+	if ((fps == 20) && ignore20MaxFPS) pl->player_fps = FPS;
 	n = FPS - pl->player_fps;
 	if (n <= 0) {
 	    pl->player_count = 0;

@@ -3,6 +3,18 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@xpilot.org.
 
+Release 4.2 credits:
+
+	Ben Jackson			Numerous patches.
+	Uoti Urpala			Numerous patches.
+	Jonny Svärling, Adam Lorentzon	Talk macros.
+	Teemu Elias Hirsimäki		xp-replay fix.
+	Guido Koopman			Armor item.
+	Sven Mascheck			Joined the maintenance team.
+	Claus Leth Gregersen		Several patches, graphics look.
+	Marcus Sundberg			Radar color fix + localnet fix.
+	Jarrod Miller			Fix base orientation, update mapeditor.
+
 Release 4.1 credits:
 
 	Guido Koopman			Several patches + 1 new item.

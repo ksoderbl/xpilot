@@ -1,4 +1,4 @@
-/* $Id: about.c,v 4.2 1998/04/16 17:39:08 bert Exp $
+/* $Id: about.c,v 4.4 1999/11/07 11:57:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -31,9 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#ifndef	__apollo
-#    include <string.h>
-#endif
+#include <string.h>
 #include <errno.h>
 
 #include <X11/Xlib.h>
@@ -56,7 +54,7 @@ char about_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: about.c,v 4.2 1998/04/16 17:39:08 bert Exp $";
+    "@(#)$Id: about.c,v 4.4 1999/11/07 11:57:30 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -296,7 +294,7 @@ void Expose_about_window(void)
 	"read the XPilot FAQ (Frequently Asked Questions), "
 	"and the on-line manual pages for xpilot(6) and xpilots(6).\n"
 	"\n"
-	"Bugs should be reported to <xpilot@xpilot.org>.\n"
+	"You can report any bug you find to <xpilot@xpilot.org>.\n"
 	"\n\n"
 	"Good luck as a future xpilot,\n"
 	"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",

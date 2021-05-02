@@ -1,4 +1,4 @@
-/* $Id: widget.c,v 4.1 1998/04/16 17:39:50 bert Exp $
+/* $Id: widget.c,v 4.7 2000/03/13 19:41:39 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -119,6 +119,29 @@ static void Widget_destroy_viewer(widget_t *w)
     v->line = NULL;
 }
 
+void Widget_destroy_children(int widget_desc)
+{
+    int			i;
+    widget_t		*w;
+    widget_form_t	*form;
+
+    if ((w = Widget_pointer(widget_desc)) != NULL) {
+	if (w->type == WIDGET_FORM) {
+	    if (w->sub != NULL) {
+		form = (widget_form_t *) w->sub;
+		if (form->children != NULL) {
+		    for (i = 0; i < form->num_children; i++) {
+			Widget_destroy(form->children[i]);
+		    }
+		    free(form->children);
+		    form->children = NULL;
+		    form->num_children = 0;
+		}
+	    }
+	}
+    }
+}
+
 void Widget_destroy(int widget_desc)
 {
     int			i;
@@ -196,7 +219,7 @@ static widget_t *Widget_new(int *descp)
 	max_widgets = 10;
 	widgets = (widget_t *) malloc(max_widgets * sizeof(widget_t));
     } else {
-	max_widgets += 10;
+	max_widgets = 10 + (12 * max_widgets) / 8;
 	widgets = (widget_t *) realloc(widgets,
 				       max_widgets * sizeof(widget_t));
     }
@@ -253,7 +276,7 @@ static int Widget_add_child(int parent_desc, int child_desc)
     widget_t		*parent,
 			*child;
     widget_form_t	*form;
-    const int		incr = 1;
+    int			incr;
 
     if ((parent = Widget_pointer(parent_desc)) == NULL
 	|| (child = Widget_pointer(child_desc)) == NULL) {
@@ -280,9 +303,11 @@ static int Widget_add_child(int parent_desc, int child_desc)
 	}
     }
     if (form->num_children == 0) {
+	incr = 4;
 	form->children = (int *) malloc((form->num_children + incr)
 					* sizeof(*form->children));
     } else {
+	incr = 4 + form->num_children / 2;
 	form->children = (int *) realloc(form->children,
 					 (form->num_children + incr)
 					 * sizeof(*form->children));
@@ -298,7 +323,7 @@ static int Widget_add_child(int parent_desc, int child_desc)
 	}
 	form->children[form->num_children] = child_desc;
 	child->parent_desc = parent_desc;
-	form->num_children += incr;
+	form->num_children++;
     }
     return child_desc;
 }
@@ -589,6 +614,8 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	error("Widget draw invalid");
 	return;
     }
+
+    /* printf("exp wd %d, wt %d\n", widget_desc, widget->type); */
 
     switch (widget->type) {
 
@@ -1008,6 +1035,15 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 			    Widget_draw(sub_widget_desc);
 			}
 		    }
+#ifdef	_WINDOWS
+		    {
+			widget_t* widget = Widget_pointer(sub_widget_desc);
+			WinXFlush(widget->window);
+			widget = Widget_pointer(widget_desc);
+			WinXFlush(widget->window);
+		    }
+#endif
+
 		}
 		break;
 	    case WIDGET_INPUT_FLOAT:
@@ -1153,10 +1189,10 @@ int Widget_event(XEvent *event)
     widget_arrow_t	*arroww;
     widget_slider_t	*sliderw;
 
-	/* xpprintf("Widget_event type=%d w=%d\n", event->type, event->xany.window); */
+    /* xpprintf("Widget_event type=%d w=%d\n", event->type, event->xany.window); */
 
-	if (!widgets)
-		return(0);
+    if (!widgets)
+	return(0);
 
     if (event->type == ButtonRelease) {
 	if (event->xbutton.button == Button1) {
@@ -1875,6 +1911,19 @@ int Widget_backing_store(int widget_desc, int mode)
     return widget_desc;
 }
 
+int Widget_set_background(int widget_desc, int bgcolor)
+{
+    XSetWindowAttributes	sattr;
+    widget_t			*widget;
+
+    if ((widget = Widget_pointer(widget_desc)) == NULL) {
+	return NO_WIDGET;
+    }
+    sattr.background_pixel = colors[bgcolor].pixel;
+    XChangeWindowAttributes(dpy, widget->window, CWBackPixel, &sattr);
+    return widget_desc;
+}
+
 int Widget_map_sub(int widget_desc)
 {
     widget_t		*widget;
@@ -1926,6 +1975,19 @@ int Widget_raise(int widget_desc)
     } else {
 	errno = 0;
 	error("Widget_raise: Invalid widget");
+	return NO_WIDGET;
+    }
+    return widget_desc;
+}
+
+int Widget_get_dimensions(int widget_desc, int *width, int *height)
+{
+    widget_t		*widget;
+
+    if ((widget = Widget_pointer(widget_desc)) != NULL) {
+	if (width) *width = widget->width;
+	if (height) *height = widget->height;
+    } else {
 	return NO_WIDGET;
     }
     return widget_desc;
@@ -2163,8 +2225,7 @@ int Widget_create_viewer(const char *buf, int len,
 			 const char *window_name, const char *icon_name,
 			 XFontStruct *font)
 {
-    const int
-			save_width = 2*8 + XTextWidth(font, "SAVE", 5),
+    const int		save_width = 2*8 + XTextWidth(font, "SAVE", 5),
 			save_height = 6 + font->ascent + font->descent,
 			save_x_offset = width / 3 - save_width / 2,
 			save_y_offset = 5,

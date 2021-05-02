@@ -1,6 +1,6 @@
-This is the README file for XPilot 4.1.0alpha.
+This is the README file for XPilot 4.2.0.
 
-Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
+Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
 Please see the LICENSE file for further details.  You may not
 distribute this project without all the documentation,
@@ -59,4 +59,4 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
 
-$Id: README.txt,v 4.6 1998/08/29 20:29:53 bert Exp $
+$Id: README.txt,v 4.21 2000/03/13 19:09:52 bert Exp $

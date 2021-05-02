@@ -3,6 +3,361 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.2.0 compared to release 4.1.0.
+
+Sven Mascheck submitted two bugfixes.  One is a problem with locking on
+players during teammode.  The other with lock banks.
+
+Teemu Elias Hirsim$ki fixed a bug in xp-replay related to the recent 
+addition of the mirror item.
+
+Some changes were derived from the XPilot summercamp patches webpage:
+    - client: an extra check for line style being solid in paintobjects.c.
+    - server: extra checks to keep player direction within a valid range.
+    - server: If you were near your treasure box and couldn't connect to the
+      unmoved ball there, you sometimes were unable to connect to any other
+      balls either.
+    - server: if the target was destroyed of a team without an active player
+      then no message would be displayed.
+    - server: loadlock could cause a stale lock to be loaded.  This could
+      result in a server crash.
+
+Sometimes a player could not join over a slow connection because a robot would
+take his homebase.  The message xpilots would print would look like:
+    xpilots: Not enough bases for players
+
+Ben Jackson submitted a large number of bugfixes for client display:
+
+    These patches fix lots of bugs with the client display when using a
+    scaleFactor other than 1.0.  The client looks significantly better at
+    both very large scale (< 0.5) and very small scale (>= 2.0).  I believe
+    I have fixed all of the font position bugs, some of which were even
+    visible with no scaling.  The client looks better both with much bigger
+    and much smaller fonts for gameFont.  All of the changes were tested
+    with and without -erase, so there should be no new pixel dust.
+
+    Some of the most significant improvements are in the HUD, which had
+    many layout bugs due to scaling.  Also, a longstanding bug with the
+    duration of the fuel display has been fixed.
+
+    src/client/painthud.c:
+
+	Make Paint_meter() consistent about what is WINSCALE()d and
+	what is not, and avoid scaling twice for some things.
+
+	Position scoreobjects properly.
+
+	Position lock range correctly.
+
+	Omit mini version of locked ship if it would be too small to
+	identify anyway (smaller than 1/3rd original size overall,
+	which makes ships like the LARDBUS 10x10 pixels).
+
+	Revamp item display to avoid overlaps and other problems.
+
+	Center "Autopilot" light correctly.
+
+	Center hud messages correctly.  Also, if the first HUD message
+	is too wide to fit in the gap at the bottom of the HUD, move it
+	down a line so it doesn't overlap the fuel/vert hud lines (if any).
+
+	Move fuelCount decrement so that the fuel number actually
+	disappears eventually if fuelMeter is off.  See also the comment
+	about shorter FUEL_NOTIFY time below.
+
+    src/common/const.h:
+
+	Decreased FUEL_NOTIFY (time the number stays on) from 16 seconds
+	to 3.  If you liked the old behavior, just set fuelNotify (no
+	relation to that constant) to a very low number and it will stay
+	on all the time, just like before.
+
+    src/client/paintmap.c:
+
+	Properly center `F' in fuel squares.  Fully erase it if the font
+	is bigger than one square.
+
+	Change display of base teams/names to center the info below the
+	base rather than left-justifying it.  Make it work for larger
+	fonts.  Make it display team numbers/player names for bases facing
+	right without overlapping them when scaling is on.
+
+	Target team numbers are properly centered.
+
+	Treasure team numbers are centered and just above the ball.
+
+    src/client/paintobjects.c:
+
+	Properly center `P' in paused player blocks.  Huge fonts still
+	lose for -erase, though.
+
+	Properly center bomb owners under bombs.
+
+	Properly center player name under players.  Added 1 pixel more
+	separation between the name and the ship.
+
+	Properly center the round delay.
+
+	Fix ball size with ballTexture and scaling.  You'll still have
+	to supply a ball.xpm that's the right size to get the expected
+	results.
+
+	Scale mines, properly erase them at all scales.
+
+    src/client/xinit.c,
+    src/client/configure.c:
+
+	Scale dashes/cdashes to scaleFactor.  This affects all dashed
+	lines:  (visible) cloaked ships, shields, tractor beams, hud
+	lines, partially conencted treasures, refueling lines...
+
+    src/client/netclient.c:
+
+	Clarify the draw_width/draw_height role.  Rescaling and resizing
+	both now have the proper effect, and the client doesn't send
+	resizes for every frame.
+
+Ben Jackson also submitted a patch to improve the accuracy with which lock
+distance is calculated:
+
+    src/server/update.c:
+
+	Move computation of lock distance to a second loop after the
+	player position update loop.  The direction is computed during
+	the frame update, so the distance and direction were out of
+	sync, but only for players with lower indices than the player
+	they were locked onto.
+	This affected the HUD display for players and messed up some
+	robot computations.
+
+Ball and player positions were not calculated at `the same time'.
+So it was not possible to connect at very high speeds.
+This is called the `connector bug'. Fix taken from
+Uoti Urpala's server patch.
+
+New client option `selectionAndHistory' for the unix version:
+    * You can place the cursor in the talk window with the left pointer
+      button.  This works also with `Left'/`Right'.
+    * You can cut from the player talk messages (at the left top edge).
+    * You can cut from the talk window.
+    * At both places, the selected text is drawn emphasized (blue)
+      (but not until you finish the selection).
+    * You can paste into the talk window.
+      Unprintables (according to iso-latin-1) are converted to space.
+    * Your own messages are stored in a cyclic history (default ist 32 lines)
+      you can browse through it in the talk window with `Up' and `Down'.
+      Number of saved lines is `saveLinesInHistory'.
+    * The `Up',`Down',`Left',`Right' from above are configurable with
+      `keyTalkCursor[Up|Down|Left|Right]'.
+    * You can print all current server and player messages to the `tty' with
+      `Print' (`keyPrintMessagesStdout').
+
+    Details:
+    * As long as a cut from the messages is pending (button not released),
+      no new messages will be drawn, but they get buffered and are drawn after
+      you release the button.
+    * Emphasized text in the talk window gets deleted when typing on.
+    * The cut will notice if you wanted to include a final `newline'.
+    * About the `history':
+      - When you type some text and then start browsing through the history
+	(without pressing enter) your text is stored and still available
+	by browsing. Purpose: looking at/resending/modifying older messages.
+      - The history line currently drawn is automatically stored in the
+	selection, means you can paste it immediately.
+    * Cutting in common:
+      - The selected text is stored the way like terminalemulators do.
+	It stores selections in both `cut buffer' and `primary selection'
+	(in contrast to netscape f.i. using only the primary selection).
+	[Some versions of netscapes sometimes delete(!) the `primary selection'
+	when starting (why did they call it `mozilla'?)]
+    * Cutting from the player messages:
+      - As long as there is a selection, older messages will get white but then
+	their `expire' won't be counted down further. Thus they won't disappear
+	(except when new messages come in).
+      - Cutting doesn't include the last character - like in
+	a terminalemulator.
+    * A blinking cursor being over an unemphasized underscore is drawn 
+      emphasized to be able to still see that underscore.
+    * About finishing a cut (releasing 1st button) outside the talk window:
+      if you do it right from where you started, it's considered as
+      cutting all the rest of the line.  Left: analogous.
+    * note: only one XClient `owns' the `primary selection' at a time.
+
+Fixed auto-idle-pause bug
+(client auto shield when restarting from the base was interpreted as keystroke)
+ 
+Lasers disappear less frequently when wrapping (from Uoti Urpala).
+ 
+Fixed turnspeed bug (from Uoti Urpala).
+ 
+Team locking fixed again.
+ 
+If FPS is odd, the client might have gotten no frames
+at all (from Uoti Urpala).
+ 
+Wreckage color was changed to red (pointed out by Espen Skoglund).
+But deadly wreckages are still painted in white.
+
+When the client has set the sparkProb option to 0 then the
+server will not send wreckages when they are not deadly.
+
+Ben Jackson submitted fixes for better (in-client) handling of 
+changing power/turnspeed and the Config Window (reflecting them):
+
+    src/client/configure.c
+ 
+	Add Config_redraw() and associated support, for updating the
+	config display when parameters change.  Used below.
+ 
+	Change constraints on maxFPS from 0..30 to FPS/2..FPS.  The
+	code was always keeping the variable maxFPS in that range, but
+	the display could go one past, which was annoying.
+ 
+    src/client/client.h
+    src/client/client.c
+    src/client/paintdata.c
+    src/client/painthud.c
+ 
+	Client always ignores PACKET_SELF power/turnspeed for purposes
+	of configuration.  Now it just displays it in the meter, but
+	maybe even that is misleading?  Maybe it should only do that
+	if snooping, and otherwise display the correct values, assuming
+	autopilot is messing with them.
+ 
+    src/client/paintdata.h
+    src/client/paintdata.c
+ 
+	New global `snooping' which is true whenever we're watching
+	another player instead of ourselves.
+ 
+	Since server never calls Send_eyes() (?!?!?!) the client now
+	makes a best guess -- it assumes that the player at the center
+	of the display is the player we're watching, especially if it's
+	the player himself!
+ 
+    src/client/xevent.c
+ 
+	KEY_SWAP_SETTINGS uses a heuristic to guess if the server will
+	accept this keystroke, and if it thinks so it sends the keystroke
+	and ALSO swaps the settings locally, and updates the config
+	display.
+ 
+	KEY_INCREASE_POWER, KEY_DECREASE_POWER, KEY_INCREASE_TURNSPEED
+	and KEY_DECREASE_TURNSPEED are all done in-client now.  The client
+	sends the new absolute value.  This is probably the Right Thing
+	anyway, and it's necessary since we now ignore the PACKET_SELF
+	power/turnspeed values.
+ 
+    src/common/pack.h
+    src/server/netserver.c
+ 
+	New magic version 0x4200.
+ 
+	old clients->new server: power/turnspeed while autopiloting are ignored
+				 by server to avoid having people set values
+				 relative to the autopilot values
+ 
+	new clients->old server: power/turnspeed are not corrupted by autopilot
+				 but the old server will lose the value.  I
+				 tried having the new client send the values
+				 whenever it sees the autopilot light go off,
+				 but due to a combination of bugs in the
+				 OLD server this is disasterous.
+ 
+	new clients->new server: power/turnspeed sent while autopiloting set
+				 the saved values and are used as soon as
+				 autopilot is off
+ 
+	The disasterous bug mentioned above is caused by being able to
+	set pl->turnspeed while autopiloting in older servers.  That
+	can't happen anymore because it's either ignored (old clients)
+	or put into the save values (new clients).
+ 
+    src/server/object.h
+    src/server/update.c
+ 
+	Autopilot no longer saves/restores turnacc -- was irrelevant anyway,
+	since it is immediately recomputed.
+
+A frame counter for balls was added (from Uoti Urpala's patch).
+
+Parking on the base is easier now (also due to harder debris) : the allowed
+maximum speed is increased.
+
+Ignore client maxFPS request if it is 20 (the client default setting)
+and if serveroption `ignore20MaxFPS' is true (default), by Uoti Urpala.
+
+The client knows about talk macros now (Jonny Svärling, Adam Lorentzon)
+modified: macros work also properly in teammode when one is dead.
+See doc/README.talkmacros.
+
+Guido Koopman submitted a patch for a new armor item:
+    - one new item: armor. If shields are not used/available, an armor item
+      can absorb a specified number of hits before the player is killed.
+      The idea is to bridge the gap between un- and shielded games.
+    - Three new options: initialArmor, maxArmor and itemArmorProb.
+      With defaults of 0, 10 and 1e-9.
+    - One new option: armorHits. The number of hits one armor item can take.
+      The default is 1.
+
+Only check for robot leaving when it is not transported to its homebase.
+This leaves the shots from a dead robot in the game a bit after it dies.
+
+TkXpInterface had a problem accessing temp_dir in a subroutine where
+it was not declared as a global variable.
+
+The Makefile of maps2image had some problems.
+
+Fixed incorrect use of rand throughout the server.  The problem with
+most rand implementations is that the low order bits are not very
+random at all.  Therefore almost all uses of rand have been replaced
+with rfrac.
+
+Now larger map areas can be viewed when using larger scaleFactors on 
+big screens.  Try "xpilot -scaleFactor 2.5 -geometry 1280x1024".
+
+When using pointercontrol, configuring turning settings is easier now:
+Setting it to zero makes the server completely ignoring it.
+
+A first cut at a graphical user interface to the meta server.
+This is still very very alpha.  It works, but not everything.
+
+Ship shize increased from 14 to 16 due to `analytical collision detection'
+which inspects a real circle and not just a square anymore.
+
+Claus Leth Gregersen submitted a big patch:
+    - Introduced a new key for swapping scale factor settings.
+    - Fixed a slight bug in a MS-Windows paletterealization.
+    - Moved all the painting logic expect the linedrawing for the blocks
+    into guimap.c, added a border around the updated area too.
+    - Moved all functionality out from the key_press switch into seperate
+    functions.
+    - Extracted the function from xevent and put them in a new file
+    xeventhandlers.c, those functions only used in this new
+    file was also moved.
+    - Fixed the windows mouse bug with a hack, fixed a few compile problems.
+
+To prevent cheating the order in which information is send from the server
+to the client about players and objects is now permuted.
+
+Guido Koopman submitted a patch for team cannons hitting cannons of another
+team:
+    - added some extra checks to FROMCANNON objects hitting a cannon to allow
+    cannons to be killed by cannons from opposing teams. They don't actually
+    aim or fire at the other cannons, but a shot could accidently hit them when
+    it misses a player.
+
+Jarrod Miller submitted a patch which fixes the orientation of bases that sit
+on the edge of a map when edge wrap is on and a base orientor on the opposite
+edge should be accounted for.
+
+Claus Leth Gregersen fixed portability problems for Windows and
+submitted several patches to improve the way the graphics drawing
+code is organized.  He also submitted code which improves the
+graphics look of items.
+
+===============================================================================
+
 This is a summary of changes of release 4.1.0 compared to release 4.0.0.
 
 Fixed a bug which caused some valid hostnames to be rejected.
@@ -3556,6 +3911,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.11 1998/09/30 15:22:41 bert Exp $
+==== $Id: ChangeLog,v 4.33 2000/03/11 20:15:41 bert Exp $
 ===============================================================================
 

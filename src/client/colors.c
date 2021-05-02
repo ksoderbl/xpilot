@@ -1,4 +1,4 @@
-/* $Id: colors.c,v 4.2 1998/09/30 14:00:32 bert Exp $
+/* $Id: colors.c,v 4.4 2000/02/21 20:22:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -29,9 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#ifndef	__apollo
-#    include <string.h>
-#endif
+#include <string.h>
 #include <errno.h>
 
 #include <X11/Xlib.h>
@@ -53,7 +51,7 @@ char colors_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: colors.c,v 4.2 1998/09/30 14:00:32 bert Exp $";
+    "@(#)$Id: colors.c,v 4.4 2000/02/21 20:22:32 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
@@ -502,15 +500,18 @@ int Colors_init(void)
      * planes at once.
      */
     for (p=0; p<2; p++) {
+	int num=0;
+
 	dpl_1[p] = dpl_2[p] = 0;
 
 	for (i=0; i<32; i++) {
 	    if (!((1<<i)&dbuf_state->masks[p])) {
-		if (dpl_1[p]) {
-		    dpl_2[p] |= 1<<i;
+	        num++;
+		if (num==1 || num==3 ) {
+		    dpl_1[p] |= 1<<i;   /* planes with moving radar objects */
 		}
 		else {
-		    dpl_1[p] |= 1<<i;
+		    dpl_2[p] |= 1<<i;   /* constant map part of radar */
 		}
 	    }
 	}

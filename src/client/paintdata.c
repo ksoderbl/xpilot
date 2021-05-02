@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 4.4 1998/08/30 15:18:54 bert Exp $
+/* $Id: paintdata.c,v 4.12 1999/11/06 17:37:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -100,6 +100,7 @@ XSegment	*seg_ptr[MAX_COLORS];
 int		num_seg[MAX_COLORS], max_seg[MAX_COLORS];
 
 int		eyesId;		/* Player we get frame updates for */
+short		snooping;	/* are we snooping on someone else? */
 
 unsigned long	current_foreground;
 
@@ -342,16 +343,23 @@ void Arc_end(void)
 }
 
 int Arc_add(int color,
-		   int x, int y,
-		   int width, int height,
-		   int angle1, int angle2)
+	    int x, int y,
+	    int width, int height,
+	    int angle1, int angle2)
 {
     XArc t;
 
+#ifndef WINDOWSCALING
+    t.x = x;
+    t.y = y;
+    t.width = width;
+    t.height = height;
+#else
     t.x = WINSCALE(x);
     t.y = WINSCALE(y);
-    t.width = WINSCALE(width);
-    t.height = WINSCALE(height);
+    t.width = WINSCALE(width+x) - t.x;
+    t.height = WINSCALE(height+y) - t.y;
+#endif
     t.angle1 = angle1;
     t.angle2 = angle2;
     STORE(XArc, arc_ptr[color], num_arc[color], max_arc[color], t);
@@ -433,7 +441,14 @@ int Handle_start(long server_loops)
 int Handle_end(long server_loops)
 {
     end_loops = server_loops;
+    snooping = self && (eyesId != self->id);
     Paint_frame();
+    return 0;
+}
+
+int Handle_self_items(u_byte *newNumItems)
+{
+    memcpy(numItems, newNumItems, NUM_ITEMS * sizeof(u_byte));
     return 0;
 }
 
@@ -449,9 +464,9 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
     vel.x = vx;
     vel.y = vy;
     heading = newHeading;
-    power = newPower;
-    turnspeed = newTurnspeed;
-    turnresistance = newTurnresistance;
+    displayedPower = newPower;
+    displayedTurnspeed = newTurnspeed;
+    displayedTurnresistance = newTurnresistance;
     lock_id = newLockId;
     lock_dist = newLockDist;
     lock_dir = newLockBearing;
@@ -626,12 +641,19 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshiel
     t.shield = shield;
     t.cloak = cloak;
     t.eshield = eshield;
-	t.phased = phased;
-	t.deflector = deflector;
+    t.phased = phased;
+    t.deflector = deflector;
     STORE(ship_t, ship_ptr, num_ship, max_ship, t);
 
-    if (id == eyesId) {
-	selfVisible = 1;
+    /* if we see a ship in the center of the display, we may be watching
+     * it, especially if it's us!  consider any ship there to be our eyes
+     * until we see a ship that really is us.
+     * BG: XXX there was a bug here.  self was dereferenced at "self->id"
+     * while self could be NULL here.
+     */
+    if (!selfVisible && ((x == pos.x && y == pos.y) || (self && id == self->id))) {
+        eyesId = id;
+	selfVisible = (self && (id == self->id));
 	return Handle_radar(x, y, 3);
     }
 
@@ -934,11 +956,11 @@ void paintdataCleanup(void)
 }
 
 #ifdef	WINDOWSCALING
-int	scaleArray[32768];
+short	scaleArray[32768];
 
-void init_ScaleArray()
+void Init_scale_array(void)
 {
-    int		i;
+    int		i, start, end, n;
     double	scaleMultFactor;
 
     if (scaleFactor == 0.0)
@@ -948,8 +970,34 @@ void init_ScaleArray()
     if (scaleFactor > 10.0)
 	scaleFactor = 10.0;
     scaleMultFactor = 1.0 / scaleFactor;
-    for (i = 0; i < NELEM(scaleArray); i++) {
+
+    scaleArray[0] = 0;
+
+    for (i = 1; i < NELEM(scaleArray); i++) {
+	n = (int)floor(i * scaleMultFactor + 0.5);
+	if (n == 0) {
+	    /* keep values for non-zero indices at least 1. */
+	    scaleArray[i] = 1;
+	} else {
+	    break;
+	}
+    }
+    start = i;
+
+    for (i = NELEM(scaleArray) - 1; i >= 0; i--) {
+	n = (int)floor(i * scaleMultFactor + 0.5);
+	if (n > 32767) {
+	    /* keep values lower or equal to max short. */
+	    scaleArray[i] = 32767;
+	} else {
+	    break;
+	}
+    }
+    end = i;
+
+    for (i = start; i <= end; i++) {
 	scaleArray[i] = (int)floor(i * scaleMultFactor + 0.5);
     }
+
 }
 #endif

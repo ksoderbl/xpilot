@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 4.6 1998/09/30 14:00:32 bert Exp $
+/* $Id: xinit.c,v 4.23 2000/03/12 11:07:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -36,9 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#ifndef	__apollo
-#    include <string.h>
-#endif
+#include <string.h>
 #include <errno.h>
 
 #include "version.h"
@@ -57,7 +55,10 @@
 #include "portability.h"
 
 /*
- * Item structures
+ * Item structures.
+ *
+ * If you add an item here then please make sure you also add
+ * the item in the proper place in ../replay/xp-replay.c.
  */
 #ifdef	_WINDOWS
 #pragma warning(disable : 4305)
@@ -71,6 +72,7 @@
 #include "items/itemSensorPack.xbm"
 #include "items/itemTank.xbm"
 #include "items/itemEcm.xbm"
+#include "items/itemArmor.xbm"
 #include "items/itemAfterburner.xbm"
 #include "items/itemTransporter.xbm"
 #include "items/itemDeflector.xbm"
@@ -87,7 +89,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.6 1998/09/30 14:00:32 bert Exp $";
+    "@(#)$Id: xinit.c,v 4.23 2000/03/12 11:07:54 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -99,6 +101,8 @@ static char sourceid[] =
 #define ABOUT_WINDOW_HEIGHT	700
 
 extern message_t	*TalkMsg[], *GameMsg[];
+extern message_t	*TalkMsg_pending[], *GameMsg_pending[];
+extern char		*HistMsg[];
 extern int		RadarHeight;
 
 /*
@@ -120,6 +124,7 @@ int			num_spark_colors;
 int			ignoreWindowManager;
 
 static message_t	*MsgBlock = NULL;
+static message_t	*MsgBlock_pending = NULL;
 
 
 /*
@@ -127,7 +132,7 @@ static message_t	*MsgBlock = NULL;
  */
 static struct {
     char*	data;
-    const char*	keysText;
+    const char*		keysText;
 } itemBitmapData[NUM_ITEMS] = {
     {
 	itemEnergyPack_bits,
@@ -233,6 +238,11 @@ static struct {
 	"Mirror; "
 	"reflects laser beams"
     },
+    {
+	itemArmor_bits,
+	"Armor; "
+	"absorbs shots in the absence of shields"
+    },
 };
 #ifdef	_WINDOWS
 Pixmap	itemBitmaps[NUM_ITEMS][2];	/* Bitmaps for the items in 2 colors */
@@ -240,8 +250,8 @@ Pixmap	itemBitmaps[NUM_ITEMS][2];	/* Bitmaps for the items in 2 colors */
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
 #endif
 
-char dashes[NUM_DASHES] = { 8, 4 };
-char cdashes[NUM_CDASHES] = { 3, 9 };
+char dashes[NUM_DASHES];
+char cdashes[NUM_CDASHES];
 
 static int Quit_callback(int, void *, const char **);
 static int Config_callback(int, void *, const char **);
@@ -299,12 +309,17 @@ static void Init_spark_colors(void)
      * The sparkColors specification may contain
      * any possible separator.  Only look at numbers.
      */
-    for (src = sparkColors; *src; src++) {
+
+     /* hack but protocol will allow max 9 (MM) */ 
+    for (src = sparkColors; *src && (num_spark_colors < 9); src++) {
 	if (isascii(*src) && isdigit(*src)) {
 	    dst = &buf[0];
 	    do {
 		*dst++ = *src++;
-	    } while (*src && isascii(*src) && isdigit(*src));
+	    } while (*src &&
+		     isascii(*src) &&
+		     isdigit(*src) &&
+		     ((dst - buf) < (sizeof(buf) - 1)));
 	    *dst = '\0';
 	    src--;
 	    if (sscanf(buf, "%u", &col) == 1) {
@@ -407,6 +422,8 @@ static void Init_disp_prop(Display *d, Window win,
     XSetIOErrorHandler(FatalError);
 }
 #endif
+
+
 /*
  * The following function initializes a toplevel window.
  * It returns 0 if the initialization was successful,
@@ -424,6 +441,11 @@ int Init_top(void)
     XGCValues				xgc;
     XSetWindowAttributes		sattr;
     unsigned long			mask;
+
+    if (top) {
+	error("Init_top called twice");
+	exit(1);
+    }
 
     if (Colors_init() == -1) {
 	return -1;
@@ -478,7 +500,7 @@ int Init_top(void)
     }
 
     shieldDrawMode = shieldDrawMode ? LineSolid : LineOnOffDash;
-    radarPlayerRectFN = (mono ? XDrawRectangle : XFillRectangle);
+    radarDrawRectanglePtr = (mono ? XDrawRectangle : XFillRectangle);
 
     /*
      * Get toplevel geometry.
@@ -622,7 +644,6 @@ int Init_top(void)
     gc
 	= XCreateGC(dpy, top, values, &xgc);
     XSetBackground(dpy, gc, colors[BLACK].pixel);
-    XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
 
     /*
      * Set fonts
@@ -685,7 +706,7 @@ int Init_top(void)
  * Creates the playing windows.
  * Returns 0 on success, -1 on error.
  */
-int Init_windows(void)
+int Init_playing_windows(void)
 {
 #ifndef	_WINDOWS
     unsigned			w, h;
@@ -701,13 +722,17 @@ int Init_windows(void)
 	}
     }
 
+    Scale_dashes();
+
     draw_width = top_width - (256 + 2);
     draw_height = top_height;
-	/* poor code.  WinX needs to know beforehand if its dealing with draw
-	   because it might want to create 2 bitmaps for it.  Since i know draw
-	   is the first window created (after top), i can cheat it.
-	*/
-	draw = 1;
+#ifdef  _WINDOWS
+    /* poor code.  WinX needs to know beforehand if its dealing with draw
+       because it might want to create 2 bitmaps for it.  Since i know draw
+       is the first window created (after top), i can cheat it.
+    */
+    draw = 1;
+#endif
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
 			       draw_width, draw_height,
 			       0, 0, colors[BLACK].pixel);
@@ -717,8 +742,8 @@ int Init_windows(void)
 				colors[BLACK].pixel);
 
 #ifdef	_WINDOWS
-	WinXSetEventMask(draw, NoEventMask);
-	radar_exposures = 1;
+    WinXSetEventMask(draw, NoEventMask);
+    radar_exposures = 1;
     radarGC = WinXCreateWinDC(radar);
     gc = WinXCreateWinDC(draw);
 
@@ -730,7 +755,7 @@ int Init_windows(void)
     msgWindow = XCreateSimpleWindow(dpy, top, 0, 0,
 				0, 0, 0, 0,
 				colors[BLACK].pixel);
-	messageGC = WinXCreateWinDC(msgWindow);
+    messageGC = WinXCreateWinDC(msgWindow);
     motdGC = WinXCreateWinDC(top);
 
 	for (i=0; i<MAX_COLORS; i++)
@@ -820,9 +845,13 @@ int Init_windows(void)
      */
     XSelectInput(dpy, radar, ExposureMask);
     XSelectInput(dpy, players, ExposureMask);
-    XSelectInput(dpy, draw, 0);
-
 #ifndef	_WINDOWS
+    if (!selectionAndHistory) {
+	XSelectInput(dpy, draw, 0);
+    } else {
+	XSelectInput(dpy, draw, ButtonPressMask | ButtonReleaseMask);
+    }
+
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
@@ -891,52 +920,83 @@ int Init_windows(void)
 #ifdef	_WINDOWS
 void WinXCreateItemBitmaps()
 {
-	int		i;
+    int			i;
 
-    for (i=0; i<NUM_ITEMS; i++)
-	{
-		itemBitmaps[i][ITEM_HUD]
-		    = WinXCreateBitmapFromData(dpy, draw,
-					    (char *)itemBitmapData[i].data,
-					    ITEM_SIZE, ITEM_SIZE, colors[hudColor].pixel);
-		itemBitmaps[i][ITEM_PLAYFIELD]
-		    = WinXCreateBitmapFromData(dpy, draw,
-					    (char *)itemBitmapData[i].data,
-					    ITEM_SIZE, ITEM_SIZE, colors[RED].pixel);
-	}
+    for (i = 0; i < NUM_ITEMS; i++) {
+	itemBitmaps[i][ITEM_HUD]
+	    = WinXCreateBitmapFromData(dpy, draw,
+				       (char *)itemBitmapData[i].data,
+				       ITEM_SIZE, ITEM_SIZE, colors[hudColor].pixel);
+	itemBitmaps[i][ITEM_PLAYFIELD]
+	    = WinXCreateBitmapFromData(dpy, draw,
+				       (char *)itemBitmapData[i].data,
+				       ITEM_SIZE, ITEM_SIZE, colors[RED].pixel);
+    }
 }
 #endif
 
 int Alloc_msgs(void)
 {
-    message_t		*x;
+    message_t		*x, *x2 = 0;
     int			i;
 
-    if ((x = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL) {
+    if ((x = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL){
 	error("No memory for messages");
 	return -1;
     }
-    MsgBlock = x;
+
+#ifndef _WINDOWS
+    if (selectionAndHistory &&
+	((x2 = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL)){
+	error("No memory for history messages");
+	free(x);
+	return -1;
+    }
+    if (selectionAndHistory) {
+	MsgBlock_pending	= x2;
+    }
+#endif
+
+    MsgBlock		= x;
+
     for (i = 0; i < 2 * MAX_MSGS; i++) {
 	if (i < MAX_MSGS) {
 	    TalkMsg[i] = x;
+	    IFNWINDOWS( if (selectionAndHistory) TalkMsg_pending[i] = x2; )
 	} else {
 	    GameMsg[i - MAX_MSGS] = x;
+	    IFNWINDOWS( if (selectionAndHistory) GameMsg_pending[i - MAX_MSGS] = x2; )
 	}
 	x->txt[0] = '\0';
 	x->len = 0;
 	x->life = 0;
 	x++;
+
+#ifndef _WINDOWS
+	if (selectionAndHistory) {
+	    x2->txt[0] = '\0';
+	    x2->len = 0;
+	    x2->life = 0;
+	    x2++;
+	}
+#endif
     }
     return 0;
 }
-
 
 void Free_msgs(void)
 {
     if (MsgBlock) {
 	free(MsgBlock);
+	MsgBlock = NULL;
     }
+
+#ifndef _WINDOWS
+    if (MsgBlock_pending) {
+	free(MsgBlock_pending);
+	MsgBlock_pending = NULL;
+    }
+#endif
 }
 
 
@@ -984,15 +1044,14 @@ void Resize(Window w, int width, int height)
     /* ignore illegal resizes */
     LIMIT(width, MIN_TOP_WIDTH, MAX_TOP_WIDTH);
     LIMIT(height, MIN_TOP_HEIGHT, MAX_TOP_HEIGHT);
-	/* Window scaling needs to recalculate sizes, even when they're the same */
     if (width == top_width && height == top_height) {
-#ifdef	WINDOWSCALING
-		Send_display();
-#endif
-		return;
+	return;
     }
     top_width = width;
     top_height = height;
+    if (!draw) {
+	return;
+    }
     draw_width = top_width - 258;
     draw_height = top_height;
     Send_display();
@@ -1007,7 +1066,7 @@ void Resize(Window w, int width, int height)
     XResizeWindow(dpy, players,
 		  256, top_height - (RadarHeight + ButtonHeight + 2));
 #ifdef	_WINDOWS
-	WinXResize();
+    WinXResize();
 #endif
     Talk_resize();
     Config_resize();
@@ -1053,3 +1112,13 @@ int FatalError(Display *dpy)
     return(0);
 }
 
+void Scale_dashes()
+{
+    dashes[0] = WINSCALE(8);
+    dashes[1] = WINSCALE(4);
+
+    cdashes[0] = WINSCALE(3);
+    cdashes[1] = WINSCALE(9);
+
+    XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
+}

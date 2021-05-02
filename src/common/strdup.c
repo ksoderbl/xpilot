@@ -8,11 +8,16 @@
  *
  * You can do anything you like to this... :)
  *
- * $Id: strdup.c,v 4.0 1998/03/18 15:18:06 bert Exp $
+ * $Id: strdup.c,v 4.1 1999/10/04 19:57:47 bert Exp $
  */
 
 #include <stdlib.h>
 #include <string.h>
+
+/* BG 99-10-4: some version of glibs defines strdup.  kill that nonsense. */
+#ifdef strdup
+#undef strdup
+#endif
 
 char* strdup (const char* s1)
 {

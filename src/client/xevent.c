@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 4.3 1998/10/06 14:52:19 bert Exp $
+/* $Id: xevent.c,v 4.23 2000/03/12 11:50:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -30,10 +30,13 @@
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <X11/Xatom.h>
+#include <X11/Xmd.h>
 #ifdef	__apollo
 #    include <X11/ap_keysym.h>
 #endif
 #else
+#include <math.h>
 #include "NT/winX.h"
 #include "NT/winAudio.h"
 #include "NT/winClient.h"
@@ -54,8 +57,14 @@
 #include "error.h"
 #include "record.h"
 #include "portability.h"
+#include "paintdata.h"
+#include "talk.h"
+#include "configure.h"
+#include "xeventhandlers.h"
 
 char xevent_version[] = VERSION;
+
+extern char *talk_fast_msgs[];	/* talk macros */
 
 extern setup_t		*Setup;
 
@@ -65,8 +74,6 @@ int		initialPointerControl = false;
 bool		pointerControl = false;
 extern keys_t	buttonDefs[MAX_POINTER_BUTTONS];
 extern Cursor	pointerControlCursor;
-
-
 
 #if defined(JOYSTICK) && defined(__linux__)
 /*
@@ -121,6 +128,9 @@ static void Joystick_event(void)
     struct JS_DATA_TYPE	js;
     int			change = 0;
 
+    if (!draw) {
+	return;
+    }
     if (!js_fd && !js_avail) {
 	if ((js_fd = open(JS_DEVICE, O_RDONLY)) == -1) {
 	    return;
@@ -142,12 +152,12 @@ static void Joystick_event(void)
 #endif
 
 
-static keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
+keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
 {
     keys_t ret = KEY_DUMMY;
     static int i = 0;
 
-#if DEVELOPMENT
+#ifndef NO_KEYSORT
     if (reset) {
 	/* binary search since keyDefs is sorted on keysym. */
 	int lo = 0, hi = maxKeyDefs - 1;
@@ -213,7 +223,7 @@ static keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     return (ret);
 }
 
-static void Pointer_control_set_state(int onoff)
+void Pointer_control_set_state(int onoff)
 {
     if (onoff) {
 	pointerControl = true;
@@ -229,18 +239,27 @@ static void Pointer_control_set_state(int onoff)
 	pointerControl = false;
 	XUngrabPointer(dpy, CurrentTime);
 	XDefineCursor(dpy, draw, None);
-	XSelectInput(dpy, draw, 0);
+	if (!selectionAndHistory)
+	    XSelectInput(dpy, draw, 0);
+	else
+	    XSelectInput(dpy, draw, ButtonPressMask | ButtonReleaseMask);
     }
 }
 
+#ifndef	_WINDOWS
+
 static void Talk_set_state(bool onoff)
 {
-#ifndef	_WINDOWS
+
     if (onoff) {
 	/* Enable talking, disable pointer control if it is enabled. */
 	if (pointerControl) {
 	    initialPointerControl = true;
 	    Pointer_control_set_state(false);
+	}
+	if (selectionAndHistory) {
+	    XSelectInput(dpy, draw, PointerMotionMask | ButtonPressMask
+				    | ButtonReleaseMask);
 	}
 	Talk_map_window(true);
     }
@@ -252,15 +271,29 @@ static void Talk_set_state(bool onoff)
 	    Pointer_control_set_state(true);
 	}
     }
+}
+
 #else
-    {
+
+static void Talk_set_state(bool onoff)
+{
 	char* wintalkstr;
+
+    if (pointerControl) {
+	initialPointerControl = true;
+	Pointer_control_set_state(false);
+    }
 	wintalkstr = (char*)mfcDoTalkWindow();
 	if (*wintalkstr)
 	    Net_talk(wintalkstr);
+
+    if (initialPointerControl) {
+	initialPointerControl = false;
+	Pointer_control_set_state(true);
     }
-#endif
 }
+#endif
+
 
 int Key_init(void)
 {
@@ -281,15 +314,207 @@ int Key_update(void)
     return Send_keyboard(keyv);
 }
 
-static bool Key_press(keys_t key)
+bool Key_check_talk_macro(keys_t key)
 {
+    if (key >= KEY_MSG_1 && key < KEY_MSG_1 + TALK_FAST_NR_OF_MSGS) {
+    /* talk macros */
+	Talk_macro(talk_fast_msgs[key - KEY_MSG_1]);
+    }
+    return true;
+}
+
+
+bool Key_press_id_mode(keys_t key)
+{
+    showRealName = showRealName ? false : true;
+    scoresChanged++;
+    return false;	/* server doesn't need to know */
+}
+
+bool Key_press_autoshield_hack(keys_t key)
+{
+    if (auto_shield && BITV_ISSET(keyv, KEY_SHIELD)) {
+	BITV_CLR(keyv, KEY_SHIELD);
+    }
+    return false;
+}
+
+bool Key_press_shield(keys_t key)
+{
+    if (toggle_shield) {
+	shields = !shields;
+	if (shields) {
+	    BITV_SET(keyv, key);
+	} else {
+	    BITV_CLR(keyv, key);
+	}
+	return true;
+    }
+    else if (auto_shield) {
+	shields = 1;
+#if 0
+	shields = 0;
+	BITV_CLR(keyv, key);
+	return true;
+#endif
+    }
+    return false;
+}
+
+bool Key_press_fuel(keys_t key)
+{
+    fuelCount = FUEL_NOTIFY;
+    return false;
+}
+
+bool Key_press_swap_settings(keys_t key)
+{
+    /* if the server isn't mucking with our power/turnspeed (autopilot)
+     * or we're watching someone else, then it will accept our swap
+     */
+    if ((fabs(displayedTurnspeed - turnspeed) < 0.5
+	 && fabs(displayedPower - power) < 0.5)
+       || snooping) {
+	DFLOAT _tmp;
+#define SWAP(a, b) (_tmp = (a), (a) = (b), (b) = _tmp)
+	    
+	SWAP(power, power_s);
+	SWAP(turnspeed, turnspeed_s);
+	SWAP(turnresistance, turnresistance_s);
+	control_count = CONTROL_DELAY;
+	Config_redraw();
+	    return true;
+    } else
+	return false;	/* don't send the key and risk skew */
+}
+
+bool Key_press_swap_scalefactor(keys_t key)
+{
+    DFLOAT tmp;
+    tmp = scaleFactor;
+    scaleFactor = scaleFactor_s;
+    scaleFactor_s = tmp;
+
+    Init_scale_array();
+    Scale_dashes();
+    return false;
+}
+
+bool Key_press_increase_power(keys_t key)
+{
+    power = power * 1.10;
+    power = MIN(power, MAX_PLAYER_POWER);
+    Send_power(power);
+
+    Config_redraw();
+    control_count = CONTROL_DELAY;
+    return false;	/* server doesn't see these keypresses anymore */
+
+}
+
+bool Key_press_decrease_power(keys_t key)
+{
+    power = power * 0.90;
+    power = MAX(power, MIN_PLAYER_POWER);
+    Send_power(power);
+
+    Config_redraw();
+    control_count = CONTROL_DELAY;
+    return false;	/* server doesn't see these keypresses anymore */
+}
+
+bool Key_press_increase_turnspeed(keys_t key)
+{
+    turnspeed = turnspeed * 1.05;
+    turnspeed = MIN(turnspeed, MAX_PLAYER_TURNSPEED);
+    Send_turnspeed(turnspeed);
+
+    Config_redraw();
+    control_count = CONTROL_DELAY;
+    return false;	/* server doesn't see these keypresses anymore */
+}
+
+bool Key_press_decrease_turnspeed(keys_t key)
+{
+    turnspeed = turnspeed * 0.95;
+    turnspeed = MAX(turnspeed, MIN_PLAYER_TURNSPEED);
+    Send_turnspeed(turnspeed);
+
+    Config_redraw();
+    control_count = CONTROL_DELAY;
+    return false;	/* server doesn't see these keypresses anymore */
+}
+
+bool Key_press_talk(keys_t key)
+{
+    Talk_set_state((talk_mapped == false) ? true : false);
+    return false;	/* server doesn't need to know */
+}
+
+bool Key_press_show_items(keys_t key)
+{
+    TOGGLE_BIT(instruments, SHOW_ITEMS);
+    return false;	/* server doesn't need to know */
+}
+
+bool Key_press_show_messages(keys_t key)
+{
+    TOGGLE_BIT(instruments, SHOW_MESSAGES);
+    return false;	/* server doesn't need to know */
+}
+
+bool Key_press_pointer_control(keys_t key)
+{
+    if (version < 0x3202) {
+	error("Cannot use pointer control below version 3.2.3");
+    } else  {
+        Pointer_control_set_state(!pointerControl);
+    }
+    return false;	/* server doesn't need to know */
+}
+
+bool Key_press_toggle_record(keys_t key)
+{
+    Record_toggle();
+    return false;	/* server doesn't need to know */
+}
+
+#ifndef _WINDOWS
+bool Key_press_msgs_stdout(keys_t key)
+{
+    if (selectionAndHistory)
+	Print_messages_to_stdout();
+    return false;	/* server doesn't need to know */
+}
+#endif
+
+bool Key_press_select_lose_item(keys_t key)
+{
+    if (version < 0x3400) {
+        static int before;
+        if (!before++) {
+	    errno = 0;
+	    error("Servers less than 3.4.0 dont know how to drop items");
+	}
+	return false;
+    }
+    if (lose_item_active == 1) {
+        lose_item_active = 2;
+    } else {
+	lose_item_active = 1;
+    }
+    return true;
+}
+
+
+bool Key_press(keys_t key)
+{
+    Key_check_talk_macro(key);
+
     switch (key) {
     case KEY_ID_MODE:
-	showRealName = showRealName ? false : true;
-	scoresChanged++;
-	return false;	/* server doesn't need to know */
+	return (Key_press_id_mode(key));
 
-    /* Don auto-shield hack */
     case KEY_FIRE_SHOT:
     case KEY_FIRE_LASER:
     case KEY_FIRE_MISSILE:
@@ -297,87 +522,69 @@ static bool Key_press(keys_t key)
     case KEY_FIRE_HEAT:
     case KEY_DROP_MINE:
     case KEY_DETACH_MINE:
-	if (auto_shield && BITV_ISSET(keyv, KEY_SHIELD)) {
-	    BITV_CLR(keyv, KEY_SHIELD);
-	}
+	Key_press_autoshield_hack(key);    
 	break;
 
     case KEY_SHIELD:
-	if (toggle_shield) {
-	    shields = !shields;
-	    if (shields) {
-		BITV_SET(keyv, key);
-	    } else {
-		BITV_CLR(keyv, key);
-	    }
-	    return true;
-	}
-	else if (auto_shield) {
-	    shields = 1;
-#if 0
-	    shields = 0;
-	    BITV_CLR(keyv, key);
-	    return true;
-#endif
-	}
+	if (Key_press_shield(key))
+	    return true; 
 	break;
 
     case KEY_REFUEL:
     case KEY_REPAIR:
     case KEY_TANK_NEXT:
     case KEY_TANK_PREV:
-	fuelCount = FUEL_NOTIFY;
+	Key_press_fuel(key);
 	break;
 
     case KEY_SWAP_SETTINGS:
-    case KEY_INCREASE_POWER:
-    case KEY_DECREASE_POWER:
-    case KEY_INCREASE_TURNSPEED:
-    case KEY_DECREASE_TURNSPEED:
-	control_count = CONTROL_DELAY;
+	if (!Key_press_swap_settings(key))
+	    return false;
 	break;
 
+    case KEY_SWAP_SCALEFACTOR:
+	if (!Key_press_swap_scalefactor(key))
+	    return false;
+	break;
+
+    case KEY_INCREASE_POWER:
+	return Key_press_increase_power(key);
+
+    case KEY_DECREASE_POWER:
+	return Key_press_decrease_power(key);
+
+    case KEY_INCREASE_TURNSPEED:
+	return Key_press_increase_turnspeed(key);
+
+    case KEY_DECREASE_TURNSPEED:
+	return Key_press_decrease_turnspeed(key);
+
     case KEY_TALK:
-	Talk_set_state((talk_mapped == false) ? true : false);
-	return false;	/* server doesn't need to know */
+	return Key_press_talk(key);
 
     case KEY_TOGGLE_OWNED_ITEMS:
-	TOGGLE_BIT(instruments, SHOW_ITEMS);
-	return false;	/* server doesn't need to know */
+	return Key_press_show_items(key);
 
     case KEY_TOGGLE_MESSAGES:
-	TOGGLE_BIT(instruments, SHOW_MESSAGES);
-	return false;	/* server doesn't need to know */
+	return Key_press_show_messages(key);
 
     case KEY_POINTER_CONTROL:
-	if (version < 0x3202) {
-	    error("Cannot use pointer control below version 3.2.3");
-	    return false;
-	}
-	Pointer_control_set_state(!pointerControl);
-	return false;	/* server doesn't need to know */
+	return Key_press_pointer_control(key);
+
     case KEY_TOGGLE_RECORD:
-	Record_toggle();
-	return false;	/* server doesn't need to know */
+	return Key_press_toggle_record(key);
+#ifndef _WINDOWS
+    case KEY_PRINT_MSGS_STDOUT:
+	return Key_press_msgs_stdout(key);
+#endif
     case KEY_SELECT_ITEM:
     case KEY_LOSE_ITEM:
-	if (version < 0x3400) {
-	    static int before;
-	    if (!before++) {
-		errno = 0;
-		error("Servers less than 3.4.0 dont know how to drop items");
-	    }
+	if (!Key_press_select_lose_item(key)) 
 	    return false;
-	}
-	if (lose_item_active == 1) {
-	    lose_item_active = 2;
-	} else {
-	    lose_item_active = 1;
-	}
-        break;
     default:
 	break;
     }
+
     if (key < NUM_KEYS) {
 	BITV_SET(keyv, key);
     }
@@ -385,7 +592,7 @@ static bool Key_press(keys_t key)
     return true;
 }
 
-static bool Key_release(keys_t key)
+bool Key_release(keys_t key)
 {
     switch (key) {
     case KEY_ID_MODE:
@@ -532,276 +739,24 @@ void Set_toggle_shield(int onoff)
     }
 }
 
-static void Talk_event(XEvent *event)
+void Talk_event(XEvent *event)
 {
     if (!Talk_do_event(event)) {
 	Talk_set_state(false);
     }
 }
 
-#ifndef	_WINDOWS
-int xevent(int new_input)
-#else
-int xevent(XEvent event)
-#endif
+
+int	talk_key_repeat_count;
+XEvent	talk_key_repeat_event;
+
+void xevent_keyboard(int queued)
 {
-    static ipos		mouse;		/* position of mouse pointer. */
-    int			movement = 0;	/* horizontal mouse movement. */
-    ipos		delta;
 #ifndef	_WINDOWS
-    int			i, n, type;
+    int			i, n;
     XEvent		event;
-    XClientMessageEvent	*cmev;
-    XConfigureEvent	*conf;
-#endif
-    static int		talk_key_repeat_count;
-    static XEvent	talk_key_repeat_event;
-#ifdef DEVELOPMENT
-    static time_t	back_in_play_since;
 #endif
 
-#ifdef SOUND
-    audioEvents();
-#endif /* SOUND */
-
-#ifdef JOYSTICK
-    Joystick_event();
-#endif /* JOYSTICK */
-
-#ifndef	_WINDOWS
-    switch (new_input) {
-    case 0: type = QueuedAlready; break;
-    case 1: type = QueuedAfterReading; break;
-    case 2: type = QueuedAfterFlush; break;
-    default:
-	errno = 0;
-	error("Bad input queue type (%d)", new_input);
-	return -1;
-    }
-    n = XEventsQueued(dpy, type);
-    for (i = 0; i < n; i++) {
-	XNextEvent(dpy, &event);
-#endif
-
-	switch (event.type) {
-
-	case MapNotify:
-	    if (ignoreWindowManager == 1) {
-		XSetInputFocus(dpy, top, RevertToParent, CurrentTime); 
-		ignoreWindowManager = 2;
-	    }
-	    break;
-
-#ifndef	_WINDOWS
-	case ClientMessage:
-	    cmev = (XClientMessageEvent *)&event;
-	    if (cmev->message_type == ProtocolAtom
-		&& cmev->format == 32
-		&& cmev->data.l[0] == KillAtom) {
-		/*
-		 * On HP-UX 10.20 with CDE strange things happen
-		 * sometimes when closing xpilot via the window
-		 * manager.  Keypresses may result in funny characters
-		 * after the client exits.  The remedy to this seems
-		 * to be to explicitly destroy the top window with
-		 * XDestroyWindow when the window manager asks the
-		 * client to quit and then wait for the resulting
-		 * DestroyNotify event before closing the connection
-		 * with the X server.
-		 */
-		XDestroyWindow(dpy, top);
-		XSync(dpy, True);
-		printf("Quit\n");
-		return -1;
-	    }
-	    break;
-#endif
-
-	case KeyPress:
-	    talk_key_repeat_count = 0;
-	case KeyRelease:
-#ifdef DEVELOPMENT
-	    if (back_in_play_since) {
-		time_t now = time(NULL);
-		if (now - back_in_play_since > 0) {
-		    back_in_play_since = 0;
-		} else {
-		    /* after popup ignore key events for 1 seconds. */
-		    break;
-		}
-	    }
-#endif
-	    if (event.xkey.window == top) {
-		Key_event(&event);
-	    }
-	    else if (event.xkey.window == talk_w) {
-		if (event.type == KeyPress) {
-		    talk_key_repeat_count = 1;
-		    talk_key_repeat_event = event;
-		}
-		else if (talk_key_repeat_count > 0
-		    && event.xkey.keycode
-			== talk_key_repeat_event.xkey.keycode) {
-		    talk_key_repeat_count = 0;
-		}
-		Talk_event(&event);
-		if (!talk_mapped)
-		    talk_key_repeat_count = 0;
-	    }
-	    /* else : here we can add widget.c key uses. */
-	    break;
-
-	case ButtonPress:
-	    if (event.xbutton.window == draw) {
-		if (pointerControl
-		    && !talk_mapped
-		    && event.xbutton.button <= MAX_POINTER_BUTTONS) {
-		    if (Key_press(buttonDefs[event.xbutton.button-1])) {
-			Net_key_change();
-		    }
-		}
-		break;
-	    }
-	    if (Widget_event(&event) != 0) {
-		break;
-	    }
-	    Expose_button_window(BLACK, event.xbutton.window);
-	    break;
-
-	case MotionNotify:
-	    if (event.xmotion.window == draw) {
-		if (pointerControl) {
-		    if (!talk_mapped) {
-			if (!event.xmotion.send_event) {
-			    movement += event.xmotion.x - mouse.x;
-			}
-		    }
-		    mouse.x = event.xmotion.x;
-		    mouse.y = event.xmotion.y;
-		}
-	    }
-	    else {
-		Widget_event(&event);
-	    }
-	    break;
-
-	case ButtonRelease:
-	    if (event.xbutton.window == draw) {
-		if (pointerControl
-		    && !talk_mapped
-		    && event.xbutton.button <= MAX_POINTER_BUTTONS) {
-		    if (Key_release(buttonDefs[event.xbutton.button-1])) {
-			Net_key_change();
-		    }
-		}
-		break;
-	    }
-	    if (Widget_event(&event) != 0) {
-		extern int quitting;
-		if (quitting == true) {
-		    quitting = false;
-		    printf("Quit\n");
-		    return -1;
-		}
-		break;
-	    }
-	    Expose_button_window(RED, event.xbutton.window);
-	    if (event.xbutton.window == about_close_b)
-		About(about_close_b);
-	    else if (event.xbutton.window == about_next_b)
-		About(about_next_b);
-	    else if (event.xbutton.window == about_prev_b)
-		About(about_prev_b);
-	    break;
-
-	case Expose:
-	    if (event.xexpose.window == players) {
-		if (event.xexpose.count == 0) {
-		    players_exposed = true;
-		    scoresChanged++;
-		}
-	    }
-	    else if (event.xexpose.window == about_w) {
-		if (event.xexpose.count == 0) {
-		    Expose_about_window();
-		}
-	    }
-	    else  if (event.xexpose.window == radar) {
-		if (event.xexpose.count <= 1) {
-		    radar_exposures = 1;
-		} else {
-		    radar_exposures++;
-		}
-	    }
-	    else if (event.xexpose.window == talk_w) {
-		if (event.xexpose.count == 0) {
-		    Talk_event(&event);
-		    if (!talk_mapped)
-			talk_key_repeat_count = 0;
-		}
-	    }
-	    else if (Widget_event(&event) == 0) {
-		if (event.xexpose.count == 0) {
-		    Expose_button_window(RED, event.xexpose.window);
-		}
-	    }
-	    break;
-
-	case EnterNotify:
-	case LeaveNotify:
-	    Widget_event(&event);
-	    break;
-
-#ifndef	_WINDOWS
-	    /* Back in play */
-	case FocusIn:
-#ifdef DEVELOPMENT
-	    if (!gotFocus) {
-		time(&back_in_play_since);
-	    }
-#endif
-	    if (initialPointerControl && !talk_mapped) {
-		initialPointerControl = false;
-		Pointer_control_set_state(true);
-	    }
-	    gotFocus = true;
-	    XAutoRepeatOff(dpy);
-	    break;
-
-	    /* Probably not playing now */
-	case FocusOut:
-	case UnmapNotify:
-	    if (pointerControl) {
-		initialPointerControl = true;
-		Pointer_control_set_state(false);
-	    }
-	    gotFocus = false;
-	    XAutoRepeatOn(dpy);
-	    break;
-
-	case MappingNotify:
-	    XRefreshKeyboardMapping(&event.xmapping);
-	    break;
-#endif
-
-#ifndef	_WINDOWS
-	case ConfigureNotify:
-	    conf = &event.xconfigure;
-	    if (conf->window == top) {
-		Resize(conf->window, conf->width, conf->height);
-	    }
-	    else {
-		Widget_event(&event);
-	    }
-	    break;
-#endif
-
-	default:
-	    break;
-	}
-#ifndef	_WINDOWS
-    }
-#endif
     if (talk_key_repeat_count > 0) {
 	if (++talk_key_repeat_count >= FPS
 	    && (talk_key_repeat_count - FPS) % ((FPS + 2) / 3) == 0) {
@@ -813,7 +768,7 @@ int xevent(XEvent event)
 
 #ifndef	_WINDOWS
     if (kdpy) {
-	n = XEventsQueued(kdpy, type);
+	n = XEventsQueued(kdpy, queued);
 	for (i = 0; i < n; i++) {
 	    XNextEvent(kdpy, &event);
 	    switch (event.type) {
@@ -842,9 +797,36 @@ int xevent(XEvent event)
 	}
     }
 #endif
+}
+
+ipos	delta;
+ipos	mouse;		/* position of mouse pointer. */
+int	movement;	/* horizontal mouse movement. */
+
+
+void xevent_pointer()
+{ 
+#ifndef	_WINDOWS
+    XEvent		event;
+#endif
 
     if (pointerControl) {
 	if (!talk_mapped) {
+
+#ifdef _WINDOWS
+	    /* This is a HACK to fix mouse control under windows. */
+	    {
+		 POINT point;
+
+		 GetCursorPos(&point);
+		 movement = point.x - draw_width/2; 
+		 XWarpPointer(dpy, None, draw,
+			      0, 0, 0, 0,
+			      draw_width/2, draw_height/2);
+	    }
+		/* fix end */
+#endif 
+
 	    if (movement != 0) {
 		Send_pointer_move(movement);
 		delta.x = draw_width / 2 - mouse.x;
@@ -853,23 +835,152 @@ int xevent(XEvent event)
 		    || ABS(delta.y) > 1 * draw_height / 8) {
 
 #ifndef	_WINDOWS
+		    memset(&event, 0, sizeof(event));
 		    event.type = MotionNotify;
 		    event.xmotion.display = dpy;
 		    event.xmotion.window = draw;
 		    event.xmotion.x = draw_width/2;
 		    event.xmotion.y = draw_height/2;
 		    XSendEvent(dpy, draw, False, PointerMotionMask, &event);
-#endif
 		    XWarpPointer(dpy, None, draw,
 				 0, 0, 0, 0,
 				 draw_width/2, draw_height/2);
-		    IFWINDOWS( Trace("Recovering mouse m=%d/%d delta=%d/%d\n",
-		    			mouse.x, mouse.y, delta.x, delta.y); )
+#endif
 		    XFlush(dpy);
 		}
 	    }
 	}
     }
+}
+
+#ifndef	_WINDOWS
+int xevent(int new_input)
+#else
+int xevent(XEvent event)
+#endif
+{
+    int			queued = 0;
+#ifndef	_WINDOWS
+    int			i, n;
+    XEvent		event;
+#endif
+
+#ifdef SOUND
+    audioEvents();
+#endif /* SOUND */
+
+#ifdef JOYSTICK
+    Joystick_event();
+#endif /* JOYSTICK */
+
+    movement = 0;
+
+#ifndef	_WINDOWS
+    switch (new_input) {
+    case 0: queued = QueuedAlready; break;
+    case 1: queued = QueuedAfterReading; break;
+    case 2: queued = QueuedAfterFlush; break;
+    default:
+	errno = 0;
+	error("Bad input queue type (%d)", new_input);
+	return -1;
+    }
+    n = XEventsQueued(dpy, queued);
+    for (i = 0; i < n; i++) {
+	XNextEvent(dpy, &event);
+#endif
+	switch (event.type) {
+
+#ifndef	_WINDOWS
+	    /*
+	     * after requesting a selection we are notified that we
+	     * can access it.
+	     */
+	case SelectionNotify:
+	    SelectionNotify_event(&event);    
+	    break;
+	    /*
+	     * we are requested to provide a selection.
+	     */
+	case SelectionRequest:
+	    SelectionRequest_event(&event);
+	    break;
+
+	case SelectionClear:
+	    if (selectionAndHistory)
+		Clear_selection();
+	    break;
+
+	case MapNotify:
+	    MapNotify_event(&event);
+	    break;
+
+	case ClientMessage:
+	    if (ClientMessage_event(&event) == -1) {
+		return -1;
+	    }
+	    break;
+
+	    /* Back in play */
+	case FocusIn:
+	    FocusIn_event(&event);
+	    break;
+
+	    /* Probably not playing now */
+	case FocusOut:
+	case UnmapNotify:
+	    UnmapNotify_event(&event);
+	    break;
+	    
+	case MappingNotify:
+	    XRefreshKeyboardMapping(&event.xmapping);
+	    break;
+
+
+	case ConfigureNotify:
+	    ConfigureNotify_event(&event);
+	    break;
+#endif
+
+	case KeyPress:
+	    talk_key_repeat_count = 0;
+	    /* FALLTHROUGH */
+	case KeyRelease:
+	    KeyChanged_event(&event);
+	    break;
+
+	case ButtonPress:
+	    ButtonPress_event(&event);
+	    break;
+
+	case MotionNotify:
+	    MotionNotify_event(&event);
+	    break;
+
+	case ButtonRelease:
+	    if (ButtonRelease_event(&event) == -1) 
+	        return -1;
+	    break;
+
+	case Expose:
+	    Expose_event(&event);
+	    break;
+
+	case EnterNotify:
+	case LeaveNotify:
+	    Widget_event(&event);
+	    break;
+
+	default:
+	    break;
+	}
+#ifndef	_WINDOWS
+    }
+#endif
+
+    xevent_keyboard(queued);	
+    xevent_pointer();
     return 0;
 }
+
 

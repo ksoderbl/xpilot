@@ -1,1 +1,1 @@
-This server is running XPilot-server 4.1.0-NT13
+This server is running XPilot-server 4.2.0-NT13

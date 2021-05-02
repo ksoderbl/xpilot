@@ -1,4 +1,4 @@
-/* $Id: netclient.h,v 4.1 1998/04/16 17:39:29 bert Exp $
+/* $Id: netclient.h,v 4.4 1999/10/08 21:22:03 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -51,6 +51,7 @@ int Receive_start(void);
 int Receive_end(void);
 int Receive_message(void);
 int Receive_self(void);
+int Receive_self_items(void);
 int Receive_modifiers(void);
 int Receive_refuel(void);
 int Receive_connector(void);

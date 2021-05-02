@@ -1,4 +1,4 @@
-/* $Id: update.c,v 4.5 1998/08/29 19:49:57 bert Exp $
+/* $Id: update.c,v 4.16 1999/11/10 21:06:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -50,7 +50,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 4.5 1998/08/29 19:49:57 bert Exp $";
+    "@(#)$Id: update.c,v 4.16 1999/11/10 21:06:36 bert Exp $";
 #endif
 
 
@@ -159,15 +159,19 @@ void Emergency_thrust (int ind, int on)
 	    pl->emergency_thrust_max = emergency_thrust_time;
 	    pl->item[ITEM_EMERGENCY_THRUST]--;
 	}
-	SET_BIT(pl->used, OBJ_EMERGENCY_THRUST);
-	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_ON_SOUND);
+	if (!BIT(pl->used, OBJ_EMERGENCY_THRUST)) {
+	    SET_BIT(pl->used, OBJ_EMERGENCY_THRUST);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_ON_SOUND);
+	}
     } else {
-	CLR_BIT(pl->used, OBJ_EMERGENCY_THRUST);
+	if (BIT(pl->used, OBJ_EMERGENCY_THRUST)) {
+	    CLR_BIT(pl->used, OBJ_EMERGENCY_THRUST);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_OFF_SOUND);
+	}
 	if (pl->emergency_thrust_left <= 0) {
 	    if (pl->item[ITEM_EMERGENCY_THRUST] <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
 	}
-	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_OFF_SOUND);
     }
 }
 
@@ -185,11 +189,12 @@ void Emergency_shield (int ind, int on)
 	    pl->emergency_shield_max = emergency_shield_time;
 	    pl->item[ITEM_EMERGENCY_SHIELD]--;
 	}
-	SET_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
 	SET_BIT(pl->have, OBJ_SHIELD);
-	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
+	if (!BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
+	    SET_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
+	}
     } else {
-	CLR_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
 	if (pl->emergency_shield_left <= 0) {
 	    if (pl->item[ITEM_EMERGENCY_SHIELD] <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
@@ -198,7 +203,10 @@ void Emergency_shield (int ind, int on)
 	    CLR_BIT(pl->have, OBJ_SHIELD);
 	    CLR_BIT(pl->used, OBJ_SHIELD);
 	}
-	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_OFF_SOUND);
+	if (BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
+	    CLR_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_OFF_SOUND);
+	}
     }
 }
 
@@ -214,7 +222,6 @@ void Autopilot (int ind, int on)
     CLR_BIT(pl->status, THRUSTING);
     if (on) {
 	pl->auto_power_s = pl->power;
-	pl->auto_turnacc_s = pl->turnacc;
 	pl->auto_turnspeed_s = pl->turnspeed;
 	pl->auto_turnresistance_s = pl->turnresistance;
 	SET_BIT(pl->used, OBJ_AUTOPILOT);
@@ -224,7 +231,7 @@ void Autopilot (int ind, int on)
 	sound_play_sensors(pl->pos.x, pl->pos.y, AUTOPILOT_ON_SOUND);
     } else {
 	pl->power = pl->auto_power_s;
-	pl->turnacc = pl->auto_turnacc_s;
+	pl->turnacc = 0.0;
 	pl->turnspeed = pl->auto_turnspeed_s;
 	pl->turnresistance = pl->auto_turnresistance_s;
 	CLR_BIT(pl->used, OBJ_AUTOPILOT);
@@ -432,7 +439,7 @@ void Update_objects(void)
     for (i=0; i<NUM_ITEMS; i++)
 	if (World.items[i].num < World.items[i].max
 	    && World.items[i].chance > 0
-	    && rand()%World.items[i].chance == 0) {
+	    && (rfrac() * World.items[i].chance) < 1.0f) {
 
 	    Place_item(i, -1);
 	}
@@ -468,9 +475,6 @@ void Update_objects(void)
     for (i=0; i<NumObjs; i++) {
 	obj = Obj[i];
 
-	update_object_speed(obj);
-	Move_object(i);
-
 	if (BIT(obj->type, OBJ_MINE))
 	    Move_mine(i);
 
@@ -487,40 +491,40 @@ void Update_objects(void)
 		(obj->rotation + (int) (obj->turnspeed * RES)) % RES;
 	}
 
+	update_object_speed(obj);
+	Move_object(i);
     }
 
     /*
      * Update ECM blasts
      */
-    for (i=0; i<NumEcms; i++) {
+    for (i = 0; i < NumEcms; i++) {
 	if ((Ecms[i]->size >>= 1) == 0) {
 	    if (Ecms[i]->id != -1)
 		Players[GetInd[Ecms[i]->id]]->ecmcount--;
 	    free(Ecms[i]);
-	    if (--NumEcms > i) {
-		Ecms[i] = Ecms[NumEcms];
-		i--;
-	    }
+	    --NumEcms;
+	    Ecms[i] = Ecms[NumEcms];
+	    i--;
 	}
     }
 
     /*
      * Update transporters
      */
-    for (i=0; i<NumTransporters; i++) {
-	if (!--Transporters[i]->count) {
+    for (i = 0; i < NumTransporters; i++) {
+	if (--Transporters[i]->count <= 0) {
 	    free(Transporters[i]);
-	    if (--NumTransporters > i) {
-		Transporters[i] = Transporters[NumTransporters];
-		i--;
-	    }
+	    --NumTransporters;
+	    Transporters[i] = Transporters[NumTransporters];
+	    i--;
 	}
     }
 
     /*
      * Updating cannons, maybe a little bit of fireworks too?
      */
-    for (i=0; i<World.NumCannons; i++) {
+    for (i = 0; i < World.NumCannons; i++) {
 	cannon_t *cannon = World.cannon + i;
 	if (cannon->dead_time > 0) {
 	    if (!--cannon->dead_time) {
@@ -532,23 +536,18 @@ void Update_objects(void)
 	    continue;
 	} else if (!cannon->damaged
 		   && !cannon->tractor_count) {
-	    int weapon, target = -1, dir = 0;
-	    weapon = Cannon_select_weapon(i);
-	    Cannon_aim(i, weapon, &target, &dir);
-	    if (target != -1) {
-		if (rand() % 16 == 0)
-		    Cannon_fire(i, weapon, target, dir);
-	    } else if (cannonsUseItems
-		       && itemProbMult > 0
-		       && cannonItemProbMult > 0) {
-		int item = rand() % NUM_ITEMS;
+	    if (rfrac() * 16 < 1) {
+		Cannon_check_fire(i);
+	    }
+	    else if (cannonsUseItems
+		     && itemProbMult > 0
+		     && cannonItemProbMult > 0) {
+		int item = (int)(rfrac() * NUM_ITEMS);
 		/* this gives the cannon an item about once every minute */
 		if (World.items[item].cannonprob > 0
-		    && rand() % (int)(60.0
-				      * FPS
-				      / cannonItemProbMult
-				      / World.items[item].cannonprob
-				      + 1) == 0) {
+		    && cannonItemProbMult > 0
+		    && (int)(rfrac() * (60 * FPS))
+			< (cannonItemProbMult * World.items[item].cannonprob)) {
 		    Cannon_add_item(i, item, (item == ITEM_FUEL ?
 					ENERGY_PACK_FUEL >> FUEL_SCALE_BITS
 					: 1));
@@ -762,7 +761,14 @@ void Update_objects(void)
 	 * Compute turn
 	 */
 	pl->turnvel	+= pl->turnacc;
-	pl->turnvel	*= pl->turnresistance;
+
+	/*
+	 * turnresistance is zero: client requests linear turning behaviour
+	 * when playing with pointer control.
+	 */
+	if (pl->turnresistance) {
+	    pl->turnvel *= pl->turnresistance;
+	}
 
 #ifdef TURN_FUEL
 	tf = pl->oldturnvel - pl->turnvel;
@@ -780,10 +786,18 @@ void Update_objects(void)
 
 	pl->float_dir	+= pl->turnvel;
 
-	if (pl->float_dir < 0)
+	while (pl->float_dir < 0)
 	    pl->float_dir += RES;
-	if (pl->float_dir >= RES)
+	while (pl->float_dir >= RES)
 	    pl->float_dir -= RES;
+
+	/*
+	 * turnresistance is zero: client requests linear turning behaviour
+	 * when playing with pointer control.
+	 */
+	if (!pl->turnresistance) {
+	    pl->turnvel = 0;
+	}
 
 	Turn_player(i);
 
@@ -807,13 +821,13 @@ void Update_objects(void)
 		pl->visibility[j].canSee = 1;
 	    else if (pl->updateVisibility
 		     || Players[j]->updateVisibility
-		     || rand() % UPDATE_RATE
+		     || (int)(rfrac() * UPDATE_RATE)
 		     < ABS(frame_loops - pl->visibility[j].lastChange)) {
 
 		pl->visibility[j].lastChange = frame_loops;
 		pl->visibility[j].canSee
-		    = rand() % (pl->item[ITEM_SENSOR] + 1)
-			> (rand() % (Players[j]->item[ITEM_CLOAK] + 1));
+		    = (rfrac() * (pl->item[ITEM_SENSOR] + 1))
+			> (rfrac() * (Players[j]->item[ITEM_CLOAK] + 1));
 	    }
 	}
 
@@ -920,7 +934,9 @@ void Update_objects(void)
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
 
-	pl->mass = pl->emptymass + FUEL_MASS(pl->fuel.sum);
+	pl->mass = pl->emptymass
+		   + FUEL_MASS(pl->fuel.sum)
+		   + pl->item[ITEM_ARMOR] * ARMOR_MASS;
 
 	if (BIT(pl->status, WARPING)) {
 	    position w;
@@ -928,18 +944,24 @@ void Update_objects(void)
 		nearestFront, nearestRear,
 		proxFront, proxRear;
 
+	    if (pl->wormHoleHit >= World.NumWormholes) {
+		/* could happen if the player hit a temporary wormhole
+		   that was removed while the player was warping */
+		CLR_BIT(pl->status, WARPING);
+		break;
+	    }
+
 	    if (pl->wormHoleHit != -1) {
 
-	    if (World.wormHoles[pl->wormHoleHit].countdown > 0
-		/*&& World.wormHoles[pl->wormHoleHit].lastplayer != i*/)
+	    if (World.wormHoles[pl->wormHoleHit].countdown > 0) {
 		j = World.wormHoles[pl->wormHoleHit].lastdest;
-	    else if (rfrac() < 0.10f)
+	    } else if (rfrac() < 0.10f) {
 		do
-		    j = rand() % World.NumWormholes;
+		    j = (int)(rfrac() * World.NumWormholes);
 		while (World.wormHoles[j].type == WORM_IN
 		       || pl->wormHoleHit == j
 		       || World.wormHoles[j].temporary);
-	    else {
+	    } else {
 		nearestFront = nearestRear = -1;
 		proxFront = proxRear = 10000000;
 
@@ -974,13 +996,14 @@ void Update_objects(void)
 #ifndef RANDOM_REAR_WORM
 		j = nearestFront < 0 ? nearestRear : nearestFront;
 #else /* RANDOM_REAR_WORM */
-		if (nearestFront >= 0)
+		if (nearestFront >= 0) {
 		    j = nearestFront;
-		else
+		} else {
 		    do
-			j = rand() % World.NumWormholes;
+			j = (int)(rfrac() * World.NumWormholes);
 		    while (World.wormHoles[j].type == WORM_IN
 			   || j == pl->wormHoleHit);
+		}
 #endif /* RANDOM_REAR_WORM */
 	    }
 
@@ -992,8 +1015,8 @@ void Update_objects(void)
 	    } else { /* wormHoleHit == -1 */
 		int i;
 		for (i = 20; i > 0; i--) {
-		    w.x = (rand() % World.width);
-		    w.y = (rand() % World.height);
+		    w.x = (int)(rfrac() * World.width);
+		    w.y = (int)(rfrac() * World.height);
 		    if (BIT(1U << World.block[(int)(w.x/BLOCK_SZ)]
 					     [(int)(w.y/BLOCK_SZ)],
 			    SPACE_BLOCKS)) {
@@ -1012,13 +1035,11 @@ void Update_objects(void)
 		    && BIT(1U << World.block[(int)(w.x/BLOCK_SZ)]
 					    [(int)(w.y/BLOCK_SZ)],
 			   SPACE_BIT)) {
-		    add_temp_wormhole((int)(w.x/BLOCK_SZ),
-				      (int)(w.y/BLOCK_SZ), 1);
-		    add_temp_wormhole(OBJ_X_IN_BLOCKS(pl),
-				      OBJ_Y_IN_BLOCKS(pl), 0);
-		    World.wormHoles[World.NumWormholes - 1].lastdest =
-			World.NumWormholes - 2;
-		    World.wormHoles[World.NumWormholes - 1].lastplayer = i;
+		    add_temp_wormholes(OBJ_X_IN_BLOCKS(pl),
+				       OBJ_Y_IN_BLOCKS(pl),
+				       (int)(w.x/BLOCK_SZ),
+				       (int)(w.y/BLOCK_SZ),
+				       i);
 		}
 		sound_play_sensors(pl->pos.x, pl->pos.y, HYPERJUMP_SOUND);
 	    }
@@ -1066,9 +1087,10 @@ void Update_objects(void)
 	    if ((j != pl->wormHoleHit) && (pl->wormHoleHit != -1)) {
 		World.wormHoles[pl->wormHoleHit].lastplayer = i;
 		World.wormHoles[pl->wormHoleHit].lastdest = j;
-		World.wormHoles[pl->wormHoleHit].countdown = (wormTime ?
-							      wormTime * FPS :
-							      WORMCOUNT);
+		if (!World.wormHoles[j].temporary) {
+		    World.wormHoles[pl->wormHoleHit].countdown = (wormTime ?
+			wormTime * FPS : WORMCOUNT);
+		}
 	    }
 
 	    CLR_BIT(pl->status, WARPING);
@@ -1093,11 +1115,6 @@ void Update_objects(void)
 	    Turn_thrust(i, TURN_SPARKS(tf));
 #endif
 
-	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
-	    pl->lock.distance =
-		Wrap_length(pl->pos.x - Players[GetInd[pl->lock.pl_id]]->pos.x,
-			    pl->pos.y - Players[GetInd[pl->lock.pl_id]]->pos.y);
-	}
 	Compute_sensor_range(pl);
 
 	pl->used &= pl->have;
@@ -1129,6 +1146,12 @@ void Update_objects(void)
 
 	if (BIT(pl->used, OBJ_TRACTOR_BEAM))
 	    Tractor_beam(i);
+
+	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
+	    pl->lock.distance =
+		Wrap_length(pl->pos.x - Players[GetInd[pl->lock.pl_id]]->pos.x,
+			    pl->pos.y - Players[GetInd[pl->lock.pl_id]]->pos.y);
+	}
     }
 
     /*

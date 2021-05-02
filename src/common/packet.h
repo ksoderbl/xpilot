@@ -1,4 +1,4 @@
-/* $Id: packet.h,v 4.1 1998/04/16 17:40:48 bert Exp $
+/* $Id: packet.h,v 4.2 1999/10/07 20:05:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -63,7 +63,7 @@
 #define PKT_TARGET		23
 #define PKT_KEYBOARD		24
 #define PKT_SEEK		25
-#define PKT_NOT_USED_26		26
+#define PKT_SELF_ITEMS		26	/* still under development */
 #define PKT_NOT_USED_27		27	/* was PKT_SEND_BUFSIZE */
 #define PKT_PLAYER		28
 #define PKT_SCORE		29
