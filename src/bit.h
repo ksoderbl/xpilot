@@ -1,4 +1,4 @@
-/* bit.h,v 1.3 1992/05/11 15:30:56 bjoerns Exp
+/* bit.h,v 1.4 1992/06/25 03:23:46 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,10 +8,12 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
+#ifndef	BIT_H
+#define	BIT_H
+
 #define SET_BIT(w, bit)		w |= (bit);
 #define CLR_BIT(w, bit)		w &= (~(bit));
 #define BIT(w, bit)		( w & (bit) )
 #define TOGGLE_BIT(w, bit)	w ^= (bit);
 
-typedef enum {true = 1, false = 0} BOOLEAN;
-typedef BOOLEAN bool;
+#endif

@@ -14,8 +14,14 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      /users/lgserv0/disk2/bjoerns/src/cvs/xpilot/src/lib/socklib.c,v 1.1.1.1 1992/05/11 12:32:34 bjoerns Exp
+ * RCS:      socklib.c,v 1.3 1992/06/25 04:31:37 bjoerns Exp
  * Log:      socklib.c,v
+ * Revision 1.3  1992/06/25  04:31:37  bjoerns
+ * Added source id to socklib.
+ *
+ * Revision 1.2  1992/05/19  21:11:39  bjoerns
+ * Minor.
+ *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
  *
@@ -27,6 +33,11 @@
  * Initial revision
  * 
  */
+
+#ifndef lint
+static char sourceid[] =
+    "@(#)$Id: ";
+#endif
 
 /* _SOCKLIB_LIBSOURCE must be defined int this file */
 #define _SOCKLIB_LIBSOURCE
@@ -422,7 +433,7 @@ int	fd;
     timerclear(&timeout); /* macro function */
     timeout.tv_sec = sl_timeout_s;
     timeout.tv_usec = sl_timeout_us;
-    readfds |= (1 << fd);
+    readfds = (1 << fd);
 
     (void) select(fd + 1, &readfds, &writefds, &exceptfds, &timeout);
     

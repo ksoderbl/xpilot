@@ -1,4 +1,4 @@
-/* collision.c,v 1.3 1992/05/11 15:31:00 bjoerns Exp
+/* collision.c,v 1.10 1992/06/28 05:38:07 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,23 +8,23 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include "pilot.h"
+#include "global.h"
 #include "map.h"
 #include "score.h"
+#include "robot.h"
 
-#define in_range(o1, o2, r)	((ABS((o1)->pos.x-(o2)->pos.x)<(r) && ABS((o1)->pos.y-(o2)->pos.y)<(r)) ? true : false)
+#ifndef	lint
+static char sourceid[] =
+    "@(#)collision.c,v 1.10 1992/06/28 05:38:07 bjoerns Exp";
+#endif
 
-extern int Antall, Ant_Shots;
-extern player *Players[];
-extern object *Shots[];
-extern wireobj ships[];
-extern World_map World;
-extern void Set_message(char *);
-extern void Explode_object(double, double, int, int, int);
-bool Landing(int, int);
+#define in_range(o1, o2, r)	( \
+    (ABS((o1)->pos.x-(o2)->pos.x)<(r) && ABS((o1)->pos.y-(o2)->pos.y)<(r)) \
+				 ? true : false)
+
 
 extern long KILLING_SHOTS;
-char msg[MSG_LEN];
+static char msg[MSG_LEN];
 
 
 
@@ -53,21 +53,21 @@ void Check_collision(void)
     /*
      * Collision detection.
      */
-    for (i=0; i<Antall; i++) {
+    for (i=0; i<NumPlayers; i++) {
 	pl=Players[i];
 	if (!BIT(pl->status, PLAYING) || BIT(pl->status, GAME_OVER))
 	    continue;
 
 	if (pl->pos.x<0 || pl->pos.y<0 ||
-	    pl->pos.x>=(World.x*WORLD_SPACE) ||
-	    pl->pos.y>=(World.y*WORLD_SPACE))
+	    pl->pos.x>=(World.x*BLOCK_SZ) ||
+	    pl->pos.y>=(World.y*BLOCK_SZ))
 	    SET_BIT(pl->status, KILLED);
 
 	/* Player - player */
 	if (BIT(World.rules->mode, CRASH_WITH_PLAYER)) {
-	    for (j=i+1; j<Antall; j++)
+	    for (j=i+1; j<NumPlayers; j++)
 		if (in_range((object *)pl,
-			     (object *)Players[j], 2*SHIP_WIDTH-6) &&
+			     (object *)Players[j], 2*SHIP_SZ-6) &&
 		    (BIT(Players[j]->status, PLAYING) &&
 		     !BIT(Players[j]->status, GAME_OVER)))
 		    if (!TEAM(i, j)) {
@@ -88,9 +88,9 @@ void Check_collision(void)
 	/* Player checkpoint */
 	if (BIT(World.rules->mode, TIMING))
 	    if (LENGTH(Players[i]->pos.x -
-		       (World.check[Players[i]->check].x*WORLD_SPACE),
+		       (World.check[Players[i]->check].x*BLOCK_SZ),
 		       Players[i]->pos.y -
-		       (World.check[Players[i]->check].y*WORLD_SPACE))
+		       (World.check[Players[i]->check].y*BLOCK_SZ))
 		< 200) {
 
 		if (Players[i]->check == 0) {
@@ -108,44 +108,48 @@ void Check_collision(void)
 
 		Players[i]->check++;
 
-		if (Players[i]->check == World.Ant_check)
+		if (Players[i]->check == World.NumChecks)
 		    Players[i]->check = 0;
 	    }
 
 	/*
 	 * Collision between a player and an object.
 	 */
-	for (j=0; j<Ant_Shots; j++) {
-	    range=SHIP_WIDTH;
-	    if (Shots[j]->type == OBJ_SMART_SHOT)
+	for (j=0; j<NumObjs; j++) {
+	    range=SHIP_SZ;
+	    if (Obj[j]->type == OBJ_SMART_SHOT)
 		range+=4;
-	    if (Shots[j]->type == OBJ_MINE)
+	    if (Obj[j]->type == OBJ_MINE)
 		range+=100;
 
 	    if (BIT(pl->status, KILLED) ||
-		(!in_range((object *)pl, Shots[j], range)))
+		(!in_range((object *)pl, Obj[j], range)))
 		continue;
 
-	    if ((Shots[j]->type==OBJ_SPARK && Shots[j]->id==pl->id) ||
-		(Shots[j]->type==OBJ_MINE &&
-		 (Shots[j]->id==pl->id || TEAM(get_ind[Shots[j]->id], i))))
+	    if ((Obj[j]->type==OBJ_SPARK && Obj[j]->id==pl->id) ||
+		(Obj[j]->type==OBJ_MINE &&
+		 (Obj[j]->id==pl->id || TEAM(GetInd[Obj[j]->id], i))))
 		continue;
 
-	    if ((Shots[j]->id != -1) &&
-		(TEAM(i, get_ind[Shots[j]->id])) &&
-		(pl->id != Shots[j]->id))
+	    if ((Obj[j]->id != -1) &&
+		(TEAM(i, GetInd[Obj[j]->id])) &&
+		(pl->id != Obj[j]->id))
 		continue;
 	    else
-		Shots[j]->life=0;
+		Obj[j]->life=0;
 	    
-	    Delta_mv(pl, Shots[j]);
+	    Delta_mv((object *)pl, (object *)Obj[j]);
 
 	    /*
-	     * Special object collision.
+	     * Object collision.
 	     */
-	    switch (Shots[j]->type) {
+	    switch (Obj[j]->type) {
 	    case OBJ_WIDEANGLE_SHOT:
 		pl->extra_shots++;
+		break;
+	    case OBJ_SENSOR_PACK:
+		pl->sensors++;
+		pl->updateVisibility = 1;
 		break;
 	    case OBJ_REAR_SHOT:
 		SET_BIT(pl->have, OBJ_REAR_SHOT);
@@ -155,6 +159,8 @@ void Check_collision(void)
 		break;
 	    case OBJ_CLOAKING_DEVICE:
 		SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
+		pl->cloaks++;
+		pl->updateVisibility = 1;
 		break;
 	    case OBJ_ENERGY_PACK:
 		pl->fuel += 500+(rand()%500);
@@ -164,22 +170,33 @@ void Check_collision(void)
 	    case OBJ_MINE_PACK:
 		pl->mines++;
 		break;
+
+	    case OBJ_MINE:
+		sprintf(msg, "%s hit mine dropped by %s.", pl->name,
+			Players[killer=GetInd[Obj[j]->id]]->name);
+		sc = Rate(Players[killer]->score, pl->score) / 6;
+		SCORE(killer, sc);
+		SCORE(i, -sc);
+		Set_message(msg);
+		break;
 	    default:
 		break;
 	    }
 
-	    if (!BIT(Shots[j]->type, KILLING_SHOTS))
+	    if (!BIT(Obj[j]->type, KILLING_SHOTS))
 		continue;
 
 	    if (BIT(pl->used, OBJ_SHIELD)) {
-		switch (Shots[j]->type) {
+		switch (Obj[j]->type) {
 		case OBJ_SMART_SHOT:
 		    pl->fuel+=ED_SMART_SHOT_HIT;
+		    pl->forceVisible += 2;
 		    break;
 
 		case OBJ_SHOT:
 		case OBJ_CANNON_SHOT:
 		    pl->fuel+=ED_SHOT_HIT;
+		    pl->forceVisible += 1;
 		    break;
 
 		default:
@@ -187,13 +204,13 @@ void Check_collision(void)
 		    break;
 		}
 	    } else
-		if (BIT(Shots[j]->type, (OBJ_SHOT|OBJ_SMART_SHOT))) {
+		if (BIT(Obj[j]->type, (OBJ_SHOT|OBJ_SMART_SHOT))) {
 		    sprintf(msg, "%s was shot down by %s.", pl->name,
-			    Players[killer=get_ind[Shots[j]->id]]->name);
+			    Players[killer=GetInd[Obj[j]->id]]->name);
 			SET_BIT(pl->status, KILLED);
 			if (killer == i) {
 			    strcat(msg, " How strange!...");
-			/*  SCORE(i, PTS_PR_PL_SHOT);	*/
+			    SCORE(i, PTS_PR_PL_SHOT);
 			} else {
 			    sc = Rate(Players[killer]->score, pl->score);
 			    SCORE(killer, sc);
@@ -201,7 +218,7 @@ void Check_collision(void)
 			}
 			Set_message(msg);
 		    }
-		else if (BIT(Shots[j]->type, OBJ_CANNON_SHOT)) {
+		else if (BIT(Obj[j]->type, OBJ_CANNON_SHOT)) {
 		    sprintf(msg, "%s was hit by cannonfire.", pl->name);
 		    Set_message(msg);
 		    SCORE(i, -Rate(CANNON_RATING, pl->score)/4);
@@ -212,11 +229,11 @@ void Check_collision(void)
 
 
 	/* Player - wall */
-	if (!(BIT(pl->used, OBJ_TRAINER)||BIT(pl->status, KILLED)))
-	    for(j=0; (j<3) && (!BIT(pl->status, KILLED)); j++) {
-		switch (World.type
-    [x=(int)((pl->pos.x+ships[pl->dir].pts[j].x)/WORLD_SPACE)]
-    [y=(int)((pl->pos.y+ships[pl->dir].pts[j].y)/WORLD_SPACE)]) {
+	if (!(BIT(pl->used, OBJ_TRAINER) || BIT(pl->status, KILLED))) {
+	    for(j=0; j<3 && !BIT(pl->status, KILLED); j++) {
+		switch (World.block
+    [x = (int) ((pl->pos.x + ships[pl->dir].pts[j].x) / BLOCK_SZ)]
+    [y = (int) ((pl->pos.y + ships[pl->dir].pts[j].y) / BLOCK_SZ)]) {
 		case FUEL:
 		case FILLED:
 		case FILLED_NO_DRAW:
@@ -228,10 +245,10 @@ void Check_collision(void)
 		case REC_LU:
 		    if ((((int)(pl->pos.x
 				+ships[pl->dir].pts[j].x))
-			 % WORLD_SPACE)
+			 % BLOCK_SZ)
 			<= (((int)(pl->pos.y
 				   +ships[pl->dir].pts[j].y))
-			    % WORLD_SPACE)) {
+			    % BLOCK_SZ)) {
 			if (!Landing(i, j)) {
 			    SET_BIT(pl->status, KILLED);
 			    SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -240,9 +257,9 @@ void Check_collision(void)
 		    break;
 		case REC_RU:
 		    if ((((int)(pl->pos.x
-			    +ships[pl->dir].pts[j].x)) % WORLD_SPACE)
-			    >= WORLD_SPACE - (((int)(pl->pos.y
-			+ships[pl->dir].pts[j].y)) % WORLD_SPACE)) {
+			    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
+			    >= BLOCK_SZ - (((int)(pl->pos.y
+			+ships[pl->dir].pts[j].y)) % BLOCK_SZ)) {
 			if (!Landing(i, j)) {
 			    SET_BIT(pl->status, KILLED);
 			    SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -251,9 +268,9 @@ void Check_collision(void)
 		    break;
 		case REC_LD:
 		    if ((((int)(pl->pos.x
-			    +ships[pl->dir].pts[j].x)) % WORLD_SPACE)
-			<= WORLD_SPACE - (((int)(pl->pos.y
-			+ships[pl->dir].pts[j].y)) % WORLD_SPACE)) {
+			    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
+			<= BLOCK_SZ - (((int)(pl->pos.y
+			+ships[pl->dir].pts[j].y)) % BLOCK_SZ)) {
 			SET_BIT(pl->status, KILLED);
 			sprintf(msg,"%s crashed into the wall.",
 				pl->name);
@@ -263,9 +280,9 @@ void Check_collision(void)
 		    break;
 		case REC_RD:
 		    if ((((int)(pl->pos.x
-			    +ships[pl->dir].pts[j].x)) % WORLD_SPACE)
+			    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
 			>= (((int)(pl->pos.y
-			+ships[pl->dir].pts[j].y)) % WORLD_SPACE)) {
+			+ships[pl->dir].pts[j].y)) % BLOCK_SZ)) {
 			SET_BIT(pl->status, KILLED);
 			sprintf(msg, "%s crashed into the wall.",
 				pl->name);
@@ -274,8 +291,8 @@ void Check_collision(void)
 		    }
 		    break;
 		case CANNON:
-		    xd=pl->pos.x+ships[pl->dir].pts[j].x;
-		    yd=pl->pos.y+ships[pl->dir].pts[j].y;
+		    xd = pl->pos.x + ships[pl->dir].pts[j].x;
+		    yd = pl->pos.y + ships[pl->dir].pts[j].y;
 
 		    for(t=0; World.cannon[t].pos.x!=x ||
 			World.cannon[t].pos.y!=y; t++);
@@ -283,81 +300,92 @@ void Check_collision(void)
 		    if (World.cannon[t].dead_time > 0)
 			break;
 
-		    if (((World.cannon[t].dir == UP) &&
-			(yd%WORLD_SPACE < WORLD_SPACE/3)) ||
-			((World.cannon[t].dir == DOWN) &&
-			(yd%WORLD_SPACE > 2*WORLD_SPACE/3)) ||
-			((World.cannon[t].dir == RIGHT) &&
-			(xd%WORLD_SPACE < WORLD_SPACE/3)) ||
-			((World.cannon[t].dir == LEFT) &&
-			(xd%WORLD_SPACE > 2*WORLD_SPACE/3))) {
+		    if (((World.cannon[t].dir == DIR_UP) &&
+			(yd%BLOCK_SZ < BLOCK_SZ/3)) ||
+			((World.cannon[t].dir == DIR_DOWN) &&
+			(yd%BLOCK_SZ > 2*BLOCK_SZ/3)) ||
+			((World.cannon[t].dir == DIR_RIGHT) &&
+			(xd%BLOCK_SZ < BLOCK_SZ/3)) ||
+			((World.cannon[t].dir == DIR_LEFT) &&
+			(xd%BLOCK_SZ > 2*BLOCK_SZ/3))) {
 			SET_BIT(pl->status, KILLED);
 			sprintf(msg, "%s crashed with a cannon.",
 				pl->name);
 			SCORE(i, -Rate(WALL_RATING, pl->score));
 			Set_message(msg);
-			World.cannon[t].dead_time=CANNON_DEAD_TIME;
-			World.cannon[t].active=false;
-			Explode_object(x*WORLD_SPACE, y*WORLD_SPACE,
-				       World.cannon[t].dir, RESOLUTION*0.4,
+			World.cannon[t].dead_time = CANNON_DEAD_TIME;
+			World.cannon[t].active = false;
+			Explode_object((double)(x*BLOCK_SZ),
+				       (double)(y*BLOCK_SZ),
+				       World.cannon[t].dir, RES*0.4,
 				       120);
 		    }
 
+		    break;
+		case WORMHOLE:
+		    SET_BIT(pl->status, WARPING);
+		    pl->forceVisible += 15;
 		    break;
 		default:
 		    break;
 		}
 	    }
+	    if (BIT(pl->status, KILLED) && pl->score < 0
+		&& pl->robot_mode != RM_NOT_ROBOT) {
+		pl->home_base = -1;
+		Pick_startpos(i);
+	    }
+	}
     }
 
 
 
     /* Shot - wall, and out of bounds */
-    for (i=0; i<Ant_Shots; i++) {
-	x=(int)(Shots[i]->pos.x/WORLD_SPACE);
-	y=(int)(Shots[i]->pos.y/WORLD_SPACE);
+    for (i=0; i<NumObjs; i++) {
+	x=(int)(Obj[i]->pos.x/BLOCK_SZ);
+	y=(int)(Obj[i]->pos.y/BLOCK_SZ);
 
 	if (x<0 || x>=World.x || y<0 || y>=World.y)
-	    Shots[i]->life=0;
+	    Obj[i]->life=0;
 	else
-	    switch (World.type[x][y]) {
+	    switch (World.block[x][y]) {
 
 	case FUEL:
 	case FILLED:
 	case FILLED_NO_DRAW:
-	    Shots[i]->life=0;
+	    Obj[i]->life=0;
 	    break;
 
 	case REC_LU:
-	    if ((int)Shots[i]->pos.x % WORLD_SPACE
-		<= (int)Shots[i]->pos.y % WORLD_SPACE)
-		Shots[i]->life=0;
+	    if ((int)Obj[i]->pos.x % BLOCK_SZ
+		<= (int)Obj[i]->pos.y % BLOCK_SZ)
+		Obj[i]->life=0;
 	    break;
 
 	case REC_RU:
-	    if ((int)Shots[i]->pos.x % WORLD_SPACE
-		>= WORLD_SPACE - ((int)Shots[i]->pos.x % WORLD_SPACE))
-		Shots[i]->life=0;
+	    if ((int)Obj[i]->pos.x % BLOCK_SZ
+		>= BLOCK_SZ - ((int)Obj[i]->pos.x % BLOCK_SZ))
+		Obj[i]->life=0;
 	    break;
 
 	case REC_LD:
-	    if ((int)Shots[i]->pos.x % WORLD_SPACE
-		<= WORLD_SPACE - ((int)Shots[i]->pos.y % WORLD_SPACE))
-		Shots[i]->life=0;
+	    if ((int)Obj[i]->pos.x % BLOCK_SZ
+		<= BLOCK_SZ - ((int)Obj[i]->pos.y % BLOCK_SZ))
+		Obj[i]->life=0;
 	    break;
 
 	case REC_RD:
-	    if ((int)Shots[i]->pos.x % WORLD_SPACE
-		>= ((int)Shots[i]->pos.y % WORLD_SPACE))
-		Shots[i]->life=0;
+	    if ((int)Obj[i]->pos.x % BLOCK_SZ
+		>= ((int)Obj[i]->pos.y % BLOCK_SZ))
+		Obj[i]->life=0;
 	    break;
 
 	case CANNON:
-	    if (!BIT(Shots[i]->type, KILLING_SHOTS&(~OBJ_CANNON_SHOT)))
+	    if (!BIT(Obj[i]->type, KILLING_SHOTS&(~OBJ_CANNON_SHOT)))
 		break;
 
-	    xd=Shots[i]->pos.x;
-	    yd=Shots[i]->pos.y;
+	    xd=Obj[i]->pos.x;
+	    yd=Obj[i]->pos.y;
 
 	    for(t=0; World.cannon[t].pos.x!=x ||
 		World.cannon[t].pos.y!=y; t++);
@@ -365,21 +393,22 @@ void Check_collision(void)
 	    if (World.cannon[t].dead_time > 0)
 		break;
 
-	    if (((World.cannon[t].dir == UP) &&
-		 (yd%WORLD_SPACE <= WORLD_SPACE/3)) ||
-		((World.cannon[t].dir == DOWN) &&
-		 (yd%WORLD_SPACE >= 2*WORLD_SPACE/3)) ||
-		((World.cannon[t].dir == RIGHT) &&
-		 (xd%WORLD_SPACE <= WORLD_SPACE/3)) ||
-		((World.cannon[t].dir == LEFT) &&
-		 (xd%WORLD_SPACE >= 2*WORLD_SPACE/3))) {
-		World.cannon[t].dead_time=CANNON_DEAD_TIME;
-		World.cannon[t].active=false;
-		Explode_object(x*WORLD_SPACE+WORLD_SPACE/2,
-			       y*WORLD_SPACE+WORLD_SPACE/2,
-			       World.cannon[t].dir, RESOLUTION*0.4, 80);
-		killer=get_ind[Shots[i]->id];
-		SCORE(killer, Rate(CANNON_RATING, pl->score)/4);
+	    if (((World.cannon[t].dir == DIR_UP) &&
+		 (yd%BLOCK_SZ <= BLOCK_SZ/3)) ||
+		((World.cannon[t].dir == DIR_DOWN) &&
+		 (yd%BLOCK_SZ >= 2*BLOCK_SZ/3)) ||
+		((World.cannon[t].dir == DIR_RIGHT) &&
+		 (xd%BLOCK_SZ <= BLOCK_SZ/3)) ||
+		((World.cannon[t].dir == DIR_LEFT) &&
+		 (xd%BLOCK_SZ >= 2*BLOCK_SZ/3))) {
+
+		World.cannon[t].dead_time = CANNON_DEAD_TIME;
+		World.cannon[t].active    = false;
+		Explode_object((double)(x*BLOCK_SZ+BLOCK_SZ/2),
+			       (double)(y*BLOCK_SZ+BLOCK_SZ/2),
+			       World.cannon[t].dir, RES*0.4, 80);
+		killer = GetInd[Obj[i]->id];
+		SCORE(killer, Rate(pl->score, CANNON_RATING)/4);
 	    }
 
 	    break;
@@ -413,23 +442,23 @@ bool Landing(int ind, int point)
 	return False;
     }
 
-    if ((pl->dir >= (1.3*RESOLUTION/4)) ||	/* Right angle? */
-	(pl->dir <= (0.7*RESOLUTION/4))) {
+    if ((pl->dir >= (1.3*RES/4)) ||	/* Right angle? */
+	(pl->dir <= (0.7*RES/4))) {
 	sprintf(msg, "%s had a bad landing.", Players[ind]->name);
 	Set_message(msg);
 	return False;
     }
 
-    if (((int)(y=pl->pos.y+ships[pl->dir].pts[point].y) % WORLD_SPACE)
-	< (WORLD_SPACE*0.80)) {			/* Right position? */
+    if (((int)(y=pl->pos.y+ships[pl->dir].pts[point].y) % BLOCK_SZ)
+	< (BLOCK_SZ*0.80)) {			/* Right position? */
 	sprintf(msg, "%s crashed.", Players[ind]->name);
 	Set_message(msg);
 	return False;
     }
 
     pl->vel.x*=0.95;
-    pl->dir-=((pl->dir - (RESOLUTION/4))*0.2);
-    pl->pos.y = (1+(int)(y/WORLD_SPACE))*WORLD_SPACE
+    pl->dir-=((pl->dir - (RES/4))*0.2);
+    pl->pos.y = (1+(int)(y/BLOCK_SZ))*BLOCK_SZ
 	- ships[pl->dir].pts[point].y;
 
     pl->vel.y = 0.90*ABS(pl->vel.y);

@@ -1,4 +1,4 @@
-/* syslimit.c,v 1.3 1992/05/11 15:31:40 bjoerns Exp
+/* syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,8 +8,12 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include <stdio.h>
-#include "pilot.h"
+#include <stdio.h>		/* Could be moved below the #ifdef, but then */
+				/* we would get a warning (empty source file) */
+				/* each time LIMIT_ACCESS isn't defined. */
+#ifdef	LIMIT_ACCESS
+
+#include <time.h>
 #include "pack.h"
 
 #define PATTERN		"lglab[01]"
@@ -19,6 +23,11 @@
 #define GREP		"/usr/local/bin/ggrep "
 #define WC_L		"/bin/wc -l "
 #define RWHO		"/usr/bin/rwho -a "
+
+#ifndef	lint
+static char sourceid[] =
+    "@(#)syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp";
+#endif
 
 extern Pack		req;
 
@@ -32,6 +41,8 @@ bool Is_allowed(void)
 {
     FILE *fp;
     int total_no, no_free, in_use;
+    struct tm *now;
+    time_t		tmp;
 
 
     if (strstr(req.display, "lglab") == NULL)
@@ -42,6 +53,17 @@ bool Is_allowed(void)
     if (strstr(req.display, "lglab2") != NULL) {
 	printf("Atsjoooooo! I can't, sorry! :)\n");
 	return (false);
+    }
+    tmp = time((time_t)NULL);
+    now = localtime(&tmp);
+
+    if (now->tm_hour >= 8 && now->tm_hour < 16) {
+	if (now->tm_wday != 0 && now->tm_wday != 6) {
+	    printf("You'll have to wait %d hours and %d minutes until "
+		   "you're allowed to play.\n",
+		   16 - now->tm_hour, 60 - now->tm_min);
+	    return (false);
+	}
     }
 
     printf("Checking number of unused workstations."); fflush(stdout);
@@ -71,3 +93,5 @@ bool Is_allowed(void)
 	return (false);
     }
 }
+
+#endif	/* LIMIT_ACCESS */

@@ -1,4 +1,4 @@
-/* play.c,v 1.3 1992/05/11 15:31:29 bjoerns Exp
+/* play.c,v 1.10 1992/06/28 05:38:23 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -9,22 +9,16 @@
  */
 
 #include <stdio.h>
-#include "pilot.h"
-#include "map.h"
+#include <math.h>
+
+#include "global.h"
 #include "draw.h"
 #include "score.h"
 
-extern int Antall;
-extern double Gravity;
-extern player *Players[];
-extern object *Shots[];
-extern int Ant_Shots;
-extern double tbl_sin[];
-extern wireobj ships[];
-extern XColor colors[];
-extern World_map World;
-
-void Explode_object(double, double, int, int, int);
+#ifndef	lint
+static char sourceid[] =
+    "@(#)play.c,v 1.10 1992/06/28 05:38:23 bjoerns Exp";
+#endif
 
 
 
@@ -32,66 +26,66 @@ void Explode_object(double, double, int, int, int);
  * Functions for ship movement.
  */
 
-void Thrust(int indeks)
+void Thrust(int ind)
 {
-    player *pl;
+    player *pl = Players[ind];
     object *spark;
     int i, dir, no_sparks;
-    const int spread = (RESOLUTION*0.3);
+    const int spread = (RES*0.3);
     const int spreadoffset = (spread/2);
     double x, y;
 
 
-    pl=Players[indeks];
+    pl = Players[ind];
 
-    no_sparks=(pl->power*0.3)+(rand()%3);
+    no_sparks = (pl->power*0.3)+(rand()%3);
 
-    x=pl->pos.x+(ships[pl->dir].pts[1].x+ships[pl->dir].pts[2].x)/2;
-    y=pl->pos.y+(ships[pl->dir].pts[1].y+ships[pl->dir].pts[2].y)/2;
+    x = pl->pos.x + (ships[pl->dir].pts[1].x + ships[pl->dir].pts[2].x) / 2;
+    y = pl->pos.y + (ships[pl->dir].pts[1].y + ships[pl->dir].pts[2].y) / 2;
 
-    for (i=0; i<no_sparks && Ant_Shots<MAX_TOTAL_SHOTS; i++, Ant_Shots++) {
-	spark=Shots[Ant_Shots];
-	dir = pl->dir + (RESOLUTION/2) + (rand()%spread)-spreadoffset;
-	spark->color=RED;
-	spark->id = pl->id;
-	spark->pos.x = x;
-	spark->pos.y = y;
-	spark->vel.x = pl->vel.x + ((tcos(dir) *
-				     (1+rand()%(int)(pl->power*0.2))));
-	spark->vel.y = pl->vel.y + ((tsin(dir) *
-				     (1+rand()%(int)(pl->power*0.2))));
-	spark->status = GRAVITY;
-	spark->acc.x = spark->acc.y = 0.0;
-	spark->dir = MOD(spark->dir, RESOLUTION);
-	spark->mass = 1.0;
-	spark->type = OBJ_SPARK;
-	spark->life = 3+(rand()%(int)(pl->power*0.3));
+    for (i=0; i<no_sparks && NumObjs<MAX_TOTAL_SHOTS; i++, NumObjs++) {
+	spark	= Obj[NumObjs];
+	dir	= pl->dir + (RES/2) + (rand()%spread)-spreadoffset;
+	spark->color	= RED;
+	spark->id	= pl->id;
+	spark->pos.x	= x;
+	spark->pos.y	= y;
+	spark->vel.x	= pl->vel.x + ((tcos(dir) *
+					(1+rand()%(int)(pl->power*0.2))));
+	spark->vel.y	= pl->vel.y + ((tsin(dir) *
+					(1+rand()%(int)(pl->power*0.2))));
+	spark->status	= GRAVITY;
+	spark->acc.x	= spark->acc.y = 0.0;
+	spark->dir	= MOD(spark->dir, RES);
+	spark->mass	= 1.0;
+	spark->type	= OBJ_SPARK;
+	spark->life	= 3 + (rand()%(int)(pl->power*0.3));
     }
 }
 
 
-void Turn_thrust(int indeks)
+void Turn_thrust(int ind)
 {
-    player *pl = Players[indeks];
+    player *pl = Players[ind];
     object *spark;
     int i, dir, no_sparks;
-    const int spread = (RESOLUTION*0.08);
+    const int spread = (RES*0.08);
     const int spreadoffset = (spread/2);
     int x, y;
-    double rate=ABS(Players[indeks]->turnacc*0.1);
+    double rate = ABS(Players[ind]->turnacc*0.1);
 
 
     no_sparks=(rand()%(int)(rate*2));
 
-    x=pl->pos.x+ships[pl->dir].pts[0].x;
-    y=pl->pos.y+ships[pl->dir].pts[0].y;
+    x = pl->pos.x+ships[pl->dir].pts[0].x;
+    y = pl->pos.y+ships[pl->dir].pts[0].y;
 
-    for (i=0; i<no_sparks && Ant_Shots<MAX_TOTAL_SHOTS; i++, Ant_Shots++) {
-	spark=Shots[Ant_Shots];
-	dir = pl->dir + (RESOLUTION/4) + (rand()%spread)-spreadoffset;
+    for (i=0; i<no_sparks && NumObjs<MAX_TOTAL_SHOTS; i++, NumObjs++) {
+	spark = Obj[NumObjs];
+	dir = pl->dir + (RES/4) + (rand()%spread)-spreadoffset;
 
 	if (pl->turnacc > 0.0)
-	    dir=dir+RESOLUTION/2;
+	    dir=dir+RES/2;
 
 	spark->color=RED;
 	spark->id = pl->id;
@@ -101,15 +95,15 @@ void Turn_thrust(int indeks)
 	spark->vel.y = pl->vel.y + (tsin(dir) * rate);
 	spark->status = GRAVITY;
 	spark->acc.x = spark->acc.y = 0;
-	spark->dir = MOD(spark->dir, RESOLUTION);
+	spark->dir = MOD(spark->dir, RES);
 	spark->mass = 1.0;
 	spark->type = OBJ_SPARK;
 	spark->life = 1+(rand()%2);
     }
 }
 
-/* Rekylen til ship hvis den 'skyter ut' shot */
-void Rekyl(object *ship, object *shot)
+/* Calculates the recoil if a ship fires a shot */
+void Recoil(object *ship, object *shot)
 {
     ship->vel.x -= ((tcos(shot->dir) * ABS(shot->vel.x-ship->vel.x) *
 	shot->mass) / ship->mass);
@@ -122,8 +116,8 @@ void Delta_mv(object *ship, object *obj)
     double dvx, dvy, ship_theta, obj_theta, dm;
 
 
-    dvx=ABS(obj->vel.x - ship->vel.x);
-    dvy=ABS(obj->vel.y - ship->vel.y);
+    dvx = ABS(obj->vel.x - ship->vel.x);
+    dvy = ABS(obj->vel.y - ship->vel.y);
     ship_theta = atan2(ship->vel.y, ship->vel.x);
     obj_theta = atan2(obj->vel.y, obj->vel.x);
 
@@ -147,7 +141,7 @@ void Alloc_shots(int number)
     int i;
 
     for (i=0; i<number; i++)
-	Shots[i]=(object *)malloc(sizeof(object));
+	Obj[i] = (object *)malloc(sizeof(object));
 }
 
 
@@ -156,7 +150,7 @@ void Free_shots(int number)
     int i;
 
     for (i=0; i<number; i++)
-	free(Shots[i]);
+	free(Obj[i]);
 }
 
 
@@ -167,22 +161,22 @@ void Place_item(int type)
     int x, y;
 
 
-    if (Ant_Shots >= MAX_TOTAL_SHOTS)
+    if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
 
-    item = Shots[Ant_Shots++];
+    item = Obj[NumObjs++];
 
     do {
 	x=rand()%World.x;
 	y=rand()%World.y;
-    } while (World.type[x][y] != SPACE);
+    } while (World.block[x][y] != SPACE);
 
     item->color = RED;
     item->info = type;
     item->status = 0;
     item->id = -1;
-    item->pos.x = x*WORLD_SPACE+WORLD_SPACE/2;
-    item->pos.y = y*WORLD_SPACE+WORLD_SPACE/2;
+    item->pos.x = x*BLOCK_SZ+BLOCK_SZ/2;
+    item->pos.y = y*BLOCK_SZ+BLOCK_SZ/2;
     item->vel.x=item->vel.y = item->acc.x=item->acc.y = 0.00000001;
 		/* Near zero, but not zero or atan2 will complain. */
     item->mass = 10.0;
@@ -191,6 +185,9 @@ void Place_item(int type)
     switch (type) {
     case ITEM_SMART_SHOT_PACK:
 	item->type = OBJ_SMART_SHOT_PACK;
+	break;
+    case ITEM_SENSOR_PACK:
+	item->type = OBJ_SENSOR_PACK;
 	break;
     case ITEM_MINE_PACK:
 	item->type = OBJ_MINE_PACK;
@@ -221,10 +218,10 @@ void Place_mine(int ind)
     player *pl = Players[ind];
 
 
-    if (Ant_Shots >= MAX_TOTAL_SHOTS)
+    if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
 
-    mine = Shots[Ant_Shots++];
+    mine = Obj[NumObjs++];
     mine->type = OBJ_MINE;
     mine->color = BLUE;
     mine->info = OBJ_MINE;
@@ -239,72 +236,72 @@ void Place_mine(int ind)
 }
 
 
-void Cannon_fire(int indeks)
+void Cannon_fire(int ind)
 {
     object *shot;
     int dir, speed;
-    const int spread = (RESOLUTION*0.3);
+    const int spread = (RES*0.3);
     const int spreadoffset = (spread/2);
 
 
-    if (Ant_Shots >= MAX_TOTAL_SHOTS)
+    if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
 
-    shot=Shots[Ant_Shots++];
+    shot = Obj[NumObjs++];
     dir = (rand()%spread) - spreadoffset;	/* Tmp direction */
     speed = 9+(rand()%4);
     shot->color=WHITE;
     shot->id = -1;
-    shot->pos.x = World.cannon[indeks].pos.x*WORLD_SPACE+WORLD_SPACE/2;
-    shot->pos.y = World.cannon[indeks].pos.y*WORLD_SPACE+WORLD_SPACE/2;
+    shot->pos.x = World.cannon[ind].pos.x*BLOCK_SZ+BLOCK_SZ/2;
+    shot->pos.y = World.cannon[ind].pos.y*BLOCK_SZ+BLOCK_SZ/2;
     shot->status = GRAVITY;
     shot->acc.x = shot->acc.y = 0;
     shot->mass = 0.4;
     shot->type = OBJ_CANNON_SHOT;
     shot->life = 25+(rand()%20);
 
-    switch (World.cannon[indeks].dir) {
-    case UP:
-	shot->pos.y+=WORLD_SPACE/6;
-	dir+=UP;
+    switch (World.cannon[ind].dir) {
+    case DIR_UP:
+	shot->pos.y+=BLOCK_SZ/6;
+	dir+=DIR_UP;
 	break;
-    case DOWN:
-	shot->pos.y-=WORLD_SPACE/6;
-	dir+=DOWN;
+    case DIR_DOWN:
+	shot->pos.y-=BLOCK_SZ/6;
+	dir+=DIR_DOWN;
 	break;
-    case RIGHT:
-	shot->pos.x+=WORLD_SPACE/6;
-	dir+=RIGHT;
+    case DIR_RIGHT:
+	shot->pos.x+=BLOCK_SZ/6;
+	dir+=DIR_RIGHT;
 	break;
-    case LEFT:
-	shot->pos.x-=WORLD_SPACE/6;
-	dir+=LEFT;
+    case DIR_LEFT:
+	shot->pos.x-=BLOCK_SZ/6;
+	dir+=DIR_LEFT;
 	break;
     }
 
-    shot->dir = MOD(shot->dir, RESOLUTION);
+    shot->dir = MOD(shot->dir, RES);
     shot->vel.x=speed*tcos(dir);
     shot->vel.y=speed*tsin(dir);
 }
 
 
 
-void Fire_shot(int indeks, int type, int dir)	    /* Initializes a new shot */
+void Fire_shot(int ind, int type, int dir)	    /* Initializes a new shot */
 {
     object *shot;
     player *pl;
 
 
-    pl=Players[indeks];
-    if ((pl->shots >= pl->shot_max) || (Ant_Shots >= MAX_TOTAL_SHOTS)
+    pl = Players[ind];
+    if ((pl->shots >= pl->shot_max) || (NumObjs >= MAX_TOTAL_SHOTS)
 	|| BIT(pl->used, OBJ_SHIELD))
 	return;
 
-    shot=Shots[Ant_Shots];
+    shot = Obj[NumObjs];
     switch (type) {
 
     case OBJ_SHOT:
-	if (pl->fuel < -ED_SHOT)
+	if (pl->fuel < ABS(ED_SHOT))
 	    return;
 
 	shot->life = pl->shot_life;
@@ -314,12 +311,12 @@ void Fire_shot(int indeks, int type, int dir)	    /* Initializes a new shot */
 	break;
 
     case OBJ_SMART_SHOT:
-	if (((pl->fuel < -ED_SMART_SHOT) ||
-	     (!BIT(pl->used, OBJ_COMPASS)) ||
-	     ((pl->lock.distance > pl->sensor_range)) &&
-	     (BIT(World.rules->mode, LIMITED_VISIBILITY))) ||
-	    BIT(Players[get_ind[pl->lock.pl_id]]->status, INVISIBLE) ||
-	    (pl->missiles <= 0))
+	if (((pl->fuel < ABS(ED_SMART_SHOT))
+	     || !BIT(pl->used, OBJ_COMPASS)
+	     || ((pl->lock.distance > pl->sensor_range)
+		 && BIT(World.rules->mode, LIMITED_VISIBILITY)))
+	    || !pl->visibility[GetInd[pl->lock.pl_id]].canSee
+	    || (pl->missiles <= 0))
 	    return;
 
 	shot->mass = 5.0;
@@ -331,34 +328,34 @@ void Fire_shot(int indeks, int type, int dir)	    /* Initializes a new shot */
 	pl->missiles--;
 	break;
     }
-    shot->type = type;
-    shot->id = pl->id;
-    shot->color=pl->color;
+    shot->type	= type;
+    shot->id	= pl->id;
+    shot->color	= pl->color;
     shot->pos.x = pl->pos.x + ships[dir].pts[0].x;
     shot->pos.y = pl->pos.y + ships[dir].pts[0].y;
     shot->vel.x = pl->vel.x + ((tcos(dir) * pl->shot_speed));
     shot->vel.y = pl->vel.y + ((tsin(dir) * pl->shot_speed));
-    shot->status = GRAVITY;
+    shot->status= GRAVITY;
     shot->acc.x = shot->acc.y = 0;
-    shot->dir = dir;
+    shot->dir	= dir;
 
-    Rekyl((object *)pl, shot);
+    Recoil((object *)pl, shot);
 
-    Ant_Shots++; pl->shots++;
+    NumObjs++; pl->shots++;
 
 }
 
 
 
-void Delete_shot(int indeks)	    /* Removes shot from array */
+void Delete_shot(int ind)	    /* Removes shot from array */
 {
-    object *shot = Shots[indeks];	    /* Used when swapping places */
+    object *shot = Obj[ind];	    /* Used when swapping places */
     player *pl;
 
 
     switch (shot->type) {
     case OBJ_MINE:
-	Explode_object(shot->pos.x, shot->pos.y, 0, RESOLUTION, 500);
+	Explode_object(shot->pos.x, shot->pos.y, 0, RES, 500);
     case OBJ_CANNON_SHOT:
     case OBJ_CANNON_DEBRIS:
     case OBJ_DEBRIS:
@@ -368,28 +365,31 @@ void Delete_shot(int indeks)	    /* Removes shot from array */
 	/* Shots related to a player. */
     case OBJ_SHOT:
     case OBJ_SMART_SHOT:
-	pl=Players[get_ind[shot->id]];
+	pl=Players[GetInd[shot->id]];
 	pl->shots--;
 	break;
 
 	/* Special items. */
     case OBJ_SMART_SHOT_PACK:
-	World.items[ITEM_SMART_SHOT_PACK].ant--;
+	World.items[ITEM_SMART_SHOT_PACK].num--;
+	break;
+    case OBJ_SENSOR_PACK:
+	World.items[ITEM_SENSOR_PACK].num--;
 	break;
     case OBJ_CLOAKING_DEVICE:
-	World.items[ITEM_CLOAKING_DEVICE].ant--;
+	World.items[ITEM_CLOAKING_DEVICE].num--;
 	break;
     case OBJ_ENERGY_PACK:
-	World.items[ITEM_ENERGY_PACK].ant--;
+	World.items[ITEM_ENERGY_PACK].num--;
 	break;
     case OBJ_WIDEANGLE_SHOT:
-	World.items[ITEM_WIDEANGLE_SHOT].ant--;
+	World.items[ITEM_WIDEANGLE_SHOT].num--;
 	break;
     case OBJ_REAR_SHOT:
-	World.items[ITEM_REAR_SHOT].ant--;
+	World.items[ITEM_REAR_SHOT].num--;
 	break;
     case OBJ_MINE_PACK:
-	World.items[ITEM_MINE_PACK].ant--;
+	World.items[ITEM_MINE_PACK].num--;
 	break;
     default:
 	printf("Delete_shot(): Unkown shot type %d.\n", shot->type);
@@ -397,16 +397,16 @@ void Delete_shot(int indeks)	    /* Removes shot from array */
     }
 
 
-    Shots[indeks]=Shots[--Ant_Shots];
-    Shots[Ant_Shots]=shot;
+    Obj[ind] = Obj[--NumObjs];
+    Obj[NumObjs] = shot;
 }
 
 
 
-void Move_smart_shot(int indeks)
+void Move_smart_shot(int ind)
 {
-    object *shot = Shots[indeks];
-    player *pl = Players[ get_ind[Shots[indeks]->info] ];
+    object *shot = Obj[ind];
+    player *pl = Players[ GetInd[Obj[ind]->info] ];
     double theta;
     int vinkel;
 
@@ -414,22 +414,22 @@ void Move_smart_shot(int indeks)
     theta = atan2(pl->pos.y-(shot->pos.y+2*shot->vel.y),
 		  pl->pos.x-(shot->pos.x+2*shot->vel.x));
 
-    vinkel=(RESOLUTION/(2.0*PI))*theta;
+    vinkel=(RES/(2.0*PI))*theta;
 
     if (vinkel < 0)
-	vinkel += RESOLUTION;
-    vinkel %= RESOLUTION;
+	vinkel += RES;
+    vinkel %= RES;
 
     if (vinkel < shot->dir)
-	vinkel += RESOLUTION;
+	vinkel += RES;
     vinkel = vinkel - shot->dir;
 
-    if (vinkel < RESOLUTION/2)
+    if (vinkel < RES/2)
 	shot->dir += shot->turnspeed;
     else
 	shot->dir -= shot->turnspeed;
 
-    shot->dir = MOD(shot->dir, RESOLUTION);	/* MERK!!!! */
+    shot->dir = MOD(shot->dir, RES);	/* MERK!!!! */
 
     if (shot->velocity > shot->max_speed)
 	shot->velocity-=SMART_SHOT_ACC;
@@ -457,8 +457,8 @@ void Explode_object(double x, double y, int real_dir, int spread, int intensity)
 
 
     no_debris=(intensity/2)+(rand()%(intensity/2));
-    for (i=0; i<no_debris && Ant_Shots<MAX_TOTAL_SHOTS; i++, Ant_Shots++) {
-	debris = Shots[Ant_Shots];
+    for (i=0; i<no_debris && NumObjs<MAX_TOTAL_SHOTS; i++, NumObjs++) {
+	debris = Obj[NumObjs];
 	speed = (1024+intensity)/intensity+(rand()%(intensity/4));
 	dir = real_dir + (rand()%spread)-spreadoffset;
 	debris->color = RED;
@@ -476,19 +476,19 @@ void Explode_object(double x, double y, int real_dir, int spread, int intensity)
     }
 }
 
-void Explode(int indeks)	/* Index of unfortunate player */
+void Explode(int ind)	/* Index of unfortunate player */
 {
     player *pl;
     object *debris;
     int i, dir, no_debris, speed;
 
 
-    pl=Players[indeks];
-    no_debris=1+(pl->fuel/8.0)+(rand()%((int)(pl->mass*4.0)));
-/*  shot_mass=pl->mass / no_debris;	Not used! */
-    for (i=0; i<no_debris && Ant_Shots<MAX_TOTAL_SHOTS; i++, Ant_Shots++) {
-	debris=Shots[Ant_Shots];
-	dir = rand()%RESOLUTION;
+    pl = Players[ind];
+    no_debris = 1+(pl->fuel/8.0)+(rand()%((int)(pl->mass*4.0)));
+/*  shot_mass = pl->mass / no_debris;	Not used! */
+    for (i=0; i<no_debris && NumObjs<MAX_TOTAL_SHOTS; i++, NumObjs++) {
+	debris = Obj[NumObjs];
+	dir = rand()%RES;
 	speed = 0.7+(rand()%9)+(rand()%200)/10;
 	debris->color=RED;
 	debris->id = pl->id;

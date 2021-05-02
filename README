@@ -6,16 +6,16 @@
  /   /  /         /    /       /    /     /
 /     / /         /    //////   ////      /
 
-////////  V e r s i o n   1 . 0  ////////////
+////////  V e r s i o n   1 . 2  ////////////
 
 
 
 COPYRIGHT & DISCLAIMER STUFF:
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-Copyright (C) 1991-92 by Bjørn Stabell and Ken Ronny Schouten.
-                         University of Tromsø, Norway.
-                         Email: bjoerns@stud.cs.uit.no,
+Copyright (C) 1991-92 by Bjoern Stabell and Ken Ronny Schouten.
+                         University of Tromsoe, Norway.
+                         Email: bjoerns@staff.cs.uit.no,
                                 kenrsc@stud.cs.uit.no
 
 Please see the LICENSE file for further details, in addition you may not
@@ -28,13 +28,11 @@ REQUIREMENTS:
 
 XPilot require the following resources:
 
-    - A UNIX machine    (Tested on HP9000 300 and 700 series and on SUN's)
     - An ANSI compiler  (GCC with no options should work just fine)
-    - X11               (Only R4 tested)
-    - A color display   (Might work on monochrome displays but not tested)
+    - X11               (only R4 and R5 tested)
 
-Also note that XPilot is not kind on the network or on the X server, so a
-fast machine in a fast network is the ideal situation.
+Also note that XPilot generates heavy netload and isn't gentle with the X
+server, so a fast machine in a fast network is the ideal situation.
 
 
 
@@ -43,13 +41,15 @@ INSTALLATION:
 
 *   Cd to the src directory.
 
-*   Edit the config.h and Imakefile files to suit your environment.
+*   Edit the config.h and Imakefile files to suit your environment.  If you
+    don't have Imake, you may have to hack a bit on Makefile.std.
 
-*   Issue the following commands:
+*   If you have Imake, issue the following command:
 
-        xmkmf
-        make Makefiles
-        make depend
+        xmkmf -a
+
+*   Now make:
+
         make
 
 *   Copy the maps to a suitable place (as specified in the config.h file).
@@ -57,20 +57,22 @@ INSTALLATION:
     An /bin/ls -l on this directory gives:
 
         total 500
-        -rw-r--r--   1 bjoerns  siving90      36  Feb 12 19:29 help.txt
-        -rw-rw-rw-   1 bjoerns  siving90   29859  May  5 21:32 log
+        -rw-rw-rw-   1 bjoerns  siving90   29859  May  5 21:32 log	(+)
         drwxr-xr-x   2 bjoerns  siving90    1024  Apr  5 16:16 maps
-        -rw-r--r--   1 bjoerns  siving90      80  May  1 13:20 motd.txt
+        -rw-r--r--   1 bjoerns  siving90     320  Jun 20 13:20 motd
 
-    (Note, if you have logging enabeled you will have to touch a file called
-    log in the LIBDIR and give other users write permission to it (this is
-    neccessary since xpilot hasn't, and shouldn't have, the setuid bit set.))
+    (+)Note, if you have logging enabled you will have to touch a file called
+       log in the LIBDIR and give other users write permission to it. This is
+       necessary since xpilot hasn't, and shouldn't have, the setuid bit set.
+
+    Also note that the `motd' isn't included, you should make one yourself
+    if you feel the need for it.
 
 *   Copy the manual pages to a suitable place.  If you don't know where to
     put them, don't bother.  You may still read them with the following
     command:
 
-        nroff -man <man-file> | more
+        nroff -man <man-file> | col | more
 
 
 
@@ -80,4 +82,8 @@ MISCELLANEOUS INFORMATION:
 Please refer to the manuals in the man6 directory for further reading.  If
 you're completely stuck, or just want to chat :), e-mail me at:
 
-        bjoerns@stud.cs.uit.no
+        bjoerns@staff.cs.uit.no or xpilot-request@cs.uit.no
+
+Questions and bug-reports should be sent to xpilot-request@cs.uit.no.
+Also, there is a mailing list for XPilot - please send an email to
+xpilot-request@cs.uit.no with subject 'info' if you want to know more.

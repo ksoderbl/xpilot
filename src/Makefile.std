@@ -1,0 +1,53 @@
+# Makefile.std,v 1.1 1992/06/26 15:25:29 bjoerns Exp
+#
+#      This file is part of the XPilot project, written by
+#
+#          Bjørn Stabell (bjoerns@stud.cs.uit.no)
+#          Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+#
+#      Copylefts are explained in the LICENSE file.
+#
+
+# NOTE:  As I use Imake, this file may or may not be updated.
+#        Hack away. :)
+
+UNPROTOCPP    = $(HOME)/bin/cpp
+DEFINES       = -DNO_LOG -I./lib
+CDEBUGFLAGS   = -O
+CFLAGS        = $(DEFINES) $(CDEBUGFLAGS) -I/usr/include/X11R4 \
+                -Wc,-Ns40000 -tp,$(UNPROTOCPP)
+
+#
+# Uncomment the following lines if you system doesn't support the
+# library routine.
+#
+USLEEP_OBJ = usleep.o
+# STRCASECMP_OBJ = strcasecmp.o
+
+
+############################################################################
+#
+# Object files.
+#
+
+OBJS1 = server.o xinit.o dbuff.o draw.o event.o map.o math.o cmdline.o \
+        play.o player.o rules.o update.o collision.o default.o error.o \
+	robot.o $(STRCASECMP_OBJ)
+
+OBJS2 = xpilot.o syslimit.o error.o $(USLEEP_OBJ)
+
+
+############################################################################
+#
+# Dependencies / rules
+#
+all: xpilots xpilot
+
+lib/socklib.o:
+        cd lib;cc -c $(CFLAGS) socklib.c
+
+xpilot: $(OBJS2)
+        cc -o xpilot $(OBJS2)
+
+xpilots: $(OBJS1)
+        cc -o xpilots $(OBJS1) -L /usr/lib/X11R4 -lXt -lX11 -lm

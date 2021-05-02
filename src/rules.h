@@ -1,4 +1,4 @@
-/* rules.h,v 1.3 1992/05/11 15:31:34 bjoerns Exp
+/* rules.h,v 1.5 1992/06/26 17:04:22 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *

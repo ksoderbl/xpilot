@@ -11,7 +11,7 @@
 .\" (c) Copyright 1991, UiT, all rights reserved.
 .\"
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-.TH XPILOTS 6 "Version 1.0" "BS & KRS"
+.TH XPILOTS 6 "Version 1.2" "BS & KRS"
 .ad b
 .SH NAME
 xpilots \- XPilot/UX  Multiplayer gravity war game server
@@ -19,7 +19,10 @@ xpilots \- XPilot/UX  Multiplayer gravity war game server
 .SH SYNOPSIS
 
 .BR xpilots
-[\fB-map \fImap-file\fR]
+[\fB-map \fImap-file\fP]
+[\fB-help\fP]
+[\fB-version\fP]
+[\fB-robots \fInumber\fP]
 
 .SH DESCRIPTION
 This manual explains the following topics:
@@ -47,6 +50,22 @@ is passed as command line arguments, the server will try to locate a file
 called \fBblackhole.map\fP in the current directory, or in a predefined
 directory (default is /usr/local/games/lib/xpilot/maps/).
 
+.TP 15
+.B -help
+Prints a short help, including the supported commandline options.
+
+.TP 15
+.B -version
+Prints the current version.
+
+.TP 15
+.B -robots \fInumber\fP
+Tells the server that you want \fInumber\fP robots instead of the default -
+number-of-bases/2.  A value of -1 will fill the entire server with robots.
+Note however that there will always be room for one new player, the robots
+will be kicked out of the game to accomodate for new players, they will
+also enter the game when there is space for them.
+
 .SS Prompt options (owner only)
 If you are the owner of a server you have successfully connected to (with
 \fIxpilot(6)\fP), you have several special commands available, all of which
@@ -64,9 +83,10 @@ learned their lesson.
 Lock/unlock the game.  This prevents other users from joining the game.
 .TP 15
 .B d
-Shutdown/cancel shutdown.  This command will ask for a reason and transmit
-this as a message.  A timer will appear showing how much time is left
-before the game goes down.
+Shutdown/cancel shutdown.  This command will ask for a reason and a
+shutdown delay (in ticks) and transmit these to the server.  A timer will
+appear showing how much time is left before the game goes down.  If you
+don't specify a delay, you will be canceling an already initiated shutdown.
 
 .SH MAPS
 Maps are currently implemented as plain ASCII-text files with the letters
@@ -132,7 +152,9 @@ as one character, while the normal editor will usually do an expansion.
 .TP
 \fINB!\fP This implementation will not handle auto-wraparound, a player
 that leaves the play-field will be destroyed.  The best way to handle this
-is to implement a frame of filled blocks around the playing area.
+is to implement a frame of filled blocks around the playing area.  Also
+note that you will have to comply with the maximum settings of the server,
+so have a look at the map.h file in the distribution.
 
 .SS Character descriptions
 The following characters (case sensitive) have special interpretations:
@@ -159,6 +181,11 @@ the sign of the grav (positive/negative), or in the case of the curl gravs
 - push your fighter around as if it were in a whirlpool (try it or ask some
 physicist).
 .TP
+.B W
+Wormhole, works much like the famous SciFi term 'teleporting'.  Note that
+it is not possible to have only one wormhole on a map, you must have none
+or more than one.
+.TP
 .B d r f c
 Cannons.  They are pointing in the following directions (same order as
 above): left, up, right and down.  These tend to make life difficult for a
@@ -181,7 +208,7 @@ spaces)
 .IP
 .B 0
 .IP
-.B Microcosmos
+.B Micro cosmos
 .IP
 .B A. N. Other Jr.
 .IP
@@ -229,57 +256,7 @@ The \fIxpilot\fP product was developed by Bjoern Stabell and Ken Ronny
 Schouten at the University of Tromsoe, Norway.
 
 .SH CREDITS
-The authors would like to thank the following people for their
-contributions:
-.RS 4
-.TP 22
-.PD 0
-.B Arne Helme
-for the socklib software.
-.TP
-.B Tom Grydeland
-for his fonts, maps and ideas.
-.TP
-.B Jon Ivar Kristansen
-for moral support, installation and the double-buffering software (which he
-found in a Dr.Dobbs magazine).
-.TP
-.B Alvin Brattli
-for ideas, beta-testing - and torture :)
-.TP
-.B Boerge Berg-Olsen
-for his maps and beta testing.
-.TP
-.B Kjell Irgens
-for his maps and beta testing.
-.TP
-.B Ronny H. Arild
-for his maps and beta testing.
-.TP
-.B Terje Pedersen
-for lots of ideas and beta testing.
-.TP
-.B Sven Jonsson
-for the name and beta testing.
-.TP
-.B Gaute Nessan and Roar Steen
-for help with X, moral support and beta testing.
-.PD 1
-.RS -4
-.TP
-Beta testers (in no particular order):
-.RS 4
-.TP 4
-.PD 0
-.B johnm tommyo thostr nilss oddt rudolf
-.TP 4
-.B andre geiri knutm paale raymonda
-.TP 4
-.B kjelli ronnya larsn rolfo sven arneme
-.TP 4
-.B gaute roar terjepe dagb steffen
-.TP 4
-.B alvin tomg borgeb trondh terjem
+See the provided CREDITS file.
 
 .SH FILES
 .PD 0

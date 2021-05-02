@@ -1,4 +1,4 @@
-/* dbuff.c,v 1.3 1992/05/11 15:31:03 bjoerns Exp
+/* dbuff.c,v 1.12 1992/06/25 18:10:52 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,22 +8,36 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
+#include <stdio.h>
+#ifdef	apollo
+#    include <stdlib.h>
+#else
+#    include <malloc.h>
+#endif
+
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
-#include <malloc.h>
-#include <stdio.h>
-#include "dbuff.h"
+#include <X11/Xos.h>
+
+#include "global.h"
+#include "draw.h"
 #include "config.h"
 
+#ifndef	lint
+static char sourceid[] =
+    "@(#)dbuff.c,v 1.12 1992/06/25 18:10:52 bjoerns Exp";
+#endif
 
-void itob(i)
-long i;
+
+
+void itob(long i)
 {
     if (i>1)
 	itob(i>>1);
 
     putchar('0'+(i&1));
 }
+
 
 static void release(register dbuff_state_t *state)
 {
@@ -34,7 +48,6 @@ static void release(register dbuff_state_t *state)
 	free(state);
     }
 }
-
 
 
 static long color(register dbuff_state_t *state, register long simple_color)
@@ -52,8 +65,7 @@ static long color(register dbuff_state_t *state, register long simple_color)
 }
 
 
-
-dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
+dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
 			   unsigned long planes, XColor *colors)
 {
     register dbuff_state_t *state;
@@ -77,18 +89,21 @@ D(  printf("Start - double buffer (asked for %ld planes).\n", planes);)
     state->display = display;
     state->cmap = cmap;
 
-    if (XAllocColorCells(state->display, state->cmap, False,
-			 state->planes, 2*planes, &state->pixel, 1) == 0) {
-	release(state);
-	return NULL;
+    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR)) {
+	if (XAllocColorCells(state->display, state->cmap, False,
+			     state->planes, 2*planes, &state->pixel, 1) == 0) {
+	    release(state);
+	    return NULL;
+	}
+
+D(  	for (i=0; i<(2*planes); i++) {
+	    printf("state->planes[%d] = ", i);
+	    itob(state->planes[i]);
+	    putchar('\n');
+	}
+)
     }
 
-D(  for (i=0; i<(2*planes); i++) {
-	printf("state->planes[%d] = ", i);
-	itob(state->planes[i]);
-	putchar('\n');
-    }
-)
     state->masks[0] = AllPlanes;
     state->masks[1] = AllPlanes;
 
@@ -102,10 +117,20 @@ D(  for (i=0; i<(2*planes); i++) {
 	putchar('\n');
     }
 )
-    for (i=0; i<(1 << planes); i++) {
-	colors[i].pixel = color(state, i | (i << planes));
-	colors[i].flags = DoRed | DoGreen | DoBlue;
+
+    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR)) {
+	for (i=0; i<(1 << planes); i++) {
+	    colors[i].pixel = color(state, i | (i << planes));
+	    colors[i].flags = DoRed | DoGreen | DoBlue;
+	}
     }
+    else {
+	colors[WHITE].pixel = WhitePixel(display, DefaultScreen(display));
+	colors[BLACK].pixel = BlackPixel(display, DefaultScreen(display));
+	colors[BLUE].pixel  = WhitePixel(display, DefaultScreen(display));
+	colors[RED].pixel   = WhitePixel(display, DefaultScreen(display));
+    }
+
 
     low_mask = (1 << planes) - 1;
     high_mask = low_mask << planes;
@@ -118,8 +143,9 @@ D(  for (i=0; i<(2*planes); i++) {
 
     state->buffer = 0;
     state->drawing_planes = state->masks[state->buffer];
-    XStoreColors(state->display, state->cmap,
-		 state->colormaps[state->buffer], state->map_size);
+    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+	XStoreColors(state->display, state->cmap,
+		     state->colormaps[state->buffer], state->map_size);
 
 D(  printf("End - double buffer, successful completion.\n");)
     return (state);
@@ -127,21 +153,23 @@ D(  printf("End - double buffer, successful completion.\n");)
     
 
 
-void dbuff_switch(register dbuff_state_t *state)
+void dbuff_switch(register int ind, register dbuff_state_t *state)
 {
     state->buffer ^= 1;
 
-    XStoreColors(state->display, state->cmap,
-		 state->colormaps[state->buffer], state->map_size);
+    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+	XStoreColors(state->display, state->cmap,
+		     state->colormaps[state->buffer], state->map_size);
 
     state->drawing_planes = state->masks[state->buffer];
 }
 
 
 
-void end_dbuff(register dbuff_state_t *state)
+void end_dbuff(int ind, dbuff_state_t *state)
 {
-    XFreeColors(state->display, state->cmap,
-		&state->pixel, 1, ~(state->masks[0] & state->masks[1]));
+    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+	XFreeColors(state->display, state->cmap,
+		    &state->pixel, 1, ~(state->masks[0] & state->masks[1]));
     release(state);
 }

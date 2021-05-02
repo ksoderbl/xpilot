@@ -1,4 +1,4 @@
-/* math.c,v 1.3 1992/05/11 15:31:21 bjoerns Exp
+/* math.c,v 1.7 1992/06/28 05:38:19 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,17 +8,19 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include "pilot.h"
-#include "map.h"
+#include "global.h"
+
 
 #define GRAV_RANGE  10
 #define PTS_IN_SHIP 3
 
-double		    tbl_sin[TABLE_SIZE];
-wireobj		    ships[RESOLUTION];
+#ifndef	lint
+static char sourceid[] =
+    "@(#)math.c,v 1.7 1992/06/28 05:38:19 bjoerns Exp";
+#endif
 
-extern World_map    World;
-extern double	    Gravity;
+double  	tbl_sin[TABLE_SIZE];
+wireobj		ships[RES];
 
 
 
@@ -37,12 +39,12 @@ void Make_ships(void)
 
 
     ships[0].pts=(position *)malloc(PTS_IN_SHIP*sizeof(position));
-    ships[0].pts[0].x=15; ships[0].pts[0].y= 0;
-    ships[0].pts[1].x=-9; ships[0].pts[1].y= 8;
-    ships[0].pts[2].x=-9; ships[0].pts[2].y=-8;
-    ships[0].ant_points=PTS_IN_SHIP;
+    ships[0].pts[0].x = 15; ships[0].pts[0].y =  0;
+    ships[0].pts[1].x = -9; ships[0].pts[1].y =  8;
+    ships[0].pts[2].x = -9; ships[0].pts[2].y = -8;
+    ships[0].num_points=PTS_IN_SHIP;
 
-    for (i=1; i<RESOLUTION; i++) {
+    for (i=1; i<RES; i++) {
 	ships[i].pts=(position *)malloc(PTS_IN_SHIP*sizeof(position));
 
 	for (z=0; z<PTS_IN_SHIP; z++) {
@@ -60,7 +62,7 @@ void Free_ships(void)
     int dir;
 
 
-    for (dir=0; dir<RESOLUTION; dir++)
+    for (dir=0; dir<RES; dir++)
 	free(ships[dir].pts);
 }
 
@@ -77,9 +79,9 @@ void Compute_gravity(void)
 	    World.gravity[xi][yi].x = 0.0;
 	}
 
-    for (g=0; g<World.Ant_gravs; g++) {
-	gx = World.gravs[g].pos.x;
-	gy = World.gravs[g].pos.y;
+    for (g=0; g<World.NumGravs; g++) {
+	gx = World.grav[g].pos.x;
+	gy = World.grav[g].pos.y;
 
 	for (xi = (gx>GRAV_RANGE) ? gx-GRAV_RANGE : 0;
 	     (xi<gx+GRAV_RANGE) && (xi<World.x); xi++)
@@ -100,13 +102,13 @@ void Compute_gravity(void)
 		    else
 			theta = 3.0*PI/2.0;
 
-		if (World.type[gx][gy] == CWISE_GRAV ||
-		    World.type[gx][gy] == ACWISE_GRAV)
+		if (World.block[gx][gy] == CWISE_GRAV ||
+		    World.block[gx][gy] == ACWISE_GRAV)
 		    theta += PI/2.0;
 
-		World.gravity[xi][yi].x += cos(theta)*World.gravs[g].force/
+		World.gravity[xi][yi].x += cos(theta)*World.grav[g].force/
 		    sqr(avst);
-		World.gravity[xi][yi].y += sin(theta)*World.gravs[g].force/
+		World.gravity[xi][yi].y += sin(theta)*World.grav[g].force/
 		    sqr(avst);
 	    }
     }

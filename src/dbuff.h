@@ -1,4 +1,4 @@
-/* dbuff.h,v 1.3 1992/05/11 15:31:05 bjoerns Exp
+/* dbuff.h,v 1.6 1992/06/25 03:23:51 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -7,6 +7,9 @@
  *
  *	Copylefts are explained in the LICENSE file.
  */
+
+#ifndef	DBUFF_H
+#define	DBUFF_H
 
 #include <X11/Xlib.h>
 
@@ -25,6 +28,9 @@ typedef struct {
 /*
  * Prototypes.
  */
-extern dbuff_state_t	*start_dbuff();
-extern void		dbuff_switch();
-extern void		end_dbuff();
+extern dbuff_state_t	*start_dbuff(int, Display *, Colormap,
+				     unsigned long, XColor *);
+extern void		dbuff_switch(int, dbuff_state_t *);
+extern void		end_dbuff(int, dbuff_state_t *);
+
+#endif

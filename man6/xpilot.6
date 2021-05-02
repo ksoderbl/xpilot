@@ -11,7 +11,7 @@
 .\" (c) Copyright 1991, UiT, all rights reserved.
 .\"
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-.TH XPILOT 6 "Version 1.0" "BS & KRS"
+.TH XPILOT 6 "Version 1.2" "BS & "
 .ad b
 .SH NAME
 xpilot \- XPilot/UX  Multiplayer gravity war game hand-shake program
@@ -23,6 +23,8 @@ xpilot \- XPilot/UX  Multiplayer gravity war game hand-shake program
 [\fB-list\fR]
 [\fB-name \fInickname\fR]
 [\fB-team \fIteam-number\fR]
+[\fB-help\fR]
+[\fB-version\fR]
 [\fIserver-host\fR]
 
 .SH DESCRIPTION
@@ -42,6 +44,14 @@ servers running, you will have to start one on your own (see man-page
 \fIxpilots(6)\fP).
 
 .SS Options
+
+.TP 15
+.B -help
+Prints some help, including commandline options.
+
+.TP 15
+.B -version
+Prints the current version.
 
 .TP 15
 .B -name \fIplayer-name\fP
@@ -67,9 +77,14 @@ Automatically joins the first and best server.
 Queries status information from all servers found.
 
 .TP 15
+.B -shutdown [\fImessage\fP]
+Sends a shutdown to the server, the message part is optional.
+
+.TP 15
 .B server-host
 Tries to connect to server at host \fIserver-host\fR.  The default is to
-search through the \fIsub-domain\fR your machine is connected to.
+search through the \fIsub-domain\fR your machine is connected to.  Note
+that you must use this option if your net isn't class C.
 
 .SH PROMPT COMMANDS
 When you startup \fBxpilot\fP without the \fB-join\fP option, you will get
@@ -111,15 +126,8 @@ following information:
 .RS 6
 .TP 12
 .B Special items
-You may notice some numbers on the top left or bottom left corner of the HUD,
-this means that you have either \fBs\fPmart shots (missiles) or \fBm\fPines
-and the number indicates how many smart shots / missiles you have.  Smart
-shots are shown in the bottom left corner (with and S prefixing the number)
-and missiles are in the top left corner (with an M prefixing the number).
-
-Also, other special items like \fBc\fPloaking devices, \fBw\fPide angle
-shots and \fBr\fPear shots are only indicated by a letter appearing on the
-left side of the HUD.
+You may notice some characters and numbers on the left side of the HUD,
+these indicate which, and how many, special items you have picked up.
 .TP 12
 .B Fuel
 A fuel meter will appear on the right side of the HUD when you are getting
@@ -141,11 +149,17 @@ This section will only describe the \fIcombat mode\fR of the game as the
 \fIrace version\fR is quite straightforward.
 
 The game has really no main purpose but to have fun.  This is achievable in
-many ways, but mainly by \fBblasting away\fP on friends and cannons.  Both
-will naturally fire back at you, so you will also need some nifty
-\fBpiloting skills\fP and/or some heavy equipment to really enjoy living.
-Another vital part of your machinery is your \fBenergy/fuel\fP - without
-it, you will surely die a horrible death.
+many ways, but mainly by \fBblasting away\fP on human or robot players as
+well as cannons.  All will naturally fire back at you, so you will also
+need some nifty \fBpiloting skills\fP and/or some heavy equipment to really
+enjoy living.  Another vital part of your machinery is your
+\fBenergy/fuel\fP - without it, you will surely die a horrible death.
+
+You may notice some red circles - either containing a plus (+), minus (+),
+clockwise or anti-clockwise arrow.  These are \fBgravs\fP which affect the
+gravity.  You may also notice some rotating circles, this is a
+\fBwormhole\fP, a shortcut through the space-time continuum (works like
+\fBteleporting\fP).
 
 During the game you might encounter red triangles - these are special items
 which will make your life easier.  As of today, these are:
@@ -157,6 +171,10 @@ More fuel.
 .TP 12
 .B C
 Cloaking device.
+.TP 12
+.B I
+Instrument pack - improves your sensors so that you can see cloakers more
+easily.
 .TP 12
 .B R
 Rear shot.
@@ -173,29 +191,31 @@ Pack of mines.  Default is one mine in each pack.
 .SH CONTROLS
 The game understands quite some keys, but not all of them are equally
 important.  The following keys are in prioritized order, and note that a |
-is used to separate equivalent keys.
+is used to separate equivalent keys.  The words inside the curly braces {}
+are the name of the resources that corresponds to the actions, see
+Xresources below.
 .RS 2
 .TP 4
 \fIPrimary keys\fR
 The primary keys are:
 .RS 6
 .TP 12
-.B a
+.B a {keyTurnLeft}
 Turn left (anti-clockwise).
 .TP 12
-.B s
+.B s {keyTurnRight}
 Turn right (clockwise).
 .TP 12
-.B shift
+.B shift {keyThrust}
 Thrust me.
 .TP 12
-.B return
+.B return {keyFireShot}
 Fire normal shot.
 .TP 12
-.B space or right-meta
+.B space | right-meta {keyShield}
 Activate shield.  Must be held down for continuous use.
 .TP 12
-.B ctrl | f
+.B ctrl | f {keyRefuel}
 Try to connect to nearest fuel station.  Must be held down during refueling.
 .RS -6
 .TP 4
@@ -204,84 +224,75 @@ The following commands are not always available, some require special items
 to have any functionality at all.
 .RS 6
 .TP 12
-.B q
+.B q {keySelfDestruct}
 Self destruct.  At last we managed to include a timer, got rid of all those
 nasty I'd-rather-die-by-my-own-hands-than-let-you-kill-me-and-get-all-
 the-points pilots.
 .TP 12
-.B backSpace
+.B backSpace {keyCloak}
 Enable/disable cloaking device if available.  You will be invisible on both
 radar and on screen, but beware - the device is not foolproof, it is
 not cheap on your fuel and the only thing becoming invisible is your ship,
 i.e. the exhaust-flames will still be visible.
 .TP 12
-.B Esc
+.B Esc {keySwapSettings}
 Toggle between two different settings.  You'll probably want more power
-and a larger turnrate in combat than when you're doing some critical
+and a larger turn rate in combat than when you're doing some critical
 maneuvering.  Also, the game speed (unfortunately) varies as the load of
 the machines and the net varies.
 .TP 12
-.B Tab
+.B Tab {keyDropMine}
 Drop a proximity mine.  The mine will detonate after a certain amount of
 time (quite large actually) or when a foe comes too near.
 .TP 12
-.B Home
+.B Home {keyChangeHome}
 Change home base.  You will need to be landed on the base of your choice.
 (The \fBHome\fP key is located just right of the \fBReturn\fP key on most
 HP-keyboards.)  These keys are convenient for HP keyboards, also somewhat
 adapted to SUN keyboards.
 .TP 12
-.B p
+.B p {keyPause}
 Parking mode - you can only park while you're landed on your own home base,
 and when you park, you cannot rejoin the game until the P has stopped
 blinking (to prevent users from using this option to run away from a
 battle).
 
 .TP 0
-The following keys toggle miscellaneous gauges.
+These keys let you adjust the control sensitivity:
 .TP 12
-.B c
-Toggle on/off lock computer.
-.TP 12
-.B t
-Toggle on/off fuel tank gauge.  A nice pie-chart representation of your
-fighter's current fuel level.
-.TP 12
-.B v
-Turn on/off velocity gauge.
-
-.TP 0
-The following keys are located on the keypad to the right on most
-HP-keyboards.  They let you adjust miscellaneous values that are dependent
-of machine speed (which may vary greatly).
-.TP 12
-.B *
+.B * {keyIncreasePower}
 Increase engine power.
 .TP 12
-.B /
+.B / {keyDecreasePower}
 Decrease engine power.
 .TP 12
-.B +
+.B + {keyIncreaseTurnspeed}
 Increase turn speed.
 .TP 12
-.B -
+.B - {keyDecreaseTurnspeed}
 Decrease turn speed.
+.TP 12
+.B [ {keySlowdown}
+Slows down the game (owner only).
+.TP 12
+.B ] {keySpeedup}
+Speeds up the game (owner only).
 
 .TP 0
-The following requires that the \fBlock computer is on\fP:
+The following requires that you have a \fBlock\fP on somebody:
 .TP 12
-.B \e (backSlash) | LF (lineFeed)
+.B \e (backSlash) | LF (lineFeed) {keyFireMissile}
 Fire smart missile if available.  The missile will home onto the player
 that you have currently locked on.  You must have \fBa clear lock\fP on a
 player for this to work.
 .TP 12
-.B Select | Up | Down
+.B Select | Up | Down {keyLockClose}
 Will lock onto the closest player if he/she is within range.
 .TP 12
-.B Next | Right
+.B Next | Right {keyLockNext}
 Will, if possible, lock onto the next player in the game.
 .TP 12
-.B Prior (Prev) | Left
+.B Prior (Prev) | Left {keyLockPrev}
 Will, if possible, lock onto the previous player in the game.
 
 .RS -6
@@ -292,7 +303,8 @@ isn't disabled.  But don't lose any sleep over it, it's not that easy.
 Usually, this option is disabled.
 
 .SH X RESOURCES
-XPilot understands the following X resources:
+XPilot understands the following X resources in addition to the key
+resources described above:
 .RS 6
 .TP 12
 .B name
@@ -306,7 +318,7 @@ Primary power setting of your engine.  Primary in this context means that it
 is part of the default setting, secondary means the other setting (two
 different settings are available, pressing \fBEsc\fP will switch between
 them).  You may change "sensitivity" of your ship by adjusting these
-paramteres.  Often you would like one setting to be more "rough" than the
+parameters.  Often you would like one setting to be more "rough" than the
 other - one setting for fine maneuvering and one for racing. (Default 45.0)
 .TP 12
 .B turnSpeed
@@ -391,7 +403,7 @@ keyboard.  To re-enable autorepeat, use the \fIxset\fR command with the
 .B xset r
 .PP
 Also note that the game speed cannot be controlled, so that the only way to
-slow down a game is to have several dummys join it.  Use the following
+slow down a game is to have several dummies join it.  Use the following
 command:
 
 .SH AUTHORS
@@ -400,13 +412,13 @@ Schouten at the University of Tromsoe, Norway.
 
 .SH BUGS
 The product is seemingly stable, so bug reports are highly appreciated.
-Send email to \fBbjoerns@stud.cs.uit.no\fP or (not until 1993)
-\fBkenrsc@stud.cs.uit.no\fP and we will see what we can do.  We only ask
-that you remember to include the following information:
+Send email to \fBxpilot-request@cs.uit.no\fP and we will see what we can
+do.  We merely ask that you remember to include the following information:
 .IP
 .PD 0
 .RS 4
-\- The platform(s) the bug(s) occurs on.
+\- The platform(s) the bug(s) occurs on and what kind of display (depth,
+color, type) you use.
 .TP
 \- The version, revision and patchlevel of XPilot.
 .TP
@@ -419,7 +431,9 @@ that you remember to include the following information:
 .RS -4
 We would also like to receive changes you do to make the code compile on
 your machine (we would NOT like to receive the whole program translated to
-standard C, keep it ANSI :)
+K&R C, keep it ANSI :) If you don't have an ANSI compiler, there are
+several utilities which may help you de-ANSI-fy the code (unproto,
+unprotoize etc).
 
 .SH NOTES
 For credit list, see \fIxpilots(6)\fP.
@@ -427,7 +441,7 @@ For credit list, see \fIxpilots(6)\fP.
 .SH FILES
 .PD 0
 .TP 40
-\fB/usr/local/games/lib/xpilot/motd.txt\fP
+\fB/usr/local/games/lib/xpilot/motd\fP
 Message of the day.
 .TP
 \fB/usr/local/games/lib/xpilot/maps/\fP

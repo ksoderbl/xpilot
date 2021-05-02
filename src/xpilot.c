@@ -1,4 +1,4 @@
-/* xpilot.c,v 1.3 1992/05/11 15:31:45 bjoerns Exp
+/* xpilot.c,v 1.18 1992/06/28 05:38:37 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -10,217 +10,79 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <pwd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <X11/Intrinsic.h>
+#if  defined(apollo)
+#    include <sys/types.h>
+#else
+#    include <string.h>
+#    include <unistd.h>
+#endif
+
 #include "pack.h"
 #include "bit.h"
 #include "version.h"
 #include "config.h"
 
-#define ON(x)	      ( (strcasecmp(x, "true")==0) || (strcasecmp(x, "on")==0) )
+#ifndef	lint
+static char versionid[] = "@(#)$" TITLE " $";
+static char sourceid[] =
+    "@(#)xpilot.c,v 1.18 1992/06/28 05:38:37 bjoerns Exp";
+#endif
 
-#define MAX_LINE	80
-#define MAX_NAME_LEN	11
-#define NOT_SET		-1
+#define MAX_LINE	256
 
-Pack	req;
-char	name[MAX_LINE];
-char	base_addr[MAX_LINE];
-int	socket_c, socket_i, pack_size;	    /* Contact socket, data socket */
-bool	auto_connect=false, list_servers=false, auto_shutdown=false;
-Display *disp;
+int		socket_c,		/* Contact socket */
+    		socket_i,		/* Info socket */
+    		server_port;
+pack_t		req;
+core_pack_t	*core = &req.core;
+char		name[MAX_NAME_LEN],
+    		base_addr[MAX_LINE],
+    		server_host[MAX_LINE],
+    		hostname[MAX_LINE],
+    		display[MAX_DISP_LEN],
+		shutdown_reason[MAX_ARG_LEN];
+bool		auto_connect = false,
+    		list_servers = false,
+    		auto_shutdown = false;
+u_short		team = TEAM_NOT_SET;
 
-
-
-double atod(char *str)
-{
-    double tmp;
-
-    sscanf(str, "%lf", &tmp);
-    return (tmp);
-}
 
 /*
  * NOTE (base_addr) that this routine only handles the first net address.  If
  * the machine has more than one connection, you'll have to specify the server
  * machine manually if it isn't on the first net.
-*/
-void *initaddr()
+ */
+void initaddr()
 {
-    struct hostent *hinfo;
-    char tmp[MAX_LINE];
-    int i;
+    struct hostent	*hinfo, *he;
+    char		tmp[MAX_LINE];
+    int			i;
 
 
-    base_addr[0]='\0';
-    gethostname(req.hostname, MAX_LINE);
-    hinfo = gethostbyname(req.hostname);
+    base_addr[0] = '\0';
+    gethostname(hostname, MAX_LINE);
+    if ((hinfo = gethostbyname(hostname)) == NULL) {
+	error("gethostbyname");
+	exit (-1);
+    }
 
     /* Get base address (cluster address?) */
-    hinfo->h_addr;
+
     for (i=0; i<hinfo->h_length-1; i++) {
 	sprintf(tmp, "%d.", (unsigned char)hinfo->h_addr[i]);
 	strcat(base_addr, tmp);
     }
 
     /*
-     * Get host's IP-address.
+     * Get host's official name.
      */
-#ifdef	USE_IP_NUMBER
-    strcpy(req.hostname, base_addr);
-    sprintf(tmp, "%d", (unsigned char)hinfo->h_addr[hinfo->h_length-1]);
-    strcat(req.hostname, tmp);
-#else
-    strcpy(req.hostname, hinfo->h_name);
-#endif
+    strcpy(hostname, hinfo->h_name);
 }
 
-
-void get_defaults()
-{
-    char *str;
-
-
-    /*
-     * Defaults.
-     */
-    req.def.power=45.0; req.def.turnspeed=30.0; req.def.turnresistance=0.12;
-    req.def.power_s=35.0;req.def.turnspeed_s=25.0;req.def.turnresistance_s=0.12;
-    req.def.team=0;
-    req.def.fuel3=500.0; req.def.fuel2=200.0; req.def.fuel1=100.0;
-    req.def.instruments = SHOW_HUD_INSTRUMENTS | SHOW_HUD_HORIZONTAL;
-
-
-    /*
-     * Name
-     */
-    if (name[0]=='\0') {
-	if ((disp!=NULL) && (str=XGetDefault(disp, "xpilot", "name"))!=NULL)
-	    strcpy(name, str);
-	else
-	    strcpy(name, req.realname);
-    }
-    if (strlen(name)>MAX_NAME_LEN) {
-	name[MAX_NAME_LEN]='\0';
-	fprintf(stderr, "Name too long - chopped off: %s\n", name);
-    }
-    CAP_LETTER(name[0]);
-
-
-    if (disp == NULL)
-	return;
-
-    /*
-     * Control sensitivity.
-     */
-    str=XGetDefault(disp, "xpilot", "power");
-    if (str)
-	req.def.power = atod(str);
-    str=XGetDefault(disp, "xpilot", "turnSpeed");
-    if (str)
-	req.def.turnspeed = atod(str);
-    str=XGetDefault(disp, "xpilot", "turnResistance");
-    if (str)
-	req.def.turnresistance = atod(str);
-
-    str=XGetDefault(disp, "xpilot", "altPower");
-    if (str)
-	req.def.power_s = atod(str);
-    str=XGetDefault(disp, "xpilot", "altTurnSpeed");
-    if (str)
-	req.def.turnspeed_s = atod(str);
-    str=XGetDefault(disp, "xpilot", "altTurnResistance");
-    if (str)
-	req.def.turnresistance_s = atod(str);
-
-
-    /*
-     * Misc. data, fuel limits on HUD.
-     */
-    str=XGetDefault(disp, "xpilot", "team");
-    if (str)
-	req.def.team = atoi(str);
-    str=XGetDefault(disp, "xpilot", "fuelNotify");
-    if (str)
-	req.def.fuel3 = atod(str);
-    str=XGetDefault(disp, "xpilot", "fuelWarning");
-    if (str)
-	req.def.fuel2 = atod(str);
-    str=XGetDefault(disp, "xpilot", "fuelCritical");
-    if (str)
-	req.def.fuel1 = atod(str);
-    
-    /*
-     * Instruments.
-     */
-
-    /* HUD */
-    str=XGetDefault(disp, "xpilot", "showHUD");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_HUD_INSTRUMENTS);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_HUD_INSTRUMENTS);
-	}
-    }
-    str=XGetDefault(disp, "xpilot", "verticalHUDLine");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_HUD_VERTICAL);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_HUD_VERTICAL);
-	}
-    }
-    str=XGetDefault(disp, "xpilot", "horizontalHUDLine");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_HUD_HORIZONTAL);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_HUD_HORIZONTAL);
-	}
-    }
-
-    /* FUEL */
-    str=XGetDefault(disp, "xpilot", "fuelMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_FUEL_METER);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_FUEL_METER);
-	}
-    }
-    str=XGetDefault(disp, "xpilot", "fuelGauge");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_FUEL_GAUGE);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_FUEL_GAUGE);
-	}
-    }
-
-    /* Misc. meters. */
-    str=XGetDefault(disp, "xpilot", "turnSpeedMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_TURNSPEED_METER);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_TURNSPEED_METER);
-	}
-    }
-    str=XGetDefault(disp, "xpilot", "powerMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(req.def.instruments, SHOW_POWER_METER);
-	} else {
-	    CLR_BIT(req.def.instruments, SHOW_POWER_METER);
-	}
-    }
-}
 
 
 void printfile(char *name)
@@ -230,7 +92,7 @@ void printfile(char *name)
 
 
     if ((fp=fopen(name, "r")) == NULL) {
-/*	perror(name);	*/
+/*	error(name);	*/
 	return;
     }
 
@@ -242,20 +104,29 @@ void printfile(char *name)
 
 
 
-int get_contact_message(char *server)
+bool Get_contact_message(void)
 {
-    bool readable = false;
-    Pack pack;
+    bool		readable = false;
+    contact_pack_t	pack;
 
 
     if (SocketReadable(socket_c)) {
-	if (DgramReceiveAny(socket_c, (char *)&pack, sizeof(Pack)) == -1) {
-	    perror("DgramReceiveAny");
+	if (DgramReceiveAny(socket_c, (char *)&pack, sizeof(pack_t)) == -1) {
+	    error("DgramReceiveAny, contact message");
 	    exit(-1);
 	}
-	if (pack.type == CONTACT) {
-	    readable = true;
-	    strcpy(server, pack.string);
+	readable = true;
+
+	/*
+	 * Now get server's host and port.
+	 */
+	strcpy(server_host, DgramLastaddr());
+	server_port = pack.port = ntohl(pack.port);
+	pack.magic = ntohl(pack.magic);
+
+	if (pack.magic != MAGIC) {
+	    error("Bad magic on contact message (0x%lx).", pack.magic);
+	    return (false);
 	}
     }
     
@@ -264,19 +135,32 @@ int get_contact_message(char *server)
 
 
 
-Pack *get_info_message()
+int Get_reply_message(reply_pack_t *p)
 {
-    static Pack pack;
+    int len;
 
-    
+
     if (SocketReadable(socket_i)) {
-	if (DgramReceiveAny(socket_i, (char *)&pack, sizeof(Pack)) == -1) {
-	    perror("DgramReceiveAny");
+	if ((len=DgramReceiveAny(socket_i, (char *)p,
+				 sizeof(reply_pack_t))) == -1) {
+	    error("DgramReceiveAny, reply message");
 	    exit(-1);
-	} 
-    } else return NULL;
+	} else {
+	    /*
+	     * Watch out for big/little-endian problems.
+	     */
+	    p->magic = ntohl(p->magic);
+	    p->port = ntohl(p->port);
+
+	    if (p->magic != MAGIC) {
+		error("Wrong MAGIC in pack (0x%lx).", p->magic);
+		return (0);
+	    }
+	}
+    } else
+	return (0);
     
-    return &pack;
+    return (len);
 }
 
 
@@ -284,151 +168,287 @@ Pack *get_info_message()
 /*
  * This is the routine that interactively (if not auto_connect) prompts
  * the user on his/her next action.  Returns true if player joined this
- * server, or false if the player wants to have a look at the next server.
+ * server (connected to server), or false if the player wants to have a
+ * look at the next server.
  */
-bool Connect_to_server(char *server)
+bool Connect_to_server(void)
 {
-    bool contact;
-    char c, str[MAX_LINE];
-    Pack *pack;
+    int			len;
+    bool		contact, xhost_is_done;
+    char		c, str[MAX_LINE];
+    reply_pack_t	reply;
+    struct hostent	*he;
 
 
-    req.port = GetPortNum(socket_i);
+    core->port = htonl(GetPortNum(socket_i));
 
  again:
+    xhost_is_done = false;
 
     /*
      * Now, what do you want from the server?
      */
     if (!auto_connect) {
-	printf("Server on %s. Enter command> ",
-	       server);
-	
+	if ((he = gethostbyaddr((char *)&sl_dgram_lastaddr.sin_addr,
+				sizeof(struct in_addr), AF_INET)) == NULL) {
+	    error("gethostbyname() couldn't lookup server's name");
+	    exit (-1);
+	}
+
+	printf("Server on %s. Enter command> ", he->h_name);
+
 	gets(str);
 	c = str[0];
 	CAP_LETTER(c);
     } else {
 	if (list_servers)
-	    c='S';
+	    c = 'S';
 	else if (auto_shutdown)
-	    c='D';
+	    c = 'D';
 	else
-	    c='J';
+	    c = 'J';
     }
 
-    contact=true;
+    contact = true;
     switch (c) {
 
 	/*
 	 * Owner only commands:
 	 */
-    case 'K':
-	req.type = KICK;
-	printf("WARNING! Only owner can execute this operation.\n"
-	       "Enter name of victim: ");
-	gets(req.string);
+    case 'K':	{
+	kick_player_pack_t	*p = &req.command;
+
+	p->type = KICK_PLAYER_pack;
+	printf("Enter name of victim: ");
+	fflush(stdout);
+	gets(p->arg_str);
+    }
 	break;
 
-    case 'M':				/* Send a message to server. */
-	req.type = MESSAGE;
-	printf("WARNING! Only the owner of the server can send a message.\n"
-	       "Enter message: ");
-	gets(req.string);
+    case 'M':	{			/* Send a message to server. */
+	message_pack_t	*p = &req.command;
+
+	p->type = MESSAGE_pack;
+	printf("Enter message: ");
+	fflush(stdout);
+	gets(p->arg_str);
+    }
 	break;
 
 	/*
 	 * Public commands:
 	 */
     case 'N':				/* Next server. */
-	contact=false;
+	return (false);
 	break;
 
-    case 'S':				/* Report status. */
-	req.type = REPORT_STATUS;
+    case 'S':	{			/* Report status. */
+	report_status_pack_t	*p = &req.command;
+
+	p->type = REPORT_STATUS_pack;
+    }
 	break;
 
-    case 'D':
-	req.type = SHUTDOWN;
+    case 'D':	{
+	shutdown_pack_t		*p = &req.command;
+
+	p->type = SHUTDOWN_pack;
 	if (!auto_shutdown) {
-	    printf("WARNING! Only the owner of the server can send a message.\n"
-		   "Enter reason: ");
-	    gets(req.string);
+	    printf("Enter delay: ");
+	    gets(p->arg_str);
+	    /*
+	     * No argument = cancel shutdown = arg_int=0
+	     */
+	    if (sscanf(p->arg_str, "%d", &p->arg_int) <= 0) {
+		p->arg_int = 0;
+	    } else
+		if (p->arg_int <= 0)
+		    p->arg_int = 1;
+
+	    printf("Enter reason: ");
+	    gets(p->arg_str);
+	} else {
+	    strcpy(p->arg_str, shutdown_reason);
+	    p->arg_int = 600;
 	}
+	p->arg_int = htonl(p->arg_int);		/* Big/little endian */
+    }
 	break;
 
     case 'Q':
 	exit (0);
 	break;
 
-    case 'L':
-	req.type = LOCK;
+    case 'L':	{
+	lock_game_pack_t	*p = &req.command;
+
+	p->type = LOCK_GAME_pack;
+    }
 	break;
 
     case '\0':
-    case 'J':				/* Trying to enter game. */
-	if (req.display[0] == '\0') {
-	    fprintf(stderr, "ERROR: Display variable not set.\n");
-	    if (auto_connect)
-		exit (-1);
-	    else
-		goto again;
-	}
-	sprintf(str, XHOST_CMD, server);
-	system(str);
-	strcpy(req.string, name);
-	req.type = ENTER_GAME;
+    case 'J':	{			/* Trying to enter game. */
+	enter_game_pack_t	*p = &req.enter;
+
+	p->type = ENTER_GAME_pack;
+	strcpy(p->nick, name);
+	strcpy(p->display, display);
+	p->team = htons(team);
+    }
 	break;
 
     case '?':
     case 'H':				/* Help. */
     default:
-	printf("CLIENT VERSION...: %s\n", TITLE);
-	printf("Supported commands are:\n"
-	       "H/? -	Help - this text.\n"
-	       "N   -	Next server, skip this one.\n"
-	       "S   -	list Status.\n"
-	       "Q   -	Quit.\n"
-	       "K   -	Kick a player.		     (only owner)\n"
-	       "M   -	send a Message.		     (only owner)\n"
-	       "L   -	Lock/unLock server access.   (only owner)\n"
-	       "D   -	shutDown/cancel shutDown.    (only owner)\n"
-	       "J or just Return enters the game.\n");
-	goto again;
-	break;
+        printf("CLIENT VERSION...: %s\n", TITLE);
+        printf("Supported commands are:\n"
+               "H/?  -   Help - this text.\n"
+               "N    -   Next server, skip this one.\n"
+               "S    -   list Status.\n"
+               "Q    -   Quit.\n"
+               "K    -   Kick a player.               (only owner)\n"
+               "M    -   send a Message.              (only owner)\n"
+               "L    -   Lock/unLock server access.   (only owner)\n"
+               "D(*) -   shutDown/cancel shutDown.    (only owner)\n"
+               "J or just Return enters the game.\n"
+               "* If you don't specify any delay for shutdown, you will signal "
+               "  that\nthe server should stop an ongoing shutdown.\n");
+        goto again;
+        break;
     }
 
-
+ retry:
     /*
      * Do you want to contact the server, or carry on?
      */
     if (contact) {
-	if ((pack_size = DgramSend(socket_i, server, PORT_NR, 
-				   (char *)&req, sizeof(Pack))) == -1) {
-	    perror("Couldn't send request to server (DgramSend)");
-	    exit(1);
+	if (DgramSend(socket_i, server_host, server_port,
+		      (char *)&req, sizeof(reply_pack_t)) == -1) {
+	    error("Couldn't send request to server (DgramSend)");
+	    exit(-1);
 	}
 
-	if ((pack = get_info_message()) != NULL) {
-	    if (!auto_connect || list_servers)
-		printf("\nRESPONSE FROM %s: %s\n", server, pack->string);
-	} else
-	    perror("Could not get any answer from server");
+	/*
+	 * Get reply message.  If we failed, return false (next server).
+	 */
+	if ((len = Get_reply_message(&reply)) < sizeof(core_pack_t)) {
+	    error("Could not get any answer from server (pack length %d)", len);
+	    return (false);
+	}
+
+	/*
+	 * Now try and interpret the result.
+	 */
+	switch (reply.status) {
+
+	case SUCCESS:
+	    /*
+	     * Oh glorious success.
+	     */
+	    switch (req.core.type) {
+	    case SHUTDOWN_pack:
+		if (ntohl(req.command.arg_int) == 0)
+		    puts("Shutdown stopped.");
+		else
+		    puts("Shutdown initiated.");
+		break;
+	    case ENTER_GAME_pack:
+		puts("You have entered the game.");
+		break;
+	    default:
+		puts("Operation successful.");
+		break;
+	    }
+	    break;
+
+	case E_DISPLAY:
+#ifdef	XHOST
+	    /*
+	     * Now this is something we might fix.  The server couldn't open
+	     * the display, maybe we should try "xhost +server" and then
+	     * "xhost -server" when we're finished?
+	     */
+	    if (xhost_is_done) {
+		error("Couldn't open display");
+		exit (-1);
+	    }
+
+	    sprintf(str, XHOST_OPEN, server_host);
+	    system(str);
+	    xhost_is_done = true;
+	    goto retry;
+#else
+	    error("This version does not automatically use xhost "
+		  "to allow the server to connect\n"
+		  "to your display, you will have to do it manually"
+		  "if you want to join the game.");
+#endif
+	    break;
+
+	case E_NOT_OWNER:
+	    error("Permission denied, not owner");
+	    break;
+	case E_GAME_FULL:
+	    error("Sorry, game full");
+	    break;
+	case E_GAME_LOCKED:
+	    error("Sorry, game locked");
+	    break;
+	case E_DBUFF:
+	    error("Couldn't initialize double buffering");
+	    break;
+	case E_NOT_FOUND:
+	    error("That player is not logged on this server");
+	    break;
+	case E_IN_USE:
+	    error("Your nick is already used");
+	    break;
+	default:
+	    error("Wrong status '%d'", reply.status);
+	    break;
+	}
+
+	/*
+	 * Did the reply include a string?
+	 */
+	if (len > sizeof(core_pack_t) && !auto_connect) {
+	    puts(reply.str);
+	}
 
 	if (list_servers)	/* If listing servers, go to next one */
-	    return false;
+	    return (false);
 
-	if (auto_shutdown)
-	    return true;
+	if (auto_shutdown)	/* Do the same if we've sent a -shutdown */
+	    return (false);
 
-	if (auto_connect && pack->type!=ENTER_GAME) {
-	    return false;			  /* return false. */
+#ifdef	XHOST
+	if (xhost_is_done) {
+	    sprintf(str, XHOST_CLOSE, server_host);
+	    system(str);
+	    xhost_is_done = false;
 	}
-	if (pack && pack->type == ENTER_GAME)
-	    return true;
-	else
-	    goto again;
-    } else
-	return false;
+#endif
+
+	/*
+	 * If we wanted to enter the game and we were allowed to, return true
+	 * (we are done).  If we weren't allowed, either return false (get next
+	 * server) if we are auto_connecting or get next command if we aren't
+	 * auto_connecting (interactive).
+	 */
+	if (core->type == ENTER_GAME_pack) {
+	    if (core->status == SUCCESS) {
+		return (true);
+	    } else {
+		if (auto_connect)
+		    return (false);
+	    }
+	}
+    }
+
+    /*
+     * Get next command.
+     */
+    goto again;
 }
 
 
@@ -439,112 +459,106 @@ bool Connect_to_server(char *server)
  */
 int main(int argc, char *argv[])
 {
-    char machine[MAX_LINE];
-    int i, team, packet_size = sizeof(Pack);
-    struct passwd *pwent;
-    bool connected = false;
+    char		machine[MAX_LINE];
+    int			i;
+    struct passwd	*pwent;
+    bool		connected = false;
 
 
     /*
-     * Misc. init.
+     * --- Miscellaneous initialization ---
      */
     initaddr();
+    init_error(argv[0]);
 
     if ((socket_i = CreateDgramSocket(0)) == -1) {
-	perror("Could not create socket.");
+	error("Could not create info socket");
 	exit(-1);
     }
 
     if ((socket_c = CreateDgramSocket(0)) == -1) {
-	perror("Could not create socket.");
+	error("Could not create connection socket");
+	SocketClose(socket_c);
 	exit(-1);
     }
 
-    machine[0]=name[0]='\0';
-
+    machine[0] = name[0] = '\0';
+    strcpy(display, getenv("DISPLAY"));
 
     /*
-     * --- Setup the rest of the request (req.hostname already setup) ---
+     * --- Setup core of pack ---
      */
-    pwent = getpwuid(geteuid());
-    strcpy(req.realname, pwent->pw_name);
-    strcpy(req.display, getenv("DISPLAY"));
-    req.port = GetPortNum(socket_c);
-    req.type = CONTACT;
-    team = NOT_SET;
+    core->magic = htonl(MAGIC);
+    core->type = CONTACT_pack;
+    pwent = getpwuid(geteuid()); strcpy(core->realname, pwent->pw_name);
+    core->port = htonl(GetPortNum(socket_c));
+    core->status = SUCCESS;
 
 
     /*
      * --- Check commandline arguments ---
      */
     for(i=1; i<argc; i++) {
-	if ((strcmp(argv[i], "-h")==0) || (strcmp(argv[i], "-help")==0)) {
-	    printfile(HELPFILE);
-	    exit (0);
+	if (strncmp(argv[i], "-help", 2) == 0) {
+	    printf("Usage:	%s [-options ..] [server]\n\n"
+		   "Where options include:\n"
+		   "	-help			print out this message\n"
+		   "	-version		print out current version\n"
+		   "	-name <nick>		specifies a nick name\n"
+		   "	-team <number>		specifies team number\n"
+		   "	-join			enables auto join mode\n"
+		   "	-list			lists all accessible servers\n"
+		   "	-shutdown [msg]		shuts down the server\n"
+		   "	-display		which X server to contact\n"
+		   "	server			which game server to contact\n"
+		   "\nIf no server is specified, the command will affect all "
+		   "servers.\n", argv[0]);
+	    exit(0);
 	}
-	if (strcmp(argv[i], "-name")==0) {
+	if (strncmp(argv[i], "-version", 2) == 0) {
+	    puts(TITLE);
+	    exit(0);
+	}
+	if (strcmp(argv[i], "-name") == 0) {
 	    strcpy(name, argv[++i]);
 	    continue;
 	}
-	if (strcmp(argv[i], "-team")==0) {
+	if (strcmp(argv[i], "-join") == 0) {
+	    auto_connect = true;
+	    continue;
+	}
+	if (strcmp(argv[i], "-team") == 0) {
 	    team = atoi(argv[++i]);
+	    if (team < 0)
+		team = 0;
+	    else if (team > 9)
+		team = 9;
 	    continue;
 	}
-	if (strcmp(argv[i], "-join")==0) {
-	    auto_connect=true;
+	if (strcmp(argv[i], "-list") == 0) {
+	    list_servers = true;
+	    auto_connect = true;
 	    continue;
 	}
-	if (strcmp(argv[i], "-list")==0) {
-	    list_servers=true;
-	    auto_connect=true;
+	if (strcmp(argv[i], "-display") == 0) {
+	    strcpy(display, argv[++i]);
 	    continue;
 	}
-	if (strcmp(argv[i], "-display")==0) {
-	    strcpy(req.display, argv[++i]);
-	    continue;
-	}
-	if (strcmp(argv[i], "-shutdown")==0) {
-	    auto_shutdown=true;
-	    auto_connect=true;
+	if (strcmp(argv[i], "-shutdown") == 0) {
+	    auto_shutdown = true;
+	    auto_connect = true;
 	    if (argc > i+1)
-		strcpy(req.string, argv[++i]);
+		strcpy(shutdown_reason, argv[++i]);
 	    else
-		strcpy(req.string, "Unknown reason.");
+		strcpy(shutdown_reason, "Unknown reason.");
 	    continue;
 	}
-	strcpy(machine, argv[i]);
+
+	if (argv[i][0] == '-') {
+	    error("Unkown option '%s'", argv[i]);
+	} else
+	    strcpy(server_host, argv[i]);
     }
-
-    if (strstr(req.display, "unix:0")!=NULL ||
-	strstr(req.display, "local:0")!=NULL ||
-	strcmp(req.display, ":0.0")==0 || strcmp(req.display, ":0")==0)
-	sprintf(req.display, "%s:0.0", req.hostname);
-	
-    if ((disp=XOpenDisplay(req.display)) == NULL) {
-	fprintf(stderr,
-		"WARNING: Cannot connect to display \"%s\".\n"
-		"	  As a consequence you will not be allowed to\n"
-		"	  join the game.  Please set your DISPLAY variable,\n"
-		"	  or use the -display <hostname:0.0> option.\n\n"
-		"NOTE:	  You can still contact the server and give commands."
-		"\n\n", req.display);
-	req.display[0] == '\0';
-    }
-
-
-    /*
-     * Get X defaults.
-     */
-    get_defaults();
-    if (team != NOT_SET)
-	req.def.team = team;
-
-    if (req.def.team < 0 || req.def.team > 9) {
-	req.def.team = 0;
-	fprintf(stderr, "WARNING:  You can only spesify team from 0-9.\n"
-		"Your will be on team 0.\n");
-    }
-
 
     /*
      * --- Message of the Day ---
@@ -555,26 +569,53 @@ int main(int argc, char *argv[])
 	printf("LISTING AVAILABLE SERVERS:\n");
 
     /*
+     * --- Correct the display --- May need modification
+     */
+    if (display[0] == '\0'
+	|| strstr(display, "unix:0") != NULL
+	|| strstr(display, "local:0") != NULL
+	|| strcmp(display, ":0.0") == 0
+	|| strcmp(display, ":0") == 0)
+	sprintf(display, "%s:0", hostname);
+
+
+#ifdef	LIMIT_ACCESS
+    /*
      * If sysadm's have complained alot, check for free machines before
      * letting the user play.  If room is crowded, don't let him play.
      */
-#ifdef	LIMIT_ACCESS
-    if (!list_servers && Is_allowed()==false)
+    if (!list_servers && Is_allowed() == false)
 	exit (-1);
 #endif
 
+    SetTimeout(15, 0);
 
     /*
      * --- Try to contact server ---
      */
-    if (machine[0] != '\0') {		/* Server specified on command line? */
-	SetTimeout(3, 0);
-	DgramSend(socket_c, machine, PORT_NR, (char *)&req, sizeof(Pack));
-	if (get_contact_message(machine))
-	    connected = Connect_to_server(machine);
+    if (server_host[0] != '\0') {	/* Server specified on command line? */
+	DgramSend(socket_c, server_host, SERVER_PORT,
+		  (char *)&req, sizeof(contact_pack_t));
+
+	if (Get_contact_message())
+	    connected = Connect_to_server();
 
     } else {				/* Search after servers... */
-	SetTimeout(10, 0);
+	/*
+	 * Try to broadcast the 'hello servers' packet.  This won't work
+	 * on all systems, but for those who allow mortals to do broadcasts
+	 * it will mean a significant reduction in netload.  Also, some
+	 * ethernet controllers (mainly AIX ones) goes nutso when we try
+	 * to do 'manual broadcasts'.  (See below)
+	 *
+	 * Note, this method only works for class C nets, or class B nets
+	 * with subnetmasks.
+	 */
+	/*
+	sprintf(server_host, "%s255", base_addr);
+		if (DgramSend(socket_c, server_host, DEFAULT_PORT,
+			(char *)&req, sizeof(Pack))j);
+			IKKE FERDIG */
 
 	/*
 	 * Got the IP address of name-server with the last part deleted, i.e.
@@ -582,17 +623,15 @@ int main(int argc, char *argv[])
 	 * Then search through all the machines in the 129.242.16 domain.
 	 */
 D(	printf("Sending packet to:\n"); )
-	for (i=1;  i<255; i++) {
-	    sprintf(machine, "%s%d", base_addr, i);
-D(	    printf("%s\t", machine);	)
-	    while (DgramSend(socket_c, machine, PORT_NR, (char *)&req,
-			     sizeof(Pack)) < packet_size) {
-		if (packet_size != -1) {
-D(		    printf("Only transmitted %d bytes.\n", packet_size);    )
+	for (i=1; i<255; i++) {
+	    sprintf(server_host, "%s%d", base_addr, i);
+D(	    printf("%s\t", server_host);	)
+	    while (DgramSend(socket_c, server_host, SERVER_PORT, (char *)&req,
+			     sizeof(contact_pack_t)) < sizeof(contact_pack_t))
 		    sleep(1);
-		}
-	    }
-	}
+	    usleep(10000);		/* UDP isn't reliable, so we'd better */
+	}				/* not push the net. */
+
 D(	printf("\n");	)
 
 
@@ -600,8 +639,8 @@ D(	printf("\n");	)
 #ifdef	UIT
 	strcpy(base_addr, "129.242.16.");
 	for (i=1;  i<255; i++) {
-	    sprintf(machine, "%s%d", base_addr, i);
-	    while (DgramSend(socket_c, machine, PORT_NR, (char *)&req,
+	    sprintf(server_host, "%s%d", base_addr, i);
+	    while (DgramSend(socket_c, server_host, DEFAULT_PORT, (char *)&req,
 			     sizeof(Pack)) == -1)
 		sleep(1);
 	}
@@ -609,8 +648,8 @@ D(	printf("\n");	)
 #ifdef	CC
 	strcpy(base_addr, "129.242.6.");
 	for (i=1;  i<255; i++) {
-	    sprintf(machine, "%s%d", base_addr, i);
-	    while (DgramSend(socket_c, machine, PORT_NR, (char *)&req,
+	    sprintf(server_host, "%s%d", base_addr, i);
+	    while (DgramSend(socket_c, server_host, DEFAULT_PORT, (char *)&req,
 			     sizeof(Pack)) == -1)
 		sleep(1);
 	}
@@ -619,17 +658,11 @@ D(	printf("\n");	)
 	/*
 	 * Wait for answer.
 	 */
-	while (get_contact_message(machine)) {
-	    if (connected = Connect_to_server(machine))
+	while (Get_contact_message()) {
+	    if (connected = Connect_to_server())
 		break;
 	}
     }
 
-    /*
-     * Cleanup.
-     */
-    if (socket_c!=-1)	    SocketClose(socket_c);
-    if (socket_i!=-1)	    SocketClose(socket_i);
-    
     exit (connected==true ? 0 : -1);
 }

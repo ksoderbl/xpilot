@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      /users/lgserv0/disk2/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.1.1.1 1992/05/11 12:32:34 bjoerns Exp
+ * RCS:      /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.1.1.1 1992/05/11 12:32:34 bjoerns Exp
  * Log:      socklib.h,v
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0

@@ -1,4 +1,4 @@
-/* map.c,v 1.3 1992/05/11 15:31:18 bjoerns Exp
+/* map.c,v 1.12 1992/06/28 05:38:17 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,24 +8,31 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include "pilot.h"
-#include "map.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-extern void Set_world_rules(int);
+#include "global.h"
+#include "map.h"
 
-extern wireobj ships[];
+#ifndef	lint
+static char sourceid[] =
+    "@(#)map.c,v 1.12 1992/06/28 05:38:17 bjoerns Exp";
+#endif
 
-void Print_map(void);
-void Generate_random_map(void);
 
+/*
+ * Globals.
+ */
 World_map World;
 
 
 
+/*
+ * Sets as many blocks as possible to FILLED_NO_DRAW.  You won't notice the
+ * difference. :)
+ */
 void Optimize_map()
 {
     int x, y, type;
@@ -33,24 +40,24 @@ void Optimize_map()
 
     for (x=1; x<(World.x-1); x++)
 	for (y=1; y<(World.y-1); y++)
-	    if (World.type[x][y]==FILLED) {
-		type=World.type[x][y-1];
-		if ((type!=FILLED) && (type!=REC_LU) && (type!=REC_RU))
+	    if (World.block[x][y] == FILLED) {
+		type = World.block[x][y-1];
+		if ((type != FILLED) && (type != REC_LU) && (type != REC_RU))
 		    continue;
 
-		type=World.type[x][y+1];
-		if ((type!=FILLED) && (type!=REC_LD) && (type!=REC_RD))
+		type = World.block[x][y+1];
+		if ((type != FILLED) && (type != REC_LD) && (type != REC_RD))
 		    continue;
 
-		type=World.type[x-1][y];
-		if ((type!=FILLED) && (type!=REC_RD) && (type!=REC_RU))
+		type = World.block[x-1][y];
+		if ((type != FILLED) && (type != REC_RD) && (type != REC_RU))
 		    continue;
 
-		type=World.type[x+1][y];
-		if ((type!=FILLED) && (type!=REC_LD) && (type!=REC_LU))
+		type = World.block[x+1][y];
+		if ((type != FILLED) && (type != REC_LD) && (type != REC_LU))
 		    continue;
 
-		World.type[x][y]=FILLED_NO_DRAW;
+		World.block[x][y] = FILLED_NO_DRAW;
 	    }
 }
 
@@ -62,11 +69,11 @@ void Print_map(void)			/* Debugging only. */
 
     for (y=World.y-1; y>=0; y--) {
 	for (x=0; x<World.x; x++)
-	    switch (World.type[x][y]) {
+	    switch (World.block[x][y]) {
 	    case SPACE:
 		putchar(' ');
 		break;
-	    case PORT:
+	    case BASE:
 		putchar('_');
 		break;
 	    default:
@@ -81,11 +88,13 @@ void Print_map(void)			/* Debugging only. */
 
 void Init_map(void)
 {
-    World.x = 300; World.y = 300;
-    World.Ant_fuel=0;
-    World.Ant_start=0;
-    World.Ant_gravs=0;
-    World.Ant_cannon=0;
+    World.x		= 300;
+    World.y		= 300;
+    World.NumFuels	= 0;
+    World.NumBases	= 0;
+    World.NumGravs	= 0;
+    World.NumCannons	= 0;
+    World.NumWormholes	= 0;
 }
 
 
@@ -95,14 +104,14 @@ void Free_map(void)
     int x;
 
 
-    if (World.type) {
+    if (World.block) {
 	for (x=0; x<World.x; x++) {
-	    if (World.type[x])
-		free(World.type[x]);
+	    if (World.block[x])
+		free(World.block[x]);
 	    else
 		break;
 	}
-	free(World.type);
+	free(World.block);
     }
     if (World.gravity) {
 	for (x=0; x<World.x; x++) {
@@ -122,27 +131,27 @@ void Alloc_map(void)
     int x;
 
 
-    if (World.type || World.gravity)
+    if (World.block || World.gravity)
 	Free_map();
 
-    World.type = malloc(sizeof(unsigned char *)*World.x);
-    World.gravity = malloc(sizeof(vector *)*World.x);
+    World.block = (unsigned char **) malloc(sizeof(unsigned char *)*World.x);
+    World.gravity = (vector **) malloc(sizeof(vector *)*World.x);
 
-    if (World.type==NULL || World.gravity==NULL) {
-    no_more_mem:
+    if (World.block == NULL || World.gravity == NULL) {
+    out_of_mem:
 	Free_map();
-	fprintf(stderr, "XPilots: Couldn't allocate memory for "
-		"map (%d bytes).\n",
-		(sizeof(unsigned char)+sizeof(vector))*World.y*World.x +
-		(sizeof(unsigned char *)+sizeof(vector *))*World.x);
-	exit (-1);
+	error("Couldn't allocate memory for map (%d bytes)",
+	      (sizeof(unsigned char)+sizeof(vector))*World.y*World.x +
+	      (sizeof(unsigned char *)+sizeof(vector *))*World.x);
+	exit(-1);
     } else {
 	for (x=0; x<World.x; x++) {
-	    World.type[x] = malloc(sizeof(unsigned char)*World.y);
-	    World.gravity[x] = malloc(sizeof(vector)*World.y);
+	    World.block[x] = (unsigned char *)
+				malloc(sizeof(unsigned char)*World.y);
+	    World.gravity[x] = (vector *) malloc(sizeof(vector)*World.y);
 
-	    if (World.type[x]==NULL || World.gravity[x]==NULL)
-		goto no_more_mem;
+	    if (World.block[x] == NULL || World.gravity[x] == NULL)
+		goto out_of_mem;
 	}
     }
 }
@@ -154,7 +163,7 @@ void Load_map(char *map)
     FILE *fd;
     int x, y, c;
     char file[256], str[256];
-    bool done_line = False;
+    bool done_line = false;
 
 
     /*
@@ -216,95 +225,101 @@ void Load_map(char *map)
 
 	    switch (c) {
 	    case 'x': 
-		World.type[x][y] = FILLED;
+		World.block[x][y] = FILLED;
 		break;
 	    case ' ':
-		World.type[x][y] = SPACE;
+		World.block[x][y] = SPACE;
 		break;
 	    case 's': 
-		World.type[x][y] = REC_LU;
+		World.block[x][y] = REC_LU;
 		break;
 	    case 'a': 
-		World.type[x][y] = REC_RU;
+		World.block[x][y] = REC_RU;
 		break;
 	    case 'w': 
-		World.type[x][y] = REC_LD;
+		World.block[x][y] = REC_LD;
 		break;
 	    case 'q': 
-		World.type[x][y] = REC_RD;
+		World.block[x][y] = REC_RD;
 		break;
 	    case 'r':
-		World.type[x][y] = CANNON;
-		World.cannon[World.Ant_cannon].dir = UP;
-		World.cannon[World.Ant_cannon].pos.x = x;
-		World.cannon[World.Ant_cannon].pos.y = y;
-		World.cannon[World.Ant_cannon].dead_time = 0;
-		World.Ant_cannon++;
+		World.block[x][y] = CANNON;
+		World.cannon[World.NumCannons].dir = DIR_UP;
+		World.cannon[World.NumCannons].pos.x = x;
+		World.cannon[World.NumCannons].pos.y = y;
+		World.cannon[World.NumCannons].dead_time = 0;
+		World.NumCannons++;
 		break;
 	    case 'd':
-		World.type[x][y] = CANNON;
-		World.cannon[World.Ant_cannon].dir = LEFT;
-		World.cannon[World.Ant_cannon].pos.x = x;
-		World.cannon[World.Ant_cannon].pos.y = y;
-		World.cannon[World.Ant_cannon].dead_time = 0;
-		World.Ant_cannon++;
+		World.block[x][y] = CANNON;
+		World.cannon[World.NumCannons].dir = DIR_LEFT;
+		World.cannon[World.NumCannons].pos.x = x;
+		World.cannon[World.NumCannons].pos.y = y;
+		World.cannon[World.NumCannons].dead_time = 0;
+		World.NumCannons++;
 		break;
 	    case 'f':
-		World.type[x][y] = CANNON;
-		World.cannon[World.Ant_cannon].dir = RIGHT;
-		World.cannon[World.Ant_cannon].pos.x = x;
-		World.cannon[World.Ant_cannon].pos.y = y;
-		World.cannon[World.Ant_cannon].dead_time = 0;
-		World.Ant_cannon++;
+		World.block[x][y] = CANNON;
+		World.cannon[World.NumCannons].dir = DIR_RIGHT;
+		World.cannon[World.NumCannons].pos.x = x;
+		World.cannon[World.NumCannons].pos.y = y;
+		World.cannon[World.NumCannons].dead_time = 0;
+		World.NumCannons++;
 		break;
 	    case 'c':
-		World.type[x][y] = CANNON;
-		World.cannon[World.Ant_cannon].dir = DOWN;
-		World.cannon[World.Ant_cannon].pos.x = x;
-		World.cannon[World.Ant_cannon].pos.y = y;
-		World.cannon[World.Ant_cannon].dead_time = 0;
-		World.Ant_cannon++;
+		World.block[x][y] = CANNON;
+		World.cannon[World.NumCannons].dir = DIR_DOWN;
+		World.cannon[World.NumCannons].pos.x = x;
+		World.cannon[World.NumCannons].pos.y = y;
+		World.cannon[World.NumCannons].dead_time = 0;
+		World.NumCannons++;
 		break;
 	    case 'F': 
-		World.type[x][y] = FUEL;
-		World.fuel[World.Ant_fuel].pos.x = x*WORLD_SPACE+WORLD_SPACE/2;
-		World.fuel[World.Ant_fuel].pos.y = y*WORLD_SPACE+WORLD_SPACE/2;
-		World.fuel[World.Ant_fuel].left = 20.0;
-		World.Ant_fuel++;
+		World.block[x][y] = FUEL;
+		World.fuel[World.NumFuels].pos.x = x*BLOCK_SZ+BLOCK_SZ/2;
+		World.fuel[World.NumFuels].pos.y = y*BLOCK_SZ+BLOCK_SZ/2;
+		World.fuel[World.NumFuels].left = 20.0;
+		World.NumFuels++;
 		break;
 	    case '*': 
-		World.type[x][y] = PORT;
-		World.Start_points[World.Ant_start].x = x;
-		World.Start_points[World.Ant_start].y = y;
-		World.Ant_start++;
+		World.block[x][y] = BASE;
+		World.base[World.NumBases].x = x;
+		World.base[World.NumBases].y = y;
+		World.NumBases++;
 		break;
 	    case '+':
-		World.type[x][y] = POS_GRAV;
-		World.gravs[World.Ant_gravs].pos.x = x;
-		World.gravs[World.Ant_gravs].pos.y = y;
-		World.gravs[World.Ant_gravs].force = -GRAVS_POWER;
-		World.Ant_gravs++;
+		World.block[x][y] = POS_GRAV;
+		World.grav[World.NumGravs].pos.x = x;
+		World.grav[World.NumGravs].pos.y = y;
+		World.grav[World.NumGravs].force = -GRAVS_POWER;
+		World.NumGravs++;
 		break;
 	    case '-':
-		World.type[x][y] = NEG_GRAV;
-		World.gravs[World.Ant_gravs].pos.x = x;
-		World.gravs[World.Ant_gravs].pos.y = y;
-		World.gravs[World.Ant_gravs].force = GRAVS_POWER;
-		World.Ant_gravs++;
+		World.block[x][y] = NEG_GRAV;
+		World.grav[World.NumGravs].pos.x = x;
+		World.grav[World.NumGravs].pos.y = y;
+		World.grav[World.NumGravs].force = GRAVS_POWER;
+		World.NumGravs++;
 		break;
 	    case '>':
-		World.type[x][y] = CWISE_GRAV;
-		World.gravs[World.Ant_gravs].pos.x = x;
-		World.gravs[World.Ant_gravs].pos.y = y;
-		World.gravs[World.Ant_gravs].force = GRAVS_POWER;
-		World.Ant_gravs++;
+		World.block[x][y] = CWISE_GRAV;
+		World.grav[World.NumGravs].pos.x = x;
+		World.grav[World.NumGravs].pos.y = y;
+		World.grav[World.NumGravs].force = GRAVS_POWER;
+		World.NumGravs++;
 		break;
 	    case '<':
-		World.type[x][y] = ACWISE_GRAV;
-		World.gravs[World.Ant_gravs].pos.x = x;
-		World.gravs[World.Ant_gravs].pos.y = y;
-		World.gravs[World.Ant_gravs].force = -GRAVS_POWER;
-		World.Ant_gravs++;
+		World.block[x][y] = ACWISE_GRAV;
+		World.grav[World.NumGravs].pos.x = x;
+		World.grav[World.NumGravs].pos.y = y;
+		World.grav[World.NumGravs].force = -GRAVS_POWER;
+		World.NumGravs++;
+		break;
+	    case 'W':
+		World.block[x][y] = WORMHOLE;
+		World.wormhole[World.NumWormholes].x = x;
+		World.wormhole[World.NumWormholes].y = y;
+		World.NumWormholes++;
 		break;
 	    case '0':
 	    case '1':
@@ -319,27 +334,44 @@ void Load_map(char *map)
 		if (BIT(World.rules->mode, TIMING)) {
 		    World.check[c-'0'].x = x;
 		    World.check[c-'0'].y = y;
-		    World.Ant_check++;
-		    World.type[x][y] = CHECK;
-		} else World.type[x][y] = SPACE;
+		    World.NumChecks++;
+		    World.block[x][y] = CHECK;
+		} else World.block[x][y] = SPACE;
 		break;
 
 	    default:
-		World.type[x][y] = SPACE;
+		World.block[x][y] = SPACE;
 		break;
 	    }
 	}
 
-	printf("World can take a maximum of %d players.\n", World.Ant_start);
+#ifndef	SILENT
+	printf("World can take a maximum of %d players.\n",
+	       World.NumBases);
+#endif
 
 	fclose(fd);
 
     } else {
-	perror("Map file");
+	error(file);
 	Generate_random_map();
     }
 
+    if (World.NumWormholes == 1) {
+	error("You're not allowed to have only 1 wormhole, removing it");
+	World.NumWormholes = 0;
+	for (x=0; x<World.x; x++)
+	    for (y=0; y<World.y; y++)
+		if (World.block[x][y] == WORMHOLE)
+		    World.block[x][y] = SPACE;
+    }
+
     Optimize_map();
+
+    if (WantedNumRobots == -1)
+	WantedNumRobots = (World.NumBases / 2);
+    if (BIT(World.rules->mode, TIMING))
+	WantedNumRobots = 0;
 
 D(  Print_map();    )
 }
@@ -358,7 +390,9 @@ void Generate_random_map(void)
     Init_map();
     Alloc_map();
 
-    printf("Creating random map.\n");
+#ifndef	SILENT
+    puts("Creating random map.");
+#endif
 
     Set_world_rules(0);
     strcpy(World.name, "Random map");
@@ -367,68 +401,69 @@ void Generate_random_map(void)
     for (y=World.y-1; y >= 0 ; y--)
 	for (x=0; x<World.x; x++) {
 	    if ((y==World.y-1) || (y==0) || (x==0) || (x==World.x-1)) 
-		World.type[x][y] = FILLED;
+		World.block[x][y] = FILLED;
 	    else if (((rand()%20)==0) && ((x==1)||(x==World.x-2))) {
 		if (x==1)
-		    World.type[x][y] = REC_LU;
+		    World.block[x][y] = REC_LU;
 		else
-		    World.type[x][y] = REC_RU;
+		    World.block[x][y] = REC_RU;
 	    }
 	    else
 		switch (rand()%11137) {
 		case 0:
 		case 1:
-		    World.type[x][y] = FUEL;
-		    World.fuel[World.Ant_fuel].pos.x =
-			x*WORLD_SPACE+WORLD_SPACE/2;
-		    World.fuel[World.Ant_fuel].pos.y =
-			y*WORLD_SPACE+WORLD_SPACE/2;
-		    World.fuel[World.Ant_fuel].left = 20.0;
-		    World.Ant_fuel++;
+		    World.block[x][y] = FUEL;
+		    World.fuel[World.NumFuels].pos.x =
+			x*BLOCK_SZ+BLOCK_SZ/2;
+		    World.fuel[World.NumFuels].pos.y =
+			y*BLOCK_SZ+BLOCK_SZ/2;
+		    World.fuel[World.NumFuels].left = 20.0;
+		    World.NumFuels++;
 		    break;
 		case 10:
 		case 11:
-		    World.type[x][y] = FILLED;
+		    World.block[x][y] = FILLED;
 		    break;
 		case 20:
-		    World.type[x][y] = REC_LU;
+		    World.block[x][y] = REC_LU;
 		    break;
 		case 30:
-		    World.type[x][y] = REC_RU;
+		    World.block[x][y] = REC_RU;
 		    break;
 		case 40:
 		    if (rand()%2)
-			World.type[x][y] = REC_LD;
+			World.block[x][y] = REC_LD;
 		    else
-			World.type[x][y] = REC_RD;
+			World.block[x][y] = REC_RD;
 		    break;
 		case 50:
-		    World.gravs[World.Ant_gravs].pos.x = x;
-		    World.gravs[World.Ant_gravs].pos.y = y;
-		    World.Ant_gravs++;
+		    World.grav[World.NumGravs].pos.x = x;
+		    World.grav[World.NumGravs].pos.y = y;
+		    World.NumGravs++;
 		    if (rand()%2) {
-			World.gravs[World.Ant_gravs].force = -GRAVS_POWER;
-			World.type[x][y] = NEG_GRAV;
+			World.grav[World.NumGravs].force = -GRAVS_POWER;
+			World.block[x][y] = NEG_GRAV;
 		    } else {
-			World.gravs[World.Ant_gravs].force = GRAVS_POWER;
-			World.type[x][y] = POS_GRAV;
+			World.grav[World.NumGravs].force = GRAVS_POWER;
+			World.block[x][y] = POS_GRAV;
 		    }
 		    break;
 		default:
-		    World.type[x][y] = SPACE;
+		    World.block[x][y] = SPACE;
 		    break;
 		}
 	}
 
     for (x=1; x<World.x-1; x++)
 	for (y=World.y-1; y>1; y--) {
-	    i = World.type[x][y-1];
-	    if (((i==FILLED) || (i==REC_LU) || (i==REC_RU) || (i==FUEL)) &&
-		((rand()%27)==0)) {
-		World.type[x][y] = PORT;
-		World.Start_points[World.Ant_start].x = x;
-		World.Start_points[World.Ant_start].y = y;
-		World.Ant_start++;
+	    i = World.block[x][y-1];
+	    if ((i == FILLED || i == REC_LU || i == REC_RU || i == FUEL)
+		&& (rand()%27) == 0) {
+
+		World.block[x][y] = BASE;
+		World.base[World.NumBases].x = x;
+		World.base[World.NumBases].y = y;
+		World.NumBases++;
 	    }
 	}
 }

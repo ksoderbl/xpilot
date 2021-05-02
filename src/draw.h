@@ -1,4 +1,4 @@
-/* draw.h,v 1.3 1992/05/11 15:31:13 bjoerns Exp
+/* draw.h,v 1.9 1992/06/28 05:38:11 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,7 +8,10 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#define ANT_COLORS	    4
+#ifndef	DRAW_H
+#define	DRAW_H
+
+#define NUM_COLORS	    4
 
 #define BLACK		    0
 #define WHITE		    1
@@ -36,7 +39,6 @@
 extern char dashes[];
 #endif
 
-#define CENTER		    (FULL/2)
 #define HUD_SIZE	    90		    /* Size/2 of HUD lines */
 #define HUD_OFFSET	    20		    /* Hud line offset */
 #define FUEL_GAUGE_OFFSET   6
@@ -49,3 +51,19 @@ typedef struct {
     char txt[MSG_LEN];
     long life;
 } message_t;
+
+#define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
+#define HaveColor(d)  (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor)
+
+#define FRAC(py)	    ((int)((py) * 1024.0/768.0))
+#define ShadowDrawString(i, d, w, gc, x, y, str, fg, bg)	\
+{								\
+	if (BIT(Players[i]->disp_type, DT_HAVE_COLOR)) {	\
+	    XSetForeground(d, gc, bg);				\
+	    XDrawString(d, w, gc, x+1, y+1, str, strlen(str));	\
+	}							\
+	XSetForeground(d, gc, fg);				\
+	XDrawString(d, w, gc, x-1, y-1, str, strlen(str));	\
+}
+
+#endif

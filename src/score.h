@@ -1,4 +1,4 @@
-/* score.h,v 1.3 1992/05/11 15:31:36 bjoerns Exp
+/* score.h,v 1.6 1992/06/25 18:11:09 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -29,7 +29,7 @@
 #define PTS_SUICIDE	    	-25	/* Points if you are #$@ enough to */
 					/* commit suicide. */
 
-#define CANNON_RATING	    	0
+#define CANNON_RATING	    	-500
 #define WALL_RATING	    	2000
 
 #define RATE_SIZE	    	20

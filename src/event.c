@@ -1,4 +1,4 @@
-/* event.c,v 1.3 1992/05/11 15:31:15 bjoerns Exp
+/* event.c,v 1.12 1992/06/28 05:38:14 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,25 +8,32 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
 #include <X11/Xproto.h>
-#include "pilot.h"
-#include "map.h"
+#include <X11/Xlib.h>
+#include <X11/Xos.h>
+#include <X11/keysym.h>
+#ifdef	apollo
+#    include <X11/ap_keysym.h>
+#endif
+
+#include "global.h"
 #include "score.h"
+#include "map.h"
+
+#ifndef	lint
+static char sourceid[] =
+    "@(#)event.c,v 1.12 1992/06/28 05:38:14 bjoerns Exp";
+#endif
 
 #define SWAP(_a, _b)	    {double _tmp = _a; _a = _b; _b = _tmp;}
 
 #define CONTROL_DELAY	100
 
-extern player *Players[];
-extern World_map    World;
-extern int Antall;
 
-static char msg[MSG_LEN];
-
-void Pick_startpos(int);
-void Place_mine(int);
+/*
+ * Globals.
+ */
+static char		msg[MSG_LEN];
 
 
 
@@ -40,7 +47,7 @@ void Refuel(int ind)
     if (!BIT(pl->have, OBJ_REFUEL))
 	return;
 
-    for (i=0; i<World.Ant_fuel; i++) {
+    for (i=0; i<World.NumFuels; i++) {
 	l=LENGTH(pl->pos.x-World.fuel[i].pos.x, 
 		 pl->pos.y-World.fuel[i].pos.y);
 	if (min_dist > l) {
@@ -54,52 +61,92 @@ void Refuel(int ind)
 }
 
 
+static keys_t Lookup_key(KeySym ks, player *pl)
+{
+    keys_t ret = KEY_DUMMY;
+    int i = 0;
+
+
+    while (i < MAX_KEY_DEFS && pl->keyDefs[i].key)
+	if (pl->keyDefs[i].keysym == ks) {
+	    ret = pl->keyDefs[i].key;
+	    break;
+	}
+    else
+	i++;
+
+    return (ret);
+}
+
 
 void Key_event(int ind, XEvent *event)
 {
-    KeySym  KS;
-    int	    i, xi, yi, min_ind;
-    player  *pl;
-    double  min, l;
+    KeySym  	KS;
+    int	    	i, xi, yi, min_ind;
+    player  	*pl;
+    double  	min, l;
+    keys_t	key;
 
 
-    pl=Players[ind];
+    pl = Players[ind];
 
-    KS=XLookupKeysym(&(event->xkey), 0);
+    KS = XLookupKeysym(&(event->xkey), 0);
+    key = Lookup_key(KS, pl);
 
-    if (!BIT(pl->status, PLAYING) &&
-	KS!=XK_p && KS!=XK_Escape && KS!=XK_Next && KS!=XK_Prior &&
-	KS!=XK_Up && KS!=XK_Down && KS!=XK_Left && KS!=XK_Right &&
-	KS!=XK_KP_Multiply && KS!=XK_KP_Divide &&
-	KS!=XK_Linefeed && KS!=XK_KP_Add && KS!=XK_KP_Subtract)
-	return;
+    if (!BIT(pl->status, PLAYING))		/* Allow these functions */
+	switch (key) {				/* while you're 'dead'. */
+	case KEY_PAUSE:
+	case KEY_LOCK_NEXT:
+	case KEY_LOCK_PREV:
+	case KEY_ID_MODE:
+	case KEY_TOGGLE_VELOCITY:
+	case KEY_TOGGLE_COMPASS:
+	case KEY_SWAP_SETTINGS:
+	case KEY_INCREASE_POWER:
+	case KEY_DECREASE_POWER:
+	case KEY_INCREASE_TURNSPEED:
+	case KEY_DECREASE_TURNSPEED:
+	case KEY_SLOWDOWN:
+	case KEY_SPEEDUP:
+	    break;
+	default:
+	    return;
+	}
 
 
     if (event->type == KeyPress) {	/* --- KEYPRESS --- */
-	switch (KS) {
+	switch (key) {
 
-	case XK_Left:
-	case XK_Right:
-	case XK_Next:
-	case XK_Prior:
-	    i = get_ind[pl->lock.pl_id];
-	    if (Antall > 1)
+	case KEY_SLOWDOWN:
+	    if (Owner(pl->realname)) {
+		Delay += 5;
+		break;
+	    }
+	case KEY_SPEEDUP:
+	    if (Owner(pl->realname)) {
+		Delay -= 5;
+		if (Delay < 0)
+		    Delay = 0;
+		break;
+	    }
+	case KEY_LOCK_NEXT:
+	case KEY_LOCK_PREV:
+	    i = GetInd[pl->lock.pl_id];
+	    if (NumPlayers > 1)
 		do {
 		    if ((KS==XK_Prior) || (KS==XK_Left))
 			i--;
 		    else
 			i++;
-		    i = MOD(i, Antall);
+		    i = MOD(i, NumPlayers);
 		    pl->lock.pl_id = Players[i]->id;
 		    pl->lock.tagged = LOCK_PLAYER;
 		} while (i == ind);
 	    break;
 
-	case XK_Up:
-	case XK_Down:
-	case XK_Select:
+	case KEY_LOCK_CLOSE:
 	    min = DBL_MAX;
-	    for (i=0; i<Antall; i++) {
+	    for (i=0; i<NumPlayers; i++) {
 		if (TEAM(ind, i) || !BIT(Players[i]->status, PLAYING))
 		    continue;
 		l=LENGTH(Players[i]->pos.x - pl->pos.x,
@@ -116,21 +163,21 @@ void Key_event(int ind, XEvent *event)
 		pl->lock.tagged = LOCK_NONE;
 	    break;
 
-	case XK_Home:
-	    xi=(int)pl->pos.x/WORLD_SPACE;
-	    yi=(int)pl->pos.y/WORLD_SPACE;
-	    if ((pl->velocity<(0.5 + LENGTH(World.gravity[xi][yi].x,
-					    World.gravity[xi][yi].y))) &&
-		(World.type[xi][yi]==PORT)) {
+	case KEY_CHANGE_HOME:
+	    xi=(int)pl->pos.x/BLOCK_SZ;
+	    yi=(int)pl->pos.y/BLOCK_SZ;
+	    if (/*(pl->velocity<(0.5 + LENGTH(World.gravity[xi][yi].x,
+					    World.gravity[xi][yi].y))) && */
+		(World.block[xi][yi]==BASE)) {
 		msg[0]='\0';
-		for (i=0; i<World.Ant_start; i++) {
-		    if ((World.Start_points[i].x==xi) &&
-			(World.Start_points[i].y==yi) && (i!=pl->home_base)) {
+		for (i=0; i<World.NumBases; i++) {
+		    if ((World.base[i].x==xi) &&
+			(World.base[i].y==yi) && (i!=pl->home_base)) {
 			pl->home_base=i;
 			sprintf(msg, "%s has changed home base.", pl->name);
 		    }
 		}
-		for (i=0; i<Antall; i++)
+		for (i=0; i<NumPlayers; i++)
 		    if ((i!=ind) && (pl->home_base==Players[i]->home_base)) {
 			Pick_startpos(i);
 			sprintf(msg, "%s has taken over %s's home base.",
@@ -141,63 +188,61 @@ void Key_event(int ind, XEvent *event)
 	    }
 	    break;
 
-	case XK_Meta_R:
-	case XK_space:
+	case KEY_SHIELD:
 	    if (BIT(pl->have, OBJ_SHIELD))
 		SET_BIT(pl->used, OBJ_SHIELD);
 	    break;
 
-	case XK_Return:
+	case KEY_FIRE_SHOT:
 	    Fire_shot(ind, OBJ_SHOT, pl->dir);
 	    for (i=0; i<pl->extra_shots; i++) {
 		Fire_shot(ind, OBJ_SHOT,
-			  MOD(pl->dir + (1+i)*SHOTS_ANGLE, RESOLUTION));
+			  MOD(pl->dir + (1+i)*SHOTS_ANGLE, RES));
 		Fire_shot(ind, OBJ_SHOT,
-			  MOD(pl->dir - (1+i)*SHOTS_ANGLE, RESOLUTION));
+			  MOD(pl->dir - (1+i)*SHOTS_ANGLE, RES));
 	    }
 	    if (BIT(pl->have, OBJ_REAR_SHOT))
 		Fire_shot(ind, OBJ_SHOT,
-			  MOD(pl->dir+RESOLUTION/2, RESOLUTION));
+			  MOD(pl->dir+RES/2, RES));
 	    break;
 	    
-	case XK_backslash:
-	case XK_Linefeed:
+	case KEY_FIRE_MISSILE:
 	    if (pl->missiles > 0)
 		Fire_shot(ind, OBJ_SMART_SHOT, pl->dir);
 	    break;
 	    
-	case XK_Tab:
+	case KEY_DROP_MINE:
 	    if (pl->mines > 0) {
 		Place_mine(ind);
 		pl->mines--;
 	    }
 	    break;
 
-	case XK_a:
+	case KEY_TURN_LEFT:
 	    pl->turnacc+=pl->turnspeed;
 	    break;
 	    
-	case XK_s:
+	case KEY_TURN_RIGHT:
 	    pl->turnacc-=pl->turnspeed;
 	    break;
 
-	case XK_q:
+	case KEY_SELF_DESTRUCT:
 	    TOGGLE_BIT(pl->status, SELF_DESTRUCT);
 	    if (BIT(pl->status, SELF_DESTRUCT))
 		pl->count = 150;
 	    break;
 
-	case XK_i:
+	case KEY_ID_MODE:
 	    TOGGLE_BIT(pl->status, ID_MODE);
 	    break;
 
-	case XK_p:
-	    xi=(int)pl->pos.x/WORLD_SPACE;
-	    yi=(int)pl->pos.y/WORLD_SPACE;
+	case KEY_PAUSE:
+	    xi = (int)pl->pos.x / BLOCK_SZ;
+	    yi = (int)pl->pos.y / BLOCK_SZ;
 	    if ((pl->velocity<(0.5 + LENGTH(World.gravity[xi][yi].x,
 					    World.gravity[xi][yi].y))) &&
-		(World.Start_points[pl->home_base].x==xi &&
-		 World.Start_points[pl->home_base].y==yi)) {
+		(World.base[pl->home_base].x == xi &&
+		 World.base[pl->home_base].y == yi)) {
 		if (!BIT(pl->status, PAUSE)) {	    /* Turn pause mode on */
 		    pl->count = MIN_PAUSE;
 		    SET_BIT(pl->status, PAUSE);
@@ -212,76 +257,76 @@ void Key_event(int ind, XEvent *event)
 	    }
 	    break;
 		
-	case XK_v:
+	case KEY_TOGGLE_VELOCITY:
 	    TOGGLE_BIT(pl->status, VELOCITY_GAUGE);
 	    break;
 
-	case XK_c:
+	case KEY_TOGGLE_COMPASS:
 	    if (!BIT(pl->have, OBJ_COMPASS))
 		break;
 	    TOGGLE_BIT(pl->used, OBJ_COMPASS);
 	    if (BIT(pl->used, OBJ_COMPASS))
-		if (Antall > 1) {
-		    pl->lock.tagged=LOCK_PLAYER;
+		if (NumPlayers > 1) {
+		    pl->lock.tagged = LOCK_PLAYER;
 		} else
-		    pl->lock.tagged=LOCK_NONE;
+		    pl->lock.tagged = LOCK_NONE;
 	    break;
 
-	case XK_Escape:
+	case KEY_SWAP_SETTINGS:
 	    SWAP(pl->power, pl->power_s);
 	    SWAP(pl->turnspeed, pl->turnspeed_s);
 	    SWAP(pl->turnresistance, pl->turnresistance_s);
 	    pl->control_count = CONTROL_DELAY;
 	    break;
 
-	case XK_f:		    /* Thanks to our disagreement, you are */
-	case XK_Control_L:	    /* left free to choose. :) */
+	case KEY_REFUEL:
 	    pl->fuel_count = 150;
 	    Refuel(ind);
 	    break;
 
-	case XK_KP_Multiply:
+	case KEY_INCREASE_POWER:
 	    pl->power *= 1.10;
 	    pl->power=MIN(pl->power, MAX_PLAYER_POWER);
 	    pl->control_count = CONTROL_DELAY;
 	    break;
 
-	case XK_KP_Divide:
+	case KEY_DECREASE_POWER:
 	    pl->power *= 0.90;
 	    pl->power=MAX(pl->power, MIN_PLAYER_POWER);
 	    pl->control_count = CONTROL_DELAY;
 	    break;
 
-	case XK_KP_Add:
+	case KEY_INCREASE_TURNSPEED:
 	    if (pl->turnacc == 0.0)
 		pl->turnspeed *= 1.05;
 	    pl->turnspeed=MIN(pl->turnspeed, MAX_PLAYER_TURNSPEED);
 	    pl->control_count = CONTROL_DELAY;
 	    break;
 
-	case XK_KP_Subtract:
+	case KEY_DECREASE_TURNSPEED:
 	    if (pl->turnacc == 0.0)
 		pl->turnspeed *= 0.95;
 	    pl->turnspeed=MAX(pl->turnspeed, MIN_PLAYER_TURNSPEED);
 	    pl->control_count = CONTROL_DELAY;
 	    break;
-
+/*
 	case XK_KP_0:
 	case XK_0:
 	    if (BIT(pl->used, OBJ_TRAINER))
 		pl->vel.x=pl->vel.y=0.0;
 	    pl->turnacc = 0.0;
 	    break;
-
-	case XK_Shift_L:
-	case XK_Shift_R:
+*/
+	case KEY_THRUST:
 	    SET_BIT(pl->status, THRUSTING);
 	    break;
 
-	case XK_Delete:
-	case XK_BackSpace:
-	    if (BIT(pl->have, OBJ_CLOAKING_DEVICE))
+	case KEY_CLOAK:
+	    if (pl->cloaks > 0)
+	    {
+		pl->updateVisibility = 1;
 		TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
+	    }
 	    break;
 
 #ifdef	CHEAT
@@ -342,28 +387,25 @@ void Key_event(int ind, XEvent *event)
 
 
     else if (event->type == KeyRelease) {	/* --- KEYRELEASE --- */
-	switch (KS) {
-	case XK_a:
+	switch (key) {
+	case KEY_TURN_LEFT:
 	    pl->turnacc-=pl->turnspeed;
 	    break;
 
-	case XK_s:
+	case KEY_TURN_RIGHT:
 	    pl->turnacc+=pl->turnspeed;
 	    break;
 
-	case XK_Control_L:
-	case XK_f:
+	case KEY_REFUEL:
 	    CLR_BIT(pl->used, OBJ_REFUEL);
 	    pl->fuel_count=20;
 	    break;
 
-	case XK_Meta_R:
-	case XK_space:
+	case KEY_SHIELD:
 	    CLR_BIT(pl->used, OBJ_SHIELD);
 	    break;
 
-	case XK_Shift_L:
-	case XK_Shift_R:
+	case KEY_THRUST:
 	    CLR_BIT(pl->status, THRUSTING);
 	    break;
 

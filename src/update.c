@@ -1,4 +1,4 @@
-/* update.c,v 1.3 1992/05/11 15:31:42 bjoerns Exp
+/* update.c,v 1.10 1992/06/28 05:38:32 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -8,10 +8,17 @@
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include "pilot.h"
+#include "global.h"
 #include "map.h"
 #include "score.h"
 #include "draw.h"
+
+#ifndef	lint
+static char sourceid[] =
+    "@(#)update.c,v 1.10 1992/06/28 05:38:32 bjoerns Exp";
+#endif
+
+
 
 #define speed_limit(obj) {					\
     if (ABS((obj).velocity>SPEED_LIMIT)) {			\
@@ -22,10 +29,10 @@
 }
 
 #define update_object_pos(obj)	{					    \
-    int x=(int)((obj).pos.x/WORLD_SPACE), y=(int)((obj).pos.y/WORLD_SPACE); \
+    int x=(int)((obj).pos.x/BLOCK_SZ), y=(int)((obj).pos.y/BLOCK_SZ); \
     if (x<0 || x>=World.x || y<0 || y>=World.y) {			    \
-	LIMIT((obj).pos.x, 0.0, WORLD_SPACE*World.x-1.0);		    \
-	LIMIT((obj).pos.y, 0.0, WORLD_SPACE*World.y-1.0);		    \
+	LIMIT((obj).pos.x, 0.0, BLOCK_SZ*World.x-1.0);		    \
+	LIMIT((obj).pos.y, 0.0, BLOCK_SZ*World.y-1.0);		    \
     } else {								    \
 	if (!BIT((obj).status, GRAVITY)) {				    \
 	    (obj).pos.x += (obj).vel.x += (obj).acc.x;			    \
@@ -42,50 +49,43 @@
 
 
 
-extern int Antall;
-extern player *Players[];
-extern object *Shots[];
-extern int Ant_Shots;
-extern double Gravity;
-extern World_map World;
-extern double tbl_sin[];
-
-extern void Kill_player(int);
-extern void Check_collision(void);
-extern void Cannon_fire(int);
-extern void Turn_thrust(int);
-extern void Thrust(int);
-
 static char msg[MSG_LEN];
+
+extern unsigned long loops;
 
 
 
 /********** **********
  * Updating objects and the like.
-*/
-
+ */
 void Update_objects(void)
 {
     int i, j;
     player *pl;
 
 
+
+    /*
+     * Update robots.
+     */
+    Update_robots();
+
     /*
      * Special items.
      */
-    j=rand();
-    for (i=0; i<NO_OF_ITEMS; i++)
+    j = rand();
+    for (i=0; i<NUM_ITEMS; i++)
 	if ((j%World.items[i].chance) == 0)
-	    if (World.items[i].ant < World.items[i].max) {
-		World.items[i].ant++;
+	    if (World.items[i].num < World.items[i].max) {
+		World.items[i].num++;
 		Place_item(i);
 	    }
 
     /*
      * Let the fuel stations regenerate some fuel.
      */
-    for(i=0; i<World.Ant_fuel; i++) {
-	World.fuel[i].left += STATION_REGENERATION*Antall;
+    for(i=0; i<World.NumFuels; i++) {
+	World.fuel[i].left += STATION_REGENERATION*NumPlayers;
 	if (World.fuel[i].left > MAX_STATION_FUEL)
 	    World.fuel[i].left = MAX_STATION_FUEL;
     }
@@ -93,17 +93,17 @@ void Update_objects(void)
     /*
      * Update shots.
      */
-    for (i=0; i<Ant_Shots; i++) {
-	update_object_pos(*Shots[i]);
+    for (i=0; i<NumObjs; i++) {
+	update_object_pos(*Obj[i]);
 
-	if (Shots[i]->type == OBJ_SMART_SHOT)
+	if (Obj[i]->type == OBJ_SMART_SHOT)
 	    Move_smart_shot(i);
     }
 
     /*
      * Updating cannons, maybe a little bit of fireworks too?
      */
-    for (i=0; i<World.Ant_cannon; i++) {
+    for (i=0; i<World.NumCannons; i++) {
 	if (World.cannon[i].dead_time > 0) {
 	    World.cannon[i].dead_time--;
 	    continue;
@@ -121,8 +121,8 @@ void Update_objects(void)
      * Player loop. Computes miscellaneous updates.
      *
      */
-    for (i=0; i<Antall; i++) {
-	pl=Players[i];
+    for (i=0; i<NumPlayers; i++) {
+	pl = Players[i];
 
 	/* Limits. */
 	LIMIT(pl->power, MIN_PLAYER_POWER, MAX_PLAYER_POWER);
@@ -137,16 +137,17 @@ void Update_objects(void)
 	if (pl->count>0) {
 	    pl->count--;
 	    if (!BIT(pl->status, PLAYING)) {
-		pl->vel.x = (WORLD_SPACE*World.Start_points[pl->home_base].x
-			     + WORLD_SPACE/2 - pl->pos.x) / (pl->count+1);
-		pl->vel.y = (WORLD_SPACE*World.Start_points[pl->home_base].y
-			     + WORLD_SPACE/2 - pl->pos.y) / (pl->count+1);
+		pl->vel.x = (BLOCK_SZ*World.base[pl->home_base].x
+			     + BLOCK_SZ/2 - pl->pos.x) / (pl->count+1);
+		pl->vel.y = (BLOCK_SZ*World.base[pl->home_base].y
+			     + BLOCK_SZ/2 - pl->pos.y) / (pl->count+1);
 		goto update;
 	    }
 	}
 
 	if (pl->count == 0) {
-	    pl->count=-1;
+	    pl->count = -1;
+
 	    if (!BIT(pl->status, PLAYING)) {
 		SET_BIT(pl->status, PLAYING);
 		Go_home(i);
@@ -172,35 +173,52 @@ void Update_objects(void)
 	/*
 	 * Compute turn
 	 */
-	pl->turnvel+=pl->turnacc;
-	pl->turnvel*=pl->turnresistance;
-	pl->double_dir += pl->turnvel;
-	if (pl->double_dir < 0)
-	    pl->double_dir+=RESOLUTION;
-	if (pl->double_dir > RESOLUTION)
-	    pl->double_dir-=RESOLUTION;
+	pl->turnvel	+= pl->turnacc;
+	pl->turnvel	*= pl->turnresistance;
+	pl->double_dir	+= pl->turnvel;
 
-	pl->dir=pl->double_dir;
-	pl->dir %= RESOLUTION;
+	if (pl->double_dir < 0)
+	    pl->double_dir += RES;
+	if (pl->double_dir >= RES)
+	    pl->double_dir -= RES;
+
+/*	if (pl->double_dir < 0)
+	    pl->double_dir -= RES * (((int)pl->double_dir)/RES);
+	if (pl->double_dir >= RES)
+	    pl->double_dir -= RES * (((int)pl->double_dir)/RES);
+*/
+	pl->dir = pl->double_dir;
+	pl->dir %= RES;
 
 
 	/*
 	 * Compute energy drainage
 	 */
 	if (BIT(pl->used, OBJ_SHIELD))
-	    pl->fuel+=ED_SHIELD;
+	    pl->fuel += ED_SHIELD;
 
 	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
-	    pl->fuel+=ED_CLOAKING_DEVICE;
+	    pl->fuel += ED_CLOAKING_DEVICE;
 
-	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
-	    if ((rand()%CLOAK_FAILURE) == 0) {
-		CLR_BIT(pl->status, INVISIBLE);
-	    } else {
-		SET_BIT(pl->status, INVISIBLE);
-	    }
-	else
-	    CLR_BIT(pl->status, INVISIBLE);
+#define UPDATE_RATE 100
+
+	for (j = 0; j < NumPlayers; j++)
+	{
+	    if (pl->forceVisible)
+		Players[j]->visibility[i].canSee = 1;
+
+	    if (i == j || !BIT(Players[j]->used, OBJ_CLOAKING_DEVICE))
+		pl->visibility[j].canSee = 1;
+	    else
+		if (pl->updateVisibility || Players[j]->updateVisibility ||
+		    rand() % UPDATE_RATE <
+		    ABS(loops - pl->visibility[j].lastChange))
+		{
+		    pl->visibility[j].lastChange = loops;
+		    pl->visibility[j].canSee = rand() % (pl->sensors + 1) >
+			(rand() % (Players[j]->cloaks + 1));
+		}
+	}
 
 	if (BIT(pl->used, OBJ_REFUEL)) {
 	    if ((LENGTH((pl->pos.x-World.fuel[pl->fs].pos.x),
@@ -210,20 +228,20 @@ void Update_objects(void)
 	    } else
 		if (World.fuel[pl->fs].left > 5.0) {
 		    World.fuel[pl->fs].left -= 5.0;
-		    pl->fuel+=5.0;
+		    pl->fuel += 5.0;
 		} else {
-		    pl->fuel+=World.fuel[pl->fs].left;
-		    World.fuel[pl->fs].left=0.0;
+		    pl->fuel += World.fuel[pl->fs].left;
+		    World.fuel[pl->fs].left = 0.0;
 		    CLR_BIT(pl->used, OBJ_REFUEL);
 		}
 	}
 	if (pl->fuel <= 0.0) {
-	    pl->fuel=0.0;
+	    pl->fuel = 0.0;
 	    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_CLOAKING_DEVICE);
 	    CLR_BIT(pl->status, THRUSTING);
 	}
 	if (pl->fuel > MAX_PLAYER_FUEL) {
-	    pl->fuel=MAX_PLAYER_FUEL;
+	    pl->fuel = MAX_PLAYER_FUEL;
 	    CLR_BIT(pl->used, OBJ_REFUEL);
 	}
 
@@ -231,16 +249,25 @@ void Update_objects(void)
 	 * Update acceleration vector etc.
 	 */
 	if (BIT(pl->status, THRUSTING)) {
-	    pl->acc.x = pl->power *
-		tcos(pl->dir) / pl->mass;
-	    pl->acc.y = pl->power *
-		tsin(pl->dir) / pl->mass;
-	    pl->fuel -= (pl->power*0.02);   /* Decrement fuel */
+	    pl->acc.x = pl->power * tcos(pl->dir) / pl->mass;
+	    pl->acc.y = pl->power * tsin(pl->dir) / pl->mass;
+	    pl->fuel -= pl->power * 0.02;	/* Decrement fuel */
 	} else {
-	    pl->acc.x=pl->acc.y=0.0;
+	    pl->acc.x = pl->acc.y = 0.0;
 	}
 
 	pl->mass = pl->emptymass + (pl->fuel*0.005);
+
+	if (BIT(pl->status, WARPING)) {
+	    int dest;
+
+	    dest = rand() % World.NumWormholes;
+	    pl->pos.x = World.wormhole[dest].x * BLOCK_SZ + 
+		(pl->vel.x < 0.0 ? -BLOCK_SZ : BLOCK_SZ) * 1.5;
+	    pl->pos.y = World.wormhole[dest].y * BLOCK_SZ +
+		(pl->vel.y < 0.0 ? -BLOCK_SZ : BLOCK_SZ) * 1.5;
+	    CLR_BIT(pl->status, WARPING);
+	}
 
     update:
 	if (!BIT(pl->status, PAUSE))
@@ -269,9 +296,9 @@ void Update_objects(void)
 	switch (pl->lock.tagged) {
 	case LOCK_PLAYER:
 	    pl->lock.distance = LENGTH(pl->pos.x -
-				     Players[get_ind[pl->lock.pl_id]]->pos.x,
+				     Players[GetInd[pl->lock.pl_id]]->pos.x,
 				     pl->pos.y -
-				     Players[get_ind[pl->lock.pl_id]]->pos.y);
+				     Players[GetInd[pl->lock.pl_id]]->pos.y);
 	    pl->sensor_range = MAX(pl->fuel*ENERGY_RANGE_FACTOR,
 				   VISIBILITY_DISTANCE);
 	    break;
@@ -282,10 +309,22 @@ void Update_objects(void)
 
 	pl->used &= pl->have;
 
-	pl->world.x=pl->pos.x-CENTER;	    /* Scroll */
-	pl->world.y=pl->pos.y-CENTER;
+	pl->world.x = pl->pos.x-CENTER;	    /* Scroll */
+	pl->world.y = pl->pos.y-CENTER;
     }
 
+    for (i = 0; i < NumPlayers; i++)
+    {
+	Players[i]->updateVisibility = 0;
+
+	if (Players[i]->forceVisible)
+	{
+	    Players[i]->forceVisible--;
+
+	    if (!Players[i]->forceVisible)
+		Players[i]->updateVisibility = 1;
+	}
+    }
 
     /*
      * Checking for collision, updating score etc. (see collision.c)
@@ -296,15 +335,15 @@ void Update_objects(void)
     /*
      * Kill players that ought to be killed.
      */
-    for (i=Antall-1; i>=0; i--)
+    for (i=NumPlayers-1; i>=0; i--)
 	if (BIT(Players[i]->status, KILLED))
 	    Kill_player(i);
 
     /*
      * Kill shots that ought to be dead.
      */
-    for (i=Ant_Shots-1; i>=0; i--)
-	if (--(Shots[i]->life) <= 0)
+    for (i=NumObjs-1; i>=0; i--)
+	if (--(Obj[i]->life) <= 0)
 	    Delete_shot(i);
 
     /*

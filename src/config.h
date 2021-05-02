@@ -1,4 +1,4 @@
-/* config.h,v 1.3 1992/05/11 15:31:01 bjoerns Exp
+/* config.h,v 1.10 1992/06/26 17:04:14 bjoerns Exp
  *
  *	This file is part of the XPilot project, written by
  *
@@ -12,34 +12,39 @@
  * Configure these variables, that's what they're here for.
  */
 #ifndef LOCALGURU
-#define LOCALGURU	"bjoerns@stud.cs.uit.no"
+#    define LOCALGURU		"bjoerns@stud.cs.uit.no"
 #endif
 
 #ifndef LIBDIR
-#define LIBDIR		"/usr/local/lib/xpilot/"
+#    define LIBDIR		"/usr/local/games/lib/xpilot/"
 #endif
 
-#ifndef HELPFILE
-#define HELPFILE	LIBDIR "help.txt"
-#endif
 #ifndef MOTDFILE
-#define MOTDFILE	LIBDIR "motd.txt"
+#    define MOTDFILE		LIBDIR "motd"
 #endif
 #ifndef LOGFILE
-#define LOGFILE		LIBDIR "log"
+#    define LOGFILE		LIBDIR "log"
 #endif
 #ifndef MAPDIR
-#define MAPDIR		LIBDIR "maps/"
+#    define MAPDIR		LIBDIR "maps/"
+#endif
+
+#ifndef	UPDATES_PR_FRAME
+#    define UPDATES_PR_FRAME	1
 #endif
 
 /*
- * This is really nasty, but it's so much easier this way.  Will substitute
- * the name of the machine where the server runs for %s.
+ * If XHOST is defined, the hand-shake program will open a connection to the
+ * specified host by executing XHOST_OPEN (%s will be substituted with the
+ * server host) and closing it again with XHOST_CLOSE.  Note however that this
+ * will only be done if the server complains that it couldn't open the display.
+ *
+ * All in all, a not perfect, but adequate solution, highly recommended for
+ * X environments where Xauthority is used.
  */
-#ifndef XHOST_CMD
-#define XHOST_CMD	"/usr/bin/X11/xhost +%s >/dev/null" /*2>/dev/null"*/
-#endif
-
+#define	XHOST
+#define XHOST_OPEN	"/usr/bin/X11/xhost +%s >/dev/null"
+#define XHOST_CLOSE	"/usr/bin/X11/xhost -%s >/dev/null"
 
 /*
  * Leave these alone.
@@ -47,9 +52,7 @@
 #define REPORT_ADDRESS	"bjoerns@stud.cs.uit.no"
 
 #ifdef	DEBUG
-#define D(x)		{ {x}; fflush(stdout); }
+#    define D(x)	{ {x}; fflush(stdout); }
 #else
-#define D(x)		{ ; }
+#    define D(x)	{ ; }
 #endif
-
-#define warn(s)		{ fprintf(stderr, s); }
