@@ -1,0 +1,12 @@
+The xpilots program will probably not find these maps automatically (if you
+haven't specified the correct MAPDIR), so you will have to specify the
+whole path.
+
+You will need to uncompress and extract the files from the tar archive, i.e:
+
+	zcat maps.tar.Z | tar xvf -
+
+		or
+
+	uncompress maps.tar.Z
+	tar xvf maps.tar

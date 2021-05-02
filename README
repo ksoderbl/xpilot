@@ -1,0 +1,83 @@
+/     / //////
+ /   /  /     /   /    /        ////    /////
+  / /   /     /   /    /       /    /     /
+   /    //////    /    /       /    /     /
+  / /   /         /    /       /    /     /
+ /   /  /         /    /       /    /     /
+/     / /         /    //////   ////      /
+
+////////  V e r s i o n   1 . 0  ////////////
+
+
+
+COPYRIGHT & DISCLAIMER STUFF:
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+Copyright (C) 1991-92 by Bjørn Stabell and Ken Ronny Schouten.
+                         University of Tromsø, Norway.
+                         Email: bjoerns@stud.cs.uit.no,
+                                kenrsc@stud.cs.uit.no
+
+Please see the LICENSE file for further details, in addition you may not
+distribute this project without this file (README) included.
+
+
+
+REQUIREMENTS:
+\\\\\\\\\\\\\
+
+XPilot require the following resources:
+
+    - A UNIX machine    (Tested on HP9000 300 and 700 series and on SUN's)
+    - An ANSI compiler  (GCC with no options should work just fine)
+    - X11               (Only R4 tested)
+    - A color display   (Might work on monochrome displays but not tested)
+
+Also note that XPilot is not kind on the network or on the X server, so a
+fast machine in a fast network is the ideal situation.
+
+
+
+INSTALLATION:
+\\\\\\\\\\\\\
+
+*   Cd to the src directory.
+
+*   Edit the config.h and Imakefile files to suit your environment.
+
+*   Issue the following commands:
+
+        xmkmf
+        make Makefiles
+        make depend
+        make
+
+*   Copy the maps to a suitable place (as specified in the config.h file).
+    On our system we have the LIBDIR set to /user/local/games/lib/xpilot.
+    An /bin/ls -l on this directory gives:
+
+        total 500
+        -rw-r--r--   1 bjoerns  siving90      36  Feb 12 19:29 help.txt
+        -rw-rw-rw-   1 bjoerns  siving90   29859  May  5 21:32 log
+        drwxr-xr-x   2 bjoerns  siving90    1024  Apr  5 16:16 maps
+        -rw-r--r--   1 bjoerns  siving90      80  May  1 13:20 motd.txt
+
+    (Note, if you have logging enabeled you will have to touch a file called
+    log in the LIBDIR and give other users write permission to it (this is
+    neccessary since xpilot hasn't, and shouldn't have, the setuid bit set.))
+
+*   Copy the manual pages to a suitable place.  If you don't know where to
+    put them, don't bother.  You may still read them with the following
+    command:
+
+        nroff -man <man-file> | more
+
+
+
+MISCELLANEOUS INFORMATION:
+\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+Please refer to the manuals in the man6 directory for further reading.  If
+you're completely stuck, or just want to chat :), e-mail me at:
+
+        bjoerns@stud.cs.uit.no

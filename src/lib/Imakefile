@@ -1,0 +1,11 @@
+# @(#)Imakefile 23/01/92
+# Imakefile - socklib
+
+OBJS = socklib.o
+SRCS = socklib.c
+
+#
+# Make socklib
+#
+NormalLibraryTarget(socklib, $(OBJS))
+DependTarget()

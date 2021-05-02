@@ -1,0 +1,126 @@
+/* Imakefile,v 1.3 1992/05/11 15:30:54 bjoerns Exp
+ *
+ *      This file is part of the XPilot project, written by
+ *
+ *          Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *          Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *
+ *      Copylefts are explained in the LICENSE file.
+ */
+
+#
+# Imakefile - XPilot
+# /users/lgserv0/disk2/bjoerns/src/cvs/xpilot/src/Imakefile,v 1.3 1992/05/11 15:30:54 bjoerns Exp
+#
+
+
+############################################################################
+#
+# Miscellaneous flags.
+#
+MATHLIB = -lm
+SOCKLIB = lib/libsocklib.a
+
+/*
+ * Specify an ANSI compiler.
+ */
+CC = gcc -fpcc-struct-return -O4
+
+
+/*
+ * DEFINES should be used for program specific defines.
+ * Currently supported flags are:
+ *
+ *  LIMIT_ACCESS    - extremely local, cannot be used without modification.
+ *  NO_LOG          - don't try to keep a log.
+ *  SCROLL          - scroll a message in the window title, this is intended
+ *                    for you people who really wanna burn CPU cycles.
+ *  DRAW_GRAV_VECTORS   - slows the game down to an unbearable speed, you
+ *                        might try it once, the effect is quite ... er...
+ *  THRUST_TURN     - makes turning look a bit more, er... stupid actually!
+ *  CHEAT           - define this for fun, but don't make it a habit... :)
+ *  USE_IP_NUMBER   - for the platforms where gethostbyname()->h_name doesn't
+ *                    contain the full internet address, use this flag (xpilot
+ *                    will still work if you don't, but only locally).
+ *
+ * You should also set these appropriately (see config.h):
+ *
+ *  LOCALGURU       - define to the person in charge of xpilot on this site.
+ *  LIBDIR          - define to where you want the help-files etc.
+ *                    (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
+ *  XHOST_CMD       - see config.h for usage.
+ */
+DEFINES = -DNO_LOG
+
+
+/*
+ * CDEBUGFLAGS should specify optimalization or debug information (or both).
+ */
+#CDEBUGFLAGS = +O3 +OS +ESlit -Wl,-P
+# -Wl,-I first, then -Wl,-P
+
+CFLAGS = $(DEFINES) $(CDEBUGFLAGS)
+
+
+
+############################################################################
+#
+# Source and object files.
+#
+/*
+ * 'Server' program, xpilots...
+ */
+OBJS1 = server.o board.o dbuff.o draw.o event.o map.o math.o parser.o \
+        play.o player.o rules.o update.o collision.o
+SRCS1 = server.c board.c dbuff.c draw.c event.c map.c math.c parser.c \
+        play.c player.c rules.c update.c collision.c
+
+
+/*
+ * Hand-shake program, xpilot...
+ */
+OBJS2 = xpilot.o syslimit.o
+SRCS2 = xpilot.c syslimit.c
+
+
+
+############################################################################
+#
+# Make subdirectories, socklib...
+#
+SUBDIRS = lib
+
+#define IHaveSubdirs
+#define PassCDebugFlags 'CDEBUGFLAGS=$(CDEBUGFLAGS)'
+
+MakeSubdirs($(SUBDIRS))
+DependSubdirs($(SUBDIRS))
+
+
+
+############################################################################
+#
+# Make handshake and server program
+#
+AllTarget(xpilot xpilots)
+
+ComplexProgramTarget_1(xpilots, $(SOCKLIB), $(MATHLIB) $(XLIB))
+ComplexProgramTarget_2(xpilot, $(SOCKLIB), $(XLIB))
+
+
+
+############################################################################
+#
+# Special rules
+#
+locked::
+	rlog -L -R RCS/?*,v
+
+rcslog::
+	rlog RCS/?*,v >RCS.log
+
+clean::
+	rm -f RCS.log
+
+etags::
+	etags -t *.[chips]

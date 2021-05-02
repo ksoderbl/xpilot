@@ -1,0 +1,9 @@
+KNOWN BUGS
+==========
+- Doesn't handle limited dogfight properly, don't use until fixed (the mode
+  isn't very popular).
+- Doesn't always manage to contact server (could be I'm pouring too many
+  packets into the buffers at once).
+- Sometimes you will be able to contact the server, but the double
+  buffering cannot be initialized.
+- Doesn't handle monocrome displays at all, needs at least 4 (?) bitplanes.

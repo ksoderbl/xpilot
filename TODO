@@ -1,0 +1,10 @@
+TODO list for XPilot
+====================
+- double buffering on labels. (?)
+- thrust flame moved a little further back.
+- bouncing.
+- better detection of servers and contact mechanism (TCP instead of UDP maybe).
+- more bitplanes/colours, at least the possibility to determine this yourself.
+- no players may have the same name, maybe save player ratings.
+- enhance team option (team with names, own colors and home bases?)
+- make an xp-ed (xpilot-ed) map editor.

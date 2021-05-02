@@ -1,0 +1,17 @@
+(NOTE, these fonts are not needed by xpilot (or xpilots), they are provided
+merely as a help for those of you who want to use a standard text editor to
+generate maps.)
+
+First, make the fonts (done in the directory where the .bdf files are):
+
+ksh:
+	for font in map*.bdf
+	do
+		bdftosnf $font | compress > ${font%%.bdf}.scf
+	done
+	mkfontdir
+
+To install these fonts in your font-path, use the following commands:
+
+	xset fp+ <this-directory>
+	xset fp rehash

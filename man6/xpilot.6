@@ -1,0 +1,441 @@
+.\" -*-Text-*-
+.\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.\"
+.\" File:         xpilot.6
+.\" Description:  XPilot man page
+.\" Author:       Bjoern Stabell & Ken Ronny Schouten
+.\" Modified:     910520
+.\" Language:     Text
+.\" Package:      xpilot
+.\"
+.\" (c) Copyright 1991, UiT, all rights reserved.
+.\"
+.\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.TH XPILOT 6 "Version 1.0" "BS & KRS"
+.ad b
+.SH NAME
+xpilot \- XPilot/UX  Multiplayer gravity war game hand-shake program
+
+.SH SYNOPSIS
+
+.BR xpilot
+[\fB-join\fR]
+[\fB-list\fR]
+[\fB-name \fInickname\fR]
+[\fB-team \fIteam-number\fR]
+[\fIserver-host\fR]
+
+.SH DESCRIPTION
+XPilot is a multiplayer game which looks a bit like \fBThrust\fP, the good
+old action game for the \fBCommodore 64\fP.  Several clones have appeared
+for various computers, among others \fBGravity Force\fP for the
+\fBCommodore Amiga\fP.
+
+The main objective of the game varies as you can choose different game
+modes, although the only modes supported as of today are \fIcombat\fR and
+\fIrace\fR.  The former mode focuses more strongly on shooting each other
+down, while the latter is more a piloting test than anything else.
+
+To start playing, you need only to connect to a \fBserver\fP by using a
+small \fBhand-shake\fP program called \fIxpilot\fR.  If there are no
+servers running, you will have to start one on your own (see man-page
+\fIxpilots(6)\fP).
+
+.SS Options
+
+.TP 15
+.B -name \fIplayer-name\fP
+Lets you use an alternative name during the play (may be handy :).  If this
+option isn't specified, and you haven't set the X resource \fPname\fP, you
+will be known by your \fIlogin name\fR.
+
+.TP 15
+.B -team \fIteam-number\fP
+Joins team number \fBteam-number\fR.  This has various effects - you cannot
+harm another team member (and they cannot harm you), and you can see
+(though not on radar) cloaked team-mates.  Note however, that you can
+still harm yourself.  This option will probably be much more enhanced
+in the future.  You may also specify a team number using X resources, see
+below for details.  Team 0 is equivalent to no team.
+
+.TP 15
+.B -join
+Automatically joins the first and best server.
+
+.TP 15
+.B -list
+Queries status information from all servers found.
+
+.TP 15
+.B server-host
+Tries to connect to server at host \fIserver-host\fR.  The default is to
+search through the \fIsub-domain\fR your machine is connected to.
+
+.SH PROMPT COMMANDS
+When you startup \fBxpilot\fP without the \fB-join\fP option, you will get
+a prompt asking you for directions.  You may type 'h' or '?' to list the
+available commands.  These are quite obvious and deal with communication to
+the current server only.  You may enter the game by pressing CR (Return/Enter).
+
+If you are the owner of the server you will have a few extra options.  See
+\fIxpilots(6)\fP.
+
+.SH THE WINDOW
+When you enter a game you will hopefully be presented a window.  This
+window is divided into three major areas:
+.RS 6
+.TP 12
+.B The radar
+This area shows the map the server you are playing on is using as well as
+the position of your fellow players (if they aren't cloaked).  In race mode
+the radar also outputs the position of the control posts.
+.TP 12
+.B The player list
+This area shows the list of players (sorted with respect to rating)
+currently logged on the server.  A sample field looks like this:
+.IP
+.B 	*9	Selac			003		64
+.IP
+The asterisk (*) means that the player Selac (me) has the best
+<rating>/<deaths> ratio.  You can also see that I am a member of team no.
+9, that I have died 003 times and have a rating of 64.
+.TP 12
+.B The game area
+This is where the action is.  Most notably you will see your fighter in the
+middle of the screen, hopefully you won't see any shots or explosions yet!
+
+You may also see some strange blue drawings surrounding your fighter - this
+is the \fBHUD\fP (Head Up Display) which greatly simplifies and compresses
+the information you need to know.  Currently, the HUD displays the
+following information:
+.RS 6
+.TP 12
+.B Special items
+You may notice some numbers on the top left or bottom left corner of the HUD,
+this means that you have either \fBs\fPmart shots (missiles) or \fBm\fPines
+and the number indicates how many smart shots / missiles you have.  Smart
+shots are shown in the bottom left corner (with and S prefixing the number)
+and missiles are in the top left corner (with an M prefixing the number).
+
+Also, other special items like \fBc\fPloaking devices, \fBw\fPide angle
+shots and \fBr\fPear shots are only indicated by a letter appearing on the
+left side of the HUD.
+.TP 12
+.B Fuel
+A fuel meter will appear on the right side of the HUD when you are getting
+low on fuel, it will start flashing when your fuel level gets dangerously
+low.  The fuel is numerically displayed on the bottom right corner of the
+HUD.
+.TP 12
+.B Lock
+The name of the player you have currently locked on is shown on the top of
+the HUD.  Also, the distance and bearing to the player is visualized by a
+dot where placement of the dot gives the direction, and the size of the dot
+gives the distance.  The dot will be filled if the player is not on the
+same team as you.  The distance to the player also numerically displayed on
+the top right corner of the HUD, it is measured in 'blocks'.
+.RS -6
+
+.SH GAME PLAY
+This section will only describe the \fIcombat mode\fR of the game as the
+\fIrace version\fR is quite straightforward.
+
+The game has really no main purpose but to have fun.  This is achievable in
+many ways, but mainly by \fBblasting away\fP on friends and cannons.  Both
+will naturally fire back at you, so you will also need some nifty
+\fBpiloting skills\fP and/or some heavy equipment to really enjoy living.
+Another vital part of your machinery is your \fBenergy/fuel\fP - without
+it, you will surely die a horrible death.
+
+During the game you might encounter red triangles - these are special items
+which will make your life easier.  As of today, these are:
+
+.RS 6
+.TP 12
+.B F
+More fuel.
+.TP 12
+.B C
+Cloaking device.
+.TP 12
+.B R
+Rear shot.
+.TP 12
+.B W
+Wide angle shots.  The more you pick up, the more awesome your firepower gets.
+.TP 12
+.B S
+Pack of smart shots (missiles).  Default is four missiles in each pack.
+.TP 12
+.B M
+Pack of mines.  Default is one mine in each pack.
+
+.SH CONTROLS
+The game understands quite some keys, but not all of them are equally
+important.  The following keys are in prioritized order, and note that a |
+is used to separate equivalent keys.
+.RS 2
+.TP 4
+\fIPrimary keys\fR
+The primary keys are:
+.RS 6
+.TP 12
+.B a
+Turn left (anti-clockwise).
+.TP 12
+.B s
+Turn right (clockwise).
+.TP 12
+.B shift
+Thrust me.
+.TP 12
+.B return
+Fire normal shot.
+.TP 12
+.B space or right-meta
+Activate shield.  Must be held down for continuous use.
+.TP 12
+.B ctrl | f
+Try to connect to nearest fuel station.  Must be held down during refueling.
+.RS -6
+.TP 4
+\fISecondary keys\fR
+The following commands are not always available, some require special items
+to have any functionality at all.
+.RS 6
+.TP 12
+.B q
+Self destruct.  At last we managed to include a timer, got rid of all those
+nasty I'd-rather-die-by-my-own-hands-than-let-you-kill-me-and-get-all-
+the-points pilots.
+.TP 12
+.B backSpace
+Enable/disable cloaking device if available.  You will be invisible on both
+radar and on screen, but beware - the device is not foolproof, it is
+not cheap on your fuel and the only thing becoming invisible is your ship,
+i.e. the exhaust-flames will still be visible.
+.TP 12
+.B Esc
+Toggle between two different settings.  You'll probably want more power
+and a larger turnrate in combat than when you're doing some critical
+maneuvering.  Also, the game speed (unfortunately) varies as the load of
+the machines and the net varies.
+.TP 12
+.B Tab
+Drop a proximity mine.  The mine will detonate after a certain amount of
+time (quite large actually) or when a foe comes too near.
+.TP 12
+.B Home
+Change home base.  You will need to be landed on the base of your choice.
+(The \fBHome\fP key is located just right of the \fBReturn\fP key on most
+HP-keyboards.)  These keys are convenient for HP keyboards, also somewhat
+adapted to SUN keyboards.
+.TP 12
+.B p
+Parking mode - you can only park while you're landed on your own home base,
+and when you park, you cannot rejoin the game until the P has stopped
+blinking (to prevent users from using this option to run away from a
+battle).
+
+.TP 0
+The following keys toggle miscellaneous gauges.
+.TP 12
+.B c
+Toggle on/off lock computer.
+.TP 12
+.B t
+Toggle on/off fuel tank gauge.  A nice pie-chart representation of your
+fighter's current fuel level.
+.TP 12
+.B v
+Turn on/off velocity gauge.
+
+.TP 0
+The following keys are located on the keypad to the right on most
+HP-keyboards.  They let you adjust miscellaneous values that are dependent
+of machine speed (which may vary greatly).
+.TP 12
+.B *
+Increase engine power.
+.TP 12
+.B /
+Decrease engine power.
+.TP 12
+.B +
+Increase turn speed.
+.TP 12
+.B -
+Decrease turn speed.
+
+.TP 0
+The following requires that the \fBlock computer is on\fP:
+.TP 12
+.B \e (backSlash) | LF (lineFeed)
+Fire smart missile if available.  The missile will home onto the player
+that you have currently locked on.  You must have \fBa clear lock\fP on a
+player for this to work.
+.TP 12
+.B Select | Up | Down
+Will lock onto the closest player if he/she is within range.
+.TP 12
+.B Next | Right
+Will, if possible, lock onto the next player in the game.
+.TP 12
+.B Prior (Prev) | Left
+Will, if possible, lock onto the previous player in the game.
+
+.RS -6
+.TP 0
+There is even a cheat mode, and a possibility to join the 'twilight-
+zone boys' if you should be so lucky to hit the right key while the option
+isn't disabled.  But don't lose any sleep over it, it's not that easy.
+Usually, this option is disabled.
+
+.SH X RESOURCES
+XPilot understands the following X resources:
+.RS 6
+.TP 12
+.B name
+Nick name of your player.
+.TP 12
+.B team
+Preferred team number.
+.TP 12
+.B power
+Primary power setting of your engine.  Primary in this context means that it
+is part of the default setting, secondary means the other setting (two
+different settings are available, pressing \fBEsc\fP will switch between
+them).  You may change "sensitivity" of your ship by adjusting these
+paramteres.  Often you would like one setting to be more "rough" than the
+other - one setting for fine maneuvering and one for racing. (Default 45.0)
+.TP 12
+.B turnSpeed
+Primary turnspeed setting of your ship. (Default 30.0)
+.TP 12
+.B turnResistance
+Primary turnresistance setting of your ship.  This value determines how
+fast your ship will stop rotating, i.e. the rotating speed of your ship is
+set equal to itself multiplied by this value.  Obviously the value has to
+lie between 0.0 (exclusive) and 1.0 (inclusive).  (Default 0.12)
+.TP 12
+.B altPower
+Secondary power setting of your engine. (Default 35.0)
+.TP 12
+.B altTurnSpeed
+Secondary turnspeed setting of your ship. (Default 25.0)
+.TP 12
+.B altTurnResistance
+Secondary turnresistance setting of your ship. (Default 0.12)
+.TP 12
+.B fuelNotify
+The limit when the HUD fuel bar will become visible. (Default 500.0)
+.TP 12
+.B fuelWarning
+The limit when the HUD fuel bar will start flashing. (Default 200.0)
+.TP 12
+.B fuelCritical
+The limit when the HUD fuel bar will flash faster. (Default 100.0)
+.TP 12
+.B showHUD
+Should the HUD be on or off. (Default true)
+.TP 12
+.B verticalHUDLine
+Should the vertical lines in the HUD be drawn. (Default false)
+.TP 12
+.B horizontalHUDLine
+Should the horizontal lines in the HUD be drawn. (Default true)
+.TP 12
+.B fuelMeter
+Determines if the fuel meter should be visible. This meter visualizes your
+fuel level in a different way than \fBfuelGauge\fP does.
+.TP 12
+.B fuelGauge
+Determines if the fuel gauge should be visible. See \fBfuelMeter\fP.
+.TP 12
+.B turnSpeedMeter
+Should the turnspeed meter be visible at all times. (Default false)
+.TP 12
+.B powerMeter
+Should the power meter be visible at all times. (Default false)
+.RS -6
+
+.SH EXAMPLES
+The simplest invocation of the hand-shake program is to just type:
+.IP
+.B xpilot
+.PP
+This will force the program to search after a server on all the machines
+on your sub-domain (i.e. all the machines with the all but the last part of
+the IP address in common).
+
+Say this don't work (it often doesn't unfortunately), and you know where
+the server is, and you don't want to be prompted (handy in scripts etc.),
+you may type for example:
+.IP
+.B xpilot -join lglab08
+.PP
+
+In the examples above your name would be your login name.  Let's say you
+want to be really cool and your login name is \fBgudmari\fR, well - you're
+in loads of trouble if you don't know about the \fB-name\fR option;
+.IP
+.B xpilot -name FireEater
+.PP
+will fix the problem for you.
+
+.SH WARNINGS
+If the server should go down, you will be without autorepeat on your
+keyboard.  To re-enable autorepeat, use the \fIxset\fR command with the
+\fIr\fR switch, i.e.:
+.IP
+.B xset r
+.PP
+Also note that the game speed cannot be controlled, so that the only way to
+slow down a game is to have several dummys join it.  Use the following
+command:
+
+.SH AUTHORS
+The \fIxpilot\fP product was developed by Bjoern Stabell and Ken Ronny
+Schouten at the University of Tromsoe, Norway.
+
+.SH BUGS
+The product is seemingly stable, so bug reports are highly appreciated.
+Send email to \fBbjoerns@stud.cs.uit.no\fP or (not until 1993)
+\fBkenrsc@stud.cs.uit.no\fP and we will see what we can do.  We only ask
+that you remember to include the following information:
+.IP
+.PD 0
+.RS 4
+\- The platform(s) the bug(s) occurs on.
+.TP
+\- The version, revision and patchlevel of XPilot.
+.TP
+\- What the bug(s) looks like.
+.TP
+\- When the bug(s) usually occurs.
+.PP
+.PD
+.IP
+.RS -4
+We would also like to receive changes you do to make the code compile on
+your machine (we would NOT like to receive the whole program translated to
+standard C, keep it ANSI :)
+
+.SH NOTES
+For credit list, see \fIxpilots(6)\fP.
+
+.SH FILES
+.PD 0
+.TP 40
+\fB/usr/local/games/lib/xpilot/motd.txt\fP
+Message of the day.
+.TP
+\fB/usr/local/games/lib/xpilot/maps/\fP
+Directory containing maps.
+.PD
+
+.SH SEE ALSO
+xpilots(6)
+.\"
+.\" index		\fIxpilot\fR - multiplayer war game
+.\" index		\fIxpilots\fR \- server module for xpilot

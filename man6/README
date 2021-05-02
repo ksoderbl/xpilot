@@ -1,0 +1,3 @@
+To read these files without installing them on your system, use
+
+	nroff -man <filename> | more
