@@ -1,4 +1,4 @@
-/* $Id: saudio.h,v 4.1 1998/04/16 17:41:57 bert Exp $
+/* $Id: saudio.h,v 4.2 1998/08/30 12:15:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -30,6 +30,8 @@
 /* Enable only sound support in the server, not in the client. */
 #define SOUND	1
 #endif
+
+#define SDBG(x)	/*#x*/
 
 #ifndef SOUND
 

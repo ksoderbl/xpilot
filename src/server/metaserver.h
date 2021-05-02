@@ -29,6 +29,6 @@
 #define META_HOST	"meta.xpilot.org"
 #define META_HOST_TWO	"meta2.xpilot.org"
 #define META_IP		"129.242.16.101"
-#define META_IP_TWO	"145.18.160.57"
+#define META_IP_TWO	"132.235.197.27"
 
 #endif

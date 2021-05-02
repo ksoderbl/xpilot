@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 4.4 1998/04/27 21:46:37 dick Exp $
+/* $Id: frame.c,v 4.6 1998/09/04 15:04:22 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -54,7 +54,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 4.4 1998/04/27 21:46:37 dick Exp $";
+    "@(#)$Id: frame.c,v 4.6 1998/09/04 15:04:22 dick Exp $";
 #endif
 
 
@@ -403,8 +403,8 @@ static void Frame_map(int conn, int ind)
 
     for (i = 0; i < World.NumCannons; i++) {
 	if (block_inview(&bv,
-			 World.cannon[i].pos.x,
-			 World.cannon[i].pos.y)) {
+			 World.cannon[i].blk_pos.x,
+			 World.cannon[i].blk_pos.y)) {
 	    if (BIT(World.cannon[i].conn_mask, conn_bit) == 0) {
 		Send_cannon(conn, i, World.cannon[i].dead_time);
 	    }
@@ -488,9 +488,10 @@ static void Frame_shots(int conn, int ind)
 	    break;
 
 	case OBJ_SHOT:
-	    if (shot->id != -1
-		&& shot->id != pl->id
-		&& TEAM_IMMUNE(ind, GetInd[shot->id])) {
+	    if (BIT(World.rules->mode, TEAM_PLAY)
+		&& teamImmunity
+		&& shot->team == pl->team
+		&& shot->id != pl->id) {
 		color = BLUE;
 		teamshot = DEBRIS_TYPES;
 	    } else if (shot->mods.nuclear && (frame_loops & 2)) {
@@ -537,10 +538,12 @@ static void Frame_shots(int conn, int ind)
 		    if (BIT(shot->status, CONFUSED))
 			confused = 1;
 		}
-		laid_by_team = (shot->owner != -1 &&
-				((BIT(shot->status, OWNERIMMUNE)
-				     && shot->owner == pl->id)
-				 || TEAM_IMMUNE(ind, GetInd[shot->owner])));
+		laid_by_team = ((BIT(World.rules->mode, TEAM_PLAY)
+				 && teamImmunity
+				 && shot->team == pl->team
+				 && shot->id != pl->id)
+				|| (BIT(shot->status, OWNERIMMUNE)
+				    && shot->owner == pl->id));
 		if (confused) {
 		    id = 0;
 		    laid_by_team = rand() & 0x01;
@@ -566,21 +569,32 @@ static void Frame_ships(int conn, int ind)
     int			i, j, color, dir;
     DFLOAT		x, y;
 
-    for (i = 0; i < NumPlayers; i++) {
-	pl_i = Players[i];
-	if (!BIT(pl_i->status, PLAYING|PAUSE)) {
+    for (j = 0; j < NumPulses; j++) {
+	pulse = Pulses[j];
+	if (pulse->len <= 0) {
 	    continue;
 	}
-	if (BIT(pl_i->status, GAME_OVER)) {
-	    continue;
-	}
-	for (j = 0; j < pl_i->num_pulses; j++) {
-	    pulse = &pl_i->pulses[j];
-	    if (pulse->len <= 0) {
-		continue;
+	x = pulse->pos.x;
+	y = pulse->pos.y;
+	if (BIT (World.rules->mode, WRAP_PLAY)) {
+	    if (x < 0) {
+		x += World.width;
 	    }
-	    x = pulse->pos.x;
-	    y = pulse->pos.y;
+	    else if (x >= World.width) {
+		x -= World.width;
+	    }
+	    if (y < 0) {
+		y += World.height;
+	    }
+	    else if (y >= World.height) {
+		y -= World.height;
+	    }
+	}
+	if (inview(x, y)) {
+	    dir = pulse->dir;
+	} else {
+	    x += tcos(pulse->dir) * pulse->len;
+	    y += tsin(pulse->dir) * pulse->len;
 	    if (BIT (World.rules->mode, WRAP_PLAY)) {
 		if (x < 0) {
 		    x += World.width;
@@ -596,37 +610,57 @@ static void Frame_ships(int conn, int ind)
 		}
 	    }
 	    if (inview(x, y)) {
-		dir = pulse->dir;
-	    } else {
-		x += tcos(pulse->dir) * pulse->len;
-		y += tsin(pulse->dir) * pulse->len;
-		if (BIT (World.rules->mode, WRAP_PLAY)) {
-		    if (x < 0) {
-			x += World.width;
-		    }
-		    else if (x >= World.width) {
-			x -= World.width;
-		    }
-		    if (y < 0) {
-			y += World.height;
-		    }
-		    else if (y >= World.height) {
-			y -= World.height;
-		    }
-		}
-		if (inview(x, y)) {
-		    dir = MOD2(pulse->dir + RES/2, RES);
-		}
-		else {
-		    continue;
+		dir = MOD2(pulse->dir + RES/2, RES);
+	    }
+	    else {
+		continue;
+	    }
+	}
+	if (BIT(World.rules->mode, TEAM_PLAY)
+	    && teamImmunity
+	    && pulse->team == pl->team
+	    && pulse->id != pl->id) {
+	    color = BLUE;
+	} else {
+	    color = RED;
+	}
+	Send_laser(conn, color, (int)x, (int)y, pulse->len, dir);
+    }
+    for (i = 0; i < NumEcms; i++) {
+	ecm_t *ecm = Ecms[i];
+	Send_ecm(conn, (int)ecm->pos.x, (int)ecm->pos.y, ecm->size);
+    }
+    for (i = 0; i < NumTransporters; i++) {
+	trans_t *trans = Transporters[i];
+	player 	*victim = Players[GetInd[trans->target]],
+		*pl = (trans->id == -1 ? NULL : Players[GetInd[trans->id]]);
+	DFLOAT 	x = (pl ? pl->pos.x : trans->pos.x),
+		y = (pl ? pl->pos.y : trans->pos.y);
+	Send_trans(conn, victim->pos.x, victim->pos.y, (int)x, (int)y);
+    }
+    for (i = 0; i < World.NumCannons; i++) {
+	cannon_t *cannon = World.cannon + i;
+	if (cannon->tractor_count > 0) {
+	    player *t = Players[GetInd[cannon->tractor_target]];
+	    if (inview(t->pos.x, t->pos.y)) {
+		int j;
+		for (j = 0; j < 3; j++) {
+		    Send_connector(conn,
+				   (int)(t->pos.x + t->ship->pts[j][t->dir].x),
+				   (int)(t->pos.y + t->ship->pts[j][t->dir].y),
+				   (int)cannon->pix_pos.x,
+				   (int)cannon->pix_pos.y, 1);
 		}
 	    }
-	    if (TEAM_IMMUNE(ind, i) && ind != i) {
-		color = BLUE;
-	    } else {
-		color = RED;
-	    }
-	    Send_laser(conn, color, (int)x, (int)y, pulse->len, dir);
+	}
+    }
+    for (i = 0; i < NumPlayers; i++) {
+	pl_i = Players[i];
+	if (!BIT(pl_i->status, PLAYING|PAUSE)) {
+	    continue;
+	}
+	if (BIT(pl_i->status, GAME_OVER)) {
+	    continue;
 	}
 	if (!inview(pl_i->pos.x, pl_i->pos.y)) {
 	    continue;
@@ -637,20 +671,6 @@ static void Frame_ships(int conn, int ind)
 			pl_i->pos.y,
 			pl_i->count);
 	    continue;
-	}
-	for (j = 0; j < pl_i->ecmInfo.count; j++) {
-	    Send_ecm(conn,
-		     (int)pl_i->ecmInfo.pos[j].x,
-		     (int)pl_i->ecmInfo.pos[j].y,
-		     pl_i->ecmInfo.size[j]);
-	}
-	if (pl_i->transInfo.count) {
-	    player *pl = Players[GetInd[pl_i->transInfo.pl_id]];
-	    Send_trans(conn,
-		       pl->pos.x,
-		       pl->pos.y,
-		       pl_i->pos.x,
-		       pl_i->pos.y);
 	}
 
 	/* Don't transmit information if fighter is invisible */
@@ -691,18 +711,18 @@ static void Frame_ships(int conn, int ind)
 		Send_refuel(conn, pl_i->pos.x, pl_i->pos.y, (int) x, (int) y);
 	    }
 	}
-	if (pl_i->tractor != NULL
-	    /* && BIT(pl_i->used, OBJ_TRACTOR_BEAM) */
-	    && inview(pl_i->tractor->pos.x, pl_i->tractor->pos.y)) {
-	    player *t = pl_i->tractor;
-	    int j;
+	if (BIT(pl_i->used, OBJ_TRACTOR_BEAM)) {
+	    player *t = Players[GetInd[pl_i->lock.pl_id]];
+	    if (inview(t->pos.x, t->pos.y)) {
+		int j;
 
-	    for (j = 0; j < 3; j++) {
-		Send_connector(conn,
-			       (int)(t->pos.x + t->ship->pts[j][t->dir].x),
-			       (int)(t->pos.y + t->ship->pts[j][t->dir].y),
-			       pl_i->pos.x,
-			       pl_i->pos.y, 1);
+		for (j = 0; j < 3; j++) {
+		    Send_connector(conn,
+				   (int)(t->pos.x + t->ship->pts[j][t->dir].x),
+				   (int)(t->pos.y + t->ship->pts[j][t->dir].y),
+				   pl_i->pos.x,
+				   pl_i->pos.y, 1);
+		}
 	    }
 	}
 
@@ -867,14 +887,16 @@ void Frame_update(void)
 	if (conn == NOT_CONNECTED) {
 	    continue;
 	}
-	if (BIT(pl->status, PAUSE|GAME_OVER) && !allowViewing) {
+	if (BIT(pl->status, PAUSE|GAME_OVER)
+	    && !allowViewing
+	    && !pl->isowner) {
 	    /*
 	     * Lower the frame rate for non-playing players
 	     * to reduce network load.
 	     * Owner always gets full framerate even if paused.
 	     * With allowViewing on, everyone gets full framerate.
 	     */
-	    if (BIT(pl->status, PAUSE) && !pl->isowner) {
+	    if (BIT(pl->status, PAUSE)) {
 		if (frame_loops & 0x03) {
 		    continue;
 		}

@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:18:41 bert Exp $ */
+/* $Id: Imakefile,v 4.1 1998/08/30 12:15:34 bert Exp $ */
 
 TOP=../..
 
@@ -37,13 +37,13 @@ DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
 INCLUDES = $(AUDIOINC) -I../common/ -I../lib/
 
 SRCS = \
-	cmdline.c collision.c contact.c event.c frame.c id.c map.c \
+	cannon.c cmdline.c collision.c contact.c event.c frame.c id.c map.c \
 	metaserver.c netserver.c objpos.c option.c play.c player.c \
 	robot.c robotdef.c rules.c saudio.c sched.c server.c \
 	update.c walls.c
 
 OBJS = \
-	cmdline.o collision.o contact.o event.o frame.o id.o map.o \
+	cannon.o cmdline.o collision.o contact.o event.o frame.o id.o map.o \
 	metaserver.o netserver.o objpos.o option.o play.o player.o \
 	robot.o robotdef.o rules.o saudio.o sched.o server.o \
 	update.o walls.o

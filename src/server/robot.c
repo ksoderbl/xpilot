@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 4.5 1998/04/20 11:30:57 bert Exp $
+/* $Id: robot.c,v 4.6 1998/08/29 19:49:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1018,7 +1018,8 @@ void Robot_update(void)
     static int		new_robot_delay;
 
 
-    if (NumRobots < WantedNumRobots
+    if ((NumPlayers - NumPseudoPlayers < maxRobots
+	 || NumRobots < minRobots)
 	&& NumPlayers - NumPseudoPlayers < World.NumBases
 	&& NumRobots < MAX_ROBOTS
 	&& !(BIT(World.rules->mode, TEAM_PLAY)
@@ -1030,7 +1031,9 @@ void Robot_update(void)
 	    Robot_create();
 	    new_robot_delay = 0;
 	}
-    } else if (NumPlayers - NumPseudoPlayers > World.NumBases
+    } else if ((NumPlayers - NumPseudoPlayers > World.NumBases
+		|| (NumPlayers - NumPseudoPlayers > maxRobots
+		    && NumRobots > minRobots))
 	       && NumRobots > 0) {
 	Robot_delete(-1, false);
     }
@@ -1078,12 +1081,10 @@ void Robot_update(void)
 	    msg[0] = '\0';
 	    if (robotLeaveLife > 0 && pl->life >= robotLeaveLife) {
 		sprintf(msg, "%s retired.", pl->name);
-	    }
-	    else if (robotLeaveScore != 0 && pl->score < robotLeaveScore) {
+	    } else if (robotLeaveScore != 0 && pl->score < robotLeaveScore) {
 		sprintf(msg, "%s left out of disappointment.", pl->name);
-	    }
-	    else if (robotLeaveRatio != 0 && pl->score / (pl->life + 1)
-		    < robotLeaveRatio) {
+	    } else if (robotLeaveRatio != 0 && pl->score / (pl->life + 1)
+		       < robotLeaveRatio) {
 		sprintf(msg, "%s played too badly.", pl->name);
 	    }
 	    if (msg[0] != '\0') {

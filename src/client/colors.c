@@ -1,4 +1,4 @@
-/* $Id: colors.c,v 4.1 1998/04/16 17:39:15 bert Exp $
+/* $Id: colors.c,v 4.2 1998/09/30 14:00:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,7 +53,7 @@ char colors_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: colors.c,v 4.1 1998/04/16 17:39:15 bert Exp $";
+    "@(#)$Id: colors.c,v 4.2 1998/09/30 14:00:32 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
@@ -504,12 +504,16 @@ int Colors_init(void)
     for (p=0; p<2; p++) {
 	dpl_1[p] = dpl_2[p] = 0;
 
-	for (i=0; i<32; i++)
-	    if (!((1<<i)&dbuf_state->masks[p]))
-		if (dpl_1[p])
+	for (i=0; i<32; i++) {
+	    if (!((1<<i)&dbuf_state->masks[p])) {
+		if (dpl_1[p]) {
 		    dpl_2[p] |= 1<<i;
-		else
+		}
+		else {
 		    dpl_1[p] |= 1<<i;
+		}
+	    }
+	}
     }
 
     return 0;

@@ -3,6 +3,12 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@xpilot.org.
 
+Release 4.1 credits:
+
+	Guido Koopman			Several patches + 1 new item.
+	Sven Mascheck			Erase work + fixes & testing.
+	Rakk & Murx			Analytical Collision Detection.
+
 Release 4.0 credits:
 
 	Guido Koopman			Several patches + 3 new items

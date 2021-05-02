@@ -4,7 +4,7 @@
 .\"
 .TH XPILOTS  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.0.0: Apr 28th, 1998
+.ds ]W XPilot 4.1.0: Oct 30th, 1998
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -136,7 +136,7 @@ for details see the provided LICENSE file.
 .B /*.map
 Miscellaneous maps.
 .TP 40
-.B /usr/lib/X11/log
+.B /usr/X11R6/lib/X11/log
 Log file.
 .PD
 

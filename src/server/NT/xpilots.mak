@@ -1,4 +1,4 @@
-# Microsoft Developer Studio Generated NMAKE File, Format Version 4.20
+# Microsoft Developer Studio Generated NMAKE File, Format Version 4.10
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
@@ -32,9 +32,9 @@ NULL=nul
 ################################################################################
 # Begin Project
 # PROP Target_Last_Scanned "xpilots - Win32 Debug"
-RSC=rc.exe
-MTL=mktyplib.exe
 CPP=cl.exe
+MTL=mktyplib.exe
+RSC=rc.exe
 
 !IF  "$(CFG)" == "xpilots - Win32 Release"
 
@@ -51,84 +51,86 @@ CPP=cl.exe
 OUTDIR=.\Release
 INTDIR=.\Release
 
-ALL : "$(OUTDIR)\XPilot-server.exe" "$(OUTDIR)\xpilots.bsc"
+ALL : ".\Release\XPilot-server.exe" ".\Release\xpilots.bsc"
 
 CLEAN : 
-	-@erase "$(INTDIR)\checknames.obj"
-	-@erase "$(INTDIR)\checknames.sbr"
-	-@erase "$(INTDIR)\cmdline.obj"
-	-@erase "$(INTDIR)\cmdline.sbr"
-	-@erase "$(INTDIR)\collision.obj"
-	-@erase "$(INTDIR)\collision.sbr"
-	-@erase "$(INTDIR)\ConfigDlg.obj"
-	-@erase "$(INTDIR)\ConfigDlg.sbr"
-	-@erase "$(INTDIR)\contact.obj"
-	-@erase "$(INTDIR)\contact.sbr"
-	-@erase "$(INTDIR)\error.obj"
-	-@erase "$(INTDIR)\error.sbr"
-	-@erase "$(INTDIR)\event.obj"
-	-@erase "$(INTDIR)\event.sbr"
-	-@erase "$(INTDIR)\ExitXpilots.obj"
-	-@erase "$(INTDIR)\ExitXpilots.sbr"
-	-@erase "$(INTDIR)\frame.obj"
-	-@erase "$(INTDIR)\frame.sbr"
-	-@erase "$(INTDIR)\id.obj"
-	-@erase "$(INTDIR)\id.sbr"
-	-@erase "$(INTDIR)\map.obj"
-	-@erase "$(INTDIR)\map.sbr"
-	-@erase "$(INTDIR)\math.obj"
-	-@erase "$(INTDIR)\math.sbr"
-	-@erase "$(INTDIR)\metaserver.obj"
-	-@erase "$(INTDIR)\metaserver.sbr"
-	-@erase "$(INTDIR)\net.obj"
-	-@erase "$(INTDIR)\net.sbr"
-	-@erase "$(INTDIR)\netserver.obj"
-	-@erase "$(INTDIR)\netserver.sbr"
-	-@erase "$(INTDIR)\objpos.obj"
-	-@erase "$(INTDIR)\objpos.sbr"
-	-@erase "$(INTDIR)\option.obj"
-	-@erase "$(INTDIR)\option.sbr"
-	-@erase "$(INTDIR)\play.obj"
-	-@erase "$(INTDIR)\play.sbr"
-	-@erase "$(INTDIR)\player.obj"
-	-@erase "$(INTDIR)\player.sbr"
-	-@erase "$(INTDIR)\portability.obj"
-	-@erase "$(INTDIR)\portability.sbr"
-	-@erase "$(INTDIR)\ReallyShutdown.obj"
-	-@erase "$(INTDIR)\ReallyShutdown.sbr"
-	-@erase "$(INTDIR)\robot.obj"
-	-@erase "$(INTDIR)\robot.sbr"
-	-@erase "$(INTDIR)\robotdef.obj"
-	-@erase "$(INTDIR)\robotdef.sbr"
-	-@erase "$(INTDIR)\rules.obj"
-	-@erase "$(INTDIR)\rules.sbr"
-	-@erase "$(INTDIR)\saudio.obj"
-	-@erase "$(INTDIR)\saudio.sbr"
-	-@erase "$(INTDIR)\sched.obj"
-	-@erase "$(INTDIR)\sched.sbr"
-	-@erase "$(INTDIR)\server.obj"
-	-@erase "$(INTDIR)\server.sbr"
-	-@erase "$(INTDIR)\shipshape.obj"
-	-@erase "$(INTDIR)\shipshape.sbr"
-	-@erase "$(INTDIR)\socklib.obj"
-	-@erase "$(INTDIR)\socklib.sbr"
-	-@erase "$(INTDIR)\update.obj"
-	-@erase "$(INTDIR)\update.sbr"
-	-@erase "$(INTDIR)\walls.obj"
-	-@erase "$(INTDIR)\walls.sbr"
-	-@erase "$(INTDIR)\winNet.obj"
-	-@erase "$(INTDIR)\winNet.sbr"
-	-@erase "$(INTDIR)\winSvrThread.obj"
-	-@erase "$(INTDIR)\winSvrThread.sbr"
-	-@erase "$(INTDIR)\wsockerrs.obj"
-	-@erase "$(INTDIR)\wsockerrs.sbr"
-	-@erase "$(INTDIR)\xpilots.obj"
-	-@erase "$(INTDIR)\xpilots.res"
-	-@erase "$(INTDIR)\xpilots.sbr"
-	-@erase "$(INTDIR)\xpilotsDlg.obj"
-	-@erase "$(INTDIR)\xpilotsDlg.sbr"
-	-@erase "$(OUTDIR)\XPilot-server.exe"
-	-@erase "$(OUTDIR)\xpilots.bsc"
+	-@erase ".\Release\cannon.obj"
+	-@erase ".\Release\cannon.sbr"
+	-@erase ".\Release\checknames.obj"
+	-@erase ".\Release\checknames.sbr"
+	-@erase ".\Release\cmdline.obj"
+	-@erase ".\Release\cmdline.sbr"
+	-@erase ".\Release\collision.obj"
+	-@erase ".\Release\collision.sbr"
+	-@erase ".\Release\ConfigDlg.obj"
+	-@erase ".\Release\ConfigDlg.sbr"
+	-@erase ".\Release\contact.obj"
+	-@erase ".\Release\contact.sbr"
+	-@erase ".\Release\error.obj"
+	-@erase ".\Release\error.sbr"
+	-@erase ".\Release\event.obj"
+	-@erase ".\Release\event.sbr"
+	-@erase ".\Release\ExitXpilots.obj"
+	-@erase ".\Release\ExitXpilots.sbr"
+	-@erase ".\Release\frame.obj"
+	-@erase ".\Release\frame.sbr"
+	-@erase ".\Release\id.obj"
+	-@erase ".\Release\id.sbr"
+	-@erase ".\Release\map.obj"
+	-@erase ".\Release\map.sbr"
+	-@erase ".\Release\math.obj"
+	-@erase ".\Release\math.sbr"
+	-@erase ".\Release\metaserver.obj"
+	-@erase ".\Release\metaserver.sbr"
+	-@erase ".\Release\net.obj"
+	-@erase ".\Release\net.sbr"
+	-@erase ".\Release\netserver.obj"
+	-@erase ".\Release\netserver.sbr"
+	-@erase ".\Release\objpos.obj"
+	-@erase ".\Release\objpos.sbr"
+	-@erase ".\Release\option.obj"
+	-@erase ".\Release\option.sbr"
+	-@erase ".\Release\play.obj"
+	-@erase ".\Release\play.sbr"
+	-@erase ".\Release\player.obj"
+	-@erase ".\Release\player.sbr"
+	-@erase ".\Release\portability.obj"
+	-@erase ".\Release\portability.sbr"
+	-@erase ".\Release\ReallyShutdown.obj"
+	-@erase ".\Release\ReallyShutdown.sbr"
+	-@erase ".\Release\robot.obj"
+	-@erase ".\Release\robot.sbr"
+	-@erase ".\Release\robotdef.obj"
+	-@erase ".\Release\robotdef.sbr"
+	-@erase ".\Release\rules.obj"
+	-@erase ".\Release\rules.sbr"
+	-@erase ".\Release\saudio.obj"
+	-@erase ".\Release\saudio.sbr"
+	-@erase ".\Release\sched.obj"
+	-@erase ".\Release\sched.sbr"
+	-@erase ".\Release\server.obj"
+	-@erase ".\Release\server.sbr"
+	-@erase ".\Release\shipshape.obj"
+	-@erase ".\Release\shipshape.sbr"
+	-@erase ".\Release\socklib.obj"
+	-@erase ".\Release\socklib.sbr"
+	-@erase ".\Release\update.obj"
+	-@erase ".\Release\update.sbr"
+	-@erase ".\Release\walls.obj"
+	-@erase ".\Release\walls.sbr"
+	-@erase ".\Release\winNet.obj"
+	-@erase ".\Release\winNet.sbr"
+	-@erase ".\Release\winSvrThread.obj"
+	-@erase ".\Release\winSvrThread.sbr"
+	-@erase ".\Release\wsockerrs.obj"
+	-@erase ".\Release\wsockerrs.sbr"
+	-@erase ".\Release\XPilot-server.exe"
+	-@erase ".\Release\xpilots.bsc"
+	-@erase ".\Release\xpilots.obj"
+	-@erase ".\Release\xpilots.res"
+	-@erase ".\Release\xpilots.sbr"
+	-@erase ".\Release\xpilotsDlg.obj"
+	-@erase ".\Release\xpilotsDlg.sbr"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
@@ -152,44 +154,45 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 BSC32_FLAGS=/nologo /o"$(OUTDIR)/xpilots.bsc" 
 BSC32_SBRS= \
-	"$(INTDIR)\checknames.sbr" \
-	"$(INTDIR)\cmdline.sbr" \
-	"$(INTDIR)\collision.sbr" \
-	"$(INTDIR)\ConfigDlg.sbr" \
-	"$(INTDIR)\contact.sbr" \
-	"$(INTDIR)\error.sbr" \
-	"$(INTDIR)\event.sbr" \
-	"$(INTDIR)\ExitXpilots.sbr" \
-	"$(INTDIR)\frame.sbr" \
-	"$(INTDIR)\id.sbr" \
-	"$(INTDIR)\map.sbr" \
-	"$(INTDIR)\math.sbr" \
-	"$(INTDIR)\metaserver.sbr" \
-	"$(INTDIR)\net.sbr" \
-	"$(INTDIR)\netserver.sbr" \
-	"$(INTDIR)\objpos.sbr" \
-	"$(INTDIR)\option.sbr" \
-	"$(INTDIR)\play.sbr" \
-	"$(INTDIR)\player.sbr" \
-	"$(INTDIR)\portability.sbr" \
-	"$(INTDIR)\ReallyShutdown.sbr" \
-	"$(INTDIR)\robot.sbr" \
-	"$(INTDIR)\robotdef.sbr" \
-	"$(INTDIR)\rules.sbr" \
-	"$(INTDIR)\saudio.sbr" \
-	"$(INTDIR)\sched.sbr" \
-	"$(INTDIR)\server.sbr" \
-	"$(INTDIR)\shipshape.sbr" \
-	"$(INTDIR)\socklib.sbr" \
-	"$(INTDIR)\update.sbr" \
-	"$(INTDIR)\walls.sbr" \
-	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\winSvrThread.sbr" \
-	"$(INTDIR)\wsockerrs.sbr" \
-	"$(INTDIR)\xpilots.sbr" \
-	"$(INTDIR)\xpilotsDlg.sbr"
+	".\Release\cannon.sbr" \
+	".\Release\checknames.sbr" \
+	".\Release\cmdline.sbr" \
+	".\Release\collision.sbr" \
+	".\Release\ConfigDlg.sbr" \
+	".\Release\contact.sbr" \
+	".\Release\error.sbr" \
+	".\Release\event.sbr" \
+	".\Release\ExitXpilots.sbr" \
+	".\Release\frame.sbr" \
+	".\Release\id.sbr" \
+	".\Release\map.sbr" \
+	".\Release\math.sbr" \
+	".\Release\metaserver.sbr" \
+	".\Release\net.sbr" \
+	".\Release\netserver.sbr" \
+	".\Release\objpos.sbr" \
+	".\Release\option.sbr" \
+	".\Release\play.sbr" \
+	".\Release\player.sbr" \
+	".\Release\portability.sbr" \
+	".\Release\ReallyShutdown.sbr" \
+	".\Release\robot.sbr" \
+	".\Release\robotdef.sbr" \
+	".\Release\rules.sbr" \
+	".\Release\saudio.sbr" \
+	".\Release\sched.sbr" \
+	".\Release\server.sbr" \
+	".\Release\shipshape.sbr" \
+	".\Release\socklib.sbr" \
+	".\Release\update.sbr" \
+	".\Release\walls.sbr" \
+	".\Release\winNet.sbr" \
+	".\Release\winSvrThread.sbr" \
+	".\Release\wsockerrs.sbr" \
+	".\Release\xpilots.sbr" \
+	".\Release\xpilotsDlg.sbr"
 
-"$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
+".\Release\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
   $(BSC32_FLAGS) $(BSC32_SBRS)
 <<
@@ -202,45 +205,46 @@ LINK32_FLAGS=/nologo /subsystem:windows /incremental:no\
  /pdb:"$(OUTDIR)/XPilot-server.pdb" /machine:I386\
  /out:"$(OUTDIR)/XPilot-server.exe" 
 LINK32_OBJS= \
-	"$(INTDIR)\checknames.obj" \
-	"$(INTDIR)\cmdline.obj" \
-	"$(INTDIR)\collision.obj" \
-	"$(INTDIR)\ConfigDlg.obj" \
-	"$(INTDIR)\contact.obj" \
-	"$(INTDIR)\error.obj" \
-	"$(INTDIR)\event.obj" \
-	"$(INTDIR)\ExitXpilots.obj" \
-	"$(INTDIR)\frame.obj" \
-	"$(INTDIR)\id.obj" \
-	"$(INTDIR)\map.obj" \
-	"$(INTDIR)\math.obj" \
-	"$(INTDIR)\metaserver.obj" \
-	"$(INTDIR)\net.obj" \
-	"$(INTDIR)\netserver.obj" \
-	"$(INTDIR)\objpos.obj" \
-	"$(INTDIR)\option.obj" \
-	"$(INTDIR)\play.obj" \
-	"$(INTDIR)\player.obj" \
-	"$(INTDIR)\portability.obj" \
-	"$(INTDIR)\ReallyShutdown.obj" \
-	"$(INTDIR)\robot.obj" \
-	"$(INTDIR)\robotdef.obj" \
-	"$(INTDIR)\rules.obj" \
-	"$(INTDIR)\saudio.obj" \
-	"$(INTDIR)\sched.obj" \
-	"$(INTDIR)\server.obj" \
-	"$(INTDIR)\shipshape.obj" \
-	"$(INTDIR)\socklib.obj" \
-	"$(INTDIR)\update.obj" \
-	"$(INTDIR)\walls.obj" \
-	"$(INTDIR)\winNet.obj" \
-	"$(INTDIR)\winSvrThread.obj" \
-	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.obj" \
-	"$(INTDIR)\xpilots.res" \
-	"$(INTDIR)\xpilotsDlg.obj"
+	".\Release\cannon.obj" \
+	".\Release\checknames.obj" \
+	".\Release\cmdline.obj" \
+	".\Release\collision.obj" \
+	".\Release\ConfigDlg.obj" \
+	".\Release\contact.obj" \
+	".\Release\error.obj" \
+	".\Release\event.obj" \
+	".\Release\ExitXpilots.obj" \
+	".\Release\frame.obj" \
+	".\Release\id.obj" \
+	".\Release\map.obj" \
+	".\Release\math.obj" \
+	".\Release\metaserver.obj" \
+	".\Release\net.obj" \
+	".\Release\netserver.obj" \
+	".\Release\objpos.obj" \
+	".\Release\option.obj" \
+	".\Release\play.obj" \
+	".\Release\player.obj" \
+	".\Release\portability.obj" \
+	".\Release\ReallyShutdown.obj" \
+	".\Release\robot.obj" \
+	".\Release\robotdef.obj" \
+	".\Release\rules.obj" \
+	".\Release\saudio.obj" \
+	".\Release\sched.obj" \
+	".\Release\server.obj" \
+	".\Release\shipshape.obj" \
+	".\Release\socklib.obj" \
+	".\Release\update.obj" \
+	".\Release\walls.obj" \
+	".\Release\winNet.obj" \
+	".\Release\winSvrThread.obj" \
+	".\Release\wsockerrs.obj" \
+	".\Release\xpilots.obj" \
+	".\Release\xpilots.res" \
+	".\Release\xpilotsDlg.obj"
 
-"$(OUTDIR)\XPilot-server.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+".\Release\XPilot-server.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
@@ -260,88 +264,90 @@ LINK32_OBJS= \
 OUTDIR=.\Debug
 INTDIR=.\Debug
 
-ALL : "$(OUTDIR)\xpilots.exe" "$(OUTDIR)\xpilots.bsc"
+ALL : ".\Debug\xpilots.exe" ".\Debug\xpilots.bsc"
 
 CLEAN : 
-	-@erase "$(INTDIR)\checknames.obj"
-	-@erase "$(INTDIR)\checknames.sbr"
-	-@erase "$(INTDIR)\cmdline.obj"
-	-@erase "$(INTDIR)\cmdline.sbr"
-	-@erase "$(INTDIR)\collision.obj"
-	-@erase "$(INTDIR)\collision.sbr"
-	-@erase "$(INTDIR)\ConfigDlg.obj"
-	-@erase "$(INTDIR)\ConfigDlg.sbr"
-	-@erase "$(INTDIR)\contact.obj"
-	-@erase "$(INTDIR)\contact.sbr"
-	-@erase "$(INTDIR)\error.obj"
-	-@erase "$(INTDIR)\error.sbr"
-	-@erase "$(INTDIR)\event.obj"
-	-@erase "$(INTDIR)\event.sbr"
-	-@erase "$(INTDIR)\ExitXpilots.obj"
-	-@erase "$(INTDIR)\ExitXpilots.sbr"
-	-@erase "$(INTDIR)\frame.obj"
-	-@erase "$(INTDIR)\frame.sbr"
-	-@erase "$(INTDIR)\id.obj"
-	-@erase "$(INTDIR)\id.sbr"
-	-@erase "$(INTDIR)\map.obj"
-	-@erase "$(INTDIR)\map.sbr"
-	-@erase "$(INTDIR)\math.obj"
-	-@erase "$(INTDIR)\math.sbr"
-	-@erase "$(INTDIR)\metaserver.obj"
-	-@erase "$(INTDIR)\metaserver.sbr"
-	-@erase "$(INTDIR)\net.obj"
-	-@erase "$(INTDIR)\net.sbr"
-	-@erase "$(INTDIR)\netserver.obj"
-	-@erase "$(INTDIR)\netserver.sbr"
-	-@erase "$(INTDIR)\objpos.obj"
-	-@erase "$(INTDIR)\objpos.sbr"
-	-@erase "$(INTDIR)\option.obj"
-	-@erase "$(INTDIR)\option.sbr"
-	-@erase "$(INTDIR)\play.obj"
-	-@erase "$(INTDIR)\play.sbr"
-	-@erase "$(INTDIR)\player.obj"
-	-@erase "$(INTDIR)\player.sbr"
-	-@erase "$(INTDIR)\portability.obj"
-	-@erase "$(INTDIR)\portability.sbr"
-	-@erase "$(INTDIR)\ReallyShutdown.obj"
-	-@erase "$(INTDIR)\ReallyShutdown.sbr"
-	-@erase "$(INTDIR)\robot.obj"
-	-@erase "$(INTDIR)\robot.sbr"
-	-@erase "$(INTDIR)\robotdef.obj"
-	-@erase "$(INTDIR)\robotdef.sbr"
-	-@erase "$(INTDIR)\rules.obj"
-	-@erase "$(INTDIR)\rules.sbr"
-	-@erase "$(INTDIR)\saudio.obj"
-	-@erase "$(INTDIR)\saudio.sbr"
-	-@erase "$(INTDIR)\sched.obj"
-	-@erase "$(INTDIR)\sched.sbr"
-	-@erase "$(INTDIR)\server.obj"
-	-@erase "$(INTDIR)\server.sbr"
-	-@erase "$(INTDIR)\shipshape.obj"
-	-@erase "$(INTDIR)\shipshape.sbr"
-	-@erase "$(INTDIR)\socklib.obj"
-	-@erase "$(INTDIR)\socklib.sbr"
-	-@erase "$(INTDIR)\update.obj"
-	-@erase "$(INTDIR)\update.sbr"
-	-@erase "$(INTDIR)\vc40.idb"
-	-@erase "$(INTDIR)\vc40.pdb"
-	-@erase "$(INTDIR)\walls.obj"
-	-@erase "$(INTDIR)\walls.sbr"
-	-@erase "$(INTDIR)\winNet.obj"
-	-@erase "$(INTDIR)\winNet.sbr"
-	-@erase "$(INTDIR)\winSvrThread.obj"
-	-@erase "$(INTDIR)\winSvrThread.sbr"
-	-@erase "$(INTDIR)\wsockerrs.obj"
-	-@erase "$(INTDIR)\wsockerrs.sbr"
-	-@erase "$(INTDIR)\xpilots.obj"
-	-@erase "$(INTDIR)\xpilots.res"
-	-@erase "$(INTDIR)\xpilots.sbr"
-	-@erase "$(INTDIR)\xpilotsDlg.obj"
-	-@erase "$(INTDIR)\xpilotsDlg.sbr"
-	-@erase "$(OUTDIR)\xpilots.bsc"
-	-@erase "$(OUTDIR)\xpilots.exe"
-	-@erase "$(OUTDIR)\xpilots.ilk"
-	-@erase "$(OUTDIR)\xpilots.pdb"
+	-@erase ".\Debug\cannon.obj"
+	-@erase ".\Debug\cannon.sbr"
+	-@erase ".\Debug\checknames.obj"
+	-@erase ".\Debug\checknames.sbr"
+	-@erase ".\Debug\cmdline.obj"
+	-@erase ".\Debug\cmdline.sbr"
+	-@erase ".\Debug\collision.obj"
+	-@erase ".\Debug\collision.sbr"
+	-@erase ".\Debug\ConfigDlg.obj"
+	-@erase ".\Debug\ConfigDlg.sbr"
+	-@erase ".\Debug\contact.obj"
+	-@erase ".\Debug\contact.sbr"
+	-@erase ".\Debug\error.obj"
+	-@erase ".\Debug\error.sbr"
+	-@erase ".\Debug\event.obj"
+	-@erase ".\Debug\event.sbr"
+	-@erase ".\Debug\ExitXpilots.obj"
+	-@erase ".\Debug\ExitXpilots.sbr"
+	-@erase ".\Debug\frame.obj"
+	-@erase ".\Debug\frame.sbr"
+	-@erase ".\Debug\id.obj"
+	-@erase ".\Debug\id.sbr"
+	-@erase ".\Debug\map.obj"
+	-@erase ".\Debug\map.sbr"
+	-@erase ".\Debug\math.obj"
+	-@erase ".\Debug\math.sbr"
+	-@erase ".\Debug\metaserver.obj"
+	-@erase ".\Debug\metaserver.sbr"
+	-@erase ".\Debug\net.obj"
+	-@erase ".\Debug\net.sbr"
+	-@erase ".\Debug\netserver.obj"
+	-@erase ".\Debug\netserver.sbr"
+	-@erase ".\Debug\objpos.obj"
+	-@erase ".\Debug\objpos.sbr"
+	-@erase ".\Debug\option.obj"
+	-@erase ".\Debug\option.sbr"
+	-@erase ".\Debug\play.obj"
+	-@erase ".\Debug\play.sbr"
+	-@erase ".\Debug\player.obj"
+	-@erase ".\Debug\player.sbr"
+	-@erase ".\Debug\portability.obj"
+	-@erase ".\Debug\portability.sbr"
+	-@erase ".\Debug\ReallyShutdown.obj"
+	-@erase ".\Debug\ReallyShutdown.sbr"
+	-@erase ".\Debug\robot.obj"
+	-@erase ".\Debug\robot.sbr"
+	-@erase ".\Debug\robotdef.obj"
+	-@erase ".\Debug\robotdef.sbr"
+	-@erase ".\Debug\rules.obj"
+	-@erase ".\Debug\rules.sbr"
+	-@erase ".\Debug\saudio.obj"
+	-@erase ".\Debug\saudio.sbr"
+	-@erase ".\Debug\sched.obj"
+	-@erase ".\Debug\sched.sbr"
+	-@erase ".\Debug\server.obj"
+	-@erase ".\Debug\server.sbr"
+	-@erase ".\Debug\shipshape.obj"
+	-@erase ".\Debug\shipshape.sbr"
+	-@erase ".\Debug\socklib.obj"
+	-@erase ".\Debug\socklib.sbr"
+	-@erase ".\Debug\update.obj"
+	-@erase ".\Debug\update.sbr"
+	-@erase ".\Debug\vc40.idb"
+	-@erase ".\Debug\vc40.pdb"
+	-@erase ".\Debug\walls.obj"
+	-@erase ".\Debug\walls.sbr"
+	-@erase ".\Debug\winNet.obj"
+	-@erase ".\Debug\winNet.sbr"
+	-@erase ".\Debug\winSvrThread.obj"
+	-@erase ".\Debug\winSvrThread.sbr"
+	-@erase ".\Debug\wsockerrs.obj"
+	-@erase ".\Debug\wsockerrs.sbr"
+	-@erase ".\Debug\xpilots.bsc"
+	-@erase ".\Debug\xpilots.exe"
+	-@erase ".\Debug\xpilots.ilk"
+	-@erase ".\Debug\xpilots.obj"
+	-@erase ".\Debug\xpilots.pdb"
+	-@erase ".\Debug\xpilots.res"
+	-@erase ".\Debug\xpilots.sbr"
+	-@erase ".\Debug\xpilotsDlg.obj"
+	-@erase ".\Debug\xpilotsDlg.sbr"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
@@ -365,44 +371,45 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 BSC32_FLAGS=/nologo /o"$(OUTDIR)/xpilots.bsc" 
 BSC32_SBRS= \
-	"$(INTDIR)\checknames.sbr" \
-	"$(INTDIR)\cmdline.sbr" \
-	"$(INTDIR)\collision.sbr" \
-	"$(INTDIR)\ConfigDlg.sbr" \
-	"$(INTDIR)\contact.sbr" \
-	"$(INTDIR)\error.sbr" \
-	"$(INTDIR)\event.sbr" \
-	"$(INTDIR)\ExitXpilots.sbr" \
-	"$(INTDIR)\frame.sbr" \
-	"$(INTDIR)\id.sbr" \
-	"$(INTDIR)\map.sbr" \
-	"$(INTDIR)\math.sbr" \
-	"$(INTDIR)\metaserver.sbr" \
-	"$(INTDIR)\net.sbr" \
-	"$(INTDIR)\netserver.sbr" \
-	"$(INTDIR)\objpos.sbr" \
-	"$(INTDIR)\option.sbr" \
-	"$(INTDIR)\play.sbr" \
-	"$(INTDIR)\player.sbr" \
-	"$(INTDIR)\portability.sbr" \
-	"$(INTDIR)\ReallyShutdown.sbr" \
-	"$(INTDIR)\robot.sbr" \
-	"$(INTDIR)\robotdef.sbr" \
-	"$(INTDIR)\rules.sbr" \
-	"$(INTDIR)\saudio.sbr" \
-	"$(INTDIR)\sched.sbr" \
-	"$(INTDIR)\server.sbr" \
-	"$(INTDIR)\shipshape.sbr" \
-	"$(INTDIR)\socklib.sbr" \
-	"$(INTDIR)\update.sbr" \
-	"$(INTDIR)\walls.sbr" \
-	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\winSvrThread.sbr" \
-	"$(INTDIR)\wsockerrs.sbr" \
-	"$(INTDIR)\xpilots.sbr" \
-	"$(INTDIR)\xpilotsDlg.sbr"
+	".\Debug\cannon.sbr" \
+	".\Debug\checknames.sbr" \
+	".\Debug\cmdline.sbr" \
+	".\Debug\collision.sbr" \
+	".\Debug\ConfigDlg.sbr" \
+	".\Debug\contact.sbr" \
+	".\Debug\error.sbr" \
+	".\Debug\event.sbr" \
+	".\Debug\ExitXpilots.sbr" \
+	".\Debug\frame.sbr" \
+	".\Debug\id.sbr" \
+	".\Debug\map.sbr" \
+	".\Debug\math.sbr" \
+	".\Debug\metaserver.sbr" \
+	".\Debug\net.sbr" \
+	".\Debug\netserver.sbr" \
+	".\Debug\objpos.sbr" \
+	".\Debug\option.sbr" \
+	".\Debug\play.sbr" \
+	".\Debug\player.sbr" \
+	".\Debug\portability.sbr" \
+	".\Debug\ReallyShutdown.sbr" \
+	".\Debug\robot.sbr" \
+	".\Debug\robotdef.sbr" \
+	".\Debug\rules.sbr" \
+	".\Debug\saudio.sbr" \
+	".\Debug\sched.sbr" \
+	".\Debug\server.sbr" \
+	".\Debug\shipshape.sbr" \
+	".\Debug\socklib.sbr" \
+	".\Debug\update.sbr" \
+	".\Debug\walls.sbr" \
+	".\Debug\winNet.sbr" \
+	".\Debug\winSvrThread.sbr" \
+	".\Debug\wsockerrs.sbr" \
+	".\Debug\xpilots.sbr" \
+	".\Debug\xpilotsDlg.sbr"
 
-"$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
+".\Debug\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
   $(BSC32_FLAGS) $(BSC32_SBRS)
 <<
@@ -413,45 +420,46 @@ LINK32=link.exe
 LINK32_FLAGS=/nologo /subsystem:windows /incremental:yes\
  /pdb:"$(OUTDIR)/xpilots.pdb" /debug /machine:I386 /out:"$(OUTDIR)/xpilots.exe" 
 LINK32_OBJS= \
-	"$(INTDIR)\checknames.obj" \
-	"$(INTDIR)\cmdline.obj" \
-	"$(INTDIR)\collision.obj" \
-	"$(INTDIR)\ConfigDlg.obj" \
-	"$(INTDIR)\contact.obj" \
-	"$(INTDIR)\error.obj" \
-	"$(INTDIR)\event.obj" \
-	"$(INTDIR)\ExitXpilots.obj" \
-	"$(INTDIR)\frame.obj" \
-	"$(INTDIR)\id.obj" \
-	"$(INTDIR)\map.obj" \
-	"$(INTDIR)\math.obj" \
-	"$(INTDIR)\metaserver.obj" \
-	"$(INTDIR)\net.obj" \
-	"$(INTDIR)\netserver.obj" \
-	"$(INTDIR)\objpos.obj" \
-	"$(INTDIR)\option.obj" \
-	"$(INTDIR)\play.obj" \
-	"$(INTDIR)\player.obj" \
-	"$(INTDIR)\portability.obj" \
-	"$(INTDIR)\ReallyShutdown.obj" \
-	"$(INTDIR)\robot.obj" \
-	"$(INTDIR)\robotdef.obj" \
-	"$(INTDIR)\rules.obj" \
-	"$(INTDIR)\saudio.obj" \
-	"$(INTDIR)\sched.obj" \
-	"$(INTDIR)\server.obj" \
-	"$(INTDIR)\shipshape.obj" \
-	"$(INTDIR)\socklib.obj" \
-	"$(INTDIR)\update.obj" \
-	"$(INTDIR)\walls.obj" \
-	"$(INTDIR)\winNet.obj" \
-	"$(INTDIR)\winSvrThread.obj" \
-	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.obj" \
-	"$(INTDIR)\xpilots.res" \
-	"$(INTDIR)\xpilotsDlg.obj"
+	".\Debug\cannon.obj" \
+	".\Debug\checknames.obj" \
+	".\Debug\cmdline.obj" \
+	".\Debug\collision.obj" \
+	".\Debug\ConfigDlg.obj" \
+	".\Debug\contact.obj" \
+	".\Debug\error.obj" \
+	".\Debug\event.obj" \
+	".\Debug\ExitXpilots.obj" \
+	".\Debug\frame.obj" \
+	".\Debug\id.obj" \
+	".\Debug\map.obj" \
+	".\Debug\math.obj" \
+	".\Debug\metaserver.obj" \
+	".\Debug\net.obj" \
+	".\Debug\netserver.obj" \
+	".\Debug\objpos.obj" \
+	".\Debug\option.obj" \
+	".\Debug\play.obj" \
+	".\Debug\player.obj" \
+	".\Debug\portability.obj" \
+	".\Debug\ReallyShutdown.obj" \
+	".\Debug\robot.obj" \
+	".\Debug\robotdef.obj" \
+	".\Debug\rules.obj" \
+	".\Debug\saudio.obj" \
+	".\Debug\sched.obj" \
+	".\Debug\server.obj" \
+	".\Debug\shipshape.obj" \
+	".\Debug\socklib.obj" \
+	".\Debug\update.obj" \
+	".\Debug\walls.obj" \
+	".\Debug\winNet.obj" \
+	".\Debug\winSvrThread.obj" \
+	".\Debug\wsockerrs.obj" \
+	".\Debug\xpilots.obj" \
+	".\Debug\xpilots.res" \
+	".\Debug\xpilotsDlg.obj"
 
-"$(OUTDIR)\xpilots.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+".\Debug\xpilots.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
@@ -499,10 +507,23 @@ DEP_CPP_XPILO=\
 	".\xpilotsDlg.h"\
 	
 
-"$(INTDIR)\xpilots.obj" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\xpilots.sbr" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
 
+".\Release\xpilots.obj" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
+
+".\Release\xpilots.sbr" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\xpilots.obj" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
+
+".\Debug\xpilots.sbr" : $(SOURCE) $(DEP_CPP_XPILO) "$(INTDIR)"
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -522,10 +543,23 @@ DEP_CPP_XPILOT=\
 	".\xpilotsDlg.h"\
 	
 
-"$(INTDIR)\xpilotsDlg.obj" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\xpilotsDlg.sbr" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
 
+".\Release\xpilotsDlg.obj" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
+
+".\Release\xpilotsDlg.sbr" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\xpilotsDlg.obj" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
+
+".\Debug\xpilotsDlg.sbr" : $(SOURCE) $(DEP_CPP_XPILOT) "$(INTDIR)"
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -538,9 +572,21 @@ DEP_RSC_XPILOTS=\
 	".\res\xpilots.rc2"\
 	
 
-"$(INTDIR)\xpilots.res" : $(SOURCE) $(DEP_RSC_XPILOTS) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
+".\Release\xpilots.res" : $(SOURCE) $(DEP_RSC_XPILOTS) "$(INTDIR)"
    $(RSC) $(RSC_PROJ) $(SOURCE)
 
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\xpilots.res" : $(SOURCE) $(DEP_RSC_XPILOTS) "$(INTDIR)"
+   $(RSC) $(RSC_PROJ) $(SOURCE)
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -553,10 +599,23 @@ DEP_CPP_EXITX=\
 	".\xpilots.h"\
 	
 
-"$(INTDIR)\ExitXpilots.obj" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\ExitXpilots.sbr" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
 
+".\Release\ExitXpilots.obj" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
+
+".\Release\ExitXpilots.sbr" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\ExitXpilots.obj" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
+
+".\Debug\ExitXpilots.sbr" : $(SOURCE) $(DEP_CPP_EXITX) "$(INTDIR)"
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -571,10 +630,23 @@ DEP_CPP_WINSV=\
 	".\WinSvrThread.h"\
 	
 
-"$(INTDIR)\winSvrThread.obj" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\winSvrThread.sbr" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
 
+".\Release\winSvrThread.obj" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
+
+".\Release\winSvrThread.sbr" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\winSvrThread.obj" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
+
+".\Debug\winSvrThread.sbr" : $(SOURCE) $(DEP_CPP_WINSV) "$(INTDIR)"
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -587,10 +659,23 @@ DEP_CPP_REALL=\
 	".\xpilots.h"\
 	
 
-"$(INTDIR)\ReallyShutdown.obj" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\ReallyShutdown.sbr" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
 
+".\Release\ReallyShutdown.obj" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
+
+".\Release\ReallyShutdown.sbr" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\ReallyShutdown.obj" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
+
+".\Debug\ReallyShutdown.sbr" : $(SOURCE) $(DEP_CPP_REALL) "$(INTDIR)"
+
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -599,12 +684,14 @@ DEP_CPP_REALL=\
 SOURCE=..\cmdline.c
 DEP_CPP_CMDLI=\
 	"..\..\common\bit.h"\
+	"..\..\common\cmw.h"\
 	"..\..\common\config.h"\
 	"..\..\common\const.h"\
 	"..\..\common\draw.h"\
 	"..\..\common\item.h"\
 	"..\..\common\keys.h"\
 	"..\..\common\NT/winNet.h"\
+	"..\..\common\portability.h"\
 	"..\..\common\version.h"\
 	"..\click.h"\
 	"..\defaults.h"\
@@ -617,15 +704,33 @@ NODEP_CPP_CMDLI=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\cmdline.obj" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
+".\Release\cmdline.obj" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\cmdline.sbr" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
+".\Release\cmdline.sbr" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\cmdline.obj" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\cmdline.sbr" : $(SOURCE) $(DEP_CPP_CMDLI) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -657,15 +762,33 @@ NODEP_CPP_COLLI=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\collision.obj" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
+".\Release\collision.obj" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\collision.sbr" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
+".\Release\collision.sbr" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\collision.obj" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\collision.sbr" : $(SOURCE) $(DEP_CPP_COLLI) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -698,15 +821,33 @@ NODEP_CPP_CONTA=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\contact.obj" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
+".\Release\contact.obj" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\contact.sbr" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
+".\Release\contact.sbr" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\contact.obj" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\contact.sbr" : $(SOURCE) $(DEP_CPP_CONTA) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -724,15 +865,33 @@ DEP_CPP_ERROR=\
 	".\winServer.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\error.obj" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
+".\Release\error.obj" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\error.sbr" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
+".\Release\error.sbr" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\error.obj" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\error.sbr" : $(SOURCE) $(DEP_CPP_ERROR) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -762,15 +921,33 @@ NODEP_CPP_EVENT=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\event.obj" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
+".\Release\event.obj" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\event.sbr" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
+".\Release\event.sbr" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\event.obj" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\event.sbr" : $(SOURCE) $(DEP_CPP_EVENT) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -800,15 +977,33 @@ NODEP_CPP_FRAME=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\frame.obj" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
+".\Release\frame.obj" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\frame.sbr" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
+".\Release\frame.sbr" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\frame.obj" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\frame.sbr" : $(SOURCE) $(DEP_CPP_FRAME) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -833,15 +1028,33 @@ NODEP_CPP_ID_C18=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\id.obj" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
+".\Release\id.obj" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\id.sbr" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
+".\Release\id.sbr" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\id.obj" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\id.sbr" : $(SOURCE) $(DEP_CPP_ID_C18) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -869,15 +1082,33 @@ NODEP_CPP_MAP_C=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\map.obj" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
+".\Release\map.obj" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\map.sbr" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
+".\Release\map.sbr" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\map.obj" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\map.sbr" : $(SOURCE) $(DEP_CPP_MAP_C) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -890,15 +1121,33 @@ DEP_CPP_MATH_=\
 	"..\..\common\version.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\math.obj" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
+".\Release\math.obj" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\math.sbr" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
+".\Release\math.sbr" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\math.obj" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\math.sbr" : $(SOURCE) $(DEP_CPP_MATH_) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -930,15 +1179,33 @@ NODEP_CPP_METAS=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\metaserver.obj" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
+".\Release\metaserver.obj" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\metaserver.sbr" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
+".\Release\metaserver.sbr" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\metaserver.obj" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\metaserver.sbr" : $(SOURCE) $(DEP_CPP_METAS) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -958,15 +1225,33 @@ DEP_CPP_NET_C=\
 	{$(INCLUDE)}"\sys\TYPES.H"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\net.obj" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
+".\Release\net.obj" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\net.sbr" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
+".\Release\net.sbr" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\net.obj" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\net.sbr" : $(SOURCE) $(DEP_CPP_NET_C) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1006,15 +1291,33 @@ NODEP_CPP_NETSE=\
 	"..\winNet.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\netserver.obj" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
+".\Release\netserver.obj" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\netserver.sbr" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
+".\Release\netserver.sbr" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\netserver.obj" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\netserver.sbr" : $(SOURCE) $(DEP_CPP_NETSE) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1040,15 +1343,33 @@ NODEP_CPP_OBJPO=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\objpos.obj" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
+".\Release\objpos.obj" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\objpos.sbr" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
+".\Release\objpos.sbr" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\objpos.obj" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\objpos.sbr" : $(SOURCE) $(DEP_CPP_OBJPO) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1074,15 +1395,33 @@ NODEP_CPP_OPTIO=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\option.obj" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
+".\Release\option.obj" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\option.sbr" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
+".\Release\option.sbr" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\option.obj" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\option.sbr" : $(SOURCE) $(DEP_CPP_OPTIO) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1099,6 +1438,7 @@ DEP_CPP_PLAY_=\
 	"..\..\common\keys.h"\
 	"..\..\common\NT/winNet.h"\
 	"..\..\common\version.h"\
+	"..\cannon.h"\
 	"..\click.h"\
 	"..\global.h"\
 	"..\netserver.h"\
@@ -1113,15 +1453,33 @@ NODEP_CPP_PLAY_=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\play.obj" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
+".\Release\play.obj" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\play.sbr" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
+".\Release\play.sbr" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\play.obj" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\play.sbr" : $(SOURCE) $(DEP_CPP_PLAY_) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1152,15 +1510,33 @@ NODEP_CPP_PLAYE=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\player.obj" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
+".\Release\player.obj" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\player.sbr" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
+".\Release\player.sbr" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\player.obj" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\player.sbr" : $(SOURCE) $(DEP_CPP_PLAYE) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1177,15 +1553,33 @@ NODEP_CPP_PORTA=\
 	"..\..\common\username.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\portability.obj" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
+".\Release\portability.obj" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\portability.sbr" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
+".\Release\portability.sbr" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\portability.obj" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\portability.sbr" : $(SOURCE) $(DEP_CPP_PORTA) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1218,15 +1612,33 @@ NODEP_CPP_ROBOT=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\robot.obj" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
+".\Release\robot.obj" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\robot.sbr" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
+".\Release\robot.sbr" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\robot.obj" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\robot.sbr" : $(SOURCE) $(DEP_CPP_ROBOT) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1258,15 +1670,33 @@ NODEP_CPP_ROBOTD=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\robotdef.obj" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
+".\Release\robotdef.obj" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\robotdef.sbr" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
+".\Release\robotdef.sbr" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\robotdef.obj" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\robotdef.sbr" : $(SOURCE) $(DEP_CPP_ROBOTD) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1283,6 +1713,7 @@ DEP_CPP_RULES=\
 	"..\..\common\NT/winNet.h"\
 	"..\..\common\rules.h"\
 	"..\..\common\version.h"\
+	"..\cannon.h"\
 	"..\click.h"\
 	"..\global.h"\
 	"..\object.h"\
@@ -1292,15 +1723,33 @@ NODEP_CPP_RULES=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\rules.obj" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
+".\Release\rules.obj" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\rules.sbr" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
+".\Release\rules.sbr" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\rules.obj" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\rules.sbr" : $(SOURCE) $(DEP_CPP_RULES) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1328,15 +1777,33 @@ NODEP_CPP_SAUDI=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\saudio.obj" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
+".\Release\saudio.obj" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\saudio.sbr" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
+".\Release\saudio.sbr" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\saudio.obj" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\saudio.sbr" : $(SOURCE) $(DEP_CPP_SAUDI) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1363,15 +1830,33 @@ DEP_CPP_SCHED=\
 	{$(INCLUDE)}"\sys\TYPES.H"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\sched.obj" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
+".\Release\sched.obj" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\sched.sbr" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
+".\Release\sched.sbr" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\sched.obj" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\sched.sbr" : $(SOURCE) $(DEP_CPP_SCHED) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1404,15 +1889,33 @@ NODEP_CPP_SERVE=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\server.obj" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
+".\Release\server.obj" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\server.sbr" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
+".\Release\server.sbr" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\server.obj" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\server.sbr" : $(SOURCE) $(DEP_CPP_SERVE) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1430,15 +1933,33 @@ NODEP_CPP_SOCKL=\
 	"..\..\common\termnet.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\socklib.obj" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
+".\Release\socklib.obj" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\socklib.sbr" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
+".\Release\socklib.sbr" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\socklib.obj" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\socklib.sbr" : $(SOURCE) $(DEP_CPP_SOCKL) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1455,6 +1976,7 @@ DEP_CPP_UPDAT=\
 	"..\..\common\keys.h"\
 	"..\..\common\NT/winNet.h"\
 	"..\..\common\version.h"\
+	"..\cannon.h"\
 	"..\click.h"\
 	"..\global.h"\
 	"..\object.h"\
@@ -1468,15 +1990,33 @@ NODEP_CPP_UPDAT=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\update.obj" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
+".\Release\update.obj" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\update.sbr" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
+".\Release\update.sbr" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\update.obj" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\update.sbr" : $(SOURCE) $(DEP_CPP_UPDAT) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1509,15 +2049,33 @@ NODEP_CPP_WALLS=\
 	"..\strcasecmp.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\walls.obj" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
+".\Release\walls.obj" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\walls.sbr" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
+".\Release\walls.sbr" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\walls.obj" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\walls.sbr" : $(SOURCE) $(DEP_CPP_WALLS) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1525,15 +2083,33 @@ BuildCmds= \
 
 SOURCE=..\..\common\NT\wsockerrs.c
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\wsockerrs.obj" : $(SOURCE) "$(INTDIR)"
+".\Release\wsockerrs.obj" : $(SOURCE) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\wsockerrs.sbr" : $(SOURCE) "$(INTDIR)"
+".\Release\wsockerrs.sbr" : $(SOURCE) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\wsockerrs.obj" : $(SOURCE) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\wsockerrs.sbr" : $(SOURCE) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1544,15 +2120,33 @@ DEP_CPP_WINNE=\
 	"..\..\common\error.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\winNet.obj" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
+".\Release\winNet.obj" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\winNet.sbr" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
+".\Release\winNet.sbr" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\winNet.obj" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\winNet.sbr" : $(SOURCE) $(DEP_CPP_WINNE) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1567,15 +2161,33 @@ DEP_CPP_CHECK=\
 	"..\..\common\version.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\checknames.obj" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
+".\Release\checknames.obj" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\checknames.sbr" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
+".\Release\checknames.sbr" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\checknames.obj" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\checknames.sbr" : $(SOURCE) $(DEP_CPP_CHECK) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1592,15 +2204,33 @@ DEP_CPP_SHIPS=\
 	".\winServer.h"\
 	
 
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
 BuildCmds= \
 	$(CPP) $(CPP_PROJ) $(SOURCE) \
 	
 
-"$(INTDIR)\shipshape.obj" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
+".\Release\shipshape.obj" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
    $(BuildCmds)
 
-"$(INTDIR)\shipshape.sbr" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
+".\Release\shipshape.sbr" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
    $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\shipshape.obj" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\shipshape.sbr" : $(SOURCE) $(DEP_CPP_SHIPS) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1614,10 +2244,81 @@ DEP_CPP_CONFI=\
 	".\xpilots.h"\
 	
 
-"$(INTDIR)\ConfigDlg.obj" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
+!IF  "$(CFG)" == "xpilots - Win32 Release"
 
-"$(INTDIR)\ConfigDlg.sbr" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
 
+".\Release\ConfigDlg.obj" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
+
+".\Release\ConfigDlg.sbr" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+".\Debug\ConfigDlg.obj" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
+
+".\Debug\ConfigDlg.sbr" : $(SOURCE) $(DEP_CPP_CONFI) "$(INTDIR)"
+
+
+!ENDIF 
+
+# End Source File
+################################################################################
+# Begin Source File
+
+SOURCE=\users\dick\xpilot\src\server\cannon.c
+DEP_CPP_CANNO=\
+	"..\..\common\audio.h"\
+	"..\..\common\bit.h"\
+	"..\..\common\config.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\keys.h"\
+	"..\..\common\NT/winNet.h"\
+	"..\..\common\version.h"\
+	"..\cannon.h"\
+	"..\click.h"\
+	"..\global.h"\
+	"..\object.h"\
+	"..\objpos.h"\
+	"..\proto.h"\
+	"..\saudio.h"\
+	"..\score.h"\
+	"..\walls.h"\
+	".\winServer.h"\
+	
+NODEP_CPP_CANNO=\
+	"..\strcasecmp.h"\
+	
+
+!IF  "$(CFG)" == "xpilots - Win32 Release"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Release\cannon.obj" : $(SOURCE) $(DEP_CPP_CANNO) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Release\cannon.sbr" : $(SOURCE) $(DEP_CPP_CANNO) "$(INTDIR)"
+   $(BuildCmds)
+
+!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+
+
+BuildCmds= \
+	$(CPP) $(CPP_PROJ) $(SOURCE) \
+	
+
+".\Debug\cannon.obj" : $(SOURCE) $(DEP_CPP_CANNO) "$(INTDIR)"
+   $(BuildCmds)
+
+".\Debug\cannon.sbr" : $(SOURCE) $(DEP_CPP_CANNO) "$(INTDIR)"
+   $(BuildCmds)
+
+!ENDIF 
 
 # End Source File
 # End Target

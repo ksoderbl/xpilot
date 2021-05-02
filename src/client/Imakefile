@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:15:36 bert Exp $ */
+/* $Id: Imakefile,v 4.3 1998/10/06 14:52:18 bert Exp $ */
 
 TOPDIR=../..
 
@@ -35,11 +35,19 @@ TOPDIR=../..
   AUDIOOBJ = hpaudio.o
   AUDIODEF = -DSOUND
 #else	/* no sound */
+#if defined(DEBUG_SOUND)
+  AUDIOINC = 
+  AUDIOLIB = 
+  AUDIOSRC = debugaudio.c
+  AUDIOOBJ = debugaudio.o
+  AUDIODEF = -DSOUND
+#else
   AUDIOINC =
   AUDIOLIB =
   AUDIOSRC =
   AUDIOOBJ =
   AUDIODEF =
+#endif /* DEBUG_SOUND */
 #endif /* HP_SOUND */
 #endif /* AF_SOUND */
 #endif /* RPLAY_SOUND */
@@ -63,6 +71,9 @@ DEFS_JOYSTICK = -DJOYSTICK
 #ifdef WindowScaling
 DEFS_SCALING = -DWINDOWSCALING
 #endif
+#ifdef XPilotDevelopment
+DEFS_DEBUG = -DDEVELOPMENT
+#endif
 
 /*
  * Assemble defines and includes.
@@ -78,7 +89,7 @@ DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
        -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
        $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
        $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
-       $(DEFS_OTHER)
+       $(DEFS_OTHER) $(DEFS_DEBUG)
 INCLUDES = $(AUDIOINC) -I../common/ -I../../lib/
 
 
@@ -94,7 +105,7 @@ OBJS = \
 	default.o join.o netclient.o paint.o paintdata.o painthud.o \
 	paintmap.o paintobjects.o paintradar.o query.o record.o \
 	syslimit.o talk.o texture.o usleep.o widget.o xevent.o \
-	xinit.o xpilot.o xpmread.o $(AUDIOOBJ) $(STRDUP_OBJ)
+	xinit.o xpilot.o xpmread.o $(AUDIOOBJ)
 
 DEPLIBS = ../common/libxpcommon.a $(DEPXLIB)
 

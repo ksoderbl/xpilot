@@ -1,4 +1,4 @@
-/* $Id: play.c,v 4.9 1998/04/28 07:16:03 bert Exp $
+/* $Id: play.c,v 4.14 1998/09/30 13:18:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -45,12 +45,13 @@
 #include "netserver.h"
 #include "error.h"
 #include "objpos.h"
+#include "cannon.h"
 
 char play_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 4.9 1998/04/28 07:16:03 bert Exp $";
+    "@(#)$Id: play.c,v 4.14 1998/09/30 13:18:54 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -100,6 +101,7 @@ void Thrust(int ind)
 	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
 	/* owner id       */ pl->id,
+	/* owner team	  */ pl->team,
 	/* kind           */ OBJ_SPARK,
 	/* mass           */ THRUST_MASS,
 	/* status         */ GRAVITY | OWNERIMMUNE,
@@ -115,6 +117,7 @@ void Thrust(int ind)
 	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
 	/* owner id       */ pl->id,
+	/* owner team	  */ pl->team,
 	/* kind           */ OBJ_SPARK,
 	/* mass           */ THRUST_MASS * ALT_SPARK_MASS_FACT,
 	/* status         */ GRAVITY | OWNERIMMUNE,
@@ -140,6 +143,7 @@ void Turn_thrust(int ind,int num_sparks)
 	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
 	/* owner id       */ pl->id,
+	/* owner team	  */ pl->team,
 	/* kind           */ OBJ_SPARK,
 	/* mass           */ THRUST_MASS,
 	/* status         */ GRAVITY | OWNERIMMUNE,
@@ -174,7 +178,7 @@ void Record_shove(player *pl, player *pusher, long time)
     shove->time = time;
 }
 
-/* Calculates the effect of a collision between to objects */
+/* Calculates the effect of a collision between two objects */
 void Delta_mv(object *ship, object *obj)
 {
     DFLOAT	vx, vy, m;
@@ -254,6 +258,8 @@ static void Item_update_flags(player *pl)
 	CLR_BIT(pl->have, OBJ_CLOAKING_DEVICE);
 	pl->updateVisibility = 1;
     }
+    if (pl->item[ITEM_MIRROR] <= 0)
+	CLR_BIT(pl->have, OBJ_MIRROR);
     if (pl->item[ITEM_DEFLECTOR] <= 0)
 	CLR_BIT(pl->have, OBJ_DEFLECTOR);
     if (pl->item[ITEM_AFTERBURNER] <= 0)
@@ -346,7 +352,7 @@ void Free_shots(void)
 }
 
 
-void Place_item(int item, player *pl)
+void Place_item(int item, int ind)
 {
     object		*obj;
     int			num_lose, num_per_pack,
@@ -357,6 +363,7 @@ void Place_item(int item, player *pl)
     int			px, py;
     DFLOAT		vx, vy;
     item_concentrator_t	*con;
+    player		*pl = (ind == -1 ? NULL : Players[ind]);
 
     if (NumObjs >= MAX_TOTAL_SHOTS) {
 	if (pl && !BIT(pl->status, KILLED)) {
@@ -482,7 +489,7 @@ void Place_item(int item, player *pl)
 		bx = px / BLOCK_SZ;
 		by = py / BLOCK_SZ;
 	    }
-	    if (BIT(1U << World.block[bx][by], SPACE_BLOCKS)) {
+	    if (BIT(1U << World.block[bx][by], SPACE_BLOCKS|CANNON_BIT)) {
 		break;
 	    }
 	}
@@ -520,8 +527,9 @@ void Place_item(int item, player *pl)
     obj->info = item;
     obj->color = RED;
     obj->status = grav;
-    obj->dir = 0;
+    obj->dir = (u_byte)findDir(vx, vy);
     obj->id = -1;
+    obj->team = TEAM_NOT_SET;
     obj->owner = -1;
     Object_position_init_pixels(obj, px, py);
     obj->vel.x = vx;
@@ -538,11 +546,12 @@ void Place_item(int item, player *pl)
 }
 
 
-void Throw_items(player *pl)
+void Throw_items(int ind)
 {
     int			num_items_to_throw, remain, item;
+    player		*pl = (ind == -1 ? NULL : Players[ind]);
 
-    if (!dropItemOnKillProb)
+    if (!dropItemOnKillProb || !pl)
 	return;
 
     for (item = 0; item < NUM_ITEMS; item++) {
@@ -552,7 +561,7 @@ void Throw_items(player *pl)
 		if (num_items_to_throw <= 0) {
 		    break;
 		}
-		Place_item(item, pl);
+		Place_item(item, ind);
 		remain = pl->item[item] - World.items[item].initial;
 	    } while (remain > 0 && remain < num_items_to_throw);
 	}
@@ -602,7 +611,7 @@ void Detonate_items(int ind)
 		&& pl->item[ITEM_MINE] < nukeMinMines) {
 		CLR_BIT(mods.nuclear, NUCLEAR);
 	    }
-	    Place_general_mine(ind, GRAVITY,
+	    Place_general_mine(ind, pl->team, GRAVITY,
 			       pl->pos.x, pl->pos.y,
 			       pl->vel.x + vel * tcos(dir),
 			       pl->vel.y + vel * tsin(dir),
@@ -634,11 +643,75 @@ void Detonate_items(int ind)
 		&& pl->item[ITEM_MISSILE] < nukeMinSmarts) {
 		CLR_BIT(mods.nuclear, NUCLEAR);
 	    }
-	    Fire_general_shot(ind, pl->pos.x, pl->pos.y,
+	    Fire_general_shot(ind, 0, pl->team, pl->pos.x, pl->pos.y,
 			      type, MOD2(rand(), RES),
-			      pl->shot_speed, mods);
+			      pl->shot_speed, mods, -1);
 	}
     }
+}
+
+void Tractor_beam(int ind)
+{
+    player	*pl = Players[ind];
+    DFLOAT	maxdist, percent;
+    long	cost;
+
+    maxdist = TRACTOR_MAX_RANGE(pl->item[ITEM_TRACTOR_BEAM]);
+    if (BIT(pl->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE)
+	!= (LOCK_PLAYER|LOCK_VISIBLE)
+	|| BIT(Players[GetInd[pl->lock.pl_id]]->status,
+	       PLAYING|PAUSE|KILLED|GAME_OVER) != PLAYING
+	|| pl->lock.distance >= maxdist
+	|| BIT(pl->used, OBJ_PHASING_DEVICE)
+	|| BIT(Players[GetInd[pl->lock.pl_id]]->used, OBJ_PHASING_DEVICE)) {
+	CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
+	return;
+    }
+    percent = TRACTOR_PERCENT(pl->lock.distance, maxdist);
+    cost = (long)TRACTOR_COST(percent);
+    if (pl->fuel.sum < -cost) {
+	CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
+	return;
+    }
+    General_tractor_beam(ind, pl->pos.x, pl->pos.y,
+			 pl->item[ITEM_TRACTOR_BEAM],
+			 GetInd[pl->lock.pl_id], pl->tractor_is_pressor);
+}
+
+void General_tractor_beam(int ind, DFLOAT x, DFLOAT y,
+			  int items, int target, bool pressor)
+{
+    player	*pl = (ind == -1 ? NULL : Players[ind]),
+		*victim = Players[target];
+    DFLOAT	maxdist = TRACTOR_MAX_RANGE(items),
+		maxforce = TRACTOR_MAX_FORCE(items),
+		percent, force, dist;
+    long	cost;
+    int		theta;
+
+    dist = Wrap_length(x - victim->pos.x, y - victim->pos.y);
+    if (dist > maxdist)
+	return;
+    percent = TRACTOR_PERCENT(dist, maxdist);
+    cost = (long)TRACTOR_COST(percent);
+    force = TRACTOR_FORCE(pressor, percent, maxforce);
+    
+    sound_play_sensors(x, y,
+		       (pressor ? PRESSOR_BEAM_SOUND : TRACTOR_BEAM_SOUND));
+
+    if (pl)
+	Add_fuel(&(pl->fuel), cost);
+
+    theta = (int)Wrap_findDir(x - victim->pos.x, y - victim->pos.y);
+
+    if (pl) {
+	pl->vel.x += tcos(theta) * (force / pl->mass);
+	pl->vel.y += tsin(theta) * (force / pl->mass);
+	Record_shove(pl, victim, frame_loops);
+	Record_shove(victim, pl, frame_loops);
+    }
+    victim->vel.x -= tcos(theta) * (force / victim->mass);
+    victim->vel.y -= tsin(theta) * (force / victim->mass);
 }
 
 void Place_mine(int ind)
@@ -649,7 +722,7 @@ void Place_mine(int ind)
 	|| (BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE) && !shieldedMining))
 	return;
 
-    Place_general_mine(ind, 0,
+    Place_general_mine(ind, pl->team, 0,
 		       pl->pos.x, pl->pos.y, 0.0, 0.0, pl->mods);
 }
 
@@ -662,11 +735,11 @@ void Place_moving_mine(int ind)
 	|| (BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE) && !shieldedMining))
 	return;
 
-    Place_general_mine(ind, GRAVITY,
+    Place_general_mine(ind, pl->team, GRAVITY,
 		       pl->pos.x, pl->pos.y, pl->vel.x, pl->vel.y, pl->mods);
 }
 
-void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
+void Place_general_mine(int ind, u_short team, long status, DFLOAT x, DFLOAT y,
 			DFLOAT vx, DFLOAT vy, modifiers mods)
 {
     char		msg[MSG_LEN];
@@ -689,10 +762,13 @@ void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
 	return;
     }
 
-    if (pl && BIT(pl->status, KILLED))
+    if (pl && BIT(pl->status, KILLED)) {
 	life = rand() % FPS;
-    else
+    } else if (BIT(status, FROMCANNON)) {
+	life = CANNON_SHOT_LIFE;
+    } else {
 	life = (mineLife ? mineLife : MINE_LIFETIME);
+    }
 
     if (!BIT(mods.warhead, CLUSTER))
 	mods.velocity = 0;
@@ -720,7 +796,7 @@ void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
 	}
 	mass = MINE_MASS * used * NUKE_MASS_MULT;
     } else {
-	mass = MINE_MASS;
+	mass = (BIT(status, FROMCANNON) ? MINE_MASS * 0.6 : MINE_MASS);
 	used = 1;
     }
 
@@ -778,6 +854,7 @@ void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
 	mine->status = status;
 	mine->dir = 0;
 	mine->id = (pl ? pl->id : -1);
+	mine->team = team;
 	mine->owner = mine->id;
 	Object_position_init_pixels(mine, x, y);
 	if (minis > 1) {
@@ -863,101 +940,6 @@ void Detonate_mines(int ind)
     return;
 }
 
-
-void Cannon_fire(int ind, int j)
-{
-    cannon_t *cannon = World.cannon + ind;
-    object *shot;
-    int dir = -1, speed, i, life;
-    const int spread = (int)(RES * 0.3);
-    const int spreadoffset = (spread / 2);
-    int cpx = (int)((cannon->pos.x + 0.5) * BLOCK_SZ);
-    int cpy = (int)((cannon->pos.y + 0.5) * BLOCK_SZ);
-
-    speed = (int)(ShotsSpeed + (rand() % 7) - 4);
-    switch (cannonSmartness) {
-    case 0:		/* straight ahead */
-	dir = cannon->dir;
-	break;
-    case 3:		/* deadly accuracy */
-	{
-	    int closest = INT_MAX;
-	    for (i = j; i < NumPlayers; i++) {
-		player *pl = Players[i];
-		int tdist;
-		if (BIT(pl->used, OBJ_PHASING_DEVICE))
-		    continue;
-		tdist = (int)(Wrap_length(pl->pos.x - cpx, pl->pos.y - cpy));
-		if (tdist < (CANNON_DISTANCE + 2 * cannon->item[ITEM_SENSOR] * BLOCK_SZ)) {
-		    DFLOAT shoot_time = tdist / speed;
-		    int npx = (int)(pl->pos.x
-			      + pl->vel.x * shoot_time
-			      + pl->acc.x * shoot_time * shoot_time);
-		    int npy = (int)(pl->pos.y
-			      + pl->vel.y * shoot_time
-			      + pl->acc.y * shoot_time * shoot_time);
-		    int tdir = (int)(Wrap_findDir(npx - cpx, npy - cpy));
-		    if (abs(tdir - cannon->dir) > spreadoffset)
-			continue;
-		    if (tdist < closest) {
-			closest = tdist;
-			dir = tdir;
-		    }
-		}
-	    }
-	}
-	if (dir == -1)
-	    return;
-	break;
-    case 2:		/* more or less aimed at activating player */
-	dir = (int)Wrap_findDir(Players[j]->pos.x - cpx, Players[j]->pos.y - cpy);
-	if (dir < cannon->dir - spreadoffset) {
-	    dir = cannon->dir - spreadoffset + 3;
-	} else if (dir > cannon->dir + spreadoffset) {
-	    dir = cannon->dir + spreadoffset - 3;
-	}
-	dir += (rand() % 7) - 3;
-	break;
-    case 1:
-    default:		/* random direction */
-	dir = cannon->dir;
-	dir += (rand() % (spread + 1)) - spreadoffset;
-	break;
-    }
-    dir = MOD2(dir, RES);
-    life = 25 + (rand()&0x17);
-
-    for (i = 0; i < (1 + 2 * cannon->item[ITEM_WIDEANGLE]); i++) {
-
-    if (NumObjs >= MAX_TOTAL_SHOTS)
-	return;
-    shot = Obj[NumObjs++];
-    shot->color = WHITE;
-    shot->id = -1;
-    shot->owner = -1;
-    Object_position_init_pixels(shot, cpx, cpy);
-    shot->status = FROMCANNON;
-    if (ShotsGravity) {
-	SET_BIT(shot->status, GRAVITY);
-    }
-    shot->acc.x = shot->acc.y = 0;
-    shot->mass = 0.4;
-    shot->type = OBJ_SHOT;
-    shot->life = life;
-    shot->pl_range = 0;
-    shot->pl_radius = 0;
-    CLEAR_MODS(shot->mods);
-    shot->dir = dir + (4 - cannonSmartness) * (-cannon->item[ITEM_WIDEANGLE] +  i);
-    shot->dir = MOD2(shot->dir, RES);
-    shot->vel.x = speed * tcos(shot->dir);
-    shot->vel.y = speed * tsin(shot->dir);
-
-    }
-
-    sound_play_sensors(shot->pos.x, shot->pos.y, CANNON_FIRE_SOUND);
-}
-
-
 void Make_treasure_ball(int treasure)
 {
     object *ball;
@@ -985,6 +967,7 @@ void Make_treasure_ball(int treasure)
     ball->dir = 0;
     Object_position_init_pixels(ball, x, y);
     ball->id = ball->owner = -1;
+    ball->team = t->team;
     ball->type = OBJ_BALL;
     ball->color = WHITE;
     ball->count = 0;
@@ -1157,7 +1140,8 @@ void Fire_main_shot(int ind, int type, int dir)
     x = pl->pos.x + pl->ship->m_gun[pl->dir].x;
     y = pl->pos.y + pl->ship->m_gun[pl->dir].y;
 
-    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
+		      pl->shot_speed, pl->mods, -1);
 }
 
 void Fire_shot(int ind, int type, int dir)
@@ -1167,8 +1151,8 @@ void Fire_shot(int ind, int type, int dir)
     if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
 	return;
 
-    Fire_general_shot(ind, pl->pos.x, pl->pos.y,
-		      type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, pl->pos.x, pl->pos.y,
+		      type, dir, pl->shot_speed, pl->mods, -1);
 }
 
 void Fire_left_shot(int ind, int type, int dir, int gun)
@@ -1183,7 +1167,8 @@ void Fire_left_shot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->l_gun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->l_gun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
+		      pl->shot_speed, pl->mods, -1);
 
 }
 
@@ -1199,7 +1184,8 @@ void Fire_right_shot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->r_gun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->r_gun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
+		      pl->shot_speed, pl->mods, -1);
 
 }
 
@@ -1215,7 +1201,8 @@ void Fire_left_rshot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->l_rgun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->l_rgun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
+		      pl->shot_speed, pl->mods, -1);
 
 }
 
@@ -1231,12 +1218,14 @@ void Fire_right_rshot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->r_rgun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->r_rgun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
+		      pl->shot_speed, pl->mods, -1);
 
 }
 
-void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
-		       DFLOAT speed, modifiers mods)
+void Fire_general_shot(int ind, u_short team, bool cannon, DFLOAT x, DFLOAT y,
+		       int type, int dir, DFLOAT speed, modifiers mods,
+		       int target)
 {
     char		msg[MSG_LEN];
     player		*pl = (ind == -1 ? NULL : Players[ind]);
@@ -1273,8 +1262,14 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
 	mass = pl->shot_mass;
 	life = pl->shot_life;
     } else {
-	mass = ShotsMass;
-	life = ShotsLife;
+	if (cannon) {
+	    mass = CANNON_SHOT_MASS;
+	    life = CANNON_SHOT_LIFE;
+	    SET_BIT(status, FROMCANNON);
+	} else {
+	    mass = ShotsMass;
+	    life = ShotsLife;
+	}
     }
 
     switch (type) {
@@ -1305,6 +1300,7 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
 		return;
 	    }
 	}
+	/* FALLTHROUGH */
     case OBJ_TORPEDO:
 	/*
 	 * Make sure there are enough object entries for the mini shots.
@@ -1350,23 +1346,28 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
 		drain += (long)(CLUSTER_MASS_DRAIN(mass));
 	}
 
-	if (pl && BIT(pl->status, KILLED))
+	if (pl && BIT(pl->status, KILLED)) {
 	    life = rand() % FPS;
-	else
+	} else if (!cannon) {
 	    life = (missileLife ? missileLife : MISSILE_LIFETIME);
+	}
 
 	switch (type) {
 	case OBJ_HEAT_SHOT:
 #ifndef HEAT_LOCK
 	    lock = -1;
 #else  /* HEAT_LOCK */
-	    if (pl == NULL
-		|| !BIT(pl->lock.tagged, LOCK_PLAYER)
+	    if (pl == NULL) {
+		lock = target;
+	    } else {
+		if (!BIT(pl->lock.tagged, LOCK_PLAYER)
 		|| ((pl->lock.distance > pl->sensor_range)
-		    && BIT(World.rules->mode, LIMITED_VISIBILITY)))
-		lock = -1;
-	    else
-		lock = pl->lock.pl_id;
+		    && BIT(World.rules->mode, LIMITED_VISIBILITY))) {
+		    lock = -1;
+		} else {
+		    lock = pl->lock.pl_id;
+		}
+	    }
 #endif /* HEAT_LOCK */
 	    if (pl) {
 		sound_play_sensors(pl->pos.x, pl->pos.y, FIRE_HEAT_SHOT_SOUND);
@@ -1377,13 +1378,16 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
 	    break;
 
 	case OBJ_SMART_SHOT:
-	    if (pl == NULL
-		|| !BIT(pl->lock.tagged, LOCK_PLAYER)
+	    if (pl == NULL) {
+		lock = target;
+	    } else {
+		if (!BIT(pl->lock.tagged, LOCK_PLAYER)
 		|| ((pl->lock.distance > pl->sensor_range)
 		    && BIT(World.rules->mode, LIMITED_VISIBILITY))
 		|| !pl->visibility[GetInd[pl->lock.pl_id]].canSee)
-		return;
-	    lock = pl->lock.pl_id;
+		    return;
+		lock = pl->lock.pl_id;
+	    }
 	    max_speed = SMART_SHOT_MAX_SPEED;
 	    turnspeed = SMART_TURNSPEED;
 	    break;
@@ -1425,7 +1429,7 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
     turnspeed *= (1 + (mods.power * MISSILE_POWER_TURNSPEED_FACT));
     spread = (DFLOAT)((unsigned)mods.spread + 1);
     /*
-     * Calculate the maxmimum time it would take to cross one ships width,
+     * Calculate the maximum time it would take to cross one ships width,
      * don't fuse the shot/missile/torpedo for the owner only until that
      * time passes.  This is a hack to stop various odd missile and shot
      * mounting points killing the player when they're firing.
@@ -1652,6 +1656,7 @@ void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
 	shot->info 	= lock;
 	shot->type	= type;
 	shot->id	= (pl ? pl->id : -1);
+	shot->team	= team;
 	shot->owner	= -1;
 	shot->color	= (pl ? pl->color : WHITE);
 
@@ -1867,20 +1872,29 @@ void Delete_shot(int ind)
 	    if (BIT(shot->status, NOEXPLOSION))
 		break;
 	    sound_play_sensors(shot->pos.x, shot->pos.y, EXPLODE_BALL_SOUND);
-	    Make_debris(
-		/* pos.x, pos.y   */ shot->prevpos.x, shot->prevpos.y,
-		/* vel.x, vel.y   */ shot->vel.x, shot->vel.y,
-		/* owner id       */ shot->id,
-		/* kind           */ OBJ_DEBRIS,
-		/* mass           */ DEBRIS_MASS,
-		/* status         */ GRAVITY,
-		/* color          */ RED,
-		/* radius         */ 8,
-		/* min,max debris */ 75, 150,
-		/* min,max dir    */ 0, RES-1,
-		/* min,max speed  */ 20, 95,
-		/* min,max life   */ 10, 2*(FPS+15)
-		);
+	    if (!anaColDet){
+		Make_debris(
+		    /* pos.x, pos.y   */ shot->prevpos.x, shot->prevpos.y,
+		    /* vel.x, vel.y   */ shot->vel.x, shot->vel.y,
+		    /* owner id       */ shot->id,
+		    /* owner team	  */ shot->team,
+		    /* kind           */ OBJ_DEBRIS,
+		    /* mass           */ DEBRIS_MASS,
+		    /* status         */ GRAVITY,
+		    /* color          */ RED,
+		    /* radius         */ 8,
+		    /* min,max debris */ 75, 150,
+		    /* min,max dir    */ 0, RES-1,
+		    /* min,max speed  */ 20, 95,
+		    /* min,max life   */ 10, 2*(FPS+15)
+		    );
+	    } else {
+		Make_debris(
+		    shot->prevpos.x, shot->prevpos.y, shot->vel.x, shot->vel.y,
+		    shot->id, shot->team, OBJ_DEBRIS, DEBRIS_MASS, GRAVITY,
+		    RED, 8, 10, 20, 0, RES-1, 10, 50, 10, 2*(FPS+15));
+	    }
+
 	}
 	break;
 	/* Shots related to a player. */
@@ -1896,6 +1910,9 @@ void Delete_shot(int ind)
 	status = GRAVITY;
 	if (shot->type == OBJ_MINE) {
 	    status |= COLLISIONSHOVE;
+	}
+	if (BIT(shot->status, FROMCANNON)) {
+	    status |= FROMCANNON;
 	}
 
 	if (BIT(shot->type, OBJ_MINE)) {
@@ -1960,7 +1977,7 @@ void Delete_shot(int ind)
 	}
 
 	if (BIT(shot->mods.warhead, IMPLOSION)) {
-	    intensity >>= 1;
+	    /*intensity >>= 1;*/
 	    mass = -mass;
 	}
 
@@ -1972,6 +1989,7 @@ void Delete_shot(int ind)
 	    /* pos.x, pos.y   */ shot->prevpos.x, shot->prevpos.y,
 	    /* vel.x, vel.y   */ shot->vel.x, shot->vel.y,
 	    /* owner id       */ shot->id,
+	    /* owner team     */ shot->team,
 	    /* kind           */ type,
 	    /* mass           */ mass,
 	    /* status         */ status,
@@ -2060,12 +2078,13 @@ void Delete_shot(int ind)
 	    mods.power = rand() % (MODS_POWER_MAX + 1);
 	}
 	if (addMine) {
-	    Place_general_mine (-1, (rand()%2 == 0 ? GRAVITY : 0),
+	    Place_general_mine (-1, TEAM_NOT_SET, (rand()%2 == 0 ? GRAVITY : 0),
 				shot->pos.x, shot->pos.y, 0.0, 0.0, mods);
 	}
 	else if (addHeat) {
-	    Fire_general_shot (-1, shot->pos.x, shot->pos.y, OBJ_HEAT_SHOT,
-			       MOD2(rand(), RES), 1.0f, mods);
+	    Fire_general_shot (-1, TEAM_NOT_SET, 0, shot->pos.x, shot->pos.y,
+			       OBJ_HEAT_SHOT, MOD2(rand(), RES), 1.0f,
+			       mods, -1);
 	}
     }
     else if (addBall) {
@@ -2073,230 +2092,407 @@ void Delete_shot(int ind)
     }
 }
 
-
-void do_transporter(player *pl)
+void Fire_laser(int ind)
 {
-    int			i;
-    DFLOAT		l,
-			closestLength = TRANSPORTER_DISTANCE;
-    player		*closestPlayer = NULL,
-			*p;
-    bool		done = false;
-    char		msg[MSG_LEN];
-    const char		*what = 0;
-
-    if (!BIT(pl->used, OBJ_PHASING_DEVICE)) {
-    for (i = 0; i < NumPlayers; i++) {
-	p = Players[i];
-
-	if (p != pl
-	    && BIT(p->status, PLAYING|PAUSE|GAME_OVER) == PLAYING
-	    && !TEAM_IMMUNE(GetInd[pl->id], i)
-		&& !IS_TANK_PTR(p)
-		&& !BIT(p->used, OBJ_PHASING_DEVICE)) {
-
-	    l = Wrap_length(pl->pos.x - p->pos.x, pl->pos.y - p->pos.y);
-	    if (l < closestLength) {
-		closestLength = l;
-		closestPlayer = p;
+    player	*pl = Players[ind];
+    DFLOAT	x, y;
+    
+    if (pl->item[ITEM_LASER] > pl->num_pulses
+	&& pl->velocity < PULSE_SPEED - PULSE_SAMPLE_DISTANCE) {
+	if (pl->fuel.sum <= -ED_LASER) {
+	    CLR_BIT(pl->used, OBJ_LASER);
+	} else {
+	    x = pl->pos.x + pl->ship->m_gun[pl->dir].x + pl->vel.x;
+	    y = pl->pos.y + pl->ship->m_gun[pl->dir].y + pl->vel.y;
+	    x = WRAP_XPIXEL(x);
+	    y = WRAP_YPIXEL(y);
+	    if (x >= 0 && x < World.width && y >= 0 && y < World.height) {
+		Fire_general_laser(ind, pl->team, x, y, pl->dir, pl->mods);
 	    }
 	}
     }
+}
+
+void Fire_general_laser(int ind, u_short team, DFLOAT x, DFLOAT y,
+			int dir, modifiers mods)
+{
+    player	*pl = (ind == -1 ? NULL : Players[ind]);
+    pulse_t	*pulse;
+    int		life;
+
+    if (pl) {
+	Add_fuel(&(pl->fuel), (long)ED_LASER);
+	sound_play_sensors(x, y, FIRE_LASER_SOUND);
+	life = (int)PULSE_LIFE(pl->item[ITEM_LASER]);
+    } else {
+	life = (int)PULSE_LIFE(CANNON_PULSES);
+    }
+    Pulses[NumPulses] = (pulse_t *)malloc(sizeof(pulse_t));
+    pulse = Pulses[NumPulses];
+    pulse->id = (pl ? pl->id : -1);
+    pulse->team = team;
+    pulse->dir = dir;
+    pulse->len = PULSE_LENGTH;
+    pulse->life = life;
+    pulse->mods = mods;
+    pulse->refl = false;
+    pulse->pos.x = x - PULSE_SPEED * tcos(dir);
+    pulse->pos.y = y - PULSE_SPEED * tsin(dir);
+    NumPulses++;
+    if (pl)
+	pl->num_pulses++;
+}
+
+void Do_deflector(int ind)
+{
+    player	*pl = Players[ind];
+    DFLOAT	range = (pl->item[ITEM_DEFLECTOR] * 0.25 + 1) * BLOCK_SZ;
+    DFLOAT	maxforce = pl->item[ITEM_DEFLECTOR] * 0.1;
+    object	*obj;
+    int		i;
+    long	dist, dx, dy;
+
+    if (pl->fuel.sum < -ED_DEFLECTOR) {
+	CLR_BIT(pl->used, OBJ_DEFLECTOR);
+	return;
+    }
+    Add_fuel(&(pl->fuel), (long)ED_DEFLECTOR);
+
+    for (i = 0; i < NumObjs; i++) {
+	obj = Obj[i];
+
+	if (obj->life <= 0
+	    || ABS(obj->mass) == 0)
+	    continue;
+
+	if (obj->id == pl->id) {
+	    /* don't deflect self */
+	    if (BIT(obj->type, OBJ_PLAYER))
+		continue;
+
+	    if (BIT(obj->status, OWNERIMMUNE)
+		|| obj->fuselife < obj->life)
+		continue;
+	} else {
+	    if (teamImmunity
+		&& BIT(World.rules->mode, TEAM_PLAY)
+		&& obj->team == pl->team)
+		continue;
+	}
+
+	/* don't push balls out of treasure boxes */
+	if (BIT(obj->type, OBJ_BALL)
+	    && !BIT(obj->status, GRAVITY))
+	    continue;
+
+	dx = WRAP_DX(obj->pos.x - pl->pos.x);
+	dy = WRAP_DY(obj->pos.y - pl->pos.y);
+
+	/* get rid of out-of-range objects quickly */
+	if (QUICK_LENGTH(dx, dy) > range)
+	    continue;
+
+	dist = (long)(LENGTH(dx, dy) - SHIP_SZ);
+	if (dist < range
+	    && dist > 0) {
+	    int dir = (int)findDir(dx, dy);
+	    int idir = MOD2(dir - obj->dir, RES);
+
+	    if (idir > RES * 0.25
+		&& idir < RES * 0.75) {
+		DFLOAT force = ((DFLOAT)(range - dist) / range)
+				* ((DFLOAT)(range - dist) / range)
+				* maxforce
+				* ((RES * 0.25) - ABS(idir - RES * 0.5))
+				/ (RES * 0.25);
+		DFLOAT dv = force / ABS(obj->mass);
+
+		obj->vel.x += tcos(dir) * dv;
+		obj->vel.y += tsin(dir) * dv;
+	    }
+	}
+    }
+}
+
+void Do_transporter(int ind)
+{
+    player	*pl = Players[ind], *p;
+    int		i, target = -1;
+    DFLOAT	dist, closest = TRANSPORTER_DISTANCE;
+
+    /* if not available, fail silently */
+    if (!pl->item[ITEM_TRANSPORTER]
+	|| pl->fuel.sum < -ED_TRANSPORTER
+	|| BIT(pl->used, OBJ_PHASING_DEVICE))
+	return;
+
+    /* find victim */
+    for (i = 0; i < NumPlayers; i++) {
+	p = Players[i];
+	if (p == pl
+	    || BIT(p->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
+	    || TEAM_IMMUNE(ind, i)
+	    || IS_TANK_PTR(p)
+	    || BIT(p->used, OBJ_PHASING_DEVICE))
+	    continue;
+	dist = Wrap_length(pl->pos.x - p->pos.x, pl->pos.y - p->pos.y);
+	if (dist < closest) {
+	    closest = dist;
+	    target = i;
+	}
     }
 
-    if (!(p = closestPlayer)) {
+    /* no victims in range */
+    if (target == -1) {
 	sound_play_sensors(pl->pos.x, pl->pos.y, TRANSPORTER_FAIL_SOUND);
+	Add_fuel(&(pl->fuel), ED_TRANSPORTER);
+	pl->item[ITEM_TRANSPORTER]--;
 	return;
     }
 
-    sound_play_sensors(pl->pos.x, pl->pos.y, TRANSPORTER_SUCCESS_SOUND);
-    pl->transInfo.pl_id = p->id;
-    pl->transInfo.count = 5;
+    /* victim found */
+    Do_general_transporter(ind, pl->pos.x, pl->pos.y, target, NULL, NULL);
+}
 
-#define STEAL(ITEM, MSG)	\
-    {				\
-	if (!p->item[ITEM])	\
-	    break;		\
-	p->item[ITEM]--;	\
-	pl->item[ITEM]++;	\
-	what = MSG;		\
-	done = true;		\
+void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
+			    int *itemp, long *amountp)
+{
+    player		*pl = (ind == -1 ? NULL : Players[ind]),
+			*victim = Players[target];
+    char		msg[MSG_LEN];
+    const char		*what = NULL;
+    int			i;
+    int			item;
+    long		amount;
+
+    /* choose item type to steal */
+    for (i = 0; i < 50; i++) {
+	item = rand() % NUM_ITEMS;
+	if (victim->item[item]
+	    || (item == ITEM_TANK && victim->fuel.num_tanks)
+	    || (item == ITEM_FUEL && victim->fuel.sum))
+	    break;
     }
 
-    while (!done) {
-
-	enum Item item = (enum Item) (rfrac() * NUM_ITEMS);
-
-	switch (item) {
-
-	case ITEM_AFTERBURNER:
-	    STEAL(item, "an afterburner");
-	    if (p->item[ITEM_AFTERBURNER] <= 0)
-		CLR_BIT(p->have, OBJ_AFTERBURNER);
-	    SET_BIT(pl->have, OBJ_AFTERBURNER);
-	    if (pl->item[ITEM_AFTERBURNER] > MAX_AFTERBURNER)
-		pl->item[ITEM_AFTERBURNER] = MAX_AFTERBURNER;
-	    break;
-
-	case ITEM_MISSILE:
-	    STEAL(item, "some missiles");
-
-	    if (p->item[ITEM_MISSILE] < 3) {
-		pl->item[ITEM_MISSILE] += p->item[ITEM_MISSILE];
-		p->item[ITEM_MISSILE] = 0;
-	    }
-	    else {
-		p->item[ITEM_MISSILE] -= 3;
-		pl->item[ITEM_MISSILE] += 3;
-	    }
-	    break;
-
-	case ITEM_CLOAK:
-	    STEAL(item, "a cloaking device");
-	    p->updateVisibility = pl->updateVisibility = 1;
-	    if (!p->item[ITEM_CLOAK]) {
-		CLR_BIT(p->used, OBJ_CLOAKING_DEVICE);
-		CLR_BIT(p->have, OBJ_CLOAKING_DEVICE);
-	    }
-	    SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
-	    break;
-
-	case ITEM_WIDEANGLE:
-	    STEAL(item, "a wide");
-	    break;
-
-	case ITEM_REARSHOT:
-	    STEAL(item, "a rear");
-	    break;
-
-	case ITEM_MINE:
-	    STEAL(item, "a mine");
-	    break;
-
-	case ITEM_SENSOR:
-	    STEAL(item, "a sensor");
-	    p->updateVisibility = pl->updateVisibility = 1;
-	    break;
-
-	case ITEM_ECM:
-	    STEAL(item, "an ECM");
-	    break;
-
-	case ITEM_TRANSPORTER:
-	    STEAL(item, "a transporter");
-	    break;
-
-	case ITEM_DEFLECTOR:
-	    STEAL(item, "a deflector");
-	    if (!p->item[ITEM_DEFLECTOR]) {
-		CLR_BIT(p->used, OBJ_DEFLECTOR);
-		CLR_BIT(p->have, OBJ_DEFLECTOR);
-	    }
-	    SET_BIT(pl->have, OBJ_DEFLECTOR);
-	    break;
-
-	case ITEM_HYPERJUMP:
-	    STEAL(item, "a hyperjump");
-	    break;
-
-	case ITEM_PHASING:
-	    STEAL(item, "a phasing device");
-	    if (!p->item[ITEM_PHASING]) {
-		if (BIT(p->used, OBJ_PHASING_DEVICE))
-		    Phasing(GetInd[p->id], 0);
-		CLR_BIT(p->have, OBJ_PHASING_DEVICE);
-	    }
-	    SET_BIT(pl->have, OBJ_PHASING_DEVICE);
-	    break;
-
-	case ITEM_LASER:
-	    STEAL(item, "a laser");
-	    if (pl->item[ITEM_LASER] > MAX_LASERS)
-		pl->item[ITEM_LASER] = MAX_LASERS;
-	    break;
-
-	case ITEM_EMERGENCY_THRUST:
-	    STEAL(item, "an emergency thrust");
-	    if (!p->item[ITEM_EMERGENCY_THRUST]) {
-		if (BIT(p->used, OBJ_EMERGENCY_THRUST))
-		    Emergency_thrust(GetInd[p->id], 0);
-		CLR_BIT(p->have, OBJ_EMERGENCY_THRUST);
-	    }
-	    SET_BIT(pl->have, OBJ_EMERGENCY_THRUST);
-	    break;
-
-	case ITEM_EMERGENCY_SHIELD:
-	    STEAL(item, "an emergency shield");
-	    if (!p->item[ITEM_EMERGENCY_SHIELD]) {
-		if (BIT(p->used, OBJ_EMERGENCY_SHIELD))
-		    Emergency_shield(GetInd[p->id], 0);
-		CLR_BIT(p->have, OBJ_EMERGENCY_SHIELD);
-		if (!BIT(DEF_HAVE, OBJ_SHIELD)) {
-		    CLR_BIT(p->have, OBJ_SHIELD);
-		    CLR_BIT(p->used, OBJ_SHIELD);
-		}
-	    }
-	    SET_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
-	    break;
-
-	case ITEM_TRACTOR_BEAM:
-	    STEAL(item, "a tractor beam");
-	    if (!p->item[ITEM_TRACTOR_BEAM])
-		CLR_BIT(p->have, OBJ_TRACTOR_BEAM);
-	    SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
-	    if (pl->item[ITEM_TRACTOR_BEAM] > MAX_TRACTORS)
-		pl->item[ITEM_TRACTOR_BEAM] = MAX_TRACTORS;
-	    break;
-
-	case ITEM_AUTOPILOT:
-	    STEAL(item, "an autopilot");
-	    if (!p->item[ITEM_AUTOPILOT]) {
-		if (BIT(p->used, OBJ_AUTOPILOT))
-		    Autopilot(GetInd[p->id], 0);
-		CLR_BIT(p->have, OBJ_AUTOPILOT);
-	    }
-	    SET_BIT(pl->have, OBJ_AUTOPILOT);
-	    break;
-
-	case ITEM_TANK:
-	    if (p->fuel.num_tanks > 0 && pl->fuel.num_tanks < MAX_TANKS) {
-		int tank_ind = (rand() % p->fuel.num_tanks) + 1;
-		long tank_fuel = p->fuel.tank[tank_ind];
-		Player_remove_tank(GetInd[p->id], tank_ind);
-		Player_add_tank(GetInd[pl->id], tank_fuel);
-		what = "a tank";
-		done = true;
-	    }
-	    break;
-
-	case ITEM_FUEL:	/* used to steal fuel */
-#define MIN_FUEL_STEAL	10
-#define MAX_FUEL_STEAL  50
-	    {
-		long            amount;
-		DFLOAT          percent;
-
-		percent = ((rand() % (MAX_FUEL_STEAL - MIN_FUEL_STEAL) +
-			    MIN_FUEL_STEAL) / 100.0);
-		amount = (long)(p->fuel.sum * percent);
-		sprintf(msg, "%s stole %ld units (%d%%) of fuel from %s",
-			pl->name, amount >> FUEL_SCALE_BITS,
-			(int) (percent * 100.0 + 0.5), p->name);
-		Add_fuel(&(pl->fuel), amount);
-		Add_fuel(&(p->fuel), -amount);
-		Set_message(msg);
-	    }
-	    return;
-
-	case NUM_ITEMS:
-	    /*NOTREACHED*/
-	    error("BUG: steal");
-	    break;
+    if (i == 50) {
+	/* you can't pluck from a bald chicken.. */
+	sound_play_sensors(x, y, TRANSPORTER_FAIL_SOUND);
+	if (!pl) {
+	    *amountp = 0;
+	    *itemp = -1;
 	}
+	return;
+    } else {
+	sound_play_sensors(x, y, TRANSPORTER_SUCCESS_SOUND);
+	Transporters[NumTransporters] = (trans_t *)malloc(sizeof(trans_t));
+	Transporters[NumTransporters]->pos.x = x;
+	Transporters[NumTransporters]->pos.y = y;
+	Transporters[NumTransporters]->target = victim->id;
+	Transporters[NumTransporters]->id = (pl ? pl->id : -1);
+	Transporters[NumTransporters]->count = 5;
+	NumTransporters++;
     }
 
-    sprintf(msg, "%s stole %s from %s.", pl->name, what, p->name);
+    /* remove loot from victim */
+    amount = 1;
+    if (!(item == ITEM_MISSILE
+	  || item == ITEM_FUEL
+	  || item == ITEM_TANK))
+	victim->item[item]--;
+
+    /* describe loot and update victim */
+    msg[0] = '\0';
+    switch (item) {
+    case ITEM_AFTERBURNER:
+	what = "an afterburner";
+	if (victim->item[item] == 0)
+	    CLR_BIT(victim->have, OBJ_AFTERBURNER);
+	break;
+    case ITEM_MISSILE:
+	amount = MIN(victim->item[item], 3);
+	if (amount == 1) {
+	    sprintf(msg, "%s stole a missile from %s.",
+		    (pl ? pl->name : "A cannon"), victim->name);
+	} else {
+	    sprintf(msg, "%s stole %ld missiles from %s",
+		    (pl ? pl->name : "A cannon"), amount, victim->name);
+	}
+        break;
+    case ITEM_CLOAK:
+	what = "a cloaking device";
+	victim->updateVisibility = 1;
+	if (!victim->item[item]) {
+	    CLR_BIT(victim->used, OBJ_CLOAKING_DEVICE);
+	    CLR_BIT(victim->have, OBJ_CLOAKING_DEVICE);
+	}
+        break;
+    case ITEM_WIDEANGLE:
+	what = "a wideangle";
+        break;
+    case ITEM_REARSHOT:
+	what = "a rearshot";
+        break;
+    case ITEM_MINE:
+	what = "a mine";
+        break;
+    case ITEM_SENSOR:
+	what = "a sensor";
+	victim->updateVisibility = 1;
+        break;
+    case ITEM_ECM:
+	what = "an ECM";
+        break;
+    case ITEM_TRANSPORTER:
+	what = "a transporter";
+        break;
+    case ITEM_MIRROR:
+	what = "a mirror";
+	if (!victim->item[item])
+	    CLR_BIT(victim->have, OBJ_MIRROR);
+	break;
+    case ITEM_DEFLECTOR:
+	what = "a deflector";
+	if (!victim->item[item]) {
+	    CLR_BIT(victim->used, OBJ_DEFLECTOR);
+	    CLR_BIT(victim->have, OBJ_DEFLECTOR);
+	}
+        break;
+    case ITEM_HYPERJUMP:
+	what = "a hyperjump";
+        break;
+    case ITEM_PHASING:
+	what = "a phasing device";
+	if (!victim->item[item]) {
+	    if (BIT(victim->used, OBJ_PHASING_DEVICE))
+		Phasing(target, 0);
+	    CLR_BIT(victim->have, OBJ_PHASING_DEVICE);
+	}
+        break;
+    case ITEM_LASER:
+	what = "a laser";
+        break;
+    case ITEM_EMERGENCY_THRUST:
+	what = "an emergency thrust";
+	if (!victim->item[item]) {
+	    if (BIT(victim->used, OBJ_EMERGENCY_THRUST))
+		Emergency_thrust(target, 0);
+	    CLR_BIT(victim->have, OBJ_EMERGENCY_THRUST);
+	}
+        break;
+    case ITEM_EMERGENCY_SHIELD:
+	what = "an emergency shield";
+	if (!victim->item[item]) {
+	    if (BIT(victim->used, OBJ_EMERGENCY_SHIELD))
+		Emergency_shield(target, 0);
+	    CLR_BIT(victim->have, OBJ_EMERGENCY_SHIELD);
+	    if (!BIT(DEF_HAVE, OBJ_SHIELD)) {
+		CLR_BIT(victim->have, OBJ_SHIELD);
+		CLR_BIT(victim->used, OBJ_SHIELD);
+	    }
+	}
+        break;
+    case ITEM_TRACTOR_BEAM:
+	what = "a tractor beam";
+	if (!victim->item[item])
+	    CLR_BIT(victim->have, OBJ_TRACTOR_BEAM);
+        break;
+    case ITEM_AUTOPILOT:
+	what = "an autopilot";
+	if (!victim->item[item]) {
+	    if (BIT(victim->used, OBJ_AUTOPILOT))
+		Autopilot(target, 0);
+	    CLR_BIT(victim->have, OBJ_AUTOPILOT);
+	}
+        break;
+    case ITEM_TANK:
+	/* for tanks, amount is the amount of fuel in the stolen tank */
+	what = "a tank";
+	i = (rand() % victim->fuel.num_tanks) + 1;
+	amount = victim->fuel.tank[i];
+	Player_remove_tank(target, i);
+        break;
+    case ITEM_FUEL:
+	{
+	    DFLOAT percent = ((DFLOAT)((rand() % 40) + 10) / 100);
+	    amount = (long)(victim->fuel.sum * percent);
+	    sprintf(msg, "%s stole %ld units (%d%%) of fuel from %s.",
+		    (pl ? pl->name : "A cannon"), amount >> FUEL_SCALE_BITS,
+		    (int)(percent * 100 + 0.5), victim->name);
+	}
+	Add_fuel(&(victim->fuel), -amount);
+        break;
+    }
+
+    /* inform the world about the robbery */
+    if (!msg[0]) {
+	sprintf(msg, "%s stole %s from %s.", (pl ? pl->name : "A cannon"),
+		what, victim->name);
+    }
     Set_message(msg);
+
+    /* cannons take care of themselves */
+    if (!pl) {
+	*itemp = item;
+	*amountp = amount;
+	if (item == ITEM_FUEL || item == ITEM_TANK)
+	    *amountp >>= FUEL_SCALE_BITS;
+	return;
+    }
+
+    /* don't forget the penalty for robbery */
+    pl->item[ITEM_TRANSPORTER]--;
+    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
+
+    /* update thief */
+    if (!(item == ITEM_FUEL
+	  || item == ITEM_TANK))
+	pl->item[item] += amount;
+    switch(item) {
+    case ITEM_AFTERBURNER:
+	SET_BIT(pl->have, OBJ_AFTERBURNER);
+	LIMIT(pl->item[item], 0, MAX_AFTERBURNER);
+	break;
+    case ITEM_CLOAK:
+	SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
+	pl->updateVisibility = 1;
+	break;
+    case ITEM_SENSOR:
+	pl->updateVisibility = 1;
+	break;
+    case ITEM_MIRROR:
+	SET_BIT(pl->have, OBJ_MIRROR);
+	break;
+    case ITEM_DEFLECTOR:
+	SET_BIT(pl->have, OBJ_DEFLECTOR);
+	break;
+    case ITEM_PHASING:
+	SET_BIT(pl->have, OBJ_PHASING_DEVICE);
+	break;
+    case ITEM_EMERGENCY_THRUST:
+	SET_BIT(pl->have, OBJ_EMERGENCY_THRUST);
+	break;
+    case ITEM_EMERGENCY_SHIELD:
+	SET_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
+	break;
+    case ITEM_TRACTOR_BEAM:
+	SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
+	break;
+    case ITEM_AUTOPILOT:
+	SET_BIT(pl->have, OBJ_AUTOPILOT);
+	break;
+    case ITEM_TANK:
+	/* for tanks, amount is the amount of fuel in the stolen tank */
+	if (pl->fuel.num_tanks < MAX_TANKS)
+	    Player_add_tank(ind, amount);
+	break;
+    case ITEM_FUEL:
+	Add_fuel(&(pl->fuel), amount);
+	break;
+    default:
+	break;
+    }
+
+    LIMIT(pl->item[item], 0, World.items[item].limit);
 }
 
 void do_hyperjump(player *pl)
@@ -2305,10 +2501,14 @@ void do_hyperjump(player *pl)
     pl->wormHoleHit = -1;
 }
 
-void do_lose_item(player *pl)
+void do_lose_item(int ind)
 {
-    int item = pl->lose_item;
+    int item;
+    player *pl = (ind == -1 ? NULL : Players[ind]);
 
+    if (!pl)
+	return;
+    item = pl->lose_item;
     if (item < 0 || item >= NUM_ITEMS) {
 	error("BUG: do_lose_item %d", item);
 	return;
@@ -2321,7 +2521,7 @@ void do_lose_item(player *pl)
     }
 
     if (loseItemDestroys == false && !BIT(pl->used, OBJ_PHASING_DEVICE)) {
-	Place_item(item, pl);
+	Place_item(item, ind);
     }
     else {
 	pl->item[item]--;
@@ -2333,23 +2533,37 @@ void do_lose_item(player *pl)
 #define CONFUSED_UPDATE_GRANULARITY	10
 #define CONFUSED_TIME			3
 
-static void do_ecm(player *pl)
+void Fire_general_ecm(int ind, u_short team, DFLOAT x, DFLOAT y)
 {
     object		*shot;
     object		*closest_mine = NULL;
     DFLOAT		closest_mine_range = World.hypotenuse;
-    int			i, j, owner, ind = GetInd[pl->id];
+    int			i, j, owner;
     DFLOAT		range, perim, damage;
-    player		*p;
+    player		*pl = (ind == -1 ? NULL : Players[ind]), *p;
+    ecm_t		*ecm;
 
-    sound_play_sensors(pl->pos.x, pl->pos.y, ECM_SOUND);
+    Ecms[NumEcms] = (ecm_t *)malloc(sizeof(ecm_t));
+    ecm = Ecms[NumEcms];
+    ecm->pos.x = x;
+    ecm->pos.y = y;
+    ecm->id = (pl ? pl->id : -1);
+    ecm->size = (int)ECM_DISTANCE;
+    NumEcms++;
+    if (pl) {
+	pl->ecmcount++;
+	pl->item[ITEM_ECM]--;
+	Add_fuel(&(pl->fuel), ED_ECM);
+	sound_play_sensors(x, y, ECM_SOUND);
+    }
+
     for (i = 0; i < NumObjs; i++) {
 	shot = Obj[i];
 
 	if (! BIT(shot->type, OBJ_SMART_SHOT|OBJ_MINE))
 	    continue;
-	if ((range = Wrap_length(pl->pos.x - shot->pos.x,
-				 pl->pos.y - shot->pos.y)) > ECM_DISTANCE)
+	if ((range = Wrap_length(x - shot->pos.x,
+				 y - shot->pos.y)) > ECM_DISTANCE)
 	    continue;
 
 	/*
@@ -2372,8 +2586,9 @@ static void do_ecm(player *pl)
 			continue;
 		    }
 		}
-	    }
-	    else if (TEAM_IMMUNE(ind, owner)) {
+	    } else if (BIT(World.rules->mode, TEAM_PLAY)
+		       && teamImmunity
+		       && shot->team == team) {
 		continue;
 	    }
 	}
@@ -2387,7 +2602,8 @@ static void do_ecm(player *pl)
 	    SET_BIT(shot->status, CONFUSED);
 	    shot->ecm_range = range;
 	    shot->count = CONFUSED_TIME;
-	    if (BIT(pl->lock.tagged, LOCK_PLAYER)
+	    if (pl
+		&& BIT(pl->lock.tagged, LOCK_PLAYER)
 		&& (pl->lock.distance <= pl->sensor_range
 		    || !BIT(World.rules->mode, LIMITED_VISIBILITY))
 		&& pl->visibility[GetInd[pl->lock.pl_id]].canSee)
@@ -2451,38 +2667,47 @@ static void do_ecm(player *pl)
     if (ecmsReprogramMines && closest_mine != NULL) {
 	range = closest_mine_range;
 	if (range <= 0 || rand() % 100 < (100 - (int)(50*range)))
-	    closest_mine->id = pl->id;
+	    closest_mine->id = (pl ? pl->id : -1);
+	    closest_mine->team = team;
     }
 
-    for (i = 0; i < World.NumCannons; i++) {
-	cannon_t *c = World.cannon + i;
-	range = Wrap_length(pl->pos.x - (c->pos.x + 0.5) * BLOCK_SZ,
-			    pl->pos.y - (c->pos.y + 0.5) * BLOCK_SZ);
-	if (range > ECM_DISTANCE)
-	    continue;
-	damage = (ECM_DISTANCE - range) / ECM_DISTANCE;
-	if (c->item[ITEM_LASER]) {
-	    c->item[ITEM_LASER] -= (int)(damage * c->item[ITEM_LASER] + 0.5);
+    /* in non-team mode cannons are immune to cannon ECMs */
+    if (BIT(World.rules->mode, TEAM_PLAY) || ind != -1) {
+	for (i = 0; i < World.NumCannons; i++) {
+	    cannon_t *c = World.cannon + i;
+	    if (BIT(World.rules->mode, TEAM_PLAY)
+		&& c->team == team)
+		continue;
+	    range = Wrap_length(x - c->pix_pos.x, y - c->pix_pos.y);
+	    if (range > ECM_DISTANCE)
+		continue;
+	    damage = (ECM_DISTANCE - range) / ECM_DISTANCE;
+	    if (c->item[ITEM_LASER]) {
+		c->item[ITEM_LASER] -= (int)(damage
+					     * c->item[ITEM_LASER] + 0.5);
+	    }
+	    c->damaged += (int)(24 * range * pow(0.75, c->item[ITEM_SENSOR]));
 	}
-	c->damaged += (int)(24 * range * pow(0.75, c->item[ITEM_SENSOR]));
     }
 
     for (i = 0; i < NumPlayers; i++) {
-	p = Players[i];
+	if (i == ind)
+	    continue;
 
+	p = Players[i];
 	/*
 	 * Team members are always immune from ECM effects from other
 	 * team members.  Its too nasty otherwise.
 	 */
-	if (TEAM(ind, i))
+	if (BIT(World.rules->mode, TEAM_PLAY) && p->team == team)
 	    continue;
 
 	if (BIT(p->used, OBJ_PHASING_DEVICE))
 	    continue;
 
-	if (p != pl && BIT(p->status, PLAYING|GAME_OVER|PAUSE) == PLAYING) {
-	    range = Wrap_length(pl->pos.x - p->pos.x,
-				pl->pos.y - p->pos.y);
+	if (BIT(p->status, PLAYING|GAME_OVER|PAUSE) == PLAYING) {
+	    range = Wrap_length(x - p->pos.x,
+				y - p->pos.y);
 	    if (range > ECM_DISTANCE)
 		continue;
 
@@ -2525,11 +2750,12 @@ static void do_ecm(player *pl)
 		p->item[ITEM_LASER] -= (int)(range * p->item[ITEM_LASER] + 0.5);
 	    }
 
-	    if (!IS_ROBOT_PTR(p) || !ecmsReprogramRobots) {
+	    if (!IS_ROBOT_PTR(p) || !ecmsReprogramRobots || !pl) {
 		/* player is blinded by light flashes. */
 		long duration = (int)(damage * pow(0.75, p->item[ITEM_SENSOR]));
 		p->damaged += duration;
-		Record_shove(p, pl, frame_loops + duration);
+		if (pl)
+		    Record_shove(p, pl, frame_loops + duration);
 	    } else {
 		if (BIT(pl->lock.tagged, LOCK_PLAYER)
 		    && (pl->lock.distance < pl->sensor_range
@@ -2560,14 +2786,11 @@ void Fire_ecm(int ind)
 
     if (pl->item[ITEM_ECM] == 0
 	|| pl->fuel.sum <= -ED_ECM
-	|| pl->ecmInfo.count >= MAX_PLAYER_ECMS
+	|| pl->ecmcount >= MAX_PLAYER_ECMS
 	|| BIT(pl->used, OBJ_PHASING_DEVICE))
 	return;
 
-    SET_BIT(pl->used, OBJ_ECM);
-    do_ecm(pl);
-    pl->item[ITEM_ECM]--;
-    Add_fuel(&(pl->fuel), ED_ECM);
+    Fire_general_ecm(ind, pl->team, pl->pos.x, pl->pos.y);
 }
 
 void Move_ball(int ind)
@@ -2745,7 +2968,10 @@ void Move_smart_shot(int ind)
 	if (shot->info >= 0) {
 	    /* Get player and set min to distance */
 	    pl = Players[ GetInd[shot->info] ];
-	    range = Wrap_length(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y);
+	    range = Wrap_length(pl->pos.x + pl->ship->engine[pl->dir].x
+				- shot->pos.x,
+				pl->pos.y + pl->ship->engine[pl->dir].y
+				- shot->pos.y);
 	} else {
 	    /* No player. Number of moves so that new target is searched */
 	    pl = 0;
@@ -2781,8 +3007,10 @@ void Move_smart_shot(int ind)
 		    if (!BIT(p->status, THRUSTING))
 			continue;
 
-		    l = Wrap_length(p->pos.x - shot->pos.x,
-				    p->pos.y - shot->pos.y);
+		    l = Wrap_length(p->pos.x + p->ship->engine[p->dir].x
+				    - shot->pos.x,
+				    p->pos.y + p->ship->engine[p->dir].y
+				    - shot->pos.y);
 		    /*
 		     * After burners can be detected easier;
 		     * so scale the length:
@@ -3195,8 +3423,6 @@ void Tank_handle_detach(player *pl)
 
     /* No lasers */
     dummy->num_pulses = 0;
-    dummy->max_pulses = 0;
-    dummy->pulses = NULL;
 
     /* Mass is only tank + fuel */
     dummy->mass = (dummy->emptymass = ShipMass) + FUEL_MASS(dummy->fuel.sum);
@@ -3259,6 +3485,7 @@ void Make_debris(
     /* pos.x, pos.y   */ DFLOAT  x,          DFLOAT y,
     /* vel.x, vel.y   */ DFLOAT  velx,       DFLOAT vely,
     /* owner id       */ int    id,
+    /* owner team     */ u_short team,
     /* type           */ int    type,
     /* mass           */ DFLOAT  mass,
     /* status         */ long   status,
@@ -3271,7 +3498,7 @@ void Make_debris(
 )
 {
     object		*debris;
-    int			i, num_debris, life, fuse;
+    int			i, num_debris, life;
     modifiers		mods;
 
     if (BIT(World.rules->mode, WRAP_PLAY)) {
@@ -3283,20 +3510,22 @@ void Make_debris(
     if (x < 0 || x >= World.width || y < 0 || y >= World.height) {
 	return;
     }
-    if (min_life > ShotsLife && ShotsLife >= FPS)
-	min_life = ShotsLife;
-    if (max_life > ShotsLife && ShotsLife >= FPS)
-	max_life = ShotsLife;
     if (max_life < min_life)
 	max_life = min_life;
+    if (ShotsLife >= FPS) {
+	if (min_life > ShotsLife) {
+	    min_life = ShotsLife;
+	    max_life = ShotsLife;
+	} else if (max_life > ShotsLife) {
+	    max_life = ShotsLife;
+	}
+    }
     if (min_speed * max_life > World.hypotenuse)
 	min_speed = World.hypotenuse / max_life;
     if (max_speed * min_life > World.hypotenuse)
 	max_speed = World.hypotenuse / min_life;
     if (max_speed < min_speed)
 	max_speed = min_speed;
-
-    fuse = 0;
 
     CLEAR_MODS(mods);
 
@@ -3312,37 +3541,30 @@ void Make_debris(
 	num_debris = MAX_TOTAL_SHOTS - NumObjs;
     }
     for (i = 0; i < num_debris; i++, NumObjs++) {
-	DFLOAT		dx, dy, diroff, speed;
-	int		dir, dirplus;
+	DFLOAT		speed;
+	int		dir;
 
 	debris = Obj[NumObjs];
 	debris->color = color;
 	debris->id = id;
+	debris->team = team;
 	debris->owner = -1;
 	Object_position_init_pixels(debris, x, y);
-	dir = MOD2(min_dir + (int)(rfrac() * (max_dir - min_dir)), RES);
-	dirplus = MOD2(dir + 1, RES);
-	diroff = rfrac();
-	dx = tcos(dir) + (tcos(dirplus) - tcos(dir)) * diroff;
-	dy = tsin(dir) + (tsin(dirplus) - tsin(dir)) * diroff;
+	dir = MOD2(min_dir + (int)(rfrac() * MOD2(max_dir - min_dir, RES)), RES);
 	speed = min_speed + rfrac() * (max_speed - min_speed);
-	debris->vel.x = velx + dx * speed;
-	debris->vel.y = vely + dy * speed;
+	debris->vel.x = velx + tcos(dir) * speed;
+	debris->vel.y = vely + tsin(dir) * speed;
 	debris->acc.x = 0;
 	debris->acc.y = 0;
 	debris->dir = dir;
 	debris->mass = mass;
 	debris->type = type;
-	life = (int)(min_life + rfrac() * (max_life - min_life));
+	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);
+	if (life * speed > World.hypotenuse) {
+	    life = (long)(World.hypotenuse / speed);
+	}
 	debris->life = life;
-	if (debris->life * speed > World.hypotenuse) {
-	    debris->life = (long)(World.hypotenuse / speed);
-	    life = min_life;
-	}
-	else if (++life > max_life) {
-	    life = min_life;
-	}
-	debris->fuselife = debris->life - fuse;
+	debris->fuselife = life;
 	debris->spread_left = 0;
 	debris->pl_range = radius;
 	debris->pl_radius = radius;
@@ -3355,6 +3577,7 @@ void Make_wreckage(
     /* pos.x, pos.y     */ DFLOAT x,            DFLOAT y,
     /* vel.x, vel.y     */ DFLOAT velx,         DFLOAT vely,
     /* owner id         */ int    id,
+    /* owner team	*/ u_short team,
     /* min,max mass     */ DFLOAT min_mass,     DFLOAT max_mass,
     /* total mass       */ DFLOAT total_mass,
     /* status           */ long   status,
@@ -3366,7 +3589,7 @@ void Make_wreckage(
 )
 {
     object		*wreckage;
-    int			i, life, fuse, size;
+    int			i, life, size;
     modifiers		mods;
     DFLOAT		mass, sum_mass = 0.0;
 
@@ -3379,12 +3602,14 @@ void Make_wreckage(
     if (x < 0 || x >= World.width || y < 0 || y >= World.height) {
 	return;
     }
-    if (min_life > ShotsLife && ShotsLife >= FPS)
-	min_life = ShotsLife;
-    if (max_life > ShotsLife && ShotsLife >= FPS)
-	max_life = ShotsLife;
     if (max_life < min_life)
 	max_life = min_life;
+    if (ShotsLife >= FPS) {
+	if (min_life > ShotsLife) {
+	    min_life = ShotsLife;
+	    max_life = ShotsLife;
+	}
+    }
 
     if (min_speed * max_life > World.hypotenuse)
 	min_speed = World.hypotenuse / max_life;
@@ -3397,34 +3622,29 @@ void Make_wreckage(
 	max_wreckage = MAX_TOTAL_SHOTS - NumObjs;
     }
 
-    fuse = 0;
-
     CLEAR_MODS(mods);
 
     for (i = 0; i < max_wreckage && sum_mass < total_mass; i++, NumObjs++) {
-	DFLOAT		dx, dy, diroff, speed;
-	int		dir, dirplus, radius;
+	DFLOAT		speed;
+	int		dir, radius;
 
 	wreckage = Obj[NumObjs];
 	wreckage->color = color;
 	wreckage->id = id;
+	wreckage->team = team;
 	wreckage->type = OBJ_WRECKAGE;
 
 	/* Position */
 	Object_position_init_pixels(wreckage, x, y);
 
 	/* Direction */
-	dir = MOD2(min_dir + (int)(rfrac() * (max_dir - min_dir)), RES);
-	dirplus = MOD2(dir + 1, RES);
-	diroff = rfrac();
-	dx = tcos(dir) + (tcos(dirplus) - tcos(dir)) * diroff;
-	dy = tsin(dir) + (tsin(dirplus) - tsin(dir)) * diroff;
+	dir = MOD2(min_dir + (int)(rfrac() * MOD2(max_dir - min_dir, RES)), RES);
 	wreckage->dir = dir;
 
 	/* Velocity and acceleration */
 	speed = min_speed + rfrac() * (max_speed - min_speed);
-	wreckage->vel.x = velx + dx * speed;
-	wreckage->vel.y = vely + dy * speed;
+	wreckage->vel.x = velx + tcos(dir) * speed;
+	wreckage->vel.y = vely + tsin(dir) * speed;
 	wreckage->acc.x = 0;
 	wreckage->acc.y = 0;
 
@@ -3440,16 +3660,12 @@ void Make_wreckage(
 	}
 
 	/* Lifespan  */
-	life = (int)(min_life + rfrac() * (max_life - min_life));
+	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);
+	if (life * speed > World.hypotenuse) {
+	    life = (long)(World.hypotenuse / speed);
+	}
 	wreckage->life = life;
-	if (wreckage->life * speed > World.hypotenuse) {
-	    wreckage->life = (long)(World.hypotenuse / speed);
-	    life = min_life;
-	}
-	else if (++life > max_life) {
-	    life = min_life;
-	}
-	wreckage->fuselife = wreckage->life - fuse;
+	wreckage->fuselife = wreckage->life;
 
 	/* Wreckage type, rotation, and size */
 	wreckage->turnspeed = 0.02 + rfrac() * 0.35;
@@ -3489,6 +3705,7 @@ void Explode_fighter(int ind)
 	/* pos.x, pos.y   */ pl->pos.x, pl->pos.y,
 	/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
 	/* owner id       */ pl->id,
+	/* owner team	  */ pl->team,
 	/* kind           */ OBJ_DEBRIS,
 	/* mass           */ 3.5,
 	/* status         */ GRAVITY,
@@ -3506,7 +3723,8 @@ void Explode_fighter(int ind)
 	/* pos.x, pos.y     */ pl->pos.x, pl->pos.y,
 	/* vel.x, vel.y     */ pl->vel.x, pl->vel.y,
 	/* owner id         */ pl->id,
-	/* min,max mass     */ pl->mass/8.0, pl->mass,
+	/* owner team	    */ pl->team,
+	/* min,max mass     */ MAX(pl->mass/8.0, 0.33), pl->mass,
 	/* total mass       */ 2.0 * pl->mass,
 	/* status           */ GRAVITY,
 	/* color            */ WHITE,
@@ -3516,4 +3734,46 @@ void Explode_fighter(int ind)
 	/* min,max life     */ 5, (int)(5 + (pl->mass * 1.5))
 	);
 
+}
+
+void add_temp_wormhole (int x, int y, bool inout) {
+    wormhole_t hole;
+
+    if ((World.wormHoles = (wormhole_t *)realloc(World.wormHoles,
+						(World.NumWormholes + 1)
+						* sizeof(wormhole_t)))
+	== NULL) {
+	error("No memory for temporary %s wormhole at (%d,%d).",
+	      (inout ? "out" : "in"), x, y);
+	End_game();
+    }
+
+    hole.pos.x = x;
+    hole.pos.y = y;
+    hole.countdown = wormTime * FPS;
+    hole.lastdest = -1;
+    hole.lastplayer = -1;
+    hole.temporary = 1;
+    hole.type = (inout ? WORM_OUT : WORM_IN);
+    World.wormHoles[World.NumWormholes] = hole;
+    World.block[x][y] = WORMHOLE;
+    World.itemID[x][y] = World.NumWormholes;
+    World.NumWormholes++;
+}
+
+void remove_temp_wormhole (int ind) {
+    wormhole_t hole;
+
+    World.NumWormholes--;
+    hole = World.wormHoles[World.NumWormholes];
+    World.wormHoles[World.NumWormholes] = World.wormHoles[ind];
+    World.wormHoles[ind] = hole;
+    hole = World.wormHoles[World.NumWormholes];
+
+    World.block[hole.pos.x][hole.pos.y] = SPACE;
+    World.itemID[hole.pos.x][hole.pos.y] = (u_short) -1;
+
+    World.wormHoles = (wormhole_t *)realloc(World.wormHoles,
+					    World.NumWormholes
+					    * sizeof(wormhole_t));
 }

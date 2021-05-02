@@ -3,6 +3,177 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.1.0 compared to release 4.0.0.
+
+Fixed a bug which caused some valid hostnames to be rejected.
+
+Changed the Imakefile for better compilation on Solaris 2.6 with gcc.
+
+Sven Mascheck fixed a bug which could cause the playing window to remain
+blue after being ECMed.  This bug only occurred in erase mode.
+
+Guido Koopman contributed a bit patch with several new features:
+    adds/fixes the following:
+    - new item: mirror. reflects laser pulses. usual options with usual defaults.
+      doesn't need turning on or off and uses no fuel. each additional mirror
+      halves the chance a pulse gets through.
+    - cannons now use all offensive and semi-offensive items. see cannon.[ch] for
+      lots of comments.
+    - option cannonsUseItems replaces cannonsPickupItems. old option now used as
+      alternative spelling. if on, cannons don't pickup, get or use items.
+      default is off, to keep the conservative majority from complaining.
+    - new option cannonItemProbMult. if 0.0, cannons don't get items, except for
+      the initial items, but can still pickup or steal them. 1.0 means each
+      cannon gets an item once per minute on average. default is 1.0.
+    - resubmission of min/maxRobots options. see previous patch for info.
+    - new option resetOnHuman. if >0, the round/race is restarted when the < Nth
+      human player logs on. handy if you don't want to wait for the robots to
+      finish the round/race.
+    - new option teamCannons. when on, cannons don't activate on teammembers.
+      with teamImmunity on, players can't be hit by fire from their team's cannons
+      and can also fly through them. default off.
+    - new option teamFuel. when on, players can't refuel at fuelstations owned by
+      other teams. default off.
+    - new option keepShots. when on, mines/missiles/shots are made anonymous when
+      a player leaves the game, instead of being deleted. default off.
+    - new option wormTime. gives the number of seconds wormholes remain stable
+      ie. connected to the same out or inout wormhole. if 0, a new wormhole is
+      searched every time a player passes through it. other objects are only warped
+      while the wormhole is stable. if 0, a wormhole remains stable for other
+      objects until a new player passes through it. default is 0.
+    - alternate version of the recent (few months ago) nasty looking shots hack.
+      shots look like '+' or 'x' (chosen randomly).
+    - removed maxima for lasers and tractorbeams. maximum can now be set by
+      max<item>s up to 99.
+    - no more gaining lots of points by killing your own tanks. killing your own
+      tank now counts as killing a teammate.
+    - reimplemented deflector code. shots fired horizontally or vertically used
+      to gain extra speed from deflectors (no longer so) and more than ~15
+      deflectors were clipped by the collision checking code (also solved).
+      deflectors might feel a little different, but not much has changed.
+    - fixed yet another bug in Pick_team function which caused TEAM_NOT_SET to
+      be returned even if free bases were available.
+    - stun lasers now disable thrust, shields and shots for 5 frames. enforced
+      because robots could otherwise not be stunned (they turn those on again
+      every frame).
+    - having emergency shields on now allows you to fly against cannons without
+      dying. the cannon still dies and points are awarded as usual for killing
+      the cannon.
+    - heatseekers now target the engine instead of the center of the ship. this
+      seemed more realistic, but you don't see much of it.
+    - implosive mines/missiles are now as powerful as normal ones. they used to
+      be only half as powerful.
+    - hyperjumping leaves behind two wormholes, one inhole and one outhole. these
+      wormholes are removed after wormTime seconds or 1 second if wormTime is 0.
+    - robots try to thrust through walls less often. this was caused by a bug in
+      the goto cannon/fuelstation code.
+    - robots now go after loose balls too. before, they only navigated to treasure
+      boxes.
+    - Ben Aveling added a hack to make robots consider only 1000 objects to prevent
+      server lag when a nuke went off. this caused problems on some maps.
+      increased this number to 2000.
+    - robots now also use lasers on other players than the ones they are at war
+      with.
+    bugs left:
+    - cannon mode 3 doesn't check for walls between cannon and victim.
+    - temporary wormholes don't show up on screen even if wormholeVisible is on,
+      because they are not transmitted to the client.
+    - emergency don't protect you from treasure boxes.
+    - maximum number of tanks is still 8.
+    - team owned fuelstations or cannons are not displayed differently from normal
+      fuelstations/cannons. problem: the current way maps are encoded before
+      transmission to the client has not enough unused bits.
+    - lifetime of laser pulses is too short for reflected pulses to be harmful to
+      others.
+    - new deflector code seems to slow down the server when lots of objects are
+      present.
+    - cannons don't use defensive items yet.
+    - the new 'nasty' shot look is hardcoded, ie. there's no way to turn it off.
+    fun things to do:
+    - tell me what you think about everything I changed since v3.6.2. please. the
+      amount of feedback I get from others than the XPilot developers makes me
+      think I'm the only one who is actually interested in the time I put into
+      hacking XPilot.
+    - well, just try out everything this patch adds. I had a lot of fun coding it,
+      so I expect you (the people who play XPilot for a living) to have at least
+      as much fun using it.
+
+Guido Koopman added some improvements over his big 4.0.0 patch:
+    adds/fixes the following:
+    - used RES/3 in Cannon_throw_items instead of CANNON_SPREAD.
+    - resetOnHuman only reset the game when the =< N-1st player entered
+      works as it should now, <= Nth.
+    - the object-out-of-map bug was apparently caused by items not having the
+      correct direction (tsin/tcos use lookup tables!). fixed in both Place_item
+      and Cannon_throw_items.
+    - Do_deflector was a little slow. rearranging the various tests and adding
+      a new one to get rid of unwanted objects quickly helps (profiling shows
+      50% less time spent in Do_deflector).
+    - tried to speed up robot code.
+    - check on BIT(pl->have, ITEM_DEFLECTOR) caused robots to almost always turn
+      on deflectors (even if itemDeflectorProb == 0). replaced ITEM_DEFLECTOR with
+      OBJ_DEFLECTOR.
+    - ROB_LOOK_AH was 2, even though robots check for possible collisions every
+      frame. removed ROB_LOOK_AH.
+    - possible use of ECMs and tanks as defense against missiles/mines was only
+      checked for when object was already within shield_range. checking is now
+      done earlier.
+    - replaced LENGTH() macro by QUICK_LENGTH() or VECTOR_LENGTH() in some
+      places.
+    fun things to do:
+    - use a profiler more often.
+
+Guido Koopman contributed more small improvements:
+    adds/fixes the following:
+    - in various places, both Wrap_length and Wrap_findDir were used on the same
+      values.
+      replaced with WRAP_DX, WRAP_DY, LENGTH and findDir to eliminate overhead.
+    - removed some unused/unnecessary stuff from Make_debris and Make_wreckage.
+    - in cmdline.c, wormTime was declared as valSec, but it was used in update.c
+      as meaning ticks.
+      added '* FPS'.
+    - with wormTime set to 0, temporary wormholes were given a countdown of 1
+      tick. this caused problems when a wormhole was removed between a player
+      hitting it and being warped.
+      don't add wormholes when wormTime == 0 and remove both wormholes at once.
+    - added QUICK_LENGTH check to robot collision checking loop to get rid of
+      out-of-range objects quickly.
+    - robot collision checking on laser pulses could go wrong at map edges
+      because LENGTH was used instead of wrapped LENGTH.
+    - hyperjumping could cause problems when no empty space was found in 20
+      samples. w.x, w.y would then point to a wall or so.
+      hyperjumps to original location in that case now.
+    bugs left:
+    - there are still some strange tests in Make_debris/Make_wreckage which seem
+      unnecessary.
+    - should I have left that last 'problem' (^^) in as a feature?
+    fun things to do:
+    - run a profiler to see if XPilot is any faster now.
+
+Added a debugaudio.c to the client to debug sound problems.
+
+Changed the test for the existence of a xpilot host in the local DNS domain.
+This slowed down startup considerably when DNS searches weren't limited to
+one domain.  Now if the local domain can be found only xpilot for that single
+domain is tried.
+
+Sven Mascheck contributed code to make the ERASE hack a client commandline option.
+He also found out why sometimes the screen remains blue after an ECM.
+
+Added Rakk & Murx's analytical collision detection patch.
+
+Fixed a bug which would allow dead players to lock on any other player
+even if lockOtherTeam was false.
+
+Don't lock closest on paused players.  Thanks to Sven Mascheck.
+
+Added a new client option -ignoreWindowManager.  It does what it says.
+Handy if your window manager tends to uverrule your geometry value,
+or if you think it spends to much time checking for window manager keys,
+or if it doesn't handle colormap switching well.
+
+===============================================================================
+
 This is a summary of changes of release 4.0.0 compared to release 3.7.1
 
 The contributed packages maps2image and TkXpInterface have been updated.
@@ -3385,6 +3556,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.3 1998/04/20 10:20:34 bert Exp $
+==== $Id: ChangeLog,v 4.11 1998/09/30 15:22:41 bert Exp $
 ===============================================================================
 

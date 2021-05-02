@@ -1,4 +1,4 @@
-/* $Id: event.c,v 4.3 1998/04/20 10:18:36 bert Exp $
+/* $Id: event.c,v 4.6 1998/09/25 14:21:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -47,7 +47,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 4.3 1998/04/20 10:18:36 bert Exp $";
+    "@(#)$Id: event.c,v 4.6 1998/09/25 14:21:46 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}
@@ -128,14 +128,56 @@ bool team_dead(int team)
     return (!alive);
 }
 
+/*
+ * Return true if a lock is allowed.
+ */
+bool Player_lock_allowed(int ind, int lock)
+{
+    player		*pl = Players[ind];
+
+    /* we can never lock on ourselves, nor on -1. */
+    if (ind == lock || lock == -1) {
+	return false;
+    }
+
+    /* if we are actively playing then we can lock since we are not viewing. */
+    if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+	return true;
+    }
+
+    /* if there is no team play then we can always lock on anyone. */
+    if (!BIT(World.rules->mode, TEAM_PLAY)) {
+	return true;
+    }
+
+    /* we can always lock on players from our own team. */
+    if (TEAM(ind, lock)) {
+	return true;
+    }
+
+    /* if lockOtherTeam is true then we can always lock on other teams. */
+    if (lockOtherTeam) {
+	return true;
+    }
+
+    /* if our own team is dead then we can lock on anyone. */
+    if (team_dead(pl->team)) {
+	return true;
+    }
+
+    /* can't find any reason why this lock should be allowed. */
+    return false;
+}
+
 int Player_lock_closest(int ind, int next)
 {
     player *pl = Players[ind];
     int lock, i, newpl;
     DFLOAT dist, best, l;
 
-    if (!next)
+    if (!next) {
 	CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
+    }
 
     if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
 	lock = GetInd[pl->lock.pl_id];
@@ -148,21 +190,11 @@ int Player_lock_closest(int ind, int next)
     newpl = -1;
     best = FLT_MAX;
     for (i = 0; i < NumPlayers; i++) {
-	if (lock == i
-	    || i == ind
-	    || ((lockOtherTeam
-		 || team_dead(pl->team))
-		&& TEAM(ind, i))
-	    || ((!lockOtherTeam
-		 && !team_dead(pl->team))
-		&& ((BIT(World.rules->mode, TEAM_PLAY)
-		     && BIT(pl->status, PLAYING|GAME_OVER) == PLAYING
-		     && TEAM(ind, i))
-		    || (BIT(World.rules->mode, TEAM_PLAY)
-			&& BIT(pl->status, PLAYING|GAME_OVER) != PLAYING
-			&& !TEAM(ind, i))))
-	    || BIT(Players[i]->status, PLAYING|GAME_OVER) != PLAYING)
+	if (i == lock
+	    || (BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING)
+	    || !Player_lock_allowed(ind, i)) {
 	    continue;
+	}
 	l = Wrap_length(Players[i]->pos.x - pl->pos.x,
 			Players[i]->pos.y - pl->pos.y);
 	if (l >= dist && l < best) {
@@ -170,10 +202,13 @@ int Player_lock_closest(int ind, int next)
 	    newpl = i;
 	}
     }
-    if (newpl == -1)
+    if (newpl == -1) {
 	return 0;
+    }
+
     SET_BIT(pl->lock.tagged, LOCK_PLAYER);
     pl->lock.pl_id = Players[newpl]->id;
+
     return 1;
 }
 
@@ -426,8 +461,8 @@ int Handle_keyboard(int ind)
 		j = i = GetInd[pl->lock.pl_id];
 		if (!BIT(pl->lock.tagged, LOCK_PLAYER)
 		    || j < 0 || j >= NumPlayers) {
-		    /* better jump to KEY_LOCK_CLOSEST.... */
-		    (void) Player_lock_closest(ind, 0);
+		    /* better jump to KEY_LOCK_CLOSE... */
+		    Player_lock_closest(ind, 0);
 		    break;
 		}
 		do {
@@ -444,11 +479,7 @@ int Handle_keyboard(int ind)
 			break;
 		} while (i == ind
 			 || BIT(Players[i]->status, GAME_OVER)
-			 || ((!lockOtherTeam
-			      && !team_dead(pl->team))
-			     && (BIT(World.rules->mode, TEAM_PLAY)
-				 && BIT(pl->status, GAME_OVER)
-				 && !TEAM(ind, i))));
+			 || !Player_lock_allowed(ind, i));
 		if (i == ind) {
 		    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
 		}
@@ -478,14 +509,17 @@ int Handle_keyboard(int ind)
 		    && i != ind) {
 		    break;
 		}
-		(void) Player_lock_closest(ind, 0);
+		Player_lock_closest(ind, 0);
 		break;
 
 	    case KEY_LOCK_NEXT_CLOSE:
-		if (Player_lock_closest(ind, 1))
-		    break;
+		if (!Player_lock_closest(ind, 1)) {
+		    Player_lock_closest(ind, 0);
+		}
+		break;
+
 	    case KEY_LOCK_CLOSE:
-		(void) Player_lock_closest(ind, 0);
+		Player_lock_closest(ind, 0);
 		break;
 
 	    case KEY_CHANGE_HOME:
@@ -677,11 +711,14 @@ int Handle_keyboard(int ind)
 		int *l = &(pl->lockbank[key - KEY_LOAD_LOCK_1]);
 
 		if (BIT(pl->status, REPROGRAM)) {
-		    if (BIT(pl->lock.tagged, LOCK_PLAYER))
+		    if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
 			*l = pl->lock.pl_id;
-		} else if (*l != NOT_CONNECTED) {
-		    pl->lock.pl_id = *l;
-		    SET_BIT(pl->lock.tagged, LOCK_PLAYER);
+		    }
+		} else {
+		    if (Player_lock_allowed(ind, *l)) {
+			pl->lock.pl_id = *l;
+			SET_BIT(pl->lock.tagged, LOCK_PLAYER);
+		    }
 		}
 		break;
 	    }
@@ -849,14 +886,14 @@ int Handle_keyboard(int ind)
 
 	    case KEY_PRESSOR_BEAM:
 		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
-		    pl->tractor_pressor = 1;
+		    pl->tractor_is_pressor = true;
 		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
 		}
 		break;
 
 	    case KEY_TRACTOR_BEAM:
 		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
-		    pl->tractor_pressor = 0;
+		    pl->tractor_is_pressor = false;
 		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
 		}
 		break;
@@ -914,11 +951,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_TRANSPORTER:
-		if (pl->item[ITEM_TRANSPORTER] > 0 && pl->fuel.sum > -ED_TRANSPORTER) {
-		    do_transporter(pl);
-		    pl->item[ITEM_TRANSPORTER]--;
-		    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
-		}
+		Do_transporter(ind);
 		break;
 
 	    case KEY_DEFLECTOR:
@@ -959,7 +992,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_LOSE_ITEM:
-		do_lose_item(pl);
+		do_lose_item(ind);
 		break;
 
 	    default:

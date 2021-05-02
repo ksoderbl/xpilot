@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 4.7 1998/04/20 11:30:52 bert Exp $
+/* $Id: cmdline.c,v 4.12 1998/09/01 10:20:17 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -39,12 +39,13 @@
 #include "proto.h"
 #include "defaults.h"
 #include "error.h"
+#include "portability.h"
 
 char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 4.7 1998/04/20 11:30:52 bert Exp $";
+    "@(#)$Id: cmdline.c,v 4.12 1998/09/01 10:20:17 bert Exp $";
 #endif
 
 DFLOAT		Gravity;		/* Power of gravity */
@@ -53,8 +54,8 @@ DFLOAT		ShotsMass;		/* Default mass of shots */
 DFLOAT		ShotsSpeed;		/* Default speed of shots */
 int		ShotsLife;		/* Default number of ticks */
 					/* each shot will live */
-int		WantedNumRobots;	/* How many robots should enter */
-					/* the game? */
+int		maxRobots;		/* How many robots should enter */
+int		minRobots;		/* the game? */
 char		*robotFile;		/* Filename for robot parameters */
 int		robotsTalk;		/* Do robots talk? */
 int		robotsLeave;		/* Do robots leave at all? */
@@ -112,9 +113,13 @@ DFLOAT		maxVisibilityDistance;	/* Maximum visibility */
 bool		limitedLives;		/* Are lives limited? */
 int		worldLives;		/* If so, what's the max? */
 bool		endOfRoundReset;	/* Reset the world when round ends? */
+int		resetOnHuman;		/* Restart when human enters? */
 bool		teamPlay;		/* Are teams allowed? */
+bool		teamFuel;		/* Do fuelstations belong to teams? */
+bool		teamCannons;		/* Do cannons belong to teams? */
 int		cannonSmartness;	/* Accuracy of cannonfire */
-bool		cannonsPickupItems;	/* Do cannons pickup items? */
+bool		cannonsUseItems;	/* Do cannons use items? */
+bool		keepShots;		/* Keep shots when player leaves? */
 bool		onePlayerOnly;		/* Can there be multiple players? */
 bool		timing;			/* Is this a race? */
 bool		edgeWrap;		/* Do objects wrap when they cross
@@ -131,6 +136,7 @@ bool		gravityAnticlockwise;	/* If not clockwise, anticlockwise? */
 bool		gravityVisible;		/* Is gravity visible? */
 bool		wormholeVisible;	/* Are wormholes visible? */
 bool		itemConcentratorVisible;/* Are itemconcentrators visible? */
+int		wormTime;
 char		*defaultsFileName;	/* Name of defaults file... */
 char		*scoreTableFileName;	/* Name of score table file */
 
@@ -167,6 +173,7 @@ DFLOAT		destroyItemInCollisionProb;
 DFLOAT           rogueHeatProb;          /* prob. that unclaimed rocketpack */
 DFLOAT           rogueMineProb;          /* or minepack will "activate" */
 DFLOAT		itemProbMult;
+DFLOAT		cannonItemProbMult;
 DFLOAT		maxItemDensity;
 int		itemConcentratorRadius;
 DFLOAT		itemConcentratorProb;
@@ -219,7 +226,9 @@ int		maxOffensiveItems;	/* how many offensive and defensive */
 int		maxDefensiveItems;	/* items can player carry */
 
 int		roundDelay;		/* delay before start of each round */
-int		maxRoundTime;		/* max. duration of ecah round */
+int		maxRoundTime;		/* max. duration of each round */
+
+bool		anaColDet;		/* use Analytical Collision Detection?  */
 
 bool		pLockServer;		/* Is server swappable out of memory?  */
 
@@ -315,10 +324,21 @@ static optionDesc options[] = {
 	"maxRobots",
 	"robots",
 	"4",
-	&WantedNumRobots,
+	&maxRobots,
 	valInt,
 	tuner_none,
-	"How many robots do you want?\n"
+	"The maximum number of robots wanted.\n"
+	"Adds robots if there are less than maxRobots players.\n"
+    },
+    {
+	"minRobots",
+	"minRobots",
+	"-1",
+	&minRobots,
+	valInt,
+	tuner_none,
+	"The minimum number of robots wanted.\n"
+	"At least minRobots robots will be in the game, if there is room.\n"
     },
     {
 	"robotFile",
@@ -801,6 +821,16 @@ static optionDesc options[] = {
 	"This option is only effective when limitedLives is turned on.\n"
     },
     {
+	"resetOnHuman",
+	"humanReset",
+	"no",
+	&resetOnHuman,
+	valInt,
+	tuner_dummy,
+	"Is the game restarted when there are less than resetOnHuman\n"
+	"humans present and a new human logs in?\n"
+    },
+    {
 	"teamPlay",
 	"teams",
 	"no",
@@ -810,22 +840,53 @@ static optionDesc options[] = {
 	"Is the map a team play map?\n"
     },
     {
+	"teamFuel",
+	"teamFuel",
+	"no",
+	&teamFuel,
+	valBool,
+	tuner_none,
+	"Are fuelstations only available to team members?\n"
+    },
+    {
+	"teamCannons",
+	"teamCannons",
+	"no",
+	&teamCannons,
+	valBool,
+	tuner_none,
+	"Do cannons choose sides in teamPlay?\n"
+    },
+    {
 	"cannonSmartness",
 	"cannonSmartness",
 	"1",
 	&cannonSmartness,
 	valInt,
 	tuner_none,
-	"0: straight ahead, 1: random direction, 2: good, 3: accurate.\n"
+	"0: dumb (straight ahead),\n"
+	"1: default (random direction),\n"
+	"2: good (small error),\n"
+	"3: accurate (aims at predicted player position).\n"
+	"Also influences use of weapons if cannonsUseItems is on.\n"
     },
     {
-	"cannonsPickupItems",
+	"cannonsUseItems",
 	"cannonsPickupItems",
 	"no",
-	&cannonsPickupItems,
+	&cannonsUseItems,
 	valBool,
 	tuner_none,
-	"Do cannons pickup items?\n"
+	"Do cannons use items?\n"
+    },
+    {
+	"keepShots",
+	"keepShots",
+	"no",
+	&keepShots,
+	valBool,
+	tuner_none,
+	"Do shots, mines and missiles remain after their owner leaves?\n"
     },
     {
 	"teamAssign",
@@ -1044,6 +1105,15 @@ static optionDesc options[] = {
 	valBool,
 	tuner_none,
 	"Are itemconcentrator mapsymbols visible to players?\n"
+    },
+    {
+	"wormTime",
+	"wormTime",
+	"0",
+	&wormTime,
+	valSec,
+	tuner_none,
+	"Number of seconds wormholes will remain stable.\n"
     },
     {
 	"defaultsFileName",
@@ -1480,6 +1550,15 @@ static optionDesc options[] = {
 	"Item Probability Multiplication Factor scales all item probabilities.\n"
     },
     {
+	"cannonItemProbMult",
+	"cannonItemProbMult",
+	"1.0",
+	&cannonItemProbMult,
+	valReal,
+	tuner_none,
+	"Average number of items a cannon gets per minute.\n"
+    },
+    {
 	"maxItemDensity",
 	"maxItemDensity",
 	"0.00012",
@@ -1630,6 +1709,15 @@ static optionDesc options[] = {
 	valReal,
 	Tune_item_probs,
 	"Probability for a transporter item to appear.\n"
+    },
+    {
+	"itemMirrorProb",
+	"itemMirrorProb",
+	"1e-9",
+	&World.items[ITEM_MIRROR].prob,
+	valReal,
+	Tune_item_probs,
+	"Probability for a mirror item to appear.\n"
     },
     {
 	"itemDeflectorProb",
@@ -1803,6 +1891,15 @@ static optionDesc options[] = {
 	"How many transporters players start with.\n"
     },
     {
+	"initialMirrors",
+	"initialMirrors",
+	"0",
+	&World.items[ITEM_MIRROR].initial,
+	valInt,
+	Set_initial_resources,
+	"How many mirrors players start with.\n"
+    },
+    {
 	"initialDeflectors",
 	"initialDeflectors",
 	"0",
@@ -1972,6 +2069,15 @@ static optionDesc options[] = {
 	valInt,
 	Set_initial_resources,
 	"Upper limit on the number of transporters per player.\n"
+    },
+    {
+	"maxMirrors",
+	"maxMirrors",
+	"10",
+	&World.items[ITEM_MIRROR].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of mirrors per player.\n"
     },
     {
 	"maxDeflectors",
@@ -2145,6 +2251,15 @@ static optionDesc options[] = {
 	"The maximum duration of each round, in seconds.\n"
     },
     {
+	"analyticalCollisionDetection",
+	"ACD",
+	"true",
+	&anaColDet,
+	valBool,
+	tuner_dummy,
+	"Use Rakk's Analytical Collision Detection.\n"
+    },
+    {
 	"pLockServer",
 	"pLockServer",
 #ifdef PLOCKSERVER
@@ -2203,6 +2318,58 @@ static void Parse_help(char *progname)
 "    Please refer to the manual pages, xpilots(6) and xpilot(6),\n"
 "    for more specific help.\n"
 	  );
+}
+
+static void Parse_dump_mapedit(char *progname)
+{
+    int			j, n = 0;
+
+    xpprintf("charlie                         default_settings[] = {\n");
+    for (j = 0; j < NELEM(options); j++) {
+	if (options[j].type != valVoid) {
+	    int len = strlen(options[j].name);
+	    xpprintf("%s:%*s%s\n", options[j].name,
+		   (len < 40) ? (40 - len) : 1, "",
+		   (options[j].defaultValue != NULL)
+		       ? options[j].defaultValue
+		       : "");
+	}
+    }
+    xpprintf("\n");
+}
+
+static void Parse_dump_man(char *progname)
+{
+    int			j;
+
+    for (j = 0; j < NELEM(options); j++) {
+	if (options[j].type != valVoid) {
+	    int len = strlen(options[j].name);
+	    xpprintf("%s:%*s%s\n", options[j].name,
+		   (len < 40) ? (40 - len) : 1, "",
+		   (options[j].defaultValue != NULL)
+		       ? options[j].defaultValue
+		       : "");
+	}
+    }
+    xpprintf("\n");
+}
+
+static void Parse_dump_windows(char *progname)
+{
+    int			j;
+
+    for (j = 0; j < NELEM(options); j++) {
+	if (options[j].type != valVoid) {
+	    int len = strlen(options[j].name);
+	    xpprintf("%s:%*s%s\n", options[j].name,
+		   (len < 40) ? (40 - len) : 1, "",
+		   (options[j].defaultValue != NULL)
+		       ? options[j].defaultValue
+		       : "");
+	}
+    }
+    xpprintf("\n");
 }
 
 static void Parse_dump(char *progname)
@@ -2281,21 +2448,27 @@ void Parser(int argc, char **argv)
 	if (strcmp("-help", argv[i]) == 0
 	    || strcmp("-h", argv[i]) == 0) {
 	    Parse_help(*argv);
-#ifndef	_WINDOWS
-	    exit(0);
-#endif
+	    IFNWINDOWS( exit(0); )
 	}
 	if (strcmp("-dump", argv[i]) == 0) {
 	    Parse_dump(*argv);
-#ifndef	_WINDOWS
-	    exit(0);
-#endif
+	    IFNWINDOWS( exit(0); )
+	}
+	if (strcmp("-dumpMapedit", argv[i]) == 0) {
+	    Parse_dump_mapedit(*argv);
+	    IFNWINDOWS( exit(0); )
+	}
+	if (strcmp("-dumpMan", argv[i]) == 0) {
+	    Parse_dump_man(*argv);
+	    IFNWINDOWS( exit(0); )
+	}
+	if (strcmp("-dumpWindows", argv[i]) == 0) {
+	    Parse_dump_windows(*argv);
+	    IFNWINDOWS( exit(0); )
 	}
 	if (strcmp("-version", argv[i]) == 0 || strcmp("-v", argv[i]) == 0) {
 	    puts(TITLE);
-#ifndef	_WINDOWS
-	    exit(0);
-#endif
+	    IFNWINDOWS( exit(0); )
 	}
 
 	if (argv[i][0] == '-' || argv[i][0] == '+') {

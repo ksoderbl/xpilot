@@ -1,4 +1,4 @@
-/* $Id: checknames.c,v 1.7 1998/04/27 06:38:18 dick Exp $
+/* $Id: checknames.c,v 1.8 1998/04/28 13:20:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -129,18 +129,26 @@ void Fix_nick_name(char *name)
     }
 }
 
+/* isalnum() depends on locale. */
+static int is_alpha_numeric(unsigned char c)
+{
+    if (c >= 'A' && c <= 'Z') return 1;
+    if (c >= 'a' && c <= 'z') return 1;
+    if (c >= '0' && c <= '9') return 1;
+    return 0;
+}
+
 int Check_host_name(char *name)
 {
     unsigned char *str;
-    int alnum = isalnum('a');
 
     name[MAX_HOST_LEN - 1] = '\0';
-    if (isalnum(*name) != alnum) {
+    str = (unsigned char *) name;
+    if (!is_alpha_numeric(*str)) {
 	return NAME_ERROR;
     }
-    str = (unsigned char *) name;
     for (; *str; str++) {
-	if (isalnum(*str) != alnum) {
+	if (!is_alpha_numeric(*str)) {
 	    if (*str == '.' || *str == '-') {
 		if (str[1] == '.' || str[1] == '-' || !str[1]) {
 		    return NAME_ERROR;
@@ -157,16 +165,15 @@ int Check_host_name(char *name)
 void Fix_host_name(char *name)
 {
     unsigned char *str;
-    int alnum = isalnum('a');
 
     name[MAX_HOST_LEN - 1] = '\0';
-    if (isalnum(*name) != alnum) {
+    str = (unsigned char *) name;
+    if (!is_alpha_numeric(*str)) {
 	strcpy(name, "xxx.xxx");
 	return;
     }
-    str = (unsigned char *) name;
     for (; *str; str++) {
-	if (isalnum(*str) != alnum) {
+	if (!is_alpha_numeric(*str)) {
 	    if (*str == '.' || *str == '-') {
 		if (str[1] == '.' || str[1] == '-' || !str[1]) {
 		    *str = 'x';

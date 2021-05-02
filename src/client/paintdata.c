@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 4.3 1998/04/17 10:59:30 dick Exp $
+/* $Id: paintdata.c,v 4.4 1998/08/30 15:18:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -103,15 +103,9 @@ int		eyesId;		/* Player we get frame updates for */
 
 unsigned long	current_foreground;
 
-#define RESET_FG()	(current_foreground = -1)
-#define SET_FG(PIXEL)				\
-    if ((PIXEL) == current_foreground) ;	\
-    else XSetForeground(dpy, gc, current_foreground = (PIXEL))
-
-#if ERASE
 erase_t		erase[2], *erp;
 
-void Erase_start(void)
+void Erase_do_start(void)
 {
     int			i;
 
@@ -136,13 +130,13 @@ void Erase_start(void)
     }
 }
 
-void Erase_end(void)
+void Erase_do_end(void)
 {
     int			i,
 			linewidth = false;
 
     if (damaged > 0) {
-	error("BUG: Erase_end while damaged");
+	error("BUG: Erase_do_end while damaged");
 	return;
     }
 
@@ -177,7 +171,7 @@ void Erase_end(void)
     }
 }
 
-void Erase_rectangle(int x, int y, int width, int height)
+void Erase_do_rectangle(int x, int y, int width, int height)
 {
     XRectangle		*p;
 
@@ -189,14 +183,14 @@ void Erase_rectangle(int x, int y, int width, int height)
     p->height = height;
 }
 
-void Erase_rectangles(XRectangle *rectp, int n)
+void Erase_do_rectangles(XRectangle *rectp, int n)
 {
     EXPAND(erp->rect_ptr, erp->num_rect, erp->max_rect, XRectangle, n);
     memcpy(&erp->rect_ptr[erp->num_rect], rectp, n * sizeof(XRectangle));
     erp->num_rect += n;
 }
 
-void Erase_arc(int x, int y, int width, int height,
+void Erase_do_arc(int x, int y, int width, int height,
 		      int angle1, int angle2)
 {
     XArc		*p;
@@ -211,14 +205,14 @@ void Erase_arc(int x, int y, int width, int height,
     p->angle2 = angle2;
 }
 
-void Erase_arcs(XArc *arcp, int n)
+void Erase_do_arcs(XArc *arcp, int n)
 {
     EXPAND(erp->arc_ptr, erp->num_arc, erp->max_arc, XArc, n);
     memcpy(&erp->arc_ptr[erp->num_arc], arcp, n * sizeof(XArc));
     erp->num_arc += n;
 }
 
-void Erase_segment(int width, int x1, int y1, int x2, int y2)
+void Erase_do_segment(int width, int x1, int y1, int x2, int y2)
 {
     XSegment		*p;
 
@@ -231,7 +225,7 @@ void Erase_segment(int width, int x1, int y1, int x2, int y2)
     p->y2 = y2;
 }
 
-void Erase_segments(XSegment *segp, int n)
+void Erase_do_segments(XSegment *segp, int n)
 {
     EXPAND(erp->seg_ptr[0], erp->num_seg[0], erp->max_seg[0],
 	   XSegment, n);
@@ -239,7 +233,7 @@ void Erase_segments(XSegment *segp, int n)
     erp->num_seg[0] += n;
 }
 
-void Erase_points(int width, XPoint *pointp, int n)
+void Erase_do_points(int width, XPoint *pointp, int n)
 {
     XSegment		*p;
     int			i;
@@ -258,7 +252,7 @@ void Erase_points(int width, XPoint *pointp, int n)
     erp->num_seg[width] += n - 1;
 }
 
-void Erase_4point(int x, int y, int width, int height)
+void Erase_do_4point(int x, int y, int width, int height)
 {
     XSegment		*p;
 
@@ -287,7 +281,6 @@ void Erase_4point(int x, int y, int width, int height)
     p++;
     erp->num_seg[0] += 4;
 }
-#endif	/* ERASE */
 
 void Rectangle_start(void)
 {

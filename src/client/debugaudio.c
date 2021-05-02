@@ -1,6 +1,6 @@
-/* $Id: version.h.msub,v 4.0 1998/03/18 15:18:09 bert Exp $
+/* $Id: debugaudio.c,v 1.1 1998/08/30 12:13:36 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-1998 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -21,24 +21,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/*
+ * Debug audio driver.
+ * Sometimes new xpilot versions break the XPilot sound system
+ * which is hard to debug on systems without sound.
+ * Hence this file to monitor what's going on.
+ */
 
-#ifndef	VERSION_H
-#define	VERSION_H
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
-#if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-1998"
-#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#   pragma VERSIONID		"XPilot 4.1.0"
-#endif
+#include "version.h"
+#include "audio.h"
 
-#define VERSION			"4.1.0"
-#ifdef	_WINDOWS
-#define	TITLE			"4.1.0-NT13"
-#define	VERSION_WINDOWS	"13"
-#else
-#define TITLE			"XPilot 4.1.0"
-#endif
-#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#define COPYRIGHT		"Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
+char audio_version[] = VERSION;
 
-#endif /* VERSION_H */
+int audioDeviceInit(char *display)
+{
+    printf("debug audio: init\n");
+
+    return 0;
+}
+
+void audioDevicePlay(char *filename, int type, int volume, void **private)
+{
+    printf("debug audio: play file %s, type %d, vol %d, priv %p\n",
+	    filename, type, volume, private);
+}
+
+void audioDeviceEvents()
+{
+    /* printf("debug audio: events\n"); */
+}
+

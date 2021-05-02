@@ -1,4 +1,4 @@
-/* $Id: paintmap.c,v 4.3 1998/04/17 09:00:28 bert Exp $
+/* $Id: paintmap.c,v 4.4 1998/08/30 15:18:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -141,20 +141,21 @@ void Paint_vfuel(void)
 	    y = vfuel_ptr[i].y;
 	    fuel = vfuel_ptr[i].fuel;
 	    size = (BLOCK_SZ - 2*FUEL_BORDER) * fuel / MAX_STATION_FUEL;
-#if ERASE
-	    /* speedup for slow old cheap graphics cards like cg3. */
-	    rd.drawLine(dpy, p_draw, gc,
+	    if (useErase){
+	    /* speedup for slow old cheap graphics cards like cg3.
+		or Xterminals with slow connection */
+		rd.drawLine(dpy, p_draw, gc,
 		      WINSCALE(X(x + FUEL_BORDER)),
 			  WINSCALE(Y(y + FUEL_BORDER + size)),
 		      WINSCALE(X(x + FUEL_BORDER + (BLOCK_SZ - 2*FUEL_BORDER))),
 		      WINSCALE(Y(y + FUEL_BORDER + size)));
-#else
-	    rd.fillRectangle(dpy, p_draw, gc,
+	    } else {
+		rd.fillRectangle(dpy, p_draw, gc,
 			  WINSCALE(X(x + FUEL_BORDER)),
 			  WINSCALE(Y(y + FUEL_BORDER + size)),
 			  WINSCALE(BLOCK_SZ - 2*FUEL_BORDER + 1),
 			  WINSCALE(size + 1));
-#endif
+	    }
 	    Erase_rectangle(WINSCALE(X(x)) - 1,
 			    WINSCALE(Y(y + BLOCK_SZ)) - 1,
 			    WINSCALE(BLOCK_SZ) + 2,
@@ -436,8 +437,7 @@ void Paint_vdecor(void)
 		    rd.fillPolygon(dpy, p_draw, gc,
 				   points, 5,
 				   Convex, CoordModeOrigin);
-#if ERASE
-		    {
+		    if (useErase){
 			int left_x = MIN(fill_bottom_left, fill_top_left);
 			int right_x = MAX(fill_bottom_right, fill_top_right);
 			Erase_rectangle(WINSCALE(X(left_x)) - 1,
@@ -445,7 +445,6 @@ void Paint_vdecor(void)
 					WINSCALE(right_x - left_x) + 4,
 					WINSCALE(BLOCK_SZ) + 3);
 		    }
-#endif
 		    fill_top_left =
 		    fill_top_right =
 		    fill_bottom_left =
@@ -1111,8 +1110,7 @@ void Paint_world(void)
 			if (wallTileDoit) {
 			    XSetFillStyle(dpy, gc, FillSolid);
 			}
-#if ERASE
-			{
+			if (useErase){
 			    int left_x = MIN(fill_bottom_left, fill_top_left);
 			    int right_x = MAX(fill_bottom_right, fill_top_right);
 			    Erase_rectangle(WINSCALE(X(left_x)) - 1,
@@ -1120,7 +1118,6 @@ void Paint_world(void)
 					    WINSCALE(right_x - left_x) + 4,
 					    WINSCALE(BLOCK_SZ) +3);
 			}
-#endif
 			fill_top_left =
 			fill_top_right =
 			fill_bottom_left =
@@ -1151,15 +1148,13 @@ void Paint_world(void)
 	    if (wallTileDoit) {
 		XSetFillStyle(dpy, gc, FillSolid);
 	    }
-#if ERASE
-	    {
+	    if (useErase){
 		int left_x = MIN(fill_bottom_left, fill_top_left);
 		Erase_rectangle(WINSCALE(X(left_x)) - 1,
 				WINSCALE(Y(y + BLOCK_SZ)) - 1,
 				WINSCALE(x - left_x) + 4,
 				WINSCALE(BLOCK_SZ) + 3);
 	    }
-#endif
 	    fill_top_left =
 	    fill_top_right =
 	    fill_bottom_left =

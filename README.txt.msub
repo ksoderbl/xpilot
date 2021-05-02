@@ -40,9 +40,6 @@ XPilot FTP archive: ftp.xpilot.org:/pub/
 
 XPilot newsgroup: rec.games.computer.xpilot
 
-XPilot announcement mailing list: xpilot-announce@list.uit.no
-	(send an e-mail to majordomo@list.uit.no for help on how to join).
-
 
 CONTRIBUTED SOFTWARE
 
@@ -62,4 +59,4 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
 
-$Id: README.txt.msub,v 4.0 1998/03/18 15:11:09 bert Exp $
+$Id: README.txt.msub,v 4.1 1998/05/01 07:47:44 bert Exp $

@@ -1,4 +1,4 @@
-/* $Id: audio.h,v 4.1 1998/04/16 17:40:31 bert Exp $
+/* $Id: audio.h,v 4.2 1998/08/29 19:49:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -79,6 +79,7 @@ enum {
     PHASING_DEVICE_PICKUP_SOUND,
     PHASING_ON_SOUND,
     PHASING_OFF_SOUND,
+    MIRROR_PICKUP_SOUND,
     NUKE_LAUNCH_SOUND,
     NUKE_EXPLOSION_SOUND,
     PLAYER_RAN_OVER_PLAYER_SOUND,
@@ -165,6 +166,7 @@ static char    *soundNames[] =
     "phasing_device_pickup",
     "phasing_on",
     "phasing_off",
+    "mirror_pickup",
     "nuke_launch",
     "nuke_explosion",
     "player_ran_over_player",

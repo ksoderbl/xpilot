@@ -1,6 +1,9 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:14:13 bert Exp $ */
+/* $Id: Imakefile,v 4.1 1998/07/21 09:31:40 bert Exp $ */
 
-/* Some systems _still_ hasn't defined NullParameter... *sigh* */
+/* need config to compile msub.c. */
+#include "Local.config"
+
+/* Some systems _still_ don't define NullParameter... *sigh* */
 #ifndef NullParameter
 #define NullParameter
 #endif

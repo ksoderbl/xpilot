@@ -1,4 +1,4 @@
-/* $Id: map.h,v 4.2 1998/04/16 17:41:36 bert Exp $
+/* $Id: map.h,v 4.4 1998/09/04 15:04:22 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -106,6 +106,7 @@ typedef struct {
     long	fuel;
     unsigned	conn_mask;
     long	last_change;
+    int		team;
 } fuel_t;
 
 typedef struct {
@@ -125,31 +126,40 @@ typedef struct {
 } baseorder_t;
 
 typedef struct {
-    ipos	pos;
+    ipos	blk_pos;
+    position	pix_pos;
     int		dir;
     int		dead_time;
     unsigned	conn_mask;
     long	last_change;
     int		item[NUM_ITEMS];
     int		damaged;
+    int		tractor_target;
+    int		tractor_count;
+    bool	tractor_is_pressor;
+    u_short	team;
 } cannon_t;
 
 typedef struct {
-    DFLOAT	prob;		/* Probility [0..1] for item to appear */
+    DFLOAT	prob;		/* Probability [0..1] for item to appear */
     int		max;		/* Max on world at a given time */
     int		num;		/* Number active right now */
     int		chance;		/* Chance [0..127] for this item to appear */
+    DFLOAT	cannonprob;	/* Relative probability for item to appear */
     int		min_per_pack;	/* minimum number of elements per item. */
     int		max_per_pack;	/* maximum number of elements per item. */
     int		initial;	/* initial number of elements per player. */
-    int		limit;		/* max number of elements per player. */
+    int		limit;		/* max number of elements per player/cannon. */
 } item_t;
 
 typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;
 
 typedef struct {
     ipos	pos;
-    int		lastdest, countdown, lastplayer;
+    int		lastdest,	/* last destination wormhole */
+		countdown,	/* if >0 warp to lastdest else random */
+		lastplayer;	/* last player to pass through */
+    bool	temporary;	/* wormhole was left by hyperjump */
     wormType	type;
 } wormhole_t;
 

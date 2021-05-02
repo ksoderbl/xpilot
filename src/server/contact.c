@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 4.7 1998/04/20 11:30:53 bert Exp $
+/* $Id: contact.c,v 4.8 1998/08/29 19:49:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -61,7 +61,7 @@ char contact_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: contact.c,v 4.7 1998/04/20 11:30:53 bert Exp $";
+    "@(#)$Id: contact.c,v 4.8 1998/08/29 19:49:54 bert Exp $";
 #endif
 
 /*
@@ -692,8 +692,8 @@ void Contact(int fd, void *arg)
 	    status = E_INVAL;
 	}
 	else {
-	    WantedNumRobots = max_robots;
-	    while (WantedNumRobots < NumRobots) {
+	    maxRobots = max_robots;
+	    while (maxRobots < NumRobots) {
 		Robot_delete(-1, true);
 	    }
 	}

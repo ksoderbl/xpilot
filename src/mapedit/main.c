@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.c,v 1.2 1998/04/22 15:44:14 bert Exp $
+ * $Id: main.c,v 1.4 1998/10/06 14:52:19 bert Exp $
  */
 
 #include                 "main.h"
@@ -352,14 +352,14 @@ prefs_t                  prefs[151] = {
 };
 
 /***************************************************************************/
-/* void main                                                               */
+/* int main                                                                */
 /* Arguments :                                                             */
 /*   argc                                                                  */
 /*   argv                                                                  */
 /* Purpose :                                                               */
 /***************************************************************************/
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
    SetDefaults(argc,argv);
 
@@ -414,6 +414,7 @@ void main(int argc, char *argv[])
 
    MainEventLoop();
 
+    return 0;
 }
 
 

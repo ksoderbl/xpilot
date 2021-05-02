@@ -1,4 +1,4 @@
-/* $Id: map.c,v 4.4 1998/04/20 11:30:55 bert Exp $
+/* $Id: map.c,v 4.5 1998/08/29 19:49:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -50,7 +50,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 4.4 1998/04/20 11:30:55 bert Exp $";
+    "@(#)$Id: map.c,v 4.5 1998/08/29 19:49:55 bert Exp $";
 #endif
 
 
@@ -497,60 +497,64 @@ void Grok_map(void)
 		    line[y] = CANNON;
 		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_UP;
-		    World.cannon[World.NumCannons].pos.x = x;
-		    World.cannon[World.NumCannons].pos.y = y;
+		    World.cannon[World.NumCannons].blk_pos.x = x;
+		    World.cannon[World.NumCannons].blk_pos.y = y;
+		    World.cannon[World.NumCannons].pix_pos.x =
+						(x + 0.5) * BLOCK_SZ;
+		    World.cannon[World.NumCannons].pix_pos.y =
+						(y + 0.333) * BLOCK_SZ;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = frame_loops;
-		    for (i = 0; i < NUM_ITEMS; i++) {
-			World.cannon[World.NumCannons].item[i] = World.items[i].initial;
-		    }
-		    World.cannon[World.NumCannons].damaged = 0;
+		    World.cannon[World.NumCannons].team = TEAM_NOT_SET;
+		    Cannon_init(World.NumCannons);
 		    World.NumCannons++;
 		    break;
 		case 'd':
 		    line[y] = CANNON;
 		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_LEFT;
-		    World.cannon[World.NumCannons].pos.x = x;
-		    World.cannon[World.NumCannons].pos.y = y;
+		    World.cannon[World.NumCannons].blk_pos.x = x;
+		    World.cannon[World.NumCannons].blk_pos.y = y;
+		    World.cannon[World.NumCannons].pix_pos.x =
+						(x + 0.667) * BLOCK_SZ;
+		    World.cannon[World.NumCannons].pix_pos.y =
+						(y + 0.5) * BLOCK_SZ;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = frame_loops;
-		    for (i = 0; i < NUM_ITEMS; i++) {
-			World.cannon[World.NumCannons].item[i] = World.items[i].initial;
-		    }
-		    World.cannon[World.NumCannons].damaged = 0;
+		    World.cannon[World.NumCannons].team = TEAM_NOT_SET;
+		    Cannon_init(World.NumCannons);
 		    World.NumCannons++;
 		    break;
 		case 'f':
 		    line[y] = CANNON;
 		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_RIGHT;
-		    World.cannon[World.NumCannons].pos.x = x;
-		    World.cannon[World.NumCannons].pos.y = y;
+		    World.cannon[World.NumCannons].blk_pos.x = x;
+		    World.cannon[World.NumCannons].blk_pos.y = y;
+		    World.cannon[World.NumCannons].pix_pos.x =
+						(x + 0.333) * BLOCK_SZ;
+		    World.cannon[World.NumCannons].pix_pos.y =
+						(y + 0.5) * BLOCK_SZ;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = frame_loops;
-		    for (i = 0; i < NUM_ITEMS; i++) {
-			World.cannon[World.NumCannons].item[i] = World.items[i].initial;
-		    }
-		    World.cannon[World.NumCannons].damaged = 0;
+		    World.cannon[World.NumCannons].team = TEAM_NOT_SET;
+		    Cannon_init(World.NumCannons);
 		    World.NumCannons++;
 		    break;
 		case 'c':
 		    line[y] = CANNON;
 		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_DOWN;
-		    World.cannon[World.NumCannons].pos.x = x;
-		    World.cannon[World.NumCannons].pos.y = y;
+		    World.cannon[World.NumCannons].blk_pos.x = x;
+		    World.cannon[World.NumCannons].blk_pos.y = y;
+		    World.cannon[World.NumCannons].pix_pos.x =
+						(x + 0.5) * BLOCK_SZ;
+		    World.cannon[World.NumCannons].pix_pos.y =
+						(y + 0.667) * BLOCK_SZ;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = frame_loops;
-		    for (i = 0; i < NUM_ITEMS; i++) {
-			World.cannon[World.NumCannons].item[i] = World.items[i].initial;
-		    }
-		    World.cannon[World.NumCannons].damaged = 0;
+		    World.cannon[World.NumCannons].team = TEAM_NOT_SET;
+		    Cannon_init(World.NumCannons);
 		    World.NumCannons++;
 		    break;
 
@@ -564,6 +568,7 @@ void Grok_map(void)
 		    World.fuel[World.NumFuels].fuel = START_STATION_FUEL;
 		    World.fuel[World.NumFuels].conn_mask = (unsigned)-1;
 		    World.fuel[World.NumFuels].last_change = frame_loops;
+		    World.fuel[World.NumFuels].team = TEAM_NOT_SET;
 		    World.NumFuels++;
 		    break;
 
@@ -718,6 +723,7 @@ void Grok_map(void)
 		    World.wormHoles[World.NumWormholes].countdown = 0;
 		    World.wormHoles[World.NumWormholes].lastdest = -1;
 		    World.wormHoles[World.NumWormholes].lastplayer = -1;
+		    World.wormHoles[World.NumWormholes].temporary = 0;
 		    if (c == '@') {
 			World.wormHoles[World.NumWormholes].type = WORM_NORMAL;
 			worm_norm++;
@@ -791,6 +797,15 @@ void Grok_map(void)
 	    World.NumWormholes = 0;
 	}
 
+	if (!wormTime) {
+	    for (i = 0; i < World.NumWormholes; i++) {
+		int j = rand() % World.NumWormholes;
+		while (World.wormHoles[j].type == WORM_IN)
+		    j = rand() % World.NumWormholes;
+		World.wormHoles[i].lastdest = j;
+	    }
+	}
+
 	if (BIT(World.rules->mode, TIMING) && World.NumChecks == 0) {
 	    xpprintf("No checkpoints found while race mode (timing) was set.\n");
 	    xpprintf("Turning off race mode.\n");
@@ -803,9 +818,10 @@ void Grok_map(void)
 	 * treasure.
 	 */
 	if (BIT(World.rules->mode, TEAM_PLAY)) {
+	    u_short team = TEAM_NOT_SET;
 	    for (i=0; i<World.NumTreasures; i++) {
-		u_short team = Find_closest_team(World.treasures[i].pos.x,
-						 World.treasures[i].pos.y);
+		team = Find_closest_team(World.treasures[i].pos.x,
+					 World.treasures[i].pos.y);
 		World.treasures[i].team = team;
 		if (team == TEAM_NOT_SET) {
 		    error("Couldn't find a matching team for the treasure.");
@@ -815,21 +831,43 @@ void Grok_map(void)
 		}
 	    }
 	    for (i=0; i<World.NumTargets; i++) {
-		u_short team = Find_closest_team(World.targets[i].pos.x,
-						 World.targets[i].pos.y);
+		team = Find_closest_team(World.targets[i].pos.x,
+					 World.targets[i].pos.y);
 		if (team == TEAM_NOT_SET) {
 		    error("Couldn't find a matching team for the target.");
 		}
 		World.targets[i].team = team;
 	    }
+	    if (teamCannons) {
+		for (i=0; i<World.NumCannons; i++) {
+		    team = Find_closest_team(World.cannon[i].blk_pos.x,
+					     World.cannon[i].blk_pos.y);
+		    if (team == TEAM_NOT_SET) {
+			error("Couldn't find a matching team for the target.");
+		    }
+		    World.cannon[i].team = team;
+		}
+	    }
+	    if (teamFuel) {
+		for (i=0; i<World.NumFuels; i++) {
+		    team = Find_closest_team(World.fuel[i].blk_pos.x,
+					     World.fuel[i].blk_pos.y);
+		    if (team == TEAM_NOT_SET) {
+			error("Couldn't find a matching team for fuelstation.");
+		    }
+		    World.fuel[i].team = team;
+		}
+	    }
 	}
     }
 
-    if (WantedNumRobots == -1) {
-	WantedNumRobots = World.NumBases;
+    if (maxRobots == -1) {
+	maxRobots = World.NumBases;
+    }
+    if (minRobots == -1) {
+	minRobots = maxRobots;
     }
     if (BIT(World.rules->mode, TIMING)) {
-	/* WantedNumRobots = 0;  new robots can race */
 	Find_base_order();
     }
 

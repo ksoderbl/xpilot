@@ -1,4 +1,4 @@
-/* $Id: client.c,v 4.1 1998/04/16 17:39:12 bert Exp $
+/* $Id: client.c,v 4.2 1998/09/09 00:22:15 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -97,6 +97,7 @@ int	map_point_size;		/* size of navigation points */
 int	spark_size;		/* size of debris and spark */
 int	shot_size;		/* size of shot */
 int	teamshot_size;		/* size of team shot */
+bool	showNastyShots = false;		/* show original flavor shots or the new "nasty shots" */
 long	control_count;		/* Display control for how long? */
 
 long	fuelSum;			/* Sum of fuel in all tanks */

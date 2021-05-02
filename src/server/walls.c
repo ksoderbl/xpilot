@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 4.7 1998/04/21 09:29:49 dick Exp $
+/* $Id: walls.c,v 4.10 1998/09/04 15:04:23 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -321,7 +321,7 @@ void Move_init(void)
 
     mp.obj_cannon_mask = (KILLING_SHOTS) | OBJ_MINE | OBJ_SHOT | OBJ_PULSE |
 			OBJ_SMART_SHOT | OBJ_TORPEDO | OBJ_HEAT_SHOT;
-    if (cannonsPickupItems)
+    if (cannonsUseItems)
 	mp.obj_cannon_mask |= OBJ_ITEM;
     mp.obj_target_mask = mp.obj_cannon_mask | OBJ_BALL | OBJ_SPARK;
     mp.obj_treasure_mask = mp.obj_bounce_mask | OBJ_BALL | OBJ_PULSE;
@@ -741,6 +741,7 @@ static void Move_segment(move_state_t *ms)
 	     */
 	    int last = World.wormHoles[hole].lastdest;
 	    if (last >= 0
+		&& (World.wormHoles[hole].countdown > 0 || !wormTime)
 		&& last < World.NumWormholes
 		&& World.wormHoles[last].type != WORM_IN
 		&& last != hole
@@ -763,13 +764,18 @@ static void Move_segment(move_state_t *ms)
 	    break;
 	}
 	for (i = 0; ; i++) {
-	    if (World.cannon[i].pos.x == block.x
-		&& World.cannon[i].pos.y == block.y) {
+	    if (World.cannon[i].blk_pos.x == block.x
+		&& World.cannon[i].blk_pos.y == block.y) {
 		break;
 	    }
 	}
 	ms->cannon = i;
 
+	if (BIT(World.rules->mode, TEAM_PLAY)
+	    && teamImmunity
+	    && mi->obj->team == World.cannon[i].team) {
+	    break;
+	}
 	{
 	    /*
 	     * Calculate how far the point can travel in the cannon block
@@ -1032,11 +1038,8 @@ static void Move_segment(move_state_t *ms)
 			    team = TEAM_NOT_SET;
 			}
 		    }
-		    else if (mi->obj->id == -1) {
-			team = TEAM_NOT_SET;
-		    }
 		    else {
-			team = Players[GetInd[mi->obj->id]]->team;
+			team = mi->obj->team;
 		    }
 		    if (team == World.targets[i].team) {
 			break;
@@ -1519,24 +1522,23 @@ static void Move_segment(move_state_t *ms)
 static void Cannon_dies(move_state_t *ms)
 {
     cannon_t           *cannon = World.cannon + ms->cannon;
-    int			x = cannon->pos.x;
-    int			y = cannon->pos.y;
+    int			x = (int)cannon->pix_pos.x;
+    int			y = (int)cannon->pix_pos.y;
     int			sc;
-    int			i;
+    int			killer = -1;
+    player		*pl = NULL;
 
     cannon->dead_time = CANNON_DEAD_TIME;
     cannon->conn_mask = 0;
-    cannon->last_change = frame_loops;
-    for (i = 0; i < NUM_ITEMS; i++) {
-	cannon->item[i] = World.items[i].initial;
-    }
-    cannon->damaged = 0;
-    World.block[x][y] = SPACE;
-    sound_play_sensors((x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ, CANNON_EXPLOSION_SOUND);
+    World.block[cannon->blk_pos.x][cannon->blk_pos.y] = SPACE;
+    Cannon_throw_items(ms->cannon);
+    Cannon_init(ms->cannon);
+    sound_play_sensors(x, y, CANNON_EXPLOSION_SOUND);
     Make_debris(
-	/* pos.x, pos.y   */ (x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ,
+	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ 0.0, 0.0,
 	/* owner id       */ -1,
+	/* owner team	  */ cannon->team,
 	/* kind           */ OBJ_DEBRIS,
 	/* mass           */ 4.5,
 	/* status         */ GRAVITY,
@@ -1548,9 +1550,10 @@ static void Cannon_dies(move_state_t *ms)
 	/* min,max life   */ 8, 68
 	);
     Make_wreckage(
-	/* pos.x, pos.y   */ (x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ,
+	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ 0.0, 0.0,
 	/* owner id       */ -1,
+	/* owner team	  */ cannon->team,
 	/* min,max mass   */ 3.5, 23,
 	/* total mass     */ 28,
 	/* status         */ GRAVITY,
@@ -1562,13 +1565,22 @@ static void Cannon_dies(move_state_t *ms)
 	);
 
     if (!ms->mip->pl) {
-	object *obj = ms->mip->obj;
-	if (obj->id >= 0) {
-	    int killer = GetInd[obj->id];
-	    player *pl = Players[killer];
-	    sc = Rate(pl->score, CANNON_SCORE) / 4;
-	    SCORE(killer, sc, x, y, "");
+	if (ms->mip->obj->id != -1) {
+	    killer = GetInd[ms->mip->obj->id];
+	    pl = Players[killer];
 	}
+    } else if (BIT(ms->mip->pl->used, OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)
+	       == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+	pl = ms->mip->pl;
+	killer = GetInd[pl->id];
+    }
+    if (pl) {
+	sc = Rate(pl->score, CANNON_SCORE) / 4;
+	if (BIT(World.rules->mode, TEAM_PLAY)
+	    && pl->team == cannon->team) {
+	    sc = -sc;
+	}
+	SCORE(killer, sc, cannon->blk_pos.x, cannon->blk_pos.y, "");
     }
 }
 
@@ -1589,6 +1601,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     DFLOAT 		drainfactor;
 
     /* a normal shot or a direct mine hit work, cannons don't */
+    /* BD: should shots/mines by cannons of opposing teams work? */
     /* also players suiciding on target will cause damage */
     if (!BIT(obj->type, KILLING_SHOTS|OBJ_MINE|OBJ_PULSE|OBJ_PLAYER)) {
 	return;
@@ -1597,7 +1610,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 	return;
     }
     killer = GetInd[obj->id];
-    if (targ->team == Players[killer]->team) {
+    if (targ->team == obj->team) {
 	return;
     }
 
@@ -1605,7 +1618,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     case OBJ_SHOT:
 #ifdef DRAINFACTOR
 /* BG: this is bad: one shot causes way too much damage. */
-	drainfactor = LENGTH(obj->vel.x, obj->vel.y);
+	drainfactor = VECTOR_LENGTH(obj->vel);
     	drainfactor = (drainfactor * drainfactor * ABS(obj->mass)) / (ShotsSpeed * ShotsSpeed * ShotsMass);
 #else
 	drainfactor = 1;
@@ -1668,6 +1681,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 	/* pos.x, pos.y   */ (x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ,
 	/* vel.x, vel.y   */ 0.0, 0.0,
 	/* owner id       */ -1,
+	/* owner team	  */ targ->team,
 	/* kind           */ OBJ_DEBRIS,
 	/* mass           */ 4.5,
 	/* status         */ GRAVITY,
@@ -1812,7 +1826,7 @@ static void Object_crash(move_state_t *ms)
     case CrashCannon:
 	obj->life = 0;
 	if (BIT(obj->type, OBJ_ITEM)) {
-	    World.cannon[ms->cannon].item[obj->info] += obj->count;
+	    Cannon_add_item(ms->cannon, obj->info, obj->count);
 	} else {
 	    Cannon_dies(ms);
 	}
@@ -1831,6 +1845,7 @@ void Move_object(int ind)
     int			dist;
     move_info_t		mi;
     move_state_t	ms;
+    bool		pos_update = false;
 
     Object_position_remember(obj);
 
@@ -1873,6 +1888,7 @@ void Move_object(int ind)
     for (;;) {
 	Move_segment(&ms);
 	if (!(ms.done.x | ms.done.y)) {
+	    pos_update |= (ms.crash | ms.bounce);
 	    if (ms.crash) {
 		break;
 	    }
@@ -1934,6 +1950,9 @@ void Move_object(int ind)
     obj->dir = ms.dir;
     if (ms.crash) {
 	Object_crash(&ms);
+    }
+    if (pos_update && anaColDet) {
+	Object_position_remember(obj);
     }
 }
 
@@ -1997,9 +2016,12 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	break;
 
     case CrashCannon:
-	howfmt = "%s smashed%s against a cannon";
-	hudmsg = "[Cannon]";
-	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNON_SOUND);
+	if (BIT(pl->used, OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)
+	    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+	    howfmt = "%s smashed%s against a cannon";
+	    hudmsg = "[Cannon]";
+	    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNON_SOUND);
+	}
 	Cannon_dies(ms);
 	break;
 
@@ -2125,6 +2147,7 @@ void Move_player(int ind)
     vector		r[RES];
     ivec		sign;		/* sign (-1 or 1) of direction */
     ipos		block;		/* block index */
+    bool		pos_update = false;
 
 
     if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING) {
@@ -2252,6 +2275,7 @@ void Move_player(int ind)
 	crash = -1;
 	for (i = 0; i < pl->ship->num_points; i++) {
 	    Move_segment(&ms[i]);
+	    pos_update |= (ms[i].crash | ms[i].bounce);
 	    if (ms[i].crash) {
 		crash = i;
 		break;
@@ -2376,6 +2400,7 @@ void Move_player(int ind)
 			/* pos.x, pos.y   */ pl->pos.x, pl->pos.y,
 			/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
 			/* owner id       */ pl->id,
+			/* owner team	  */ pl->team,
 			/* kind           */ OBJ_SPARK,
 			/* mass           */ 3.5,
 			/* status         */ GRAVITY | OWNERIMMUNE | FROMBOUNCE,
@@ -2447,6 +2472,9 @@ void Move_player(int ind)
 
     if (ms[worst].crash) {
 	Player_crash(&ms[worst], worst, false);
+    }
+    if (pos_update && anaColDet) {
+	Player_position_remember(pl);
     }
 }
 

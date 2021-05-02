@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 4.1 1998/04/16 17:39:30 bert Exp $
+/* $Id: paint.c,v 4.4 1998/09/04 07:03:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -128,6 +128,7 @@ int	titleFlip;		/* Do special title bar flipping? */
 int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
 char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
 char	*texturePath = NULL;		/* Path list of texture directories */
+bool	useErase;		/* use Erase hack for slow X */
 
 int		maxKeyDefs;
 keydefs_t	*keyDefs = NULL;
@@ -201,7 +202,8 @@ void Paint_frame(void)
      * Do we really need to draw all this if the player is damaged?
      */
     if (damaged <= 0) {
-	if (prev_prev_damaged) {
+	if (prev_damaged || prev_prev_damaged) {
+	    /* clean up ecm damage */
 	    SET_FG(colors[BLACK].pixel);
 	    XFillRectangle(dpy, draw, gc, 0, 0, draw_width, draw_height);
 	}
@@ -324,24 +326,26 @@ void Paint_frame(void)
 	XSetPlaneMask(dpy, messageGC, dbuf_state->drawing_planes);
     }
 #endif
+
     if (!damaged) {
 	/* Prepare invisible buffer for next frame by clearing. */
-#if ERASE
-	Erase_end();
-#else
-	/* DBE's XdbeBackground switch option is probably faster than
-	   XFillRectangle */
-#ifdef DBE
-	if (dbuf_state->type != MULTIBUFFER) {
-#endif
-	SET_FG(colors[BLACK].pixel);
-#ifndef	_WINDOWS
-	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
-#endif
-#ifdef DBE
+	if (useErase) {
+	    Erase_end();
 	}
+	else {
+	    /* DBE's XdbeBackground switch option is probably faster than
+	       XFillRectangle */
+#ifdef DBE
+	    if (dbuf_state->type != MULTIBUFFER) {
 #endif
+		SET_FG(colors[BLACK].pixel);
+#ifndef	_WINDOWS
+		XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
 #endif
+#ifdef DBE
+	    }
+#endif
+	}
     }
 
 #ifndef	_WINDOWS

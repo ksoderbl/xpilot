@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 4.2 1998/04/23 14:18:19 bert Exp $
+# $Id: Makefile.std,v 4.3 1998/08/30 20:12:18 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993-98 by
 #
@@ -25,7 +25,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.0.0
+VERSION=4.1.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -123,7 +123,7 @@ AIX_MLIB = -lm
 AIX_XLIB = -lX11
 
 #
-# Flags for Linux on a 486.
+# Flags for Linux.
 # Linux versions up to 0.99pl9 should define LINUX0 when compiling
 # as there are some network deficiences which are reportedly solved
 # in 0.99pl10.  Defining LINUX0 makes it impossible for a Linux client
@@ -132,7 +132,7 @@ AIX_XLIB = -lX11
 #
 LINUX_CC = gcc
 LINUX_CPLUSPLUS = g++
-LINUX_CFLAGS = $(DEFS) $(INCS) -m486 -Wall -fstrict-prototype
+LINUX_CFLAGS = $(DEFS) $(INCS) -Wall -fstrict-prototype
 LINUX_OPT = -O2
 LINUX_DEBUG = -g -O2
 LINUX_PROF = -pg -O2
@@ -276,10 +276,10 @@ SRCS1 = about.c caudio.c client.c colors.c configure.c dbuff.c default.c \
 #
 # Server program xpilots
 #
-OBJS2 = cmdline.o collision.o contact.o event.o frame.o id.o map.o \
+OBJS2 = cannon.o cmdline.o collision.o contact.o event.o frame.o id.o map.o \
 	metaserver.o netserver.o objpos.o option.o play.o player.o robot.o \
 	robotdef.o rules.o saudio.o sched.o server.o update.o walls.o
-SRCS2 = cmdline.c collision.c contact.c event.c frame.c id.c map.c \
+SRCS2 = cannon.c cmdline.c collision.c contact.c event.c frame.c id.c map.c \
 	metaserver.c netserver.c objpos.c option.c play.c player.c robot.c \
 	robotdef.c rules.c saudio.c sched.c server.c update.c walls.c
 

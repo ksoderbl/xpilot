@@ -1,4 +1,4 @@
-/* $Id: global.h,v 4.4 1998/04/20 11:30:54 bert Exp $
+/* $Id: global.h,v 4.6 1998/09/01 10:06:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,12 +53,18 @@ typedef struct {
 #define FPS			framesPerSecond
 extern player		**Players;
 extern object		*Obj[];
+extern pulse_t		*Pulses[];
+extern ecm_t		*Ecms[];
+extern trans_t		*Transporters[];
 extern long		frame_loops;
 extern int		NumPlayers;
 extern int		NumPseudoPlayers;
 extern int		NumQueuedPlayers;
 extern int		NumObjs;
-extern int		NumRobots, WantedNumRobots;
+extern int		NumPulses;
+extern int		NumEcms;
+extern int		NumTransporters;
+extern int		NumRobots, maxRobots, minRobots;
 extern int		login_in_progress;
 
 extern char		*robotFile;
@@ -124,9 +130,13 @@ extern DFLOAT		maxVisibilityDistance;
 extern bool		limitedLives;
 extern int		worldLives;
 extern bool		endOfRoundReset;
+extern int		resetOnHuman;
 extern bool		teamPlay;
+extern bool		teamFuel;
+extern bool		teamCannons;
 extern int		cannonSmartness;
-extern bool		cannonsPickupItems;
+extern bool		cannonsUseItems;
+extern bool		keepShots;
 extern bool		teamAssign;
 extern bool		teamImmunity;
 extern bool		onePlayerOnly;
@@ -142,6 +152,7 @@ extern bool		gravityAnticlockwise;
 extern bool		gravityVisible;
 extern bool		wormholeVisible;
 extern bool		itemConcentratorVisible;
+extern int		wormTime;
 extern int		nukeMinSmarts;
 extern int		nukeMinMines;
 extern DFLOAT		nukeClusterDamage;
@@ -204,6 +215,7 @@ extern DFLOAT 		movingItemProb;
 extern DFLOAT            rogueHeatProb;
 extern DFLOAT            rogueMineProb;
 extern DFLOAT		itemProbMult;
+extern DFLOAT		cannonItemProbMult;
 extern DFLOAT		maxItemDensity;
 extern int		itemConcentratorRadius;
 extern DFLOAT		itemConcentratorProb;
@@ -220,6 +232,8 @@ extern bool		lockOtherTeam;
 extern bool 		loseItemDestroys;
 extern int		maxOffensiveItems;
 extern int		maxDefensiveItems;
+
+extern bool		anaColDet;
 
 extern bool		pLockServer;
 

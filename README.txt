@@ -1,4 +1,4 @@
-This is the README file for XPilot 4.0.0.
+This is the README file for XPilot 4.1.0alpha.
 
 Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
@@ -40,9 +40,6 @@ XPilot FTP archive: ftp.xpilot.org:/pub/
 
 XPilot newsgroup: rec.games.computer.xpilot
 
-XPilot announcement mailing list: xpilot-announce@list.uit.no
-	(send an e-mail to majordomo@list.uit.no for help on how to join).
-
 
 CONTRIBUTED SOFTWARE
 
@@ -62,4 +59,4 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
 
-$Id: README.txt,v 4.4 1998/04/28 07:40:20 bert Exp $
+$Id: README.txt,v 4.6 1998/08/29 20:29:53 bert Exp $

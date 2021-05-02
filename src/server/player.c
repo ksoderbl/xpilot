@@ -1,4 +1,4 @@
-/* $Id: player.c,v 4.4 1998/04/27 21:46:41 dick Exp $
+/* $Id: player.c,v 4.7 1998/09/18 15:28:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -49,7 +49,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 4.4 1998/04/27 21:46:41 dick Exp $";
+    "@(#)$Id: player.c,v 4.7 1998/09/18 15:28:00 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -64,7 +64,8 @@ bool		updateScores = true;
 void Pick_startpos(int ind)
 {
     player	*pl = Players[ind];
-    int		i, num_free, pick, seen;
+    int		i, num_free;
+    int		pick = 0, seen = 0;
     static int	prev_num_bases = 0;
     static char	*free_bases = NULL;
 
@@ -111,13 +112,13 @@ void Pick_startpos(int ind)
 	    }
 	}
     } else {
-    pick = rand() % num_free;
-    seen = 0;
-    for (i = 0; i < World.NumBases; i++) {
-	if (free_bases[i] != 0) {
-	    if (seen < pick) {
-		seen++;
-	    } else {
+	pick = rand() % num_free;
+	seen = 0;
+	for (i = 0; i < World.NumBases; i++) {
+	    if (free_bases[i] != 0) {
+		if (seen < pick) {
+		    seen++;
+		} else {
 		    break;
 		}
 	    }
@@ -356,8 +357,6 @@ int Init_player(int ind, wireobj *ship)
     pl->fuel.sum        = World.items[ITEM_FUEL].initial << FUEL_SCALE_BITS;
     Player_init_fuel(ind, pl->fuel.sum);
 
-    pl->transInfo.count	= 0;
-
     if (allowShipShapes == true && ship) {
 	pl->ship = ship;
     }
@@ -403,16 +402,15 @@ int Init_player(int ind, wireobj *ship)
     pl->repair_target	= 0;
     pl->name[0]		= '\0';
     pl->num_pulses	= 0;
-    pl->max_pulses	= 0;
-    pl->pulses		= NULL;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
     pl->emergency_shield_left = 0;
     pl->emergency_shield_max = 0;
     pl->phasing_left	= 0;
     pl->phasing_max	= 0;
-    pl->ecmInfo.count	= 0;
+    pl->ecmcount	= 0;
     pl->damaged 	= 0;
+    pl->stunned		= 0;
 
     pl->mode		= World.rules->mode;
     pl->status		= PLAYING | GRAVITY | DEF_BITS;
@@ -876,7 +874,7 @@ static void Give_individual_bonus(int ind, int average_score)
 	  "[Winner]");
 }
 
-static void Team_game_over(int winning_team, const char *reason)
+void Team_game_over(int winning_team, const char *reason)
 {
     int			i, j;
     int			average_score;
@@ -944,7 +942,7 @@ static void Team_game_over(int winning_team, const char *reason)
     free(best_players);
 }
 
-static void Individual_game_over(int winner)
+void Individual_game_over(int winner)
 {
     int			i, j;
     int			average_score;
@@ -1015,7 +1013,7 @@ static void Individual_game_over(int winner)
     free(best_players);
 }
 
-static void Race_game_over(void)
+void Race_game_over(void)
 {
     player		*pl;
     int			i,
@@ -1353,7 +1351,7 @@ void Compute_game_status(void)
 #if 0
 	    /* not all teammode maps have treasures. */
 	    else if (World.teams[Players[i]->team].NumTreasures == 0) {
-		/* Ingore players with no treasures troves */
+		/* Ignore players with no treasure troves */
 		continue;
 	    }
 #endif
@@ -1604,28 +1602,38 @@ void Delete_player(int ind)
 		obj->id = -1;
 	    }
 	    else {
-		obj->life = 0;
-		if (BIT(obj->type,
+		if (!keepShots) {
+		    obj->life = 0;
+		    if (BIT(obj->type,
 			OBJ_MINE|OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO)) {
-		    obj->mass = 0;
+			obj->mass = 0;
+		    }
 		}
-		obj->id = -1;
+	        obj->id = -1;
 	    }
 	}
 	else if (obj->owner == id) {
 	    obj->owner = -1;
-	    if (BIT(obj->type, OBJ_MINE)) {
-		obj->life = 0;
-		obj->mass = 0;
+	    if (!keepShots) {
+		if (BIT(obj->type, OBJ_MINE)) {
+		    obj->life = 0;
+		    obj->mass = 0;
+		}
 	    }
 	}
     }
 
-    if (pl->max_pulses > 0 && pl->pulses != NULL) {
-	free(pl->pulses);
-	pl->max_pulses = 0;
+    if (pl->num_pulses) {
+	for (i = 0; i < NumPulses; i++) {
+	    if (Pulses[i]->id == pl->id) {
+		free(Pulses[i]);
+		if (--NumPulses > i) {
+		    Pulses[i] = Pulses[NumPulses];
+		    i--;
+		}
+	    }
+	}
 	pl->num_pulses = 0;
-	pl->pulses = NULL;
     }
     Free_ship_shape(pl->ship);
 
@@ -1671,9 +1679,6 @@ void Delete_player(int ind)
 	if (BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE)
 	    && (Players[i]->lock.pl_id == id || NumPlayers <= 1)) {
 	    CLR_BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE);
-	    /* bugfix (1995/08/07): */
-	    Players[i]->tractor = NULL;
-	    /* consider this: */
 	    CLR_BIT(Players[i]->used, OBJ_TRACTOR_BEAM);
 	}
 	if (IS_ROBOT_IND(i)
@@ -1775,7 +1780,7 @@ void Player_death_reset(int ind)
     pl->shot_life	= ShotsLife;
     pl->shot_mass	= ShotsMass;
     pl->count		= RECOVERY_DELAY;
-    pl->ecmInfo.count	= 0;
+    pl->ecmcount	= 0;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
     pl->emergency_shield_left = 0;
@@ -1783,6 +1788,7 @@ void Player_death_reset(int ind)
     pl->phasing_left	= 0;
     pl->phasing_max	= 0;
     pl->damaged 	= 0;
+    pl->stunned		= 0;
     pl->lock.distance	= 0;
 
     pl->fuel.sum       	= (long)(pl->fuel.sum*0.90);		/* Loose 10% of fuel */
@@ -1790,14 +1796,6 @@ void Player_death_reset(int ind)
     minfuel		+= (rand() % (1 + minfuel) / 5);
     pl->fuel.sum	= MAX(pl->fuel.sum, minfuel);
     Player_init_fuel(ind, pl->fuel.sum);
-
-    pl->transInfo.count	= 0;
-
-    if (pl->max_pulses > 0 && pl->num_pulses == 0) {
-	free(pl->pulses);
-	pl->pulses = NULL;
-	pl->max_pulses = 0;
-    }
 
     /*-BA Handle the combination of limited life games and
      *-BA robotLeaveLife by making a robot leave iff it gets
@@ -1814,20 +1812,18 @@ void Player_death_reset(int ind)
 
     if (BIT(pl->mode, LIMITED_LIVES)) { 
 	pl->life--;
-
 	if (pl->life == -1) {
-	    if(!IS_ROBOT_PTR(pl) ||
-	       (BIT(World.rules->mode, TIMING|TEAM_PLAY) &&
-		(pl->score >= robotLeaveScore || !robotsLeave))) {
-		pl->life = 0;
-		SET_BIT(pl->status, GAME_OVER);
-		Player_lock_closest(ind, 0);
-		pl->mychar = 'D';
+	    if (IS_ROBOT_PTR(pl)) {
+		if (!BIT(World.rules->mode, TIMING|TEAM_PLAY)
+		    || (robotsLeave && pl->score < robotLeaveScore)) {
+		    Robot_delete(ind, false);
+		    return;
+		}
 	    }
-	    else {
-		Robot_delete(ind,false);
-		return ;
-	    }
+	    pl->life = 0;
+	    SET_BIT(pl->status, GAME_OVER);
+	    pl->mychar = 'D';
+	    Player_lock_closest(ind, 0);
 	}
     }
     else {

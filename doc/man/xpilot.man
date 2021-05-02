@@ -4,7 +4,7 @@
 .\"
 .TH XPILOT  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.0.0: Apr 28th, 1998
+.ds ]W XPilot 4.1.0: Oct 30th, 1998
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1402,7 +1402,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of XPilot, i.e., 4.0.0
+\(bu The full version of XPilot, i.e., 4.1.0
 .TP
 \(bu What the bug looks like (symptoms)
 .TP
@@ -1428,10 +1428,10 @@ for details see the provided LICENSE file.
 .SH FILES
 .PD 0
 .TP 40
-.B /usr/lib/X11/motd
+.B /usr/X11R6/lib/X11/motd
 Message of the day.
 .TP
-.B /usr/lib/X11/sounds
+.B /usr/X11R6/lib/X11/sounds
 File containing the sound to sound-file mapping.
 .PD
 

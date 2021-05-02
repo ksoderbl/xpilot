@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: events.c,v 1.4 1998/04/23 20:08:33 bert Exp $
+ * $Id: events.c,v 1.5 1998/05/03 06:55:01 dick Exp $
  */
 
 #include                 "main.h"
@@ -80,11 +80,16 @@ void MainEventLoop(void)
 	    if (report.xclient.message_type == ProtocolAtom
 	       && report.xclient.format == 32
 	       && report.xclient.data.l[0] == KillAtom) {
-	       XDestroyWindow(display, mapwin);
-	       XSync(display, True);
-	       XCloseDisplay(display);
-	       exit(0);
-	    }
+		    if (report.xclient.window == mapwin) {
+				XDestroyWindow(display, mapwin);
+				XSync(display, True);
+				XCloseDisplay(display);
+		       		exit(0);
+		    }
+		    else {
+				XUnmapWindow(display, report.xclient.window);
+			}
+	   }
       } /* end switch */
    }
 

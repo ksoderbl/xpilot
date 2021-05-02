@@ -1,4 +1,4 @@
-/* $Id: robot.h,v 4.2 1998/04/16 17:41:52 bert Exp $
+/* $Id: robot.h,v 4.3 1998/08/29 19:49:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -159,6 +159,8 @@ typedef struct robot_default_data {
     int		last_fired_missile;     /* relative to robot_count */
     int		last_thrown_ball;	/* relative to robot_count */
     int		longterm_mode;		/* long term robot mode */
+    int		lock_last_seen;		/* last time robot saw target */
+    position	lock_last_pos;		/* last known position of target */
 } robot_default_data_t;
 
 #endif

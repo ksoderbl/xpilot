@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 4.2 1998/04/17 09:00:27 bert Exp $
+/* $Id: painthud.c,v 4.4 1998/09/13 10:29:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -269,14 +269,14 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
     }
     points[i++] = points[0];
     SET_FG(colors[hudShipColor].pixel);
-#if ERASE
-    rd.drawLines(dpy, p_draw, gc, points, i, 0);
-    Erase_points(0, points, i);
-#else
-    rd.fillPolygon(dpy, p_draw, gc,
+    if (useErase){
+	rd.drawLines(dpy, p_draw, gc, points, i, 0);
+	    Erase_points(0, points, i);
+    } else {
+	rd.fillPolygon(dpy, p_draw, gc,
 		   points, i,
 		   Complex, CoordModeOrigin);
-#endif
+    }
     SET_FG(colors[hudColor].pixel);
 
     if (lock_dist != 0) {
@@ -555,11 +555,12 @@ void Paint_HUD(void)
 		    WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER)
 			- gameFont->descent,
 		    str, strlen(str));
-	Erase_rectangle(WINSCALE(hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER
-				 - size) - 1,
-			WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER) - 3,
+	Erase_rectangle(WINSCALE(hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER)
+			    - size - 1,
+			WINSCALE(hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER)
+			    - gameFont->ascent - gameFont->descent,
 			size + 2,
-			gameFont->ascent + gameFont->descent + 6);
+			gameFont->ascent + gameFont->descent);
     }
 
     /* Update the modifiers */

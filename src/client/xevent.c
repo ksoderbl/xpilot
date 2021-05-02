@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 4.1 1998/04/16 17:39:53 bert Exp $
+/* $Id: xevent.c,v 4.3 1998/10/06 14:52:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -147,19 +147,47 @@ static keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     keys_t ret = KEY_DUMMY;
     static int i = 0;
 
+#if DEVELOPMENT
+    if (reset) {
+	/* binary search since keyDefs is sorted on keysym. */
+	int lo = 0, hi = maxKeyDefs - 1;
+	while (lo < hi) {
+	    i = (lo + hi) >> 1;
+	    if (ks > keyDefs[i].keysym) {
+		lo = i + 1;
+	    } else {
+		hi = i;
+	    }
+	}
+	if (lo == hi && ks == keyDefs[lo].keysym) {
+	    while (lo > 0 && ks == keyDefs[lo - 1].keysym) {
+		lo--;
+	    }
+	    i = lo;
+	    ret = keyDefs[i].key;
+	    i++;
+	}
+    }
+    else {
+	if (i < maxKeyDefs && ks == keyDefs[i].keysym) {
+	    ret = keyDefs[i].key;
+	    i++;
+	}
+    }
+#else
+
     if (reset)
 	i = 0;
 
-    while (i < maxKeyDefs && keyDefs[i].key) {
+    for (; i < maxKeyDefs; i++) {
 	if (keyDefs[i].keysym == ks) {
 	    ret = keyDefs[i].key;
 	    i++;
 	    break;
-	} else {
-	    i++;
 	}
     }
-	IFWINDOWS( Trace("Lookup_key: got key ks=%04X ret=%d\n", ks, ret); )
+#endif
+    IFWINDOWS( Trace("Lookup_key: got key ks=%04X ret=%d\n", ks, ret); )
 
 #ifdef DEVELOPMENT
     if (reset && ret == KEY_DUMMY) {
@@ -556,6 +584,13 @@ int xevent(XEvent event)
 #endif
 
 	switch (event.type) {
+
+	case MapNotify:
+	    if (ignoreWindowManager == 1) {
+		XSetInputFocus(dpy, top, RevertToParent, CurrentTime); 
+		ignoreWindowManager = 2;
+	    }
+	    break;
 
 #ifndef	_WINDOWS
 	case ClientMessage:

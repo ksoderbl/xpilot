@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 4.3 1998/04/16 17:39:54 bert Exp $
+/* $Id: xinit.c,v 4.6 1998/09/30 14:00:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -76,6 +76,7 @@
 #include "items/itemDeflector.xbm"
 #include "items/itemHyperJump.xbm"
 #include "items/itemPhasingDevice.xbm"
+#include "items/itemMirror.xbm"
 #include "items/itemLaser.xbm"
 #include "items/itemEmergencyThrust.xbm"
 #include "items/itemTractorBeam.xbm"
@@ -86,7 +87,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.3 1998/04/16 17:39:54 bert Exp $";
+    "@(#)$Id: xinit.c,v 4.6 1998/09/30 14:00:32 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -116,6 +117,7 @@ Cursor			pointerControlCursor;
 char			sparkColors[MSG_LEN];
 int			spark_color[MAX_COLORS];
 int			num_spark_colors;
+int			ignoreWindowManager;
 
 static message_t	*MsgBlock = NULL;
 
@@ -225,6 +227,11 @@ static struct {
 	itemPhasingDevice_bits,
 	"Phasing Device; "
 	"lets you fly through anything for a limited period"
+    },
+    {
+	itemMirror_bits,
+	"Mirror; "
+	"reflects laser beams"
     },
 };
 #ifdef	_WINDOWS
@@ -435,13 +442,13 @@ int Init_top(void)
 	    && ProtocolVersion (dpy) == 11)
 	    shieldDrawMode = 1;
 
-#ifdef ERASE
+	if (useErase){
 	/*
 	 * The NeWS X server doesn't orrectly erase shields.
 	 */
 	if (!strcmp(ServerVendor(dpy), "X11/NeWS - Sun Microsystems Inc."))
 	    shieldDrawMode = 1;
-#endif
+	}
     }
 
 #endif
@@ -537,6 +544,10 @@ int Init_top(void)
     if (colormap != 0) {
 	sattr.colormap = colormap;
 	mask |= CWColormap;
+    }
+    if (ignoreWindowManager) {
+	sattr.override_redirect = True;
+	mask |= CWOverrideRedirect;
     }
     top = XCreateWindow(dpy,
 			DefaultRootWindow(dpy),

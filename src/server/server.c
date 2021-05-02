@@ -1,4 +1,4 @@
-/* $Id: server.c,v 4.5 1998/04/20 10:18:43 bert Exp $
+/* $Id: server.c,v 4.6 1998/08/29 19:49:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -75,7 +75,7 @@ char server_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 4.5 1998/04/20 10:18:43 bert Exp $";
+    "@(#)$Id: server.c,v 4.6 1998/08/29 19:49:57 bert Exp $";
 #endif
 
 /*
@@ -83,8 +83,14 @@ static char sourceid[] =
  */
 int			NumPlayers = 0;
 int			NumObjs = 0;
+int			NumPulses = 0;
+int			NumEcms = 0;
+int			NumTransporters = 0;
 player			**Players;
 object			*Obj[MAX_TOTAL_SHOTS];
+pulse_t			*Pulses[MAX_TOTAL_SHOTS>>1];
+ecm_t			*Ecms[MAX_TOTAL_SHOTS>>1];
+trans_t			*Transporters[MAX_TOTAL_SHOTS>>1];
 int			GetInd[NUM_IDS+1];
 server			Server;
 int			ShutdownServer = -1, ShutdownDelay = 1000;
@@ -384,7 +390,7 @@ int Pick_team(int pick_for_type)
 	    playing_teams++;
 	}
 	if (IS_HUMAN_PTR(pl) || IS_ROBOT_PTR(pl)) {
-	    team_score[i] += pl->score;
+	    team_score[pl->team] += pl->score;
 	}
     }
     if (playing_teams <= 1) {
@@ -706,7 +712,8 @@ void Game_Over(void)
  */
 static void Check_server_versions(void)
 {
-    extern char		cmdline_version[],
+    extern char		cannon_version[],
+			cmdline_version[],
 			collision_version[],
 			error_version[],
 			event_version[],
@@ -733,6 +740,7 @@ static void Check_server_versions(void)
 	char		filename[16];
 	char		*versionstr;
     } file_versions[] = {
+	{ "cannon", cannon_version },
 	{ "cmdline", cmdline_version },
 	{ "collision", collision_version },
 	{ "error", error_version },

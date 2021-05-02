@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 4.1 1998/04/16 17:39:10 bert Exp $
+/* $Id: caudio.c,v 4.2 1998/08/30 12:15:33 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -74,8 +74,14 @@ void audioInit(char *display)
     char	    snddir[MAX_CHARS];
 #endif
 
-    if (!maxVolume || !(fp = fopen(sounds, "r")))
+    if (!maxVolume) {
+	printf("maxVolume is 0: no sound.\n");
 	return;
+    }
+    if (!(fp = fopen(sounds, "r"))) {
+	error("Could not open soundfile %s", sounds);
+	return;
+    }
 
 #ifdef _WINDOWS
     strcpy(snddir, sounds);

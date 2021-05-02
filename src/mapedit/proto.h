@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: proto.h,v 1.3 1998/04/23 19:44:12 bert Exp $
+ * $Id: proto.h,v 1.4 1998/10/06 14:52:19 bert Exp $
  */
 
 /*
@@ -31,7 +31,6 @@
  */
 
 /* prototypes for main.c */
-void            main(int argc, char *argv[]);
 void            SetDefaults(int argc, char *argv[]);
 void            ParseArgs(int argc, char *argv[]);
 void            ResetMap(void);

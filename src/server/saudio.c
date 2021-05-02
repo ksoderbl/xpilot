@@ -1,4 +1,4 @@
-/* $Id: saudio.c,v 4.1 1998/04/16 17:41:56 bert Exp $
+/* $Id: saudio.c,v 4.2 1998/08/30 12:15:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -87,6 +87,8 @@ static void queue_audio(player * pl, int index, int volume)
 
 int sound_player_init(player * pl)
 {
+    SDBG(printf("sound_player_init %p\n", pl);)
+
     pl->audio = NULL;
 
     if (pl->version < 0x3250) {
@@ -102,6 +104,8 @@ int sound_player_init(player * pl)
  */
 void sound_player_onoff(player *pl, int onoff)
 {
+    SDBG(printf("sound_player_onoff %p, %d\n", pl, onoff);)
+
     if (onoff) {
 	if (!BIT(pl->status, WANT_AUDIO)) {
 	    SET_BIT(pl->status, WANT_AUDIO);
@@ -118,6 +122,8 @@ void sound_player_onoff(player *pl, int onoff)
  */
 void sound_play_player(player * pl, int index)
 {
+    SDBG(printf("sound_play_player %p, %d\n", pl, index);)
+
     if (BIT(pl->status, WANT_AUDIO)) {
 	queue_audio(pl, index, 100);
     }
@@ -129,6 +135,8 @@ void sound_play_player(player * pl, int index)
 void sound_play_all(int index)
 {
     int i;
+
+    SDBG(printf("sound_play_all %d\n", index);)
 
     for (i = 0; i < NumPlayers; i++) {
 	if (BIT(Players[i]->status, WANT_AUDIO)) {
@@ -152,6 +160,8 @@ void sound_play_sensors(DFLOAT x, DFLOAT y, int index)
 		    range,
 		    factor;
     player         *pl;
+
+    SDBG(printf("sound_play_sensors %g, %g, %d\n", x, y, index);)
 
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
@@ -180,6 +190,8 @@ void sound_play_queued(player * pl)
     AudioQPtr       p,
 		    n;
 
+    SDBG(printf("sound_play_sensors %p\n", pl);)
+
     p = (AudioQPtr)pl->audio;
     pl->audio = NULL;
 
@@ -195,6 +207,8 @@ void sound_close(player * pl)
 {
     AudioQPtr       p,
 		    n;
+
+    SDBG(printf("sound_close %p\n", pl);)
 
     p = (AudioQPtr)pl->audio;
     pl->audio = NULL;

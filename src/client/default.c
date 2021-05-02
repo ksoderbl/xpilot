@@ -1,4 +1,4 @@
-/* $Id: default.c,v 4.2 1998/04/16 17:39:22 bert Exp $
+/* $Id: default.c,v 4.7 1998/10/06 14:52:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -73,7 +73,7 @@ char default_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.2 1998/04/16 17:39:22 bert Exp $";
+    "@(#)$Id: default.c,v 4.7 1998/10/06 14:52:19 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -226,6 +226,16 @@ struct option {
 	KEY_DUMMY,
 	"Set the window size and position in standard X geometry format.\n"
 	"The maximum allowed window size is 1282x1024.\n"
+    },
+    {
+	"ignoreWindowManager",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Ignore the window manager when opening the top level player window.\n"
+	"This can be handy if you want to have your XPilot window on a preferred\n"
+	"position without window manager borders.  Also sometimes window managers\n"
+	"may interfere when switching colormaps.  This option may prevent that.\n"
     },
     {
 	"shutdown",
@@ -621,6 +631,14 @@ struct option {
 	"Note that team shots are drawn in blue.\n"
     },
     {
+	"showNastyShots",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Use the new Nasty Looking Shots or the original rectangle shots,\n"
+	"You will probably want to increase your shotSize if you use this.\n"
+    },
+    {
 	"backgroundPointDist",
 	NULL,
 	"8",
@@ -729,11 +747,19 @@ struct option {
 	"Only use black and white (may be very slow).\n"
     },
     {
+	"erase",
+	"Yes",
+	"",
+	KEY_DUMMY,
+	"Use Erase(-hack) for slow X.\n"
+    },
+    {
 	"colorSwitch",
 	NULL,
 	"Yes",
 	KEY_DUMMY,
 	"Use color buffering or not.\n"
+	"Usually color buffering is faster, especially on 8-bit PseudoColor displays.\n"
     },
     {
 	"multibuffer",
@@ -1721,7 +1747,7 @@ static void Usage(void)
     printf(
 "Most of these options can also be set in the .xpilotrc file\n"
 "in your home directory.\n"
-"Each key option may have mutliple keys bound to it and\n"
+"Each key option may have multiple keys bound to it and\n"
 "one key may be used by multiple key options.\n"
 "If no server is specified then xpilot will search\n"
 "for servers on your local network.\n"
@@ -2245,6 +2271,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
 #endif	/* _WINDOWS */
 
+    Get_bool_resource(rDB, "ignoreWindowManager", &ignoreWindowManager);
+
     Get_resource(rDB, "name", nickName, MAX_NAME_LEN);
     if (!nickName[0]) {
 	strcpy(nickName, realName);
@@ -2354,6 +2382,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     LIMIT(shot_size, MIN_SHOT_SIZE, MAX_SHOT_SIZE);
     Get_int_resource(rDB, "teamShotSize", &teamshot_size);
     LIMIT(teamshot_size, MIN_TEAMSHOT_SIZE, MAX_TEAMSHOT_SIZE);
+    Get_bool_resource(rDB, "showNastyShots", &showNastyShots);
     Get_bool_resource(rDB, "titleFlip", &titleFlip);
     /*
      * This is a special value; default or not defined means choose depending
@@ -2435,6 +2464,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "reverseScroll", &instruments, SHOW_REVERSE_SCROLL);
 
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
+    Get_bool_resource(rDB, "erase", &useErase);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
     LIMIT(showItemsTime, MIN_SHOW_ITEMS_TIME, MAX_SHOW_ITEMS_TIME);
 
@@ -2472,20 +2502,20 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     oldMaxFPS = maxFPS;
 
 #ifdef _WINDOWS
-	/*
-	 * Windows specific things
-	 */
-	{
-		Get_int_resource(rDB, "radarDivisor", &RadarDivisor);
-	    Get_bool_resource(rDB, "threadedDraw", &ThreadedDraw);
-	}
+    /*
+     * Windows specific things
+     */
+    {
+	Get_int_resource(rDB, "radarDivisor", &RadarDivisor);
+	Get_bool_resource(rDB, "threadedDraw", &ThreadedDraw);
+    }
 #endif	
 #ifdef	WINDOWSCALING
-
-		Get_float_resource(rDB, "scaleFactor", &scaleFactor);
-		if (scaleFactor == 0.0)
-			scaleFactor = 1.0;
-		/* init_ScaleArray(); */
+    Get_float_resource(rDB, "scaleFactor", &scaleFactor);
+    if (scaleFactor == 0.0) {
+	scaleFactor = 1.0;
+    }
+    /* init_ScaleArray(); */
 #endif
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
@@ -2495,7 +2525,12 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
 #ifdef SPARC_CMAP_HACK
     Get_string_resource(rDB, "frameBuffer", frameBuffer, sizeof frameBuffer);
-#endif    
+#endif
+
+    /* mutually exclusive options */
+    if (useErase) {
+	multibuffer = false;
+    }
 
     /*
      * Key bindings
@@ -2540,9 +2575,26 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		}
 	    }
 
+#ifdef DEVELOPMENT
+	    /* insertion sort. */
+	    for (j = num; j > 0; j--) {
+		if (ks >= keyDefs[j - 1].keysym) {
+		    break;
+		}
+		keyDefs[j] = keyDefs[j - 1];
+	    }
+	    keyDefs[j].keysym = ks;
+	    keyDefs[j].key = key;
+	    num++;
+	    if (!key) {
+		printf("bug key 0\n");
+		exit(1);
+	    }
+#else
 	    keyDefs[num].keysym = ks;
 	    keyDefs[num].key = key;
 	    num++;
+#endif
 	}
     }
     if (num < maxKeyDefs) {

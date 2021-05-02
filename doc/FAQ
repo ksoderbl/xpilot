@@ -3,65 +3,63 @@ Newsgroups: rec.games.computer.xpilot,rec.answers,news.answers
 Subject: XPilot multi-player Internet game FAQ
 Approved: news-answers-request@MIT.EDU
 Distribution: world
-Expires: Sun, 15 Mar 1998 23:59:59 GMT
+Expires: Sun, 28 Jun 1998 23:59:59 GMT
 Summary: Frequently Asked Questions about XPilot with Answers
 Keywords: xpilot,games,Internet,faq
 
 Archive-name: games/xpilot-faq
-Last-modified: 1998/02/24
-Version: 3.5.0
+Last-modified: 1998/05/14
+Version: 3.6.1
 Submitted-By: faq@xpilot.org
 
 This is the Frequently Asked Questions list With Answers for XPilot.
 Copyright (C) 1993-98 by the XPilot FAQ Group (faq@xpilot.org).
 This FAQ is posted in rec.games.computer.xpilot on irregular intervals.
 It is also part of the XPilot distribution.
-It can also be obtained from URL: telnet://meta.xpilot.org:4402/
+It can also be obtained from <URL:telnet://meta.xpilot.org:4402/> or 
+<URL:http://www.xpilot.org/FAQ.html>
 Or by mailing the following message to mail-server@rtfm.mit.edu:
 
     send usenet/rec.games.computer.xpilot/XPilot_multi-player_Internet_game_FAQ
 
 New questions in this release: none
-Questions changed in this release: 2, 3, 4, 6
-Questions changed in the previous release: 17
+Questions changed in this release: 2
+Questions changed in the previous release: 3, 4, 5, 7
 
 Questions:
 
-0) Does this FAQ answer all my questions about XPilot?
-1) What is this wonderful game called XPilot everybody is talking about?
-2) What is the latest version?
-3) Where can I get it as soon as possible?
-4) Where can I get precompiled XPilot executables?
-5) Sound?  Does it really have sound?
-6) How can I uncompress the XPilot distribution files?
-7) I do not have the patch program on my system, so how can I upgrade?
-8) Compilation fails, because the compiler generates lots of error messages?
-9) How should I start the game?
-10) The xpilots server complains that it is unable to read globe.map?
-11) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
+1) Does this FAQ answer all my questions about XPilot?
+2) What is this wonderful game called XPilot everybody is talking about?
+3) What is the latest version?
+4) Where can I get it as soon as possible?
+5) Where can I get precompiled XPilot executables?
+6) Sound?  Does it really have sound?
+7) How can I uncompress the XPilot distribution files?
+8) I do not have the patch program on my system, so how can I upgrade?
+9) Compilation fails, because the compiler generates lots of error messages?
+10) How should I start the game?
+11) The xpilots server complains that it is unable to read globe.map?
+12) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
    or: Couldn't send query packets (Operation not supported on socket)?
    or: Can't make socket non-blocking (Operation not supported on socket)?
-12) xpilots fails: Could not create Dgram socket (Invalid argument)
-13) Why is the client so slow?  Why is my display so jerky?
-14) Where can I get new maps?
-15) How can I distribute my own carefully crafted maps?
-16) How can I design my own maps easily?
-17) How can I design my own ship?
-18) I have a problem because this and that is not working.
-19) What is the meta server?  Where can I find other players?
-20) What information on XPilot is available on World Wide Web?
-21) What is the NM (Newbie Manual)?
-22) How should I subscribe/unsubscribe to/from the XPilot mailing list?
+13) xpilots fails: Could not create Dgram socket (Invalid argument)
+14) Why is the client so slow?  Why is my display so jerky?
+15) Where can I get new maps?
+16) How can I distribute my own carefully crafted maps?
+17) How can I design my own maps easily?
+18) How can I design my own ship?
+19) I have a problem because this and that is not working.
+20) What is the meta server?  Where can I find other players?
+21) What information on XPilot is available on World Wide Web?
+22) What is the NM (Newbie Manual)?
 23) How can I contribute bugfixes and new features to the game?
-24) Is there an archive of the newsgroup and the mailing list?
-25) Why do I never get any items (triangles) to appear in my maps?
-26) What are the Well Known Problems for the latest version?
-27) What if I'm having trouble installing XPilot on Platform XYZ?
-28) Is there a XPilot version available for DOS, Windows or the Mac?
+24) Why do I never get any items (triangles) to appear in my maps?
+25) What are the Well Known Problems for the latest version?
+26) Is there a XPilot version available for DOS, Windows or the Mac?
 
 Answers:
 
-0) Does this FAQ answer all my questions about XPilot?
+1) Does this FAQ answer all my questions about XPilot?
 
 No, this FAQ is only meant to get you up and running and covers some
 issues not found elsewhere.  In the XPilot distribution there is
@@ -70,9 +68,9 @@ Pay special attention to the two manual pages in the man6 directory
 and to the four README files.
 
 More, many more questions are answered in the WWW XPilot Newbie Manual
-    http://www.xpilot.org/NM/
+    <URL:http://www.xpilot.org/NM/>
 
-1) What is this wonderful game called XPilot everybody is talking about?
+2) What is this wonderful game called XPilot everybody is talking about?
 
 XPilot is a multi-player tactical manouvring game for X and Unix workstations.
 Players have a fighter which they move along in an artificial world
@@ -98,38 +96,36 @@ Since release 3.0 it is possible to play games across the Internet if
 the roundtrip times are below 150 milliseconds or so, depending on the
 frame rate of the XPilot server.
 
-XPilot is copyrighted by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
-Many people around the world have contributed a plethora of ideas and source
-code or helped in other ways to have XPilot run on a diverse set of UNIX
-computers and VMS.  See the CREDITS file for more details.
+XPilot is copyrighted by Bjoern Stabell, Ken Ronny Schouten, Bert Gijsbers
+and Dick Balaska.  Many people around the world have contributed a plethora
+of ideas and source code or helped in other ways to have XPilot run on a
+diverse set of UNIX computers and VMS.  See the CREDITS file for more details.
 
 The XPilot home page on World-Wide Web is:
-    http://www.xpilot.org/
+    <URL:http://www.xpilot.org/>
 
 There is a large and entertaining Newbie Manual on WWW which encompasses
-more than 160 articles.  Its URL is http://www.xpilot.org/NM/
+more than 160 articles.  Its URL is <URL:http://www.xpilot.org/NM/>
 
-2) What is the latest version?
+3) What is the latest version?
 
-3.7.1.  Which is XPilot release 3.7, patchlevel 1.
+4.0.0.  Which is XPilot release 4.0, patchlevel 0.
 
-3) Where can I get it as soon as possible?
+4) Where can I get it as soon as possible?
 
 Anonymous ftp to ftp.xpilot.org (145.18.160.22).  Use as login name
 anonymous or ftp and supply your email address as password.
-Go to the directory /pub and look for the file named xpilot-3.7.1.tar.gz.
+Go to the directory /pub and look for the file named xpilot-4.0.0.tar.gz.
 Some patches for older versions are also available.
 Other anonymous ftp sites may have it as well, the most up to date is
 ftp.x.org (130.105.100.3) in /contrib/games/multiplayer/.
 
-4) Where can I get precompiled XPilot executables?
+5) Where can I get precompiled XPilot executables?
 
 The Liverpool Archives distribute binaries for HP 700 series workstations.
 Go to hpux.csc.liv.ac.uk (138.253.42.172) in /hpux/Games/Networking/.
-Note that the binaries in the xpilot-3.7.1 directory will only work on HP-UX 10.10,
-not on HP-UX 10.01 or 10.20.
 
-5) Sound?  Does it really have sound?
+6) Sound?  Does it really have sound?
 
 There is optional sound support for machines running the rplay package.
 When you have compiled and installed XPilot with sound support configured
@@ -160,7 +156,7 @@ systems running Ultrix, Digital Alpha AXP systems running OSF/1,
 Sun Microsystems SPARCstations running SunOS, and SGI Indigos.
 Tom De Pauw can provide with more details at tom@wimsey.com.
 
-6) How can I uncompress the XPilot distribution files?
+7) How can I uncompress the XPilot distribution files?
 
 The files are in GNU zip format.  Older versions of GNU zip use
 the .z extension, newer versions of GNU zip use the .gz extension.
@@ -171,24 +167,24 @@ prep.ai.mit.edu (18.159.0.42).  The last one in the pub/gnu directory.
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.7.1.tar.gz > xpilot-3.7.1.tar
+    gzip -d < xpilot-4.0.0.tar.gz > xpilot-4.0.0.tar
 
 or even better :
 
-    gzip -d < xpilot-3.7.1.tar.gz | tar xvf -
+    gzip -d < xpilot-4.0.0.tar.gz | tar xvf -
 
-7) I do not have the patch program on my system, so how can I upgrade?
+8) I do not have the patch program on my system, so how can I upgrade?
 
 Get patch from one of the major ftp sites mentioned above.
 Or from prep.ai.mit.edu in the /pub/gnu directory.
 
-8) Compilation fails, because the compiler generates lots of error messages?
+9) Compilation fails, because the compiler generates lots of error messages?
 
 This is probably due to not using an ANSI C compliant compiler.
 Consider using gcc.  Also, do not use the -ansi option together with GCC,
 because some system include files are not fully ANSI compatible.
 
-9) How should I start the game?
+10) How should I start the game?
 
 When you have managed to compile XPilot successfully you will have
 two new executables.  One program is named 'xpilots', which is the
@@ -211,7 +207,7 @@ Newbies should note that in order to fire one has to put down
 the shield first.  This is done by pressing and releasing the
 spacebar once.
 
-10) The xpilots server complains that it is unable to read globe.map?
+11) The xpilots server complains that it is unable to read globe.map?
 
 First read the READMEs more carefully.  They tell you that you
 need to adapt the Imakefile or Makefile and possibly the config.h
@@ -220,7 +216,7 @@ Specifically modify LIBDIR to the directory where you have your XPilot
 lib directory and MAPDIR in case you have changed your map directory.
 There are also two manual pages included which may offer you more help.
 
-11) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
+12) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
    or: Couldn't send query packets (Operation not supported on socket)?
    or: Can't make socket non-blocking (Operation not supported on socket)?
 
@@ -259,7 +255,7 @@ these in a special place.  Then a enviroment variable is set so that gcc
 knows where the modified headers are.  After our sys-admin guy let gcc do
 this, everything worked.
 
-12) xpilots fails: Could not create Dgram socket (Invalid argument)
+13) xpilots fails: Could not create Dgram socket (Invalid argument)
 
 You are probably running Linux or one of the BSD flavors on your PC
 and "forgot" to install the network support of your operating system.
@@ -268,7 +264,7 @@ For Linux you should install the N series of disks n1, n2 and n3.
 You won't need everything that's on the disks in order to run XPilot,
 i.e. you can drop things like lynx, tin, nn, etc.
 
-13) Why is the client so slow?  Why is my display so jerky?
+14) Why is the client so slow?  Why is my display so jerky?
 
 This is probably due to you not using a standard MIT X server, but
 one of those customized servers supplied by your workstation vendor.
@@ -332,11 +328,12 @@ make the game run more smoothly and evenly, and perhaps make
 the game more fair.  Users joining across the Internet really appreciate
 a slightly lower frame rate (try values like: 14, 12 or 10).
 
-14) Where can I get new maps?
+15) Where can I get new maps?
 
 anonymous ftp:
         ftp.xpilot.org:/pub/maps
         xpilot.sdsu.edu:/pub/xpilot-maps
+
 gopher:
         Name=xpilot-maps
         Type=1
@@ -345,14 +342,14 @@ gopher:
         Host=xpilot.sdsu.edu
         (Note that you can only retrieve maps with gopher...)
 
-15) How can I distribute my own carefully crafted maps?
+16) How can I distribute my own carefully crafted maps?
 
 See the previous question.  The sites mentioned in the previous question
 are eager to add your map to their set of maps, but it is perhaps also
-a good idea to post an announcement in rec.games.computer.xpilot or on
-the mailing list explaining some ideas behind and properties of your map.
+a good idea to post an announcement in rec.games.computer.xpilot
+explaining the ideas behind your map.
 
-16) How can I design my own maps easily?
+17) How can I design my own maps easily?
 
 Use the XMapEdit program, which was made by Aaron Averila.
 You can get it by ftp from ftp.xpilot.org in /pub/xmapedit/.
@@ -362,9 +359,9 @@ it that way before XMapEdit, but that seems hopelessly complex
 and tedious now.  Special thanks go to Aaron for making XMapEdit.
 
 A new updated version by William Docter is available from
-ftp://ftp.xpilot.org/pub/xmapedit/xmapedit-3.5.1d.tar.gz
+<URL:ftp://ftp.xpilot.org/pub/xmapedit/xmapedit-3.5.1d.tar.gz>
 
-17) How can I design my own ship?
+18) How can I design my own ship?
 
 On Unix, use editss.  You can get it by anonymous ftp to
 dnpap.et.tudelft.nl in the /pub/Private/Ronald directory.
@@ -372,13 +369,13 @@ Or from ftp.xpilot.org in the /pub/contrib directory.
 
 On Windows, there is Lewis Beard's XPShipEditor.  It is
 distributed with the Windows Binary release of XPilot.
-You can fetch the Visual Basic source from http://www.lwb.org
+You can fetch the Visual Basic source from <URL:http://www.lwb.org>
 
 There is also Jonny Svrling's Java "Ship Shaper" available from 
-http://www.student.nada.kth.se/~d93-jsv/xpilot/sshaper
+<URL:http://www.student.nada.kth.se/~d93-jsv/xpilot/sshaper>
 This is reported to work on Windows but not Unix.
 
-18) I have a problem because this and that is not working.
+19) I have a problem because this and that is not working.
 
 Make sure you use the latest `officially released' version.
 You will be most cooperative if you try to fix it yourself first.
@@ -386,17 +383,17 @@ If you tried everything and you still cannot solve it then post
 a help request to rec.games.computer.xpilot.
 There are some things that are generally helpful to mention, when relevant:
  
-   * The XPilot version and where you obtained the distribution.
-   * Your hardware.
-   * Operating system.
-   * Windowing system (X11, ...)
-   * C Compiler used.
-   * Changes you made to configuration files.
-   * Any changes you have made to the source code or installation
-     procedures.
-   * Any problems you had during installation.
+   The XPilot version and where you obtained the distribution.
+   Your hardware.
+   Operating system.
+   Windowing system (X11, ...)
+   C Compiler used.
+   Changes you made to configuration files.
+   Any changes you have made to the source code or installation
+   procedures.
+   Any problems you had during installation.
 
-19) What is the meta server?  Where can I find other players?
+20) What is the meta server?  Where can I find other players?
 
 The meta server is a server program that allows people to find other
 XPilot servers running on the Internet.  XPilot servers can report
@@ -413,7 +410,7 @@ You can connect to the meta server with:
   telnet meta.xpilot.org 4400
 
 Help is available online.  Example session:
-
+<pre>
     telnet meta.xpilot.org 4400
     Trying...
     Connected to meta.xpilot.org..
@@ -473,7 +470,7 @@ Help is available online.  Example session:
 
     >quit
     Connection closed by foreign host.
-
+</pre>
 Try port 4401 instead of 4400 to get the server listing in a different format.
 
 Port 4402 will get you the latest version of this FAQ.
@@ -487,35 +484,35 @@ there is an backup meta server at telnet meta2.xpilot.org 4400.
 The meta server is developed and maintained by Ken Ronny Schouten
 and Bert Gijsbers with email address meta@xpilot.org.
 
-20) What information about XPilot is available on World Wide Web?
+21) What information about XPilot is available on World Wide Web?
 
 The XPilot Page on the World-Wide Web can be found on URL
-    http://www.xpilot.org/
+    <URL:http://www.xpilot.org/>
 
 Highly recommended is the online XPilot Newbie Manual, the creation
 of Karen Gould and Erwin Zierler with the help of many contributors:
-    http://www.xpilot.org/NM/
+    <URL:http://www.xpilot.org/NM/>
 
 Other WWW pages related to XPilot are:
-    http://heron.met.nps.navy.mil/~forsythe/index.html
-    http://bau2.uibk.ac.at/che/xpilot.html
-    http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html
-    http://ernie.ucsc.edu:8001/1g/xpilot
-    http://ece.uiuc.edu/lard/lard.html
-    http://www.sdsu.edu/~boyns/xpilot.html
-    http://www.sdsu.edu/~turtle/
-    http://www.sdsu.edu/~garrett/
-    http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html
-    http://rs560.cl.msu.edu/misc/xpilot.html
-    http://www.cldc.howard.edu/~ltb/Xpilot
+    <URL:http://heron.met.nps.navy.mil/~forsythe/index.html>
+    <URL:http://bau2.uibk.ac.at/che/xpilot.html>
+    <URL:http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html>
+    <URL:http://ernie.ucsc.edu:8001/1g/xpilot>
+    <URL:http://ece.uiuc.edu/lard/lard.html>
+    <URL:http://www.sdsu.edu/~boyns/xpilot.html>
+    <URL:http://www.sdsu.edu/~turtle/>
+    <URL:http://www.sdsu.edu/~garrett/>
+    <URL:http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html>
+    <URL:http://rs560.cl.msu.edu/misc/xpilot.html>
+    <URL:http://www.cldc.howard.edu/~ltb/Xpilot>
 
-21) What is the NM (Newbie Manual)?
+22) What is the NM (Newbie Manual)?
 
 The Newbie Manual is a World Wide Web (WWW) book (not page, it is made
 up of many many pages all linked together) which you access using programs
 like Mosaic or Netscape by opening the Newbie Manual address which is:
 
-    http://www.xpilot.org/NM/
+    <URL:http://www.xpilot.org/NM/>
 
 This will connect you to the Manual which you read through by clicking on
 the highlighted links.
@@ -528,14 +525,6 @@ the V modifier, and these articles have loads of links to important
 cross reference material.  The manual is not complete, but is an extremely
 useful documentation guide to playing XPilot.
 
-22) How should I subscribe/unsubscribe to/from the XPilot mailing list?
-
-Requests for (un)subscription to the XPilot mailing list should
-be send to majordomo@list.uit.no.  People really dislike it
-to see any (un)subscribe requests in the mailing list itself.
-The mailing list itself is xpilot-list@cs.uit.no, which is gateway-ed
-to rec.games.computer.xpilot.
-
 23) How can I contribute bugfixes and new features to the game?
 
 Make your contributions as context diffs against the latest version
@@ -543,19 +532,9 @@ and mail them to xpilot@xpilot.org.  You can make context diffs with
 the diff command.  Use `diff -c oldfile newfile' or `diff -cr olddir newdir'.
 The authors very much appreciate fixes and improvements.  XPilot has a
 longstanding tradition of incorporating code from hackers all over the world.
-Ideas for new features can of course be discussed in rec.games.computer.xpilot
-and the mailing list.
+Ideas for new features can of course be discussed in rec.games.computer.xpilot.
 
-24) Is there an archive of the newsgroup and the mailing list?
-
-David Bianco has set up an archive of alt.games.xpilot which can be
-accessed via anonymous FTP to ftp.cs.odu.edu:/pub/news/alt.games.xpilot.
-Note that this is also an archive of the mailing list (they are the same).  
-
-There is also an older archive of the XPilot mailing list on ftp.xpilot.org
-in pub.
-
-25) Why do I never get any items (triangles) to appear in my maps?
+24) Why do I never get any items (triangles) to appear in my maps?
 
 At startup the xpilot server looks for a configuration file to
 retrieve default values for some of the options.
@@ -569,14 +548,14 @@ This is the case if you do not get any items to appear in your maps.
 An example defaults file with reasonable default values can be
 found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
 
-26) What are the Well Known Problems for the latest version?
+25) What are the Well Known Problems for the latest version?
 
 None.
 
-27) Is there a XPilot version available for DOS, Windows or the Mac?
+26) Is there a XPilot version available for DOS, Windows or the Mac?
 
 Yes!!!  Dick Balaska <dick@buckosoft.com> has accomplished a tremendous
-feat with a version for Windows.  See http://www.buckosoft.com/xpilot/
+feat with a version for Windows.  See <URL:http://www.buckosoft.com/xpilot/>
 
 For the Mac the only solution is to run Mklinux, xpilot even runs on it.
 

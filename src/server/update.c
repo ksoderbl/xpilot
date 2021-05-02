@@ -1,4 +1,4 @@
-/* $Id: update.c,v 4.4 1998/04/21 09:34:51 dick Exp $
+/* $Id: update.c,v 4.5 1998/08/29 19:49:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -42,6 +42,7 @@
 #include "bit.h"
 #include "saudio.h"
 #include "objpos.h"
+#include "cannon.h"
 
 extern unsigned SPACE_BLOCKS;
 
@@ -49,7 +50,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 4.4 1998/04/21 09:34:51 dick Exp $";
+    "@(#)$Id: update.c,v 4.5 1998/08/29 19:49:57 bert Exp $";
 #endif
 
 
@@ -289,7 +290,7 @@ static void do_Autopilot (player *pl)
      * This enables the ship to orient away from gravity and set up the
      * thrust to counteract it.
      */
-    if ((vel = LENGTH(pl->vel.x, pl->vel.y)) < auto_pilot_dead_velocity) {
+    if ((vel = VECTOR_LENGTH(pl->vel)) < auto_pilot_dead_velocity) {
 	pl->vel.x = pl->vel.y = vel = 0.0;
 	Player_position_restore(pl);
     }
@@ -397,74 +398,12 @@ static void do_Autopilot (player *pl)
     }
 }
 
-/*
- * Do tractor beam attraction between two players, where `pl' is doing
- * the tractor beam and `to' is the target.
- */
-static void Tractor_beam (player *pl)
-{
-    player		*victim;
-    DFLOAT		maxdist, maxforce, percent;
-    DFLOAT		xd, yd;
-    DFLOAT		dvx, dvy;
-    DFLOAT		force, mass;
-    long		cost;
-    int			theta;
-
-    maxdist = TRACTOR_MAX_RANGE(pl);
-
-    if (BIT(pl->lock.tagged, (LOCK_PLAYER|LOCK_VISIBLE))
-		!= (LOCK_PLAYER|LOCK_VISIBLE)
-	|| pl->lock.distance >= maxdist
-	|| BIT(pl->used, OBJ_PHASING_DEVICE)
-	|| BIT(Players[GetInd[pl->lock.pl_id]]->used, OBJ_PHASING_DEVICE)) {
-	pl->tractor = NULL;
-	return;
-    }
-
-    maxforce = TRACTOR_MAX_FORCE(pl);
-    percent = TRACTOR_PERCENT(pl, maxdist);
-    cost = (long)TRACTOR_COST(percent);
-    force = TRACTOR_FORCE(pl, percent, maxforce);
-
-    if (pl->fuel.sum < -cost) {
-	pl->tractor = NULL;
-	CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
-	return;
-    }
-
-    sound_play_sensors(pl->pos.x, pl->pos.y,
-		       (force < 0) ? TRACTOR_BEAM_SOUND : PRESSOR_BEAM_SOUND);
-
-    victim = pl->tractor = Players[GetInd[pl->lock.pl_id]];
-
-    Add_fuel(&(pl->fuel), cost);
-
-    xd = WRAP_DX(pl->pos.x - victim->pos.x);
-    yd = WRAP_DY(pl->pos.y - victim->pos.y);
-
-    theta = (int)findDir(xd, yd);
-    mass = pl->mass + victim->mass;
-
-    dvx = tcos(theta) * (force / pl->mass);
-    dvy = tsin(theta) * (force / pl->mass);
-    pl->vel.x += dvx;
-    pl->vel.y += dvy;
-    Record_shove(pl, victim, frame_loops);
-
-    dvx = -(tcos(theta) * (force / victim->mass));
-    dvy = -(tsin(theta) * (force / victim->mass));
-    victim->vel.x += dvx;
-    victim->vel.y += dvy;
-    Record_shove(victim, pl, frame_loops);
-}
-
 /********** **********
  * Updating objects and the like.
  */
 void Update_objects(void)
 {
-    int i, j, ecm, necm;
+    int i, j;
     player *pl;
     object *obj;
 
@@ -495,7 +434,7 @@ void Update_objects(void)
 	    && World.items[i].chance > 0
 	    && rand()%World.items[i].chance == 0) {
 
-	    Place_item(i, (player *)NULL);
+	    Place_item(i, -1);
 	}
 
     /*
@@ -551,34 +490,88 @@ void Update_objects(void)
     }
 
     /*
+     * Update ECM blasts
+     */
+    for (i=0; i<NumEcms; i++) {
+	if ((Ecms[i]->size >>= 1) == 0) {
+	    if (Ecms[i]->id != -1)
+		Players[GetInd[Ecms[i]->id]]->ecmcount--;
+	    free(Ecms[i]);
+	    if (--NumEcms > i) {
+		Ecms[i] = Ecms[NumEcms];
+		i--;
+	    }
+	}
+    }
+
+    /*
+     * Update transporters
+     */
+    for (i=0; i<NumTransporters; i++) {
+	if (!--Transporters[i]->count) {
+	    free(Transporters[i]);
+	    if (--NumTransporters > i) {
+		Transporters[i] = Transporters[NumTransporters];
+		i--;
+	    }
+	}
+    }
+
+    /*
      * Updating cannons, maybe a little bit of fireworks too?
      */
     for (i=0; i<World.NumCannons; i++) {
 	cannon_t *cannon = World.cannon + i;
 	if (cannon->dead_time > 0) {
 	    if (!--cannon->dead_time) {
-		World.block[cannon->pos.x][cannon->pos.y]
+		World.block[cannon->blk_pos.x][cannon->blk_pos.y]
 		    = CANNON;
 		cannon->conn_mask = 0;
 		cannon->last_change = frame_loops;
 	    }
 	    continue;
-	} else if (!cannon->damaged) {
-	    for (j = 0; j < NumPlayers; j++) {
-		if (Wrap_length(Players[j]->pos.x
-				- (cannon->pos.x + 0.5) * BLOCK_SZ,
-				Players[j]->pos.y
-				- (cannon->pos.y + 0.5) * BLOCK_SZ)
-		    < (CANNON_DISTANCE
-		       + cannon->item[ITEM_SENSOR] * 2 * BLOCK_SZ)) {
-		    if (rand()%16 == 0) {
-			Cannon_fire(i,j);
-		    }
+	} else if (!cannon->damaged
+		   && !cannon->tractor_count) {
+	    int weapon, target = -1, dir = 0;
+	    weapon = Cannon_select_weapon(i);
+	    Cannon_aim(i, weapon, &target, &dir);
+	    if (target != -1) {
+		if (rand() % 16 == 0)
+		    Cannon_fire(i, weapon, target, dir);
+	    } else if (cannonsUseItems
+		       && itemProbMult > 0
+		       && cannonItemProbMult > 0) {
+		int item = rand() % NUM_ITEMS;
+		/* this gives the cannon an item about once every minute */
+		if (World.items[item].cannonprob > 0
+		    && rand() % (int)(60.0
+				      * FPS
+				      / cannonItemProbMult
+				      / World.items[item].cannonprob
+				      + 1) == 0) {
+		    Cannon_add_item(i, item, (item == ITEM_FUEL ?
+					ENERGY_PACK_FUEL >> FUEL_SCALE_BITS
+					: 1));
 		}
 	    }
 	}
 	if (cannon->damaged > 0) {
 	    cannon->damaged--;
+	}
+	if (cannon->tractor_count > 0) {
+	    int ind = GetInd[cannon->tractor_target];
+	    if (Wrap_length(Players[ind]->pos.x - cannon->pix_pos.x,
+			    Players[ind]->pos.y - cannon->pix_pos.y)
+		< TRACTOR_MAX_RANGE(cannon->item[ITEM_TRACTOR_BEAM])
+		&& BIT(Players[ind]->status, PLAYING|GAME_OVER|KILLED|PAUSE)
+		   == PLAYING) {
+		General_tractor_beam(-1, cannon->pix_pos.x, cannon->pix_pos.y,
+				     cannon->item[ITEM_TRACTOR_BEAM], ind,
+				     cannon->tractor_is_pressor);
+		cannon->tractor_count--;
+	    } else {
+		cannon->tractor_count = 0;
+	    }
 	}
     }
 
@@ -671,7 +664,7 @@ void Update_objects(void)
 		SET_BIT(pl->status, KILLED);
 		sprintf(msg, "%s has comitted suicide.", pl->name);
 		Set_message(msg);
-		Throw_items(pl);
+		Throw_items(i);
 		Kill_player(i);
 		updateScores = true;
 	    }
@@ -686,6 +679,12 @@ void Update_objects(void)
 
 	if (!cloakedShield && BIT(pl->used, OBJ_CLOAKING_DEVICE)) {
 	    CLR_BIT(pl->used, OBJ_SHIELD | OBJ_EMERGENCY_SHIELD | OBJ_DEFLECTOR);
+	}
+
+	if (pl->stunned > 0) {
+	    pl->stunned--;
+	    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER|OBJ_SHOT);
+	    CLR_BIT(pl->status, THRUSTING);
 	}
 
 	if (pl->shield_time > 0) {
@@ -737,6 +736,19 @@ void Update_objects(void)
 	    }
 	}
 
+	if (BIT(pl->used, OBJ_LASER)) {
+	    if (pl->item[ITEM_LASER] <= 0
+		|| BIT(pl->used, OBJ_PHASING_DEVICE)) {
+		CLR_BIT(pl->used, OBJ_LASER);
+	    } else {
+		Fire_laser(i);
+	    }
+	}
+
+	if (BIT(pl->used, OBJ_DEFLECTOR)) {
+	    Do_deflector(i);
+	}
+
 	/*
 	 * Only do autopilot code if switched on and player is not
 	 * damaged (ie. can see).
@@ -785,9 +797,6 @@ void Update_objects(void)
 	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
 	    Add_fuel(&(pl->fuel), (long)ED_CLOAKING_DEVICE);
 
-	if (BIT(pl->used, OBJ_DEFLECTOR))
-	    Add_fuel(&(pl->fuel), (long)ED_DEFLECTOR);
-
 #define UPDATE_RATE 100
 
 	for (j = 0; j < NumPlayers; j++) {
@@ -814,7 +823,10 @@ void Update_objects(void)
 		|| (pl->fuel.sum >= pl->fuel.max)
 		|| (World.block[World.fuel[pl->fs].blk_pos.x]
 			       [World.fuel[pl->fs].blk_pos.y] != FUEL)
-		|| BIT(pl->used, OBJ_PHASING_DEVICE)) {
+		|| BIT(pl->used, OBJ_PHASING_DEVICE)
+		|| (BIT(World.rules->mode, TEAM_PLAY)
+		    && teamFuel
+		    && World.fuel[pl->fs].team != pl->team)) {
 		CLR_BIT(pl->used, OBJ_REFUEL);
 	    } else {
 		int i = pl->fuel.num_tanks;
@@ -918,21 +930,23 @@ void Update_objects(void)
 
 	    if (pl->wormHoleHit != -1) {
 
-	    if (World.wormHoles[pl->wormHoleHit].countdown
-		&& World.wormHoles[pl->wormHoleHit].lastplayer != i)
+	    if (World.wormHoles[pl->wormHoleHit].countdown > 0
+		/*&& World.wormHoles[pl->wormHoleHit].lastplayer != i*/)
 		j = World.wormHoles[pl->wormHoleHit].lastdest;
 	    else if (rfrac() < 0.10f)
 		do
 		    j = rand() % World.NumWormholes;
 		while (World.wormHoles[j].type == WORM_IN
-		       || pl->wormHoleHit == j);
+		       || pl->wormHoleHit == j
+		       || World.wormHoles[j].temporary);
 	    else {
 		nearestFront = nearestRear = -1;
 		proxFront = proxRear = 10000000;
 
 		for (j = 0; j < World.NumWormholes; j++) {
 		    if (j == pl->wormHoleHit
-			|| World.wormHoles[j].type == WORM_IN)
+			|| World.wormHoles[j].type == WORM_IN
+			|| World.wormHoles[j].temporary)
 			continue;
 
 		    wx = (World.wormHoles[j].pos.x -
@@ -986,6 +1000,26 @@ void Update_objects(void)
 			break;
 		    }
 		}
+		if (!i) {
+		    w.x = OBJ_X_IN_BLOCKS(pl);
+		    w.y = OBJ_Y_IN_BLOCKS(pl);
+		}
+		if (i
+		    && wormTime
+		    && BIT(1U << World.block[OBJ_X_IN_BLOCKS(pl)]
+					    [OBJ_Y_IN_BLOCKS(pl)],
+			   SPACE_BIT)
+		    && BIT(1U << World.block[(int)(w.x/BLOCK_SZ)]
+					    [(int)(w.y/BLOCK_SZ)],
+			   SPACE_BIT)) {
+		    add_temp_wormhole((int)(w.x/BLOCK_SZ),
+				      (int)(w.y/BLOCK_SZ), 1);
+		    add_temp_wormhole(OBJ_X_IN_BLOCKS(pl),
+				      OBJ_Y_IN_BLOCKS(pl), 0);
+		    World.wormHoles[World.NumWormholes - 1].lastdest =
+			World.NumWormholes - 2;
+		    World.wormHoles[World.NumWormholes - 1].lastplayer = i;
+		}
 		sound_play_sensors(pl->pos.x, pl->pos.y, HYPERJUMP_SOUND);
 	    }
 
@@ -1013,8 +1047,7 @@ void Update_objects(void)
 			if (ballpos.x < 0 || ballpos.x >= World.width
 			    || ballpos.y < 0 || ballpos.y >= World.height) {
 			    b->life = 0;
-			}
-			else {
+			} else {
 			    Object_position_set_pixels(b, ballpos.x, ballpos.y);
 			    Object_position_remember(b);
 			    b->vel.x *= WORM_BRAKE_FACTOR;
@@ -1033,7 +1066,9 @@ void Update_objects(void)
 	    if ((j != pl->wormHoleHit) && (pl->wormHoleHit != -1)) {
 		World.wormHoles[pl->wormHoleHit].lastplayer = i;
 		World.wormHoles[pl->wormHoleHit].lastdest = j;
-		World.wormHoles[pl->wormHoleHit].countdown = WORMCOUNT;
+		World.wormHoles[pl->wormHoleHit].countdown = (wormTime ?
+							      wormTime * FPS :
+							      WORMCOUNT);
 	    }
 
 	    CLR_BIT(pl->status, WARPING);
@@ -1041,30 +1076,6 @@ void Update_objects(void)
 
 	    sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 	}
-
-	/*
-	 * Update ECM blasts
-	 */
-	for (necm = pl->ecmInfo.count, ecm = 0; ecm < necm; ecm++) {
-	    if ((pl->ecmInfo.size[ecm] >>= 1) == 0) {
-		necm--;
-		pl->ecmInfo.count--;
-		pl->ecmInfo.pos[ecm] = pl->ecmInfo.pos[necm];
-		pl->ecmInfo.size[ecm] = pl->ecmInfo.size[necm];
-	    }
-	}
-	if (BIT(pl->used, OBJ_ECM)) {
-	    if (necm < MAX_PLAYER_ECMS) {
-		pl->ecmInfo.pos[necm].x = pl->pos.x;
-		pl->ecmInfo.pos[necm].y = pl->pos.y;
-		pl->ecmInfo.size[necm] = (int)ECM_DISTANCE;
-		pl->ecmInfo.count++;
-	    }
-	    CLR_BIT(pl->used, OBJ_ECM);
-	}
-
-	if (pl->transInfo.count)
-	    pl->transInfo.count--;
 
 	if (!BIT(pl->status, PAUSE)) {
 	    update_object_speed(pl);	    /* New position */
@@ -1092,9 +1103,17 @@ void Update_objects(void)
 	pl->used &= pl->have;
     }
 
-    for (i=0; i<World.NumWormholes; i++)
-       if (World.wormHoles[i].countdown)
-	   --World.wormHoles[i].countdown;
+    for (i = World.NumWormholes - 1; i >= 0; i--) {
+	if (World.wormHoles[i].countdown > 0) {
+	    World.wormHoles[i].countdown--;
+	}
+	if (World.wormHoles[i].temporary
+	    && World.wormHoles[i].countdown <= 0) {
+	    remove_temp_wormhole(i);
+	}
+    }
+
+
 
     for (i = 0; i < NumPlayers; i++) {
 	player *pl = Players[i];
@@ -1109,9 +1128,7 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->used, OBJ_TRACTOR_BEAM))
-	    Tractor_beam(pl);
-	else
-	    pl->tractor = NULL;
+	    Tractor_beam(i);
     }
 
     /*
@@ -1129,14 +1146,15 @@ void Update_objects(void)
 	if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) == PLAYING)
 	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
-	    Throw_items(pl);
+	    Throw_items(i);
 
 	    Detonate_items(i);
 
 	    Kill_player(i);
 
 	    if (IS_HUMAN_PTR(pl)) {
-		if (frame_loops - pl->frame_last_busy > 60 * FPS) {
+		if (frame_loops - pl->frame_last_busy > 60 * FPS
+		    && (NumPlayers - NumPseudoPlayers) > 1) {
 		    Pause_player(i, 1);
 		}
 	    }

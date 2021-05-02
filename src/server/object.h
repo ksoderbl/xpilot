@@ -1,4 +1,4 @@
-/* $Id: object.h,v 4.1 1998/04/16 17:41:42 bert Exp $
+/* $Id: object.h,v 4.2 1998/08/29 19:49:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -84,6 +84,7 @@
 #define OBJ_PHASING_DEVICE	(1U<<24)
 #define OBJ_ITEM		(1U<<25)
 #define OBJ_WRECKAGE		(1U<<26)
+#define OBJ_MIRROR		(1U<<27)
 
 /*
  * Some object types are overloaded.
@@ -163,6 +164,7 @@ struct _object {
     byte	color;			/* Color of object */
     u_byte	dir;			/* Direction of acceleration */
     int		id;			/* For shots => id of player */
+    u_short	team;			/* Team of player or cannon */
     objposition	pos;			/* World coordinates */
     ipos	prevpos;		/* Object's previous position... */
     vector	vel;
@@ -222,12 +224,11 @@ struct _visibility {
 };
 
 #define MAX_PLAYER_ECMS		8	/* Maximum simultaneous per player */
-typedef struct _ecm_info ecm_info;
-struct _ecm_info {
-    int		count;
-    int 	size[MAX_PLAYER_ECMS];
-    position 	pos[MAX_PLAYER_ECMS];
-};
+typedef struct {
+    int		size;
+    position	pos;
+    int		id;
+} ecm_t;
 
 /*
  * Structure holding the info for one pulse of a laser.
@@ -237,17 +238,21 @@ typedef struct {
     int		dir;
     int		len;
     int		life;
+    int		id;
+    u_short	team;
     modifiers	mods;
+    bool	refl;
 } pulse_t;
 
 /*
- * Transporter info, this is per-player
+ * Transporter info.
  */
-typedef struct _trans_info trans_info;
-struct _trans_info {
-    int 	count,
-		pl_id;
-};
+typedef struct {
+    position	pos;
+    int		target;
+    int		id;
+    int		count;
+} trans_t;
 
 /*
  * Shove-information.
@@ -275,6 +280,7 @@ struct player {
     byte	color;			/* Color of object */
     u_byte	dir;			/* Direction of acceleration */
     int		id;			/* Unique id of object */
+    u_short	team;			/* What team is the player on? */
     objposition	pos;			/* World coordinates */
     ipos	prevpos;		/* Previous position... */
     vector	vel;			/* Velocity of object */
@@ -325,8 +331,6 @@ struct player {
     int		missile_rack;		/* Next missile rack to be active */
 
     int		num_pulses;		/* Number of laser pulses in the air. */
-    int		max_pulses;		/* Max. number of laser pulses. */
-    pulse_t	*pulses;		/* Info on laser pulses. */
 
     int		emergency_thrust_left;	/* how much emergency thrust left */
     int		emergency_thrust_max;	/* maximum time left */
@@ -344,8 +348,7 @@ struct player {
     DFLOAT	auto_turnspeed_s;	/* turnresistance settings. Restored */
     DFLOAT	auto_turnresistance_s;	/* when autopilot turned off */
     modifiers	modbank[NUM_MODBANKS];	/* useful modifier settings */
-    int		tractor_pressor;	/* non-zero if tractor is pressor */
-    player	*tractor;		/* target of tractor beam */
+    bool	tractor_is_pressor;	/* on if tractor is pressor */
     int		shot_max;		/* Maximum number of shots active */
     int		shot_life;		/* Number of ticks shot will live */
     DFLOAT	shot_speed;		/* Speed of shots fired by player */
@@ -377,7 +380,6 @@ struct player {
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
     char	hostname[MAX_CHARS];	/* Hostname of client player uses */
-    u_short	team;			/* What team is the player on? */
     u_short	pseudo_team;		/* Which team is used for my tanks */
 					/* (detaching!) */
     object	*ball;
@@ -398,9 +400,9 @@ struct player {
 
     int		updateVisibility, forceVisible, damaged;
     int		wormDrawCount, wormHoleHit, wormHoleDest;
+    int		stunned;
 
-    ecm_info	ecmInfo;		/* list of active ecms */
-    trans_info  transInfo;		/* list of active transporters */
+    int		ecmcount;		/* number of active ecms */
 
     int		conn;			/* connection index, -1 if robot */
     unsigned	version;		/* XPilot version number of client */

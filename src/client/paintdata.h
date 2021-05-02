@@ -1,4 +1,4 @@
-/* $Id: paintdata.h,v 4.1 1998/04/16 17:39:33 bert Exp $
+/* $Id: paintdata.h,v 4.2 1998/08/30 15:18:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -184,13 +184,8 @@ extern long		time_left;
 
 extern unsigned long	current_foreground;
 
-#ifndef ERASE
-#define ERASE		0
-#endif
 
 #define ERASE_INITIALIZED	(1 << 0)
-
-#if ERASE
 
 #define MAX_LINE_WIDTH	4
 
@@ -209,9 +204,7 @@ typedef struct {
 
 extern erase_t		erase[2],
 			*erp;
-#endif	/* ERASE */
 
-#if ERASE
 /*
  * Macro to make room in a given dynamic array for new elements.
  * P is the pointer to the array memory.
@@ -245,7 +238,6 @@ extern erase_t		erase[2],
 	M = 0;								\
     }									\
     N = 0;
-#endif	/* ERASE */
 
 #ifndef PAINT_FREE
 # define PAINT_FREE	1
@@ -263,30 +255,38 @@ extern int		num_arc[MAX_COLORS], max_arc[MAX_COLORS];
 extern XSegment		*seg_ptr[MAX_COLORS];
 extern int		num_seg[MAX_COLORS], max_seg[MAX_COLORS];
 
-#if ERASE
-extern void Erase_start(void);
-extern void Erase_end(void);
-extern void Erase_rectangle(int x, int y, int width, int height);
-extern void Erase_rectangles(XRectangle *rectp, int n);
-extern void Erase_arc(int x, int y, int width, int height,
-		      int angle1, int angle2);
-extern void Erase_arcs(XArc *arcp, int n);
-extern void Erase_segment(int width, int x1, int y1, int x2, int y2);
-extern void Erase_segments(XSegment *segp, int n);
-extern void Erase_points(int width, XPoint *pointp, int n);
-extern void Erase_4point(int x, int y, int width, int height);
-#else	/* ERASE */
-#define Erase_start()
-#define Erase_end()
-#define Erase_rectangle(A,B,C,D)
-#define Erase_rectangles(A,B)
-#define Erase_arc(A,B,C,D,E,F)
-#define Erase_arcs(A,B)
-#define Erase_segment(A,B,C,D,E)
-#define Erase_segments(A,B)
-#define Erase_points(A,B,C)
-#define Erase_4point(A,B,C,D)
-#endif	/* ERASE */
+extern void Erase_do_start(void);
+extern void Erase_do_end(void);
+extern void Erase_do_rectangle(int x, int y, int width, int height);
+extern void Erase_do_rectangles(XRectangle *rectp, int n);
+extern void Erase_do_arc(int x, int y, int width, int height,
+                      int angle1, int angle2);
+extern void Erase_do_arcs(XArc *arcp, int n);
+extern void Erase_do_segment(int width, int x1, int y1, int x2, int y2);
+extern void Erase_do_segments(XSegment *segp, int n);
+extern void Erase_do_points(int width, XPoint *pointp, int n);
+extern void Erase_do_4point(int x, int y, int width, int height);
+
+#define Erase_start() \
+	    ((useErase) ? Erase_do_start() : (void)0 )
+#define Erase_end() \
+	    ((useErase) ? Erase_do_end() : (void)0 )
+#define Erase_rectangle( _A, _B, _C, _D ) \
+	    ((useErase) ? Erase_do_rectangle((_A), (_B), (_C), (_D)) : (void)0 )
+#define Erase_rectangles(_A, _B) \
+	    ((useErase) ? Erase_do_rectangles((_A), (_B)) : (void)0 )
+#define Erase_arc(_A, _B, _C, _D, _E, _F) \
+	    ((useErase) ? Erase_do_arc((_A), (_B), (_C), (_D), (_E), (_F)):(void)0 )
+#define Erase_arcs(_A, _B) \
+	    ((useErase) ? Erase_do_arcs((_A), (_B)) : (void)0 )
+#define Erase_segment(_A, _B, _C, _D, _E) \
+	    ((useErase) ? Erase_do_segment((_A), (_B), (_C), (_D), (_E)) : (void)0 )
+#define Erase_segments(_A, _B) \
+	    ((useErase) ? Erase_do_segments((_A), (_B)) : (void)0 )
+#define Erase_points(_A, _B, _C) \
+	    ((useErase) ? Erase_do_points((_A), (_B), (_C)) : (void)0 )
+#define Erase_4point(_A, _B, _C, _D) \
+	    ((useErase) ? Erase_do_4point((_A), (_B), (_C), (_D)) : (void)0 )
 
 extern void Rectangle_start(void);
 extern void Rectangle_end(void);

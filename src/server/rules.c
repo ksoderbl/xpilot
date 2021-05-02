@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 4.2 1998/04/16 17:41:54 bert Exp $
+/* $Id: rules.c,v 4.3 1998/08/29 19:49:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -38,12 +38,13 @@
 #include "map.h"
 #include "rules.h"
 #include "bit.h"
+#include "cannon.h"
 
 char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 4.2 1998/04/16 17:41:54 bert Exp $";
+    "@(#)$Id: rules.c,v 4.3 1998/08/29 19:49:57 bert Exp $";
 #endif
 
 #define MAX_FUEL                10000
@@ -59,8 +60,11 @@ static char sourceid[] =
 #define MAX_AUTOPILOT           99
 #define MAX_EMERGENCY_SHIELD    99
 #define MAX_DEFLECTOR           99
+#define MAX_MIRROR		99
 #define MAX_PHASING             99
 #define MAX_HYPERJUMP           99
+#define MAX_LASER		99
+#define MAX_TRACTOR_BEAM	99
 
 long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
 long	DEF_BITS = 0;
@@ -72,7 +76,7 @@ long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
 long	USED_KILL =
 	(OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_SHOT|OBJ_LASER
 	|OBJ_TRACTOR_BEAM|OBJ_CLOAKING_DEVICE|OBJ_PHASING_DEVICE
-	|OBJ_DEFLECTOR|OBJ_EMERGENCY_SHIELD|OBJ_EMERGENCY_THRUST);
+	|OBJ_DEFLECTOR|OBJ_MIRROR|OBJ_EMERGENCY_SHIELD|OBJ_EMERGENCY_THRUST);
 
 
 
@@ -83,6 +87,8 @@ long	USED_KILL =
 static void Set_item_chance(int item)
 {
     DFLOAT	max = itemProbMult * maxItemDensity * World.x * World.y;
+    DFLOAT	sum = 0;
+    int		i, num = 0;
 
     if (itemProbMult * World.items[item].prob > 0) {
 	World.items[item].chance = (int)(1.0
@@ -99,6 +105,24 @@ static void Set_item_chance(int item)
 	}
     } else {
 	World.items[item].max = 0;
+    }
+    if (!BIT(CANNON_USE_ITEM, 1U << item)) {
+	World.items[item].cannonprob = 0;
+	return;
+    }
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (World.items[i].prob > 0
+	    && BIT(CANNON_USE_ITEM, 1U << i)) {
+	    sum += World.items[i].prob;
+	    num++;
+	}
+    }
+    if (num) {
+	World.items[item].cannonprob = World.items[item].prob
+				       * (num / sum)
+				       * (maxItemDensity / 0.00012);
+    } else {
+	World.items[item].cannonprob = 0;
     }
 }
 
@@ -171,14 +195,15 @@ void Set_initial_resources(void)
     LIMIT(World.items[ITEM_MINE].limit, 0, MAX_MINE);
     LIMIT(World.items[ITEM_MISSILE].limit, 0, MAX_MISSILE);
     LIMIT(World.items[ITEM_ECM].limit, 0, MAX_ECM);
-    LIMIT(World.items[ITEM_LASER].limit, 0, MAX_LASERS);
+    LIMIT(World.items[ITEM_LASER].limit, 0, MAX_LASER);
     LIMIT(World.items[ITEM_EMERGENCY_THRUST].limit, 0, MAX_EMERGENCY_THRUST);
-    LIMIT(World.items[ITEM_TRACTOR_BEAM].limit, 0, MAX_TRACTORS);
+    LIMIT(World.items[ITEM_TRACTOR_BEAM].limit, 0, MAX_TRACTOR_BEAM);
     LIMIT(World.items[ITEM_AUTOPILOT].limit, 0, MAX_AUTOPILOT);
     LIMIT(World.items[ITEM_EMERGENCY_SHIELD].limit, 0, MAX_EMERGENCY_SHIELD);
     LIMIT(World.items[ITEM_DEFLECTOR].limit, 0, MAX_DEFLECTOR);
     LIMIT(World.items[ITEM_PHASING].limit, 0, MAX_PHASING);
     LIMIT(World.items[ITEM_HYPERJUMP].limit, 0, MAX_HYPERJUMP);
+    LIMIT(World.items[ITEM_MIRROR].limit, 0, MAX_MIRROR);
 
     for (i = 0; i < NUM_ITEMS; i++) {
 	LIMIT(World.items[i].initial, 0, World.items[i].limit);
@@ -191,7 +216,8 @@ void Set_initial_resources(void)
 	OBJ_PHASING_DEVICE |
 	OBJ_TRACTOR_BEAM |
 	OBJ_AUTOPILOT |
-	OBJ_DEFLECTOR);
+	OBJ_DEFLECTOR |
+	OBJ_MIRROR);
 
     if (World.items[ITEM_CLOAK].initial > 0)
 	SET_BIT(DEF_HAVE, OBJ_CLOAKING_DEVICE);
@@ -207,6 +233,8 @@ void Set_initial_resources(void)
 	SET_BIT(DEF_HAVE, OBJ_AUTOPILOT);
     if (World.items[ITEM_DEFLECTOR].initial > 0)
 	SET_BIT(DEF_HAVE, OBJ_DEFLECTOR);
+    if (World.items[ITEM_MIRROR].initial > 0)
+	SET_BIT(DEF_HAVE, OBJ_MIRROR);
 }
 
 
@@ -238,6 +266,7 @@ void Set_world_items(void)
     Init_item(ITEM_REARSHOT, 1, 1);
     Init_item(ITEM_AFTERBURNER, 1, 1);
     Init_item(ITEM_TRANSPORTER, 1, 1);
+    Init_item(ITEM_MIRROR, 1, 1);
     Init_item(ITEM_DEFLECTOR, 1, 1);
     Init_item(ITEM_HYPERJUMP, 1, 1);
     Init_item(ITEM_PHASING, 1, 1);

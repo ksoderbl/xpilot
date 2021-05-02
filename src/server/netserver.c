@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 4.5 1998/04/16 17:41:39 bert Exp $
+/* $Id: netserver.c,v 4.7 1998/08/30 15:23:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1131,12 +1131,25 @@ static int Handle_login(int ind)
 
     num_logins++;
 
+    if (resetOnHuman > 0
+	&& (NumPlayers - NumPseudoPlayers - NumRobots) <= resetOnHuman
+	&& !rdelay) {
+	if (BIT(World.rules->mode, TIMING)) {
+	    Race_game_over();
+	} else if (BIT(World.rules->mode, TEAM_PLAY)) {
+	    Team_game_over(-1, "");
+	} else {
+	    Individual_game_over(-1);
+	}
+    }
+
     /* if the next round is delayed, delay it again */
     if (rdelay > 0 || NumPlayers == 1) {
 	rdelay = roundDelay * FPS;
 	roundtime = -1;
 	sprintf(msg, "Player entered. Delaying %d seconds until next %s.",
-		roundDelay, (BIT(World.rules->mode, TIMING)? "race" : "round"));
+		roundDelay, (BIT(World.rules->mode, TIMING) ?
+			     "race" : "round"));
 	Set_message(msg);
     }
 
@@ -1363,14 +1376,24 @@ int Send_self(int ind,
     }
     if (connp->version >= 0x3800) {
 	n = Packet_printf(&connp->w,
-			  "%c%c%c%c",
+			  "%c%c%c%c",	/* %c", */
 			  pl->item[ITEM_EMERGENCY_SHIELD],
 			  pl->item[ITEM_DEFLECTOR],
 			  pl->item[ITEM_HYPERJUMP],
-			  pl->item[ITEM_PHASING]
+			  pl->item[ITEM_PHASING] /* ,
+			  pl->item[ITEM_MIRROR] */
 			  );
 	if (n <= 0) {
 	    connp->w.len = sbuf_len;
+	}
+	if (connp->version >= 0x4100) {
+	    n = Packet_printf(&connp->w,
+			      "%c",
+			      pl->item[ITEM_MIRROR]
+			      );
+	    if (n <= 0) {
+		connp->w.len = sbuf_len;
+	    }
 	}
     }
     else if (connp->version >= 0x3200) {

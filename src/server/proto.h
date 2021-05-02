@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 4.5 1998/04/16 17:41:49 bert Exp $
+/* $Id: proto.h,v 4.6 1998/08/29 19:49:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -116,19 +116,23 @@ void Free_shots(void);
 void Tank_handle_detach(player*);
 void Add_fuel(pl_fuel_t*, long);
 void Update_tanks(pl_fuel_t *);
-void Place_item(int type, player *pl);
+void Place_item(int type, int ind);
+void Tractor_beam(int ind);
+void General_tractor_beam(int ind, DFLOAT x, DFLOAT y,
+			  int items, int target, bool pressor);
 void Place_mine(int ind);
 void Place_moving_mine(int ind);
-void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
+void Place_general_mine(int ind, u_short team, long status, DFLOAT x, DFLOAT y,
   			DFLOAT vx, DFLOAT vy, modifiers mods);
 void Detonate_mines(int ind);
-void Cannon_fire(int ind, int j);
 char *Describe_shot(int type, long status, modifiers mods, int hit);
 void Fire_ecm(int ind);
+void Fire_general_ecm(int ind, u_short team, DFLOAT x, DFLOAT y);
 void Move_ball(int ind);
 void Fire_shot(int ind, int type, int dir);
-void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
-		       DFLOAT speed, modifiers mods);
+void Fire_general_shot(int ind, u_short team, bool cannon, DFLOAT x, DFLOAT y,
+		       int type, int dir, DFLOAT speed, modifiers mods,
+		       int target);
 void Fire_normal_shots(int ind);
 void Fire_main_shot(int ind, int type, int dir);
 void Fire_shot(int ind, int type, int dir);
@@ -139,15 +143,22 @@ void Fire_right_rshot(int ind, int type, int dir, int gun);
 void Make_treasure_ball(int treasure);
 int Punish_team(int ind, int t_destroyed, int t_target);
 void Delete_shot(int ind);
-void do_transporter(player *pl);
+void Fire_laser(int ind);
+void Fire_general_laser(int ind, u_short team, DFLOAT x, DFLOAT y, int dir,
+			modifiers mods);
+void Do_deflector(int ind);
+void Do_transporter(int ind);
+void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
+			    int *item, long *amount);
 void do_hyperjump(player *pl);
-void do_lose_item(player *pl);
+void do_lose_item(int ind);
 void Move_smart_shot(int ind);
 void Move_mine(int ind);
 void Make_debris(
 	    /* pos.x, pos.y   */ DFLOAT  x,          DFLOAT y,
 	    /* vel.x, vel.y   */ DFLOAT  velx,       DFLOAT vely,
 	    /* owner id       */ int    id,
+	    /* owner team     */ u_short team,
 	    /* type           */ int    type,
 	    /* mass           */ DFLOAT  mass,
 	    /* status         */ long   status,
@@ -162,6 +173,7 @@ void Make_wreckage(
 	    /* pos.x, pos.y   */ DFLOAT x,          DFLOAT y,
 	    /* vel.x, vel.y   */ DFLOAT velx,       DFLOAT vely,
 	    /* owner id       */ int    id,
+	    /* owner team     */ u_short team,
 	    /* min,max mass   */ DFLOAT min_mass,   DFLOAT max_mass,
 	    /* total mass     */ DFLOAT total_mass,
 	    /* status         */ long   status,
@@ -173,8 +185,20 @@ void Make_wreckage(
 	    );
 void Explode(int ind);
 void Explode_fighter(int ind);
-void Throw_items(player*);
+void Throw_items(int ind);
 void Detonate_items(int ind);
+void add_temp_wormhole(int x, int y, bool inout);
+void remove_temp_wormhole(int ind);
+
+/*
+ * Prototypes for cannon.c
+ */
+void Cannon_init(int ind);
+void Cannon_add_item(int ind, int item, int amount);
+void Cannon_throw_items(int ind);
+int Cannon_select_weapon(int ind);
+void Cannon_aim(int ind, int weapon, int *target, int *dir);
+void Cannon_fire(int ind, int weapon, int target, int dir);
 
 /*
  * Prototypes for player.c
@@ -195,6 +219,9 @@ void Delete_player(int ind);
 void Detach_ball(int ind, int ball);
 void Kill_player(int ind);
 void Player_death_reset(int ind);
+void Team_game_over(int winning_team, const char *reason);
+void Individual_game_over(int winner);
+void Race_game_over(void);
 
 /*
  * Prototypes for robot.c

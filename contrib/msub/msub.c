@@ -19,9 +19,19 @@
 	27 Mar 1990 V1.0.  Created.
 	16 Apr 1993 V1.1.  Rewritten.
 	25 Oct 1993 V1.11.  Added support for -e and var=value on command line.
+
+	18 Sep 1998	Bert Gijsbers	bert@xpilot.org
+			Added unistd, stdio, stdlib, string header files.
+			Commented out malloc declaration (now in stdlib.h).
+			Removed unused variable pi.
+
+	$Id: msub.c,v 4.2 1998/09/18 15:12:50 bert Exp $
 */
 
+# include	<unistd.h>
 # include	<stdio.h>
+# include	<stdlib.h>
+# include	<string.h>
 # include	<ctype.h>
 # include	<sys/types.h>
 # include	<sys/stat.h>
@@ -31,7 +41,7 @@
 # define	FromMakefile(vp)	(vp->source == precMakefile)
 
 
-extern char	*malloc ();
+/* extern char	*malloc (); */
 extern char	*strcpy ();
 extern char	*strncpy ();
 extern char	*strcat ();
@@ -475,7 +485,7 @@ int	nRefSeqs;
 char	*initRef[];
 char	*termRef[];
 {
-char	*p, *pi;
+char	*p;
 int	len, i;
 
 	p = s;

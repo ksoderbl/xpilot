@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 4.3 1998/04/16 17:39:27 bert Exp $
+/* $Id: netclient.c,v 4.7 1998/08/30 16:36:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1456,6 +1456,15 @@ int Receive_self(void)
 	if (n <= 0) {
 	    return n;
 	}
+	if (version >= 0x4100) {
+	    n = Packet_scanf(&rbuf, "%c", &(num_items[ITEM_MIRROR]));
+	    if (n <= 0) {
+		return n;
+	    }
+	}
+	else {
+	    num_items[ITEM_MIRROR] = 0;
+	}
     }
     else {
 	if (version >= 0x3200) {
@@ -1471,6 +1480,7 @@ int Receive_self(void)
 	num_items[ITEM_DEFLECTOR] = 0;
 	num_items[ITEM_HYPERJUMP] = 0;
 	num_items[ITEM_PHASING] = 0;
+	num_items[ITEM_MIRROR] = 0;
     }
 
     if (debris_colors > num_spark_colors) {
@@ -2455,6 +2465,10 @@ int Send_pointer_move(int movement)
 
 int Send_audio_request(int onoff)
 {
+#ifdef DEBUG_SOUND
+    printf("Send_audio_request %d\n", onoff);
+#endif
+
     if (version < 0x3250) {
 	return 0;
     }

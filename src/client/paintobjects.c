@@ -1,4 +1,4 @@
-/* $Id: paintobjects.c,v 4.6 1998/04/27 21:46:25 dick Exp $
+/* $Id: paintobjects.c,v 4.11 1998/09/09 00:22:16 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -440,17 +440,45 @@ void Paint_shots(void)
 	t_ = i + DEBRIS_TYPES;
 
 	if (num_fastshot[i] > 0) {
-	    x = BASE_X(i);
+	    int z = shot_size/2;
+
+		x = BASE_X(i);
 	    y = BASE_Y(i);
 	    color = COLOR(i);
 	    if (color != WHITE && color != BLUE) {
 		color = WHITE;
 	    }
 	    for (j = 0; j < num_fastshot[i]; j++) {
-		Rectangle_add(color,
-			      x + fastshot_ptr[i][j].x - shot_size/2,
-			      y - fastshot_ptr[i][j].y - shot_size/2,
-			      shot_size, shot_size);
+		if (showNastyShots) {
+			if (rfrac() < 0.5f) {
+				Segment_add(color,
+					x + fastshot_ptr[i][j].x - z,
+					y - fastshot_ptr[i][j].y - z,
+					x + fastshot_ptr[i][j].x + z,
+					y - fastshot_ptr[i][j].y + z);
+				Segment_add(color,
+					x + fastshot_ptr[i][j].x + z,
+					y - fastshot_ptr[i][j].y - z,
+					x + fastshot_ptr[i][j].x - z,
+					y - fastshot_ptr[i][j].y + z);
+			} else {
+				Segment_add(color,
+					x + fastshot_ptr[i][j].x - z,
+					y - fastshot_ptr[i][j].y,
+					x + fastshot_ptr[i][j].x + z,
+					y - fastshot_ptr[i][j].y);
+				Segment_add(color,
+					x + fastshot_ptr[i][j].x,
+					y - fastshot_ptr[i][j].y - z,
+					x + fastshot_ptr[i][j].x,
+					y - fastshot_ptr[i][j].y + z);
+			}
+		} else {
+			Rectangle_add(color,
+						  x + fastshot_ptr[i][j].x - z,
+						  y - fastshot_ptr[i][j].y - z,
+						  shot_size, shot_size);
+		}
 	    }
 	    RELEASE(fastshot_ptr[i], num_fastshot[i], max_fastshot[i]);
 	}
@@ -460,14 +488,35 @@ void Paint_shots(void)
 	 */
 	/* IFWINDOWS( Trace("t_=%d\n", t_); )*/
 	if (num_fastshot[t_] > 0) {
+	    int z = teamshot_size/2;
+
 	    x = BASE_X(i);
 	    y = BASE_Y(i);
 	    color = COLOR(i);
 	    for (j = 0; j < num_fastshot[t_]; j++) {
-		Rectangle_add(color,
-			      x + fastshot_ptr[t_][j].x - teamshot_size/2,
-			      y - fastshot_ptr[t_][j].y - teamshot_size/2,
-			      teamshot_size, teamshot_size);
+		if (rfrac() < 0.5f) {
+		    Segment_add(color,
+				x + fastshot_ptr[t_][j].x - z,
+				y - fastshot_ptr[t_][j].y - z,
+				x + fastshot_ptr[t_][j].x + z,
+				y - fastshot_ptr[t_][j].y + z);
+		    Segment_add(color,
+				x + fastshot_ptr[t_][j].x + z,
+				y - fastshot_ptr[t_][j].y - z,
+				x + fastshot_ptr[t_][j].x - z,
+				y - fastshot_ptr[t_][j].y + z);
+		} else {
+		    Segment_add(color,
+				x + fastshot_ptr[t_][j].x - z,
+				y - fastshot_ptr[t_][j].y,
+				x + fastshot_ptr[t_][j].x + z,
+				y - fastshot_ptr[t_][j].y);
+		    Segment_add(color,
+				x + fastshot_ptr[t_][j].x,
+				y - fastshot_ptr[t_][j].y - z,
+				x + fastshot_ptr[t_][j].x,
+				y - fastshot_ptr[t_][j].y + z);
+		}
 	    }
 	    RELEASE(fastshot_ptr[t_], num_fastshot[t_], max_fastshot[t_]);
 	}
@@ -652,24 +701,24 @@ void Paint_ships(void)
 			    s, t);
 	    }
 	    else {
-#if ERASE
-		/*
-		 * If ERASE is defined outline the locked ship in a different color,
-		 * instead of mucking around with polygons.
-		 */
-		if (lock_id == ship_ptr[i].id
-		    && ship_ptr[i].id != -1
-		    && lock_dist != 0) {
-		    ship_color = RED;
+		if (useErase){
+		    /*
+		     * Outline the locked ship in a different color,
+		     * instead of mucking around with polygons.
+		     */
+		    if (lock_id == ship_ptr[i].id
+			&& ship_ptr[i].id != -1
+					    && lock_dist != 0) {
+					    ship_color = RED;
+		    }
 		}
-#endif
 #ifndef NO_BLUE_TEAM
 		if (BIT(Setup->mode, TEAM_PLAY)
 		    && self != NULL
 		    && self->id != ship_ptr[i].id
 		    && (other = Other_by_id(ship_ptr[i].id)) != NULL
 		    && self->team == other->team) {
-		    ship_color = BLUE;
+			ship_color = BLUE;
 		}
 #endif
 		if (roundDelay > 0 && ship_color == WHITE) {
@@ -684,15 +733,15 @@ void Paint_ships(void)
 		    SET_FG(colors[ship_color].pixel);
 		    rd.drawLines(dpy, p_draw, gc, points, cnt, 0);
 		    Erase_points(0, points, cnt);
-#if !ERASE
-		    if (lock_id == ship_ptr[i].id
-			&& ship_ptr[i].id != -1
-			&& lock_dist != 0) {
-			rd.fillPolygon(dpy, p_draw, gc,
-				       points, cnt,
-				       Complex, CoordModeOrigin);
+		    if (!useErase){
+			if (lock_id == ship_ptr[i].id
+			    && ship_ptr[i].id != -1
+			    && lock_dist != 0) {
+				rd.fillPolygon(dpy, p_draw, gc,
+				    points, cnt,
+				    Complex, CoordModeOrigin);
+			}
 		    }
-#endif
 
 		    if (markingLights) {
 			if (((loops + ship_ptr[i].id) & 0xF) == 0) {
@@ -749,17 +798,17 @@ void Paint_ships(void)
 		    SET_FG(colors[ship_color].pixel+(ship_ptr[i].cloak ? CLOAKCOLOROFS : 0));
 #endif
 		    if (ship_ptr[i].cloak) {
-#if ERASE
-			int j;
-			for (j = 0; j < cnt - 1; j++) {
-			    rd.drawLine(dpy, p_draw, gc,
+			if (useErase){
+			    int j;
+			    for (j = 0; j < cnt - 1; j++) {
+				rd.drawLine(dpy, p_draw, gc,
 				      points[j].x, points[j].y,
 				      points[j + 1].x, points[j + 1].y);
+			    }
+			    Erase_points(1, points, cnt);
+			} else {
+			    rd.drawLines(dpy, p_draw, gc, points, cnt, 0);
 			}
-			Erase_points(1, points, cnt);
-#else
-			rd.drawLines(dpy, p_draw, gc, points, cnt, 0);
-#endif
 		    }
 
 		    /* draw deflectors and shields */

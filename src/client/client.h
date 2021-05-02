@@ -1,4 +1,4 @@
-/* $Id: client.h,v 4.1 1998/04/16 17:39:14 bert Exp $
+/* $Id: client.h,v 4.3 1998/09/09 00:22:15 dick Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -191,6 +191,7 @@ extern int	map_point_size;		/* size of navigation points */
 extern int	spark_size;		/* size of sparks and debris */
 extern int	shot_size;		/* size of shot */
 extern int	teamshot_size;		/* size of team shot */
+extern bool	showNastyShots;		/* show original flavor shots or the new "nasty shots" */
 extern long	control_count;		/* Display control for how long? */
 
 extern long	fuelSum;		/* Sum of fuel in all tanks */
@@ -232,7 +233,8 @@ extern int	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
 extern int	auto_shield;            /* drops shield for fire */
 extern int	initialPointerControl;	/* Start by using mouse for control? */
-extern int	pointerControl;			/* current state of mouse ship flying */
+extern int	pointerControl;		/* current state of mouse ship flying */
+extern bool	useErase;		/* use the Erase hack for slow X */
 
 extern int	maxFPS;			/* Client's own FPS */
 extern int 	oldMaxFPS;

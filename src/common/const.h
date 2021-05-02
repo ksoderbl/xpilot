@@ -1,4 +1,4 @@
-/* $Id: const.h,v 4.4 1998/04/20 10:18:30 bert Exp $
+/* $Id: const.h,v 4.5 1998/08/29 19:49:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -301,8 +301,6 @@ extern DFLOAT		tbl_cos[];
 
 #define TRANSPORTER_DISTANCE	(VISIBILITY_DISTANCE*0.2)
 
-#define CANNON_DISTANCE		(VISIBILITY_DISTANCE*0.5)
-
 #define SHOT_MULT(o) \
 	((BIT((o)->mods.nuclear, NUCLEAR) && BIT((o)->mods.warhead, CLUSTER)) \
 	 ? nukeClusterDamage : 1.0f)
@@ -356,22 +354,19 @@ extern DFLOAT		tbl_cos[];
 #define HEAT_SHOT_LEN		15
 #define TORPEDO_LEN		18
 
-#define MAX_LASERS		5
 #define PULSE_SPEED		90
 #define PULSE_SAMPLE_DISTANCE	5
 #define PULSE_LENGTH		(PULSE_SPEED - PULSE_SAMPLE_DISTANCE)
-#define PULSE_MAX_LIFE		6
-#define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS+1 - (lasers)) / 4)
+#define PULSE_MIN_LIFE		4.5
+#define PULSE_LIFE(lasers)	(PULSE_MIN_LIFE + ((lasers) / 4))
 
-#define MAX_TRACTORS		8
-
-#define TRACTOR_MAX_RANGE(pl)  (200 + (pl)->item[ITEM_TRACTOR_BEAM] * 50)
-#define TRACTOR_MAX_FORCE(pl)  (-40 + (pl)->item[ITEM_TRACTOR_BEAM] * -20)
-#define TRACTOR_PERCENT(pl, maxdist) \
-	(1.0-(0.5*(pl)->lock.distance/(maxdist)))
+#define TRACTOR_MAX_RANGE(items)  (200 + (items) * 50)
+#define TRACTOR_MAX_FORCE(items)  (-40 + (items) * -20)
+#define TRACTOR_PERCENT(dist, maxdist) \
+	(1.0 - (0.5 * (dist) / (maxdist)))
 #define TRACTOR_COST(percent) (-1.5 * FUEL_SCALE_FACT * (percent))
-#define TRACTOR_FORCE(pl, percent, maxforce) \
-	((percent) * (maxforce) * ((pl)->tractor_pressor ? -1 : 1))
+#define TRACTOR_FORCE(tr_pr, percent, maxforce) \
+	((percent) * (maxforce) * ((tr_pr) ? -1 : 1))
 
 #define WARN_TIME               2
 
