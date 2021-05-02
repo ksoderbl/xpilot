@@ -25,7 +25,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.5.4
+VERSION=4.5.5
 
 #
 # Change these for your site
@@ -106,7 +106,7 @@ AIX_XLIB = -lX11
 #
 LINUX_CC = gcc
 LINUX_CPLUSPLUS = g++
-LINUX_CFLAGS = $(DEFS) $(INCS) -Wall -fstrict-prototype
+LINUX_CFLAGS = $(DEFS) $(INCS) -Wall
 LINUX_OPT = -O2
 LINUX_DEBUG = -g -O2
 LINUX_PROF = -pg -O2
