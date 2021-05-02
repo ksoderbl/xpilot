@@ -21,7 +21,7 @@
  * we will generate a random map.
  */
 #ifndef	DEFAULT_MAP
-#  define DEFAULT_MAP		"labyrinth.map"
+#  define DEFAULT_MAP		"newcontinent.map"
 #endif
 
 #define SPACE			0

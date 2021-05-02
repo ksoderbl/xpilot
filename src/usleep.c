@@ -18,7 +18,7 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 1.4 1992/06/28 05:38:33 bjoerns Exp $";
+    "@(#)$Id: usleep.c,v 1.1 1993/03/09 14:32:00 kenrsc Exp $";
 #endif
 
 

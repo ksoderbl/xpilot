@@ -1,8 +1,8 @@
-/* $Id: limits.h,v 1.7 1992/08/27 00:25:57 bjoerns Exp $
+/* $Id: const.h,v 1.7 1993/04/01 18:17:26 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -14,12 +14,16 @@
 #include <limits.h>
 
 /*
- * DBL_MAX and RAND_MAX is ANSI C standard, but some architectures (BSD) use
- * MAXDOUBLE and INT_MAX instead.
+ * FLT_MAX and RAND_MAX is ANSI C standard, but some systems (BSD) use
+ * MAXFLOAT and INT_MAX instead.
  */
-#ifndef	DBL_MAX
-#   include <values.h>
-#   define  DBL_MAX	MAXDOUBLE
+#ifndef	FLT_MAX
+#   ifdef apollo
+#       include <math.h>	/* MAXFLOAT for apollo */
+#   else
+#       include <values.h>	/* MAXFLOAT for suns */
+#   endif
+#   define  FLT_MAX	MAXFLOAT
 #endif
 #ifndef	RAND_MAX
 #   define  RAND_MAX	INT_MAX
@@ -36,10 +40,11 @@
 
 #define BLOCK_SZ		35
 
-#define MOD(x, y)	(((x)>=(y) || (x)<0) ? ((x)>=(y)?(x)-(y):(x)+(y)) :(x))
 #define TABLE_SIZE	RES
-#define tsin(x)		(tbl_sin[MOD(x, TABLE_SIZE)])
-#define tcos(x)		(tbl_sin[MOD((x)+TABLE_SIZE/4, TABLE_SIZE)])
+#define tsin(x)		(tbl_sin[MOD2(x, TABLE_SIZE)])
+#define tcos(x)		(tbl_sin[MOD2((x)+TABLE_SIZE/4, TABLE_SIZE)])
+
+#define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
 
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
 #ifndef MAX
@@ -48,23 +53,28 @@
 #endif
 #define sqr(x)			( (x)*(x) )
 #define LENGTH(x, y)		( sqrt(sqr(x) + sqr(y)) )
-#define LIMIT(val, lo, hi)	val = val>hi ? hi : (val<lo ? lo : val)
+#define LIMIT(val, lo, hi)	( val = val>hi ? hi : (val<lo ? lo : val) )
 
-#define PSEUDO_TEAM(i,j) (Players[(i)]->pseudo_team==Players[(j)]->pseudo_team)
-#define TEAM(i, j)	(BIT(Players[i]->status, PAUSE) ||		\
-				BIT(Players[j]->status, PAUSE) ?	\
-			true : (BIT(World.rules->mode, TEAM_PLAY) ?	\
-			((Players[i]->team == Players[j]->team) &&	\
-			Players[i]->team!=0) : false))
+#ifndef MOD2
+#  define MOD2(x, m)		( (x) & ((m) - 1) )
+#endif	/* MOD2 */
+
+#define PSEUDO_TEAM(i,j)\
+	(Players[(i)]->pseudo_team == Players[(j)]->pseudo_team)
+#define TEAM(i, j)		(					\
+	BIT(Players[i]->status, PAUSE) || BIT(Players[j]->status, PAUSE)\
+	? true								\
+	: (BIT(World.rules->mode, TEAM_PLAY)				\
+	   ? (Players[i]->team != TEAM_NOT_SET				\
+	      && Players[i]->team == Players[j]->team)			\
+	   : false))
 
 #define CANNON_DEAD_TIME	900
 
-#define	RECOVERY_DELAY		32
+#define	RECOVERY_DELAY		(FPS*3)
 
 #define MAX_ID			4096		    /* Should suffice :) */
-#define MAX_BASES		64
-#define MAX_PSEUDO_PLAYERS      (MAX_BASES/4)
-#define MAX_PLAYERS		(MAX_BASES+MAX_PSEUDO_PLAYERS)	    /* Miscellaneous limits */
+#define MAX_PSEUDO_PLAYERS      16
 
 #define PLAYER_ITEM_RATE        5
 
@@ -101,14 +111,13 @@
 #define ENERGY_PACK_FUEL        ((500+(rand()&511))<<FUEL_SCALE_BITS)
 #define RACE_PLAYER_FUEL	(500<<FUEL_SCALE_BITS)
 #define DEFAULT_PLAYER_FUEL	(1000<<FUEL_SCALE_BITS)
-#define FUEL_NOTIFY             (16*FRAMES_PR_SEC)
+#define FUEL_NOTIFY             (16*FPS)
 
 #define LG2_MAX_AFTER_BURNER    4
 #define ALT_SPARK_MASS_FACT     4.2
 #define ALT_FUEL_FACT           3
 #define MAX_AFTER_BURNER        ((1<<LG2_MAX_AFTER_BURNER)-1)
-#define AFTER_BURN_SPARKS(s,n)  \
- (((s)*(n))>>LG2_MAX_AFTER_BURNER)
+#define AFTER_BURN_SPARKS(s,n)  (((s)*(n))>>LG2_MAX_AFTER_BURNER)
 #define AFTER_BURN_POWER(p,n)   \
  ((p)*(1.0+(n)*((ALT_SPARK_MASS_FACT-1.0)/(MAX_AFTER_BURNER+1.0))))
 #define AFTER_BURN_FUEL(f,n)    \
@@ -144,7 +153,7 @@
 #define MINE_LIFETIME           (5000+(rand()&255))
 #define MINE_SPEED_FACT         1.3
 
-#define MISSILE_LIFETIME        (rand()%(64*FRAMES_PR_SEC-1)+(128*FRAMES_PR_SEC))
+#define MISSILE_LIFETIME        (rand()%(64*FPS-1)+(128*FPS))
 #define MISSILE_MASS            5.0
 #define MISSILE_RANGE           4
 #define SMART_SHOT_ACC		0.6
@@ -153,36 +162,26 @@
 #define SMART_TURNSPEED         2.6
 #define SMART_SHOT_MAX_SPEED	22.0
 #define SMART_SHOT_LOOK_AH      4
-#define TORPEDO_SPEED_TIME      (2*FRAMES_PR_SEC)
+#define TORPEDO_SPEED_TIME      (2*FPS)
 #define TORPEDO_ACC             (SMART_SHOT_MAX_SPEED/TORPEDO_SPEED_TIME)
 #define TORPEDO_RANGE           (MINE_RANGE*0.45)
 #define HEAT_RANGE              (VISIBILITY_DISTANCE/2)
 #define HEAT_SPEED_FACT         1.7
-#define HEAT_CLOSE_TIMEOUT      (2*FRAMES_PR_SEC)
+#define HEAT_CLOSE_TIMEOUT      (2*FPS)
 #define HEAT_CLOSE_RANGE        HEAT_RANGE
 #define HEAT_CLOSE_ERROR        0
-#define HEAT_MID_TIMEOUT        (4*FRAMES_PR_SEC)
+#define HEAT_MID_TIMEOUT        (4*FPS)
 #define HEAT_MID_RANGE          (2*HEAT_RANGE)
 #define HEAT_MID_ERROR          8
-#define HEAT_WIDE_TIMEOUT       (8*FRAMES_PR_SEC)
+#define HEAT_WIDE_TIMEOUT       (8*FPS)
 #define HEAT_WIDE_ERROR         16
 
-#define LG2_DUST_CHANCE         6
-#define DUST_CHANCE             ((1<<(LG2_DUST_CHANCE))-1)
-#define DUST_BASE               3
-#define DUST_ADD                4
-#define DUST_SPEED_FACT         1
-#define DUST_LIFE_FACT          (FRAMES_PR_SEC*32)
-#define DUST_EXPLODE_LIMIT      5
-#define DUST_MASS_FACT          0.3
-
 #define WALL_RETURN_TIME        32
-#define WARN_TIME               4
-#define W_DUST_CHANCE           1         /* (2^n-1) */
-#define W_DUST_ADD              2
-#define W_DUST_BASE             2
-#define W_DUST_SPEED_FACT       4
-#define W_DUST_LIFE_FACT        (FRAMES_PR_SEC)
+#define WARN_TIME               2
+
+#define BALL_STRING_LENGTH	120
+
+#define TEAM_NOT_SET		0xffff
 
 #define DEBRIS_MASS             4.5
 #define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)
@@ -194,9 +193,15 @@
 
 #define ENERGY_RANGE_FACTOR	(2.5/FUEL_SCALE_FACT)
 
-#define WORM_BRAKE_FACTOR	4
+#define WORM_BRAKE_FACTOR	1
 #define WORMCOUNT		64
 
 #define ROB_LOOK_AH		2
+
+#ifdef __GNUC__
+#define	INLINE	inline
+#else
+#define INLINE
+#endif /* __GNUC__ */
 
 #endif

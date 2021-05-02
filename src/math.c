@@ -1,8 +1,8 @@
-/* $Id: math.c,v 1.8 1992/08/27 00:26:00 bjoerns Exp $
+/* $Id: math.c,v 1.5 1993/04/01 18:17:42 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -16,12 +16,38 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 1.8 1992/08/27 00:26:00 bjoerns Exp $";
+    "@(#)$Id: math.c,v 1.5 1993/04/01 18:17:42 bjoerns Exp $";
 #endif
 
-double  	tbl_sin[TABLE_SIZE];
+float  	tbl_sin[TABLE_SIZE];
 wireobj		ships[RES];
 
+
+int mod(int x, int y)
+{
+    if (x >= y || x < 0)
+	x = x - y*(x/y);
+
+    if (x < 0)
+	x += y;
+
+    return x;
+}
+
+
+float findDir(float x, float y)
+{
+    float angle;
+
+    if (x != 0.0 || y != 0.0)
+	angle = atan2(y, x) / (2 * PI);
+    else
+	angle = 0.0;
+
+    if (angle < 0)
+	angle++;
+    return angle * RES;
+}
 
 
 void Make_table(void)
@@ -29,7 +55,7 @@ void Make_table(void)
     int i;
 
     for (i=0; i<TABLE_SIZE; i++)
-	tbl_sin[i] = sin((2*PI) * ((double)i/TABLE_SIZE));
+	tbl_sin[i] = sin((2*PI) * ((float)i/TABLE_SIZE));
 }
 
 
@@ -61,7 +87,6 @@ void Free_ships(void)
 {
     int dir;
 
-
     for (dir=0; dir<RES; dir++)
 	free(ships[dir].pts);
 }
@@ -70,11 +95,11 @@ void Free_ships(void)
 void Compute_gravity(void)
 {
     int xi, yi, g, gx, gy;
-    double theta, avst, dx, dy;
+    float theta, dist, dx, dy;
 
 
     for (xi=0; xi<World.x; xi++) {
-        vector *line=World.gravity[xi];
+        vector *line = World.gravity[xi];
 
 	for (yi=0; yi<World.y; yi++) {
 	    line[yi].y = Gravity;
@@ -87,32 +112,35 @@ void Compute_gravity(void)
 	gy = World.grav[g].pos.y;
 
 	for (xi = (gx>GRAV_RANGE) ? gx-GRAV_RANGE : 0;
-	     (xi<gx+GRAV_RANGE) && (xi<World.x); xi++)
-        {   vector *line=World.gravity[xi];
+	     (xi<gx+GRAV_RANGE) && (xi<World.x);
+	     xi++) {
+	    vector *line = World.gravity[xi];
 
 	    for (yi = (gy>GRAV_RANGE) ? gy-GRAV_RANGE : 0;
-		 (yi<gy+GRAV_RANGE) && (yi<World.y); yi++) {
-		dx = (double)(gx - xi);
-		dy = (double)(gy - yi);
+		 (yi<gy+GRAV_RANGE) && (yi<World.y);
+		 yi++) {
+
+		dx = gx - xi;
+		dy = gy - yi;
 
 		if ((dy == 0) && (dx == 0))	/* In a grav? */
 		    continue;
 
-		avst = (double)LENGTH(dx, dy);
+		dist = LENGTH(dx, dy);
 		if (dx != 0.0) {
 		    theta = atan2(dy, dx);
 		} else
 		    if (dy > 0)
 			theta = PI/2.0;
 		    else
-			theta = 3.0*PI/2.0;
+			theta = 3.0 * PI/2.0;
 
-		if (World.block[gx][gy] == CWISE_GRAV ||
-		    World.block[gx][gy] == ACWISE_GRAV)
+		if (World.block[gx][gy] == CWISE_GRAV
+		    || World.block[gx][gy] == ACWISE_GRAV)
 		    theta += PI/2.0;
 
-		line[yi].x += cos(theta)*World.grav[g].force/sqr(avst);
-		line[yi].y += sin(theta)*World.grav[g].force/sqr(avst);
+		line[yi].x += cos(theta) * World.grav[g].force / sqr(dist);
+		line[yi].y += sin(theta) * World.grav[g].force / sqr(dist);
 	    }
         }
     }

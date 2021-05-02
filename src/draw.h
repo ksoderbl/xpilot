@@ -1,8 +1,8 @@
-/* $Id: draw.h,v 1.10 1992/08/26 19:36:08 bjoerns Exp $
+/* $Id: draw.h,v 1.3 1993/03/23 17:54:06 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -30,11 +30,12 @@
 #define SCROLL_LEN	    100
 
 #define TITLE_DELAY	    500
+#define	UPDATE_SCORE_DELAY  (FPS)
 
 #define CLOAK_FAILURE	    130
 
 #ifndef NO_ROTATING_DASHES
-#define NO_OF_DASHES	    2
+#define NUM_DASHES	    2
 #define DASHES_LENGTH	    12
 extern char dashes[];
 #endif

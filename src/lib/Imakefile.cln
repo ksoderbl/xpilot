@@ -1,10 +1,6 @@
 # @(#)Imakefile 23/01/92
 # Imakefile - socklib
 
-#ifdef HPArchitecture
-CCOPTIONS = -Aa -D_HPUX_SOURCE
-#endif
-
 OBJS = socklib.o
 SRCS = socklib.c
 

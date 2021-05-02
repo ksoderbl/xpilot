@@ -2,7 +2,7 @@
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.

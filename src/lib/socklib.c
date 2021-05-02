@@ -14,8 +14,20 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 1.4 1992/08/26 19:36:35 bjoerns Exp $
+ * RCS:      $Id: socklib.c,v 1.2 1993/03/24 03:24:56 bjoerns Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 1.2  1993/03/24  03:24:56  bjoerns
+ * Patch by Bert, mainly casting to right type.
+ *
+ * Revision 1.1  1993/03/09  14:33:25  kenrsc
+ * Hopefully we won't have a corrupted CVS directory anymore.
+ *
+ * Revision 1.1.1.1  1993/02/27  14:47:46  bjoerns
+ * XPilot v2.0
+ *
+ * Revision 1.1.1.1  1993/01/19  17:19:59  bjoerns
+ * XPilot v1.4
+ *
  * Revision 1.4  1992/08/26  19:36:35  bjoerns
  * Incorporated NCD patch.
  *
@@ -46,7 +58,9 @@ static char sourceid[] =
 #define _SOCKLIB_LIBSOURCE
 
 /* Include files */
+#include <unistd.h>
 #include <sys/types.h>
+#include <sys/param.h>
 #if(hpux)
 #include <time.h>
 #else
@@ -55,6 +69,8 @@ static char sourceid[] =
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <netdb.h>
 #include <signal.h>
@@ -201,7 +217,7 @@ int	port;
     addr_in.sin_addr.s_addr	= INADDR_ANY;
     addr_in.sin_port		= htons(port);
     
-    retval = bind(fd, &addr_in, sizeof(struct sockaddr_in));
+    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
     if (retval < 0)
     {
 	sl_errno = SL_EBIND;
@@ -262,7 +278,7 @@ int	fd;
     struct sockaddr_in	addr;
 
     len = sizeof(struct sockaddr_in);
-    if (getsockname(fd, &addr, &len) < 0)
+    if (getsockname(fd, (struct sockaddr *)&addr, &len) < 0)
 	return (-1);
 
     return (ntohs(addr.sin_port));
@@ -342,7 +358,7 @@ int	port;
 	return (-1);
     }
 
-    if (connect(fd, &peer, sizeof(struct sockaddr_in)) < 0) 
+    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0) 
     {
 	sl_errno = SL_ECONNECT;
 	(void) close(fd);
@@ -454,7 +470,8 @@ int	fd;
     timeout.tv_usec = sl_timeout_us;
     readfds = (1 << fd);
 
-    (void) select(fd + 1, &readfds, &writefds, &exceptfds, &timeout);
+    (void) select(fd + 1, (fd_set *)&readfds, (fd_set *)&writefds,
+	(fd_set *)&exceptfds, &timeout);
     
     if (readfds & (1 << fd))
 	return (1);
@@ -729,7 +746,7 @@ int	port;
     addr_in.sin_family		= AF_INET;
     addr_in.sin_addr.s_addr	= INADDR_ANY;
     addr_in.sin_port		= htons(port);
-    retval = bind(fd, &addr_in, sizeof(struct sockaddr_in));
+    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
     if (retval < 0)
     {
 	sl_errno = SL_EBIND;
@@ -812,7 +829,7 @@ char	*host, *sbuf;
 		    ((struct in_addr*)(hp->h_addr))->s_addr;
 	}
     }
-    return (sendto(fd, sbuf, size, 0, &the_addr,
+    return (sendto(fd, sbuf, size, 0, (struct sockaddr *)&the_addr,
 		   sizeof(struct sockaddr_in)));
 } /* DgramSend */
 
@@ -860,7 +877,8 @@ int	size;
     int		addrlen = sizeof(struct sockaddr_in);
 
     (void) memset((char *)&sl_dgram_lastaddr, 0, addrlen);
-    return (recvfrom(fd, rbuf, size, 0, &sl_dgram_lastaddr, &addrlen));
+    return (recvfrom(fd, rbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
+	&addrlen));
 } /* DgramReceiveAny */
 
 

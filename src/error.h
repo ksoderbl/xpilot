@@ -1,4 +1,4 @@
-/* $Id: error.h,v 1.2 1992/06/28 07:55:04 bjoerns Exp $
+/* $Id: error.h,v 1.1 1993/03/09 14:31:23 kenrsc Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by

@@ -1,7 +1,48 @@
+$Id: BUGS,v 1.2 1993/03/04 19:13:18 bjoerns Exp $
+
 KNOWN BUGS
 ==========
+- Use proper visual, not default one.
 - Doesn't handle limited dogfight properly, don't use until fixed (the mode
   isn't very popular).
 - Doesn't always manage to contact server (could be I'm pouring too many
   packets into the buffers at once).
 - Sometimes you're able to lock on yourself.
+- Ball isn't removed when you're killed.
+- Ball should be afflicted by collisions.
+- When you're hit from a no-player smart shot, it says 'Playername was
+  hit by Playername'.
+- Cloning bug, if you die after hitting 'r' the clone doesn't die but
+  becomes a robot.
+
+From: mjb@cs.unr.edu (Mike Brown)
+Message-Id: <9209222129.AA04453@dws001.cs.unr.edu>
+To: bjoerns@staff.cs.uit.no
+Subject: Cloning bug in xpilot
+Status: RO
+
+Is cloning yourself an advertised feature?  Unadvertised?  A bug?
+Hit 'q' for self distruct, then let go of a tank with 'r', and if you
+self distructbefore the tank dies of other things, you both come back.
+The "clone" is marked with a "T" the same way robots are marked with
+an "R".  It acts like a robot, but has your name.  I think it is a
+"pseudo" player in the game.
+
+Anyway.
+After somebody clones themselves, and then everybody exits the game,
+the server doesn't die.
+
+It does die if nobody clones themselves.
+
+This is on a DECstation 3100,
+ULTRIX V4.2 (Rev. 96) System #8: Tue Jun 23 17:49:17 PDT 1992
+UWS V4.2 (Rev. 272)
+
+compiled with gcc
+gcc -O -DFUNCPROTO -DLOCALGURU=\"...\" -DLIBDIR=\"...\" -c xpilot.c
+...
+
+It is just an annoyance.
+--
+Mike Brown, mjb@pyramid.cs.unr.edu    "I am the scratch monkey"
+

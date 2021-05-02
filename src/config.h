@@ -1,22 +1,29 @@
-/* $Id: config.h,v 1.14 1992/08/27 00:25:49 bjoerns Exp $
+/* $Id: config.h,v 1.2 1993/03/24 23:34:10 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
  */
 
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#ifdef MOD2
+#  error MOD2 already defined - config.h should be included before const.h
+#endif
+
 /*
  * Configure these, that's what they're here for.
  */
 #ifndef LOCALGURU
-#    define LOCALGURU		"ftp@csc.liv.ac.uk"
+#    define LOCALGURU		"rkl@csc.liv.ac.uk"
 #endif
 
 #ifndef LIBDIR
-#    define LIBDIR		"/usr/local/lib/X11/xpilot/"
+#    define LIBDIR		"/usr/local/games/lib/xpilot/"
 #endif
 
 #ifndef MOTDFILE
@@ -29,6 +36,12 @@
 #    define MAPDIR		LIBDIR "maps/"
 #endif
 
+/*
+ * Uncomment this if your machine doesn't use
+ * two's complement negative numbers.
+ */
+/* #define MOD2(x, m)	mod(x, m)	/* */
+
 
 /*
  * The following macros decide the speed of the game and
@@ -39,8 +52,8 @@
 #    define UPDATES_PR_FRAME	1
 #endif
 
-#ifndef FRAMES_PR_SEC
-#    define FRAMES_PR_SEC	10
+#ifndef FPS
+#    define FPS	framesPerSecond
 #endif
 
 /*
@@ -53,6 +66,10 @@
 
 #ifndef ZCAT_FORMAT
 #    define ZCAT_FORMAT "zcat < %s"
+#endif
+
+#ifndef DEFAULTS_FILE_NAME
+#    define DEFAULTS_FILE_NAME	LIBDIR "server-defaults"
 #endif
 
 /*
@@ -71,10 +88,12 @@
 /*
  * Leave these alone.
  */
-#define REPORT_ADDRESS	"ftp@csc.liv.ac.uk"
+#define REPORT_ADDRESS	"xpilot@cs.uit.no"
 
 #ifdef	DEBUG
 #    define D(x)	{ {x}; fflush(stdout); }
 #else
 #    define D(x)	{ ; }
 #endif
+
+#endif /* CONFIG_H */

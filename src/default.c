@@ -1,8 +1,8 @@
-/* $Id: default.c,v 1.10 1992/08/27 00:25:50 bjoerns Exp $
+/* $Id: default.c,v 1.5 1993/04/01 18:17:27 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -11,23 +11,27 @@
 #include <X11/keysym.h>
 #include "global.h"
 #include "pack.h"
-#include "limits.h"
+#include "const.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 1.10 1992/08/27 00:25:50 bjoerns Exp $";
+    "@(#)$Id: default.c,v 1.5 1993/04/01 18:17:27 bjoerns Exp $";
 #endif
 
-#define ON(x)	      ( (strcasecmp(x, "true")==0) || (strcasecmp(x, "on")==0) )
-#define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
 
-
-
-static double atod(char *str)
+static int ON(char *optval)
 {
-    double tmp;
+    return (strcasecmp(optval, "true") == 0
+	    || strcasecmp(optval, "on") == 0
+	    || strcasecmp(optval, "yes") == 0);
+}
 
-    sscanf(str, "%lf", &tmp);
+
+static float atod(char *str)
+{
+    float tmp;
+
+    sscanf(str, "%f", &tmp);
     return (tmp);
 }
 
@@ -62,6 +66,7 @@ void Get_defaults(int ind)
 	"keyToggleCompass",	KEY_TOGGLE_COMPASS,
 	"keySwapSettings",	KEY_SWAP_SETTINGS,
 	"keyRefuel",		KEY_REFUEL,
+	"keyConnector",		KEY_CONNECTOR,
 	"keyIncreasePower",	KEY_INCREASE_POWER,
 	"keyDecreasePower",	KEY_DECREASE_POWER,
 	"keyIncreaseTurnspeed",	KEY_INCREASE_TURNSPEED,
@@ -71,9 +76,8 @@ void Get_defaults(int ind)
         "keyTankDetach",        KEY_TANK_DETACH,
 	"keyThrust",		KEY_THRUST,
 	"keyCloak",		KEY_CLOAK,
-	"keySlowdown",		KEY_SLOWDOWN,
-	"keySpeedup",		KEY_SPEEDUP,
 	"keyEcm",		KEY_ECM,
+	"keyDropBall",		KEY_DROP_BALL,
     };
     static struct _keyDefs keyDefs[MAX_KEY_DEFS] =
     {
@@ -105,6 +109,8 @@ void Get_defaults(int ind)
 	XK_Escape,		KEY_SWAP_SETTINGS,
 	XK_f,			KEY_REFUEL,
 	XK_Control_L,		KEY_REFUEL,
+	XK_Control_L,		KEY_CONNECTOR,
+	XK_space,		KEY_CONNECTOR,
 	XK_KP_Multiply,		KEY_INCREASE_POWER,
 	XK_KP_Divide,		KEY_DECREASE_POWER,
 	XK_KP_Add,		KEY_INCREASE_TURNSPEED,
@@ -116,8 +122,7 @@ void Get_defaults(int ind)
 	XK_Shift_R,		KEY_THRUST,
 	XK_Delete,		KEY_CLOAK,
 	XK_BackSpace,		KEY_CLOAK,
-	XK_minus, 		KEY_SPEEDUP,
-	XK_equal, 		KEY_SLOWDOWN
+	XK_d,			KEY_DROP_BALL,
     };
 
 
@@ -131,7 +136,7 @@ void Get_defaults(int ind)
     pl->power_s			= 35.0;
     pl->turnspeed_s		= 25.0;
     pl->turnresistance_s	= 0.12;
-    pl->team			= 0;
+    pl->team			= TEAM_NOT_SET;
     pl->fuel.l3			= 500*FUEL_SCALE_FACT;
     pl->fuel.l2			= 200*FUEL_SCALE_FACT;
     pl->fuel.l1			= 100*FUEL_SCALE_FACT;
@@ -272,7 +277,11 @@ void Get_defaults(int ind)
 	    char *p, *p1;
 	    int j;
 
-	    p1 = (char *)malloc(sizeof(char) * (strlen(str) + 1));
+	    if ((p1 = (char *)malloc(sizeof(char) * (strlen(str) + 1)))
+		== NULL) {
+		error("No memory for key bindings");
+		continue;
+	    }
 	    strcpy(p1, str);
 	    p = strtok(p1, " \t\n");
 

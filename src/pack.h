@@ -1,8 +1,8 @@
-/* $Id: pack.h,v 1.7 1992/06/28 05:38:22 bjoerns Exp $
+/* $Id: pack.h,v 1.3 1993/03/24 22:22:30 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -12,13 +12,13 @@
 #define	PACK_H
 
 #include "lib/socklib.h"
-#include "limits.h"
+#include "const.h"
 #include "types.h"
 
 #define CAP_LETTER(c)	(c = (c>='a' && c<='z') ? c-'a'+'A' : c)
 
 #define SERVER_PORT	15345		/* Port which server listens to. */
-#define	MAGIC		0xABCDEF0UL	/* - Unique magic number - */
+#define	MAGIC		0xACBDFE1UL	/* - Unique magic number - */
 
 #define	MAX_STR_LEN	4096
 #define	MAX_ARG_LEN	256
@@ -73,7 +73,6 @@ typedef struct {
     char	display[MAX_DISP_LEN];	/* Display of player */
     char	nick[MAX_NAME_LEN];	/* Nick name */
     u_short	team;			/* Team of player */
-#define	TEAM_NOT_SET		0xff
 } enter_game_pack_t;
 #define	ENTER_GAME_pack		0x00
 
@@ -151,10 +150,12 @@ typedef union {
 #define	SUCCESS		0x00		/* Operation successful */
 #define	E_NOT_OWNER	0x01		/* Permission denied, not owner */
 #define	E_GAME_FULL	0x02		/* Game is full, entry denied */
-#define	E_GAME_LOCKED	0x03		/* Game is locked, entry denied */
-#define	E_DISPLAY	0x04		/* Couldn't open display */
-#define	E_DBUFF		0x05		/* Couldn't init. double buffering */
-#define	E_NOT_FOUND	0x06		/* Player was not found */
-#define	E_IN_USE	0x07		/* Name is already in use */
+#define	E_TEAM_FULL	0x03		/* Team is full, entry denied */
+#define	E_TEAM_NOT_SET	0x04		/* Team is full, entry denied */
+#define	E_GAME_LOCKED	0x05		/* Game is locked, entry denied */
+#define	E_DISPLAY	0x06		/* Couldn't open display */
+#define	E_DBUFF		0x07		/* Couldn't init. double buffering */
+#define	E_NOT_FOUND	0x08		/* Player was not found */
+#define	E_IN_USE	0x09		/* Name is already in use */
 
 #endif

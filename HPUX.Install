@@ -1,28 +1,64 @@
-IMPORTANT NOTES:
+Files changed:
 
-* This is the 1.3 beta-test release, but seems stable to me.
+* Makefile:
+  - Created from scratch. Automatically xmkmf's the Imakefile in the src
+    sub-directory.
+  - Included "make clean" and "make install" rules as usual.
+ 
+* maps (directory):
+  - Extra maps have been ftp'd across from cs.uit.no because the original maps
+    directory in the 2.0beta archive file and the one on that site were
+    different.
 
-* Both 256 Grey-scale 720s and colour 720s work OK with this game now, but
-  remember that it does NOT work at all on mono displays.
+* src/Imakefile:
+  - Added #ifdef HPArchitecture around some of the definitions.
+  - Added XPILOTDIR definition.
+  - Installed the maps during a "make install".
+  - Setuid'ed the binaries during a "make install".
 
-* After you've built and installed the binaries for xpilot (in the src
-  directory - use "xmkmf" and "make install install.man"), you should copy the
-  map files into the library directory. In the current configuration, this
-  would be:
+* src/config.h:
+  - Changed LOCALGURU of course.
 
-  mkdir /usr/local/lib/X11/xpilot
-  cp -r maps /usr/local/lib/X11/xpilot
-  chmod -R +r /usr/local/lib/X11/xpilot/maps
+* src/map.h:
+  - Changed DEFAULT_MAP to be "labyrinth.map". It was "newcontinent.map" which
+    wasn't only NOT supplied, but also caused xpilots to core dump because it
+    wasn't found !
 
-  Note that extra maps have been ftp'd across from cs.uit.no because the
-  original maps directory in the 1.3beta archive file and the one on that site
-  were different.
+* src/lib/Imakefile:
+  - Switch on ANSI mode during compilation and got the first ANSI warnings
+    that Bjorn's missed :-) :-)
 
-* To try out xpilot, type:
+* src/xpilot.man and src/xpilots.man:
+  - Copies of the man pages out of the man6 directory. Edited appropriately
+    for Chapter 1 references and installation directory paths.
+
+To compile and install:
+
+make install
+[Do not install as root !! The binaries are setuid'ed to the installer]
+
+To test:
 
   xpilots &
   xpilot -join
 
-The man pages are in the man6 directory and should be copied to
-/usr/local/man/man6 (though why Chapter 6 was chosen is a mystery to me) or
-wherever you put your local man pages.
+Notes:
+
+* The standard "continent,map" appears to be useless :-( It has no bases and
+  therefore the maximum number of players allowed is ZERO. Good huh ? :-(
+
+* Be warned ! This is the 2.0 beta-test release ! On one occasion, I got a
+  load of ATAN: domain error messages (I've had these messages with 1.2beta
+  as well), the hard disc went crazy and the xpilot program core dumped :-(
+  But hey, we don't want to deprive you of the latest version, do we ? :-)
+
+* Both 256 Grey-scale 700s and colour 700s work OK with this game now, but
+  remember that it does NOT work at all on mono displays.
+
+* I got some REALLY bizarre behaviour with xpilots until I setuid'ed it -
+  it was claiming that map files had no bases in them unless I ran it
+  as the owner of the binary. Yes, the author claims you shouldn't setuid()
+  the binaries, but I've ignored that :-)
+
+* The game's a big loser on greyscale displays - you can't see any of the
+  landscape :-(

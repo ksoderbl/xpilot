@@ -1,8 +1,8 @@
-/* $Id: global.h,v 1.9 1992/08/27 00:25:56 bjoerns Exp $
+/* $Id: global.h,v 1.8 1993/04/01 18:17:35 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -10,6 +10,10 @@
 
 #ifndef	GLOBAL_H
 #define	GLOBAL_H
+
+#if defined(hpux)
+#   pragma HP_ALIGN NATURAL
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,10 +43,10 @@ typedef struct {
 /*
  * Global data.
  */
-extern player		*Players[];
+extern player		**Players;
 extern object		*Obj[];
 extern wireobj		ships[];
-extern unsigned long	loops;
+extern long		loops;
 extern long		Id;
 extern int		NumPlayers;
 extern int		NumPseudoPlayers;
@@ -53,18 +57,61 @@ extern message_t	*Msg[];
 extern server		Server;
 extern int		RadarHeight;
 extern jmp_buf		SavedEnv;
-extern double		ShotsMass, ShipPower, ShipMass, ShotsSpeed, Gravity;
+extern float		ShotsMass, ShipPower, ShipMass, ShotsSpeed, Gravity;
 extern int		ShotsMax, ShotsLife;
-extern bool		ShotsGravity, LooseMass;
+extern bool		ShotsGravity;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
 extern Atom		ProtocolAtom, KillAtom;
 extern long		GetInd[];
-extern double		tbl_sin[];
+extern float		tbl_sin[];
 extern XColor		colors[];
-extern int		Delay;
 extern int		Shutdown, ShutdownDelay;
 extern int		RadarHeight;
 extern bool		RawMode;
 extern bool		NoQuit;
+extern int		framesPerSecond;
+extern char		*mapFileName;
+extern int		mapRule;
+extern char		*mapData;
+extern int		mapWidth;
+extern int		mapHeight;
+extern char		*mapName;
+extern char		*mapAuthor;
+extern bool		crashWithPlayer;
+extern bool		playerKillings;
+extern bool		playerShielding;
+extern bool		limitedVisibility;
+extern bool		limitedLives;
+extern int		worldLives;
+extern bool		teamPlay;
+extern bool		onePlayerOnly;
+extern bool		timing;
+extern bool		edgeWrap;
+extern ipos		gravityPoint;
+extern float		gravityAngle;
+extern bool		gravityPointSource;
+extern bool		gravityClockwise;
+extern bool		gravityAnticlockwise;
+extern int		MovingItemsRand;
+extern int 		ThrowItemOnKillRand;
+extern bool		updateScores;
+extern float 		dropItemOnKillProb;
+extern float 		movingItemProb;
+extern float 		itemEnergyPackProb;
+extern float 		itemTankProb;
+extern float		itemECMProb;
+extern float		itemMineProb;
+extern float 		itemMissileProb;
+extern float		itemCloakProb;
+extern float		itemSensorProb;
+extern float		itemWideangleProb;
+extern float		itemRearshotProb;
+extern float		itemAfterburnerProb;
+extern float		maxItemDensity;
 
-#endif
+#if defined(__sun__)
+#  define srand(s)	srandom(s)
+#  define rand()	random()
+#endif /* __sun__ */
+
+#endif /* GLOBAL_H */

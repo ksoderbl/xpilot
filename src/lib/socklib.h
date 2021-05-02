@@ -14,8 +14,20 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.2 1992/08/26 19:36:36 bjoerns Exp $
+ * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.1 1993/03/09 14:33:27 kenrsc Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 1.1  1993/03/09  14:33:27  kenrsc
+ * Hopefully we won't have a corrupted CVS directory anymore.
+ *
+ * Revision 1.1.1.1  1993/02/27  14:47:46  bjoerns
+ * XPilot v2.0
+ *
+ * Revision 1.1.1.1  1993/01/19  17:19:59  bjoerns
+ * XPilot v1.4
+ *
+ * Revision 1.3  1992/09/11  22:50:24  bjoerns
+ * Applied NCD2 patch.
+ *
  * Revision 1.2  1992/08/26  19:36:36  bjoerns
  * Incorporated NCD patch.
  *
@@ -32,6 +44,10 @@
 
 #ifndef _SOCKLIB_INCLUDED
 #define _SOCKLIB_INCLUDED
+
+#if(hpux)
+#pragma HP_ALIGN NATURAL
+#endif
 
 /* Error values and their meanings */
 #define SL_ESOCKET		0	/* socket system call error */

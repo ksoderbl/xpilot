@@ -1,8 +1,8 @@
-/* $Id: bit.h,v 1.4 1992/06/25 03:23:46 bjoerns Exp $
+/* $Id: bit.h,v 1.1 1993/03/09 14:31:05 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.

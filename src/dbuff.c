@@ -1,8 +1,8 @@
-/* $Id: dbuff.c,v 1.14 1992/08/26 19:36:03 bjoerns Exp $
+/* $Id: dbuff.c,v 1.1 1993/03/09 14:31:12 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -25,7 +25,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 1.14 1992/08/26 19:36:03 bjoerns Exp $";
+    "@(#)$Id: dbuff.c,v 1.1 1993/03/09 14:31:12 kenrsc Exp $";
 #endif
 
 

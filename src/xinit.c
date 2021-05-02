@@ -1,8 +1,8 @@
-/* $Id: xinit.c,v 1.15 1992/08/27 00:26:15 bjoerns Exp $
+/* $Id: xinit.c,v 1.4 1993/03/23 17:54:18 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -26,7 +26,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 1.15 1992/08/27 00:26:15 bjoerns Exp $";
+    "@(#)$Id: xinit.c,v 1.4 1993/03/23 17:54:18 bjoerns Exp $";
 #endif
 
 /*
@@ -34,11 +34,12 @@ static char sourceid[] =
  */
 static char		msg[MSG_LEN];
 static XFontStruct	*font;
+static message_t	*MsgBlock;
 
 Atom		ProtocolAtom, KillAtom;
 
 #ifndef NO_ROTATING_DASHES
-char dashes[NO_OF_DASHES] = { 8, 4 };
+char dashes[NUM_DASHES] = { 8, 4 };
 #endif
 
 
@@ -177,8 +178,9 @@ u_byte Init_window(int ind)
     /*
      * Selecting events the we can handle.
      */
-    XSelectInput(pl->disp, pl->top, KeyPressMask | KeyReleaseMask |
-		 EnterWindowMask | LeaveWindowMask);
+    XSelectInput(pl->disp, pl->top,
+		 KeyPressMask | KeyReleaseMask
+		 | FocusChangeMask | StructureNotifyMask);
     XSelectInput(pl->disp, pl->quit_b,
 		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
     XSelectInput(pl->disp, pl->info_close_b,
@@ -223,8 +225,8 @@ u_byte Init_window(int ind)
 	xsh.y = (DisplayHeight(pl->disp, DefaultScreen(pl->disp))
 		 - xsh.height) /2;
 
-	xclh.res_name = NULL;		/* NULL = Automatically uses Argv[0], */
-	xclh.res_class = "XPilot";	/* stripped for directory prefixes. */
+	xclh.res_name = NULL;		/* NULL: Automatically uses Argv[0], */
+	xclh.res_class = "XPilot";	/* stripped of directory prefixes. */
 
 	/*
 	 * Set the above properties.
@@ -326,7 +328,7 @@ u_byte Init_window(int ind)
     pl->gctxt = XCreateGC(pl->disp, pl->info_w, 0, &xgc);
 
     XSetBackground(pl->disp, pl->gc, pl->colors[BLACK].pixel);
-    XSetDashes(pl->disp, pl->gc, 0, dashes, NO_OF_DASHES);
+    XSetDashes(pl->disp, pl->gc, 0, dashes, NUM_DASHES);
     XSetLineAttributes(pl->disp, pl->gc, 0, LineSolid, CapButt, JoinBevel);
     pl->color = WHITE;
 
@@ -410,6 +412,7 @@ void Alloc_msgs(int number)
     message_t *x=(message_t*)malloc(number*sizeof(message_t));
     int i;
 
+    MsgBlock = x;
     for (i=0; i<number; i++) {
 	Msg[i]=x;
 	x->txt[0] = '\0';
@@ -421,7 +424,7 @@ void Alloc_msgs(int number)
 
 void Free_msgs(void)
 {
-    free(Msg[0]);
+    free(MsgBlock);
 }
 
 
@@ -516,7 +519,7 @@ void Expose_help_window(int ind)
                        "E\n"
                        "R\n"
 		       "I\n",
-		       pl->colors[WHITE].pixel,pl->colors[BLACK].pixel);
+		       pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
 	DrawShadowText(ind, pl->disp, pl->help_w, pl->gctxt, 180, 7,
 		       "\n\n"
 		       "Rotate left.\n"
@@ -544,7 +547,7 @@ void Expose_help_window(int ind)
                        "Switch to previous tank.\n"
                        "Detach current tank.\n"
 		       "Toggle id mode.\n",
-		       pl->colors[WHITE].pixel,pl->colors[BLACK].pixel);
+		       pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
 	break;
 
     case 1:
@@ -689,16 +692,15 @@ void Quit(int ind)
 
 	XAutoRepeatOn(pl->disp);
 
-	end_dbuff(ind, pl->dbuf_state);	    /* Clean up... */
+	end_dbuff(ind, pl->dbuf_state);	    		/* Clean up */
 	if (pl->colormap)
 	    XFreeColormap(pl->disp, pl->colormap);
 	XCloseDisplay(pl->disp);
     }
 
     Delete_player(ind);
-    Set_label_strings();
+    updateScores = true;
 }
-
 
 
 /*
@@ -718,7 +720,7 @@ int FatalError(Display *disp)
 	if (Players[i]->disp == disp)
 	    break;
 
-    if (i<NumPlayers) {	    /* Found the display. */
+    if (i < NumPlayers) {	    /* Found the display. */
 	printf("Player %s@%s did a nasty quit.\n",
 	       Players[i]->name, DisplayString(Players[i]->disp));
 
@@ -730,14 +732,14 @@ int FatalError(Display *disp)
 	longjmp(SavedEnv, 1);
 
     } else {
-	error("Fatal I/O error, but couldn't determine which player caused it");
+	error("Fatal I/O error. Couldn't determine which player caused it");
     }
     return (0);
 }
 
 
 
-void Set_labels(void)
+void Draw_score_table(void)
 {
     int register i, ind;
     player *pl;
@@ -749,20 +751,14 @@ void Set_labels(void)
 	if (pl->disp_type == DT_NONE)
 	    continue;
 
-/*	if (BIT(pl->disp_type, DT_PLANES))
-	    XSetPlaneMask(pl->disp, pl->gc, pl->dbuf_state->drawing_planes);
-*/
 	XClearWindow(pl->disp, pl->players);
-/*	XSetForeground(pl->disp, pl->gcp, pl->colors[BLUE].pixel);
-	XFillRectangle(pl->disp, pl->players, pl->gcp, 0, 0, 256, 490);
-	XSetForeground(pl->disp, pl->gcp, pl->colors[WHITE].pixel);	*/
 	
 	for(i=0; i<NumPlayers; i++)
-          if (pl->lblstr[0])
-              ShadowDrawString(ind, pl->disp, pl->players, pl->gcp,
+	    ShadowDrawString(ind, pl->disp, pl->players, pl->gcp,
                              1, 20+(20*i),
 			     Players[i]->lblstr,
                              pl->colors[WHITE].pixel,
 			     pl->colors[BLACK].pixel);
     }
 }
+

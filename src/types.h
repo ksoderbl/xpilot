@@ -1,8 +1,8 @@
-/* $Id: types.h,v 1.1 1992/06/25 03:24:19 bjoerns Exp $
+/* $Id: types.h,v 1.1 1993/03/09 14:31:57 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.

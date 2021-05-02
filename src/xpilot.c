@@ -1,8 +1,8 @@
-/* $Id: xpilot.c,v 1.23 1992/08/26 19:36:29 bjoerns Exp $
+/* $Id: xpilot.c,v 1.10 1993/03/25 14:45:12 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -10,25 +10,30 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <pwd.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <net/if.h>
 #include <netdb.h>
-#if  defined(apollo)
-#    include <sys/types.h>
-#else
+#if  !defined(apollo)
 #    include <string.h>
 #endif
 
+#include "config.h"
 #include "pack.h"
 #include "bit.h"
 #include "version.h"
-#include "config.h"
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 1.23 1992/08/26 19:36:29 bjoerns Exp $";
+    "@(#)$Id: xpilot.c,v 1.10 1993/03/25 14:45:12 bjoerns Exp $";
 #endif
 
 #define MAX_LINE	256
@@ -177,6 +182,7 @@ bool Connect_to_server(void)
     char		c, str[MAX_LINE];
     reply_pack_t	reply;
     struct hostent	*he;
+    int			Query_all(int sockfd, int port, char *msg, int msglen);
 
 
     core->port = htonl(GetPortNum(socket_i));
@@ -194,7 +200,7 @@ bool Connect_to_server(void)
 	    exit (-1);
 	}
 
-	printf("Server on %s. Enter command> ", he->h_name);
+	printf("*** Server on %s. Enter command> ", he->h_name);
 
 	gets(str);
 	c = str[0];
@@ -310,8 +316,8 @@ bool Connect_to_server(void)
                "L    -   Lock/unLock server access.   (only owner)\n"
                "D(*) -   shutDown/cancel shutDown.    (only owner)\n"
                "J or just Return enters the game.\n"
-               "* If you don't specify any delay for shutdown, you will signal "
-               "  that\nthe server should stop an ongoing shutdown.\n");
+               "* If you don't specify any delay, you will signal that\n"
+	       "  the server should stop an ongoing shutdown.\n");
         goto again;
         break;
     }
@@ -331,13 +337,23 @@ bool Connect_to_server(void)
 	 * Get reply message.  If we failed, return false (next server).
 	 */
 	if ((len = Get_reply_message(&reply)) < sizeof(core_pack_t)) {
-	    error("Could not get any answer from server (pack length %d)", len);
+	    error("No answer from server (packet length %d)", len);
 	    return (false);
+	}
+
+	/*
+	 * Did the reply include a string?
+	 */
+	if (len > sizeof(core_pack_t) && (!auto_connect || list_servers)) {
+	    if (list_servers)
+		printf("SERVER HOST......: %s\n", server_host);
+	    printf("%s", reply.str);
 	}
 
 	/*
 	 * Now try and interpret the result.
 	 */
+	errno = 0;
 	switch (reply.status) {
 
 	case SUCCESS:
@@ -347,15 +363,15 @@ bool Connect_to_server(void)
 	    switch (req.core.type) {
 	    case SHUTDOWN_pack:
 		if (ntohl(req.command.arg_int) == 0)
-		    puts("Shutdown stopped.");
+		    puts("*** Shutdown stopped.");
 		else
-		    puts("Shutdown initiated.");
+		    puts("*** Shutdown initiated.");
 		break;
 	    case ENTER_GAME_pack:
-		puts("You have entered the game.");
+		puts("*** You have entered the game.");
 		break;
 	    default:
-		puts("Operation successful.");
+		puts("*** Operation successful.");
 		break;
 	    }
 	    break;
@@ -390,6 +406,13 @@ bool Connect_to_server(void)
 	case E_GAME_FULL:
 	    error("Sorry, game full");
 	    break;
+	case E_TEAM_FULL:
+	    error("Sorry, team full");
+	    break;
+	case E_TEAM_NOT_SET:
+	    error("Sorry, team play selected "
+		  "and you haven't specified your team");
+	    break;
 	case E_GAME_LOCKED:
 	    error("Sorry, game locked");
 	    break;
@@ -405,13 +428,6 @@ bool Connect_to_server(void)
 	default:
 	    error("Wrong status '%d'", reply.status);
 	    break;
-	}
-
-	/*
-	 * Did the reply include a string?
-	 */
-	if (len > sizeof(core_pack_t) && !auto_connect) {
-	    puts(reply.str);
 	}
 
 	if (list_servers)	/* If listing servers, go to next one */
@@ -458,10 +474,13 @@ bool Connect_to_server(void)
  */
 int main(int argc, char *argv[])
 {
-    char		machine[MAX_LINE];
+    char		machine[MAX_LINE], *disp;
     int			i;
     struct passwd	*pwent;
     bool		connected = false;
+#ifdef	LIMIT_ACCESS
+    extern bool		Is_allowed(char *);
+#endif
 
 
     /*
@@ -482,7 +501,12 @@ int main(int argc, char *argv[])
     }
 
     machine[0] = name[0] = '\0';
-    strcpy(display, getenv("DISPLAY"));
+    if (!(disp = getenv("DISPLAY")))
+    {
+	fprintf(stderr, "DISPLAY environment variable not set\n");
+	exit(-1);
+    }
+    strcpy(display, disp);
 
     /*
      * --- Setup core of pack ---
@@ -528,8 +552,13 @@ int main(int argc, char *argv[])
 	}
 	if (strcmp(argv[i], "-team") == 0) {
 	    team = atoi(argv[++i]);
-	    if (team > 9)
-		team = 9;
+	    if (team > 9) {
+		error("Invalid team number %d", team);
+		team = TEAM_NOT_SET;
+	    } else if (team < 0) {
+		error("Invalid team number %d", team);
+		team = TEAM_NOT_SET;
+	    }
 	    continue;
 	}
 	if (strcmp(argv[i], "-list") == 0) {
@@ -581,11 +610,9 @@ int main(int argc, char *argv[])
      * If sysadm's have complained alot, check for free machines before
      * letting the user play.  If room is crowded, don't let him play.
      */
-    if (!list_servers && Is_allowed() == false)
+    if (!list_servers && Is_allowed(display) == false)
 	exit (-1);
 #endif
-
-    SetTimeout(45, 0);
 
     /*
      * --- Try to contact server ---
@@ -598,59 +625,13 @@ int main(int argc, char *argv[])
 	    connected = Connect_to_server();
 
     } else {				/* Search after servers... */
-	/*
-	 * Try to broadcast the 'hello servers' packet.  This won't work
-	 * on all systems, but for those who allow mortals to do broadcasts
-	 * it will mean a significant reduction in netload.  Also, some
-	 * ethernet controllers (mainly AIX ones) goes nutso when we try
-	 * to do 'manual broadcasts'.  (See below)
-	 *
-	 * Note, this method only works for class C nets, or class B nets
-	 * with subnetmasks.
-	 */
-	/*
-	sprintf(server_host, "%s255", base_addr);
-		if (DgramSend(socket_c, server_host, DEFAULT_PORT,
-		(char *)&req, sizeof(contact_pack_t)));
-			IKKE FERDIG */
-
-	/*
-	 * Got the IP address of name-server with the last part deleted, i.e.
-	 *	129.242.16.110	  =>   129.242.16.
-	 * Then search through all the machines in the 129.242.16 domain.
-	 */
-D(	printf("Sending packet to:\n"); )
-	for (i=1; i<255; i++) {
-	    sprintf(server_host, "%s%d", base_addr, i);
-D(	    printf("%s\t", server_host);	)
-	    while (DgramSend(socket_c, server_host, SERVER_PORT, (char *)&req,
-			     sizeof(contact_pack_t)) < sizeof(contact_pack_t))
-		    sleep(1);
-	    usleep(10000);		/* UDP isn't reliable, so we'd better */
-	}				/* not push the net. */
-
-D(	printf("\n");	)
-
-
-	/* Hard coded search domains. */
-#ifdef	UIT
-	strcpy(base_addr, "129.242.16.");
-	for (i=1;  i<255; i++) {
-	    sprintf(server_host, "%s%d", base_addr, i);
-	    while (DgramSend(socket_c, server_host, DEFAULT_PORT, (char *)&req,
-			     sizeof(Pack)) == -1)
-		sleep(1);
+	SetTimeout(10, 0);
+	if (Query_all(socket_c, SERVER_PORT,
+		  (char *)&req, sizeof(contact_pack_t)) == -1) {
+	    error("Couldn't send query packets");
+	    exit(1);
 	}
-#endif
-#ifdef	CC
-	strcpy(base_addr, "129.242.6.");
-	for (i=1;  i<255; i++) {
-	    sprintf(server_host, "%s%d", base_addr, i);
-	    while (DgramSend(socket_c, server_host, DEFAULT_PORT, (char *)&req,
-			     sizeof(Pack)) == -1)
-		sleep(1);
-	}
-#endif
+	D( printf("\n"); );
 
 	/*
 	 * Wait for answer.
@@ -661,5 +642,303 @@ D(	printf("\n");	)
 	}
     }
 
-    exit (connected==true ? 0 : -1);
+    exit(connected==true ? 0 : -1);
+}
+
+
+
+/*
+ * Code which uses 'real' broadcasting to find server.  Provided by
+ * Bert Gijsbers.  Thanks alot!
+ */
+
+#ifndef MAX_INTERFACE
+#define MAX_INTERFACE    16	/* Max. number of network interfaces. */
+#endif
+
+
+/*
+ * Enable broadcasting on a (datagram) socket.
+ */
+int Enable_broadcast(int sockfd)
+{
+    int         flag = 1;	/* Turn it ON */
+
+    return setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST,
+		      (void *)&flag, sizeof(flag));
+}
+
+
+/*
+ * Query all hosts on a subnet one after another.
+ * This should be avoided as much as possible.
+ * It may cause network congestion and therefore fail,
+ * because UDP is unreliable.
+ * We only allow this horrible kludge for subnets with 8 or less
+ * bits in the host part of the subnet mask.
+ * Subnets with irregular subnet bits are properly handled (I hope).
+ */
+int Query_subnet(int sockfd,
+		 struct sockaddr_in *host_addr,
+		 struct sockaddr_in *mask_addr,
+		 char *msg,
+		 int msglen)
+{
+    int i, nbits, max;
+    unsigned long bit, mask, dest, host, hostmask, hostbits[256];
+    struct sockaddr_in addr;
+
+    addr = *host_addr;
+    host = ntohl(host_addr->sin_addr.s_addr);
+    mask = ntohl(mask_addr->sin_addr.s_addr);
+    memset ((void *)hostbits, 0, sizeof hostbits);
+    nbits = 0;
+    hostmask = 0;
+
+    /*
+     * Only the lower 32 bits of an unsigned long are used.
+     */
+    for (bit = 1; (bit & 0xffffffff) != 0; bit <<= 1) {
+	if ((mask & bit) != 0) {
+	    continue;
+	}
+	if (nbits >= 8) {
+	    /* break; ? */
+	    error("too many host bits in subnet mask");
+	    return (-1);
+	}
+	hostmask |= bit;
+	for (i = (1 << nbits); i < 256; i++) {
+	    if ((i & (1 << nbits)) != 0) {
+		hostbits[i] |= bit;
+	    }
+	}
+	nbits++;
+    }
+    if (nbits < 2) {
+	error("malformed subnet mask");
+	return (-1);
+    }
+
+    /*
+     * The first and the last address are reserved for the subnet.
+     * So, for an 8 bit host part only 254 hosts are tried, not 256.
+     */
+    max = (1 << nbits) - 2;
+    for (i=1; i <= max; i++) {
+	dest = (host & ~hostmask) | hostbits[i];
+	addr.sin_addr.s_addr = htonl(dest);
+	sendto(sockfd, msg, msglen, 0,
+	       (struct sockaddr *)&addr, sizeof(addr));
+	D( printf("sendto %s/%d\n",
+		  inet_ntoa(addr.sin_addr), ntohs(addr.sin_port)); );
+	/*
+	 * Imagine a server responding to our query while we
+	 * are still transmitting packets for non-existing servers
+	 * and the server packet colliding with one of our packets.
+	 */
+	usleep(10000);
+    }
+
+    return 0;
+}
+
+
+/*
+ * Send a datagram on all network interfaces of the local host.  Return the
+ * number of packets succesfully transmitted.
+ * We only use the loopback interface if we didn't do a broadcast
+ * on one of the other interfaces in order to reduce the chance that
+ * we get multiple responses from the same server.
+ */
+int Query_all(int sockfd, int port, char *msg, int msglen)
+{
+    int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
+    struct sockaddr_in	addr, mask, loopback;
+    struct ifconf	ifconf;
+    struct ifreq	*ifreqp, ifreq, ifbuf[MAX_INTERFACE];
+
+    /*
+     * Broadcasting on a socket MUST be explicitly enabled.  This seems to be
+     * insider information.  8-!
+     */
+    if (Enable_broadcast(sockfd) == -1) {
+	error("set broadcast");
+	return (-1);
+    }
+
+    /*
+     * Create an unbound datagram socket.  Only used for ioctls.
+     */
+    if ((fd = socket(AF_INET, SOCK_DGRAM, PF_UNSPEC)) == -1) {
+	error("socket");
+	return (-1);
+    }
+
+    /*
+     * Get names and addresses of all local network interfaces.
+     */
+    ifconf.ifc_len = sizeof(ifbuf);
+    ifconf.ifc_buf = (caddr_t)ifbuf;
+    memset((void *)ifbuf, 0, sizeof(ifbuf));
+
+    if (ioctl(fd, SIOCGIFCONF, (char *)&ifconf) == -1) {
+	error("ioctl SIOCGIFCONF");
+	close(fd);
+	return (-1);
+    }
+    for (len = 0; len + sizeof(struct ifreq) <= ifconf.ifc_len;) {
+	ifreqp = (struct ifreq *)&ifconf.ifc_buf[len];
+
+	D( printf("interface name %s\n", ifreqp->ifr_name); );
+	D( printf("\taddress family %d\n", ifreqp->ifr_addr.sa_family); );
+
+	len += sizeof(struct ifreq);
+#if BSD >= 199006 || HAVE_SA_LEN
+	/*
+	 * Recent TCP/IP implementations have a sa_len member in the socket
+	 * address structure in order to support protocol families that have
+	 * bigger addresses.
+	 */
+	if (ifreqp->ifr_addr.sa_len > sizeof(ifreqp->ifr_addr)) {
+	    len += ifreqp->ifr_addr.sa_len - sizeof(ifreqp->ifr_addr);
+	    D( printf("\textra address length %d\n",
+		      ifreqp->ifr_addr.sa_len - sizeof(ifreqp->ifr_addr)); );
+	}
+#endif
+	if (ifreqp->ifr_addr.sa_family != AF_INET) {
+	    /*
+	     * Not supported.
+	     */
+	    continue;
+	}
+
+	addr = *(struct sockaddr_in *)&ifreqp->ifr_addr;
+	D( printf("\taddress %s\n", inet_ntoa(addr.sin_addr)); );
+
+	/*
+	 * Get interface flags.
+	 */
+	ifreq = *ifreqp;
+	if (ioctl(fd, SIOCGIFFLAGS, (char *)&ifreq) == -1) {
+	    error("ioctl SIOCGIFFLAGS");
+	    continue;
+	}
+	ifflags = ifreq.ifr_flags;
+
+	if ((ifflags & IFF_UP) == 0) {
+	    D( printf("\tinterface is down\n"); );
+	    continue;
+	}
+	D( printf("\tinterface %s running\n",
+		  (ifflags & IFF_RUNNING) ? "is" : "not"); );
+
+	if ((ifflags & IFF_LOOPBACK) != 0) {
+	    D( printf("\tloopback interface\n"); );
+	    /*
+	     * Only send on the loopback if we don't broadcast.
+	     */
+	    loopback = *(struct sockaddr_in *)&ifreq.ifr_addr;
+	    haslb = 1;
+	    continue;
+	} else if ((ifflags & IFF_POINTOPOINT) != 0) {
+	    D( printf("\tpoint-to-point interface\n"); );
+	    ifreq = *ifreqp;
+	    if (ioctl(fd, SIOCGIFDSTADDR, (char *)&ifreq) == -1) {
+		error("ioctl SIOCGIFDSTADDR");
+		continue;
+	    }
+	    addr = *(struct sockaddr_in *)&ifreq.ifr_addr;
+	    D(printf("\tdestination address %s\n", inet_ntoa(addr.sin_addr)););
+	} else if ((ifflags & IFF_BROADCAST) != 0) {
+	    D( printf("\tbroadcast interface\n"); );
+	    ifreq = *ifreqp;
+	    if (ioctl(fd, SIOCGIFBRDADDR, (char *)&ifreq) == -1) {
+		error("ioctl SIOCGIFBRDADDR");
+		continue;
+	    }
+	    addr = *(struct sockaddr_in *)&ifreq.ifr_addr;
+	    D( printf("\tbroadcast address %s\n", inet_ntoa(addr.sin_addr)); );
+	} else {
+	    /*
+	     * Huh?  It's not a loopback and not a point-to-point
+	     * and it doesn't have a broadcast address???
+	     * Something must be rotten here...
+	     */
+	}
+
+	if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST)) != 0) {
+	    /*
+	     * Well, we have an address (at last).
+	     */
+	    addr.sin_port = htons(port);
+	    if (sendto(sockfd, msg, msglen, 0,
+		       (struct sockaddr *)&addr, sizeof addr) == msglen) {
+		D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
+		/*
+		 * Success!
+		 */
+		count++;
+		if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
+		    == IFF_BROADCAST) {
+		    broadcasts++;
+		}
+		continue;
+	    }
+
+	    /*
+	     * Failure.
+	     */
+	    error("sendto %s/%d failed", inet_ntoa(addr.sin_addr), port);
+
+	    if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
+		!= IFF_BROADCAST) {
+		/*
+		 * It wasn't the broadcasting that failed.
+		 */
+		continue;
+	    }
+	    
+	    /*
+	     * Broadcasting failed.
+	     * Try it in a different (kludgy) manner.
+	     */
+	}
+
+	/*
+	 * Get the netmask for this interface.
+	 */
+	ifreq = *ifreqp;
+	if (ioctl(fd, SIOCGIFNETMASK, (char *)&ifreq) == -1) {
+	    error("ioctl SIOCGIFNETMASK");
+	    continue;
+	}
+	mask = *(struct sockaddr_in *)&ifreq.ifr_addr;
+	D( printf("\tmask %s\n", inet_ntoa(mask.sin_addr)); );
+
+	addr.sin_port = htons(port);
+	if (Query_subnet(sockfd, &addr, &mask, msg, msglen) != -1) {
+	    count++;
+	    broadcasts++;
+	}
+    }
+
+    if (broadcasts == 0 && haslb) {
+	/*
+	 * We didn't reach the localhost yet.
+	 */
+	addr = loopback;
+	addr.sin_port = htons(port);
+	if (sendto(sockfd, msg, msglen, 0,
+		   (struct sockaddr *)&addr, sizeof addr) == msglen) {
+	    D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
+	    count++;
+	} else {
+	    error("sendto %s/%d failed", inet_ntoa(addr.sin_addr), port);
+	}
+    }
+
+    close(fd);
+
+    return count;
 }

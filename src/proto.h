@@ -1,11 +1,13 @@
-/* $Id: proto.h,v 1.7 1992/08/27 00:26:06 bjoerns Exp $
+/* $Id: proto.h,v 1.8 1993/04/01 18:17:50 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
+ *
+ * $NCDId: @(#)proto.h,v 1.7 1992/09/10 03:26:40 mellon Exp $
  */
 
 #ifndef	PROTO_H
@@ -32,15 +34,13 @@ extern void Info(int ind, Window w);
 extern void Help(int ind, Window w);
 extern void Quit(int ind);
 extern int FatalError(Display *disp);
-extern void Set_labels(void);
+extern void Draw_score_table(void);
 
 /*
  * Prototypes for collision.c
  */
-extern int Rate(int winner, int looser);
 extern void Check_collision(void);
-extern bool Landing(int ind, int point);
-extern void crash_wall(int,int,object*);
+extern int wormXY(int x, int y);
 
 /*
  * Prototypes for dbuff.c
@@ -70,6 +70,7 @@ extern void Display_velocity_gauge(int draw, int data);
 extern void Display_power_gauge(int draw, int data);
 extern void Display_compass(int draw, int data);
 extern void Draw_cannon(int draw, int data);
+extern void Draw_bases(int draw, int data);
 extern void Display_message(int draw, int ind);
 extern void Set_message(char *message);
 extern void Draw_radar(int draw, int data);
@@ -96,18 +97,19 @@ extern void Print_map(void)			/* Debugging only. */;
 extern void Init_map(void);
 extern void Free_map(void);
 extern void Alloc_map(void);
-extern void Load_map(char *map);
+extern void Grok_map(void);
 extern void Generate_random_map(void);
-extern void add_blaster(int,int);
-extern void remove_crash_blaster(int);
+extern void Find_base_direction(void);
 
 /*
  * Prototypes for math.c
  */
+extern int mod(int, int);
 extern void Make_table(void);
 extern void Make_ships(void);
 extern void Free_ships(void);
 extern void Compute_gravity(void);
+extern float findDir (float x, float y);
 
 /*
  * Prototypes for parser.c
@@ -119,26 +121,29 @@ extern void Parser(int argc, char *argv[]);
  */
 extern void Thrust(int ind);
 #ifdef TURN_FUEL
-extern void Turn_thrust(int ind,int no_sparks);
+extern void Turn_thrust(int ind,int num_sparks);
 #endif
 extern void Recoil(object *ship, object *shot);
 extern void Delta_mv(object *ship, object *obj);
+extern void Obj_repel(object *obj1, object *obj2, int repel_dist);
+extern void Item_damage(int ind);
 extern void Alloc_shots(int number);
 extern void Free_shots(void);
 extern void Tank_handle_detach(player*);
 extern void Add_fuel(pl_fuel_t*,long);
 extern void Update_tanks(pl_fuel_t*);
-extern void Place_item(int type);
+extern void Place_item(int type, player*);
 extern void Place_mine(int ind);
-extern void Place_moving_mine(int ind, double vx, double vy);
-extern void Blaster_fire(void);
+extern void Place_moving_mine(int ind, float vx, float vy);
 extern void Cannon_fire(int ind);
 extern void Fire_shot(int ind, int type, int dir);
+extern void Make_ball(int id, float x, float y, bool grav, int treasure);
 extern void Delete_shot(int ind);
 extern void Move_smart_shot(int ind);
-extern void Explode_object(double x, double y, int real_dir,
+extern void Explode_object(float x, float y, int real_dir,
 			   int spread, int intensity);
 extern void Explode(int ind);
+extern void Throw_items(player*);
 
 /*
  * Prototypes for player.c
@@ -148,7 +153,7 @@ extern void Go_home(int ind);
 extern void Init_player(int ind);
 extern void Alloc_players(int number);
 extern void Free_players(void);
-extern void Set_label_strings(void);
+extern void Update_score_table(void);
 /*extern void Reset_all_players(void);*/
 extern void Compute_game_status(void);
 extern void Delete_player(int ind);
@@ -163,7 +168,7 @@ extern void Update_robots(void);
 /*
  * Prototypes for rules.c
  */
-extern void Set_world_rules(int rule_ind);
+extern void Set_world_rules(void);
 extern void UpdateItemChances(int num_players);
 
 /*
@@ -189,12 +194,6 @@ extern bool Is_allowed(void);
 extern void Update_objects(void);
 
 /*
- * Prototypes for usleep.c
- */
-extern int usleep(unsigned long usec);
-extern long seconds(void);
-
-/*
  * Prototypes for xpilot.c
  */
 extern void initaddr(void);
@@ -202,5 +201,14 @@ extern void printfile(char *name);
 extern bool Get_contact_message(void);
 extern int Get_reply_message(reply_pack_t *p);
 extern bool Connect_to_server(void);
+
+/*
+ * Prototypes for option.c
+ */
+
+extern void addOption (char *name, char *value, int override, void *def);
+extern char *getOption (char *name);
+extern bool parseDefaultsFile (char *filename);
+extern void parseOptions (void);
 
 #endif

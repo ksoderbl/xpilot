@@ -1,8 +1,8 @@
-/* $Id: rules.c,v 1.14 1992/08/27 00:26:10 bjoerns Exp $
+/* $Id: rules.c,v 1.9 1993/04/01 18:17:53 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -14,71 +14,67 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 1.14 1992/08/27 00:26:10 bjoerns Exp $";
+    "@(#)$Id: rules.c,v 1.9 1993/04/01 18:17:53 bjoerns Exp $";
 #endif
-
-
-#define INIT_ITEM(item, m, c)		\
-{					\
-    World.items[item].max = m;		\
-    World.items[item].ref_chance = c;	\
-    World.items[item].num = 0;		\
-}
 
 
 long	KILLING_SHOTS =
-          (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT|OBJ_DUST|OBJ_TORPEDO|OBJ_HEAT_SHOT);
+          (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
 long	DEF_BITS = (ID_MODE|VELOCITY_GAUGE|FUEL_GAUGE|POWER_GAUGE);
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
-long	DEF_HAVE = (OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL);
+long	DEF_HAVE =
+	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_CONNECTOR);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
-long	USED_KILL = (OBJ_REFUEL);
+long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR);
 
 
-rules_t Rules[] = {
-    { 0, (CRASH_WITH_PLAYER|PLAYER_KILLINGS|
-	  PLAYER_SHIELDING|LIMITED_VISIBILITY|TEAM_PLAY) },	/* CUSTOM */
-    { 1, (LIMITED_LIVES|PLAYER_SHIELDING|ONE_PLAYER_ONLY) },	/* ADVENTURE */
-    { 0, (TIMING|ONE_PLAYER_ONLY) },				/* RACE */
-    { 0, (TIMING) },						/* HEAT */
-    { 0, (CRASH_WITH_PLAYER|PLAYER_KILLINGS|
-	  PLAYER_SHIELDING|TEAM_PLAY) },			/* DOGFIGHT */
-    { 3, (CRASH_WITH_PLAYER|PLAYER_KILLINGS|
-	  LIMITED_LIVES|PLAYER_SHIELDING|TEAM_PLAY) }		/* LTD. LIVES */
-};
+/*
+ * Convert between probability for something to happen a given second on
+ * a given block, to chance for such an event to happen on any block this
+ * tick.
+ */
+void Init_item(int item, float prob)
+{
+    float	max = maxItemDensity * World.x * World.y;
 
-
-void UpdateItemChances(int num_players)
-{ 
-    int i;
-    for (i=0;i<NUM_ITEMS;i++) {
-        int j;
-        
-        World.items[i].chance = World.items[i].ref_chance;
-        for (j=num_players;
-             j--;
-             World.items[i].chance = ( World.items[i].chance
-                                     *(100-PLAYER_ITEM_RATE))
-                                    /100);
-        if (!World.items[i].chance) World.items[i].chance = 1;
+    if (prob > 0) {
+	World.items[item].chance = 1.0 / (prob * World.x * World.y * FPS);
+	World.items[item].chance = MAX(World.items[item].chance, 1);
+    } else {
+	World.items[item].chance = 0.0;
     }
+    if (max > 0) {
+	if (max < 1)
+	    World.items[item].max = 1;
+	else
+	    World.items[item].max = max;
+    } else
+	World.items[item].max = 0;
+
+    World.items[item].num = 0;
 }
 
 
-void Set_world_rules(int rule_ind)
+void Set_world_rules(void)
 {
-    if (rule_ind >= MAX_MODES) {
-	error("World rule does not exist. Using CUSTOM.");
-	rule_ind = 0;
-    }
-    
-    World.rules = &Rules[rule_ind];
-#ifndef	SILENT
-    printf("Using world rule no. %d.\n", rule_ind);
-#endif
+    static rules_t rules;
+
+	rules.mode = 
+	  ((crashWithPlayer ? CRASH_WITH_PLAYER : 0)
+	   | (playerKillings ? PLAYER_KILLINGS : 0)
+	   | (playerShielding ? PLAYER_SHIELDING : 0)
+	   | (limitedVisibility ? LIMITED_VISIBILITY : 0)
+	   | (limitedLives ? LIMITED_LIVES : 0)
+	   | (teamPlay ? TEAM_PLAY : 0)
+	   | (onePlayerOnly ? ONE_PLAYER_ONLY : 0)
+	   | (timing ? TIMING : 0)
+	   | (edgeWrap ? WRAP_PLAY : 0));
+	rules.lives = worldLives;
+	World.rules = &rules;
 
     if (!BIT(World.rules->mode, PLAYER_KILLINGS))
-	CLR_BIT(KILLING_SHOTS, OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
+	CLR_BIT(KILLING_SHOTS,
+		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
 	CLR_BIT(DEF_HAVE, OBJ_SHIELD);
 
@@ -86,19 +82,21 @@ void Set_world_rules(int rule_ind)
      * Initializes special items.  First parameter is type, second is
      * maximum number in the world at any time, third is frequency.
      */
-    
-    INIT_ITEM(ITEM_ENERGY_PACK, 9, 479);
-    INIT_ITEM(ITEM_TANK, 6, 394);
-    INIT_ITEM(ITEM_ECM, 5, 450);
-    INIT_ITEM(ITEM_MINE_PACK, 12, 250);
-    INIT_ITEM(ITEM_SMART_SHOT_PACK, 6, 359);
-    INIT_ITEM(ITEM_CLOAKING_DEVICE, 5, 1197);
-    INIT_ITEM(ITEM_SENSOR_PACK, 5, 1197);
-    INIT_ITEM(ITEM_WIDEANGLE_SHOT, 6, 711);
-    INIT_ITEM(ITEM_REAR_SHOT, 6, 953);
-    INIT_ITEM(ITEM_AFTER_BURNER, 6, 494);
-
-    UpdateItemChances(1);
-
+    Init_item(ITEM_ENERGY_PACK, itemEnergyPackProb);
+    Init_item(ITEM_TANK, itemTankProb);
+    Init_item(ITEM_ECM, itemECMProb);
+    Init_item(ITEM_MINE_PACK, itemMineProb);
+    Init_item(ITEM_SMART_SHOT_PACK, itemMissileProb);
+    Init_item(ITEM_CLOAKING_DEVICE, itemCloakProb);
+    Init_item(ITEM_SENSOR_PACK, itemSensorProb);
+    Init_item(ITEM_WIDEANGLE_SHOT, itemWideangleProb);
+    Init_item(ITEM_REAR_SHOT, itemRearshotProb);
+    Init_item(ITEM_AFTER_BURNER, itemAfterburnerProb);
     DEF_USED &= DEF_HAVE;
+
+    /*
+     * Convert from [0..1] probabilities to [0..127] probabilities
+     */
+    ThrowItemOnKillRand = dropItemOnKillProb * 128;
+    MovingItemsRand = movingItemProb * 128;
 }

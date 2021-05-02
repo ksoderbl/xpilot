@@ -1,8 +1,8 @@
-/* $Id: score.h,v 1.8 1992/08/27 00:26:11 bjoerns Exp $
+/* $Id: score.h,v 1.3 1993/03/23 17:54:12 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -32,15 +32,14 @@
 
 #define CANNON_RATING	    	-500
 #define WALL_RATING	    	2000
-#define DUST_RATING             1000
 
 #define RATE_SIZE	    	20
 #define RATE_RANGE	    	1024
 
 #define SCORE(ind, points) 					\
 {								\
-    Players[ind]->score+=(points); 				\
-    labels=true;						\
+    Players[ind]->score += (points); 				\
+    updateScores = true;					\
 }
 
 #endif

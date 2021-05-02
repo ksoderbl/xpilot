@@ -1,8 +1,8 @@
-/* $Id: syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp $
+/* $Id: syslimit.c,v 1.2 1993/03/11 23:40:39 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
@@ -14,7 +14,7 @@
 #ifdef	LIMIT_ACCESS
 
 #include <time.h>
-#include "pack.h"
+#include "types.h"
 
 #define PATTERN		"lglab[01]"
 #define FREELIMIT	7
@@ -26,10 +26,8 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp $";
+    "@(#)$Id: syslimit.c,v 1.2 1993/03/11 23:40:39 bjoerns Exp $";
 #endif
-
-extern Pack		req;
 
 
 
@@ -37,20 +35,20 @@ extern Pack		req;
  * This routine is not useful outside UiT but may be used as a skeleton for
  * similar routines, if similar problems should occur... :)
  */
-bool Is_allowed(void)
+bool Is_allowed(char *display)
 {
-    FILE *fp;
-    int total_no, no_free, in_use;
-    struct tm *now;
-    time_t		tmp;
+    FILE	*fp;
+    int		total_no, num_free, in_use;
+    struct tm	*now;
+    time_t	tmp;
 
 
-    if (strstr(req.display, "lglab") == NULL)
+    if (strstr(display, "lglab") == NULL)
 	return (true);
 
     printf("------------------\n");
 
-    if (strstr(req.display, "lglab2") != NULL) {
+    if (strstr(display, "lglab2") != NULL) {
 	printf("Atsjoooooo! I can't, sorry! :)\n");
 	return (false);
     }
@@ -80,16 +78,16 @@ bool Is_allowed(void)
 
     printf(".\n"); fflush(stdout);
 
-    no_free = total_no - in_use;
+    num_free = total_no - in_use;
 
     printf("%d out of %d machines are free. "
-	   "Current limit is at %d machines.\n", no_free, total_no, FREELIMIT);
+	   "Current limit is at %d machines.\n", num_free, total_no, FREELIMIT);
 
-    if (no_free >= FREELIMIT) {
+    if (num_free >= FREELIMIT) {
 	return (true);
     } else {
 	printf("You will not be allowed to play until %d more users log out.\n",
-	       FREELIMIT-no_free);
+	       FREELIMIT-num_free);
 	return (false);
     }
 }

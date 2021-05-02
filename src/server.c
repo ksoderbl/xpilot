@@ -1,14 +1,13 @@
-/* $Id: server.c,v 1.29 1992/08/27 00:26:12 bjoerns Exp $
+/* $Id: server.c,v 1.12 1993/04/02 20:34:55 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjørn Stabell (bjoerns@stud.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
  *
  *	Copylefts are explained in the LICENSE file.
  */
-/* #define NO_status_OPTION /**/
-/* #define NO_AUTO_REPEAT /**/
+
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
@@ -16,7 +15,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
-#include <sys/times.h>
 #include <pwd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -29,32 +27,21 @@
 #include "draw.h"
 #include "robot.h"
 
-#ifndef		CLK_TCK
-#  ifndef 	HZ
-#    define	CLK_TCK		60
-#  else
-#    define	CLK_TCK		HZ
-#  endif
-#endif
-
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 1.29 1992/08/27 00:26:12 bjoerns Exp $";
+    "@(#)$Id: server.c,v 1.12 1993/04/02 20:34:55 kenrsc Exp $";
 #endif
 
-
-#define CHECK_DELAY	(FRAMES_PR_SEC) /* 0x3f */
-#define	LOOP_DELAY	50
 
 /*
  * Global variables
  */
 int		NumPlayers = 0;
 int		NumPseudoPlayers = 0;
-int		NumObjs;
+int		NumObjs = 0;
 int		Num_alive = 0;
-player		*Players[MAX_PLAYERS];
+player		**Players;
 object		*Obj[MAX_TOTAL_SHOTS];
 long		Id = 1;		    /* Unique ID for each object */
 long		GetInd[MAX_ID];
@@ -62,12 +49,11 @@ server		Server;
 int		RadarHeight;
 int		Shutdown = -1, ShutdownDelay = 1000;
 jmp_buf		SavedEnv;
-int		Delay = LOOP_DELAY;
+int 		framesPerSecond = 18;
 
 int	Argc;
 char	**Argv;
 
-static bool	Inside_window = true;
 static int	Socket;
 static pack_t	out;
 static char	msg[MSG_LEN];
@@ -81,27 +67,31 @@ int main(int argc, char *argv[])
     struct hostent *hinfo;
     struct passwd *pwent;
 
-
+#ifdef apollo
+    signal(SIGFPE, SIG_IGN);
+#endif
     Argc = argc; Argv = argv;
-
     init_error(argv[0]);
-
     srand(time((time_t *)0));		/* Take seed from timer. */
-
     Parser(argc, argv);
-
     RadarHeight = (256.0/World.x) * World.y;
-
     Make_table();			/* Make trigonometric tables */
-
     Compute_gravity();
+    Find_base_direction();
 
     /* Allocate memory for players, shots and messages */
-    Alloc_players(World.NumBases+MAX_PSEUDO_PLAYERS);
+    Alloc_players(World.NumBases + MAX_PSEUDO_PLAYERS);
     Alloc_shots(MAX_TOTAL_SHOTS);
     Alloc_msgs(MAX_MSGS);
 
     Make_ships();
+
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	int i;
+	for(i=0; i < World.NumTreasures; i++)
+	    Make_ball(-1, World.treasures[i].pos.x * BLOCK_SZ+(BLOCK_SZ/2),
+		      World.treasures[i].pos.y*BLOCK_SZ+10,false,i);
+    }
 
     /*
      * Get server's official name.
@@ -142,10 +132,10 @@ int main(int argc, char *argv[])
     SetTimeout(0, 0);
 
     /*
-     * Is the server in raw mode, that is - should it run even while
-     * there are noe players logged in.
+     * If the server is not in raw mode it should run only if
+     * there are players logged in.
      */
-    if (RawMode) {
+    if (!RawMode) {
 	signal(SIGALRM, Handle_signal);	/* Get first client, then proceed. */
 	alarm(5*60);			/* Signal me in 5 minutes. */
 	while (Check_new_players() == false)
@@ -158,7 +148,7 @@ int main(int argc, char *argv[])
     
     Main_Loop();			    /* Entering main loop. */
     /* NEVER REACHED */
-    return (0);
+    return (-1);
 }
 
 
@@ -167,67 +157,73 @@ int main(int argc, char *argv[])
  */
 void Main_Loop()
 {
-    XEvent event;
-    XClientMessageEvent *cmev;
-    register int i, x;
-    static int loops = 0;
-    struct tms dummy_tms;
-    clock_t oldtimes=times(&dummy_tms);
+    extern void		Loop_delay(void);
+    XEvent		event;
+    XClientMessageEvent	*cmev;
+    register int	i, x;
+    int			loops = 0, lastLoops;
+    time_t		currentTime, lastPlayerCheckTime;
+    bool		playerQuit;
 
 #ifndef SILENT
-    printf("server running!\n");
+    printf("Server runs at %d frames per second\n", framesPerSecond);
 #endif
 
     setjmp(SavedEnv);
 
     while (NoQuit
-	   || NumPlayers-NumPseudoPlayers>NumRobots
+	   || NumPlayers - NumPseudoPlayers > NumRobots
 	   || NoPlayersEnteredYet) {
 	
-	if ((loops = (loops+1) & CHECK_DELAY) == 0) {
+	currentTime = time(NULL);
+	loops++;
+
+#define CHECK_FOR_NEW_PLAYERS 5
+
+	if (NumPlayers == NumRobots
+	    || currentTime - lastPlayerCheckTime >= CHECK_FOR_NEW_PLAYERS) {
+	    lastPlayerCheckTime = currentTime;
+
 	    if (NumPlayers == NumRobots && !RawMode) {
 		while(Check_new_players() == false)
-		    sleep(5);
+		    sleep(2);
 	    } else
 		Check_new_players();
 	}
 	
-	{
-	    clock_t newtimes;
-	    if(((newtimes=times(&dummy_tms))-oldtimes) < CLK_TCK/FRAMES_PR_SEC)
-		usleep(1000000/FRAMES_PR_SEC
-		       - (newtimes-oldtimes)*1000000/CLK_TCK);
-	    oldtimes = newtimes; 
-	}
-
 	Update_objects();
 	
-	if (Shutdown > 0)		/* Check for possible shutdown, the */
-	    Shutdown--;			/* server will shutdown when Shutdown */
-	else				/* (a counter) reaches 0.  If the */
-	    if (Shutdown == 0)		/* counter is < 0 then now shutdown */
-		End_game();		/* is in progress. */
+	if (Shutdown > 0)	/* Check for possible shutdown, the */
+	    Shutdown--;		/* server will shutdown when Shutdown */
+	else			/* (a counter) reaches 0.  If the */
+	    if (Shutdown == 0)	/* counter is < 0 then now shutdown */
+		End_game();	/* is in progress. */
 	
 	if ((loops % UPDATES_PR_FRAME) == 0) {
 	    Draw_objects();
+	    Loop_delay();
 	}
 	
-	for (i=0; i<NumPlayers; i++) {
+ 	for (i=0, playerQuit = FALSE;
+	     !playerQuit && i < NumPlayers;
+	     i++) {
 	    if (Players[i]->disp_type == DT_NONE)
 		continue;
 	    
-	    for(x = XEventsQueued(Players[i]->disp,
-				  QueuedAfterFlush); x>0; x--) {
+	    for(x = XEventsQueued(Players[i]->disp, QueuedAfterFlush);
+		x > 0;
+		x--) {
 		XNextEvent(Players[i]->disp, &event);
 		
 		switch (event.type) {
 
 		case ClientMessage:
-		    cmev = (XClientMessageEvent *) &event;
+		    cmev = (XClientMessageEvent *)&event;
 		    if (cmev->message_type == ProtocolAtom
 			&& cmev->data.l[0] == KillAtom) {
 
 			Quit(i);
+			playerQuit = TRUE;
                         continue;
 		    }
 		    break;
@@ -249,8 +245,9 @@ void Main_Loop()
 		case ButtonRelease:
 		    if (event.xbutton.window == Players[i]->quit_b) {
 			Quit(i);
+			playerQuit = TRUE;
                         continue;
-		    } else if (event.xbutton.window == Players[i]->info_close_b)
+		    } else if (event.xbutton.window== Players[i]->info_close_b)
 			Info(i, Players[i]->info_close_b);
 		    else if (event.xbutton.window == Players[i]->help_close_b)
 			Help(i, Players[i]->help_close_b);
@@ -262,10 +259,10 @@ void Main_Loop()
 
 		case Expose:
 		    if (event.xexpose.count > 0)	/* We don't want any */
-			break;				/* subarea exposures. */
+			break;				/* subarea exposures */
 
 		    if (event.xexpose.window == Players[i]->players)
-			Set_labels();
+			Draw_score_table();
 		    else if (event.xexpose.window == Players[i]->info_w)
 			Expose_info_window(i);
 		    else if (event.xexpose.window == Players[i]->help_w)
@@ -276,27 +273,25 @@ void Main_Loop()
 			Expose_button_window(i, RED, event.xexpose.window);
 		    break;
 
-		case EnterNotify:
-		    Inside_window = true;
+		    /* Back in play */
+		case FocusIn:
+		    Players[i]->gotFocus = true;
 		    XAutoRepeatOff(Players[i]->disp);
 		    Players[i]->turnacc = 0.0;
 		    break;
 
+		    /* Probably not playing now */
+		case FocusOut:
 		case UnmapNotify:
-		case LeaveNotify:
-		    Inside_window = false;
+		    Players[i]->gotFocus = false;
 		    XAutoRepeatOn(Players[i]->disp);
 		    break;
-
-		case NoExpose:
-		    break;	/* XXX? */
 
 		case MappingNotify:
 		    XRefreshKeyboardMapping(&event.xmapping);
 		    break;
 
 		default:
-		    error("Got unexpected event type: %d", event.type);
 		    break;
 		}
 	    }
@@ -307,14 +302,12 @@ void Main_Loop()
 }
 
 
-
 /*
  *  Last function, exit with grace.
  */
 void End_game(void)
 {
     int i;
-
 
     if (Shutdown == 0) {
 	error("Shutting down...");
@@ -335,7 +328,6 @@ void End_game(void)
 }
 
 
-
 void Dump_pack(core_pack_t *p)
 {
     printf("\nDUMP OF PACK:\n");
@@ -345,7 +337,6 @@ void Dump_pack(core_pack_t *p)
     printf("PORT:	%ld\n", ntohl(p->port));
     printf("MAGIC:	%lx\n", ntohl(p->magic));
 }
-
 
 
 bool Check_new_players(void)
@@ -362,25 +353,19 @@ bool Check_new_players(void)
     pack_t		in;
     player		*pl;
 
+
     /*
      * Anyone cheating by turning auto-fire (also called auto-repeat :) on?
      */
-#ifndef NO_AUTO_REPEAT
     for (i=0; i<NumPlayers; i++) {
-	if (Players[i]->disp_type == DT_NONE)
-	    continue;
-	if (!BIT(Players[i]->status, PAUSE) && Inside_window) {
-	    XGetKeyboardControl(Players[i]->disp, &settings);
-
-	    if (settings.global_auto_repeat == AutoRepeatModeOn)
-		XAutoRepeatOff(Players[i]->disp);
-	}
+	if (Players[i]->disp_type != DT_NONE
+	    && !BIT(Players[i]->status, PAUSE)
+	    && Players[i]->gotFocus)
+	    XAutoRepeatOff(Players[i]->disp);
     }
-#endif
 
     if (!SocketReadable(Socket))	/* No-one tried to connect. */
 	return (false);
-
 
     /*
      * Someone connected to us, now try and deschiffer the message :)
@@ -395,7 +380,6 @@ bool Check_new_players(void)
      */
     in_host = DgramLastaddr();
 
-
     /*
      * Determine if we can talk with this hand-shake program.
      */
@@ -407,11 +391,9 @@ bool Check_new_players(void)
     }
 
 
-    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-     *
+    /*
      * Now decode the packet type field and do something witty.
      * (Note, s and r is short for send and reply.)
-     *
      */
     out.core.type	= CORE_pack;
     out.core.status	= SUCCESS;
@@ -464,10 +446,32 @@ bool Check_new_players(void)
 	if (htons(r->team) != TEAM_NOT_SET)
 	    pl->team = htons(r->team);
 
+	/*
+	 * Maybe don't have enough room for player on that team?
+	 */
+	if (!BIT(World.rules->mode, TEAM_PLAY))
+	    pl->team = TEAM_NOT_SET;
+
+	if (pl->team != TEAM_NOT_SET) {
+	    if (pl->team >= MAX_TEAMS || pl->team < 0) {
+		pl->team = TEAM_NOT_SET;
+	    } else if (World.teams[pl->team].NumMembers
+		       >= World.teams[pl->team].NumBases) {
+		s->status = E_TEAM_FULL;
+		XCloseDisplay(pl->disp);
+		goto switch_end;
+	    }
+	} else if (BIT(World.rules->mode, TEAM_PLAY)) {
+	    s->status = E_TEAM_NOT_SET;
+	    XCloseDisplay(pl->disp);
+	    goto switch_end;
+	}
+	    
+	Pick_startpos(NumPlayers);
+	Go_home(NumPlayers);
 
 	/*
-	 * All names must be unique (so we don't kick the wrong one for
-	 * instance).
+	 * All names must be unique (so we know who we're talking about).
 	 */
 	for (i=0; i<NumPlayers; i++) {
 	    if (strcasecmp(Players[i]->name, pl->name) == 0) {
@@ -497,25 +501,26 @@ bool Check_new_players(void)
 			Players[NumPlayers]->realname,
 			World.name, World.author);
 
+	    if (pl->team != TEAM_NOT_SET)
+		World.teams[pl->team].NumMembers++;
 	    NumPlayers++;
 	    Id++;
 	    new_player = true;
 	    NoPlayersEnteredYet = false;
 	
 	    Set_message(msg);
-	    Set_label_strings();
+	    updateScores = true;
 	    
 	    /* Remebers the maximum number of players */
 	    Server.max_num = MAX(Server.max_num, NumPlayers);
 	    
 	} else {		/* Couldn't initialize X, explain to user. */
-
 	    new_player = false;
 	}
     }
 	break;
 
-#ifndef NO_status_OPTION
+
     case REPORT_STATUS_pack:	{
 	/*
 	 * Someone asked for information.
@@ -527,17 +532,19 @@ bool Check_new_players(void)
 	printf("%s asked for info about current game.\n", r->realname);
 #endif
 	sprintf(s->str,
-		"\nSERVER VERSION...: %s\n"
+		"SERVER VERSION...: %s\n"
 		"STARTED BY.......: %s\n"
 		"STATUS...........: %s\n"
-		"MAX SPEED........: %d frames/second\n"
+		"MAX SPEED........: %d fps\n"
 		"WORLD (%3dx%3d)..: %s\n"
 		"      AUTHOR.....: %s\n"
 		"PLAYERS (%2d/%2d)..:\n",
-		TITLE, Server.name, lock && Shutdown==-1 ? "Locked " :
-		!lock && Shutdown!=-1 ? "Shutting down" :
-		lock && Shutdown!=-1 ? "Locked and shutting down" :
-		"Clear", FRAMES_PR_SEC,
+		TITLE,
+		Server.name,
+		lock && Shutdown == -1 ? "locked" :
+		!lock && Shutdown != -1 ? "shutting down" :
+		lock && Shutdown != -1 ? "locked and shutting down" : "ok",
+		FPS,
 		World.x, World.y, World.name, World.author,
 		NumPlayers, World.NumBases);
 
@@ -559,7 +566,6 @@ bool Check_new_players(void)
 	out_size += strlen(s->str);
     }
 	break;
-#endif /* NO_status_OPTION */
 
 	
     case MESSAGE_pack:	{
@@ -695,7 +701,6 @@ bool Check_new_players(void)
 }
 
 
-
 /*
  * Returns true if <name> has owner status of this server.
  */
@@ -711,7 +716,6 @@ bool Owner(char *name)
 }
 
 
-
 void Handle_signal(int sig_no)
 {
     switch (sig_no) {
@@ -720,10 +724,16 @@ void Handle_signal(int sig_no)
 	SocketClose(Socket);
 	break;
 
-    case SIGHUP:
-    case SIGINT:
     case SIGTERM:
-	error("Caught signal %d, terminating.", sig_no);
+	error("Caught SIGTERM, terminating.");
+	End_game();
+	break;
+    case SIGHUP:
+	error("Caught SIGHUP, terminating.");
+	End_game();
+	break;
+    case SIGINT:
+	error("Caught SIGINT, terminating.");
 	End_game();
 	break;
 
@@ -736,43 +746,26 @@ void Handle_signal(int sig_no)
 }
 
 
-
 void Log_game(char *heading)
 {
-#ifndef NO_LOG
+#ifdef LOG
     char str[1024];
     FILE *fp;
-
 
     if (!Log)
 	return;
 
-/*  sprintf(str,
-	    "echo \"*** %s ***\n\n'%s' started a server on '%s' with map:\n"
-	    "'%s.'\""
-	    "| mailx -s \"%s\" %s 2>/dev/null >/dev/null",
-	    NAME " " VERSION, Server.name, Server.host,
-	    World.name, heading, REPORT_ADDRESS);
-    system("/bin/mv dead.letter3 dead.letter4 2>/dev/null >/dev/null");
-    system("/bin/mv dead.letter2 dead.letter3 2>/dev/null >/dev/null");
-    system("/bin/mv dead.letter dead.letter2 2>/dev/null >/dev/null");
-    system(str);
-    sleep (3);
-    system("/bin/rm -f dead.letter 2>/dev/null");
-    printf("Logging...\n");
-*/
     sprintf(str,
 	    "%s (%s) - %s@%s, map '%s' (%d)\n",
 	    heading, VERSION, Server.name, Server.host,
 	    World.name, Server.max_num);
 
-    if ((fp=fopen(LOGFILE, "a")) == NULL) { /* Couldn't open file, oh well. */
+    if ((fp=fopen(LOGFILE, "a")) == NULL) {	/* Couldn't open file */
 	error("Couldn't open log file, contact " LOCALGURU "");
 	return;
     }
 
     fputs(str, fp);
-
     fclose(fp);
 #endif
 }

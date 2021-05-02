@@ -1,10 +1,16 @@
-TODO list for XPilot
-====================
-- double buffering on labels. (?)
-- thrust flame moved a little further back.
-- bouncing.
-- better detection of servers and contact mechanism (TCP instead of UDP maybe).
-- more bitplanes/colours, at least the possibility to determine this yourself.
-- no players may have the same name, maybe save player ratings.
-- enhance team option (team with names, own colors and home bases?)
-- make an xp-ed (xpilot-ed) map editor.
+Hi priority:
+------------
+- Fix limited lives
+
+Medium priority:
+----------------
+- The collision detection is a mess, WallCollide() should call Landing()
+  if the object is a player.
+- Wrap-around doesn't work correctly.
+
+Low priority:
+----------------
+- Give special items weight (done?)
+- Use mouse for navigation
+- Graphical help window (should be cleaned up)
+- Radar should draw real blocks, not just pixels
