@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 5.2 2001/05/12 18:07:05 bertg Exp $
+/* $Id: caudio.c,v 5.3 2001/07/08 10:09:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -154,7 +154,7 @@ int Handle_audio(int type, int volume)
 	/*
 	 * Multiple sounds were specified.  Pick one at random.
 	 */
-	pick = rand() % table[type].nsounds;
+	pick = randomMT() % table[type].nsounds;
     }
 
     if (!table[type].private[pick]) {

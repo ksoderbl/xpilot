@@ -351,6 +351,19 @@ LINK32_OBJS= \
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
 
+SOURCE="$(InputPath)"
+DS_POSTBUILD_DEP=$(INTDIR)\postbld.dep
+
+ALL : $(DS_POSTBUILD_DEP)
+
+# Begin Custom Macros
+OutDir=.\Release
+# End Custom Macros
+
+$(DS_POSTBUILD_DEP) : "$(OUTDIR)\xpilot.exe" "$(OUTDIR)\xpilot.bsc"
+   copy Release\XPilot.exe C:\XPilot
+	echo Helper for Post-build step > "$(DS_POSTBUILD_DEP)"
+
 !ELSEIF  "$(CFG)" == "XPilot - Win32 Debug"
 
 OUTDIR=.\Debug
@@ -1002,6 +1015,19 @@ LINK32_OBJS= \
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
+
+SOURCE="$(InputPath)"
+DS_POSTBUILD_DEP=$(INTDIR)\postbld.dep
+
+ALL : $(DS_POSTBUILD_DEP)
+
+# Begin Custom Macros
+OutDir=.\XPilot__
+# End Custom Macros
+
+$(DS_POSTBUILD_DEP) : ".\Release\xpilot.exe" "$(OUTDIR)\xpilot.bsc"
+   copy Release\XPilot.exe c:\XPilot
+	echo Helper for Post-build step > "$(DS_POSTBUILD_DEP)"
 
 !ENDIF 
 

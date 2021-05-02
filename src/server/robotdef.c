@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 5.18 2001/06/10 17:36:58 bertg Exp $
+/* $Id: robotdef.c,v 5.20 2001/08/26 19:27:26 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1928,7 +1928,8 @@ static void Robot_default_play_check_objects(int ind,
 	}
 
 	/* Ignore shots if shields already up - nothing else to do anyway */
-	if (BIT(shot->type, OBJ_SHOT) && BIT(pl->used, HAS_SHIELD)) {
+	if (BIT(shot->type, OBJ_SHOT|OBJ_CANNON_SHOT)
+	    && BIT(pl->used, HAS_SHIELD)) {
 	    continue;
 	}
 
@@ -2002,7 +2003,7 @@ static void Robot_default_play_check_objects(int ind,
 
 	/* Find nearest missile/mine */
 	if (BIT(shot->type, OBJ_TORPEDO|OBJ_SMART_SHOT|OBJ_ASTEROID
-			    |OBJ_HEAT_SHOT|OBJ_BALL)
+			    |OBJ_HEAT_SHOT|OBJ_BALL|OBJ_CANNON_SHOT)
 	    || (BIT(shot->type, OBJ_SHOT)
 		&& !BIT(World.rules->mode, TIMING)
 		&& shot->id != pl->id
@@ -2176,7 +2177,7 @@ static void Robot_default_play(int ind)
     if (BIT(pl->have, HAS_CLOAKING_DEVICE) && pl->fuel.sum > pl->fuel.l2)
 	SET_BIT(pl->used, HAS_CLOAKING_DEVICE);
 
-    if (BIT(pl->have, ITEM_EMERGENCY_THRUST)
+    if (BIT(pl->have, HAS_EMERGENCY_THRUST)
 	&& !BIT(pl->used, HAS_EMERGENCY_THRUST)) {
 	Emergency_thrust(ind, 1);
     }
@@ -2495,7 +2496,7 @@ static void Robot_default_play(int ind)
 	Detect(ind, GetInd[pl->lock.pl_id])) {
 
 	ship = Players[GetInd[pl->lock.pl_id]];
-	shoot_time = (int)(pl->lock.distance / (pl->shot_speed + 1));
+	shoot_time = (int)(pl->lock.distance / (ShotsSpeed + 1));
 	dx = (long)(ship->pos.x + ship->vel.x * shoot_time);
 	dy = (long)(ship->pos.y + ship->vel.y * shoot_time);
 	/*-BA Also allow for our own momentum. */

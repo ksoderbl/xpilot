@@ -127,6 +127,8 @@ CLEAN :
 	-@erase "$(INTDIR)\strdup.sbr"
 	-@erase "$(INTDIR)\strlcpy.obj"
 	-@erase "$(INTDIR)\strlcpy.sbr"
+	-@erase "$(INTDIR)\tuner.obj"
+	-@erase "$(INTDIR)\tuner.sbr"
 	-@erase "$(INTDIR)\update.obj"
 	-@erase "$(INTDIR)\update.sbr"
 	-@erase "$(INTDIR)\UrlWidget.obj"
@@ -225,6 +227,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\server.sbr" \
 	"$(INTDIR)\ship.sbr" \
 	"$(INTDIR)\shot.sbr" \
+	"$(INTDIR)\tuner.sbr" \
 	"$(INTDIR)\update.sbr" \
 	"$(INTDIR)\walls.sbr" \
 	"$(INTDIR)\wildmap.sbr" \
@@ -289,6 +292,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\server.obj" \
 	"$(INTDIR)\ship.obj" \
 	"$(INTDIR)\shot.obj" \
+	"$(INTDIR)\tuner.obj" \
 	"$(INTDIR)\update.obj" \
 	"$(INTDIR)\walls.obj" \
 	"$(INTDIR)\wildmap.obj" \
@@ -320,6 +324,19 @@ LINK32_OBJS= \
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
+
+SOURCE="$(InputPath)"
+DS_POSTBUILD_DEP=$(INTDIR)\postbld.dep
+
+ALL : $(DS_POSTBUILD_DEP)
+
+# Begin Custom Macros
+OutDir=.\Release
+# End Custom Macros
+
+$(DS_POSTBUILD_DEP) : "$(OUTDIR)\XPilotServer.exe" "$(OUTDIR)\xpilots.bsc"
+   copy Release\XPilotServer.exe C:\XPilot
+	echo Helper for Post-build step > "$(DS_POSTBUILD_DEP)"
 
 !ELSEIF  "$(CFG)" == "XPilotServer - Win32 Debug"
 
@@ -423,6 +440,8 @@ CLEAN :
 	-@erase "$(INTDIR)\strdup.sbr"
 	-@erase "$(INTDIR)\strlcpy.obj"
 	-@erase "$(INTDIR)\strlcpy.sbr"
+	-@erase "$(INTDIR)\tuner.obj"
+	-@erase "$(INTDIR)\tuner.sbr"
 	-@erase "$(INTDIR)\update.obj"
 	-@erase "$(INTDIR)\update.sbr"
 	-@erase "$(INTDIR)\UrlWidget.obj"
@@ -524,6 +543,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\server.sbr" \
 	"$(INTDIR)\ship.sbr" \
 	"$(INTDIR)\shot.sbr" \
+	"$(INTDIR)\tuner.sbr" \
 	"$(INTDIR)\update.sbr" \
 	"$(INTDIR)\walls.sbr" \
 	"$(INTDIR)\wildmap.sbr" \
@@ -588,6 +608,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\server.obj" \
 	"$(INTDIR)\ship.obj" \
 	"$(INTDIR)\shot.obj" \
+	"$(INTDIR)\tuner.obj" \
 	"$(INTDIR)\update.obj" \
 	"$(INTDIR)\walls.obj" \
 	"$(INTDIR)\wildmap.obj" \
@@ -810,6 +831,12 @@ SOURCE=..\ship.c
 SOURCE=..\shot.c
 
 "$(INTDIR)\shot.obj"	"$(INTDIR)\shot.sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\tuner.c
+
+"$(INTDIR)\tuner.obj"	"$(INTDIR)\tuner.sbr" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

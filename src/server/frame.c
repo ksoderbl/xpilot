@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 5.28 2001/06/05 17:28:13 gkoopman Exp $
+/* $Id: frame.c,v 5.31 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -661,7 +661,6 @@ static void Frame_shots(int conn, int ind)
     int				obj_count;
     object			*shot;
     object			**obj_list;
-    DFLOAT			item_prob_sum = 0;
     int				hori_blocks, vert_blocks;
 
     hori_blocks = (view_width + (BLOCK_SZ - 1)) / (2 * BLOCK_SZ);
@@ -745,6 +744,7 @@ static void Frame_shots(int conn, int ind)
 	    break;
 
 	case OBJ_SHOT:
+	case OBJ_CANNON_SHOT:
 	    if (BIT(World.rules->mode, TEAM_PLAY)
 		&& teamImmunity
 		&& shot->team == pl->team
@@ -820,25 +820,7 @@ static void Frame_shots(int conn, int ind)
 		int item_type = shot->info;
 
 		if (BIT(shot->status, RANDOM_ITEM)) {
-		    if (item_prob_sum == 0) {
-			for (i = 0; i < NUM_ITEMS; i++) {
-			    item_prob_sum += World.items[i].prob;
-			}
-		    }
-
-		    if (item_prob_sum > 0.0) {
-			DFLOAT cum = item_prob_sum * rfrac();
-
-			for (item_type = 0; item_type < NUM_ITEMS; item_type++) {
-			    cum -= World.items[item_type].prob;
-			    if (cum <= 0) {
-				break;
-			    }
-			}
-			if (item_type >= NUM_ITEMS) {
-			    item_type = ITEM_FUEL;
-			}
-		    }
+		    item_type = Choose_random_item();
 		}
 
 		Send_item(conn, x, y, item_type);

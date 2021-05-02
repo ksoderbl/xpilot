@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.16 2001/06/16 17:21:38 bertg Exp $
+/* $Id: walls.c,v 5.19 2001/09/21 18:20:49 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -310,7 +310,7 @@ void Move_init(void)
 	SET_BIT(mp.obj_bounce_mask, OBJ_DEBRIS);
     }
     if (shotsWallBounce) {
-	SET_BIT(mp.obj_bounce_mask, OBJ_SHOT);
+	SET_BIT(mp.obj_bounce_mask, OBJ_SHOT|OBJ_CANNON_SHOT);
     }
     if (itemsWallBounce) {
 	SET_BIT(mp.obj_bounce_mask, OBJ_ITEM);
@@ -2411,6 +2411,16 @@ void Move_player(int ind)
 		ms[worst].todo.x = (int)(ms[worst].todo.x * playerWallBrakeFactor);
 		ms[worst].todo.y = (int)(ms[worst].todo.y * playerWallBrakeFactor);
 
+		/* only use armor if neccessary */
+		if (speed > max_speed
+		    && max_speed < maxShieldedWallBounceSpeed
+		    && !BIT(pl->used, HAS_SHIELD)
+		    && BIT(pl->have, HAS_ARMOR)) {
+		    max_speed = maxShieldedWallBounceSpeed;
+		    max_angle = mp.max_shielded_angle;
+		    Player_hit_armor(ind);
+		}
+
 		if (speed > max_speed) {
 		    crash = worst;
 		    ms[worst].crash = (ms[worst].target >= 0 ? CrashTarget :
@@ -2439,6 +2449,15 @@ void Move_player(int ind)
 				: -(pl->dir + RES - wall_dir);
 		}
 		abs_delta_dir = ABS(delta_dir);
+		/* only use armor if neccessary */
+		if (abs_delta_dir > max_angle
+		    && max_angle < mp.max_shielded_angle
+		    && !BIT(pl->used, HAS_SHIELD)
+		    && BIT(pl->have, HAS_ARMOR)) {
+		    max_speed = maxShieldedWallBounceSpeed;
+		    max_angle = mp.max_shielded_angle;
+		    Player_hit_armor(ind);
+		}
 		if (abs_delta_dir > max_angle) {
 		    crash = worst;
 		    ms[worst].crash = (ms[worst].target >= 0 ? CrashTarget :

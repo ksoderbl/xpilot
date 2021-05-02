@@ -4,7 +4,7 @@
 .\"
 .TH XPILOT 6 "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.4.1: July 2nd, 2001
+.ds ]W XPilot 4.4.2: Oct 8, 2001
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1572,7 +1572,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of xpilot, i.e., 4.4.1
+\(bu The full version of xpilot, i.e., 4.4.2
 .TP
 \(bu What the bug looks like (symptoms)
 .TP

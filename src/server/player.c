@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.16 2001/07/01 15:38:49 gkoopman Exp $
+/* $Id: player.c,v 5.18 2001/08/26 19:27:26 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -401,11 +401,8 @@ int Init_player(int ind, shipobj *ship)
     pl->shots		= 0;
     pl->missile_rack	= 0;
     pl->forceVisible	= 0;
-    pl->shot_speed	= ShotsSpeed;
     Compute_sensor_range(pl);
     pl->shot_max	= ShotsMax;
-    pl->shot_life	= ShotsLife;
-    pl->shot_mass	= ShotsMass;
     pl->shot_time	= 0;
     pl->color		= WHITE;
     pl->score		= 0;
@@ -698,10 +695,11 @@ void Reset_all_players(void)
 	for (i = 0; i < NumObjs; i++) {
 	    object *obj = Obj[i];
 	    if (BIT(obj->type, OBJ_SHOT|OBJ_MINE|OBJ_DEBRIS|OBJ_SPARK
-			       |OBJ_TORPEDO|OBJ_SMART_SHOT|OBJ_HEAT_SHOT)) {
+			       |OBJ_CANNON_SHOT|OBJ_TORPEDO|OBJ_SMART_SHOT
+			       |OBJ_HEAT_SHOT)) {
 		obj->life = 0;
 		if (BIT(obj->type, OBJ_TORPEDO|OBJ_SMART_SHOT|OBJ_HEAT_SHOT
-				   |OBJ_MINE)) {
+				   |OBJ_CANNON_SHOT|OBJ_MINE)) {
 		    /* Take care that no new explosions are made. */
 		    obj->mass = 0;
 		}
@@ -1664,7 +1662,8 @@ void Delete_player(int ind)
 		if (!keepShots) {
 		    obj->life = 0;
 		    if (BIT(obj->type,
-			OBJ_MINE|OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO)) {
+			OBJ_CANNON_SHOT|OBJ_MINE|OBJ_SMART_SHOT
+			|OBJ_HEAT_SHOT|OBJ_TORPEDO)) {
 			obj->mass = 0;
 		    }
 		}
@@ -1685,6 +1684,12 @@ void Delete_player(int ind)
 		    }
 		}
 	    }
+		else if (BIT(obj->type, OBJ_CANNON_SHOT)) {
+			if (!keepShots) {
+				obj->life = 0;
+				obj->mass = 0;
+			}
+		}
 	    else if (BIT(obj->type, OBJ_BALL)) {
 		ballobject *ball = BALL_PTR(obj);
 		if (ball->owner == id) {
@@ -1851,10 +1856,7 @@ void Player_death_reset(int ind)
     }
 
     pl->forceVisible	= 0;
-    pl->shot_speed	= ShotsSpeed;
     pl->shot_max	= ShotsMax;
-    pl->shot_life	= ShotsLife;
-    pl->shot_mass	= ShotsMass;
     pl->count		= RECOVERY_DELAY;
     pl->ecmcount	= 0;
     pl->emergency_thrust_left = 0;

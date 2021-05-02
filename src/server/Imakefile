@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 5.5 2001/05/26 22:29:57 bertg Exp $ */
+/* $Id: Imakefile,v 5.6 2001/07/08 09:59:39 bertg Exp $ */
 
 TOP=../..
 COMMON = ../common/
@@ -48,7 +48,7 @@ SRCS = \
 	robot.c robotdef.c rules.c \
 	saudio.c sched.c score.c \
 	server.c ship.c shot.c \
-	update.c walls.c wildmap.c
+	tuner.c update.c walls.c wildmap.c
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = \
@@ -62,7 +62,7 @@ OBJS = \
 	robot.o robotdef.o rules.o \
 	saudio.o sched.o score.o \
 	server.o ship.o shot.o \
-	update.o walls.o wildmap.o
+	tuner.o update.o walls.o wildmap.o
 
 DEPLIBS = $(COMMON)libxpcommon.a 
 

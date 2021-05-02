@@ -222,6 +222,14 @@ SOURCE=..\shot.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\tuner.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\tuner.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\update.c
 # End Source File
 # Begin Source File

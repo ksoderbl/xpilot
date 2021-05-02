@@ -1,4 +1,4 @@
-/* $Id: client.c,v 5.6 2001/06/22 05:27:42 dik Exp $
+/* $Id: client.c,v 5.7 2001/09/10 06:15:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1475,6 +1475,24 @@ int Client_setup(void)
     if (Alloc_history() == -1) {
 	return -1;
     }
+
+    /* Old servers can't deal with 0.0 turnresistance, so swap to
+     * the alternate bank, and hope there's something better there. */
+    /* HACK: Hanging Gardens runs an old server (version code 0x4101)
+     * which happens to have the turnresistance patch. */
+    if (turnresistance == 0.0 && version < 0x4200 && version != 0x4101)
+    {
+	DFLOAT tmp;
+#define SWAP(a,b) (tmp = (a), (a) = (b), (b) = tmp)
+	SWAP(power, power_s);
+	SWAP(turnspeed, turnspeed_s);
+	SWAP(turnresistance, turnresistance_s);
+#undef SWAP
+	control_count = CONTROL_DELAY;
+	Add_message("Old server can't handle turnResistance=0.0; "
+		    "swapping to alternate settings [*Client message*]");
+    }
+
     return 0;
 }
 

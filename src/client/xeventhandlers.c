@@ -1,4 +1,4 @@
-/* $Id: xeventhandlers.c,v 5.2 2001/06/03 17:21:34 bertg Exp $
+/* $Id: xeventhandlers.c,v 5.4 2001/07/08 09:07:28 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -81,7 +81,7 @@ extern void Pointer_control_set_state(int onoff); /* xevent.c */
 
 extern int	initialPointerControl;
 extern bool	pointerControl;
-extern keys_t	buttonDefs[MAX_POINTER_BUTTONS];
+extern keys_t	buttonDefs[MAX_POINTER_BUTTONS][MAX_BUTTON_DEFS+1];
 extern ipos	mouse;		/* position of mouse pointer. */
 extern int	movement;	/* horizontal mouse movement. */
 
@@ -324,8 +324,11 @@ void ButtonPress_event(XEvent *event)
         if (pointerControl
 	    && !talk_mapped
 	    && event->xbutton.button <= MAX_POINTER_BUTTONS) {
-	    if (Key_press(buttonDefs[event->xbutton.button-1])) {
-	        Net_key_change();
+	    int i;
+	    for (i = 0; i < NUM_BUTTON_DEFS(event->xbutton.button-1); ++i) {
+	    	if (Key_press(buttonDefs[event->xbutton.button-1][i])) {
+		    Net_key_change();
+		}
 	    }
 #ifndef _WINDOWS
 	} 
@@ -398,8 +401,11 @@ int ButtonRelease_event(XEvent *event)
         if (pointerControl
 	    && !talk_mapped
 	    && event->xbutton.button <= MAX_POINTER_BUTTONS) {
-	    if (Key_release(buttonDefs[event->xbutton.button-1])) {
-	        Net_key_change();
+	    int i;
+	    for (i = 0; i < NUM_BUTTON_DEFS(event->xbutton.button-1); ++i) {
+	    	if (Key_release(buttonDefs[event->xbutton.button-1][i])) {
+		    Net_key_change();
+		}
 	    }
 	} 
 #ifndef _WINDOWS

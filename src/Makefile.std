@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 5.18 2001/06/03 13:33:23 bertg Exp $
+# $Id: Makefile.std,v 5.19 2001/07/08 10:13:50 bertg Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
@@ -272,6 +272,7 @@ OBJS2 = asteroid.o cannon.o cell.o cmdline.o \
 	robot.o  robotdef.o rules.o \
 	saudio.o sched.o score.o \
 	server.o ship.o shot.o \
+	tuner.o \
 	update.o walls.o wildmap.o
 SRCS2 = asteroid.c cannon.c cell.c cmdline.c \
 	collision.c command.c contact.c \
@@ -283,6 +284,7 @@ SRCS2 = asteroid.c cannon.c cell.c cmdline.c \
 	robot.c  robotdef.c rules.c \
 	saudio.c sched.c score.c \
 	server.c ship.c shot.c \
+	tuner.c \
 	update.c walls.c wildmap.c
 
 #

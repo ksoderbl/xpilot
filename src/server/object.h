@@ -1,4 +1,4 @@
-/* $Id: object.h,v 5.17 2001/05/24 11:26:50 bertg Exp $
+/* $Id: object.h,v 5.19 2001/08/26 19:27:26 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -69,7 +69,7 @@
 #define OBJ_ITEM		(1U<<10)
 #define OBJ_WRECKAGE		(1U<<11)
 #define OBJ_ASTEROID		(1U<<12)
-
+#define	OBJ_CANNON_SHOT		(1U<<13)
 
 /*
  * Some object types are overloaded.
@@ -514,9 +514,6 @@ struct player {
     modifiers	modbank[NUM_MODBANKS];	/* useful modifier settings */
     bool	tractor_is_pressor;	/* on if tractor is pressor */
     int		shot_max;		/* Maximum number of shots active */
-    int		shot_life;		/* Number of ticks shot will live */
-    DFLOAT	shot_speed;		/* Speed of shots fired by player */
-    DFLOAT	shot_mass;		/* Mass of shots fired by player */
     long	shot_time;		/* Time of last shot fired by player */
     int		repair_target;		/* Repairing this target */
     int		fs;			/* Connected to fuel station fs */

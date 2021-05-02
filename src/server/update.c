@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.15 2001/05/27 16:38:19 bertg Exp $
+/* $Id: update.c,v 5.16 2001/07/08 10:14:11 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,6 +43,7 @@
 #include "objpos.h"
 #include "cannon.h"
 #include "asteroid.h"
+#include "commonproto.h"
 
 #define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
 #define TURN_SPARKS(tf)         (5+((tf)>>((FUEL_SCALE_BITS)-6)))

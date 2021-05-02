@@ -1,4 +1,4 @@
-/* $Id: cannon.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: cannon.h,v 5.2 2001/08/26 19:27:25 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -56,14 +56,12 @@ extern long CANNON_USE_ITEM;
 /* chance of throwing an item upon death (multiplied by dropItemOnKillProb) */
 #define CANNON_DROP_ITEM_PROB	0.7
 
-/* speed used for missiles and shots. mines are thrown at half this speed */
-#define CANNON_SHOT_SPEED	ShotsSpeed
-#define CANNON_SHOT_MASS	0.4
 #define CANNON_MINE_MASS	(MINE_MASS * 0.6)
+#define CANNON_SHOT_MASS	0.4
 /* lifetime in ticks (frames) of shots, missiles and mines */
-#define CANNON_SHOT_LIFE	(25 + (randomMT() & 0x17))
+#define CANNON_SHOT_LIFE	(8 + (randomMT() % 24))
 /* maximum lifetime (only used in aiming) */
-#define CANNON_SHOT_LIFE_MAX	(25 + 0x17)
+#define CANNON_SHOT_LIFE_MAX	(8 + 24)
 /* number of laser pulses used in calculation of pulse lifetime */
 #define CANNON_PULSES		1
 

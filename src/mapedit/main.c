@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.c,v 5.4 2001/06/03 19:49:28 millerjl Exp $
+ * $Id: main.c,v 5.5 2001/09/18 21:23:52 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -52,8 +52,8 @@ int                      prefssheet;
 map_data_t               clipdata;
 xpmap_t                    map;
 
-int                      num_default_settings=239;
-charlie                  default_settings[239] = {
+int                      num_default_settings=243;
+charlie                  default_settings[243] = {
 	{ "gravity","-0.14" },
 	{ "shipmass","20.0" },
 	{ "ballmass", "50.0" },
@@ -93,6 +93,8 @@ charlie                  default_settings[239] = {
 	{ "playerstartsshielded","yes" },
 	{ "shotswallbounce","no" },
 	{ "ballswallbounce","yes" },
+	{ "ballcollisions","no" },
+	{ "ballsparkcollisions","yes" },
 	{ "mineswallbounce","no" },
 	{ "itemswallbounce","yes" },
 	{ "missileswallbounce","no" },
@@ -123,6 +125,7 @@ charlie                  default_settings[239] = {
 	{ "teamfuel","no" },
 	{ "cannonsmartness","1" },
 	{ "cannonsuseitems","no" },
+	{ "cannonflak","yes" },
 	{ "cannondeadtime","72" },
 	{ "keepshots","no" },
 	{ "teamassign","yes" },
@@ -140,6 +143,7 @@ charlie                  default_settings[239] = {
 	{ "ballconnectordamping","2.0" },
 	{ "maxballconnectorratio","0.30" },
 	{ "ballconnectorlength","120" },
+	{ "connectorisstring","no" },
 	{ "treasurecollisionmaykill","no" },
 	{ "wreckagecollisionmaykill","no" },
 	{ "asteroidcollisionmaykill","yes" },
@@ -296,8 +300,8 @@ charlie                  default_settings[239] = {
 };
 
 /* JLM Reorganized for new options */
-int                      numprefs = 240;
-prefs_t                  prefs[240] = {
+int                      numprefs = 244;
+prefs_t                  prefs[244] = {
 { "mapwidth"     ,"", "Width:"     ,3,MAPWIDTH, map.width_str,0,0,0,0,0 },
 { "mapheight"    ,"", "Height:"    ,3,MAPHEIGHT,map.height_str,0,1,0,0,0 },
 { "mapname"      ,"", "Name:"          ,255,STRING,map.mapName,0,2,0,0,0 },
@@ -386,7 +390,10 @@ prefs_t                  prefs[240] = {
 { "maxballconnectorratio","","MxBallCnctrRatio:",19,POSFLOAT,map.maxBallConnectorRatio,0,9,1,2,0},
 { "ballconnectordamping","","BallCnctrDmping:",19,POSFLOAT,map.ballConnectorDamping,0,10,1,2,0},
 { "ballconnectorspringconstant","","BallCtrSprngCnst:",19,POSFLOAT,map.ballConnectorSpringConstant,0,11,1,2,0},
-{ "ballmass","","BallMass:",19,POSFLOAT,map.ballMass,0,12,1,2,0},
+{ "connectorisstring","","Cnctr Is String?",0,YESNO,0,&map.connectorIsString,12,1,2,0},
+{ "ballcollisions","","Ball Collisions?",0,YESNO,0,&map.ballCollisions,13,1,2,0},
+{ "ballsparkcollisions","","Ball Spark Collisions?",0,YESNO,0,&map.ballSparkCollisions,14,1,2,0},
+{ "ballmass","","BallMass:",19,POSFLOAT,map.ballMass,0,15,1,2,0},
 { "playersonradar","playersradar","Players on Radar?",0,YESNO,0,&map.playersOnRadar,0,2,2,0},
 { "missilesonradar","missilesradar","Missles on Radar?",0,YESNO,0,&map.missilesOnRadar,1,2,2,0},
 { "minesonradar","minesradar","Mines on Radar?",0,YESNO,0,&map.minesOnRadar,2,2,2,0},
@@ -404,15 +411,16 @@ prefs_t                  prefs[240] = {
 { "cannonsuseitems","cannonspickupitems","Cannons Use Items?",0,YESNO,0,&map.cannonsUseItems,0,0,3,0},
 { "cannonsmartness","","Cannon Smartness:",19,POSINT,map.cannonSmartness,0,1,0,3,0},
 { "cannondeadtime","","Cannon Dead Time:",19,POSINT,map.cannonDeadTime,0,2,0,3,0},
-{ "identifymines","","Identify Mines?",0,YESNO,0,&map.identifyMines,4,0,3,0},
-{ "maxminesperpack","","Mines/Pac",19,POSINT, map.maxMinesPerPack,0,5,0,3,0},
-{ "minelife","","Mine Life",19,POSFLOAT,map.mineLife,0,6,0,3,0},
-{ "minefusetime","","Mine Fuse Time:",19,POSINT,map.mineFuseTime,0,7,0,3,0},
-{ "baseminerange","","Base Mine Range:",19,POSINT,map.baseMineRange,0,8,0,3,0},
-{ "roguemineprob","","Rogue Mine Prob:",19,POSFLOAT,map.rogueMineProb,0,9,0,3,0},
-{ "nukeminmines","","Min Nuke Mines:",6,POSINT,map.nukeMinMines,0,10,0,3,0},
-{ "minminespeed","","Min Mine Speed:",19,POSFLOAT,map.minMineSpeed,0,11,0,3,0},
-{ "nukeclusterdamage","","Nuke Clust Dam:",19,POSFLOAT,map.nukeClusterDamage,0,12,0,3,0},
+{ "cannonflak","cannonaaa","Cannon Flak?",0,YESNO,0,&map.cannonFlak,3,0,3,0},
+{ "identifymines","","Identify Mines?",0,YESNO,0,&map.identifyMines,5,0,3,0},
+{ "maxminesperpack","","Mines/Pac",19,POSINT, map.maxMinesPerPack,0,6,0,3,0},
+{ "minelife","","Mine Life",19,POSFLOAT,map.mineLife,0,7,0,3,0},
+{ "minefusetime","","Mine Fuse Time:",19,POSINT,map.mineFuseTime,0,8,0,3,0},
+{ "baseminerange","","Base Mine Range:",19,POSINT,map.baseMineRange,0,9,0,3,0},
+{ "roguemineprob","","Rogue Mine Prob:",19,POSFLOAT,map.rogueMineProb,0,10,0,3,0},
+{ "nukeminmines","","Min Nuke Mines:",6,POSINT,map.nukeMinMines,0,11,0,3,0},
+{ "minminespeed","","Min Mine Speed:",19,POSFLOAT,map.minMineSpeed,0,12,0,3,0},
+{ "nukeclusterdamage","","Nuke Clust Dam:",19,POSFLOAT,map.nukeClusterDamage,0,13,0,3,0},
 { "ecmsreprogramrobots","","EcmsReprgmRbts?",6,YESNO,0,&map.ecmsReprogramRobots,0,1,3,0},
 { "ecmsreprogrammines","","EcmsRprgMines?",0,YESNO,0,&map.ecmsReprogramMines,1,1,3,0},
 { "distinguishmissiles","","Distng Missiles?",0,YESNO,0,&map.distinguishMissiles,3,1,3,0},
@@ -574,7 +582,7 @@ int main(int argc, char *argv[])
 
    T_GetGC(&White_GC, "white");
    T_GetGC(&Black_GC, "black");
-   T_GetGC(&xorgc, "black");
+   T_GetGC(&xorgc, "white");
    XSetFunction(display, xorgc, GXxor);
 #ifndef MONO
    T_GetGC(&Wall_GC,      COLOR_WALL      );

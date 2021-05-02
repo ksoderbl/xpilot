@@ -1,4 +1,4 @@
-/* $Id: event.c,v 5.4 2001/06/02 21:02:42 bertg Exp $
+/* $Id: event.c,v 5.7 2001/07/09 09:32:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,7 +52,6 @@ char event_version[] = VERSION;
  * Globals.
  */
 static char		msg[MSG_LEN];
-
 
 
 static void Refuel(int ind)
@@ -711,10 +710,13 @@ int Handle_keyboard(int ind)
 	    case KEY_LOAD_MODIFIERS_4: {
 		modifiers *m = &(pl->modbank[key - KEY_LOAD_MODIFIERS_1]);
 
-		if (BIT(pl->status, REPROGRAM))
+		if (BIT(pl->status, REPROGRAM)) {
 		    *m = pl->mods;
-		else
+		}
+		else {
 		    pl->mods = *m;
+		    filter_mods(&pl->mods);
+		}
 		break;
 	    }
 
@@ -1088,4 +1090,24 @@ int Handle_keyboard(int ind)
     memcpy(pl->prev_keyv, pl->last_keyv, sizeof(pl->last_keyv));
 
     return 1;
+}
+
+void filter_mods(modifiers * mods)
+{
+    if (!BIT(World.rules->mode, ALLOW_NUKES))
+	mods->nuclear = 0;
+
+    if (!BIT(World.rules->mode, ALLOW_CLUSTERS))
+	CLR_BIT(mods->warhead, CLUSTER);
+
+    if (!BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+	CLR_BIT(mods->warhead, IMPLOSION);
+	mods->velocity = 0;
+	mods->mini = 0;
+	mods->spread = 0;
+	mods->power = 0;
+    }
+
+    if (!BIT(World.rules->mode, ALLOW_LASER_MODIFIERS))
+	mods->laser = 0;
 }

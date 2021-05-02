@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 5.6 2001/06/22 05:27:42 dik Exp $
+/* $Id: configure.c,v 5.7 2001/09/18 18:19:20 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -109,6 +109,7 @@ static int Config_create_altTurnSpeed(int widget_desc, int *height);
 static int Config_create_altTurnResistance(int widget_desc, int *height);
 static int Config_create_showMessages(int widget_desc, int *height);
 static int Config_create_showHUD(int widget_desc, int *height);
+static int Config_create_showHUDRadar(int widget_desc, int *height);
 static int Config_create_horizontalHUDLine(int widget_desc, int *height);
 static int Config_create_verticalHUDLine(int widget_desc, int *height);
 static int Config_create_speedFactHUD(int widget_desc, int *height);
@@ -241,6 +242,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_reverseScroll,
     Config_create_oldMessagesColor,
     Config_create_showHUD,
+    Config_create_showHUDRadar,
     Config_create_horizontalHUDLine,
     Config_create_verticalHUDLine,
     Config_create_speedFactHUD,
@@ -702,6 +704,15 @@ static int Config_create_showHUD(int widget_desc, int *height)
 				  ? true : false,
 			      Config_update_instruments,
 			      (void *) SHOW_HUD_INSTRUMENTS);
+}
+
+static int Config_create_showHUDRadar(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "showHUDRadar",
+			      BIT(instruments, SHOW_HUD_RADAR)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_HUD_RADAR);
 }
 
 static int Config_create_horizontalHUDLine(int widget_desc, int *height)
@@ -1554,6 +1565,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_int(fp, "oldMessagesColor", oldMessagesColor);
     Config_save_bool(fp, "reverseScroll", BIT(instruments, SHOW_REVERSE_SCROLL));
     Config_save_bool(fp, "showHUD", BIT(instruments, SHOW_HUD_INSTRUMENTS));
+    Config_save_bool(fp, "showHUDRadar", BIT(instruments, SHOW_HUD_RADAR));
     Config_save_bool(fp, "verticalHUDLine", BIT(instruments, SHOW_HUD_VERTICAL));
     Config_save_bool(fp, "horizontalHUDLine", BIT(instruments, SHOW_HUD_HORIZONTAL));
     Config_save_bool(fp, "fuelMeter", BIT(instruments, SHOW_FUEL_METER));

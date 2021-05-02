@@ -1,4 +1,4 @@
-/* $Id: talkmacros.c,v 5.1 2001/04/22 09:07:42 bertg Exp $
+/* $Id: talkmacros.c,v 5.3 2001/07/08 10:14:11 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -49,6 +49,7 @@
 #include "portability.h"
 #include "talk.h"
 #include "rules.h"		/* TEAM_PLAY, LIMITED_LIVES */
+#include "commonproto.h"
 
 
 char talkmacros_version[] = VERSION;
@@ -352,7 +353,7 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 		    if (n_fields <= 0 || nextpos == NULL)
 		      break;
 		    if ((tmpptr = Talk_macro_get_field (inbuf,
-							rand() % n_fields + 1))
+						    randomMT() % n_fields + 1))
 			  == NULL) {
 			error ("Talk_macro_get_field error (random)");
 			break;

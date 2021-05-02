@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.h,v 5.4 2001/06/03 19:49:28 millerjl Exp $
+ * $Id: main.h,v 5.5 2001/09/18 21:23:52 millerjl Exp $
  */
 
 #include                 <X11/Xlib.h>
@@ -108,6 +108,8 @@ typedef struct {
    int          playerStartsShielded;
    int          shotsWallBounce;
    int          ballsWallBounce;
+   int          ballCollisions;
+   int          ballSparkCollisions;
    int          minesWallBounce;
    int          itemsWallBounce;
    int          missilesWallBounce;
@@ -138,6 +140,7 @@ typedef struct {
    int          teamFuel;
    char         cannonSmartness[3];
    int          cannonsUseItems;
+   int          cannonFlak;
    char         cannonDeadTime[20];
    int          keepShots;
    int          teamAssign;
@@ -156,6 +159,7 @@ typedef struct {
    char         ballConnectorDamping[20];
    char         maxBallConnectorRatio[20];
    char         ballConnectorLength[20];
+   int          connectorIsString;
    int          wreckageCollisionMayKill;
    int          asteroidCollisionMayKill;
    int          timing;
@@ -346,7 +350,7 @@ typedef struct {
 } prefs_t;
 
 extern int               numprefs;
-extern prefs_t           prefs[240];
+extern prefs_t           prefs[244];
 
 
 

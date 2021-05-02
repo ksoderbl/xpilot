@@ -1,4 +1,4 @@
-/* $Id: shot.c,v 5.21 2001/05/31 20:52:35 gkoopman Exp $
+/* $Id: shot.c,v 5.24 2001/09/09 17:13:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -418,6 +418,14 @@ char *Describe_shot(int type, long status, modifiers mods, int hit)
     case OBJ_HEAT_SHOT:
 	name = "heatseeker";
 	break;
+    case OBJ_CANNON_SHOT:
+	if (BIT(mods.warhead, CLUSTER)) {
+	    howmany = "";
+	    name = "flak";
+	} else {
+	    name = "shot";
+	}
+	break;
     default:
 	/*
 	 * Cluster shots are actual debris from a cluster explosion
@@ -463,8 +471,7 @@ void Fire_main_shot(int ind, int type, int dir)
     x = pl->pos.x + pl->ship->m_gun[pl->dir].x;
     y = pl->pos.y + pl->ship->m_gun[pl->dir].y;
 
-    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
-		      pl->shot_speed, pl->mods, -1);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir, pl->mods, -1);
 }
 
 void Fire_shot(int ind, int type, int dir)
@@ -475,7 +482,7 @@ void Fire_shot(int ind, int type, int dir)
 	return;
 
     Fire_general_shot(ind, pl->team, 0, pl->pos.x, pl->pos.y,
-		      type, dir, pl->shot_speed, pl->mods, -1);
+		      type, dir, pl->mods, -1);
 }
 
 void Fire_left_shot(int ind, int type, int dir, int gun)
@@ -490,8 +497,7 @@ void Fire_left_shot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->l_gun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->l_gun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
-		      pl->shot_speed, pl->mods, -1);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir, pl->mods, -1);
 
 }
 
@@ -507,8 +513,7 @@ void Fire_right_shot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->r_gun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->r_gun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
-		      pl->shot_speed, pl->mods, -1);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir, pl->mods, -1);
 
 }
 
@@ -524,8 +529,7 @@ void Fire_left_rshot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->l_rgun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->l_rgun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
-		      pl->shot_speed, pl->mods, -1);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir, pl->mods, -1);
 
 }
 
@@ -541,18 +545,19 @@ void Fire_right_rshot(int ind, int type, int dir, int gun)
     x = pl->pos.x + pl->ship->r_rgun[gun][pl->dir].x;
     y = pl->pos.y + pl->ship->r_rgun[gun][pl->dir].y;
 
-    Fire_general_shot(ind, pl->team, 0, x, y, type, dir,
-		      pl->shot_speed, pl->mods, -1);
+    Fire_general_shot(ind, pl->team, 0, x, y, type, dir, pl->mods, -1);
 
 }
 
 void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLOAT y,
-		       int type, int dir, DFLOAT speed, modifiers mods,
+		       int type, int dir, modifiers mods,
 		       int target)
 {
     char		msg[MSG_LEN];
     player		*pl = (ind == -1 ? NULL : Players[ind]);
-    int			used, life, fuse = 0,
+    int			used,
+			life = ShotsLife,
+			fuse = 0,
 			lock = 0,
 			status = GRAVITY,
 			i, ldir, minis,
@@ -565,7 +570,8 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 			side = 0,
 			fired = 0;
     long		drain;
-    DFLOAT		mass,
+    DFLOAT		mass = ShotsMass,
+			speed = ShotsSpeed,
 			turnspeed = 0,
 			max_speed = SPEED_LIMIT,
 			angle,
@@ -581,19 +587,12 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
     if (!mods.mini)
 	mods.spread = 0;
 
-    if (pl) {
-	mass = pl->shot_mass;
-	life = pl->shot_life;
-    } else {
-	if (cannon) {
-	    mass = CANNON_SHOT_MASS;
-	    life = CANNON_SHOT_LIFE;
-	    SET_BIT(status, FROMCANNON);
-	} else {
-	    mass = ShotsMass;
-	    life = ShotsLife;
-	}
+    if (cannon) {
+	mass = CANNON_SHOT_MASS;
+	life = CANNON_SHOT_LIFE;
+	SET_BIT(status, FROMCANNON);
     }
+    
 
     switch (type) {
     default:
@@ -601,6 +600,8 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 
     case OBJ_SHOT:
 	CLEAR_MODS(mods);	/* Shots can't be modified! */
+	/* FALLTHROUGH */
+    case OBJ_CANNON_SHOT:
 	pl_range = pl_radius = 0;
 	if (pl) {
 	    if (pl->fuel.sum < -ED_SHOT)
@@ -1228,6 +1229,7 @@ void Delete_shot(int ind)
     case OBJ_HEAT_SHOT:
     case OBJ_TORPEDO:
     case OBJ_SMART_SHOT:
+    case OBJ_CANNON_SHOT:
 	if (shot->mass == 0) {
 	    break;
 	}
@@ -1254,12 +1256,11 @@ void Delete_shot(int ind)
 	    if (shot->id != NO_ID) {
 		player *pl = Players[GetInd[shot->id]];
 		color = pl->color;
-		mass = pl->shot_mass;
 	    }
 	    else {
 		color = WHITE;
-		mass = ShotsMass;
 	    }
+	    mass = ShotsMass;
 	    mass *= 3;
 	    modv = 1 << shot->mods.velocity;
 	    num_modv = 4;
@@ -1420,7 +1421,7 @@ void Delete_shot(int ind)
 	else if (addHeat) {
 	    Fire_general_shot(-1, TEAM_NOT_SET, 0,
 			      shot->pos.x, shot->pos.y,
-			      OBJ_HEAT_SHOT, (int)(rfrac() * RES), 1.0f,
+			      OBJ_HEAT_SHOT, (int)(rfrac() * RES),
 			      mods, -1);
 	}
     }
@@ -1602,6 +1603,11 @@ void Move_ball(int ind)
 
     /* compute force by spring for this length */
     force = ballConnectorSpringConstant * ratio;
+
+    /* If we have string-style connectors then it is allowed to be
+     * shorted than its natural length. */
+    if (connectorIsString && ratio > 0.0)
+	return;
 
     /* if the tether is too long or too short, release it */
     if (ABS(ratio) > maxBallConnectorRatio) {

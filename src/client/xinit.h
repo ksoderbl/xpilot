@@ -1,4 +1,4 @@
-/* $Id: xinit.h,v 5.1 2001/06/02 21:01:50 bertg Exp $
+/* $Id: xinit.h,v 5.3 2001/07/08 09:07:28 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,7 +34,9 @@
 #define MAX_TOP_HEIGHT	1024
 #define DEF_TOP_HEIGHT	768
 
-#define MAX_POINTER_BUTTONS 5
+#define MAX_POINTER_BUTTONS	5
+#define MAX_BUTTON_DEFS		3
+#define NUM_BUTTON_DEFS(i)	(buttonDefs[(i)][MAX_BUTTON_DEFS])
 
 extern Atom		ProtocolAtom, KillAtom;
 extern int		buttonColor, windowColor, borderColor;

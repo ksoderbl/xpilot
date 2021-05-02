@@ -3,6 +3,98 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.4.2 compared to release 4.4.1.
+
+Paul Alexander Drees submitted a bugfix for the Windows version of XPilot.
+It used to be that, if you typed a message, the score window would go blank
+until a new set of scores came in.
+
+Joe Groff submitted a patch to allow more keys to be bound to one
+mouse button.
+
+Jarno van der Kolk submitted a patch:
+    Almost all of the serveroptions can now be "changed at runtime".
+    Only file-options, like scorefiletable, defautsfile, etc. still can't be
+    changed at runtime.  And the options, timing and teamplay.
+
+Bob Glickstein submitted "flak hack."  It changes the shots fired by cannons 
+to be AAA ("anti-aircraft artillery") rounds.  These work like normal shots 
+but explode into small flak bursts after a short while.
+
+Austin Donnelly submitted a patch:
+    Also discussed on rec.games.computer.xpilot was an proposal to make the
+    ball connector non-rigid.  This patch adds a new option
+    "connectorIsString", (default no) which when set allows the connector
+    to go "slack", so you can't push against the ball.
+    This makes certain ballruns harder, and others easier.  It does take a
+    little getting used to.
+
+Guido Koopman reworked Bob's flak patch a little. Flak explosions are smaller
+and flak can be turned off with an option cannonFlak.
+
+Austin Donelly submitted a patch to allow clients to make some
+attempt at backwards compatibility with old servers which can't handle
+a turnResistance of 0.0.
+
+Austin Donelly submitted a patch, which adds two new options:
+    ballCollisions  (default no)   Do balls collide with other objects?
+    ballSparkCollisions (default yes)   Can balls be blown around by exhaust?
+
+    ballSparkCollisions is only active if ballCollisions is also on.
+
+    What happens during a ball-object collision depends on the object.
+    Shots (including missiles of various kinds) are absorbed in an
+    inelastic collision.  Other balls bounce off, unless they were going
+    too fast (as determined by maxObjectWallBounceSpeed) in which case
+    both balls pop.  Wreckage and debris is also absorbed.  Laser pulses,
+    mines and powerup items pass unhindered through the ball.
+
+    I originally had items bouncing off the ball, but this turned out to
+    look silly: items have low mass and even slightly clipping them
+    with a ball would send them off at high speed without affecting the
+    ball much.
+
+    I tried to get lasers absorbed, but couldn't work it out - I suspect
+    the collision detection is slightly different, but I haven't spent
+    much time on it.  Mines I couldn't decide whether they should trigger
+    or bounce of the ball (so I ignored them).
+
+    This is my latest version, and fixes the problem I mentioned earlier
+    about balls in treasures being blown about.
+
+    One of the cute things I've found is that you can blow a ball by
+    placing and detonating a mine close to it :)
+
+Paul Alexander Drees submitted a patch for the server:
+    It makes asteroids release items when they are broken.
+    The probability that an asteroid releases items is given
+    by the option asteroidItemProb, while the number of items
+    that are released is between 1 and asteroidMaxItems.
+    I also streamlined some code in frame.c using a function I
+    created for the asteroid item determination.
+
+Juha Lindström submitted a patch for the client:
+    The attached patch draws the object information of the radar to the
+    map on an area three times the size of the radar. The information
+    is drawn in the sliding radar way so that you sit in the center
+    of the radar and the circles show where the opponents are relative
+    to you. Now if one of the circles suddenly moves quickly towards
+    you, just drop a few bullets to the direction of the circle, move
+    behind some cover and BANG the world is again a bit better place
+    to play xpilot :)
+
+Jarno van der Kolk submitted a version of xp-replay for Windows:
+    Finally, it works. (i.e. it doesn't crash all the time) :-)
+    This ZIP contains the source and an executable in the Release-dir.
+    The files should be unzipped into src/replay/NT, since the project uses
+    "src/client/recordfmt.h".
+    Beware that XPreplay loads the entire XPilot recording into memory, so
+    it doesn't really like the 80 Mb recordings from the summercamp. It CAN
+    handle the ballrunrecordings from the various ballrunsites just fine
+    though.
+
+===============================================================================
+
 This is a summary of changes of release 4.4.1 compared to release 4.4.0.
 
 When tuning text options at run time like the password the server
@@ -1417,6 +1509,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.28 2001/07/02 08:10:49 bertg Exp $
+==== $Id: ChangeLog,v 5.38 2001/09/24 22:48:08 bertg Exp $
 ===============================================================================
 

@@ -1,4 +1,4 @@
-/* $Id: map.c,v 5.11 2001/06/05 16:57:11 bertg Exp $
+/* $Id: map.c,v 5.15 2001/07/08 10:30:00 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,7 +65,6 @@ static void Init_map(void);
 static void Alloc_map(void);
 static void Generate_random_map(void);
 
-static unsigned short Find_closest_team(int posx, int posy);
 static void Find_base_order(void);
 
 
@@ -891,20 +890,18 @@ bool Grok_map(void)
 		    team = Find_closest_team(World.cannon[i].blk_pos.x,
 					     World.cannon[i].blk_pos.y);
 		    if (team == TEAM_NOT_SET) {
-			error("Couldn't find a matching team for the target.");
+			error("Couldn't find a matching team for the cannon.");
 		    }
 		    World.cannon[i].team = team;
 		}
 	    }
-	    if (teamFuel) {
-		for (i = 0; i < World.NumFuels; i++) {
-		    team = Find_closest_team(World.fuel[i].blk_pos.x,
-					     World.fuel[i].blk_pos.y);
-		    if (team == TEAM_NOT_SET) {
-			error("Couldn't find a matching team for fuelstation.");
-		    }
-		    World.fuel[i].team = team;
+	    for (i = 0; i < World.NumFuels; i++) {
+		team = Find_closest_team(World.fuel[i].blk_pos.x,
+					 World.fuel[i].blk_pos.y);
+		if (team == TEAM_NOT_SET) {
+		    error("Couldn't find a matching team for fuelstation.");
 		}
+		World.fuel[i].team = team;
 	    }
 	}
     }
@@ -1039,10 +1036,11 @@ void Find_base_direction(void)
     }
 }
 
+
 /*
  * Return the team that is closest to this position.
  */
-static unsigned short Find_closest_team(int posx, int posy)
+unsigned short Find_closest_team(int posx, int posy)
 {
     unsigned short team = TEAM_NOT_SET;
     int i;

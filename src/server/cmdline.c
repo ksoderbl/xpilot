@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 5.28 2001/06/24 20:12:05 bertg Exp $
+/* $Id: cmdline.c,v 5.33 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,6 +43,7 @@
 #include "portability.h"
 #include "checknames.h"
 #include "commonproto.h"
+#include "tuner.h"
 
 char cmdline_version[] = VERSION;
 
@@ -95,6 +96,8 @@ bool		missilesWallBounce;	/* Do missiles bounce off walls? */
 bool		sparksWallBounce;	/* Do sparks bounce off walls? */
 bool		debrisWallBounce;	/* Do sparks bounce off walls? */
 bool		ballsWallBounce;	/* Do balls bounce off walls? */
+bool		ballCollisions;		/* Do balls participate in colls.? */
+bool		ballSparkCollisions;	/* Do sparks push balls around? */
 bool		asteroidsWallBounce;	/* Do asteroids bounce off walls? */
 bool		cloakedExhaust;		/* Generate exhaust when cloaked? */
 bool		cloakedShield;		/* Allowed to use shields when cloaked? */
@@ -122,6 +125,7 @@ bool		teamFuel;		/* Do fuelstations belong to teams? */
 bool		teamCannons;		/* Do cannons belong to teams? */
 int		cannonSmartness;	/* Accuracy of cannonfire */
 bool		cannonsUseItems;	/* Do cannons use items? */
+bool		cannonFlak;		/* Do cannons fire flak? */
 int		cannonDeadTime;		/* How long do cannons stay dead? */
 bool		keepShots;		/* Keep shots when player leaves? */
 bool		timing;			/* Is this a race? */
@@ -178,6 +182,8 @@ DFLOAT		dropItemOnKillProb;	/* Probability for players items to */
 DFLOAT		detonateItemOnKillProb;	/* Probaility for remaining items to */
 					/* detonate when player is killed */
 DFLOAT		destroyItemInCollisionProb;
+DFLOAT		asteroidItemProb;	/* prob. that a broken asteroid will */
+int		asteroidMaxItems;	/* have one or more items */
 DFLOAT		rogueHeatProb;          /* prob. that unclaimed rocketpack */
 DFLOAT		rogueMineProb;          /* or minepack will "activate" */
 DFLOAT		itemProbMult;
@@ -233,6 +239,7 @@ DFLOAT		ballConnectorSpringConstant;
 DFLOAT		ballConnectorDamping;
 DFLOAT		maxBallConnectorRatio;
 DFLOAT		ballConnectorLength;
+bool		connectorIsString;	/* can the connector get shorter? */
 
 DFLOAT		friction;		/* friction only affects ships */
 DFLOAT		blockFriction;		/* friction in friction blocks */
@@ -335,7 +342,7 @@ static option_desc options[] = {
 	"-0.14",
 	&Gravity,
 	valReal,
-	tuner_none,
+	Compute_gravity,
 	"Gravity strength.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -345,7 +352,7 @@ static option_desc options[] = {
 	"20.0",
 	&ShipMass,
 	valReal,
-	tuner_none,
+	tuner_shipmass,
 	"Mass of fighters.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -355,7 +362,7 @@ static option_desc options[] = {
 	"50.0",
 	&ballMass,
 	valReal,
-	tuner_none,
+	tuner_ballmass,
 	"Mass of balls.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -365,7 +372,7 @@ static option_desc options[] = {
 	"0.1",
 	&ShotsMass,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Mass of bullets.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -375,7 +382,7 @@ static option_desc options[] = {
 	"21.0",
 	&ShotsSpeed,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Maximum speed of bullets.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -385,7 +392,7 @@ static option_desc options[] = {
 	"60",
 	&ShotsLife,
 	valInt,
-	tuner_none,
+	tuner_dummy,
 	"Life of bullets in ticks.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -405,7 +412,7 @@ static option_desc options[] = {
 	"4",
 	&maxRobots,
 	valInt,
-	tuner_none,
+	tuner_maxrobots,
 	"The maximum number of robots wanted.\n"
 	"Adds robots if there are less than maxRobots players.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
@@ -416,7 +423,7 @@ static option_desc options[] = {
 	"-1",
 	&minRobots,
 	valInt,
-	tuner_none,
+	tuner_minrobots,
 	"The minimum number of robots wanted.\n"
 	"At least minRobots robots will be in the game, if there is room.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
@@ -614,7 +621,7 @@ static option_desc options[] = {
 	"256",
 	&ShotsMax,
 	valInt,
-	tuner_none,
+	tuner_shotsmax,
 	"Maximum allowed bullets per player.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -770,7 +777,7 @@ static option_desc options[] = {
 	"yes",
 	&playerKillings,
 	valBool,
-	tuner_none,
+	Set_world_rules,
 	"Should players be allowed to kill one other?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -780,7 +787,7 @@ static option_desc options[] = {
 	"yes",
 	&playerShielding,
 	valBool,
-	tuner_none,
+	tuner_playershielding,
 	"Are shields allowed?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -790,7 +797,7 @@ static option_desc options[] = {
 	"yes",
 	&playerStartsShielded,
 	valBool,
-	tuner_none,
+	tuner_playerstartsshielded,
 	"Do players start with shields up?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -813,6 +820,26 @@ static option_desc options[] = {
 	Move_init,
 	"Do balls bounce off walls?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"ballCollisions",
+	"ballCollisions",
+	"no",
+	&ballCollisions,
+	valBool,
+	tuner_dummy,
+	"Can balls collide with other objects?\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"ballSparkCollisions",
+	"ballSparkCollisions",
+	"yes",
+	&ballSparkCollisions,
+	valBool,
+	tuner_dummy,
+	"Can balls be blown around by exhaust? (Needs ballCollisions too)\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE	
     },
     {
 	"minesWallBounce",
@@ -880,7 +907,7 @@ static option_desc options[] = {
 	"yes",
 	&cloakedExhaust,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Do engines of cloaked ships generate exhaust?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -890,7 +917,7 @@ static option_desc options[] = {
 	"yes",
 	&cloakedShield,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Can players use shields when cloaked?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1042,7 +1069,7 @@ static option_desc options[] = {
 	"0.0",
 	&minVisibilityDistance,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Minimum block distance for limited visibility, 0 for default.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1052,7 +1079,7 @@ static option_desc options[] = {
 	"0.0",
 	&maxVisibilityDistance,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Maximum block distance for limited visibility, 0 for default.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1073,7 +1100,7 @@ static option_desc options[] = {
 	"0",
 	&worldLives,
 	valInt,
-	tuner_none,
+	tuner_worldlives,
 	"Number of lives each player has (no sense without limitedLives).\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1133,7 +1160,7 @@ static option_desc options[] = {
 	"no",
 	&teamFuel,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Are fuelstations only available to team members?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1143,7 +1170,7 @@ static option_desc options[] = {
 	"no",
 	&teamCannons,
 	valBool,
-	tuner_none,
+	tuner_teamcannons,
 	"Do cannons choose sides in teamPlay?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1153,7 +1180,7 @@ static option_desc options[] = {
 	"1",
 	&cannonSmartness,
 	valInt,
-	tuner_none,
+	tuner_cannonsmartness,
 	"0: dumb (straight ahead),\n"
 	"1: default (random direction),\n"
 	"2: good (small error),\n"
@@ -1167,8 +1194,18 @@ static option_desc options[] = {
 	"no",
 	&cannonsUseItems,
 	valBool,
-	tuner_none,
+	tuner_cannonsuseitems,
 	"Do cannons use items?\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"cannonFlak",
+	"cannonAAA",
+	"yes",
+	&cannonFlak,
+	valBool,
+	tuner_dummy,
+	"Do cannons fire flak or normal bullets?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
@@ -1187,7 +1224,7 @@ static option_desc options[] = {
 	"no",
 	&keepShots,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Do shots, mines and missiles remain after their owner leaves?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1344,6 +1381,16 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"connectorIsString",
+	"connectorIsString",
+	"no",
+	&connectorIsString,
+	valBool,
+	tuner_dummy,
+	"Is the ball connector made of string?\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"treasureCollisionMayKill",
 	"treasureUnshieldedCollisionKills",
 	"no",
@@ -1428,7 +1475,7 @@ static option_desc options[] = {
 	"0,0",
 	&gravityPoint,
 	valIPos,
-	tuner_none,
+	Compute_gravity,
 	"If the gravity is a point source where does that gravity originate?\n"
 	"Specify the point int the form: x,y.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
@@ -1439,7 +1486,7 @@ static option_desc options[] = {
 	"90",
 	&gravityAngle,
 	valReal,
-	tuner_none,
+	Compute_gravity,
 	"If gravity is along a uniform line, at what angle is that line?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1449,7 +1496,7 @@ static option_desc options[] = {
 	"false",
 	&gravityPointSource,
 	valBool,
-	tuner_none,
+	Compute_gravity,
 	"Is gravity originating from a single point?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1459,7 +1506,7 @@ static option_desc options[] = {
 	"false",
 	&gravityClockwise,
 	valBool,
-	tuner_none,
+	Compute_gravity,
 	"If the gravity is a point source, is it clockwise?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1469,7 +1516,7 @@ static option_desc options[] = {
 	"false",
 	&gravityAnticlockwise,
 	valBool,
-	tuner_none,
+	Compute_gravity,
 	"If the gravity is a point source, is it anticlockwise?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1509,7 +1556,7 @@ static option_desc options[] = {
 	"0",
 	&wormTime,
 	valSec,
-	tuner_none,
+	tuner_wormtime,
 	"Number of seconds wormholes will remain stable.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1599,7 +1646,7 @@ static option_desc options[] = {
 	"False",
 	&allowNukes,
 	valBool,
-	tuner_none,
+	tuner_modifiers,
 	"Should nuclear weapons be allowed?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1609,7 +1656,7 @@ static option_desc options[] = {
 	"False",
 	&allowClusters,
 	valBool,
-	tuner_none,
+	tuner_modifiers,
 	"Should cluster weapons be allowed?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1619,7 +1666,7 @@ static option_desc options[] = {
 	"False",
 	&allowModifiers,
 	valBool,
-	tuner_none,
+	tuner_modifiers,
 	"Should the weapon modifiers be allowed?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1629,7 +1676,7 @@ static option_desc options[] = {
 	"False",
 	&allowLaserModifiers,
 	valBool,
-	tuner_none,
+	tuner_modifiers,
 	"Can lasers be modified to be a different weapon?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1821,7 +1868,7 @@ static option_desc options[] = {
 	"0",
 	&mineLife,
 	valInt,
-	tuner_none,
+	tuner_minelife,
 	"Life of mines in ticks, zero means use default.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1841,7 +1888,7 @@ static option_desc options[] = {
 	"0",
 	&missileLife,
 	valInt,
-	tuner_none,
+	tuner_missilelife,
 	"Life of missiles in ticks, zero means use default.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1861,7 +1908,7 @@ static option_desc options[] = {
 	"1.0",
 	&shotKillScoreMult,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Multiplication factor to scale score for shot kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1871,7 +1918,7 @@ static option_desc options[] = {
         "1.0",
         &torpedoKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for torpedo kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1881,7 +1928,7 @@ static option_desc options[] = {
         "1.0",
         &smartKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for smart missile kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1891,7 +1938,7 @@ static option_desc options[] = {
         "1.0",
         &heatKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for heatseeker kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1901,7 +1948,7 @@ static option_desc options[] = {
         "1.0",
         &clusterKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for cluster debris kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1911,7 +1958,7 @@ static option_desc options[] = {
         "1.0",
         &laserKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for laser kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1921,7 +1968,7 @@ static option_desc options[] = {
         "0.44",
         &tankKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for tank kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1931,7 +1978,7 @@ static option_desc options[] = {
         "0.33",
         &runoverKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for player runovers.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1941,7 +1988,7 @@ static option_desc options[] = {
         "1.0",
         &ballKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for ball kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1951,7 +1998,7 @@ static option_desc options[] = {
         "0.33",
         &explosionKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for explosion kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1961,7 +2008,7 @@ static option_desc options[] = {
         "0.5",
         &shoveKillScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for shove kills.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1971,7 +2018,7 @@ static option_desc options[] = {
         "0.33",
         &crashScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for player crashes.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1981,7 +2028,7 @@ static option_desc options[] = {
         "0.17",
         &mineScoreMult,
         valReal,
-        tuner_none,
+        tuner_dummy,
         "Multiplication factor to scale score for mine hits.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -1991,7 +2038,7 @@ static option_desc options[] = {
 	"yes",
 	&asteroidScoring,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Are points awarded for shooting asteroids?\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -2048,6 +2095,26 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"asteroidItemProb",
+	"asteroidItemProb",
+	"0.0",
+	&asteroidItemProb,
+	valReal,
+	Set_misc_item_limits,
+	"Probability for an asteroid to release items when it breaks.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"asteroidMaxItems",
+	"asteroidMaxItems",
+	"0",
+	&asteroidMaxItems,
+	valInt,
+	Set_misc_item_limits,
+	"The maximum number of items a broken asteroid can release.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"itemProbMult",
 	"itemProbFact",
 	"1.0",
@@ -2063,7 +2130,7 @@ static option_desc options[] = {
 	"1.0",
 	&cannonItemProbMult,
 	valReal,
-	tuner_none,
+	tuner_dummy,
 	"Average number of items a cannon gets per minute.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -2781,7 +2848,7 @@ static option_desc options[] = {
 	"0.0",
 	&gameDuration,
 	valReal,
-	tuner_none,
+	tuner_gameduration,
 	"The duration of the game in minutes (aka. pizza mode).\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -2852,7 +2919,7 @@ static option_desc options[] = {
 	"3",
 	&raceLaps,
 	valInt,
-	tuner_none,
+	tuner_racelaps,
 	"How many laps a race is run over.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -2862,7 +2929,7 @@ static option_desc options[] = {
 	"true",
 	&lockOtherTeam,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Can you lock on players from other teams when you're dead.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
@@ -2872,7 +2939,7 @@ static option_desc options[] = {
 	"false",
 	&loseItemDestroys,
 	valBool,
-	tuner_none,
+	tuner_dummy,
 	"Destroy item that player drops. Otherwise drop it.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },

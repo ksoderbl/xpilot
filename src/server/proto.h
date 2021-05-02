@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.24 2001/06/24 18:59:33 bertg Exp $
+/* $Id: proto.h,v 5.29 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -69,6 +69,7 @@ int Handle_keyboard(int);
 void Pause_player(int ind, int onoff);
 int Player_lock_closest(int ind, int next);
 bool team_dead(int team);
+void filter_mods(modifiers *mods);
 
 /*
  * Prototypes for map.c
@@ -79,6 +80,7 @@ void Find_base_direction(void);
 void Compute_gravity(void);
 DFLOAT Wrap_findDir(DFLOAT dx, DFLOAT dy);
 DFLOAT Wrap_length(DFLOAT dx, DFLOAT dy);
+unsigned short Find_closest_team(int posx, int posy);
 
 int Wildmap(
 	int width,
@@ -127,6 +129,7 @@ void Tank_handle_detach(player*);
 void Add_fuel(pl_fuel_t*, long);
 void Update_tanks(pl_fuel_t *);
 void Place_item(int type, int ind);
+int Choose_random_item(void);
 void Tractor_beam(int ind);
 void General_tractor_beam(int ind, DFLOAT x, DFLOAT y,
 			  int items, int target, bool pressor);
@@ -140,9 +143,9 @@ void Fire_ecm(int ind);
 void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y);
 void Move_ball(int ind);
 void Fire_shot(int ind, int type, int dir);
-void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLOAT y,
-		       int type, int dir, DFLOAT speed, modifiers mods,
-		       int target);
+void Fire_general_shot(int ind, unsigned short team, bool cannon,
+		       DFLOAT x, DFLOAT y, int type, int dir,
+		       modifiers mods, int target);
 void Fire_normal_shots(int ind);
 void Fire_main_shot(int ind, int type, int dir);
 void Fire_shot(int ind, int type, int dir);
@@ -193,6 +196,10 @@ void Make_wreckage(
 	    /* min,max speed  */ DFLOAT min_speed,  DFLOAT max_speed,
 	    /* min,max life   */ int    min_life,   int    max_life
 	    );
+void Make_item(int px, int py,
+	       int vx, int vy,
+	       int item, int num_per_pack,
+	       long status);
 void Explode(int ind);
 void Explode_fighter(int ind);
 void Throw_items(int ind);
@@ -288,7 +295,6 @@ void Server_info(char *str, unsigned max_size);
 void Log_game(const char *heading);
 void Game_Over(void);
 int plock_server(int onoff);
-void tuner_plock(void);
 void Main_loop(void);
 
 

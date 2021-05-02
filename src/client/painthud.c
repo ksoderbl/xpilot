@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 5.4 2001/05/19 16:47:50 bertg Exp $
+/* $Id: painthud.c,v 5.8 2001/09/19 14:12:15 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -374,6 +374,58 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 }
 
 
+void Paint_hudradar(void)
+{
+    int		i;
+    int		hrscale = 3;
+    int		hrw = hrscale * 256;
+    int		hrh = hrscale * RadarHeight;
+    float	xf = (float)hrw / (float)Setup->width, 
+		yf = (float)hrh / (float)Setup->height;
+
+    for (i = 0; i < num_radar; i++) {
+
+        int sz = radar_ptr[i].size;
+
+	/* skip non-enemy objects */
+        if ((sz & 0x80) == 0) {
+
+            int x = radar_ptr[i].x * hrscale - 
+                (world.x + ext_view_width / 2) * xf;
+
+            int y = radar_ptr[i].y * hrscale - 
+                (world.y + ext_view_height / 2) * yf;
+
+	    /* skip objects that would be drawn over our ship */
+	    if (x < SHIP_SZ && x > -SHIP_SZ
+		&& y < SHIP_SZ && y > -SHIP_SZ)
+		continue;
+
+            if (BIT(Setup->mode, WRAP_PLAY)) {
+                if (x < 0) {
+                    if (-x > hrw/2) x += hrw;
+                } else {
+                    if (x > hrw/2) x -= hrw;
+                }
+
+                if (y < 0) {
+                    if (-y > hrh/2) y += hrh;
+                } else {
+                    if (y > hrh/2) y -= hrh;
+                }
+            }
+
+            sz = (sz > 0) ? sz * hrscale : hrscale;
+
+            Arc_add(hudColor,
+                    x + ext_view_width / 2 - sz / 2, 
+                    -y + ext_view_height / 2 - sz / 2, 
+                    sz, sz, 0, 64*360);
+        }
+    }
+}
+
+
 void Paint_HUD(void)
 {
     const int		BORDER = 3;
@@ -401,6 +453,8 @@ void Paint_HUD(void)
 		    (int)(ext_view_width / 2 - ptr_move_fact*vel.x),
 		    (int)(ext_view_height / 2 + ptr_move_fact*vel.y));
     }
+
+    if (BIT(instruments, SHOW_HUD_RADAR)) Paint_hudradar();
 
     if (!BIT(instruments, SHOW_HUD_INSTRUMENTS)) {
 	return;
@@ -602,7 +656,7 @@ void Paint_HUD(void)
 	}
     }
 
-    if (time_left >= 0) {
+    if (time_left > 0) {
 	sprintf(str, "%3d:%02d", (int)(time_left / 60), (int)(time_left % 60));
 	size = XTextWidth(gameFont, str, strlen(str));
 	rd.drawString(dpy, p_draw, gc,

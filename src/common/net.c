@@ -1,4 +1,4 @@
-/* $Id: net.c,v 5.2 2001/05/07 11:38:56 dik Exp $
+/* $Id: net.c,v 5.3 2001/07/08 10:09:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -205,7 +205,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	errno = 0;
 	i = 0;
 #if 0
-	if (rand() % 12 == 0)	/* artificial packet loss */
+	if (randomMT() % 12 == 0)	/* artificial packet loss */
 	    len = sbuf->len;
 	else
 #endif
@@ -324,7 +324,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	errno = 0;
 	i = 0;
 #if 0
-	if (rand() % 12 == 0)		/* artificial packet loss */
+	if (randomMT() % 12 == 0)		/* artificial packet loss */
 	    len = sbuf->len;
 	else
 #endif

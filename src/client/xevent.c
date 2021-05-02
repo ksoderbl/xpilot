@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 5.2 2001/06/02 21:01:34 bertg Exp $
+/* $Id: xevent.c,v 5.5 2001/07/08 09:07:28 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -76,7 +76,6 @@ static BITV_DECL(keyv, NUM_KEYS);
 
 int		initialPointerControl = false;
 bool		pointerControl = false;
-extern keys_t	buttonDefs[MAX_POINTER_BUTTONS];
 extern Cursor	pointerControlCursor;
 
 #if defined(JOYSTICK) && defined(__linux__)
@@ -283,6 +282,8 @@ static void Talk_set_state(bool onoff)
 	initialPointerControl = false;
 	Pointer_control_set_state(true);
     }
+
+    scoresChanged = 1;
 }
 #endif
 

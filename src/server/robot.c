@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 5.13 2001/06/05 15:54:54 gkoopman Exp $
+/* $Id: robot.c,v 5.14 2001/08/26 19:27:26 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -798,11 +798,6 @@ static void Robot_create(void)
 
     Go_home(NumPlayers);
 
-    /*
-     * robot->shot_speed= ShotsSpeed + (rob->attack - 50) / 5.0;
-     * robot->shot_mass	= ShotsMass + (rob->defense - rob->attack) / 10.0;
-     * robot->max_speed	= SPEED_LIMIT - robot->shot_speed;
-     */
     request_ID();
     NumPlayers++;
     NumRobots++;

@@ -1,4 +1,4 @@
-/* $Id: asteroid.c,v 5.11 2001/06/02 21:02:30 bertg Exp $
+/* $Id: asteroid.c,v 5.12 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -209,6 +209,39 @@ void Break_asteroid(int ind)
 		    5, 10,
 		    3, 10);
     }
+
+    if ((asteroidMaxItems > 0) && (rfrac() < asteroidItemProb)) {
+	int	nitems = (int)(rfrac() * (asteroidMaxItems + 1));
+	int	i;
+	int	vx, vy;
+	int	item, item_dir, num_per_pack;
+	DFLOAT	item_speed;
+	long	status;
+
+	for (i = 0; i < nitems; i++) {
+	    item = Choose_random_item();
+	    item_dir = (int)(rfrac() * RES);
+	    item_speed = rfrac() * 10;
+	    vx = asteroid->vel.x + item_speed * tcos(item_dir);
+	    vy = asteroid->vel.y + item_speed * tsin(item_dir);
+	    status = GRAVITY;
+	    if (rfrac() < randomItemProb)
+		status |= RANDOM_ITEM;
+	    if (World.items[item].min_per_pack == World.items[item].max_per_pack) {
+		num_per_pack = World.items[item].max_per_pack;
+	    } else {
+		num_per_pack = World.items[item].min_per_pack
+			     + (int)(rfrac() * (1 + World.items[item].max_per_pack
+						  - World.items[item].min_per_pack));
+	    }
+
+	    Make_item(asteroid->pos.x, asteroid->pos.y,
+		      vx, vy,
+		      item, num_per_pack,
+		      status);
+	}
+    }	
+	
     sound_play_sensors(asteroid->pos.x, asteroid->pos.y, ASTEROID_BREAK_SOUND);
 
     World.asteroids.num -= 1 << (asteroid->size - 1);

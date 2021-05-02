@@ -1,4 +1,4 @@
-/* $Id: server.c,v 5.12 2001/06/03 17:28:44 bertg Exp $
+/* $Id: server.c,v 5.13 2001/07/08 09:59:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -898,9 +898,4 @@ int plock_server(int onoff)
     }
     return 0;
 #endif
-}
-
-void tuner_plock(void)
-{
-    pLockServer = (plock_server(pLockServer) == 1) ? true : false;
 }

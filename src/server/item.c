@@ -1,4 +1,4 @@
-/* $Id: item.c,v 5.12 2001/05/24 11:26:21 bertg Exp $
+/* $Id: item.c,v 5.17 2001/09/24 10:27:56 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -129,10 +129,34 @@ void Item_damage(int ind, DFLOAT prob)
     }
 }
 
+int Choose_random_item(void)
+{
+    int		i;
+    DFLOAT	item_prob_sum = 0;
+
+    for (i = 0; i < NUM_ITEMS; i++) {
+	item_prob_sum += World.items[i].prob;
+    }
+
+    if (item_prob_sum > 0.0) {
+	DFLOAT sum = item_prob_sum * rfrac();
+
+	for (i = 0; i < NUM_ITEMS; i++) {
+	    sum -= World.items[i].prob;
+	    if (sum <= 0) {
+		break;
+	    }
+	}
+	if (i >= NUM_ITEMS) {
+	    i = ITEM_FUEL;
+        }
+    }
+
+    return i;
+}
 
 void Place_item(int item, int ind)
 {
-    object		*obj;
     int			num_lose, num_per_pack,
 			bx, by,
 			place_count,
@@ -306,11 +330,30 @@ void Place_item(int item, int ind)
 	}
     }
 
+    Make_item(px, py,
+	      vx, vy,
+	      item, num_per_pack,
+	      grav | rand);
+}
+
+void Make_item(int px, int py,
+	       int vx, int vy,
+	       int item, int num_per_pack,
+	       long status)
+{
+    object *obj;
+
+    if (NumObjs >= MAX_TOTAL_SHOTS)
+	return;
+
+    if (World.items[item].num >= World.items[item].max)
+	return;
+
     obj = Obj[NumObjs++];
     obj->type = OBJ_ITEM;
     obj->info = item;
     obj->color = RED;
-    obj->status = grav | rand;
+    obj->status = status;
     obj->id = NO_ID;
     obj->team = TEAM_NOT_SET;
     Object_position_init_pixels(obj, px, py);
@@ -327,7 +370,6 @@ void Place_item(int item, int ind)
     World.items[item].num++;
     Cell_add_object(obj);
 }
-
 
 void Throw_items(int ind)
 {
@@ -435,8 +477,7 @@ void Detonate_items(int ind)
 		CLR_BIT(mods.nuclear, NUCLEAR);
 	    }
 	    Fire_general_shot(owner_ind, 0, pl->team, pl->pos.x, pl->pos.y,
-			      type, (int)(rfrac() * RES),
-			      pl->shot_speed, mods, -1);
+			      type, (int)(rfrac() * RES), mods, -1);
 	}
     }
 }

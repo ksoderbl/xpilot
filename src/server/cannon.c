@@ -1,4 +1,4 @@
-/* $Id: cannon.c,v 5.7 2001/05/28 15:54:49 bertg Exp $
+/* $Id: cannon.c,v 5.10 2001/08/26 19:27:25 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,6 +43,7 @@
 #include "objpos.h"
 #include "cannon.h"
 #include "saudio.h"
+#include "commonproto.h"
 
 char cannon_version[] = VERSION;
 
@@ -218,7 +219,7 @@ int Cannon_select_weapon(int ind)
 void Cannon_aim(int ind, int weapon, int *target, int *dir)
 {
     cannon_t	*c = World.cannon + ind;
-    int		speed = (int)CANNON_SHOT_SPEED;
+    int		speed = ShotsSpeed;
     int		range = CANNON_SHOT_LIFE_MAX * speed;
     int		cpx = (int)c->pix_pos.x;
     int		cpy = (int)c->pix_pos.y;
@@ -372,11 +373,11 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
     cannon_t	*c = World.cannon + ind;
     player	*pl = Players[target];
     int		cpx = (int)c->pix_pos.x;
-	int		cpy = (int)c->pix_pos.y;
+    int		cpy = (int)c->pix_pos.y;
     modifiers	mods;
     IFSOUND (int sound = CANNON_FIRE_SOUND;)
-	int		i;
-    int		speed = (int)CANNON_SHOT_SPEED;
+    int		i;
+    int		speed = ShotsSpeed;
 
     CLEAR_MODS(mods);
     switch (weapon) {
@@ -427,7 +428,7 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 	default:
 	    if (allowSmartMissiles) {
 		Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_SMART_SHOT,
-				  dir, speed, mods, target);
+				  dir, mods, target);
 		IFSOUND(sound = FIRE_SMART_SHOT_SOUND;)
 		break;
 	    }
@@ -436,14 +437,14 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 	    if (allowHeatSeekers
 		&& BIT(Players[target]->status, THRUSTING)) {
 		Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_HEAT_SHOT,
-				  dir, speed, mods, target);
+				  dir, mods, target);
 		IFSOUND(sound = FIRE_HEAT_SHOT_SOUND;)
 		break;
 	    }
 	    /* FALLTHROUGH */
 	case 0:
 	    Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_TORPEDO,
-			      dir, speed, mods, -1);
+			      dir, mods, -1);
 	    IFSOUND(sound = FIRE_TORPEDO_SOUND;)
 	    break;
 	}
@@ -526,6 +527,8 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 	break;
     case CW_SHOT:
     default:
+	if (cannonFlak)
+	    mods.warhead = CLUSTER;
 	/* smarter cannons fire more accurately and
 	   can therefore narrow their bullet streams */
 	for (i = 0; i < (1 + 2 * c->item[ITEM_WIDEANGLE]); i++) {
@@ -533,8 +536,8 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 			+ (4 - cannonSmartness)
 			* (-c->item[ITEM_WIDEANGLE] +  i);
 	    a_dir = MOD2(a_dir, RES);
-	    Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_SHOT,
-			      a_dir, speed, mods, -1);
+	    Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_CANNON_SHOT,
+			      a_dir, mods, -1);
 	}
 	/* I'm not sure cannons should use rearshots.
 	   After all, they are restricted to 60 degrees when picking their
@@ -544,8 +547,8 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 			+ (4 - cannonSmartness)
 			* (-((c->item[ITEM_REARSHOT] - 1) * 0.5) + i));
 	    a_dir = MOD2(a_dir, RES);
-	    Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_SHOT,
-			      a_dir, speed, mods, -1);
+	    Fire_general_shot(-1, c->team, 1, cpx, cpy, OBJ_CANNON_SHOT,
+			      a_dir, mods, -1);
 	}
     }
 

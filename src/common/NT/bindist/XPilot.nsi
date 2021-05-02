@@ -1,5 +1,5 @@
 # XPilot.nsi - the script to NSIS, the NullSoft Install System.
-# $Id: XPilot.nsi,v 5.4 2001/06/26 08:29:35 dik Exp $
+# $Id: XPilot.nsi,v 5.5 2001/09/24 17:41:17 dik Exp $
 #              Copyright 2001 Jarno van der Kolk <jarno@j-a-r-n-o.nl>
 #              Released under GNU General Public License Version 2 
 # The NullSoft Install System can be found here http://www.nullsoft.com/free/nsis/
@@ -48,6 +48,8 @@ File "README.txt"
 File "XPilot.exe"
 File "XPilotServer.exe"
 File "XPwho.exe"
+File "XPreplay.exe"
+File "XPreplay.reg"
 SetOutPath "$INSTDIR\doc"
 File "doc\Bugs.txt"
 File "doc\ChangeLog.txt"
@@ -189,6 +191,7 @@ CreateShortCut "$SMPROGRAMS\XPilot\XPilot.lnk" "$INSTDIR\XPilot.exe" "" "$INSTDI
 CreateShortCut "$SMPROGRAMS\XPilot\XPilot.ini.lnk" "$INSTDIR\XPilot.ini" "" "$INSTDIR\XPilot.ini" 0
 CreateShortCut "$SMPROGRAMS\XPilot\XPilotServer.lnk" "$INSTDIR\XPilotServer.exe" "" "$INSTDIR\XPilotServer.exe" 0
 CreateShortCut "$SMPROGRAMS\XPilot\XPwho.lnk" "$INSTDIR\XPwho.exe" "" "$INSTDIR\XPwho.exe" 0
+CreateShortCut "$SMPROGRAMS\XPilot\XPreplay.lnk" "$INSTDIR\XPreplay.exe" "" "$INSTDIR\XPreplay.exe" 0
 CreateShortCut "$SMPROGRAMS\XPilot\doc\README.lnk" "$INSTDIR\README.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\License.lnk" "$INSTDIR\License.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\ChangeLog.lnk" "$INSTDIR\doc\ChangeLog.txt" ""

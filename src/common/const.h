@@ -1,4 +1,4 @@
-/* $Id: const.h,v 5.3 2001/05/24 11:23:23 bertg Exp $
+/* $Id: const.h,v 5.4 2001/07/08 10:09:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -243,7 +243,7 @@ extern DFLOAT		tbl_cos[];
 #define MAX_PLAYER_FUEL		(2600<<FUEL_SCALE_BITS)
 #define MIN_PLAYER_FUEL		(350<<FUEL_SCALE_BITS)
 #define REFUEL_RATE		(5<<FUEL_SCALE_BITS)
-#define ENERGY_PACK_FUEL        ((500+(rand()&511))<<FUEL_SCALE_BITS)
+#define ENERGY_PACK_FUEL        ((500+(randomMT()&511))<<FUEL_SCALE_BITS)
 #define DEFAULT_PLAYER_FUEL	(1000<<FUEL_SCALE_BITS)
 #define FUEL_NOTIFY             (3*FPS)
 
@@ -276,7 +276,7 @@ extern DFLOAT		tbl_cos[];
 #define MAX_TANKS               8
 #define TANK_MASS               (ShipMass/10)
 #define TANK_CAP(n)             (!(n)?MAX_PLAYER_FUEL:(MAX_PLAYER_FUEL/3))
-#define TANK_FUEL(n)            ((TANK_CAP(n)*(5+(rand()&3)))/32)
+#define TANK_FUEL(n)            ((TANK_CAP(n)*(5+(randomMT()&3)))/32)
 #define TANK_REFILL_LIMIT       (MIN_PLAYER_FUEL/8)
 #define TANK_THRUST_FACT        0.7
 #define TANK_NOTHRUST_TIME      (HEAT_CLOSE_TIMEOUT/2+2)
@@ -306,10 +306,10 @@ extern DFLOAT		tbl_cos[];
 #define MINE_SENSE_BASE_RANGE   (MINE_RANGE*1.3)
 #define MINE_SENSE_RANGE_FACTOR (MINE_RANGE*0.3)
 #define MINE_MASS               30.0
-#define MINE_LIFETIME           (5000+(rand()&255))
+#define MINE_LIFETIME           (5000+(randomMT()&255))
 #define MINE_SPEED_FACT         1.3
 
-#define MISSILE_LIFETIME        (rand()%(64*FPS-1)+(128*FPS))
+#define MISSILE_LIFETIME        (randomMT()%(64*FPS-1)+(128*FPS))
 #define MISSILE_MASS            5.0
 #define MISSILE_RANGE           4
 #define SMART_SHOT_ACC		0.6
@@ -372,13 +372,13 @@ extern DFLOAT		tbl_cos[];
 #define TEAM_NOT_SET_STR	"4095"
 
 #define DEBRIS_MASS             4.5
-#define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)
-#define DEBRIS_LIFE(intensity)  ((rand()%(1+(intensity>>1)))|8)
+#define DEBRIS_SPEED(intensity) ((randomMT()%(1+(intensity>>2)))|20)
+#define DEBRIS_LIFE(intensity)  ((randomMT()%(1+(intensity>>1)))|8)
 #define DEBRIS_TYPES		(8 * 4 * 4)
 
 #define PL_DEBRIS_MASS          3.5
 #define PL_DEBRIS_SPEED(mass)   DEBRIS_SPEED(((int)mass)<<1)
-#define PL_DEBRIS_LIFE(mass)    (4+(rand()%(int)(1+mass*1.5)))
+#define PL_DEBRIS_LIFE(mass)    (4+(randomMT()%(int)(1+mass*1.5)))
 
 #define ENERGY_RANGE_FACTOR	(2.5/FUEL_SCALE_FACT)
 

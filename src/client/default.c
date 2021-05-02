@@ -1,4 +1,4 @@
-/* $Id: default.c,v 5.11 2001/06/22 05:27:42 dik Exp $
+/* $Id: default.c,v 5.15 2001/09/19 09:32:47 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -111,7 +111,7 @@ char *talk_fast_temp_buf_big;
 static void Get_test_resources(XrmDatabase rDB);
 
 
-keys_t buttonDefs[MAX_POINTER_BUTTONS];
+keys_t buttonDefs[MAX_POINTER_BUTTONS][MAX_BUTTON_DEFS+1];
 
 /* from common/config.c */
 extern char conf_ship_file_string[];
@@ -359,6 +359,13 @@ option options[] = {
 	"Yes",
 	KEY_DUMMY,
 	"Should the HUD be displayed or not.\n"
+    },
+    {
+	"showHUDRadar",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Should the HUD radar be displayed or not.\n"
     },
     {
 	"fuelNotify",
@@ -2742,6 +2749,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "showMineName", &instruments, SHOW_MINE_NAME);
     Get_bit_resource(rDB, "showMessages", &instruments, SHOW_MESSAGES);
     Get_bit_resource(rDB, "showHUD", &instruments, SHOW_HUD_INSTRUMENTS);
+    Get_bit_resource(rDB, "showHUDRadar", &instruments, SHOW_HUD_RADAR);
     Get_bit_resource(rDB, "verticalHUDLine", &instruments, SHOW_HUD_VERTICAL);
     Get_bit_resource(rDB, "horizontalHUDLine", &instruments, SHOW_HUD_HORIZONTAL);
     Get_bit_resource(rDB, "fuelMeter", &instruments, SHOW_FUEL_METER);
@@ -2913,19 +2921,31 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	Get_resource(rDB, resValue, resValue, sizeof resValue);
 	ptr = resValue;
 	if (*ptr != '\0') {
-	    if (!strncasecmp(ptr, "key", 3))
-		ptr += 3;
-	    for (j = 0; j < NELEM(options); j++) {
-		if (options[j].key != KEY_DUMMY) {
-		    if (!strcasecmp(ptr, options[j].name + 3)) {
-			buttonDefs[i] = options[j].key;
-			break;
+	    for (ptr = strtok(resValue, " \t\r\n");
+		 ptr != NULL;
+		 ptr = strtok(NULL, " \t\r\n")) {
+		if (!strncasecmp(ptr, "key", 3))
+		    ptr += 3;
+		for (j = 0; j < NELEM(options); j++) {
+		    if (options[j].key != KEY_DUMMY) {
+			if (!strcasecmp(ptr, options[j].name + 3)) {
+			    if (NUM_BUTTON_DEFS(i) == MAX_BUTTON_DEFS) {
+				errno = 0;
+				error("Can only have %d keys bound to"
+				      " pointer button %d",
+				      MAX_BUTTON_DEFS, i);
+				break;
+			    }
+			    buttonDefs[i][NUM_BUTTON_DEFS(i)++]
+				= options[j].key;
+			    break;
+			}
 		    }
 		}
-	    }
-	    if (j == NELEM(options)) {
-		errno = 0;
-		error("Unknown key \"%s\" for pointer button %d", resValue, i);
+		if (j == NELEM(options)) {
+		    errno = 0;
+		    error("Unknown key \"%s\" for pointer button %d", ptr, i);
+		}
 	    }
 	}
     }

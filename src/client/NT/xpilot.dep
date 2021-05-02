@@ -96,9 +96,14 @@
 
 ..\datagram.c : \
 	"..\..\common\config.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
 	"..\..\common\NT\winNet.h"\
+	"..\..\common\NT\winX.h"\
 	"..\..\common\portability.h"\
 	"..\..\common\socklib.h"\
+	"..\client.h"\
 	"..\datagram.h"\
 	"..\protoclient.h"\
 	".\winClient.h"\
@@ -156,6 +161,7 @@
 	"..\blockbitmaps.h"\
 	"..\client.h"\
 	"..\gfx2d.h"\
+	"..\guimap.h"\
 	"..\paint.h"\
 	"..\paintdata.h"\
 	"..\paintmacros.h"\
@@ -183,6 +189,7 @@
 	"..\blockbitmaps.h"\
 	"..\client.h"\
 	"..\gfx2d.h"\
+	"..\guiobjects.h"\
 	"..\paint.h"\
 	"..\paintdata.h"\
 	"..\paintmacros.h"\
@@ -388,6 +395,7 @@
 
 ..\talkmacros.c : \
 	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
 	"..\..\common\config.h"\
 	"..\..\common\const.h"\
 	"..\..\common\draw.h"\
@@ -486,6 +494,7 @@
 	"..\record.h"\
 	"..\talk.h"\
 	"..\widget.h"\
+	"..\xevent.h"\
 	"..\xeventhandlers.h"\
 	"..\xinit.h"\
 	".\winAudio.h"\
@@ -512,6 +521,7 @@
 	"..\record.h"\
 	"..\talk.h"\
 	"..\widget.h"\
+	"..\xeventhandlers.h"\
 	"..\xinit.h"\
 	".\winAudio.h"\
 	".\winClient.h"\
@@ -757,6 +767,7 @@
 	"..\..\common\commonproto.h"\
 	"..\..\common\NT\winNet.h"\
 	"..\..\common\socklib.h"\
+	"..\..\server\NT\winServer.h"\
 	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	
 
@@ -765,6 +776,10 @@
 	
 
 ..\..\common\strlcpy.c : \
+	"..\..\common\commonproto.h"\
+	
+
+..\..\common\xpmemory.c : \
 	"..\..\common\commonproto.h"\
 	
 

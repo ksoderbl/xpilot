@@ -1,4 +1,4 @@
-/* $Id: global.h,v 5.13 2001/05/31 20:52:35 gkoopman Exp $
+/* $Id: global.h,v 5.17 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -104,6 +104,8 @@ extern bool		playerShielding;
 extern bool		playerStartsShielded;
 extern bool		shotsWallBounce;
 extern bool		ballsWallBounce;
+extern bool		ballCollisions;
+extern bool		ballSparkCollisions;
 extern bool		minesWallBounce;
 extern bool		itemsWallBounce;
 extern bool		missilesWallBounce;
@@ -137,6 +139,7 @@ extern bool		teamFuel;
 extern bool		teamCannons;
 extern int		cannonSmartness;
 extern bool		cannonsUseItems;
+extern bool		cannonFlak;
 extern int		cannonDeadTime;
 extern bool		keepShots;
 extern bool		teamAssign;
@@ -221,6 +224,7 @@ extern DFLOAT		ballConnectorSpringConstant;
 extern DFLOAT		ballConnectorDamping;
 extern DFLOAT		maxBallConnectorRatio;
 extern DFLOAT		ballConnectorLength;
+extern bool		connectorIsString;
 
 extern DFLOAT 		dropItemOnKillProb;
 extern DFLOAT		detonateItemOnKillProb;
@@ -230,6 +234,8 @@ extern DFLOAT            rogueHeatProb;
 extern DFLOAT            rogueMineProb;
 extern DFLOAT		itemProbMult;
 extern DFLOAT		cannonItemProbMult;
+extern DFLOAT		asteroidItemProb;
+extern int		asteroidMaxItems;
 extern DFLOAT		maxItemDensity;
 extern DFLOAT		maxAsteroidDensity;
 extern int		itemConcentratorRadius;

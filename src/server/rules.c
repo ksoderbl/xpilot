@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 5.6 2001/05/31 20:52:35 gkoopman Exp $
+/* $Id: rules.c,v 5.9 2001/09/18 18:20:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -63,7 +63,8 @@ char rules_version[] = VERSION;
 #define MAX_LASER		99
 #define MAX_TRACTOR_BEAM	99
 
-long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
+long	KILLING_SHOTS = (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
+			 |OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
 long	DEF_BITS = 0;
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE|WARPING|WARPED);
 long	DEF_HAVE =
@@ -281,6 +282,11 @@ void Set_misc_item_limits(void)
 
     LIMIT(itemConcentratorRadius, 1, World.diagonal);
     LIMIT(itemConcentratorProb, 0.0, 1.0);
+
+    LIMIT(asteroidItemProb, 0.0, 1.0);
+
+    if (asteroidMaxItems < 0)
+	asteroidMaxItems = 0;
 }
 
 
@@ -340,7 +346,8 @@ void Set_world_rules(void)
 
     if (!BIT(World.rules->mode, PLAYER_KILLINGS))
 	CLR_BIT(KILLING_SHOTS,
-		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
+		OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
+		|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
 	CLR_BIT(DEF_HAVE, HAS_SHIELD);
 

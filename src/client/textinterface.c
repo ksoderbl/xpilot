@@ -1,4 +1,4 @@
-/* $Id: textinterface.c,v 5.6 2001/06/03 17:21:26 bertg Exp $
+/* $Id: textinterface.c,v 5.7 2001/07/31 17:35:33 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -651,6 +651,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 			error("Incomplete queue reply from server");
 		    } else {
 			printf("... queued at position %2d\n", qpos);
+			IFWINDOWS(Progress("Queued at position %2d\n", qpos);)
 		    }
 		    /*
 		     * Acknowledge each 10 seconds that we are still

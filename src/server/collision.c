@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 5.35 2001/06/02 21:02:36 bertg Exp $
+/* $Id: collision.c,v 5.40 2001/09/15 15:33:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,6 +52,7 @@
 #include "portability.h"
 #include "objpos.h"
 #include "asteroid.h"
+#include "commonproto.h"
 
 char collision_version[] = VERSION;
 
@@ -229,6 +230,7 @@ static char msg[MSG_LEN];
 static void PlayerCollision(void);
 static void PlayerObjectCollision(int ind);
 static void AsteroidCollision(void);
+static void BallCollision(void);
 static void Player_collides_with_ball(int ind, object *obj, int radius);
 static void Player_collides_with_item(int ind, object *obj);
 static void Player_collides_with_mine(int ind, object *obj);
@@ -237,11 +239,17 @@ static void Player_collides_with_asteroid(int ind, wireobject *obj);
 static void Player_collides_with_killing_shot(int ind, object *obj);
 
 
+
 void Check_collision(void)
 {
+    if (ballCollisions) {
+	BallCollision();
+    }
+
     if (round_delay == 0) {
 	PlayerCollision();
     }
+
     Laser_pulse_collision();
     AsteroidCollision();
 }
@@ -690,7 +698,7 @@ static void PlayerObjectCollision(int ind)
 	    }
 	}
 	else if (BIT(obj->type, OBJ_HEAT_SHOT | OBJ_SMART_SHOT | OBJ_TORPEDO
-				| OBJ_SHOT)) {
+				| OBJ_SHOT | OBJ_CANNON_SHOT)) {
 	    if (pl->id == obj->id && obj->life > obj->fuselife) {
 		continue;
 	    }
@@ -1257,6 +1265,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 	    break;
 
 	case OBJ_SHOT:
+	case OBJ_CANNON_SHOT:
 	    sound_play_sensors(pl->pos.x, pl->pos.y,
 			       PLAYER_EAT_SHOT_SOUND);
 	    if (BIT(pl->used, (HAS_SHIELD|HAS_EMERGENCY_SHIELD))
@@ -1266,7 +1275,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 		DFLOAT rel_velocity = LENGTH(pl->vel.x - obj->vel.x,
 					     pl->vel.y - obj->vel.y);
 		drainfactor = (rel_velocity * rel_velocity * ABS(obj->mass))
-			    / (ShotsSpeed * ShotsSpeed * ShotsMass);
+			      / (ShotsSpeed * ShotsSpeed * ShotsMass);
 #else
 		drainfactor = 1;
 #endif
@@ -1292,6 +1301,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 	case OBJ_SMART_SHOT:
 	case OBJ_HEAT_SHOT:
 	case OBJ_SHOT:
+	case OBJ_CANNON_SHOT:
 	    if (BIT(obj->status, FROMCANNON)) {
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   PLAYER_HIT_CANNONFIRE_SOUND);
@@ -1514,6 +1524,105 @@ static void AsteroidCollision(void)
 
 		    /* break; */
 		}
+	    }
+	}
+    }
+}
+
+
+/* do ball vs ball collisions */
+static void BallCollision(void)
+{
+    int         i, j, obj_count;
+    int		ignored_object_types;
+    object    **obj_list;
+    object     *obj;
+    ballobject *ball;
+
+    /*
+     * These object types ignored;
+     * some are handled by other code,
+     * some don't interact.
+     */
+    ignored_object_types = OBJ_PLAYER | OBJ_ASTEROID | OBJ_MINE | OBJ_ITEM;
+    if (!ballSparkCollisions) {
+	ignored_object_types |= OBJ_SPARK;
+    }
+
+    for (i = 0; i < NumObjs; i++) {
+	ball = BALL_IND(i);
+
+	/* ignore if: */
+	if (ball->type != OBJ_BALL ||	/* not a ball */
+	    ball->life <= 0 ||		/* dying ball */
+	    (ball->treasure != -1 && World.treasures[ball->treasure].have)) {
+					/* safe in a treasure */
+	    continue;
+	}
+
+	Cell_get_objects(OBJ_X_IN_BLOCKS(ball), OBJ_Y_IN_BLOCKS(ball),
+			 4, 300,
+			 &obj_list, &obj_count);
+
+	for (j = 0; j < obj_count; j++) {
+	    obj = obj_list[j];
+
+	    if (BIT(obj->type, ignored_object_types))
+		continue;
+
+	    if (obj->life <= 0)
+		continue;
+
+	    /* have we already done this ball pair? */
+	    if (obj->type == OBJ_BALL && obj <= OBJ_PTR(ball)) {
+		continue;
+	    }
+
+	    if (!in_range_acd(ball->prevpos.x, ball->prevpos.y,
+			      ball->pos.x, ball->pos.y,
+			      obj->prevpos.x, obj->prevpos.y,
+			      obj->pos.x, obj->pos.y,
+			      ball->pl_radius + obj->pl_radius)) {
+		continue;
+	    }
+
+	    /* bang! */
+
+	    switch (obj->type) {
+	    case OBJ_BALL:
+		/* Balls bounce off other balls that aren't safe in
+		 * the treasure: */
+		{
+		    ballobject *b2 = BALL_PTR(obj);
+		    if (b2->treasure != -1 && World.treasures[b2->treasure].have)
+			break;
+		}
+		
+		/* if the collision was too violent, destroy ball and object */
+		if ((sqr(ball->vel.x - obj->vel.x) +
+		     sqr(ball->vel.y - obj->vel.y)) >
+		    sqr(maxObjectWallBounceSpeed)) {
+		    ball->life = 0;
+		    obj->life  = 0;
+		} else {
+		    /* they bounce */
+		    Obj_repel((object*)ball, obj,
+			      ball->pl_radius + obj->pl_radius);
+		}
+		break;
+
+	    /* balls absorb and destroy all other objects: */
+	    case OBJ_SPARK:
+	    case OBJ_TORPEDO:
+	    case OBJ_SMART_SHOT:
+	    case OBJ_HEAT_SHOT:
+	    case OBJ_SHOT:
+	    case OBJ_CANNON_SHOT:
+	    case OBJ_DEBRIS:
+	    case OBJ_WRECKAGE:
+		Delta_mv(OBJ_PTR(ball), obj);
+		obj->life = 0;
+		break;
 	    }
 	}
     }

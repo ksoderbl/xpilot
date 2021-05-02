@@ -1,4 +1,20 @@
 *********************************************************************
+Changes to xmapedit V4.4.1a to bring it up to V4.4.2a
+
+Completely reworked options dialog to make it useable.
+
+Added 4 new options
+ballSporkCollisions, ballCollisions, connectorIsString, cannonFlak
+
+Daedlaes (jarrod@xpilot.org) September 19, 2001
+*********************************************************************
+Changes to xmapedit V4.4.0a to bring it up to V4.4.1a
+
+Paul Forman submitted a patch to fix the drawing of the selection box
+on most commonly used X servers.
+
+Daedlaes (jarrod@xpilot.org) June 28, 2001
+*********************************************************************
 Changes to xmapedit V4.2.1a to bring it up to V4.4.0a
 
 Completely reworked options dialog to make it useable.
@@ -141,5 +157,5 @@ Changes to xmapedit V1.00 to bring it up to V3.5.1b
 
   Robert Templeman, Jul 5, 1996.
 *********************************************************************
-$Id: README.UPDATE,v 5.3 2001/06/01 21:46:08 millerjl Exp $
+$Id: README.UPDATE,v 5.4 2001/09/18 21:23:52 millerjl Exp $
 
