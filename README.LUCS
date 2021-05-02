@@ -1,0 +1,11 @@
+Package name:   xpilot
+Version number: 1.3b
+Report bugs to: ftp@csc.liv.ac.uk
+Tested on:      HP 9000/720 running HP-UX 8.07
+Purpose:        A multi-player X Windows implementation of the Thrust game. This involves a
+                ship thrusting around a landscape shooting enemies and picking up fuel and
+                bonus objects. There are computer-controlled enemy ships, so a one-player game
+                is possible. New players can join in mid-game too. A colour or grey-scale
+                display is required for this game (it does not work on mono screens).
+Date archived:  Mon 7 Sep 1992
+Special notes:  See HPUX.Install for important notes.
