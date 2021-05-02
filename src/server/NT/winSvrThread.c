@@ -1,4 +1,4 @@
-/* $Id: winSvrThread.c,v 5.3 2001/05/28 00:17:36 dik Exp $
+/* $Id: winSvrThread.c,v 5.4 2002/05/22 15:34:38 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.c - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.c,v 5.3 2001/05/28 00:17:36 dik Exp $					*
+*  $Id: winSvrThread.c,v 5.4 2002/05/22 15:34:38 dik Exp $					*
 \***************************************************************************/
 
 /* Entry point for Windows Server Thread */
@@ -235,7 +235,7 @@ void xpprintfW(const char *fmt, ...)
 	   instead of PostMessage (which justs puts it in the queue).
 	   I guess i should have a nice dynamic array
 	*/
-	if (pServerInfo)
+	if (pServerInfo && !ServerKilled)
 		SendMessage(pServerInfo->m_hwndNotifyProgress, WM_MSGAVAILABLE, susing, (LPARAM)s);
 	else
 		printf(s);	// no Window?  try stdout (probably won't go anywhere)

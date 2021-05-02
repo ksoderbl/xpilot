@@ -78,10 +78,10 @@ STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About XPilot-server"
 FONT 8, "MS Sans Serif"
 BEGIN
-    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,21,20
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
     LTEXT           "version x",IDC_VERSION,40,23,119,8,SS_NOPREFIX
     DEFPUSHBUTTON   "OK",IDOK,235,7,32,14,WS_GROUP
-    LTEXT           "XPilot is copyright © 1991-2001 by \nBjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
+    LTEXT           "XPilot is copyright © 1991-2002 by \nBjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
                     IDC_STATIC,7,41,260,22
     PUSHBUTTON      "www.xpilot.org",IDC_BUTTON_WWW_XPILOT_ORG,19,74,103,14
     PUSHBUTTON      "www.buckosoft.com/xpilot/",IDC_BUTTON_WWW_BUCKOSOFT_COM,
@@ -96,7 +96,7 @@ CAPTION "XPilotServer"
 FONT 8, "MS Sans Serif"
 BEGIN
     PUSHBUTTON      "&Start Server",IDC_START_SERVER,7,7,50,14
-    PUSHBUTTON      "&Configure",IDC_CONFIGURE,7,26,50,14
+    PUSHBUTTON      "Con&figure",IDC_CONFIGURE,7,26,50,14
     LTEXT           "Map:",IDC_STATIC,62,9,19,8
     LTEXT           "Active Map Here",IDC_MAPNAME,112,9,118,8
     GROUPBOX        "",IDC_STATIC,107,4,123,16
@@ -105,6 +105,7 @@ BEGIN
     LTEXT           "Player count",IDC_STATIC,62,28,40,8
     LTEXT           "0",IDC_PLAYERCOUNT,112,28,11,8
     GROUPBOX        "",IDC_STATIC,107,22,19,16
+    PUSHBUTTON      "&Connect Client",IDC_CONNECT_CLIENT,175,44,55,14
 END
 
 IDD_CONFIG_DLG DIALOG DISCARDABLE  0, 0, 270, 141
@@ -112,15 +113,16 @@ STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Configure"
 FONT 8, "MS Sans Serif"
 BEGIN
-    EDITTEXT        IDC_COMMANDLINE,7,25,204,74,ES_MULTILINE | WS_VSCROLL
+    EDITTEXT        IDC_COMMANDLINE,7,30,204,74,ES_MULTILINE | WS_VSCROLL
     DEFPUSHBUTTON   "OK",IDOK,213,7,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,213,24,50,14
-    LTEXT           "Command line",IDC_STATIC,7,14,45,8
+    LTEXT           "Command line",IDC_STATIC,7,19,45,8
     PUSHBUTTON      "&Set Options",IDC_SETOPTIONS,213,44,50,14,WS_DISABLED
     LTEXT           "Server &Options",IDC_STATIC_URL,7,110,103,10,SS_NOTIFY
     PUSHBUTTON      "Choose &Map",IDC_CHOOSEMAP,213,65,50,14
     LTEXT           "&Jarno's Server Options",IDC_STATIC_URL2,7,121,103,10,
                     SS_NOTIFY
+    LTEXT           "",IDC_STATIC_STATUS,7,7,201,8
 END
 
 IDD_EXITXPILOTS DIALOG DISCARDABLE  0, 0, 185, 94

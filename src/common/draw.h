@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 5.4 2001/06/22 05:27:42 dik Exp $
+/* $Id: draw.h,v 5.5 2002/06/15 18:08:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 #ifndef TYPES_H
 /* need position */
 #include "types.h"
-#include "../common/const.h"
+#include "const.h"
 #endif
 
 /*
@@ -57,7 +57,7 @@
 #define	MISSILECOLOR	18		/* wide white pen */
 #define	LASERCOLOR		19		/* wide red pen */
 #define	LASERTEAMCOLOR	20		/* wide blue pen */
-#define	FUNKCOLORS		6		/* 5 funky colors here (15-20) */
+#define	FUNKCOLORS		6		/* 6 funky colors here (15-20) */
 #endif
 
 /*

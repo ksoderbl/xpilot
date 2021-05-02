@@ -1142,6 +1142,7 @@ SOURCE=..\usleep.c
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\welcome.c
 SOURCE=..\widget.c
 
 "$(INTDIR)\widget.obj"	"$(INTDIR)\widget.sbr" : $(SOURCE) "$(INTDIR)"

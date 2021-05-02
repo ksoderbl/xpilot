@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 5.15 2002/01/18 22:34:25 kimiko Exp $
+/* $Id: netclient.c,v 5.16 2002/05/22 11:22:24 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1352,6 +1352,13 @@ int Net_input(void)
 	|| last_loops - last_send_anything > 5 * Setup->frames_per_second) {
 	Key_update();
 	last_send_anything = last_loops;
+    } else {
+	/*
+	 * 4.5.4a2: flush if non-empty
+	 * This should help speedup the map update speed
+	 * for maps with large number of targets or cannons.
+	 */
+	Net_flush();
     }
 
     return 1 + (last_frame > oldest_frame);

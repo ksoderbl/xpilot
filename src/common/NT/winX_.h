@@ -1,4 +1,4 @@
-/* $Id: winX_.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: winX_.h,v 5.1 2002/06/15 18:10:05 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is the private interface to the Winodoze -> X11 translator.	*
 *  Here we hide the gory Windoze details from X11							*
 *																			*
-*  $Id: winX_.h,v 5.0 2001/04/07 20:00:59 dik Exp $							*
+*  $Id: winX_.h,v 5.1 2002/06/15 18:10:05 dik Exp $							*
 \***************************************************************************/
 #ifndef	_WINX__H_
 #define	_WINX__H_
@@ -123,7 +123,7 @@ extern	XIDTYPE	xid[MAX_XIDS];
 //#define	GetTophWnd()	xid[0].hwnd.hWnd
 
 #ifdef PENS_OF_PLENTY
-struct winXobj {
+typedef struct {
 	HPEN		pen;
 	HPEN		dashpen;
 	HPEN		cdashpen;
@@ -131,16 +131,16 @@ struct winXobj {
 	HBRUSH		brush;
 	COLORREF	color;
 	HBITMAP		bitmask;
-};
+} winXobj;
 #else
-struct winXobj {
+typedef struct {
 	HPEN		pen;
 	HBRUSH		brush;
 	COLORREF	color;
 //	HBITMAP		bitmask;	not used
-};
+} winXobj;
 #endif
-typedef	struct	winXobj winXobj;
+//typedef	struct	winXobj winXobj;
 extern	winXobj objs[];
 
 extern	HINSTANCE		hInstance;

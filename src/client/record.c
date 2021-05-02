@@ -1,4 +1,4 @@
-/* $Id: record.c,v 5.4 2001/10/19 17:52:56 bertg Exp $
+/* $Id: record.c,v 5.5 2002/06/15 18:14:01 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,6 +42,7 @@
 #ifdef _WINDOWS
 # include "winX.h"
 # include "winX_.h"
+# include <io.h>
 #endif
 
 #include "version.h"

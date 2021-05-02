@@ -25,6 +25,7 @@
 #define IDD_CONF_WORLD                  144
 #define IDC_START_SERVER                1000
 #define IDC_CONFIGURE                   1001
+#define IDC_CONNECT_CLIENT              1002
 #define IDC_MAPNAME                     1003
 #define IDC_LIST_PRINTF                 1004
 #define IDC_PLAYERCOUNT                 1004
@@ -79,6 +80,7 @@
 #define IDC_SLIDER_ITEMCLOAKPROB        1045
 #define IDC_STATIC_URL2                 1045
 #define IDC_SLIDER_ITEMSENSORPROB       1046
+#define IDC_STATIC_STATUS               1046
 #define IDC_CHECK_NUKECLUSTERDAMAGE     1047
 #define IDC_CHECK_MOVINGITEMPROB        1048
 #define IDC_CHECK_DROPITEMONKILLPROB    1049
@@ -122,7 +124,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        145
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1045
+#define _APS_NEXT_CONTROL_VALUE         1047
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

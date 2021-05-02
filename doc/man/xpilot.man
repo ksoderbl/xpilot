@@ -1,10 +1,10 @@
 .\" -*-Text-*-
 .\"
-.\" Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
+.\" Copyright © 1991-2002 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 .\"
 .TH XPILOT 6 "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.5.3: 2002, Apr 22
+.ds ]W XPilot 4.5.4: Jul 15, 2002
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1579,7 +1579,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of xpilot, i.e., 4.5.3
+\(bu The full version of xpilot, i.e., 4.5.4
 .TP
 \(bu What the bug looks like (symptoms)
 .TP
@@ -1598,17 +1598,17 @@ will be to install the GNU C compiler on your system.
 
 .SH COPYRIGHT & DISCLAIMER
 
-xpilot is Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.  xpilot comes with ABSOLUTELY NO WARRANTY;
+xpilot is Copyright © 1991-2002 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.  xpilot comes with ABSOLUTELY NO WARRANTY;
 for details see the provided LICENSE file.
 
 
 .SH FILES
 .PD 0
 .TP 40
-.B /root/sf/xpilot/lib/motd
+.B /home/bert/sf/xpilot/lib/motd
 Message of the day.
 .TP
-.B /root/sf/xpilot/lib/sounds
+.B /home/bert/sf/xpilot/lib/sounds
 File containing the sound to sound-file mapping.
 .PD
 

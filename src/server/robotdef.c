@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 5.30 2002/04/13 18:26:04 bertg Exp $
+/* $Id: robotdef.c,v 5.33 2002/05/27 16:51:00 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -151,8 +151,8 @@ int Robot_default_setup(robot_type_t *type_ptr)
 /*static bool Check_robot_navigate(int ind, bool * num_evade);*/
 static bool Check_robot_evade(int ind, int mine_i, int ship_i);
 static bool Check_robot_target(int ind, int item_x, int item_y, int new_mode);
-static bool Detect(int ind, int j);
-static int Importance(int ind, long itemtype);
+static bool Detect_hunt(int ind, int j);
+static int Rank_item_value(int ind, long itemtype);
 static bool Ball_handler(int ind);
 
 
@@ -1384,7 +1384,7 @@ static bool Check_robot_target(int ind,
 	    case 3:			type = OBJ_HEAT_SHOT; break;
 	    default:			type = OBJ_TORPEDO; break;
 	    }
-	    if (Detect(ind, GetInd[pl->lock.pl_id])
+	    if (Detect_hunt(ind, GetInd[pl->lock.pl_id])
 		&& !pl->visibility[GetInd[pl->lock.pl_id]].canSee)
 		type = OBJ_HEAT_SHOT;
 	    if (type == OBJ_SMART_SHOT && !allowSmartMissiles)
@@ -1454,7 +1454,7 @@ static bool Check_robot_hunt(int ind)
 	return false;
     if (pl->fuel.sum < pl->fuel.l3 /*MAX_PLAYER_FUEL/2*/)
 	return false;
-    if (!Detect(ind, GetInd[my_data->robot_lock_id]))
+    if (!Detect_hunt(ind, GetInd[my_data->robot_lock_id]))
 	return false;
 
     ship = Players[GetInd[my_data->robot_lock_id]];
@@ -1505,11 +1505,15 @@ static bool Check_robot_hunt(int ind)
     return true;
 }
 
-static bool Detect(int ind, int j)
+static bool Detect_hunt(int ind, int j)
 {
     player	*pl = Players[ind],
 		*ship = Players[j];
     int		dx, dy;
+
+    if (BIT(ship->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING) {
+	return false;		/* can't go after non-playing ships */
+    }
 
     if (BIT(ship->used, HAS_PHASING_DEVICE))
 	return false;		/* can't do anything with phased ships */
@@ -1551,7 +1555,7 @@ static bool Detect(int ind, int j)
 #define ROBOT_IGNORE_ITEM	0	/* ignore */
 /*
  */
-static int Importance(int ind, long itemtype)
+static int Rank_item_value(int ind, long itemtype)
 {
     player	*pl = Players[ind];
 
@@ -2040,7 +2044,7 @@ static void Robot_default_play_check_objects(int ind,
 		    if (BIT(shot->status, RANDOM_ITEM)) {
 			imp = ROBOT_HANDY_ITEM;		/* It doesn't know what it is, so get it if it can */
 		    } else {
-			imp = Importance(ind, obj_list[j]->info);
+			imp = Rank_item_value(ind, obj_list[j]->info);
 		    }
 		    if (imp > ROBOT_IGNORE_ITEM && imp >= *item_imp) {
 			*item_imp = imp;
@@ -2379,7 +2383,7 @@ static void Robot_default_play(int ind)
 	if (BIT(Players[GetInd[my_data->robot_lock_id]]->status,
 		PLAYING|GAME_OVER|PAUSE) == PLAYING) {
 
-	    if (Detect(ind, j)) {
+	    if (Detect_hunt(ind, j)) {
 
 		if (BIT(my_data->robot_lock, LOCK_PLAYER)
 		    && my_data->robot_lock_id == ship->id) {
@@ -2414,7 +2418,7 @@ static void Robot_default_play(int ind)
 		|| Team_immune(pl->id, ship->id))
 		continue;
 
-	    if (!Detect(ind, j))
+	    if (!Detect_hunt(ind, j))
 		continue;
 
 	    dx = ship->pos.x - pl->pos.x, dx = WRAP_DX(dx);
@@ -2489,7 +2493,7 @@ static void Robot_default_play(int ind)
 		&& my_data->robot_lock_id != pl->lock.pl_id
 		&& BIT(Players[GetInd[my_data->robot_lock_id]]->status,
 		       PLAYING|PAUSE|GAME_OVER) == PLAYING)
-	    || !Detect(ind, GetInd[ship->id])
+	    || !Detect_hunt(ind, GetInd[ship->id])
 	    || (pl->fuel.sum <= pl->fuel.l3
 		&& !BIT(World.rules->mode, TIMING))
 	    || (BIT(World.rules->mode, TIMING)
@@ -2568,7 +2572,7 @@ static void Robot_default_play(int ind)
 	}
     }
     if (BIT(pl->lock.tagged, LOCK_PLAYER) &&
-	Detect(ind, GetInd[pl->lock.pl_id])) {
+	Detect_hunt(ind, GetInd[pl->lock.pl_id])) {
 
 	ship = Players[GetInd[pl->lock.pl_id]];
 	shoot_time = (int)(pl->lock.distance / (ShotsSpeed + 1));

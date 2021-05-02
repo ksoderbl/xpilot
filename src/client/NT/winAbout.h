@@ -1,4 +1,4 @@
-/* $Id: winAbout.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: winAbout.h,v 5.2 2002/06/15 21:35:22 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -26,10 +26,8 @@
 *  winAbout.h : CAboutDlg dialog used for XPilotNT About					*
 *																			*
 *  This file contains the Windows about dialog and scrolling credits box.	*
-*  $Id: winAbout.h,v 5.0 2001/04/07 20:00:59 dik Exp $						*
+*  $Id: winAbout.h,v 5.2 2002/06/15 21:35:22 dik Exp $						*
 \***************************************************************************/
-
-#include "resource.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CCredits window
@@ -98,6 +96,7 @@ public:
 // Implementation
 protected:
 	//{{AFX_MSG(CAboutDlg)
+	virtual BOOL OnInitDialog();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 5.29 2002/04/22 18:22:03 bertg Exp $
+# $Id: Makefile.std,v 5.30 2002/04/28 11:35:34 bertg Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
@@ -25,13 +25,16 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.5.3
+VERSION=4.5.4
 
+#
 # Change these for your site
-INSTALLDIR=/usr/local
-LIBDIR=$(INSTALLDIR)/lib/xpilot
+#
 LOCALGURU=xpilot@xpilot.org
-MANDIR=/usr/local/man/man6
+INSTALLDIR=/usr/local
+BINDIR=$(INSTALLDIR)/bin
+LIBDIR=$(INSTALLDIR)/lib/xpilot
+MANDIR=$(INSTALLDIR)/man/man6
 
 #
 # Generic flags.  Probably won't work.  Use one of the specifics below.
@@ -126,27 +129,6 @@ OS2_CFLAGS = $(DEFS) $(INCS) -fno-strength-reduce -Zmtd -Zbsd-signals -I. -I$(X1
 OS2_OPT = -O2
 OS2_MLIB = -lsocket -lbsd -lm -Zbin-files -Zexe
 OS2_XLIB = -L$(X11ROOT)/xfree86/lib -L$(LIBRARY_PATH) -lX11 -lXext
-
-
-#
-# Flags for Sony NEWS.
-#
-SONYNEWS_CC = gcc
-SONYNEWS_CFLAGS = $(DEFS) -D_SONYNEWS_SOURCE
-SONYNEWS_OPT = -O
-SONYNEWS_DEBUG = -g
-SONYNEWS_MLIB = -lm
-SONYNEWS_XLIB = -lX11
-
-#
-# Flags for DEC Ultrix 4.2
-#
-ULTRIX_CC = gcc
-ULTRIX_CFLAGS = $(DEFS) $(INCS) -I/usr/include/mit
-ULTRIX_OPT = -O
-ULTRIX_DEBUG = -g
-ULTRIX_MLIB = -lm
-ULTRIX_XLIB = -lX11-mit
 
 
 #
@@ -314,7 +296,7 @@ TARGETS=make-common make-client make-server make-replay
 
 all:
 	@echo "Please specify your system.  Choose one of:"
-	@echo "    apollo/hppa/solaris/sun/aix/linux/sonynews/sgi/ultrix/os2"
+	@echo "    hppa/solaris/sun/aix/linux/sgi/os2"
 
 targets: $(TARGETS)
 
@@ -345,14 +327,6 @@ make-replay:
 
 xp-replay: $(OBJS3)
 	$(CC) $(LFLAGS) -o $@ $(OBJS3) $(XLIB) $(MLIB)
-
-apollo:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_OPT)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
-
-apollo-debug:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_DEBUG)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
 
 hppa:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
@@ -431,14 +405,6 @@ os2:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
 		"CC=$(OS2_CC)" "CFLAGS=$(OS2_CFLAGS) $(OS2_OPT)" "MLIB=$(OS2_MLIB)" "XLIB=$(OS2_XLIB)"
 
-sonynews:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_OPT)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
-
-sonynews-debug:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_DEBUG)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
-
 sgi:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
 		"CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_OPT)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
@@ -446,14 +412,6 @@ sgi:
 sgi-debug:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
 		"CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_DEBUG)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
-
-ultrix:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_OPT)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
-
-ultrix-debug:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_DEBUG)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
 
 version.h: $(MSUB) version.h.msub
 	$(MSUB) $(MSUBFLAGS) version.h.msub >version.h
@@ -465,13 +423,13 @@ $(MSUB): $(MSUB).c
 	$(CC) $(CFLAGS) $(MSUB).c -o $(MSUB)
 
 install:
-	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews"
+	@echo "Specify either install-hppa, install-linux, install-sgi, install-solaris or install-sun"
 
 install-binaries:
-	if [ ! -d $(INSTALLDIR)/. ]; then mkdir -p $(INSTALLDIR); fi
-	cp client/xpilot server/xpilots replay/xp-replay $(INSTALLDIR)
-	-strip $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
-	-chmod +x $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
+	if [ ! -d $(BINDIR)/. ]; then mkdir -p $(BINDIR); fi
+	cp client/xpilot server/xpilots replay/xp-replay $(BINDIR)
+	-strip $(BINDIR)/xpilot $(BINDIR)/xpilots $(BINDIR)/xp-replay
+	-chmod +x $(BINDIR)/xpilot $(BINDIR)/xpilots $(BINDIR)/xp-replay
 
 install-libdir:
 	if [ ! -d $(LIBDIR)/. ]; then mkdir -p $(LIBDIR); fi
@@ -492,31 +450,23 @@ install-man:
 		fi; \
 	done
 
-install-apollo: apollo install-binaries install-libdir
-
 install-hppa: hppa install-binaries install-libdir
+
+install-linux: linux install-binaries install-libdir
 
 install-sun: sun install-binaries install-libdir
 
 install-solaris: solaris install-binaries install-libdir
 
-install-sonynews: sonynews install-binaries install-libdir
-
 install-sgi: sgi install-binaries install-libdir
-
-install-ultrix: ultrix install-binaries install-libdir
-
-install-apollo-debug: apollo-debug install-apollo
 
 install-hppa-debug: hppa-debug install-hppa
 
+install-linux-debug: linux-debug install-hppa
+
 install-sun-debug: sun-debug install-sun
 
-install-sonynews-debug: sonynews-debug install-sonynews
-
 install-sgi-debug: sgi-debug install-sgi
-
-install-ultrix-debug: ultrix-debug install-ultrix
 
 clean:
 	cd common && rm -f $(OBJS0) libxpcommon.a core

@@ -1,4 +1,4 @@
-/* $Id: default.c,v 5.18 2002/01/30 21:29:39 bertg Exp $
+/* $Id: default.c,v 5.19 2002/05/14 15:44:32 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -85,7 +85,7 @@ char default_version[] = VERSION;
  */
 #define GAME_FONT	"-*-times-*-*-*--18-*-*-*-*-*-iso8859-1"
 #define MESSAGE_FONT	"-*-times-*-*-*--14-*-*-*-*-*-iso8859-1"
-#define SCORE_LIST_FONT	"-*-fixed-bold-*-*--15-*-*-*-c-*-iso8859-1"
+#define SCORE_LIST_FONT	"-*-fixed-bold-*-*--13-*-*-*-c-*-iso8859-1"
 #define BUTTON_FONT	"-*-*-bold-o-*--14-*-*-*-*-*-iso8859-1"
 #define TEXT_FONT	"-*-*-bold-i-*--14-*-*-*-p-*-iso8859-1"
 #define TALK_FONT	"-*-fixed-bold-*-*--15-*-*-*-c-*-iso8859-1"

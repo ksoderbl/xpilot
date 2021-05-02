@@ -1,5 +1,5 @@
 # XPilot.nsi - the script to NSIS, the NullSoft Install System.
-# $Id: XPilot.nsi,v 5.7 2002/02/15 06:09:43 dik Exp $
+# $Id: XPilot.nsi,v 5.10 2002/07/12 20:47:10 dik Exp $
 #              Copyright 2001 Jarno van der Kolk <jarno@j-a-r-n-o.nl>
 #              Released under GNU General Public License Version 2 
 # The NullSoft Install System can be found here http://www.nullsoft.com/free/nsis/
@@ -52,6 +52,7 @@ File "XPilotServer.exe"
 File "XPwho.exe"
 File "XPreplay.exe"
 File "XPreplay.reg"
+File "msvcr70.dll"
 SetOutPath "$INSTDIR\doc"
 #File "doc\Bugs.txt"
 File "doc\ChangeLog.txt"
@@ -67,6 +68,7 @@ File "doc\README.talkmacros.txt"
 File "doc\ServerOpts.txt"
 File "doc\Todo.txt"
 File "doc\The XPilot Page.url"
+File "doc\Newbie Guide.url"
 SetOutPath "$INSTDIR\lib"
 File "lib\defaults.txt"
 File "lib\robots.txt"
@@ -202,6 +204,7 @@ CreateShortCut "$SMPROGRAMS\XPilot\doc\License.lnk" "$INSTDIR\License.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\ChangeLog.lnk" "$INSTDIR\doc\ChangeLog.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\Server Settings.lnk" "$INSTDIR\doc\ServerOpts.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\The XPilot Page.lnk" "$INSTDIR\doc\The XPilot Page.url" ""
+CreateShortCut "$SMPROGRAMS\XPilot\doc\Newbie Guide.lnk" "$INSTDIR\doc\Newbie Guide.url" ""
 
 IfFileExists $INSTDIR\XPShipEditor 0 skipShipEditor
 CreateShortCut "$SMPROGRAMS\XPilot\XPShipEditor.lnk" "$INSTDIR\XPShipEditor\XPShipEditor.exe" "" "$INSTDIR\XPShipEditor\XPShipEditor.exe" 0
@@ -220,6 +223,10 @@ SectionEnd
 
 ; special uninstall section.
 Section "Uninstall"
+MessageBox MB_YESNO|MB_ICONEXCLAMATION "Press 'Yes' to remove XPilot from your system" IDYES removeYes IDNO removeNo
+Goto removeNo
+
+removeYes:
 ; remove registry keys
 DeleteRegKey HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\XPilot"
 DeleteRegKey HKEY_LOCAL_MACHINE SOFTWARE\XPilot
@@ -247,6 +254,23 @@ RMDir "$INSTDIR\lib\maps"
 RMDir "$INSTDIR\lib"
 RMDir "$INSTDIR\doc"
 RMDir "$INSTDIR"
+
+removeNo:
 SectionEnd
+
+
+Function .onInstSuccess	
+MessageBox MB_YESNO|MB_ICONINFORMATION "XPilot installed successfully.  \
+  Would you like to connect to the Internet to join a game?  \
+  You can do this later by running XPWho." IDNO NoXPwho
+Exec $INSTDIR\XPWho.exe
+NoXPwho:
+
+MessageBox MB_YESNO "You can also start your own server and then connect to that.  \
+  Would you like to start a server on this machine?  \
+  You can do this later by running XPilotServer." IDNO NoServer
+Exec $INSTDIR\XPilotServer.exe
+NoServer:
+FunctionEnd
 
 ; eof

@@ -173,6 +173,7 @@ RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilots.res" /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilots.bsc" 
 BSC32_SBRS= \
+	"$(INTDIR)\alliance.sbr" \
 	"$(INTDIR)\asteroid.sbr" \
 	"$(INTDIR)\cannon.sbr" \
 	"$(INTDIR)\cell.sbr" \
@@ -189,6 +190,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\map.sbr" \
 	"$(INTDIR)\metaserver.sbr" \
 	"$(INTDIR)\netserver.sbr" \
+	"$(INTDIR)\object.sbr" \
 	"$(INTDIR)\objpos.sbr" \
 	"$(INTDIR)\option.sbr" \
 	"$(INTDIR)\parser.sbr" \
@@ -203,6 +205,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\server.sbr" \
 	"$(INTDIR)\ship.sbr" \
 	"$(INTDIR)\shot.sbr" \
+	"$(INTDIR)\showtime.sbr" \
 	"$(INTDIR)\tuner.sbr" \
 	"$(INTDIR)\update.sbr" \
 	"$(INTDIR)\walls.sbr" \
@@ -228,10 +231,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\strlcpy.sbr" \
 	"$(INTDIR)\xpmemory.sbr" \
 	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\wsockerrs.sbr" \
-	"$(INTDIR)\object.sbr" \
-	"$(INTDIR)\alliance.sbr" \
-	"$(INTDIR)\showtime.sbr"
+	"$(INTDIR)\wsockerrs.sbr"
 
 "$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
@@ -241,6 +241,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=/nologo /subsystem:windows /incremental:no /pdb:"$(OUTDIR)\XPilotServer.pdb" /machine:I386 /out:"$(OUTDIR)\XPilotServer.exe" 
 LINK32_OBJS= \
+	"$(INTDIR)\alliance.obj" \
 	"$(INTDIR)\asteroid.obj" \
 	"$(INTDIR)\cannon.obj" \
 	"$(INTDIR)\cell.obj" \
@@ -257,6 +258,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\map.obj" \
 	"$(INTDIR)\metaserver.obj" \
 	"$(INTDIR)\netserver.obj" \
+	"$(INTDIR)\object.obj" \
 	"$(INTDIR)\objpos.obj" \
 	"$(INTDIR)\option.obj" \
 	"$(INTDIR)\parser.obj" \
@@ -271,6 +273,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\server.obj" \
 	"$(INTDIR)\ship.obj" \
 	"$(INTDIR)\shot.obj" \
+	"$(INTDIR)\showtime.obj" \
 	"$(INTDIR)\tuner.obj" \
 	"$(INTDIR)\update.obj" \
 	"$(INTDIR)\walls.obj" \
@@ -297,10 +300,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpmemory.obj" \
 	"$(INTDIR)\winNet.obj" \
 	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.res" \
-	"$(INTDIR)\object.obj" \
-	"$(INTDIR)\alliance.obj" \
-	"$(INTDIR)\showtime.obj"
+	"$(INTDIR)\xpilots.res"
 
 "$(OUTDIR)\XPilotServer.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -467,6 +467,7 @@ RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilots.res" /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilots.bsc" 
 BSC32_SBRS= \
+	"$(INTDIR)\alliance.sbr" \
 	"$(INTDIR)\asteroid.sbr" \
 	"$(INTDIR)\cannon.sbr" \
 	"$(INTDIR)\cell.sbr" \
@@ -483,6 +484,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\map.sbr" \
 	"$(INTDIR)\metaserver.sbr" \
 	"$(INTDIR)\netserver.sbr" \
+	"$(INTDIR)\object.sbr" \
 	"$(INTDIR)\objpos.sbr" \
 	"$(INTDIR)\option.sbr" \
 	"$(INTDIR)\parser.sbr" \
@@ -497,6 +499,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\server.sbr" \
 	"$(INTDIR)\ship.sbr" \
 	"$(INTDIR)\shot.sbr" \
+	"$(INTDIR)\showtime.sbr" \
 	"$(INTDIR)\tuner.sbr" \
 	"$(INTDIR)\update.sbr" \
 	"$(INTDIR)\walls.sbr" \
@@ -522,10 +525,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\strlcpy.sbr" \
 	"$(INTDIR)\xpmemory.sbr" \
 	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\wsockerrs.sbr" \
-	"$(INTDIR)\object.sbr" \
-	"$(INTDIR)\alliance.sbr" \
-	"$(INTDIR)\showtime.sbr"
+	"$(INTDIR)\wsockerrs.sbr"
 
 "$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
@@ -535,6 +535,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=/nologo /subsystem:windows /incremental:yes /pdb:"$(OUTDIR)\XPilotServer.pdb" /debug /machine:I386 /out:"$(OUTDIR)\XPilotServer.exe" 
 LINK32_OBJS= \
+	"$(INTDIR)\alliance.obj" \
 	"$(INTDIR)\asteroid.obj" \
 	"$(INTDIR)\cannon.obj" \
 	"$(INTDIR)\cell.obj" \
@@ -551,6 +552,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\map.obj" \
 	"$(INTDIR)\metaserver.obj" \
 	"$(INTDIR)\netserver.obj" \
+	"$(INTDIR)\object.obj" \
 	"$(INTDIR)\objpos.obj" \
 	"$(INTDIR)\option.obj" \
 	"$(INTDIR)\parser.obj" \
@@ -565,6 +567,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\server.obj" \
 	"$(INTDIR)\ship.obj" \
 	"$(INTDIR)\shot.obj" \
+	"$(INTDIR)\showtime.obj" \
 	"$(INTDIR)\tuner.obj" \
 	"$(INTDIR)\update.obj" \
 	"$(INTDIR)\walls.obj" \
@@ -591,10 +594,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpmemory.obj" \
 	"$(INTDIR)\winNet.obj" \
 	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.res" \
-	"$(INTDIR)\object.obj" \
-	"$(INTDIR)\alliance.obj" \
-	"$(INTDIR)\showtime.obj"
+	"$(INTDIR)\xpilots.res"
 
 "$(OUTDIR)\XPilotServer.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<

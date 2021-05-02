@@ -105,21 +105,17 @@ END
 
 IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 339, 241
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "About XPilotNT"
+CAPTION "About XPilot for Windows"
 FONT 8, "MS Sans Serif"
 BEGIN
-    ICON            IDR_MAINFRAME,IDC_STATIC,7,17,18,20
+    ICON            IDR_MAINFRAME,IDC_STATIC,7,17,20,20
     LTEXT           "Version 0.8",IDC_VERSION,41,23,252,8,SS_NOPREFIX
-    CTEXT           "XPilot is Copyright © 1991-1996",IDC_STATIC,7,34,325,8
+    CTEXT           "XPilot is Copyright © 1991-2002",IDC_STATIC,7,41,325,8
     DEFPUSHBUTTON   "OK",IDOK,153,219,32,14,WS_GROUP
-    CTEXT           "by Bjørn Stabell, Ken Ronny Schouten && Bert Gijsbers.",
-                    IDC_STATIC,7,45,325,8
-    CTEXT           "Additionally, XPilotNT is Copyright © 1996-1997",
-                    IDC_STATIC,7,61,325,8
-    CTEXT           "by Dick Balaska and BuckoSoft, Inc.",IDC_STATIC,7,72,
-                    325,8
-    ICON            IDI_XPILOTS,IDC_STATIC,314,17,18,20
-    CONTROL         "",IDC_CREDITS,"Static",SS_BLACKFRAME,7,84,325,124
+    CTEXT           "by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska.",
+                    IDC_STATIC,7,52,325,8
+    ICON            IDI_XPILOTS,IDC_STATIC,314,17,20,20
+    CONTROL         "",IDC_CREDITS,"Static",SS_BLACKFRAME,7,71,325,137
 END
 
 IDD_MOTD DIALOG DISCARDABLE  0, 0, 258, 190

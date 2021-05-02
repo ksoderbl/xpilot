@@ -1,4 +1,4 @@
-/* $Id: object.h,v 5.22 2001/11/30 17:56:06 bertg Exp $
+/* $Id: object.h,v 5.23 2002/05/13 20:38:27 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -570,6 +570,11 @@ struct player {
     int		updateVisibility, forceVisible, damaged;
     int		wormDrawCount, wormHoleHit, wormHoleDest;
     int		stunned;
+
+    int		last_target_update;	/* index of last updated target */
+    int		last_cannon_update;	/* index of last updated cannon */
+    int		last_fuel_update;	/* index of last updated fuel */
+    int		last_wormhole_update;	/* index of last updated wormhole */
 
     int		ecmcount;		/* number of active ecms */
 

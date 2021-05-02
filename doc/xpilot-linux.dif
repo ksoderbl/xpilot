@@ -37,16 +37,3 @@
  /* CDEBUGFLAGS = -Wc,-O3			/* Dynix/PTX 2 flags */
  /* CDEBUGFLAGS = -Wall 				/* gcc high warning level */
  /* CDEBUGFLAGS = -Wall -pedantic -ansi -Dlint	/* gcc ridiculous warning level */
-@@ -125,9 +125,9 @@
- NCDAUDIOINC = -I/usr/local/include
- NCDAUDIOLIB = -L/usr/local/lib -laudio
- 
--/* #define RPLAY_SOUND			/* Uncomment for rplay sound support */
--RPLAYAUDIOINC = -I/usr/local/include
--RPLAYAUDIOLIB = -L/usr/local/lib -lrplay
-+#define RPLAY_SOUND			/* Uncomment for rplay sound support */
-+RPLAYAUDIOINC = 			/* rplay.h is in /usr/include */
-+RPLAYAUDIOLIB = /usr/lib/librplay.a	/* link rplay statically. */
- 
- /* #define AF_SOUND			/* Uncomment for AF sound support */
- AFAUDIOINC = -I/usr/include/AF

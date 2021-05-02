@@ -1,4 +1,4 @@
-/* $Id: score.h,v 5.5 2002/03/17 13:25:14 kimiko Exp $
+/* $Id: score.h,v 5.6 2002/06/11 03:59:38 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -32,6 +32,7 @@
 #define ED_TRANSPORTER		(-60*FUEL_SCALE_FACT)
 #define ED_HYPERJUMP		(-60*FUEL_SCALE_FACT)
 #define ED_SHIELD		(-0.20*FUEL_SCALE_FACT)
+#define ED_PHASING_DEVICE	(-0.40*FUEL_SCALE_FACT)
 #define ED_CLOAKING_DEVICE	(-0.07*FUEL_SCALE_FACT)
 #define ED_DEFLECTOR		(-0.15*FUEL_SCALE_FACT)
 #define ED_SHOT_HIT		(-25.0*FUEL_SCALE_FACT)

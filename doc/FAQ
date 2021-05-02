@@ -3,17 +3,17 @@ Newsgroups: rec.games.computer.xpilot,rec.answers,news.answers
 Subject: XPilot multi-player Internet game FAQ
 Approved: news-answers-request@MIT.EDU
 Distribution: world
-Expires: Sun, 28 Jun 1998 23:59:59 GMT
+Expires: Thu, 12 Jun 2003 23:59:59 GMT
 Summary: Frequently Asked Questions about XPilot with Answers
 Keywords: xpilot,games,Internet,faq
 
 Archive-name: games/xpilot-faq
-Last-modified: 1998/05/14
-Version: 3.6.1
+Last-modified: 2002/06/12
+Version: 4.5.4
 Submitted-By: faq@xpilot.org
 
 This is the Frequently Asked Questions list With Answers for XPilot.
-Copyright (C) 1993-98 by the XPilot FAQ Group (faq@xpilot.org).
+Copyright (C) 1993-2002 by the XPilot FAQ Group (faq@xpilot.org).
 This FAQ is posted in rec.games.computer.xpilot on irregular intervals.
 It is also part of the XPilot distribution.
 It can also be obtained from <URL:telnet://meta.xpilot.org:4402/> or 
@@ -22,27 +22,25 @@ Or by mailing the following message to mail-server@rtfm.mit.edu:
 
     send usenet/rec.games.computer.xpilot/XPilot_multi-player_Internet_game_FAQ
 
-New questions in this release: none
-Questions changed in this release: 2
-Questions changed in the previous release: 3, 4, 5, 7
+New questions in this release: 3, 4, 8, 21, 27, 28
+Questions changed in this release: 1 - 28
+Questions changed in the previous release: 2
 
 Questions:
 
 1) Does this FAQ answer all my questions about XPilot?
 2) What is this wonderful game called XPilot everybody is talking about?
-3) What is the latest version?
-4) Where can I get it as soon as possible?
-5) Where can I get precompiled XPilot executables?
-6) Sound?  Does it really have sound?
-7) How can I uncompress the XPilot distribution files?
-8) I do not have the patch program on my system, so how can I upgrade?
-9) Compilation fails, because the compiler generates lots of error messages?
-10) How should I start the game?
-11) The xpilots server complains that it is unable to read globe.map?
-12) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
-   or: Couldn't send query packets (Operation not supported on socket)?
-   or: Can't make socket non-blocking (Operation not supported on socket)?
-13) xpilots fails: Could not create Dgram socket (Invalid argument)
+3) Does the Windows version work on ...?
+4) Will it work on my Macintosh?
+5) What is the latest version?
+6) Where can I get it as soon as possible?
+7) Where can I get precompiled XPilot executables?
+8) Is the latest development version also available?
+9) Sound?  Does it really have sound?
+10) How can I uncompress the source XPilot distribution files?
+11) Compilation fails, because the compiler generates lots of error messages?
+12) How should I start the game?
+13) The xpilots server complains that it is unable to read globe.map?
 14) Why is the client so slow?  Why is my display so jerky?
 15) Where can I get new maps?
 16) How can I distribute my own carefully crafted maps?
@@ -50,12 +48,14 @@ Questions:
 18) How can I design my own ship?
 19) I have a problem because this and that is not working.
 20) What is the meta server?  Where can I find other players?
-21) What information on XPilot is available on World Wide Web?
-22) What is the NM (Newbie Manual)?
-23) How can I contribute bugfixes and new features to the game?
-24) Why do I never get any items (triangles) to appear in my maps?
-25) What are the Well Known Problems for the latest version?
-26) Is there a XPilot version available for DOS, Windows or the Mac?
+21) Why do I get "Could not establish connections with any metaserver"?
+22) What information on XPilot is available online?
+23) What is the unofficial XPilot Newbie Guide?
+24) How can I contribute bugfixes and new features to the game?
+25) Why do I never get any items (triangles) to appear in my maps?
+26) What are the Well Known Problems for the latest version?
+27) Why can't I shoot players flying at high speeds?
+28) Are there other implementations of XPilot?
 
 Answers:
 
@@ -63,27 +63,50 @@ Answers:
 
 No, this FAQ is only meant to get you up and running and covers some
 issues not found elsewhere.  In the XPilot distribution there is
-authoritative documentation any wanna-be XPiloter should read.
+authoritative documentation any wanna-be XPiloteer should read.
 Pay special attention to the two manual pages in the man6 directory
-and to the four README files.
+and to all README files.
 
-More, many more questions are answered in the WWW XPilot Newbie Manual
-    <URL:http://www.xpilot.org/NM/>
+Please see question 22 for more sources of information about XPilot.
 
 2) What is this wonderful game called XPilot everybody is talking about?
 
-XPilot is a multi-player tactical manouvring game for X and Unix workstations.
-Players have a fighter which they move along in an artificial world
-and shoot each other using various kinds of weapons like bullets, mines,
-smart missiles, heat seekers and so on.  It is a fast paced game with
-a lot of tactics.  There are also robots flying around shooting players
-and other robots.  Players can pickup special bonuses to improve the
-possibilities of their ship like more engine power or special weapons.
-The aim of the game is to score points and to have a lot of fun.
+XPilot is a multi-player tactical manoeuvring game for Windows, Linux
+and Unix workstations.  The essential elements of play are that all
+players have fighters which move through an artificial world with a
+number of customizable features, shooting each other and at the same
+time trying to attain some objective to score points.  Players need to
+master a number of tactics in order to succeed.  Depending on the kind
+of world, the game can be extremely fast paced, or taken at a more
+leisurely pace.  But whatever the world or style of play, the main
+objective is to have a lot of fun.
+
+Well designed maps with various challenging objectives are what makes
+XPilot a rich and compelling game.  Because of this, it has captured a
+loyal following of players who have stuck with the game over a span of
+several years, meeting yearly for tournaments.  The camaraderie
+developed between players is strong.  For example, it brought about the
+XPilot Summer Camp of 1999 in Denmark which you can read more about at
+the XPilot web site, drawing players from all over Europe.
+
+The principal kinds of XPilot maps are as follows.  In a team map with
+"treasures" the objective is to steal the opponent's treasure (also
+simply referred to as the "ball") and return it to your own base,
+"caching" it to score before your opponent does.  In a race map, the
+objective is to finish first.  And then there is the "items map" where
+the objective is simply to collect items to help you slaughter your
+opponent while attempting to avoid getting shot.  On these maps, your
+ship can have various kinds of special weapons like mines, smart
+missiles, heat seekers and so on.  Maps can also feature robots flying
+around shooting players and other robots, or special bonuses to improve
+the possibilities of their ship like more engine power, phasing,
+deflectors, or cloaks.  The odd map out there has various combinations
+of all of these elements of play: treasure-race maps, item-treasure
+maps, and team-bot maps, to name a few possibilities.
 
 People can create their own maps using either a standard text editor or
-a nifty map editor with easy-to-use graphical user interface.
-Nice maps are a popular item to share with others.
+a nifty map editor with easy-to-use graphical user interface.  Nice maps
+are a popular item to share with others.
 
 The game is very configurable in that you can specify many parameters
 in a defaults file, in the map file or on the command line.  Configurable
@@ -94,7 +117,9 @@ updates per second and so on.
 
 Since release 3.0 it is possible to play games across the Internet if
 the roundtrip times are below 150 milliseconds or so, depending on the
-frame rate of the XPilot server.
+frame rate of the XPilot server.  Some crazy players actually do play
+routinely with latencies of 200 to 250 ms, or even higher, so it can be
+done if necessary, but is not particularly recommended for a newbie.
 
 XPilot is copyrighted by Bjoern Stabell, Ken Ronny Schouten, Bert Gijsbers
 and Dick Balaska.  Many people around the world have contributed a plethora
@@ -104,110 +129,154 @@ diverse set of UNIX computers.  See the CREDITS file for more details.
 The XPilot home page on World-Wide Web is:
     <URL:http://www.xpilot.org/>
 
-There is a large and entertaining Newbie Manual on WWW which encompasses
-more than 160 articles.  Its URL is <URL:http://www.xpilot.org/NM/>
+There is a large, entertaining, but rather dated Newbie Manual on WWW
+which encompasses more than 160 articles.  Its URL is:
+    <URL:http://www.xpilot.org/NM/>
 
-3) What is the latest version?
+There is also the wildly popular unofficial XPilot Newbie Guide by Jarno
+here:
 
-4.0.0.  Which is XPilot release 4.0, patchlevel 0.
+    <URL:http://www.j-a-r-n-o.nl/newbie>
 
-4) Where can I get it as soon as possible?
+3) Does the Windows version run on ...?
 
-Anonymous ftp to ftp.xpilot.org (145.18.160.22).  Use as login name
-anonymous or ftp and supply your email address as password.
-Go to the directory /pub and look for the file named xpilot-4.0.0.tar.gz.
+The Windows version runs on all 32 bit Windows platforms, including
+95/98/ME/NT/Win2K and WinXP.
+
+4) Will it work on my Macintosh?
+
+With some effort, probably, unless you have a really old Mac.
+
+For the Mac, there are ports of Linux available for most models (except
+for the very oldest m68k models with no MMU) and XPilot will run on
+that.  Or if you run Mac OS/X, you can get XPilot working following
+the instructions at <URL:http://www.swproductions.co.uk/xpilot.html>
+
+To summarize, you need to install fink, use it to install an X server,
+install a window manager (e.g. Afterstep), compile & install XPilot
+(you need to have installed the Developer CD to do this) and drop to
+Darwin at boot time to run startx instead of running it under the Aqua
+interface which is very slow.  Then invoke xpilot by specifying the path
+to the installed binary (or add the directory xpilot is in to your PATH
+so you can just type "xpilot") in an xterm.
+
+5) What is the latest version?
+
+4.5.4.  Which is XPilot release 4.5, patchlevel 4.
+
+Subscribe to xpilotgame-announce if you want to be notified each time
+a new release is announced.  See:
+
+<URL:http://lists.sourceforge.net/lists/listinfo/xpilotgame-announce>
+
+6) Where can I get it as soon as possible?
+
+Anonymous ftp to ftp.xpilot.org.  Use as login name anonymous or ftp and
+supply your email address as password.
+Go to the directory /pub and look for the file named xpilot-4.5.4.tar.gz.
 Some patches for older versions are also available.
-Other anonymous ftp sites may have it as well, the most up to date is
-ftp.x.org (130.105.100.3) in /contrib/games/multiplayer/.
 
-5) Where can I get precompiled XPilot executables?
+Debian carries the latest version of the official XPilot source here:
+<URL:http://ftp.debian.org/debian/pool/main/x/xpilot/xpilot_4.5.4.orig.tar.gz>
+and at its mirror sites.
 
-The Liverpool Archives distribute binaries for HP 700 series workstations.
-Go to hpux.csc.liv.ac.uk (138.253.42.172) in /hpux/Games/Networking/.
+7) Where can I get precompiled XPilot executables?
 
-6) Sound?  Does it really have sound?
+Most Linux distributions carry precompiled XPilot executables.  See your
+distribution's nearest archive mirror.  ftp.xpilot.org itself also
+distributes binaries for Windows and Red Hat Linux, the latest of which
+will be named XPilot4.5.4-NT##.exe and xpilot-4.5.4-##.i386.rpm respectively
+where "##" is the package revision number for each.
 
-There is optional sound support for machines running the rplay package.
-When you have compiled and installed XPilot with sound support configured
-then run rplayd on the machine which is running your XPilot client.
-You will probably need "rplayd -n -t 0" so that it takes input from the
-network port and doesn't time out and die.  If that is running on the
-client machine, XPilot should automatically figure it out and start
-playing the appropriate sounds for you.
+8) Is the latest development version also available?
 
-Rplay version 3.1 is not just for Suns any more.  So far there is support
-for SunOS 4.1.x, Solaris 2.x, Linux, 386bsd, BSDI/386, HP-UX, and
-SGI Indigo is almost done.
+We encourage new users to stick with the latest stable version, but if
+you would like to play with the latest development source, it is
+available at <URL:http://xpilotgame.sf.net>.
 
-There is also sound support for NCD MCX X terminals.  These X terminals
-must be running release 3.1 or later of the NCD software.
-Greg Renda can provide you with more details at greg@ncd.com.
+Note: this is not the same as <URL://xpilot.sf.net> which was so named
+simply because it was the first XPilot-based project hosted on
+SourceForge.  See question 28.  Only later did the official XPilot
+project move to sf.net, and thus it had to be named xpilotgame.
 
-The NAS (Network Audio System) support will also work with any machine running
-a netaudio server.  At the moment, the following are capable of doing this:
-    NCD MCX X-terminals (running NCDware 3.1 & later)
-    Sun Sparcs
-    SGI workstations
-    Linux
-    FreeBSD
+Instructions are given on the xpilotgame site for browsing or checking
+out the source from CVS.  If the release number in ./xpilot/Local.config
+has the suffix "alpha", features are still being added, and many things
+may still be broken.  If the suffix "beta" is present, features are
+frozen and the final bugs are being worked out to prepare for a release.
 
-And there is sound support for DEC AudioFile.  AudioFile supports Digital RISC
-systems running Ultrix, Digital Alpha AXP systems running OSF/1,
-Sun Microsystems SPARCstations running SunOS, and SGI Indigos.
-Tom De Pauw can provide with more details at tom@wimsey.com.
+If you use either an alpha or beta release, please upgrade to the final
+release once it comes out.  You should at the very least be on the
+xpilotgame-announce list so that you'll receive final release
+announcements.  See:
 
-7) How can I uncompress the XPilot distribution files?
+<URL:http://lists.sf.net/lists/listinfo/xpilotgame-announce>
 
-The files are in GNU zip format.  Older versions of GNU zip use
-the .z extension, newer versions of GNU zip use the .gz extension.
-GNU zip is available from your favorite local ftp site.  Look for gzip.
-Two of the many ftp sites having gzip are ftp.uu.net (192.48.96.9) and
-prep.ai.mit.edu (18.159.0.42).  The last one in the pub/gnu directory.
+Note: again, be aware that this is not the same as the xpilot-announce
+list also hosted at sf.net.
 
-Alternatively, if you have an older version of GNU zip and do not wish to
-upgrade, you can use something like :
+At the same time, you should also consider joining the xpilot-hacks list
+where you will be made aware of any problems others may have encountered
+in the development versions:
 
-    gzip -d < xpilot-4.0.0.tar.gz > xpilot-4.0.0.tar
+<URL:http://nslug.ns.ca/mailman/listinfo/xpilot-hacks>
 
-or even better :
+9) Sound?  Does it really have sound?
 
-    gzip -d < xpilot-4.0.0.tar.gz | tar xvf -
+Yes, but the consensus is that sound support is barely usable.  The
+principal objections are that latency is too great, and it is based on
+rather dated sound server libraries: rplay, ncd, and DEC AudioFile that
+hardly anyone uses anymore.  So if you read the docs, go through the
+bother of setting it up, and then are underwhelmed by the results, don't
+say we didn't warn you.
 
-8) I do not have the patch program on my system, so how can I upgrade?
+10) How can I uncompress the XPilot source distribution files?
 
-Get patch from one of the major ftp sites mentioned above.
-Or from prep.ai.mit.edu in the /pub/gnu directory.
+The files are "tarballs", compressed tar archives in GNU zip (.gz)
+format.  On most systems, this should work:
 
-9) Compilation fails, because the compiler generates lots of error messages?
+	gunzip xpilot-4.5.4.tar.gz
+
+11) Compilation fails, because the compiler generates lots of error messages?
 
 This is probably due to not using an ANSI C compliant compiler.
 Consider using gcc.  Also, do not use the -ansi option together with GCC,
 because some system include files are not fully ANSI compatible.
 
-10) How should I start the game?
+12) How should I start the game?
 
-When you have managed to compile XPilot successfully you will have
-two new executables.  One program is named 'xpilots', which is the
-server program.  If you do: `xpilots -help' then you will see some
+When you have managed to compile and install XPilot successfully or have
+installed binary packages for both the client and server, you will have
+two executables.  One program is named "xpilots", which is the
+server program.  If you do: "xpilots -help" then you will see some
 configuration options with explanations.  Start this program in one window
 simply by typing: xpilots or ./xpilots.  Nothing much will happen yet.
-The other program is named 'xpilot', which is the client program.
+The other program is named "xpilot", which is the client program.
 Startup this program in a second window.  If you start this program
-without arguments it tries to find an XPilot server on your local network.
-Otherwise give it the name of the host where the XPilot server is
-running as its last command line argument.
-The xpilot client program should now print a message like:
+without arguments, you will see a login screen containing three buttons:
+Local, Internet and Quit.  Local tries to find all XPilot servers on
+your local network.  Internet contacts the XPilot meta server to locate
+servers on the Internet.  Quit does the obvious.  You can also start
+xpilot with the host where the XPilot server is running as its
+command line argument.  When started this way, the xpilot client
+will give you access to a command line which gives you the advantage
+of several options before entering the game, e.g.
 
-*** Server on darkstar.frop.org. Enter command>
+*** Server on xpilot.e.kth.se. Enter command>
 
-Now type a question mark '?' to see some possible options.
+Now type a question mark "?" to see some possible options.
 Or simply type a return to enter the game.
 
-Newbies should note that in order to fire one has to put down
-the shield first.  This is done by pressing and releasing the
-spacebar once.
+To join a server when playing from Windows, the program XPWho is
+available, and included in the standard installation.  This handy tool
+automatically downloads a list of the currently running servers from
+meta.xpilot.org.  The displayed list will tell a lot of information
+about each server, including who is currently playing on it.  You can
+join any server you like simply by double clicking on the name.  XPWho
+provides the option of selecting a shipshape, and joining a specific
+team on team-enabled games.
 
-11) The xpilots server complains that it is unable to read globe.map?
+13) The xpilots server complains that it is unable to read globe.map?
 
 First read the READMEs more carefully.  They tell you that you
 need to adapt the Imakefile or Makefile and possibly the config.h
@@ -216,171 +285,233 @@ Specifically modify LIBDIR to the directory where you have your XPilot
 lib directory and MAPDIR in case you have changed your map directory.
 There are also two manual pages included which may offer you more help.
 
-12) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
-   or: Couldn't send query packets (Operation not supported on socket)?
-   or: Can't make socket non-blocking (Operation not supported on socket)?
-
-When you try to run the client it fails with the following messages:
-
-    xpilot: ioctl SIOCGIFCONF (Operation not supported on socket)
-    xpilot: Couldn't send query packets (Operation not supported on socket)
-
-or if you try to run the server it will fail with the following message:
-
-    xpilots: Can't make socket non-blocking (Operation not supported on socket)
-
-Whomever installed gcc on your system forgot to run fixincludes which
-converts the ioctl definitions in the header files so that they will
-compile properly.
-
-Colin Benson <cbenson@spock.retix.com> adds:
-The thing that caused the SunOS 4.1.3 gcc build to fail with the socket
-message is that the compile line generated by make includes '-I/usr/include'
-which makes gcc pick up the standard include files rather than its
-special includes.  I directly hacked the makefile to cut this out
-and the resulting build worked.
-
-Craig Powers <craig_powers@stortek.com> writes:
-We had fits trying to get xpilot to compile correctly with gcc on our
-Solaris2.3.  The compiler said that it was in the file signal.h.  We thought
-it must be a problem with the program since we had compiled small programs
-with gcc and they seemed to work.  It turned out that our problems were due to
-the compiler not being installed correctly.  We made our sys-admin guy go
-through the whole installation for gcc.  This time xpilot compiled the very
-first time!!  So check the installation of gcc.  It may look like its working
-correctly but it isn't.  It seems that gcc wanted to modify the header
-files and our sys-admin guy didn't let it.  What I think really happens is
-that gcc takes copies of the systems header files and modifies them and saves
-these in a special place.  Then a enviroment variable is set so that gcc
-knows where the modified headers are.  After our sys-admin guy let gcc do
-this, everything worked.
-
-13) xpilots fails: Could not create Dgram socket (Invalid argument)
-
-You are probably running Linux or one of the BSD flavors on your PC
-and "forgot" to install the network support of your operating system.
-
-For Linux you should install the N series of disks n1, n2 and n3.
-You won't need everything that's on the disks in order to run XPilot,
-i.e. you can drop things like lynx, tin, nn, etc.
-
 14) Why is the client so slow?  Why is my display so jerky?
 
-This is probably due to you not using a standard MIT X server, but
-one of those customized servers supplied by your workstation vendor.
-Some of these servers, like the Xnews and Xsun servers from Sun
-and an Ultrix server, are known to have serious performance degradation
-for X clients that frequently change their colors or colormaps.
-Because XPilot changes the set of colors at a rate of approximately 15
-times per second this will not work well if your hardware is not superfast.
-Try to use the MIT X server instead.
+A slowdown in frame rate is usually due to poor server performance. 
+Delayed "responsiveness" is most likely high network latency, and
+jerkiness (frames are lost) could either be poor client performance or
+packets being dropped by the network due to congestion.  Various meters
+are available from the "Config" menu in the client to help diagnose the
+kind and severity of lag you are experiencing.
 
-Or, if you like to experiment a little, compile the src/paint.c file
-with the macro ERASE defined as 1 (add -DERASE=1 to DEFS in the Makefile).
-This will have the client use a different drawing technique, which is
-reported to speedup the client for older/cheaper workstations by
-about 50 percent.
-The ERASE option was first implemented for release 3.0.6 and needs
-more work as it is not perfect yet.  Improvements are welcome.
+I'll start by outlining a few common "lag factors" and then go on to
+describe some detailed performance tuning tips.
 
-Owners of SPARCs could try the new SPARC_CMAP_HACK compile time option
-together with the ERASE option.  This causes a very big speed improvement
-on SPARCs with a cg3 card.  Be warned however that this is relatively new.
-SPARC_CMAP_HACK should only be allowed if the display is the console of the
-machine you're running on. Otherwise, since /dev/fb has world write access,
-whoever is using the console will find their palette flashing. Perhaps there
-should also be a command line option to switch it off.
-Please note carefull that this is a very experimental option and that it
-only works on SPARCs.
+a) Common lag factors
 
-Decrease the window size (it is resizable now), this will
-result in fewer packets sent over the network and a lot less
-work for the Xserver (clearing a 1024x1024 window is ~4 times
-more work than clearing a 512x512 window, and clearing/copying
-for double buffering often seems to be the limiting factor).
+i. Hardware
 
-Decrease sparkprob.  This will result in fewer sparks being
-sent over the network (sparks take up much of the network
-bandwidth).
+XPilot is not so demanding as to demand the latest whizbang
+multi-hundred-dollar graphics card.  Virtually anything on the PC market
+today will do, and some of the better old stuff will manage quite
+nicely.  [ When the current FAQ maintainer started playing XPilot in
+1997, his then-one-year-old S3-based graphics card was perfectly
+adequate. ]  However, if you have a really ancient card with no 2D
+acceleration, you're not going to get decent peformance.  In a word:
+upgrade.
 
-Decrease the number of colours.  This might help, but it depends
-on which double buffering routine you use and probably on the
-implementation of the Xserver.
+ii. Demanding client options
 
-Play outside working-hours.  Some bad performance is due to
-saturated LANs - a network/LAN with as little as possible load,
-or at least an even load is a necessity for getting good/smooth
+Turning on any of the texture options will strain your graphics
+performance.  Conversely, turning them off will alleviate the problem. 
+You'll need to experiment with these along with various client tuning
+tips to find the right balance for your hardware.
+
+iii. Demanding server options
+
+Great strides have been made recently to make certain server options
+that are demanding on both the CPU and network, such as cluster nukes,
+put less strain on both.  However, if you have an underpowered server
+system or low bandwidth connection, you should think twice about running
+very "busy" maps with lots of bots, cannons, shots, etc. each of which
+contributes to the total load put on your CPU and link.
+
+iv. Network
+
+The root of the problem could be poor network performance.  There are a
+few suggestions below for dealing with this.
+
+v. Client or server system load
+
+Finally, if either the XPilot client or server system is under heavy
+load, be that CPU or a high rate of I/O (usually disk or network),
+clients will experience lag.  Common sense says that xpiloting while
+burning mp3s or performing backups is generally a bad idea.  If you
+have a "mysterious" source of system load, use "top" to try to
+locate the problem processes.
+
+The rest of this answer explains some performance tuning tips for the
+XPilot client, server and your X server.
+
+b) Network performance tuning tips
+
+Play outside peak network usage hours.  Some bad performance is due to
+saturated LANs (or high-speed Internet provider's network if you're
+playing across the Internet).  A network with as little as possible
+load, or at least an even load is important for getting good, smooth
 response.
 
-Make sure you run the server on a different machine from the client.
-Or run it at a lower priority like: nice -20 xpilots.
+Decrease sparkprob.  This will result in fewer sparks being sent over
+the network (sparks take up much of the network bandwidth).  This is
+particularly important for servers with low bandwidth (e.g. 128K ISDN or
+a 56K dialup connection).  In such cases not only should you decrease
+sparkprob, but you should recommend to all other players to decrease
+sparkprob.
 
-Try another double buffering method - you can choose between
-pixmap copying and (if you have PseudoColor) color switching.
-The effect depends on your platform.
+In general, 128K ISDN and 56K servers are a poor choice for running an
+Internet accessible server.  You should probably start the server
++reportMeta so that only people to whom you have disclosed the location
+of your server will join.  Or if possible, relocate your server to a
+higher bandwidth connection.
+
+c) Client performance tuning tips
+
+The first thing to try is to enable at compile time either
+DoubleBufferExtension or MultiBufferExtension and then start the client
+with -multiBuffer on.  To determine if your X server supports these
+extensions, check xdpyinfo, e.g.
+
+$ xdpyinfo | grep -i double
+
+XFree86 version 4.x, the most popular X server currently in use,
+supports the double buffering extension.  Therefore some pre-compiled
+XPilot client binaries (e.g. the XPilot client in Debian) have this
+option enabled at compile-time by default.
+
+Decrease the number of colours.  This might help, but it depends on
+which double buffering routine you use and probably on the
+implementation of the X server.
+
+Decrease the window size (it is resizable now).  This will result in
+fewer packets sent over the network and a lot less work for the X
+server. Clearing a 1024x1024 window is roughly four times more work than
+clearing a 512x512 window, and clearing/copying for double buffering
+often seems to be the limiting factor.
+
+Try the erase-hack by starting xpilot like this:
+
+$ xpilot -erase
+
+This will have the client use a different drawing technique, which is
+reported to speed up the client for older/cheaper workstations by about
+50 percent.  Unfortunately, this comes at the expense of some drawing
+artefacts that you may find distracting.  Improvements in this area of
+the code are welcome.
+
+Try another double buffering method - you can specify "-colorSwitch no"
+to select pixmap copying.  Color switching is the default.  The effect
+depends on your platform.
 
 Try a different visual.  Try: "xpilot -visual list" to see a list
 of supported visuals on your system, or use xdpyinfo.
 
+d) Server performance tuning tips
+
+Run the server on a different machine from the client.
+
+If you have root on the server system, you can run the server at a lower
+priority (scheduling the server for execution more frequently).  For
+example, assuming you have created a user "xpilots" to run the server
+under (running any server as root is generally considered a security
+risk) and you want the server to run at the highest possible priority,
+start it as follows:
+
+# nice -20 su -c xpilots xpilots
+
+Or start it in the usual way and renice it afterwards as root:
+
+# renice -20 `pidof xpilots`
+
 Decrease the frames per second generated by the server by setting the
--fps option.  This won't make the server faster, but it might
-make the game run more smoothly and evenly, and perhaps make
-the game more fair.  Users joining across the Internet really appreciate
-a slightly lower frame rate (try values like: 14, 12 or 10).
+-FPS option.  This won't make the server faster, but it might make the
+game run more smoothly and evenly, and perhaps make the game more fair. 
+Users joining across the Internet really appreciate a slightly lower
+frame rate (try values like: 14, 12 or 10).
 
 15) Where can I get new maps?
 
-anonymous ftp:
-        ftp.xpilot.org:/pub/maps
-        xpilot.sdsu.edu:/pub/xpilot-maps
+There is a collection of older maps at ftp.xpilot.org available
+via anonymous ftp:
 
-gopher:
-        Name=xpilot-maps
-        Type=1
-        Port=71
-        Path=1/pub/xpilot-maps
-        Host=xpilot.sdsu.edu
-        (Note that you can only retrieve maps with gopher...)
+    <URL:ftp://ftp.xpilot.org/pub/maps>
+
+In the FAQ editor's opinion, designing a really good XPilot map is a
+rather difficult endeavour.  As a result, many of these old maps fall
+short, as is evidenced by virtually none of them being actually in use
+today (see question 20 regarding using the meta server to show maps
+actively in use).
+
+Newer maps can be found on the web.  One up-to-date repository of XPilot
+maps that features thumbnails, brief descriptions of the maps, and a
+means for submitting your own maps through a form is at:
+
+    <URL:http://www.j-a-r-n-o.nl/xpilotmaps.shtml>
+
+Paul Drees (Zemyla) actively develops new maps, especially demonstrating
+new or experimental features of the server, several of which started as
+"Zemyla hacks" and are now in the official XPilot distribution.  He also
+typically has several of these maps running at once hosted at
+auk.tamucc.edu so you can try them out right away.  Zemyla's site is at:
+
+    <URL:http://www.sci.tamucc.edu/~pad53945/xpilot/>
+
+Vincent has a map site which, although now a bit old, deserves mention
+because it is so nicely done:
+
+    <URL:http://www.flinthills.com/~edco/xpmaps/>
 
 16) How can I distribute my own carefully crafted maps?
 
-See the previous question.  The sites mentioned in the previous question
-are eager to add your map to their set of maps, but it is perhaps also
-a good idea to post an announcement in rec.games.computer.xpilot
-explaining the ideas behind your map.
+See the previous question.  Jarno's site makes it easy to add a new
+map but it is perhaps also a good idea to post an announcement in
+rec.games.computer.xpilot explaining the ideas behind your map.
 
 17) How can I design my own maps easily?
 
-Use the XMapEdit program, which was made by Aaron Averila.
-You can get it by ftp from ftp.xpilot.org in /pub/xmapedit/.
+On Unix, use the XMapEdit (xp-mapedit) program, which was made by Aaron
+Averill and donated to the XPilot project.  It is now maintained by the
+XPilot project and is distributed with XPilot source in the
+./src/mapedit directory.
+
+On Windows, the nice editor MapXpress has been created by Jarrod Miller,
+and is included with the installation. This editor includes special
+features such as a random map generator, and the ability to shift and
+rotate maps. The latest version is always available from Jarrod's
+homepage:
+
+    <URL:http://www.ctitech.com/users/jlmiller/index.htm>
+
 The map format is in ASCII so you can also make or change maps
 with your standard text editor (vi, emacs).  And everybody did
 it that way before XMapEdit, but that seems hopelessly complex
 and tedious now.  Special thanks go to Aaron for making XMapEdit.
 
-A new updated version by William Docter is available from
-<URL:ftp://ftp.xpilot.org/pub/xmapedit/xmapedit-3.5.1d.tar.gz>
-
 18) How can I design my own ship?
 
-On Unix, use editss.  You can get it by anonymous ftp to
-dnpap.et.tudelft.nl in the /pub/Private/Ronald directory.
-Or from ftp.xpilot.org in the /pub/contrib directory.
+On Unix, use editss.  You can get it by anonymous ftp to ftp.xpilot.org
+in the /pub/contrib directory.
 
-On Windows, there is Lewis Beard's XPShipEditor.  It is
-distributed with the Windows Binary release of XPilot.
-You can fetch the Visual Basic source from <URL:http://www.lwb.org>
+For a cross-platform solution, look at Jarno's Java shipshape editor at
+    <URL:http://www.j-a-r-n-o.nl/xpiloteditor.html>
+
+XPShipEditor is a ship editor by Lewis Beard that comes with the Windows
+distribution of XPilot.  It is written in Visual Basic, and is no longer
+actively developed.  If you have questions about it, please email
+xpilot@xpilot.org.
 
 There is also Jonny Svrling's Java "Ship Shaper" available from 
 <URL:http://www.student.nada.kth.se/~d93-jsv/xpilot/sshaper>
-This is reported to work on Windows but not Unix.
+This is reported to work on Windows but not Unix.  It also
+seems to be no longer maintained.
 
 19) I have a problem because this and that is not working.
 
-Make sure you use the latest `officially released' version.
+Make sure you use the latest "officially released" version.
 You will be most cooperative if you try to fix it yourself first.
 If you tried everything and you still cannot solve it then post
-a help request to rec.games.computer.xpilot.
+a help request to rec.games.computer.xpilot or email
+xpilot-hacks@nslug.ns.ca.
+
 There are some things that are generally helpful to mention, when relevant:
  
    The XPilot version and where you obtained the distribution.
@@ -405,7 +536,17 @@ The meta server also maintains a nickname database containing all the
 nicknames in use by Internet XPiloteers.  XPiloteers can add their
 nickname interactively and protect it by a password.
 
-You can connect to the meta server with:
+The most obvious way to use the meta server is by pressing the
+"Internet" button when you start the XPilot client.  This will show you
+a screenful of active servers which you can ping to measure latency.
+This will help you select a reasonably unlagged server.  Generally, 150ms
+or less is considered playable.  Click on the server name to join the game.
+
+You can also access other features of the meta server by connecting with
+telnet.  Jarno reports, however, that this doesn't work with the default
+Windows telnet client, nor with another one for Windows that he tried. 
+If you find a Windows telnet solution that works for you, please let us
+know.  To access meta via telnet, do the following:
 
   telnet meta.xpilot.org 4400
 
@@ -416,58 +557,50 @@ Help is available online.  Example session:
     Connected to meta.xpilot.org..
     Escape character is '^]'.
 
-    Welcome to XPilot Meta server
+    Welcome to the XPilot Meta server
 
-    This is the available ports on the Meta server:
-    4400:   This port.  Interactive user port.
-    4401:   Program port.  It lists all info in one go and terminates.
-    4402:   FAQ port.  It will give you the FAQ in one go and terminate.
-    4403:   Nick-name port.  This will give you the current nick name list.
+    These are the available ports on the Meta server:
+    4400:   This port.  The interactive user port.
+    4401:   The program port.  It lists all info in one go and terminates.
+    4402:   The FAQ port.  It will give you the FAQ in one go and terminate.
+    4403:   The nickname port.  This will give you the current nick name list.
 
     Type "help" to list possible commands.
 
+    E-mail problems to xpilot@xpilot.org.
+
     >list
-    3.2.9          :144.168.23.100           :15345    :0   :2.51      :Team-combat
-    3.2.9          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
-    3.2.9          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
-    3.2.9          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
-    3.2.9          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
-    3.2.9          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
-    3.2.9          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
-    3.2.9          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
-    3.2.9          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
-    3.2.9          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
-    3.2.9          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
-    3.2.9          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
-    3.2.9          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
-    3.2.9          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
-    3.2.9          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
-    3.2.9          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
-    3.2.9          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
-    3.2.9          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
-    3.2.9          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
-    3.2.9          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
-    3.2.9          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
-    >server scratch.eecs.umich.edu
+    4.5.3          :xpilot.void.adminz.be         :15345 :0  :2d 21.56  :Xpilot-Tournament Map (Blood's
+    4.5.3          :xp.abgenix.com                :15345 :0  :1d 21.56  :West Coast Blood's Music
+    4.5.3          :host217-34-82-162.in-addr.btopenworld.com:15345 :1  :0.00      :The Globe
+    4.5.3          :whipit.devo.com               :15345 :0  :8d 18.45  :Blood's Music II
+    4.5.1          :xpilot.terrabox.com           :15345 :0  :1d 11.19  :tzx-rambunctious
+    4.5.3          :xpilot.games.zoreil.com       :15345 :0  :9.15      :The Globe
+    4.5.3          :atfilm1.informatik.tu-muenchen.de:15345 :0  :7d 3.15   :Large Tournament
+    4.5.1          :stinkymonkey.cc.columbia.edu  :15345 :5  :7d 14.48  :New Dark Hell
+    4.?.4          :angus.rap.ucar.edu            :15345 :0  :17.59     :Ultra Doom
+    4.5.3          :fishy.fishy.fishy             :15345 :0  :46d 13.27 :Xpilot-Tournament Map (Blood's
+    >server stinkymonkey.cc.columbia.edu
     >status
-    SERVER VERSION...: XPilot 3.2.9
-    STARTED BY.......: pkenny
-    STATUS...........: ok
-    MAX SPEED........: 12 fps
-    WORLD (100x100)..: Blood's Music
-        AUTHOR.....: Patrick Kenny - pkenny@eecs.umich.edu
-    PLAYERS ( 7/12)..:
-
-    NO:  TM: NAME:             LIFE:   SC:    PLAYER:
+    SERVER VERSION...; 4.5.1
+    STATUS...........; ok
+    MAX SPEED........; 14 fps
+    WORLD (200x200)..; New Dark Hell
+          AUTHOR.....; PeaceMaker
+    PLAYERS (10/16)..;
+    
+    NO;  TM; NAME;             LIFE;   SC;    PLAYER;
     -------------------------------------------------
-     1... *2 Ender              003   342     turtle@ender.sdsu.edu
-     2...  2 DR.DEATH           003   249     boyns@hercules.sdsu.edu
-     3...  4 Phoenix            002    75     dan@starfire.ne.uiuc.edu
-     4... W2 Arafat             000     0     furth@tph21.tuwien.ac.at
-     5...  3 Lei                003    -5     caol@misty.cs.byu.edu
-     6...  2 Hero               003   -13     jmin@sunny.cs.byu.edu
-     7...  3 Neptune One        002  -189     garrett@athena.sdsu.edu
-
+     1... *  Bosmans Jos        014   193     verhaege@bennevis.esat.kuleuven.ac.be
+     2...    Thomas             079   147     thomas@gemini
+     3...    Kazak              009    44     abc0@pc-boschi.cineca.it
+     4... R  R2D2               004    36     robot@xpilot.org
+     5...    Schnucki           007    25     bohnenka@alkhwarizmi.cs.utwente.nl
+     6... R  Terminator         002     3     robot@xpilot.org
+     7...    Mary jane          014    -3     DaxxHutchinson@dax
+     8... R  Mickey             001    -6     robot@xpilot.org
+     9... R  Capone (Kazak)     007   -20     robot@xpilot.org
+    10... R  Neuro (Kazak)      005   -26     robot@xpilot.org
     >quit
     Connection closed by foreign host.
 </pre>
@@ -479,62 +612,97 @@ Port 4403 will list the current nicknames database.
 
 Due to some software problems the meta server may not be running
 at all times, but it mostly will.  In case it happens to be unreachable
-there is an backup meta server at telnet meta2.xpilot.org 4400.
+there is an backup meta server at telnet meta2.xpilot.org 4400.  The
+graphical meta interface in the XPilot client will attempt to contact
+both servers.
 
 The meta server is developed and maintained by Ken Ronny Schouten
 and Bert Gijsbers with email address meta@xpilot.org.
 
-21) What information about XPilot is available on World Wide Web?
+21) Why do I get "Could not establish connections with any metaserver"?
 
-The XPilot Page on the World-Wide Web can be found on URL
+The XPilot client will display this message when all attempts to contact
+the meta server fail.  There may temporarily be a network split between
+you and both the primary and backup meta servers, or (although this is
+rather unlikely) both meta servers may be down.  Try again later, or
+specify the address of a known xpilot server directly on the command
+line, bypassing the meta interface (see question 12).  If meta or meta2
+is simply slow and not completely down, you can try using the telnet
+interface to obtain the name of the desired xpilot server (see the
+previous question).
+
+There is one other possible cause for this error.  In XPilot 4.5.2, the
+IP number of meta.xpilot.org changed.  The XPilot client has the IP#
+embedded in it to make connection to meta quick and reliable even if
+the DNS server for xpilot.org is temporarily unreachable.  Thus, if you
+are using an older client, the connection to meta.xpilot.org will fail,
+and meta2.xpilot.org will be contacted.  If meta2 is slow or
+unreachable, the connection attempt will time out before you get a list
+of servers.  The solution here is to upgrade your client.
+
+22) What information about XPilot is available online?
+
+The XPilot home page can be found at:
     <URL:http://www.xpilot.org/>
 
-Highly recommended is the online XPilot Newbie Manual, the creation
-of Karen Gould and Erwin Zierler with the help of many contributors:
-    <URL:http://www.xpilot.org/NM/>
+Highly recommended is the unofficial XPilot Newbie Guide by
+Jarno van der Kolk at:
 
-Other WWW pages related to XPilot are:
-    <URL:http://heron.met.nps.navy.mil/~forsythe/index.html>
-    <URL:http://bau2.uibk.ac.at/che/xpilot.html>
-    <URL:http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html>
-    <URL:http://ernie.ucsc.edu:8001/1g/xpilot>
-    <URL:http://ece.uiuc.edu/lard/lard.html>
-    <URL:http://www.sdsu.edu/~boyns/xpilot.html>
-    <URL:http://www.sdsu.edu/~turtle/>
-    <URL:http://www.sdsu.edu/~garrett/>
-    <URL:http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html>
-    <URL:http://rs560.cl.msu.edu/misc/xpilot.html>
-    <URL:http://www.cldc.howard.edu/~ltb/Xpilot>
+    <URL:http://www.j-a-r-n-o.nl/newbie>
 
-22) What is the NM (Newbie Manual)?
+All things XPilot-related may be discussed on the Usenet newsgroup
+rec.games.computer.xpilot, for which this FAQ was originally written.
 
-The Newbie Manual is a World Wide Web (WWW) book (not page, it is made
-up of many many pages all linked together) which you access using programs
-like Mosaic or Netscape by opening the Newbie Manual address which is:
+XPilot mailing lists of interest to users are xpilotgame-users and
+xpilotgame-announce, which are hosted here:
+    <URL:http://sourceforge.net/mail/?group_id=14558>
 
-    <URL:http://www.xpilot.org/NM/>
+The XPilot development home page can be found at:
+    <URL:http://xpilotgame.sf.net/>
 
-This will connect you to the Manual which you read through by clicking on
-the highlighted links.
+The unofficial mailing list for XPilot development discussions between
+the official developers and contributing developers from the XPilot
+player community is at:
 
-It has some really cool pics, stories, and most improtantly, pages on
-almost all the weapons, showing what their icons look like, how to use
-them, what their keys are, and tons of strategies written by very 
-experienced players.  There is an entire article on all the modifiers, like
-the V modifier, and these articles have loads of links to important
-cross reference material.  The manual is not complete, but is an extremely
-useful documentation guide to playing XPilot.
+    <URL:http://nslug.ns.ca/mailman/listinfo/xpilot-hacks>
 
-23) How can I contribute bugfixes and new features to the game?
+Other WWW pages related to XPilot come and go.  There are too many to
+list here.  Your best bet finding recent pages is to simply try a search
+with your favourite web search engine for the keyword "xpilot".  Try:
 
-Make your contributions as context diffs against the latest version
-and mail them to xpilot@xpilot.org.  You can make context diffs with
-the diff command.  Use `diff -c oldfile newfile' or `diff -cr olddir newdir'.
-The authors very much appreciate fixes and improvements.  XPilot has a
-longstanding tradition of incorporating code from hackers all over the world.
-Ideas for new features can of course be discussed in rec.games.computer.xpilot.
+    <URL:http://www.google.ca/search?q=xpilot>
 
-24) Why do I never get any items (triangles) to appear in my maps?
+23) What is the unofficial XPilot Newbie Guide?
+
+The Newbie Guide is an interactive web site that incorporates much of the
+knowledge and wisdom of experienced players into a single document.  It
+largely supercedes the expansive but now quite dated earlier work, the
+Newbie Manual hosted at www.xpilot.org/NM.  One of the very nice features
+of this guide is the ability to add your own comments on any page.  Using
+this format, Jarno has succeeded in keeping the Newbie Guide up-to-date
+with the latest releases, patches and pearls of wisdom.  It is available
+here:
+
+    <URL:http://www.j-a-r-n-o.nl/newbie>
+
+Topics ranging from complete descriptions of all weapons to ship-making,
+map-making, jargon and etiquette are all covered by this guide.
+
+24) How can I contribute bugfixes and new features to the game?
+
+Make your contributions as context diffs against the latest version and
+mail them to xpilot-hacks@nslug.ns.ca which is an open forum where
+patches and new ideas for the game are discussed.  A subscription form
+and the archives of the list are here:
+
+    <URL:http://nslug.ns.ca/mailman/listinfo/xpilot-hacks>
+
+You can make context diffs with the diff command.  Use "diff -c oldfile
+newfile" or "diff -cr olddir newdir".  The authors very much appreciate
+fixes and improvements.  XPilot has a longstanding tradition of
+incorporating code from hackers all over the world.
+
+25) Why do I never get any items (triangles) to appear in my maps?
 
 At startup the xpilot server looks for a configuration file to
 retrieve default values for some of the options.
@@ -546,18 +714,92 @@ then the xpilot server cannot find this file anymore.  In which
 case some of the values will have no or a useless value.
 This is the case if you do not get any items to appear in your maps.
 An example defaults file with reasonable default values can be
-found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
+found in the XPilot distribution as ./lib/defaults.
 
-25) What are the Well Known Problems for the latest version?
+26) What are the Well Known Problems for the latest version?
 
 None.
 
-26) Is there a XPilot version available for DOS, Windows or the Mac?
+27) Why can't I shoot players flying at high speeds?
 
-Yes!!!  Dick Balaska <dick@buckosoft.com> has accomplished a tremendous
-feat with a version for Windows.  See <URL:http://www.buckosoft.com/xpilot/>
+Uoti Urpala provides this explanation:
 
-For the Mac the only solution is to run Mklinux, xpilot even runs on it.
+If you fly fast, the server doesn't check for all possible collisions. 
+The analytic collision checking itself would be accurate to half warp[1]
+speed but the server only does the check for bullets that are within a
+certain distance from the ship.  So if you're shooting at someone trying
+to reach warp speed, it is likely the hit won't be detected.  I think
+the distance on [chuck-yeager.e.kth.se] is 4 blocks around the ship.  So
+if the speed difference between ship and bullet is more than that per
+frame hits can go undetected, depending on where the bullet appears at
+the start of a frame.
+
+[1] Editor's note: "warp" is achieved by flying in a straight path on a
+world with edgeWrap = true until the ship appears to be stationary,
+i.e. is flying so fast that each frame it moves the entire height
+(or width) of the map.
+
+28) Are there other implementations of XPilot?
+
+Yes and no.  Nothing has been released by either of these projects yet,
+but they are being actively developed, and the very daring and
+adventuresome may download and try out what they have produced so far.
+
+a) XPilot++
+
+XPilot++ is an ambitious project led by XPilot developer Dick Balaska
+(Bucko) that is still in alpha development to port all of XPilot to C++. 
+This will enable support for many new features more easily and unify
+Unix and Windows versions into a single codebase, doing away with the
+need for platform-specific versions of XPilot utilities such as XPWho
+and xp-mapedit.  XPilot++ can be found here:
+
+    <URL:http://www.buckosoft.com/xpilot/xpilot++/>
+
+One new feature is more aggressive and smarter bots.
+
+Jarrod Miller (Daedlaes) is working on a new integrated shipshape and
+map editor as a part of this project. XpilotControl is actually much
+more than that, as it will, when finished, also allow remote
+administration of running XPilot++ servers and provides a single meta
+interface for both Windows and Unix for listing and joining XPilot
+servers.
+
+b) xpilot.sf.net
+
+As noted earlier, this is a distinct project from the official XPilot
+project at xpilotgame.sf.net.
+
+Uoti Urpala (U) leads this project.  Its most distinctive feature is a
+polygon map format which is more flexible and extensible than the
+current cell-block-based map format.  This as-yet-unamed version can be
+found here:
+
+    <URL:http://xpilot.sf.net>
+
+Other enhancements include:
+- Better collision detection between objects -- the server now notices a
+  bullet hitting a ship even if it hits a wall later in the same frame.
+- The official version lacked ship-wall collision detection for wall edges
+  which did not touch any vertices of the ship.  Now, a player will no
+  longer be able to get stuck on the corner of a wall due to this problem.
+- Different textures and colors can be specified in the map format.
+- The client can automatically download textures over HTTP.
+- Server-side recording allows re-enactment of a whole game from the
+  vantage point of an onlooker who can "snoop" through the eyes of
+  any player instead of just the limited view of the player who
+  recorded the game, as with client-side recordings.
+- Scaling of framerate allows smoother play at higher framerates (assuming
+  enough bandwidth is available) without distorting the speed of the game.
+- When player passwords are enabled on a server, its users may register
+  nicknames.  Once a password is set on a nickname, a player must
+  authenticate to use the nickname.
+
+Compatibility:
+- The server doesn't work with original XPilot clients which only
+  understand the cell-based map format.
+- The server doesn't read original cell-based maps, but there is a
+  utility provided to convert them to polygon format.
+- Robots are not implemented.
 
 EOFAQ
-

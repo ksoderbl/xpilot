@@ -102,6 +102,10 @@ LINK32=link.exe
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\alliance.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\asteroid.c
 # End Source File
 # Begin Source File
@@ -287,6 +291,10 @@ SOURCE=..\ship.c
 # Begin Source File
 
 SOURCE=..\shot.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\showtime.c
 # End Source File
 # Begin Source File
 
@@ -525,14 +533,6 @@ SOURCE=..\..\common\NT\winNet.h
 SOURCE=..\..\common\NT\wsockerrs.c
 # End Source File
 # End Group
-# Begin Source File
-
-SOURCE=..\alliance.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\showtime.c
-# End Source File
 # End Group
 # Begin Group "Resource Files"
 

@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.29 2002/04/13 18:26:04 bertg Exp $
+/* $Id: update.c,v 5.30 2002/06/11 03:59:39 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -918,6 +918,9 @@ void Update_objects(void)
 	 */
 	if (BIT(pl->used, HAS_SHIELD))
 	    Add_fuel(&(pl->fuel), (long)ED_SHIELD);
+
+	if (BIT(pl->used, HAS_PHASING_DEVICE))
+	    Add_fuel(&(pl->fuel), (long)ED_PHASING_DEVICE);
 
 	if (BIT(pl->used, HAS_CLOAKING_DEVICE))
 	    Add_fuel(&(pl->fuel), (long)ED_CLOAKING_DEVICE);

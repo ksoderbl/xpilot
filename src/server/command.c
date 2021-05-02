@@ -1,4 +1,4 @@
-/* $Id: command.c,v 5.21 2002/04/21 19:08:14 kimiko Exp $
+/* $Id: command.c,v 5.22 2002/06/08 13:39:44 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -564,12 +564,6 @@ static int Cmd_kick(char *arg, player *pl, int oper, char *msg)
 	if (Players[i]->conn == NOT_CONNECTED) {
 	    Delete_player(i);
 	}
-#if 0	/* needs testing. */
-	else if (pl == &Players[i]) {
-	    strcpy(msg, "Cannot kick self this way.");
-	    return CMD_RESULT_ERROR;
-	}
-#endif
 	else {
 	    Destroy_connection(Players[i]->conn, "kicked out");
 	}

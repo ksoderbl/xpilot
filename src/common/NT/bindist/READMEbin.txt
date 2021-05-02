@@ -1,7 +1,7 @@
 This is the README for XPilot.exe Release 13 .
-XPilot.exe is based on 4.5.3 .
+XPilot.exe is based on 4.5.4 .
 
-Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
+Copyright © 1991-2002 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
 The documentation for XPilot is far from complete.
 

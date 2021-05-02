@@ -639,6 +639,11 @@
 	
 
 .\winAbout.cpp : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	".\credits.inc.h"\
 	".\stdafx.h"\
 	".\winAbout.h"\
 	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\

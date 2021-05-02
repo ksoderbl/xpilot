@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 5.41 2002/04/21 20:31:37 bertg Exp $
+/* $Id: frame.c,v 5.42 2002/05/13 20:38:10 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -509,10 +509,18 @@ static void Frame_map(int conn, int ind)
 {
     player		*pl = Players[ind];
     int			i,
+			k,
 			x,
 			y,
 			conn_bit = (1 << conn);
     block_visibility_t	bv;
+    const int		fuel_packet_size = 5;
+    const int		cannon_packet_size = 5;
+    const int		target_packet_size = 7;
+    const int		wormhole_packet_size = 5;
+    int			bytes_left = 2000;
+    int			max_packet;
+    int			packet_count;
 
     x = pl->pos.bx;
     y = pl->pos.by;
@@ -534,7 +542,55 @@ static void Frame_map(int conn, int ind)
 	}
     }
 
-    for (i = 0; i < World.NumFuels; i++) {
+    packet_count = 0;
+    max_packet = MAX(5, bytes_left / target_packet_size);
+    i = MAX(0, pl->last_target_update);
+    for (k = 0; k < World.NumTargets; k++) {
+	target_t *targ;
+	if (++i >= World.NumTargets) {
+	    i = 0;
+	}
+	targ = &World.targets[i];
+	if (BIT(targ->update_mask, conn_bit)
+	    || (BIT(targ->conn_mask, conn_bit) == 0
+		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
+	    Send_target(conn, i, targ->dead_time, targ->damage);
+	    pl->last_target_update = i;
+	    bytes_left -= target_packet_size;
+	    if (++packet_count >= max_packet) {
+		break;
+	    }
+	}
+    }
+
+    packet_count = 0;
+    max_packet = MAX(5, bytes_left / cannon_packet_size);
+    i = MAX(0, pl->last_cannon_update);
+    for (k = 0; k < World.NumCannons; k++) {
+	if (++i >= World.NumCannons) {
+	    i = 0;
+	}
+	if (block_inview(&bv,
+			 World.cannon[i].blk_pos.x,
+			 World.cannon[i].blk_pos.y)) {
+	    if (BIT(World.cannon[i].conn_mask, conn_bit) == 0) {
+		Send_cannon(conn, i, World.cannon[i].dead_time);
+		pl->last_cannon_update = i;
+		bytes_left -= max_packet * cannon_packet_size;
+		if (++packet_count >= max_packet) {
+		    break;
+		}
+	    }
+	}
+    }
+
+    packet_count = 0;
+    max_packet = MAX(5, bytes_left / fuel_packet_size);
+    i = MAX(0, pl->last_fuel_update);
+    for (k = 0; k < World.NumFuels; k++) {
+	if (++i >= World.NumFuels) {
+	    i = 0;
+	}
 	if (BIT(World.fuel[i].conn_mask, conn_bit) == 0) {
 	    if (World.block[World.fuel[i].blk_pos.x]
 			   [World.fuel[i].blk_pos.y] == FUEL) {
@@ -542,42 +598,43 @@ static void Frame_map(int conn, int ind)
 				 World.fuel[i].blk_pos.x,
 				 World.fuel[i].blk_pos.y)) {
 		    Send_fuel(conn, i, (int) World.fuel[i].fuel);
+		    pl->last_fuel_update = i;
+		    bytes_left -= max_packet * fuel_packet_size;
+		    if (++packet_count >= max_packet) {
+			break;
+		    }
 		}
 	    }
 	}
     }
 
-    for (i = 0; i < World.NumCannons; i++) {
-	if (block_inview(&bv,
-			 World.cannon[i].blk_pos.x,
-			 World.cannon[i].blk_pos.y)) {
-	    if (BIT(World.cannon[i].conn_mask, conn_bit) == 0) {
-		Send_cannon(conn, i, World.cannon[i].dead_time);
-	    }
+    packet_count = 0;
+    max_packet = MAX(5, bytes_left / wormhole_packet_size);
+    i = MAX(0, pl->last_wormhole_update);
+    for (k = 0; k < World.NumWormholes; k++) {
+	wormhole_t *worm;
+	if (++i >= World.NumWormholes) {
+	    i = 0;
 	}
-    }
-
-    for (i = 0; i < World.NumTargets; i++) {
-	target_t *targ = &World.targets[i];
-
-	if (BIT(targ->update_mask, conn_bit)
-	    || (BIT(targ->conn_mask, conn_bit) == 0
-		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
-	    Send_target(conn, i, targ->dead_time, targ->damage);
-	}
-    }
-
-    for (i = 0; i < World.NumWormholes; i++) {
-	wormhole_t	*worm = &World.wormHoles[i];
-	int		x = (worm->pos.x * BLOCK_SZ) + BLOCK_SZ / 2,
-			y = (worm->pos.y * BLOCK_SZ) + BLOCK_SZ / 2;
-
+	worm = &World.wormHoles[i];
 	if (wormholeVisible
 	    && worm->temporary
 	    && (worm->type == WORM_IN
 		|| worm->type == WORM_NORMAL)
 	    && block_inview(&bv, worm->pos.x, worm->pos.y)) {
+	    /* This is really a stupid bug: he first converts
+	       the perfect blocksizes to pixels which the
+	       client is perfectly capable of doing itself.
+	       Then he sends the pixels in signed shorts.
+	       This will fail on big maps. */
+	    int	x = (worm->pos.x * BLOCK_SZ) + BLOCK_SZ / 2,
+		y = (worm->pos.y * BLOCK_SZ) + BLOCK_SZ / 2;
 	    Send_wormhole(conn, x, y);
+	    pl->last_wormhole_update = i;
+	    bytes_left -= max_packet * wormhole_packet_size;
+	    if (++packet_count >= max_packet) {
+		break;
+	    }
 	}
     }
 }
@@ -1037,6 +1094,8 @@ static void Frame_radar(int conn, int ind)
     object		*shot;
     DFLOAT		x, y;
 
+    Frame_radar_buffer_reset();
+
 #ifndef NO_SMART_MIS_RADAR
     if (nukesOnRadar) {
 	mask = OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_MINE;
@@ -1130,6 +1189,21 @@ static void Frame_radar(int conn, int ind)
 	    }
 	    Frame_radar_buffer_add((int)x, (int)y, size);
 	}
+    }
+
+    Frame_radar_buffer_send(conn);
+}
+
+static void Frame_lose_item_state(int ind)
+{
+    player		*pl = Players[ind];
+
+    if (pl->lose_item_state != 0) {
+	Send_loseitem(pl->lose_item, pl->conn);
+	if (pl->lose_item_state == 1)
+	    pl->lose_item_state = -5;
+	if (pl->lose_item_state < 0)
+	    pl->lose_item_state++;
     }
 }
 
@@ -1272,16 +1346,8 @@ void Frame_update(void)
 	    Frame_map(conn, ind);
 	    Frame_ships(conn, ind);
 	    Frame_shots(conn, ind);
-	    Frame_radar_buffer_reset();
 	    Frame_radar(conn, ind);
-	    Frame_radar_buffer_send(conn);
-	    if (pl->lose_item_state != 0) {
-		Send_loseitem(pl->lose_item, conn);
-		if (pl->lose_item_state == 1)
-		    pl->lose_item_state = -5;
-		if (pl->lose_item_state < 0)
-		    pl->lose_item_state++;
-	    }
+	    Frame_lose_item_state(i);
 	    debris_end(conn);
 	    fastshot_end(conn);
 	}

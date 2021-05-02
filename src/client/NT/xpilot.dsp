@@ -268,6 +268,10 @@ SOURCE=..\painthud.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\paintmacros.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\paintmap.c
 # End Source File
 # Begin Source File
@@ -293,6 +297,10 @@ SOURCE=..\record.c
 # Begin Source File
 
 SOURCE=..\record.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\recordfmt.h
 # End Source File
 # Begin Source File
 
@@ -328,6 +336,11 @@ SOURCE=..\usleep.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\welcome.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=..\widget.c
 # End Source File
 # Begin Source File
@@ -337,6 +350,10 @@ SOURCE=..\widget.h
 # Begin Source File
 
 SOURCE=..\xevent.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\xevent.h
 # End Source File
 # Begin Source File
 
@@ -377,6 +394,10 @@ SOURCE=.\BSString.cpp
 # Begin Source File
 
 SOURCE=.\BSString.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\credits.inc.h
 # End Source File
 # Begin Source File
 
@@ -501,6 +522,10 @@ SOURCE=..\..\common\.cvsignore
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\common\astershape.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\common\audio.h
 # End Source File
 # Begin Source File
@@ -606,6 +631,10 @@ SOURCE=..\..\common\strdup.c
 # Begin Source File
 
 SOURCE=..\..\common\strlcpy.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\wreckshape.h
 # End Source File
 # Begin Source File
 
@@ -773,38 +802,6 @@ SOURCE=.\res\xpilot.rc2
 SOURCE=..\..\server\NT\res\xpilots.ico
 # End Source File
 # End Group
-# Begin Group "bindist"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\..\common\NT\bindist\makeDistribution
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\bindist\README.txt.msub
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\bindist\READMEbin.txt.msub
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\bindist\ServerMOTD.txt.msub
-# End Source File
-# Begin Source File
-
-SOURCE=.\XPilot.ini
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\bindist\XPilot.nsi
-# End Source File
-# End Group
-# Begin Source File
-
-SOURCE=..\..\..\.cvsignore
-# End Source File
 # End Target
 # End Project
 # Section XPilot : {0FEA6ED2-A2FE-11CF-80DA-00A02423A46C}

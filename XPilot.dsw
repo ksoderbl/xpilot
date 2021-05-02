@@ -15,6 +15,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "XPilotFiles"=.\src\common\NT\XPilotFiles.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "XPilotServer"=.\src\server\NT\xpilots.dsp - Package Owner=<4>
 
 Package=<5>

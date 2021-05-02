@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Id: makeDistribution,v 5.8 2002/02/15 06:10:26 dik Exp $
+# $Id: makeDistribution,v 5.12 2002/07/12 20:47:10 dik Exp $
 # makeDistribution - a script to move things to a directory to make the build script
 #                    and then call makensis to build a Windows binary distribution for
 #                    XPilot, a multiplayer gravity war game.  
@@ -47,11 +47,18 @@ function doHELP ()
 	echo "  -h = Help - this text"
 }
 
+#####################################################################
+#
+# Preset all default conditions
+#
 ALL=N
 QUICK=N
 BUILDHELP=Y
 SILENT=N
+#####################################################################
+#
 # parse the command line options
+#
 while getopts "ahsHq" OPT
 do
 	case $OPT in
@@ -64,7 +71,10 @@ do
 	esac
 done
 
+#####################################################################
+#
 # sanity check are we building from the right place?
+#
 cd ../../../..
 BASE=`pwd`
 echo "Building from $BASE"
@@ -77,7 +87,10 @@ then
 	exit 1
 fi
 
+#####################################################################
+#
 # see if the output directory exists
+#
 if [ ! -d "$XDIR" ]
 then
 	echo -n "$XDIR doesn't exist. Create? [y] "
@@ -94,7 +107,10 @@ then
 	fi
 fi
 
+#####################################################################
+#
 # make all of our output subdirectories
+#
 if [ ! -d $XDIR/doc ] 
 then
 	mkdir $XDIR/doc
@@ -120,10 +136,15 @@ then
 	mkdir $XDIR/XPShipEditor
 fi
 
+#####################################################################
 # go make XPilot.exe
 if [ $QUICK = N ]
 then
 	echo go make XPilot.exe
+
+	cd $BASE/src/common/NT/bindist		# first make the credits include file
+	./creditsUpdate.pl
+
 	cd $BASE/src/client/NT
 	if [ $ALL = Y ]
 	then
@@ -138,6 +159,7 @@ then
 	fi
 fi
 
+#####################################################################
 # go make XPilotServer.exe
 if [ $QUICK = N ]
 then
@@ -160,6 +182,7 @@ then
 	./XPilotServer /ServerOpts
 fi
 
+#####################################################################
 # go make XPwho.exe
 if [ $QUICK = N ]
 then
@@ -178,6 +201,7 @@ then
 	fi
 fi
 
+#####################################################################
 # go make MapXpress.exe 
 if [ $QUICK = N ]
 then
@@ -196,6 +220,7 @@ then
 	fi
 fi
 
+#####################################################################
 # go make XPreplay.exe 
 if [ $QUICK = N ]
 then
@@ -214,6 +239,7 @@ then
 	fi
 fi
 
+#####################################################################
 # and go make mapxpress.chm
 if [ $QUICK = N -a $BUILDHELP = Y ]
 then
@@ -228,19 +254,22 @@ then
 	fi
 fi
 
+#####################################################################
 # build our output title string to use as the filename of the installer .exe
-echo build our output title string to use as the filename of the installer .exe
+#echo build our output title string to use as the filename of the installer .exe
 cd $BASE
 TITLE=`grep TITLE src/common/version.h | grep -v XPilot | cut -f2 -d'"'`
 TITLE="XPilot$TITLE.exe"
+echo ""
 echo "Building $TITLE"
 echo "OutFile $TITLE" >$XDIR/outfilename.txt
 
-$ECHO_ON	# thanks for looking.
 
+#####################################################################
 #
 # copy all files over to the staged dir
 #
+$ECHO_ON	# thanks for looking.
 cd $BASE
 cp -p LICENSE $XDIR/License.txt
 
@@ -256,7 +285,7 @@ cp -p Release/ServerOpts.txt $XDIR/doc
 
 cd $BASE/src/common/NT/bindist
 #cp -p XPilot.nsi 		$XDIR		# don't install the NSI, but we use it there.
-sed "s/\[RELEASE\]/$XPilot$TITLE/g" <XPilot.nsi >$XDIR/XPilot.nsi
+sed "s/\[RELEASE\]/$TITLE/g" <XPilot.nsi >$XDIR/XPilot.nsi
 cp -p xp_off.bmp 		$XDIR		# nsi helper bitmap
 cp -p xp_on.bmp 		$XDIR		# nsi helper bitmap
 cp -p READMEbin.txt		$XDIR/README.txt
@@ -294,6 +323,9 @@ cp -p README.talkmacros	$XDIR/doc/README.talkmacros.txt
 cp -p TODO				$XDIR/doc/Todo.txt
 echo "[InternetShortCut]"	>$XDIR/doc/The\ XPilot\ Page.url
 echo "URL=http://www.xpilot.org/" >>$XDIR/doc/The\ XPilot\ Page.url
+echo "[InternetShortCut]"	>$XDIR/doc/Newbie\ Guide.url
+echo "URL=http://www.j-a-r-n-o.nl/newbie" >>$XDIR/doc/Newbie\ Guide.url
+
 
 cd $BASE/lib
 cp -p defaults			$XDIR/lib/defaults.txt
@@ -375,5 +407,9 @@ cp -p wormhole.ppm		$XDIR/lib/textures
 
 $ECHO_OFF
 
+#####################################################################
+#
+# build the installer
+#
 cd $XDIR
 makensis XPilot.nsi

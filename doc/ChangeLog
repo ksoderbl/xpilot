@@ -3,6 +3,40 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.5.4 compared to release 4.5.3.
+
+Team cannons could kill teammates with laser pulses.  Fixed.
+
+On the map Death Star one can destroy a large number of targets with
+one FNC.  This results in packet buffer overflows and slow updates.
+To overcome this a smarter map update algorithm is implemented in the
+server and also map updates are now limited to max 2 KB per network packet.
+
+The default score font was reduced from 15 to 13.
+
+When the server sends map updates to the client these are now always
+acknowledged immediately by the client.  This should help prevent stalls
+or lock-ups on maps where are a large number of targets or cannons
+can be destroyed.  It should also reduce the number of very big
+server frame update packets.
+
+Robots no longer try to go after players who aren't in playing mode.
+
+Windows XPwho persistent fixes (shipbar, statusbar, toolbar).  XPwho
+can also set the user@host values.  XPwho now has scrolling credits box
+derived from the CREDITS file.
+
+Windows server now has a button to launch a client connected to this
+server (127.0.0.1).
+
+Windows installation, at the end of a successful installation, offers
+to launch XPwho (for Internet games) and/or XPilotServer (for local games).
+Hopefully, this will help with newbie installations who start XPilot.exe
+and can't figure out why nothing happens.
+
+
+===============================================================================
+
 This is a summary of changes of release 4.5.3 compared to release 4.5.2.
 
 Fixed a bug which caused paused players to become unpaused at end
@@ -1756,6 +1790,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.75 2002/04/21 20:40:34 bertg Exp $
+==== $Id: ChangeLog,v 5.81 2002/06/21 21:18:10 dik Exp $
 ===============================================================================
 

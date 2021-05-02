@@ -1,4 +1,4 @@
-/* $Id: ship.c,v 5.17 2001/12/11 12:45:13 bertg Exp $
+/* $Id: ship.c,v 5.18 2002/05/13 20:38:56 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -389,12 +389,6 @@ void Tank_handle_detach(player *pl)
 {
     player		*dummy;
     int			i, ct;
-    /* static char		tank_shape[] =
-			    "(NM:fueltank)(AU:John E. Norlin)"
-			    "(SH: 15,0 14,-5 9,-8 -5,-8 -3,-8 -3,0 "
-			    "2,0 2,2 -3,2 -3,6 5,6 5,8 -5,8 -5,-8 "
-			    "-9,-8 -14,-5 -15,0 -14,5 -9,8 9,8 14,5)"
-			    "(EN: -15,0)(MG: 15,0)"; */
 
     if (BIT(pl->used, HAS_PHASING_DEVICE))
 	return;
@@ -420,9 +414,6 @@ void Tank_handle_detach(player *pl)
      */
 
     Init_player(NumPlayers, (allowShipShapes)
-/*
-			    ? Parse_shape_str(tank_shape)
-*/
 			    ? Parse_shape_str(tankShipShape)
 			    : NULL);
     /* Released tanks don't have tanks... */
@@ -455,9 +446,6 @@ void Tank_handle_detach(player *pl)
     dummy->mychar       = 'T';
     dummy->score	= pl->score - tankScoreDecrement;
     updateScores	= true;
-    dummy->count	= -1;		/* Don't commit suicide :) */
-    dummy->conn		= NOT_CONNECTED;
-    dummy->audio	= NULL;
 
     /* Fuel is the one from choosen tank */
     dummy->fuel.sum     =
@@ -466,22 +454,8 @@ void Tank_handle_detach(player *pl)
     dummy->fuel.current = 0;
     dummy->fuel.num_tanks = 0;
 
-    /* Init items with initialItems to have Throw_items() be useful. */
-    for (i = 0; i < NUM_ITEMS; i++) {
-	if (!BIT(1U << i, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
-	    dummy->item[i] = World.items[i].initial;
-	}
-    }
-    dummy->lose_item		= 0;
-    dummy->lose_item_state	= 0;
-
-    /* No lasers */
-    dummy->num_pulses = 0;
-
     /* Mass is only tank + fuel */
     dummy->mass = (dummy->emptymass = ShipMass) + FUEL_MASS(dummy->fuel.sum);
-    dummy->have = DEF_HAVE;
-    dummy->used = DEF_USED;
     dummy->power *= TANK_THRUST_FACT;
 
     /* Reset visibility. */
@@ -516,11 +490,13 @@ void Tank_handle_detach(player *pl)
     }
 
     /* Maybe heat-seekers to retarget? */
-    for (i=0; i < NumObjs; i++)
+    for (i=0; i < NumObjs; i++) {
 	if (Obj[i]->type == OBJ_HEAT_SHOT
 	    && Obj[i]->info > 0
-	    && Players[ GetInd[Obj[i]->info] ] == pl)
+	    && Players[ GetInd[Obj[i]->info] ] == pl) {
 	    Obj[i]->info = NumPlayers - 1;
+	}
+    }
 
     /* Remove tank, fuel and mass from myself */
     Player_remove_tank(GetInd[pl->id], ct);

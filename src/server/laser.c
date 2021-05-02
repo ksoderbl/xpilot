@@ -1,4 +1,4 @@
-/* $Id: laser.c,v 5.12 2002/03/17 21:18:27 kimiko Exp $
+/* $Id: laser.c,v 5.13 2002/05/01 16:33:25 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -146,6 +146,13 @@ static void Laser_pulse_find_victims(
 	    continue;
 	}
 	if (Team_immune(vic->id, pulse->id)) {
+	    continue;
+	}
+	/* special case for cannon pulses */
+	if (pulse->id == NO_ID &&
+	    teamImmunity &&
+	    BIT(World.rules->mode, TEAM_PLAY) &&
+	    pulse->team == vic->team) {
 	    continue;
 	}
 	if (vic->id == pulse->id && !pulse->refl) {

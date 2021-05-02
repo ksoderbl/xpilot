@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.h,v 5.1 2001/05/07 11:42:17 dik Exp $
+/* $Id: xpilotsDlg.h,v 5.2 2002/06/14 02:16:28 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.h - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.h,v 5.1 2001/05/07 11:42:17 dik Exp $					*
+*  $Id: xpilotsDlg.h,v 5.2 2002/06/14 02:16:28 dik Exp $					*
 \***************************************************************************/
 
 /////////////////////////////////////////////////////////////////////////////
@@ -45,6 +45,7 @@ public:
 	//{{AFX_DATA(CXpilotsDlg)
 	enum { IDD = IDD_XPILOTS_DIALOG };
 	CButton	m_start_server;
+	CButton	m_connectClient;
 	//}}AFX_DATA
 
 	CRect	editRect;
@@ -79,6 +80,7 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	afx_msg void OnConfigure();
 	afx_msg void OnStartServer();
+	afx_msg void OnConnectClient();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnClose();
 	afx_msg BOOL OnHelpInfo(HELPINFO* pHelpInfo);
