@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 3.12 1993/10/21 11:02:48 bert Exp $
+/* $Id: rules.c,v 3.14 1993/11/16 22:48:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 
 #define SERVER
+#include <stdlib.h>
 #include "global.h"
 #include "map.h"
 #include "rules.h"
@@ -29,7 +30,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.12 1993/10/21 11:02:48 bert Exp $";
+    "@(#)$Id: rules.c,v 3.14 1993/11/16 22:48:22 bert Exp $";
 #endif
 
 
@@ -40,9 +41,9 @@ long	DEF_BITS = 0;
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
 long	DEF_HAVE =
 	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_CONNECTOR
-	|OBJ_FIRE|OBJ_LASER);
+	|OBJ_FIRE|OBJ_LASER|OBJ_REPAIR);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
-long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR|OBJ_FIRE|OBJ_LASER);
+long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR|OBJ_FIRE|OBJ_LASER|OBJ_REPAIR);
 
 
 /*

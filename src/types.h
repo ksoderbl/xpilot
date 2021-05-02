@@ -1,4 +1,4 @@
-/* $Id: types.h,v 3.8 1993/10/21 11:14:13 bert Exp $
+/* $Id: types.h,v 3.9 1993/12/19 19:06:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -60,7 +60,8 @@ typedef enum {true = 1, false = 0} bool;
 
 typedef struct { float x, y; }	vector;
 typedef vector			position;
-typedef struct { int x, y; }	ipos;
+typedef struct { int x, y; }	ivec;
+typedef ivec			ipos;
 
 /*
  * Modern environments use the fd_set type as argument to select.

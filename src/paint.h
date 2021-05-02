@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.25 1993/10/25 21:07:22 bjoerns Exp $
+/* $Id: paint.h,v 3.26 1993/11/11 23:22:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -85,6 +85,7 @@ extern XFontStruct* messageFont;
 extern XFontStruct* scoreListFont;
 extern XFontStruct* buttonFont;
 extern XFontStruct* textFont;
+extern XFontStruct* talkFont;
 
 /* The name of the fonts used in the game */
 extern char gameFontName[FONT_LEN];
@@ -92,6 +93,7 @@ extern char messageFontName[FONT_LEN];
 extern char scoreListFontName[FONT_LEN];
 extern char buttonFontName[FONT_LEN];
 extern char textFontName[FONT_LEN];
+extern char talkFontName[FONT_LEN];
 
 extern Display	*dpy;			/* Display of player (pointer) */
 extern short	about_page;		/* Which page is the player on? */
@@ -101,7 +103,7 @@ extern bool	radar_exposed;		/* Is radar window exposed? */
 
 #define MAX_COLOR_LEN		32
 
-extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC;
+extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
 extern Window	top, draw, radar, players;
 extern Pixmap	p_draw, p_radar, s_radar;
 extern Pixmap	itemBitmaps[];

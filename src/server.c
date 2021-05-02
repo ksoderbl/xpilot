@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.47 1993/10/25 22:11:29 bert Exp $
+/* $Id: server.c,v 3.51 1993/12/16 22:39:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -29,6 +29,7 @@
 #else
 #include <unistd.h>
 #endif
+#include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
@@ -73,7 +74,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.47 1993/10/25 22:11:29 bert Exp $";
+    "@(#)$Id: server.c,v 3.51 1993/12/16 22:39:50 bert Exp $";
 #endif
 
 
@@ -249,7 +250,9 @@ int main(int argc, char *argv[])
      */
     if (!RawMode) {
 	signal(SIGALRM, Handle_signal);	/* Get first client, then proceed. */
-	alarm(5*60);			/* Signal me in 5 minutes. */
+	if (!NoQuit) {
+	    alarm(5*60);		/* Signal me in 5 minutes. */
+	}
 	Wait_for_new_players();
 	alarm(0);
 	signal(SIGALRM, SIG_IGN);
@@ -293,6 +296,14 @@ void Send_meta_server(void)
 	    (!lock && ShutdownServer != -1) ? "shutting down" :
 	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok");
 
+    strcat(string, "add sound ");
+#ifdef SOUND
+    strcat(string, "yes\n");
+#else
+    strcat(string, "no\n");
+#endif
+
+		
     for(i=0; i < NumPlayers; i++) {
 	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
 	    if (first)
@@ -1060,27 +1071,38 @@ void Game_Over(void)
     gameDuration = -1.0;
     
     if (BIT(World.rules->mode, TEAM_PLAY)) {
-	int team[MAX_TEAMS];
+	int teamscore[MAX_TEAMS];
 	maxsc = -32767;
 	minsc = 32767;
 	win = loose = -1;
 	
 	for (i=0; i < MAX_TEAMS; i++) {
-	    team[i] = 0;
+	    teamscore[i] = 1234567; /* These teams are not used... */
 	}
 	for (i=0; i < NumPlayers; i++) {
+	    int team;
 	    if (Players[i]->robot_mode == RM_NOT_ROBOT) {
-		sc = (team[Players[i]->team] += Players[i]->score);
-		if (sc > maxsc) {
-		    maxsc = sc;
-		    win = Players[i]->team;
+	        team = Players[i]->team;
+	        if (teamscore[team] == 1234567) {
+		    teamscore[team] = 0;
 		}
-		if (sc < minsc) {
-		    minsc = sc;
-		    loose = Players[i]->team;
+		teamscore[team] += Players[i]->score;
+	    }
+	}
+
+	for (i=0; i < MAX_TEAMS; i++) {
+	    if (teamscore[i] != 1234567) {
+		if (teamscore[i] > maxsc) {
+		    maxsc = teamscore[i];
+		    win = i;
+		}
+		if (teamscore[i] < minsc) {
+		    minsc = teamscore[i];
+		    loose = i;
 		}
 	    }
 	}
+
 	if (win != -1) {
 	    sprintf(msg,"Best team (%d Pts): Team %d", maxsc, win);
 	    Set_message(msg);

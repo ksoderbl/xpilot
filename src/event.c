@@ -1,4 +1,4 @@
-/* $Id: event.c,v 3.27 1993/11/02 16:33:51 bert Exp $
+/* $Id: event.c,v 3.30 1993/12/14 19:58:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 
 #define SERVER
+#include <stdlib.h>
 #include "global.h"
 #include "score.h"
 #include "map.h"
@@ -33,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.27 1993/11/02 16:33:51 bert Exp $";
+    "@(#)$Id: event.c,v 3.30 1993/12/14 19:58:14 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -49,7 +50,7 @@ static void Refuel(int ind)
 {
     player *pl = Players[ind];
     int i;
-    float l, dist;
+    float l, dist = 1e9;
 
 
     if (!BIT(pl->have, OBJ_REFUEL))
@@ -69,10 +70,38 @@ static void Refuel(int ind)
 }
 
 
+static void Repair(int ind)
+{
+    player *pl = Players[ind];
+    int i;
+    float l, dist = 1e9;
+    float x, y;
+    target_t *targ = World.targets;
+
+    if (!BIT(pl->have, OBJ_REPAIR))
+	return;
+
+    CLR_BIT(pl->used, OBJ_REPAIR);
+    for (i = 0; i < World.NumTargets; i++, targ++) {
+	if (targ->team == pl->team
+	    && targ->dead_time <= 0) {
+	    x = targ->pos.x*BLOCK_SZ + BLOCK_SZ/2;
+	    y = targ->pos.y*BLOCK_SZ + BLOCK_SZ/2;
+	    l = Wrap_length(pl->pos.x - x, pl->pos.y - y);
+	    if (BIT(pl->used, OBJ_REPAIR) == 0 || l < dist) {
+		SET_BIT(pl->used, OBJ_REPAIR);
+		pl->repair_target = i;
+		dist = l;
+	    }
+	}
+    }
+}
+
+
 int Handle_keyboard(int ind)
 {
     player  	*pl = Players[ind];
-    int	    	i, j, k, key, pressed, xi, yi;
+    int	    	i, k, key, pressed, xi, yi;
     float  	dist, l;
 
 
@@ -246,11 +275,13 @@ int Handle_keyboard(int ind)
 
 	    case KEY_DROP_BALL:
 		if (BIT(pl->have, OBJ_BALL)) {
-		    i=0;
-		    while (i < NumObjs &&  pl->id != Obj[i]->id 
-			   && Obj[i]->type == OBJ_BALL)
-			i++;
-		    Obj[i]->id = -1;
+		    for (i = 0; i < NumObjs; i++) {
+			if (Obj[i]->type == OBJ_BALL) {
+			    if (Obj[i]->id == pl->id) {
+				Obj[i]->id = -1;
+			    }
+			}
+		    }
 		    CLR_BIT(pl->have, OBJ_BALL);
 		}
 		break;
@@ -382,6 +413,10 @@ int Handle_keyboard(int ind)
 		Refuel(ind);
 		break;
 
+	    case KEY_REPAIR:
+		Repair(ind);
+		break;
+
 	    case KEY_CONNECTOR:
 		if (BIT(pl->have, OBJ_CONNECTOR))
 		    SET_BIT(pl->used, OBJ_CONNECTOR);
@@ -457,6 +492,10 @@ int Handle_keyboard(int ind)
 
 	    case KEY_REFUEL:
 		CLR_BIT(pl->used, OBJ_REFUEL);
+		break;
+
+	    case KEY_REPAIR:
+		CLR_BIT(pl->used, OBJ_REPAIR);
 		break;
 
 	    case KEY_CONNECTOR:

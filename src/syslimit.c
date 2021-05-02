@@ -1,4 +1,4 @@
-/* $Id: syslimit.c,v 3.4 1993/09/13 19:10:29 bjoerns Exp $
+/* $Id: syslimit.c,v 3.5 1993/11/16 22:49:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -26,6 +26,7 @@
 				/* each time LIMIT_ACCESS isn't defined. */
 #ifdef	LIMIT_ACCESS
 
+#include <stdlib.h>
 #include <time.h>
 #include "types.h"
 
@@ -39,7 +40,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 3.4 1993/09/13 19:10:29 bjoerns Exp $";
+    "@(#)$Id: syslimit.c,v 3.5 1993/11/16 22:49:21 bert Exp $";
 #endif
 
 

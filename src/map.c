@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.21 1993/11/02 16:40:21 bert Exp $
+/* $Id: map.c,v 3.22 1993/11/07 23:13:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -38,7 +38,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.21 1993/11/02 16:40:21 bert Exp $";
+    "@(#)$Id: map.c,v 3.22 1993/11/07 23:13:16 bert Exp $";
 #endif
 
 
@@ -271,10 +271,7 @@ void Grok_map(void)
 	    World.NumFuels++;
 	    break;
 	case '!':
-	    if (BIT(World.rules->mode, TEAM_PLAY))
-		World.NumTargets++;
-	    else
-		World.block[x][y] = ' ';
+	    World.NumTargets++;
 	    break;
 	case '_':
 	case '0':
@@ -362,7 +359,7 @@ void Grok_map(void)
 	    exit(-1);
 	}
     } else {
-	error("Warning, map has no bases");
+	error("WARNING: map has no bases!");
     }
     World.NumCannons = 0;		/* Now reset all counters since */
     World.NumFuels = 0;			/* we will recount everything */
@@ -475,17 +472,18 @@ void Grok_map(void)
 		     * Determining which team it belongs to is done later,
 		     * in Find_closest_team().
 		     */
+		    World.treasures[World.NumTreasures].team = 0;
 		    World.NumTreasures++;
 		    break;
 		case '!':
 		    line[y] = TARGET;
 		    World.targets[World.NumTargets].pos.x = x;
 		    World.targets[World.NumTargets].pos.y = y;
-		    World.targets[World.NumTargets].pos.y = y;
 		    /*
 		     * Determining which team it belongs to is done later,
 		     * in Find_closest_team().
 		     */
+		    World.targets[World.NumTargets].team = 0;
 		    World.targets[World.NumTargets].dead_time = 0;
 		    World.targets[World.NumTargets].damage = TARGET_DAMAGE;
 		    World.targets[World.NumTargets].conn_mask = (unsigned)-1;
@@ -614,23 +612,25 @@ void Grok_map(void)
 	 * NOTE: Should check so that all teams have one, and only one,
 	 * treasure.
 	 */
-	for (i=0; i<World.NumTreasures; i++) {
-	    u_short team = Find_closest_team(World.treasures[i].pos.x,
-					     World.treasures[i].pos.y);
-	    if (team == TEAM_NOT_SET) {
-		error("Couldn't find a matching team for the treasure.");
-		World.treasures[i].have = false;
+	if (BIT(World.rules->mode, TEAM_PLAY)) {
+	    for (i=0; i<World.NumTreasures; i++) {
+		u_short team = Find_closest_team(World.treasures[i].pos.x,
+						 World.treasures[i].pos.y);
+		if (team == TEAM_NOT_SET) {
+		    error("Couldn't find a matching team for the treasure.");
+		    World.treasures[i].have = false;
+		}
+		World.treasures[i].team = team;
 	    }
-	    World.treasures[i].team = team;
+	    for (i=0; i<World.NumTargets; i++) {
+		u_short team = Find_closest_team(World.targets[i].pos.x,
+						 World.targets[i].pos.y);
+		if (team == TEAM_NOT_SET) {
+		    error("Couldn't find a matching team for the target.");
+		}
+		World.targets[i].team = team;
+	    }	
 	}
-	for (i=0; i<World.NumTargets; i++) {
-	    u_short team = Find_closest_team(World.targets[i].pos.x,
-					     World.targets[i].pos.y);
-	    if (team == TEAM_NOT_SET) {
-		error("Couldn't find a matching team for the target.");
-	    }
-	    World.targets[i].team = team;
-	}	
     }
 
     if (WantedNumRobots == -1) {

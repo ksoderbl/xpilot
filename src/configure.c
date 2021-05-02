@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.23 1993/10/31 22:22:39 bert Exp $
+/* $Id: configure.c,v 3.25 1993/11/23 22:08:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -224,8 +224,6 @@ static void Create_config(void)
 			num,
 			height,
 			offset,
-			sample1,
-			sample2,
 			width,
 			widget_desc;
     bool		full;
@@ -265,7 +263,7 @@ static void Create_config(void)
     config_space = 6;
 
     /*
-     * Sizes of the different window types.
+     * Sizes of the different widget types.
      */
     config_bool_width = XTextWidth(buttonFont, "Yes", 3)
 			+ 2 * config_button_space;
@@ -843,6 +841,7 @@ static int Config_update_bool(int widget_desc, void *data, bool *val)
 {
     bool*	client_data = data;
     *client_data = *val;
+    return 0;
 }
 
 

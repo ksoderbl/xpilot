@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.65 1993/10/31 22:24:40 bert Exp $
+/* $Id: paint.c,v 3.67 1993/11/11 23:21:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -80,11 +80,14 @@ XFontStruct* messageFont;
 XFontStruct* scoreListFont;
 XFontStruct* buttonFont;
 XFontStruct* textFont;
+XFontStruct* talkFont;
+
 char	gameFontName[FONT_LEN];	/* The fonts used in the game */
 char	messageFontName[FONT_LEN];
 char	scoreListFontName[FONT_LEN];
 char	buttonFontName[FONT_LEN];
 char	textFontName[FONT_LEN];
+char	talkFontName[FONT_LEN];
 
 Display	*dpy;			/* Display of player (pointer) */
 short	about_page;		/* Which page is the player on? */
@@ -96,6 +99,7 @@ GC	radarGC;		/* GC for the radar */
 GC	buttonGC;		/* GC for the buttons */
 GC	scoreListGC;		/* GC for the player list */
 GC	textGC;			/* GC for the info/keys text */
+GC	talkGC;			/* GC for the message window */
 
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
@@ -810,7 +814,6 @@ static void Paint_shots(void)
 {
     int		color, i, j, id, x, y, xs, ys, x1, x2, y1, y2;
     int		x_areas, y_areas, areas, max, len, dir;
-    char	str[2];
 
     if (num_itemtype > 0) {
 	SET_FG(colors[RED].pixel);
@@ -1317,6 +1320,11 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
     other_t	*target;
     char	str[50];
     static int	warningCount;
+    static int	mapdiag = 0;
+
+    if (mapdiag == 0) {
+	mapdiag = LENGTH(Setup->x * BLOCK_SZ, Setup->y * BLOCK_SZ);
+    }
 
     /*
      * Display direction arrow and miscellaneous target information.
@@ -1347,20 +1355,22 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			XTextWidth(gameFont, str, 3) + 2,
 			gameFont->ascent + gameFont->descent);
 	if (lock_dist > WARNING_DISTANCE || warningCount++ % 2 == 0) {
-	    int size = 10000 / (800 + lock_dist);
+	    int size = MIN(mapdiag / lock_dist, 10);
+
+	    SET_FG(colors[RED].pixel);
 	    if (size == 0) {
 		size = 1;
 	    }
 	    if (self != NULL
 		&& self->team == target->team
-		&& BIT(Setup->mode, TEAM_PLAY))
-		Arc_add(BLUE,
+		&& BIT(Setup->mode, TEAM_PLAY)) {
+		Arc_add(RED,
 			(int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
 			      - size * 0.5),
 			(int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
 			      - size * 0.5),
 			size, size, 0, 64*360);
-	    else {
+	    } else {
 		x = (int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
 			  - size * 0.5),
 		y = (int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
@@ -1370,6 +1380,7 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			 size, size, 0, 64*360);
 		Erase_rectangle(x, y, size, size);
 	    }
+	    SET_FG(colors[BLUE].pixel); 
 	}
     }
 }
@@ -2277,17 +2288,19 @@ static void Paint_world(void)
 				 Y(y+3*BLOCK_SZ/4),
 				 BLOCK_SZ/2, BLOCK_SZ/2);
 
-		    s[0] = '0' + type - SETUP_TARGET; s[1] = '\0';
-		    size = XTextWidth(gameFont, s, 1);
-		    XDrawString(dpy, p_draw, gc,
-				X(x + BLOCK_SZ/2 - size/2),
-				Y(y + BLOCK_SZ/2 - gameFont->ascent/2),
-				s, 1);
-		    Erase_rectangle(X(x + BLOCK_SZ/2 - size/2) - 1,
-				    Y(y + BLOCK_SZ/2 - gameFont->ascent/2)
-					- gameFont->ascent,
-				    size + 2,
-				    gameFont->ascent + gameFont->descent);
+		    if (BIT(Setup->mode, TEAM_PLAY)) {
+			s[0] = '0' + type - SETUP_TARGET; s[1] = '\0';
+			size = XTextWidth(gameFont, s, 1);
+			XDrawString(dpy, p_draw, gc,
+				    X(x + BLOCK_SZ/2 - size/2),
+				    Y(y + BLOCK_SZ/2 - gameFont->ascent/2),
+				    s, 1);
+			Erase_rectangle(X(x + BLOCK_SZ/2 - size/2) - 1,
+					Y(y + BLOCK_SZ/2 - gameFont->ascent/2)
+					    - gameFont->ascent,
+					size + 2,
+					gameFont->ascent + gameFont->descent);
+		    }
 
 		    if (damage != TARGET_DAMAGE) {
 			size = (damage * BLOCK_SZ) / (TARGET_DAMAGE * 2);
@@ -2534,7 +2547,7 @@ void Paint_frame(void)
 
     if (start_loops != end_loops) {
 	errno = 0;
-	error("Start neq. End");
+	error("Start neq. End (%ld,%ld,%ld)", start_loops, end_loops, loops);
     }
     loops = end_loops;
 

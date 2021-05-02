@@ -1,4 +1,4 @@
-/* $Id: config.h,v 3.11 1993/10/21 10:17:07 bert Exp $
+/* $Id: config.h,v 3.12 1993/11/07 23:02:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -72,7 +72,7 @@
  * Uncomment this if your machine doesn't use
  * two's complement negative numbers.
  */
-/* #define MOD2(x, m)	mod(x, m)	/* */
+/* #define MOD2(x, m)	mod(x, m) */
 
 
 /*

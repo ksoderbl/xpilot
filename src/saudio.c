@@ -1,4 +1,4 @@
-/* $Id: saudio.c,v 3.9 1993/10/21 11:04:10 bert Exp $
+/* $Id: saudio.c,v 3.10 1993/11/16 22:48:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -23,6 +23,7 @@
 /* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
 #define SERVER
+#include <stdlib.h>
 #include "global.h"
 #include "netserver.h"
 

@@ -131,6 +131,9 @@ completely stuck, found a bug or just want to chat :), e-mail us at:
 Remember to include the version of XPilot, your platform, the symptoms
 and a fix (if you have one) when reporting bugs.
 
+Check out the contrib directory and the contrib/xpmtp subdirectory for
+some extra nifty programs.  Don't forget to get xmapedit from ftp.cs.uit.no.
+
 There is a mailing list for XPilot - please send an email to
 xpilot-request@cs.uit.no with subject `info' if you want to know more.
 

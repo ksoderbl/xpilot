@@ -1,4 +1,4 @@
-/* $Id: widget.c,v 3.7 1993/10/02 19:31:02 bert Exp $
+/* $Id: widget.c,v 3.8 1993/11/07 23:25:28 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -48,8 +48,6 @@ static int		num_widgets, max_widgets;
 
 static int Widget_validate(int widget_desc)
 {
-    int			i;
-
     if (widget_desc <= NO_WIDGET || widget_desc >= num_widgets) {
 	return NO_WIDGET;
     }
@@ -451,8 +449,7 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 				*sub_widget;
     widget_bool_t		*boolw;
     widget_menu_t		*menuw;
-    widget_form_t		*formw,
-				*pullw;
+    widget_form_t		*pullw;
     widget_activate_t		*activw;
     widget_int_t		*intw;
     widget_float_t		*floatw;
@@ -466,7 +463,6 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 				fmin,
 				offset,
 				newoffset;
-    char			buf[16];
 
     if ((widget = Widget_pointer(widget_desc)) == NULL) {
 	errno = 0;
@@ -867,8 +863,7 @@ int Widget_create_activate(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_activate_t	*activw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -914,8 +909,7 @@ int Widget_create_bool(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_bool_t	*boolw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -964,7 +958,6 @@ int Widget_add_pulldown_entry(int menu_desc, char *str,
 				pull_width,
 				pull_height;
     widget_t			*menu_widget,
-				*entry_widget,
 				*pulldown_widget;
     widget_menu_t		*menuw;
     widget_form_t		*pullw;
@@ -1075,8 +1068,7 @@ int Widget_create_menu(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_menu_t	*menuw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -1120,8 +1112,7 @@ int Widget_create_int(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_int_t	*intw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -1165,8 +1156,7 @@ int Widget_create_float(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_float_t	*floatw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -1209,8 +1199,7 @@ int Widget_create_label(int parent_desc,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_label_t	*labelw;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL
@@ -1250,8 +1239,7 @@ static int Widget_create_arrow(int type, int parent_desc, int x, int y,
 {
     int			widget_desc;
     Window		window;
-    widget_t		*widget,
-			*parent_widget;
+    widget_t		*parent_widget;
     widget_arrow_t	*arroww;
 
     if ((parent_widget = Widget_pointer(parent_desc)) == NULL

@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 3.7 1993/09/13 19:09:21 bjoerns Exp $
+/* $Id: dbuff.c,v 3.9 1993/12/23 12:29:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -32,9 +32,19 @@
 #include "draw.h"
 #include "bit.h"
 
+#ifdef SPARC_CMAP_HACK
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#if defined(SVR4) || defined(__svr4__)
+#include <sys/fbio.h>
+#else
+#include <sun/fbio.h>
+#endif
+#endif
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.7 1993/09/13 19:09:21 bjoerns Exp $";
+    "@(#)$Id: dbuff.c,v 3.9 1993/12/23 12:29:19 bert Exp $";
 #endif
 
 
@@ -146,6 +156,19 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
 
+#ifdef SPARC_CMAP_HACK
+    if (state->type == COLOR_SWITCH) {
+	state->fbfd = open("/dev/fb", O_RDONLY, 0);
+	state->hardcmap.index = state->pixel;
+	state->hardcmap.count = state->map_size;
+	state->hardcmap.red = malloc(state->map_size);
+	state->hardcmap.green = malloc(state->map_size);
+	state->hardcmap.blue = malloc(state->map_size);
+    } else {
+	state->fbfd = -1;
+    }
+#endif
+
     return (state);
 }
     
@@ -155,9 +178,30 @@ void dbuff_switch(dbuff_state_t *state)
 {
     state->buffer ^= 1;
 
-    if (state->type == COLOR_SWITCH)
+    if (state->type == COLOR_SWITCH) {
+#ifdef SPARC_CMAP_HACK
+	if (state->fbfd != -1) {
+	    int		i;
+
+	    for (i = 0; i < state->map_size; i++) {
+		state->hardcmap.red[i] =
+		    state->colormaps[state->buffer][i].red >> 8;
+		state->hardcmap.green[i] =
+		    state->colormaps[state->buffer][i].green >> 8;
+		state->hardcmap.blue[i] =
+		    state->colormaps[state->buffer][i].blue >> 8;
+	    }
+	    if (ioctl(state->fbfd, FBIOPUTCMAP, &state->hardcmap) == -1) {
+		perror("ioctl FBIOPUTCMAP");
+		close(state->fbfd);
+		state->fbfd = -1;
+	    }
+	} else
+#endif
+
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
+    }
 
     state->drawing_planes = state->masks[state->buffer];
 }

@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 3.39 1993/10/31 22:30:29 bert Exp $
+/* $Id: collision.c,v 3.45 1993/12/19 18:57:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 
 #define SERVER
+#include <stdlib.h>
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -33,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.39 1993/10/31 22:30:29 bert Exp $";
+    "@(#)$Id: collision.c,v 3.45 1993/12/19 18:57:25 bert Exp $";
 #endif
 
 #define in_range(o1, o2, r)			\
@@ -49,7 +50,7 @@ static void WallCollide(object *obj, int x, int y,
 			int count, int max, int axis);
 static bool Landing(int ind, int point, int blockdir);
 static int Rate(int winner, int looser);
-static void ObjectCollision(int start, int max);
+static void ObjectCollision(int begin, int end);
 static void PlayerCollision(int max_objs);
 static void LaserCollision(void);
 static void PlayerObjectCollision(int ind, int max_objs);
@@ -103,13 +104,13 @@ void Check_collision(void)
 }
 
 
-static void ObjectCollision(int start, int max)
+static void ObjectCollision(int begin, int end)
 {
     int		i, x, y, t;
 
 
     /* Shot - wall, and out of bounds */
-    for (i = start; i < max; i++) {
+    for (i = begin; i < end; i++) {
 	object	*obj = Obj[i];
 	int sx, sy;
 	int dx, dy;
@@ -350,7 +351,7 @@ static void PlayerCollision(int max_objs)
 	PlayerObjectCollision(i, max_objs);
 
 	/* Player - wall */
-	if (!(BIT(pl->used, OBJ_TRAINER) || BIT(pl->status, KILLED))) {
+	if (!BIT(pl->status, KILLED)) {
 	    for(j=0; j<3 && !BIT(pl->status, KILLED|WARPING); j++) {
 		float tx = pl->pos.x + ships[pl->dir].pts[j].x;
 		float ty = pl->pos.y + ships[pl->dir].pts[j].y;
@@ -557,7 +558,7 @@ static void PlayerCollision(int max_objs)
 
 static void PlayerObjectCollision(int i, int max_objs)
 {
-    int		j, k, killer, range, sc;
+    int		j, killer, range, sc;
     player	*pl;
     char	*type;
     object	*obj;
@@ -745,7 +746,7 @@ static void PlayerObjectCollision(int i, int max_objs)
 		    pl->name);
 	    if (Obj[j]->id != -1) {
 		killer = GetInd[Obj[j]->id];
-		sprintf(msg + strlen(msg), " courtesy %s",
+		sprintf(msg + strlen(msg), " courtesy of %s",
 			Players[killer]->name);
 	    } else {
 		killer = i;
@@ -934,7 +935,7 @@ static void WallCollide(object *obj, int x, int y,
 	    target_t *targ = World.targets;
 	    int t = World.NumTargets, j;
 	    int win_score = 0, lose_score = 0, sc;
-	    int nobody_flag = 0;
+	    int nobody_flag = 0, targets_remaining = 0;
 
 	    while (t--) {
 		if (targ->pos.x == x && targ->pos.y == y)
@@ -975,28 +976,43 @@ static void WallCollide(object *obj, int x, int y,
 	    targ->damage = TARGET_DAMAGE;
 	    targ->dead_time = TARGET_DEAD_TIME;
 
+	    Explode_object(x*BLOCK_SZ + BLOCK_SZ/2, y*BLOCK_SZ + BLOCK_SZ/2,
+			   0, RES, 200);
+
+	    if (BIT(World.rules->mode, TEAM_PLAY)) {
+		for (j = 0; j < NumPlayers; j++) {
+		    if (Players[j]->team == targ->team) {
+			lose_score += Players[j]->score;
+			nobody_flag = 1;
+		    }
+		    else if (Players[j]->team == Players[killer]->team)
+			win_score += Players[j]->score;
+		}
+	    }
+
+	    if (!nobody_flag) {
+		SCORE(killer, Rate(Players[killer]->score, CANNON_SCORE)/3,
+		      targ->pos.x, targ->pos.y, "");
+		return;
+	    }
+
 	    sprintf(msg, "%s blew up team %d's target.",
 		    Players[killer]->name, (int) targ->team);
 	    Set_message(msg);
 
-	    Explode_object(x*BLOCK_SZ + BLOCK_SZ/2, y*BLOCK_SZ + BLOCK_SZ/2,
-			   0, RES, 200);
-	    for (j = 0; j < NumPlayers; j++) {
-		if (Players[j]->team == targ->team) {
-		    lose_score += Players[j]->score;
-		    nobody_flag = 1;
+	    for (t = 0; t < World.NumTargets; t++) {
+		if (World.targets[t].team == targ->team) {
+		    if (World.targets[t].dead_time == 0) {
+			targets_remaining++;
+		    }
 		}
-		else if (Players[j]->team == Players[killer]->team)
-		    win_score += Players[j]->score;
 	    }
-
-	    if (!nobody_flag) return;
 	    sc = Rate(win_score, lose_score);
 	    for (j = 0; j < NumPlayers; j++) {
 		if (Players[j]->team == targ->team) {
 		    SCORE(j, -sc, targ->pos.x, targ->pos.y,
 			  "Target:");
-		    if (targetKillTeam)
+		    if (targetKillTeam && targets_remaining == 0)
 			SET_BIT(Players[j]->status, KILLED);
 		}
 		else if (Players[j]->team == Players[killer]->team &&
@@ -1511,7 +1527,7 @@ static void LaserCollision(void)
 		    continue;
 		}
 		if (Wrap_length(vic->pos.x - x1, vic->pos.y - y1)
-		    >= pulse->len + SHIP_SZ) {
+		    > pulse->len + SHIP_SZ) {
 		    continue;
 		}
 		if (max_victims == 0) {

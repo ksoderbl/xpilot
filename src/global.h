@@ -1,4 +1,4 @@
-/* $Id: global.h,v 3.20 1993/10/25 21:59:41 bert Exp $
+/* $Id: global.h,v 3.23 1993/12/16 22:37:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -25,7 +25,7 @@
 #define	GLOBAL_H
 
 #include <stdio.h>
-#include <stdlib.h>
+/*#include <stdlib.h> */
 #include <math.h>
 #include <errno.h>
 #include "config.h"
@@ -71,7 +71,7 @@ extern int		robotLeaveScore, robotLeaveRatio;
 extern World_map	World;
 extern server		Server;
 extern float		ShotsMass, ShipMass, ShotsSpeed, Gravity;
-extern int		ShotsMax, ShotsLife;
+extern int		ShotsMax, ShotsLife, maxMissilesPerNuke;
 extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
@@ -135,6 +135,18 @@ extern float		itemTransporterProb;
 extern float		itemLaserProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
+extern int 		initialFuel;
+extern int 		initialTanks;
+extern int		initialECMs;
+extern int		initialMines;
+extern int 		initialMissiles;
+extern int		initialCloaks;
+extern int		initialSensors;
+extern int		initialWideangles;
+extern int		initialRearshots;
+extern int		initialAfterburners;
+extern int		initialTransporters;
+extern int		initialLasers;
 extern float		gameDuration;
 extern time_t		gameOverTime;
 #endif

@@ -1,4 +1,4 @@
-/* $Id: option.c,v 3.12 1993/10/21 10:46:36 bert Exp $
+/* $Id: option.c,v 3.13 1993/11/07 23:17:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -384,6 +384,7 @@ static void parseLine(FILE *ifile)
 #undef EXPAND
 
 
+#if 0
 /*
  * Parse an old-style map file...
  */
@@ -436,6 +437,7 @@ static int parseOldMapFile(FILE *ifile)
 
     return 1;
 }
+#endif
 
 
 #if defined(COMPRESSED_MAPS)

@@ -1,4 +1,4 @@
-/* $Id: cmw.c,v 3.1 1993/10/01 20:47:11 bjoerns Exp $
+/* $Id: cmw.c,v 3.2 1993/11/16 22:45:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -32,6 +32,7 @@
 #define SunOS_CMW /* needed by some included files */
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>

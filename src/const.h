@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.21 1993/10/21 10:20:32 bert Exp $
+/* $Id: const.h,v 3.27 1993/12/19 18:59:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -80,7 +80,8 @@
 #endif
 #define sqr(x)			( (x)*(x) )
 #define LENGTH(x, y)		( hypot( (double) (x), (double) (y) ) )
-#define LIMIT(val, lo, hi)	( val = val>hi ? hi : (val<lo ? lo : val) )
+#define VECTOR_LENGTH(v)	( hypot( (double) (v).x, (double) (v).y ) )
+#define LIMIT(val, lo, hi)	( val=(val)>(hi)?(hi):((val)<(lo)?(lo):(val)) )
 
 /*
  * Two macros for edge wrap of differences in position.
@@ -165,6 +166,7 @@
 
 #define TARGET_DEAD_TIME	(FPS * 60)
 #define TARGET_DAMAGE		(250<<FUEL_SCALE_BITS)
+#define TARGET_FUEL_REPAIR_PER_FRAME (TARGET_DAMAGE / (FPS * (60 / 3)))
 #define TARGET_REPAIR_PER_FRAME	(TARGET_DAMAGE / (FPS * 60 * 10))
 #define TARGET_UPDATE_DELAY	(TARGET_DAMAGE / (TARGET_REPAIR_PER_FRAME \
 				    * BLOCK_SZ))
@@ -243,10 +245,10 @@
 #define HEAT_WIDE_ERROR         16
 
 #define MAX_LASERS		5
-#define PULSE_SPEED		65
+#define PULSE_SPEED		90
 #define PULSE_SAMPLE_DISTANCE	5
 #define PULSE_LENGTH		(PULSE_SPEED - PULSE_SAMPLE_DISTANCE)
-#define PULSE_MAX_LIFE		8
+#define PULSE_MAX_LIFE		6
 #define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS - (lasers)) / 2)
 
 #define WALL_RETURN_TIME        32
@@ -258,7 +260,7 @@
 
 #define DEBRIS_MASS             4.5
 #define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)
-#define DEBRIS_LIFE(intensity)  ((rand()%(1+intensity>>1))|8)
+#define DEBRIS_LIFE(intensity)  ((rand()%(1+(intensity>>1)))|8)
 #define DEBRIS_TYPES		(8 * 4 * 4)
 
 #define PL_DEBRIS_MASS          3.5
@@ -278,7 +280,7 @@
 #define INLINE
 #endif /* __GNUC__ */
 
-#if defined(__sun__)
+#if defined(__sun__) && !defined(__svr4__)
 #  define srand(s)	srandom(s)
 #  define rand()	random()
 #endif /* __sun__ */

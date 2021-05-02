@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 3.17 1993/10/31 22:31:19 bert Exp $
+/* $Id: robot.c,v 3.20 1993/12/16 15:35:14 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -23,6 +23,8 @@
 /* Robot code submitted by Maurice Abraham. */
 
 #define SERVER
+#include <stdlib.h>
+#include "types.h"
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -576,9 +578,11 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
     }
     evade = false;
 
-    if (pl->velocity <= 0.2)
-	travel_dir = DIR_DOWN;
-    else {
+    if (pl->velocity <= 0.2) {
+	vector	*grav = &World.gravity
+	    [(int)pl->pos.x / BLOCK_SZ][(int)pl->pos.y / BLOCK_SZ];
+	travel_dir = findDir(grav->x, grav->y);
+    } else {
 	travel_dir = findDir(pl->vel.x, pl->vel.y);
     }
 
@@ -626,7 +630,7 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    if (sqr(gravity->x) + sqr(gravity->y) >= 1.0) {
 		gravity_dir = findDir(gravity->x - pl->pos.x,
 				      gravity->y - pl->pos.y);
-
+/* XXX: DOES THIS WORK?  strength of gravity - position?!?! */
 		if (MOD2(gravity_dir - travel_dir, RES) <= RES / 4 ||
 		    MOD2(gravity_dir - travel_dir, RES) >= 3 * RES / 4) {
 		    evade = true;
@@ -798,9 +802,12 @@ static bool Check_robot_target(int ind,
 
     item_dist = LENGTH(dy, dx);
 
-    if (dx == 0 && dy == 0)
-	item_dir = DIR_UP;
-    else {
+    if (dx == 0 && dy == 0) {
+	vector	*grav = &World.gravity
+	    [(int)pl->pos.x / BLOCK_SZ][(int)pl->pos.y / BLOCK_SZ];
+	item_dir = findDir(grav->x, grav->y);
+	item_dir = MOD2(item_dir + RES/2, RES);
+    } else {
 	item_dir = findDir(dx, dy);
     }
 
@@ -835,7 +842,9 @@ static bool Check_robot_target(int ind,
 	return false;
 
     if (pl->velocity <= 0.2) {
-	travel_dir = DIR_DOWN;
+	vector	*grav = &World.gravity
+	    [(int)pl->pos.x / BLOCK_SZ][(int)pl->pos.y / BLOCK_SZ];
+	travel_dir = findDir(grav->x, grav->y);
     } else {
 	travel_dir = findDir(pl->vel.x, pl->vel.y);
     }
@@ -1006,7 +1015,6 @@ static bool Check_robot_target(int ind,
 
 static bool Check_robot_hunt(int ind)
 {
-    int i;
     player *pl;
     player *ship;
     int ship_dir;
@@ -1027,9 +1035,11 @@ static bool Check_robot_hunt(int ind)
 
     ship_dir = Wrap_findDir(ship->pos.x - pl->pos.x, ship->pos.y - pl->pos.y);
 
-    if (pl->velocity <= 0.2)
-	travel_dir = DIR_DOWN;
-    else {
+    if (pl->velocity <= 0.2) {
+	vector	*grav = &World.gravity
+	    [(int)pl->pos.x / BLOCK_SZ][(int)pl->pos.y / BLOCK_SZ];
+	travel_dir = findDir(grav->x, grav->y);
+    } else {
 	travel_dir = findDir(pl->vel.x, pl->vel.y);
     }
 
@@ -1530,7 +1540,6 @@ void Robot_war(int ind, int killer)
 {
     player		*pl = Players[ind];
     int			k;
-    char		msg[MSG_LEN];
 
     if (pl->robot_mode == RM_NOT_ROBOT
 	|| pl->robot_mode == RM_OBJECT) {

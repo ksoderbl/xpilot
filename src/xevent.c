@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 3.22 1993/10/21 11:18:04 bert Exp $
+/* $Id: xevent.c,v 3.24 1993/11/16 22:50:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdlib.h>
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
@@ -108,6 +109,7 @@ static void Key_event(XEvent *event)
 		break;
 
 	    case KEY_REFUEL:
+	    case KEY_REPAIR:
 	    case KEY_TANK_NEXT:
 	    case KEY_TANK_PREV:
 		fuelCount = FUEL_NOTIFY;
@@ -144,6 +146,7 @@ static void Key_event(XEvent *event)
 		break;
 
 	    case KEY_REFUEL:
+	    case KEY_REPAIR:
 		fuelCount = FUEL_NOTIFY;
 		break;
 

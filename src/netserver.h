@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.24 1993/10/21 10:45:19 bert Exp $
+/* $Id: netserver.h,v 3.25 1993/11/07 23:15:33 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -108,14 +108,12 @@ typedef struct {
 
 static int Compress_map(unsigned char *map, int size);
 static int Init_setup(void);
-static int Make_port(void);
 static int Handle_listening(int ind);
 static int Handle_setup(int ind);
 static int Handle_login(int ind);
 static int Handle_input(int ind);
 
 static int Receive_send_bufsize(int ind);
-static int Receive_nodelay(int ind);
 static int Receive_keyboard(int ind);
 static int Receive_quit(int ind);
 static int Receive_play(int ind);

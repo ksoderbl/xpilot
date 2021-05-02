@@ -25,8 +25,19 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.17 1993/10/24 22:33:09 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.20 1993/12/23 12:29:46 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.20  1993/12/23  12:29:46  bert
+ * Applied a patch from Stig Bakken for Solaris compatibility ifdefs.
+ *
+ * Revision 3.19  1993/12/19  19:04:32  bert
+ * Simplified a comment.
+ *
+ * Revision 3.18  1993/11/16  22:40:09  bert
+ * Added an #ifdef TCP_NODELAY for the use of TCP_NODELAY to prevent any more
+ * silly patches for it from people not having TCP_NODELAY.
+ * Hardcoded the printing of the source filename for Suns.  *sigh*.
+ *
  * Revision 3.17  1993/10/24  22:33:09  bert
  * Changed a __FILE__ expression to "socklib.c" as Suns don't seem to support
  * the __FILE__ construct.  Sigh.
@@ -1022,6 +1033,7 @@ int	size;
  *
  * Originally coded by Bert Gÿsbers
  */
+#ifdef TCP_NODELAY
 int 
 #ifdef __STDC__
 SetSocketNoDelay(int fd, int flag)
@@ -1031,9 +1043,15 @@ int	fd;
 int	flag;
 #endif /* __STDC__ */
 {
-    return (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
-	(char *)&flag, sizeof(flag)));
+    /*
+     * The fcntl(O_NDELAY) option has nothing to do
+     * with the setsockopt(TCP_NODELAY) option.
+     * They achieve entirely different features!
+     */
+    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+		      (char *)&flag, sizeof(flag));
 } /* SetSocketNoDelay */
+#endif
 
 
 /*
@@ -1075,7 +1093,7 @@ int	fd;
 int	flag;
 #endif /* __STDC__ */
 {
-#if (_SEQUENT_) /* || defined(__sun__) ??? */
+#if (_SEQUENT_) || defined(__svr4__) || defined(SVR4)
     return (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY: 0 ));
 #else
     int                       i;
@@ -1083,7 +1101,7 @@ int	flag;
     i = ioctl(fd, FIONBIO, &flag);
 #if defined(__sun__)
     if (i < 0) {
-	error("Check out file %s at line number %d", "socklib.c", __LINE__);
+	error("Check out file src/socklib.c at line number %d", __LINE__);
 	/*
 	 * Some Suns have problems getting ioctl(FIONBIO) to work.
 	 * This is almost certain due to not having run fixincludes
@@ -2089,11 +2107,7 @@ DgramLastport()
 
 #if defined(__sun__)
 /*
- * There seems to be a strange bug in inet_ntoa() on
- * some Suns running a particular version of SunOS causing a
- * segmentation violation.  This version of inet_ntoa() seems
- * to be a workaround for it.
- * Eventually we need to come up with something better.
+ * A workaround for a bug in inet_ntoa() on Suns.
  */
 char *inet_ntoa (struct in_addr in)
 {

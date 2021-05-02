@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.27 1993/10/28 21:17:14 bert Exp $
+/* $Id: frame.c,v 3.29 1993/12/17 16:05:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -45,7 +45,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.27 1993/10/28 21:17:14 bert Exp $";
+    "@(#)$Id: frame.c,v 3.29 1993/12/17 16:05:50 bert Exp $";
 #endif
 
 
@@ -479,7 +479,7 @@ static void Frame_ships(int conn, int ind)
     player		*pl = Players[ind],
 			*pl_i;
     pulse_t		*pulse;
-    int			i, j, flag, color, dir;
+    int			i, j, color, dir;
     float		x, y;
 
     for (i = 0; i < NumPlayers; i++) {
@@ -595,6 +595,18 @@ static void Frame_ships(int conn, int ind)
 		    (int) (World.fuel[pl_i->fs].pos.y + 0.5),
 		    (int) (pl_i->pos.x + 0.5),
 		    (int) (pl_i->pos.y + 0.5));
+	    }
+	}
+	if (BIT(pl_i->used, OBJ_REPAIR)) {
+	    float x = World.targets[pl_i->repair_target].pos.x
+		* BLOCK_SZ+BLOCK_SZ/2;
+	    float y = World.targets[pl_i->repair_target].pos.y
+		* BLOCK_SZ+BLOCK_SZ/2;
+	    if (inview(x, y)) {
+		/* same packet as refuel */
+		Send_refuel(conn,
+		    (int) (pl_i->pos.x + 0.5), (int) (pl_i->pos.y + 0.5),
+		    (int) (x + 0.5), (int) (y + 0.5));
 	    }
 	}
 	if (pl_i->ball != NULL
@@ -755,10 +767,10 @@ void Frame_update(void)
 	    Send_damaged(conn, Players[ind]->damaged);
 	    Players[ind]->damaged--;
 	} else {
+	    Frame_parameters(conn, ind);
 	    if (Frame_status(conn, ind) <= 0) {
 		continue;
 	    }
-	    Frame_parameters(conn, ind);
 	    Frame_map(conn, ind);
 	    Frame_shots(conn, ind);
 	    Frame_ships(conn, ind);

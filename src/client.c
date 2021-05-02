@@ -1,4 +1,4 @@
-/* $Id: client.c,v 3.44 1993/10/24 22:12:17 bert Exp $
+/* $Id: client.c,v 3.45 1993/11/07 22:58:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -1057,7 +1057,6 @@ void Client_score_table(void)
 			**order;
     int			i, j, k, best = -1;
     float		ratio, best_ratio = -1e7;
-    char		buf[256];
 
     if (scoresChanged == 0) {
 	return;

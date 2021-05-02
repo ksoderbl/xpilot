@@ -1,4 +1,4 @@
-/* $Id: player.c,v 3.28 1993/11/02 16:45:54 bert Exp $
+/* $Id: player.c,v 3.32 1993/11/30 11:04:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #define SERVER
 #include "global.h"
@@ -32,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.28 1993/11/02 16:45:54 bert Exp $";
+    "@(#)$Id: player.c,v 3.32 1993/11/30 11:04:55 bert Exp $";
 #endif
 
 
@@ -139,7 +140,7 @@ void Go_home(int ind)
     memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
     memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
     pl->key_changed = 0;
-    CLR_BIT(pl->used, OBJ_CONNECTOR | OBJ_REFUEL);
+    CLR_BIT(pl->used, OBJ_CONNECTOR | OBJ_REFUEL | OBJ_REPAIR);
     if (playerStartsShielded != 0) {
 	SET_BIT(pl->used, OBJ_SHIELD);
 	if (playerShielding == 0) {
@@ -174,14 +175,27 @@ void Init_player(int ind)
     pl->oldturnvel	= 0.0;
 #endif
     pl->turnacc		= 0.0;
+    pl->mass		= ShipMass;
+    pl->emptymass	= ShipMass;
     pl->fuel.num_tanks  = 0;
     pl->fuel.current    = 0;
     pl->fuel.sum        =
-    pl->fuel.tank[0]    = ( DEFAULT_PLAYER_FUEL
+    pl->fuel.tank[0]    = ( (initialFuel << FUEL_SCALE_BITS)
 			   + (((rand()%400)-200) << FUEL_SCALE_BITS) );
     pl->fuel.max        = TANK_CAP(0);
-    pl->afterburners   = 0;
-    pl->transporters    = 0;
+    for (i = 1; i <= initialTanks; i++) {
+	pl->fuel.num_tanks++;
+	SET_BIT(pl->have, OBJ_TANK);
+	pl->fuel.current = i;
+	pl->fuel.max += TANK_CAP(i);
+	pl->fuel.tank[i] = 0;
+	pl->emptymass += TANK_MASS;
+	Add_fuel(&pl->fuel, TANK_FUEL(pl->fuel.current));
+    }
+    pl->fuel.current = 0;
+
+    pl->afterburners   = initialAfterburners;
+    pl->transporters    = initialTransporters;
     pl->transInfo.count	= 0;
 
     pl->power			= 45.0;
@@ -195,7 +209,6 @@ void Init_player(int ind)
 	pl->power	= MAX_PLAYER_POWER;
 	pl->turnspeed	= 27.0;
     }
-    pl->mass	= pl->emptymass	= ShipMass;
 
     pl->check		= 0;
     pl->round		= 0;
@@ -210,12 +223,12 @@ void Init_player(int ind)
 
     pl->type		= OBJ_PLAYER;
     pl->shots		= 0;
-    pl->extra_shots	= 0;
-    pl->back_shots	= 0;
-    pl->missiles	= 0;
-    pl->mines		= 0;
-    pl->cloaks		= 0;
-    pl->sensors		= 0;
+    pl->extra_shots	= initialWideangles;
+    pl->back_shots	= initialRearshots;
+    pl->missiles	= initialMissiles;
+    pl->mines		= initialMines;
+    pl->cloaks		= initialCloaks;
+    pl->sensors		= initialSensors;
     pl->forceVisible	= 0;
     pl->shot_speed	= ShotsSpeed;
     pl->sensor_range	= MAX(pl->fuel.sum * ENERGY_RANGE_FACTOR,
@@ -228,9 +241,10 @@ void Init_player(int ind)
     pl->score		= 0;
     pl->prev_score	= 0;
     pl->fs		= 0;
+    pl->repair_target	= 0;
     pl->name[0]		= '\0';
-    pl->ecms 		= 0;
-    pl->lasers 		= 0;
+    pl->ecms 		= initialECMs;
+    pl->lasers 		= initialLasers;
     pl->num_pulses	= 0;
     pl->max_pulses	= 0;
     pl->pulses		= NULL;
@@ -515,7 +529,7 @@ void Compute_game_status(void)
 		  (int) Players[ind]->pos.y/BLOCK_SZ, "Winner");
 	    /* Start up all player's again */
 	    Reset_all_players();    
-	} else if (num_alive_players == 0 && num_active_players > 1) {
+	} else if (num_alive_players == 0 && num_active_players >= 1) {
 	    sprintf(msg, "We have a draw!");
 	    Set_message(msg);
 	    /* Start up all player's again */
@@ -606,12 +620,12 @@ void Kill_player(int ind)
     pl->emptymass	= pl->mass	= ShipMass;
     pl->status		|= DEF_BITS;
     pl->status		&= ~(KILL_BITS);
-    pl->extra_shots	= 0;
-    pl->back_shots	= 0;
-    pl->missiles	= 0;
-    pl->mines		= 0;
-    pl->cloaks		= 0;
-    pl->sensors		= 0;
+    pl->extra_shots	= initialWideangles;
+    pl->back_shots	= initialRearshots;
+    pl->missiles	= initialMissiles;
+    pl->mines		= initialMines;
+    pl->cloaks		= initialCloaks;
+    pl->sensors		= initialSensors;
     pl->forceVisible	= 0;
     pl->shot_speed	= ShotsSpeed;
     pl->shot_max	= ShotsMax;
@@ -620,9 +634,9 @@ void Kill_player(int ind)
     pl->last_time	= pl->time;
     pl->last_lap	= 0;
     pl->count		= RECOVERY_DELAY;
-    pl->ecms 		= 0;
+    pl->ecms 		= initialECMs;
     pl->ecmInfo.size	= 0;
-    pl->lasers 		= 0;
+    pl->lasers 		= initialLasers;
     pl->damaged 	= 0;
     pl->lock.distance	= 0;
 
@@ -634,8 +648,19 @@ void Kill_player(int ind)
     pl->fuel.tank[0]    =
     pl->fuel.sum        = MAX(pl->fuel.sum,
                               MIN_PLAYER_FUEL+(rand()%(int)MIN_PLAYER_FUEL)/5);
-    pl->afterburners	= 0;
-    pl->transporters    = 0;
+    for (i = 1; i <= initialTanks; i++) {
+	pl->fuel.num_tanks++;
+	SET_BIT(pl->have, OBJ_TANK);
+	pl->fuel.current = i;
+	pl->fuel.max += TANK_CAP(i);
+	pl->fuel.tank[i] = 0;
+	pl->emptymass += TANK_MASS;
+	Add_fuel(&pl->fuel, TANK_FUEL(pl->fuel.current));
+    }
+    pl->fuel.current    = 0;
+
+    pl->afterburners	= initialAfterburners;
+    pl->transporters    = initialTransporters;
     pl->transInfo.count	= 0;
 
     if (pl->max_pulses > 0 && pl->num_pulses == 0) {

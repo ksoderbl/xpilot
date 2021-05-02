@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.15 1993/10/31 16:10:28 bjoerns Exp $
+/* $Id: Imakefile,v 3.18 1993/12/23 12:39:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
  *
@@ -39,6 +39,15 @@ INSTALLDIR = /usr/local/games
  *  CHEAT			- define this for fun,
  *				  but don't make it a habit... :)
  *  SILENT			- makes the server real silent.
+ *  ERASE			- use a different, possible faster, frame
+ *				  drawing technique which is not perfect yet.
+ *				  It needs more work by a volunteer.
+ *  SPARC_CMAP_HACK		- try the alternate colormap swapping code
+ *				  that talks directly to the sparc hardware
+ *				  WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
+ *				  CAUTION: dangerous if you don't know
+ *				  what it does and how it works.
+ *				  It needs more work by a volunteer.
  *
  * You should also set these appropriately (see config.h):
  *
@@ -106,8 +115,8 @@ NCDAUDIOINC = -I/usr/local/include
 NCDAUDIOLIB = -L/usr/local/lib -laudio
 
 /* #define RPLAY_SOUND			/* Uncomment for rplay sound support */
-RPLAYAUDIOINC = -I/users/staff/bjoerns/src/xpilot/rplay3.0PL2
-RPLAYAUDIOLIB = -L/users/staff/bjoerns/src/xpilot/rplay3.0PL2 -lrplay
+RPLAYAUDIOINC = -I/usr/local/include
+RPLAYAUDIOLIB = -L/usr/local/lib -lrplay
 
 
 /*

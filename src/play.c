@@ -1,4 +1,4 @@
-/* $Id: play.c,v 3.27 1993/11/02 16:43:34 bert Exp $
+/* $Id: play.c,v 3.32 1993/12/19 19:03:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -35,7 +36,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.27 1993/11/02 16:43:34 bert Exp $";
+    "@(#)$Id: play.c,v 3.32 1993/12/19 19:03:07 bert Exp $";
 #endif
 
 
@@ -377,34 +378,34 @@ void Throw_items(player *pl)
     int i;
 
     if (!ThrowItemOnKillRand) return;
-    for (i=pl->extra_shots; i; i--)
+    for (i=pl->extra_shots-initialWideangles; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_WIDEANGLE_SHOT, pl);
-    for (i=pl->ecms; i; i--)
+    for (i=pl->ecms-initialECMs; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_ECM, pl);
-    for (i=pl->sensors; i; i--)
+    for (i=pl->sensors-initialSensors; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_SENSOR_PACK, pl);
-    for (i=pl->afterburners; i; i--)
+    for (i=pl->afterburners-initialAfterburners; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_AFTERBURNER, pl);
-    for (i=pl->transporters; i; i--)
+    for (i=pl->transporters-initialTransporters; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_TRANSPORTER, pl);
-    for (i=pl->back_shots; i; i--)
+    for (i=pl->back_shots-initialRearshots; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_BACK_SHOT, pl);
-    for (i=pl->missiles; i>0; i-=4)
+    for (i=pl->missiles-initialMissiles; i>0; i-=4)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_ROCKET_PACK, pl);
-    for (i=pl->cloaks; i; i--)
+    for (i=pl->cloaks-initialCloaks; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_CLOAKING_DEVICE, pl);
-    for (i=pl->mines; i>0; i-=2)
+    for (i=pl->mines-initialMines; i>0; i-=2)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_MINE_PACK, pl);
-    for (i=pl->lasers; i; i--)
+    for (i=pl->lasers-initialLasers; i>0; i--)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_LASER, pl);
 }
@@ -563,7 +564,7 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
     char msg[MSG_LEN];
     object *shot;
     player *pl;
-
+    int NukeSize;
 
     pl = Players[ind];
     if (pl->shots >= pl->shot_max
@@ -587,18 +588,22 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 	break;
 
     case OBJ_NUKE:
-	if(pl->fuel.sum < -ED_SMART_SHOT || (pl->missiles <= NUKE_MIN_SMART))
-	  return;
-
-	shot->mass = MISSILE_MASS*pl->missiles*NUKE_MASS_MULT;
+	if (pl->fuel.sum < -ED_SMART_SHOT || pl->missiles < NUKE_MIN_SMART) {
+	    return;
+	}
+	NukeSize = pl->missiles;
+	if (maxMissilesPerNuke > 0 && NukeSize > maxMissilesPerNuke) {
+	    NukeSize = maxMissilesPerNuke;
+	}
+	shot->mass = MISSILE_MASS * NukeSize * NUKE_MASS_MULT;
 	shot->life = MISSILE_LIFETIME;
 	Add_fuel(&(pl->fuel),ED_SMART_SHOT);
 	shot->vel.x = pl->vel.x + (tcos(dir) * pl->shot_speed);
 	shot->vel.y = pl->vel.y + (tsin(dir) * pl->shot_speed);
 	shot->info = 0;
 	shot->color = RED;
-	pl->missiles = 0;
-	sprintf(msg, "%s has launched a nuke!", pl->name);
+	pl->missiles -= NukeSize;
+	sprintf(msg, "%s has launched a %d megaton nuke!", pl->name, NukeSize);
 	Set_message(msg);
 	sound_play_all(NUKE_LAUNCH_SOUND);
 	break;
@@ -748,6 +753,9 @@ void Delete_shot(int ind)
 	sound_play_all(NUKE_EXPLOSION_SOUND);
 	Explode_object(shot->prevpos.x, shot->prevpos.y,0,RES,
 		       (shot->mass/MISSILE_MASS*30*NUKE_EXPLOSION_MULT));
+	if (shot->id != -1) {
+	    Players[GetInd[shot->id]]->shots--;
+	}
 	break;
 
     case OBJ_HEAT_SHOT:
@@ -755,9 +763,9 @@ void Delete_shot(int ind)
     case OBJ_SMART_SHOT:
 	Explode_object(shot->pos.x, shot->pos.y, 0, RES, 30);
     case OBJ_SHOT:
-        if (shot->id == -1)
-	    break;
-	Players[GetInd[shot->id]]->shots--;
+	if (shot->id != -1) {
+	    Players[GetInd[shot->id]]->shots--;
+	}
 	break;
 
 	/* Special items. */
@@ -867,13 +875,13 @@ void Delete_shot(int ind)
 	heat->vel.x = ((float)(World.width / 2 - xh)
 			 / (World.width / 2)
 			 * SMART_SHOT_MAX_SPEED);
- 	  + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
-	     - SMART_SHOT_MAX_SPEED / 12);
+ 	  /* + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
+	     - SMART_SHOT_MAX_SPEED / 12); */
 	heat->vel.y = ((float)(World.height / 2 - yh)
 			 / (World.height / 2)
 			 * SMART_SHOT_MAX_SPEED);
-	  + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
-	     - SMART_SHOT_MAX_SPEED / 12);
+	  /* + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
+	     - SMART_SHOT_MAX_SPEED / 12); */
 	heat->type = OBJ_HEAT_SHOT;
 	heat->id = -1;
 	heat->color = WHITE;
@@ -1361,7 +1369,7 @@ void Move_smart_shot(int ind)
 		    }
 	    }
 	    if (k > freemax || k == freemax
-		&& ((j == -1 && rand()&1) || j == 0 || j == 1)) {
+		&& ((j == -1 && (rand()&1)) || j == 0 || j == 1)) {
 		freemax = k > 2 ? 2 : k;
 		angle = i + j;
 	    }

@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 3.46 1993/10/12 21:09:41 bert Exp $
+/* $Id: xinit.c,v 3.49 1993/11/13 19:06:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.46 1993/10/12 21:09:41 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.49 1993/11/13 19:06:51 bert Exp $";
 #endif
 
 #if defined(__cplusplus)
@@ -82,7 +82,6 @@ int	draw_width, draw_height;
 char	*geometry;
 
 
-static XFontStruct	*font;
 static message_t	*MsgBlock;
 static char		*keyHelpList = NULL, *keyHelpDesc = NULL;
 static int		KeyDescOffset;
@@ -93,6 +92,7 @@ static char		talk_str[MAX_CHARS];
 static struct {
     bool		visible;
     short		offset;
+    short		point;
 } talk_cursor;
 
 
@@ -603,6 +603,7 @@ int Init_window(void)
     talk_created = false;
     talk_mapped = false;
     talk_str[0] = '\0';
+    talk_cursor.point = 0;
 
 
     /*
@@ -712,6 +713,8 @@ int Init_window(void)
 	= XCreateGC(dpy, top, values, &xgc);
     textGC
 	= XCreateGC(dpy, top, values, &xgc);
+    talkGC
+	= XCreateGC(dpy, top, values, &xgc);
     gc
 	= XCreateGC(dpy, top, values, &xgc);
     XSetBackground(dpy, gc, colors[BLACK].pixel);
@@ -731,6 +734,8 @@ int Init_window(void)
 	= Set_font(dpy, buttonGC, buttonFontName);
     textFont
 	= Set_font(dpy, textGC, textFontName);
+    talkFont
+	= Set_font(dpy, talkGC, talkFontName);
 
     XSetState(dpy, gc,
 	      WhitePixel(dpy, DefaultScreen(dpy)),
@@ -1529,18 +1534,24 @@ void Talk_cursor(bool visible)
 	return;
     }
     if (visible == false) {
-	XSetForeground(dpy, textGC, colors[BLACK].pixel);
-	XDrawString(dpy, talk_w, textGC,
+	XSetForeground(dpy, talkGC, colors[BLACK].pixel);
+	XDrawString(dpy, talk_w, talkGC,
 		    talk_cursor.offset + TALK_INSIDE_BORDER,
-		    textFont->ascent + TALK_INSIDE_BORDER,
+		    talkFont->ascent + TALK_INSIDE_BORDER,
 		    "_", 1);
-	XSetForeground(dpy, textGC, colors[WHITE].pixel);
+	XSetForeground(dpy, talkGC, colors[WHITE].pixel);
+	if (talk_cursor.point < strlen(talk_str)) {
+	    XDrawString(dpy, talk_w, talkGC,
+			talk_cursor.offset + TALK_INSIDE_BORDER,
+			talkFont->ascent + TALK_INSIDE_BORDER,
+			&talk_str[talk_cursor.point], 1);
+	}
 	talk_cursor.visible = false;
     } else {
-	talk_cursor.offset = XTextWidth(textFont, talk_str, strlen(talk_str));
-	XDrawString(dpy, talk_w, textGC,
+	talk_cursor.offset = XTextWidth(talkFont, talk_str, talk_cursor.point);
+	XDrawString(dpy, talk_w, talkGC,
 		    talk_cursor.offset + TALK_INSIDE_BORDER,
-		    textFont->ascent + TALK_INSIDE_BORDER,
+		    talkFont->ascent + TALK_INSIDE_BORDER,
 		    "_", 1);
 	talk_cursor.visible = true;
     }
@@ -1556,6 +1567,14 @@ void Talk_map_window(bool map)
 	}
 	XMapWindow(dpy, talk_w);
 	talk_mapped = true;
+
+#if !defined(TALK_WARP_POINTER) || (TALK_WARP_POINTER != 0)
+	XWarpPointer(dpy, None, talk_w,
+		     0, 0, 0, 0,
+		     TALK_WINDOW_WIDTH - 2,
+		     TALK_WINDOW_HEIGHT - 2);
+#endif
+
     }
     else if (talk_created == true) {
 	XUnmapWindow(dpy, talk_w);
@@ -1569,16 +1588,17 @@ void Talk_event(XEvent *event)
 {
     char		ch;
     bool		cursor_visible = talk_cursor.visible;
-    int			i, count, oldlen, newlen, oldwidth, newwidth;
+    int			i, count, oldlen, newlen, onewidth, oldwidth, newwidth;
     KeySym		keysym;
     XComposeStatus	compose;
+    char		new_str[MAX_CHARS];
 
     switch (event->type) {
 
     case Expose:
 	XClearWindow(dpy, talk_w);
-	XDrawString(dpy, talk_w, textGC,
-		    TALK_INSIDE_BORDER, textFont->ascent + TALK_INSIDE_BORDER,
+	XDrawString(dpy, talk_w, talkGC,
+		    TALK_INSIDE_BORDER, talkFont->ascent + TALK_INSIDE_BORDER,
 		    talk_str, strlen(talk_str));
 	if (cursor_visible == true) {
 	    talk_cursor.visible = false;
@@ -1587,76 +1607,239 @@ void Talk_event(XEvent *event)
 	break;
 
     case KeyRelease:
+	/*
+	 * Nothing to do.
+	 * We may want to make some kind of key repeat ourselves.
+	 * Some day...
+	 */
 	break;
 
     case KeyPress:
+	onewidth = XTextWidth(talkFont, talk_str, 1);
 	count = XLookupString(&event->xkey, &ch, 1, &keysym, &compose);
-	if (count == NoSymbol || ch == '\0') {
-	    /**/
+	if (count == NoSymbol) {
+	    break;
 	}
-	else if (ch == '\r' || ch == '\n') {
+
+	switch (ch) {
+	case '\0':
+	    /*
+	     * ?  Ignore.
+	     */
+	    break;
+
+	case '\r':
+	case '\n':
+	    /*
+	     * Return.  Send the talk message to the server if there is text.
+	     */
 	    if (talk_str[0] != '\0') {
 		if (version < 0x3030) {
 		    Add_message("<<Talking is not supported by this server>>");
 		} else {
 		    Net_talk(talk_str);
 		}
+		talk_cursor.point = 0;
 		talk_str[0] = '\0';
 	    }
 	    Talk_map_window(false);
-	}
-	else if (ch == '\033') {
+	    break;
+
+	case '\033':
+	    /*
+	     * Escape.  Cancel talking.
+	     */
 	    talk_str[0] = '\0';
+	    talk_cursor.point = 0;
 	    Talk_map_window(false);
-	}
-	else if (ch == '\b' || ch == '\177'
-		 || ch == CTRL('W') || ch == CTRL('U')) {
+	    break;
+
+	case CTRL('A'):
+	    /*
+	     * Put cursor at start of line.
+	     */
 	    Talk_cursor(false);
+	    talk_cursor.point = 0;
+	    Talk_cursor(true);
+	    break;
+
+	case CTRL('E'):
+	    /*
+	     * Put cursor at end of line.
+	     */
+	    Talk_cursor(false);
+	    talk_cursor.point = strlen(talk_str);
+	    Talk_cursor(true);
+	    break;
+
+	case CTRL('B'):
+	    /*
+	     * Put cursor one character back.
+	     */
+	    if (talk_cursor.point > 0) {
+		Talk_cursor(false);
+		talk_cursor.point--;
+		Talk_cursor(true);
+	    }
+	    break;
+
+	case CTRL('F'):
+	    /*
+	     * Put cursor one character forward.
+	     */
+	    if (talk_cursor.point < strlen(talk_str)) {
+		Talk_cursor(false);
+		talk_cursor.point++;
+		Talk_cursor(true);
+	    }
+	    break;
+
+	case '\b':
+	case '\177':
+	case CTRL('D'):
+	case CTRL('W'):
+	case CTRL('U'):
+	case CTRL('K'):
+	    /*
+	     * Erase characters.
+	     */
+	    Talk_cursor(false);
+
+	    strcpy(new_str, talk_str);
 	    oldlen = strlen(talk_str);
 	    newlen = oldlen;
+
+	    /*
+	     * Calculate text changes first without drawing.
+	     */
 	    if (ch == CTRL('W')) {
-		for (i = oldlen; i > 0 && talk_str[i - 1] == ' '; i--) {
+		/*
+		 * Word erase.
+		 * Erase whitespace first and then one word.
+		 */
+		while (newlen > 0 && talk_str[newlen - 1] == ' ') {
 		    newlen--;
 		}
-		for (; i > 0 && talk_str[i - 1] != ' '; i--) {
+		while (newlen > 0 && talk_str[newlen - 1] != ' ') {
 		    newlen--;
 		}
 	    }
 	    else if (ch == CTRL('U')) {
+		/*
+		 * Erase everything.
+		 */
 		newlen = 0;
 	    }
-	    else if (oldlen > 0) {
-		newlen = oldlen - 1;
+	    else if (ch == CTRL('K')) {
+		/*
+		 * Clear rest of the line.
+		 */
+		newlen = talk_cursor.point;
 	    }
-	    newwidth = XTextWidth(textFont, talk_str, newlen);
-	    XSetForeground(dpy, textGC, colors[BLACK].pixel);
-	    XDrawString(dpy, talk_w, textGC,
-			newwidth + TALK_INSIDE_BORDER,
-			textFont->ascent + TALK_INSIDE_BORDER,
-			&talk_str[newlen], oldlen - newlen);
-	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
-	    talk_str[newlen] = '\0';
+	    else if (oldlen > 0) {
+		/*
+		 * Erase one character.
+		 */
+		newlen--;
+		if (ch != CTRL('D') || talk_cursor.point >= newlen) {
+		    if (talk_cursor.point > 0) {
+			talk_cursor.point--;
+		    }
+		}
+		strcpy(&new_str[talk_cursor.point],
+		       &talk_str[talk_cursor.point + 1]);
+	    }
+
+	    new_str[newlen] = '\0';
+	    if (talk_cursor.point > newlen) {
+		talk_cursor.point = newlen;
+	    }
+
+	    /*
+	     * Now reflect the text changes onto the screen.
+	     */
+	    if (newlen < oldlen) {
+		XSetForeground(dpy, talkGC, colors[BLACK].pixel);
+		XDrawString(dpy, talk_w, talkGC,
+			    talk_cursor.point * onewidth + TALK_INSIDE_BORDER,
+			    talkFont->ascent + TALK_INSIDE_BORDER,
+			    &talk_str[talk_cursor.point],
+			    oldlen - talk_cursor.point);
+		XSetForeground(dpy, talkGC, colors[WHITE].pixel);
+	    }
+	    if (talk_cursor.point < newlen) {
+		XDrawString(dpy, talk_w, talkGC,
+			    talk_cursor.point * onewidth + TALK_INSIDE_BORDER,
+			    talkFont->ascent + TALK_INSIDE_BORDER,
+			    &new_str[talk_cursor.point],
+			    newlen - talk_cursor.point);
+	    }
 	    Talk_cursor(cursor_visible);
-	}
-	else if ((ch & 0x7F) != ch || isprint(ch)) {
+
+	    strcpy(talk_str, new_str);
+
+	    break;
+
+	default:
+	    if ((ch & 0x7F) == ch && !isprint(ch)) {
+		/*
+		 * Unknown special character.
+		 */
+		break;
+	    }
+
 	    oldlen = strlen(talk_str);
-	    oldwidth = XTextWidth(textFont, talk_str, oldlen);
+	    oldwidth = XTextWidth(talkFont, talk_str, oldlen);
 	    if (oldlen >= MAX_CHARS - 2
 		|| oldwidth >= TALK_WINDOW_WIDTH - 2*TALK_INSIDE_BORDER - 5) {
+		/*
+		 * No more space for new text.
+		 */
 		XBell(dpy, 100);
+		break;
 	    }
-	    else {
-		oldwidth = XTextWidth(textFont, talk_str, oldlen);
-		talk_str[oldlen] = ch;
-		talk_str[oldlen + 1] = '\0';
-		Talk_cursor(false);
-		XDrawString(dpy, talk_w, textGC,
-			    oldwidth + TALK_INSIDE_BORDER,
-			    textFont->ascent + TALK_INSIDE_BORDER,
-			    &talk_str[oldlen], 1);
-		Talk_cursor(cursor_visible);
+
+	    /*
+	     * Enter new text.
+	     */
+	    strcpy(new_str, talk_str);
+	    strcpy(&new_str[talk_cursor.point + 1],
+		   &talk_str[talk_cursor.point]);
+	    new_str[talk_cursor.point] = ch;
+	    newlen = oldlen + 1;
+
+	    /*
+	     * Reflect text changes onto screen.
+	     */
+	    Talk_cursor(false);
+	    if (talk_cursor.point < oldlen) {
+		/*
+		 * Erase old text from cursor to end of line.
+		 */
+		XSetForeground(dpy, talkGC, colors[BLACK].pixel);
+		XDrawString(dpy, talk_w, talkGC,
+			    talk_cursor.point * onewidth + TALK_INSIDE_BORDER,
+			    talkFont->ascent + TALK_INSIDE_BORDER,
+			    &talk_str[talk_cursor.point],
+			    oldlen - talk_cursor.point);
+		XSetForeground(dpy, talkGC, colors[WHITE].pixel);
 	    }
+	    XDrawString(dpy, talk_w, talkGC,
+			talk_cursor.point * onewidth + TALK_INSIDE_BORDER,
+			talkFont->ascent + TALK_INSIDE_BORDER,
+			&new_str[talk_cursor.point],
+			newlen - talk_cursor.point);
+	    talk_cursor.point++;
+	    Talk_cursor(cursor_visible);
+
+	    strcpy(talk_str, new_str);
+
+	    break;
 	}
+
+	/*
+	 * End of KeyPress.
+	 */
 	break;
 
     default:

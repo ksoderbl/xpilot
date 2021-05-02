@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 3.8 1993/10/29 11:59:19 bert Exp $
+/* $Id: caudio.c,v 3.9 1993/11/16 22:45:18 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -32,6 +32,7 @@
 
 #define _CAUDIO_C_
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "config.h"

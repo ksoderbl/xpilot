@@ -1,4 +1,4 @@
-/* $Id: object.h,v 3.20 1993/09/26 20:08:36 bert Exp $
+/* $Id: object.h,v 3.21 1993/11/07 23:17:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -45,7 +45,7 @@
 #define OBJ_CLOAKING_DEVICE	(1UL<<11)
 #define OBJ_ENERGY_PACK		(1UL<<12)
 #define OBJ_WIDEANGLE_SHOT	(1UL<<13)
-#define OBJ_TRAINER		(1UL<<14)
+/* #define OBJ_TRAINER		(1UL<<14)          Not used. */
 #define OBJ_SHIELD		(1UL<<15)
 #define OBJ_REFUEL		(1UL<<16)
 #define OBJ_COMPASS		(1UL<<17)
@@ -61,6 +61,7 @@
 #define OBJ_CONNECTOR		(1UL<<27)
 #define OBJ_TRANSPORTER         (1UL<<28)
 #define OBJ_FIRE		(1UL<<29)
+#define OBJ_REPAIR		(1UL<<30)
 
 #define LOCK_NONE		1
 #define LOCK_PLAYER		2
@@ -197,6 +198,7 @@ typedef struct {
     float	shot_mass;		/* Mass of shots fired by player */
     long	shot_time;		/* Time of last shot fired by player */
     int		fs;			/* Connected to fuel station fs */
+    int		repair_target;		/* Repairing this target */
     int		check;			/* Next check point to pass */
     int		time;			/* The time a player has used */
     int		round;			/* Number of rounds player have done */

@@ -1,5 +1,13 @@
-FAQ for alt.games.xpilot release 2.0.0.
+FAQ for alt.games.xpilot release 2.2.3.
 Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
+
+This FAQ is posted in alt.games.xpilot and on the XPilot mailing list.
+It is part of the XPilot distribution.
+It can also be obtained by: telnet xpilot.cs.uit.no 4402 (incomplete?)
+Or by anonymous ftp to xpilot.sdsu.edu in pub/xpilot-maps/FAQ
+
+Questions changed:
+Questions changed in the previous FAQ: 22
 
 Questions:
 
@@ -16,18 +24,19 @@ Questions:
 10) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
    or: Couldn't send query packets (Operation not supported on socket)?
    or: Can't make socket non-blocking (Operation not supported on socket)?
-11) Why is everything so jerky?  Or why is my client so slow?
+11) Why is the client so slow?  Why is my display so jerky?
 12) Where can I get new maps?
 13) How can I distribute my own carefully crafted maps?
 14) How can I design my own maps easily?
 15) I have a problem because this and that is not working.
-16) What is the meta server?
+16) What is the meta server?  Where can I find other players?
 17) How should I subscribe/unsubscribe to/from the XPilot mailing list?
 18) How can I contribute bugfixes and new features to the game?
 19) Is there an archive of alt.games.xpilot and the mailing list?
 20) How can I fire nukes?
-21) What are the Well Known Problems for the latest version?
-22) What if I'm having trouble installing XPilot on Platform XYZ?
+21) Why do I never get any items (triangles) to appear in my maps?
+22) What are the Well Known Problems for the latest version?
+23) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Answers:
 
@@ -51,8 +60,11 @@ a lot of tactics.  There are also robots flying around shooting players
 and other robots.  Players can pickup special bonuses to improve the
 possibilities of their ship like more engine power or special weapons.
 The aim of the game is to score points and to have a lot of fun.
-People can create their own maps using a standard editor or modify
-other peoples maps.  Nice maps are a popular item to share with others.
+
+People can create their own maps using either a standard text editor or
+a nifty map editor with easy-to-use graphical user interface.
+Nice maps are a popular item to share with others.
+
 The game is very configurable in that you can specify many parameters
 in a defaults file, in the map file or on the command line.  Configurable
 options include the speed of shots, the lifetime of shots, the force and
@@ -62,14 +74,13 @@ updates per second and so on.
 
 Since release 3.0 it is possible to play games across the Internet if
 the roundtrip times are below 150 milliseconds or so, depending on the
-frame rate of the XPilot server.  Use the ping command to examine the
-quality of your connection.
+frame rate of the XPilot server.
 
 XPilot is written by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
 Many people around the world have contributed code or helped in other ways
-to have XPilot run on a diverse set of Unix computer and VMS.
+to have XPilot run on a diverse set of Unix computers and VMS.
 
-New features are added every week.
+New features are added every month.
 
 2) What is the latest version?
 
@@ -192,29 +203,72 @@ Whomever installed gcc on your system forgot to run fixincludes which
 converts the ioctl definitions in the header files so that they will
 compile properly.
 
-11) Why is my display so jerky?  Or why is the client so slow?
+11) Why is the client so slow?  Why is my display so jerky?
 
 This is probably due to you not using a standard MIT X server, but
 one of those customized servers supplied by your workstation vendor.
-Some of these servers, like the Xnews server for OpenWindows from Sun
-or an Ultrix server, are known to have serious performace degradation
+Some of these servers, like the Xnews and Xsun servers from Sun
+and an Ultrix server, are known to have serious performance degradation
 for X clients that frequently change their colors or colormaps.
 Because XPilot changes the set of colors at a rate of approximately 15
-times per second this will not work well if your graphics hardware is
-not superfast.
+times per second this will not work well if your hardware is not superfast.
 Try to use the MIT X server instead.
+
 Or, if you like to experiment a little, compile the src/paint.c file
 with the macro ERASE defined as 1 (add -DERASE=1 to DEFS in the Makefile).
 This will have the client use a different drawing technique, which is
 reported to speedup the client for older/cheaper workstations by
 about 50 percent.
 The ERASE option was first implemented for release 3.0.6 and needs
-more work as it is not perfect yet.
+more work as it is not perfect yet.  Improvements are welcome.
 
-You can also try to play on a server which runs at a lower framerate than
-the standard 18 frames per second.  Try 10 or 12.
+#oops: this is not available until 3.0.7.
+# Owners of SPARCs could try the new SPARC_CMAP_HACK compile time option
+# together with the ERASE option.  This causes a very big speed improvement
+# on SPARCs with a cg3 card.  Be warned however that this is relatively new.
+# SPARC_CMAP_HACK should only be allowed if the display is the console of the
+# machine you're running on. Otherwise, since /dev/fb has world write access,
+# whoever is using the console will find their palette flashing. Perhaps there
+# should also be a command line option to switch it off.
 
-Setting maxColors to 4 and keeping the window size medium or small helps too.
+Decrease the window size (it is resizable now), this will
+result in fewer packets sent over the network and a lot less
+work for the Xserver (clearing a 1024x1024 window is ~4 times
+more work than clearing a 512x512 window, and clearing/copying
+for double buffering often seems to be the limiting factor).
+
+Decrease sparkprob.  This will result in fewer sparks being
+sent over the network (sparks take up much of the network
+bandwidth).
+
+Decrease the number of colours.  This might help, but it depends
+on which double buffering routine you use and probably on the
+implementation of the Xserver.
+
+Play outside working-hours.  Some bad performance is due to
+saturated LANs - a network/LAN with as little as possible load,
+or at least an even load is a necessity for getting good/smooth
+response.
+
+Make sure you run the server on a different machine from the client.
+Or run it at a lower priority like: nice -20 xpilots.
+
+Try another double buffering method - you can choose between
+pixmap copying and (if you have PseudoColor) color switching.
+The effect depends on your platform.
+
+Try a different visual.  Try: "xpilot -visual list" to see a list
+of supported visuals on your system, or use xdpyinfo.
+
+Decrease the frames per second generated by the server by setting the
+-fps option.  This won't make the server faster, but it might
+make the game run more smoothly and evenly, and perhaps make
+the game more fair.  Users joining across the Internet really appreciate
+a slightly lower frame rate (try values like: 14, 12 or 10).
+
+If you have achieved any success with speeding up graphics performance
+then send a note to xpilot@cs.uit.no telling how and for which hardware,
+X server, XPilot version, compile time options and frames per second.
 
 12) Where can I get new maps?
 
@@ -230,7 +284,7 @@ gopher:
 
 Questions and comments about this map server should go to Andrew@SDSU.Edu
 
-There is also a world writeable map directorie on ftp.cs.uit.no in
+There is also a world writeable map directory on ftp.cs.uit.no in
 /pub/games/xpilot/maps.
 
 13) How can I distribute my own carefully crafted maps?
@@ -260,7 +314,7 @@ to xpilot@cs.uit.no.
 If you tried everything and you still cannot solve it then post
 a help request to alt.games.xpilot or mail to xpilot-list@cs.uit.no.
 
-16) What is the meta server?
+16) What is the meta server?  Where can I find other players?
 
 The meta server is a server program that allows people to find other
 XPilot servers running on the Internet.  XPilot servers can report
@@ -318,7 +372,7 @@ Help is available online.  Example session:
     STATUS...........: ok
     MAX SPEED........: 18 fps
     WORLD (310x267)..: Planet X
-          AUTHOR.....: Børge Berg-Olsen
+          AUTHOR.....: Bxrge Berg-Olsen
     PLAYERS ( 3/16)..:
 
     NO:  TM: NAME:             LIFE:   SC:    PLAYER:
@@ -384,7 +438,21 @@ of a nuke increases with the number of missiles you have.
 If your fighter is light (i.e. little fuel and no tanks) then the
 recoil may be so heavy that you will be smashed into the wall backwards.
 
-21) What are the Well Known Problems for the latest version?
+21) Why do I never get any items (triangles) to appear in my maps?
+
+At startup the xpilot server looks for a configuration file to
+retrieve default values for some of the options.
+The default name for this file is LIBDIR/defaults, where LIBDIR
+is defined during compilation in the Makefile or Imakefile.
+If you forgot to change the value of LIBDIR before compilation
+or if you have (re)moved the XPilot directories after installation
+then the xpilot server cannot find this file anymore.  In which
+case some of the values will have no or a useless value.
+This is the case if you do not get any items to appear in your maps.
+An example defaults file with reasonable default values can be
+found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
+
+22) What are the Well Known Problems for the latest version?
 
 The first of these Well Known Problems apply to XPilot 3.0 patchlevel 3,
 but may also apply to later patchlevels:
@@ -400,6 +468,8 @@ but may also apply to later patchlevels:
     Try the Makefile.std instead and do a make clean first.
 (c) On Suns running openwindows there seems to be a problem with the varargs
     mechanism related to gcc using a different set of include files.
+    This causes a core dump, due to a segmentation violation in the
+    file net.c in function Packet_printf().
     To prevent gcc from using the wrong set of include files make sure that
     the compiler is not having a -I/usr/include argument.
     When using the Imakefile with xmkmf check for the following bad line
@@ -411,12 +481,12 @@ but may also apply to later patchlevels:
 (d) It has been reported that after applying patch #3 it was necessary to do
     a make clean first before recompiling.
 
-These apply to patchlevel 4:
+These apply to patchlevel 4 only:
 
-e) In Team mode shots sometimes don't kill.  This is due to a bug
-   in collision.c line 627, which currently reads as:
+(e) In Team mode shots sometimes don't kill.  This is due to a bug
+    in collision.c line 627, which currently reads as:
 	    if (TEAM(obj->id, pl->id)) {
-   But which should read as:
+    But which should read as:
 	    if (TEAM(GetInd[obj->id], GetInd[pl->id])) {
 
 For patchlevel 5 there have not been reported any problems.
@@ -425,7 +495,17 @@ Since 3.0.5 there is a BUGS file in the toplevel directory of the distribution.
 This file describes all of the known bugs and the (lack of :) progress being
 made on fixing them.
 
-22) What if I'm having trouble installing XPilot on Platform XYZ?
+These apply to patchlevel 6 only:
+
+Using the `K' command to kick a player cause the server to exit with an
+error message.  This will be fixed in patchlevel 7.
+
+Running a server with very big maps fails because these maps are
+not transmitted complete to the client.  Very big is approximately
+600x600, depending upon the map compression ratio.
+This is fixed in the next release, which will permit maps upto 936x936.
+
+23) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Below is a list of people who are willing to help others install XPilot
 on various platforms. Please feel free to mail these people about any
@@ -439,7 +519,7 @@ DEC Ultrix 4.2          David Chatterton    davidc@bruce.cs.monash.edu.au
 
 SGI Irix 4.0.5          David Chatterton    davidc@bruce.cs.monash.edu.au
 
-Trusted Solaris CMW     Steve Marsden       stevem@stella.logica.co.uk
+Trusted Solaris CMW     Steve Marsden       marsdens@logica.co.uk
 
 VMS                     Curt Hjorring       HJORRING@esv1.aukuni.ac.nz
 

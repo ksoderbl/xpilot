@@ -1,4 +1,4 @@
-/* $Id: default.c,v 3.47 1993/10/31 22:23:27 bert Exp $
+/* $Id: default.c,v 3.49 1993/11/11 23:20:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -56,7 +56,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.47 1993/10/31 22:23:27 bert Exp $";
+    "@(#)$Id: default.c,v 3.49 1993/11/11 23:20:56 bert Exp $";
 #endif
 
 #ifndef PATH_MAX
@@ -71,6 +71,7 @@ static char sourceid[] =
 #define SCORE_LIST_FONT		"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
 #define BUTTON_FONT		"-*-*-bold-o-*-*-14-*-*-*-*-*-iso8859-1"
 #define TEXT_FONT		"-*-*-bold-i-*-*-14-*-*-*-p-*-iso8859-1"
+#define TALK_FONT		"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
 
 static struct _keyResources
 {
@@ -111,6 +112,8 @@ static struct _keyResources
 	KEY_LOCK_PREV,			"Lock on previous player" },
     { "keyRefuel",			"f Control_L Control_R Caps_Lock",
 	KEY_REFUEL,			"Refuel" },
+    { "keyRepair",			"x",
+	KEY_REPAIR,			"Repair target" },
     { "keyCloak",			"Delete BackSpace",
 	KEY_CLOAK,			"Toggle cloakdevice" },
     { "keyEcm",				"bracketleft",
@@ -161,6 +164,8 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-join",				".join",
 	XrmoptionNoArg,				"True" },
+    { "-motd",				".motd",
+	XrmoptionNoArg,				"True" },
     { "-list",				".list",
 	XrmoptionNoArg,				"True" },
     { "-team",				".team",
@@ -189,9 +194,9 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-altPower",			".altPower",
     	XrmoptionSepArg,			NULL },
-    { "-altTurnspeed",			".altTurnspeed",
+    { "-altTurnSpeed",			".altTurnSpeed",
     	XrmoptionSepArg,			NULL },
-    { "-altTurnresistance",		".altTurnresistance",
+    { "-altTurnResistance",		".altTurnResistance",
     	XrmoptionSepArg,			NULL },
     { "-fuelNotify",			".fuelNotify",
     	XrmoptionSepArg,			NULL },
@@ -239,6 +244,8 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-textFont",			".textFont",
     	XrmoptionSepArg,			NULL },
+    { "-talkFont",			".talkFont",
+        XrmoptionSepArg,			NULL },
     { "-backGroundPointDist",		".backGroundPointDist",
 	XrmoptionSepArg,			NULL },
     { "-receiveWindowSize",		".receiveWindowSize",
@@ -625,7 +632,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
 
 
 void Parse_options(int *argcp, char **argvp, char *realName, char *host,
-		   int *port, int *my_team, int *list, int *join,
+		   int *port, int *my_team, int *list, int *join, int *motd,
 		   char *nickName, char *dispName, char *shut_msg)
 {
     int			i,
@@ -730,13 +737,14 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_int_resource(rDB, myName, myClass, "port", SERVER_PORT, port);
     Get_bool_resource(rDB, myName, myClass, "list", "False", list);
     Get_bool_resource(rDB, myName, myClass, "join", "False", join);
+    Get_bool_resource(rDB, myName, myClass, "motd", "True", motd);
 
     Get_float_resource(rDB, myName, myClass, "power", 45.0, &power);
     Get_float_resource(rDB, myName, myClass, "turnSpeed", 35.0, &turnspeed);
     Get_float_resource(rDB, myName, myClass, "turnResistance", 0.12,
 		       &turnresistance);
     Get_float_resource(rDB, myName, myClass, "altPower", 35.0, &power_s);
-    Get_float_resource(rDB, myName, myClass, "altTurnspeed", 25.0,
+    Get_float_resource(rDB, myName, myClass, "altTurnSpeed", 25.0,
 		       &turnspeed_s);
     Get_float_resource(rDB, myName, myClass, "altTurnResistance", 0.12,
 		       &turnresistance_s);
@@ -857,6 +865,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		 buttonFontName, sizeof buttonFontName);
     Get_resource(rDB, myName, myClass, "textFont", TEXT_FONT,
 		 textFontName, sizeof textFontName);
+    Get_resource(rDB, myName, myClass, "talkFont", TALK_FONT,
+		 talkFontName, sizeof talkFontName);
 
     Get_int_resource(rDB, myName, myClass, "receiveWindowSize",
 		     DEF_RECEIVE_WINDOW_SIZE, &receive_window_size);

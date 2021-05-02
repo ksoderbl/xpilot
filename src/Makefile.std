@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 3.15 1993/10/24 12:22:01 bert Exp $
+# $Id: Makefile.std,v 3.18 1993/12/23 12:40:05 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
 #
@@ -164,9 +164,17 @@ ULTRIX_XLIB = -lX11-mit
 #  LIMIT_ACCESS    - extremely local, cannot be used without modification.
 #  LOG             - try to log every server start
 #  TURN_THRUST     - makes turning drain fuel and gives you a nice spark...
-#  CHEAT           - define this for fun, but don't make it a habit... :)
 #  SILENT          - makes the server real silent.
 #  SOUND           - for sound support (requires rplay 3.0 or NCDaudio)
+#  ERASE           - use a different, possible faster, frame
+#                    drawing technique which is not perfect yet.
+#                    It needs more work by a volunteer.
+#  SPARC_CMAP_HACK - try the alternate colormap swapping code
+#                    that talks directly to the sparc hardware
+#                    WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
+#                    CAUTION: dangerous if you don't know
+#                    what it does and how it works.
+#                    It needs more work by a volunteer.
 #
 # You should also set these appropriately (see config.h):
 #

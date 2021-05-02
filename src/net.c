@@ -1,4 +1,4 @@
-/* $Id: net.c,v 3.15 1993/10/28 21:18:47 bert Exp $
+/* $Id: net.c,v 3.16 1993/11/07 23:13:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -622,8 +622,7 @@ int Packet_scanf(va_alist)
     unsigned long	*ulptr;
     float		*fptr;
     char		*cptr,
-			*str,
-			*buf;
+			*str;
     va_list		ap;
 #if !STDVA
     char		*fmt;

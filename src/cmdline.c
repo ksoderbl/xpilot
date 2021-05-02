@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.23 1993/10/21 10:12:26 bert Exp $
+/* $Id: cmdline.c,v 3.26 1993/12/16 22:37:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -31,7 +31,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.23 1993/10/21 10:12:26 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.26 1993/12/16 22:37:19 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -46,6 +46,7 @@ int		robotsLeave;		/* Do robots leave at all? */
 int		robotLeaveLife;		/* Max life per robot (0=off)*/
 int		robotLeaveScore;	/* Min score for robot to live (0=off)*/
 int		robotLeaveRatio;	/* Min ratio for robot to live (0=off)*/
+int		maxMissilesPerNuke;	/* Max nr. of missiles in one nuke */
 int		ShotsMax;		/* Max shots pr. player */
 bool		ShotsGravity;		/* Shots affected by gravity */
 bool		LooseMass;		/* Loose mass when firering */
@@ -108,6 +109,18 @@ float		itemTransporterProb;
 float		itemLaserProb;
 float		itemProbMult;
 float		maxItemDensity;
+int		initialFuel;
+int 		initialTanks;
+int		initialECMs;
+int		initialMines;
+int 		initialMissiles;
+int		initialCloaks;
+int		initialSensors;
+int		initialWideangles;
+int		initialRearshots;
+int		initialAfterburners;
+int		initialTransporters;
+int		initialLasers;
 bool		allowNukes;
 bool		playersOnRadar;		/* Are players visible on radar? */
 bool		missilesOnRadar;	/* Are missiles visible on radar? */
@@ -142,6 +155,9 @@ static optionDesc options[] = {
   { "robotLeaveRatio", "robotleaveratio",
 	"Min ratio for robot to play (0=off)", 
 	"-5", &robotLeaveRatio, valInt },
+  { "maxMissilesPerNuke", "maxNuke",
+	"Maximum number of missiles used per nuke",
+	"16", &maxMissilesPerNuke, valInt },
   { "maxPlayerShots", "shots", "Maximum bullets present at one time",
 	"256", &ShotsMax, valInt },
   { "shotsGravity", "shotsGravity", "Are bullets afflicted by gravity",
@@ -176,8 +192,8 @@ static optionDesc options[] = {
 	"Players start with shields up",
 	"yes", &playerStartsShielded, valBool },
   { "targetKillTeam", "targetKillTeam",
-	"Do team members die when target explodes?", "no",
-	&targetKillTeam, valBool },
+	"Do team members die when their last target explodes?",
+	"no", &targetKillTeam, valBool },
   { "limitedVisibility", "limitedVisibility",
 	"Should the players have a limited visibility?",
 	"no", &limitedVisibility, valBool },
@@ -193,7 +209,8 @@ static optionDesc options[] = {
 	"no", &onePlayerOnly, valBool },
   { "timing", "race", "Race mode", "no", &timing, valBool },
   { "edgeWrap", "edgeWrap", "Wrap around edges", "no", &edgeWrap, valBool },
-  { "edgeBounce", "edgeBounce", "Objects bounce when they hit the edge",
+  { "edgeBounce", "edgeBounce",
+	"Players and bullets bounce when they hit the edge",
 	"yes", &edgeBounce, valBool },
   { "extraBorder", "extraBorder", "Give map an extra border of solid rock",
 	"no", &extraBorder, valBool },
@@ -284,6 +301,42 @@ static optionDesc options[] = {
   { "maxItemDensity", "maxItemDensity",
 	"Maximum density [0.0-1.0] for items (max items per block)",
 	"0.00012", &maxItemDensity, valReal },
+  { "initialFuel", "initialFuel",
+        "How much fuel players start with",
+        "1000", &initialFuel, valInt },
+  { "initialTanks", "initialTanks",
+        "How many tanks players start with",
+        "0", &initialTanks, valInt },
+  { "initialECMs", "initialECMs",
+        "How many ECMs players start with",
+        "0", &initialECMs, valInt },
+  { "initialMines", "initialMines",
+        "How many mines players start with",
+        "0", &initialMines, valInt },
+  { "initialMissiles", "initialMissiles",
+        "How many missiles players start with",
+        "0", &initialMissiles, valInt },
+  { "initialCloaks", "initialCloaks",
+        "How many cloaks players start with",
+        "0", &initialCloaks, valInt },
+  { "initialSensors", "initialSensors",
+        "How many sensors players start with",
+        "0", &initialSensors, valInt },
+  { "initialWideangles", "initialWideangles",
+        "How many wideangles players start with",
+        "0", &initialWideangles, valInt },
+  { "initialRearshots", "initialRearshots",
+        "How many rearshots players start with",
+        "0", &initialRearshots, valInt },
+  { "initialAfterburners", "initialAfterburners",
+        "How many afterburners players start with",
+        "0", &initialAfterburners, valInt },
+  { "initialTransporters", "initialTransporters",
+        "How many transporters players start with",
+        "0", &initialTransporters, valInt },
+  { "initialLasers", "initialLasers",
+        "How many lasers players start with",
+        "0", &initialLasers, valInt },
   { "gameDuration", "time",
 	"Duration of game in minutes (aka. pizza mode)",
 	"0.0", &gameDuration, valReal },

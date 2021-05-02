@@ -1,4 +1,4 @@
-/* $Id: ncdaudio.c,v 3.5 1993/09/13 19:09:43 bjoerns Exp $
+/* $Id: ncdaudio.c,v 3.6 1993/11/16 22:46:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -26,6 +26,7 @@
  */
 
 #ifdef SOUND
+#include <stdlib.h>
 #include <audio/audiolib.h>
 #include <audio/soundlib.h>
 #include "audio.h"

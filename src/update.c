@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.21 1993/10/31 22:32:03 bert Exp $
+/* $Id: update.c,v 3.23 1993/11/16 22:49:37 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 
 #define SERVER
+#include <stdlib.h>
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -32,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.21 1993/10/31 22:32:03 bert Exp $";
+    "@(#)$Id: update.c,v 3.23 1993/11/16 22:49:37 bert Exp $";
 #endif
 
 
@@ -497,6 +498,42 @@ void Update_objects(void)
                 pl->fuel.current = ct;
             }
 	}
+
+	/* target repair */
+	if (BIT(pl->used, OBJ_REPAIR)) {
+	    target_t *targ = &World.targets[pl->repair_target];
+	    float x = targ->pos.x*BLOCK_SZ+BLOCK_SZ/2;
+	    float y = targ->pos.y*BLOCK_SZ+BLOCK_SZ/2;
+	    if (Wrap_length(pl->pos.x - x, pl->pos.y - y) > 90.0
+		|| targ->damage >= TARGET_DAMAGE
+		|| targ->dead_time > 0) {
+		CLR_BIT(pl->used, OBJ_REPAIR);
+	    } else {
+		int i = pl->fuel.num_tanks;
+		int ct = pl->fuel.current;
+
+		do {
+		    if (pl->fuel.tank[pl->fuel.current] > REFUEL_RATE) {
+			targ->damage += TARGET_FUEL_REPAIR_PER_FRAME;
+			targ->conn_mask = 0;
+			targ->last_change = loops;
+			Add_fuel(&(pl->fuel), -REFUEL_RATE);
+			if (targ->damage > TARGET_DAMAGE) {
+			    targ->damage = TARGET_DAMAGE;
+			    break;
+			}
+		    } else {
+			CLR_BIT(pl->used, OBJ_REPAIR);
+		    }
+		    if (pl->fuel.current == pl->fuel.num_tanks)
+			pl->fuel.current = 0;
+		    else
+			pl->fuel.current += 1;
+		} while (i--);
+		pl->fuel.current = ct;
+	    }
+	}
+
 	if (pl->fuel.sum <= 0) {
 	    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_CLOAKING_DEVICE);
 	    CLR_BIT(pl->status, THRUSTING);

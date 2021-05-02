@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 3.47 1993/10/28 21:20:51 bert Exp $
+/* $Id: netserver.c,v 3.50 1993/11/27 23:13:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -423,7 +423,7 @@ int Setup_net_server(int maxconn)
  * Because there may be many reasons why a connection may
  * need to be destroyed we print the source file and line
  * number in order to be able to analyse any problems easily.
- * Since 3.0.6 the client also get's a short reason why the
+ * Since 3.0.6 the client also gets a short reason why the
  * connection was terminated.
  */
 void Destroy_connection(int ind, char *reason, char *file, int line)
@@ -498,8 +498,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
     int			i,
 			free_conn_index = max_connections,
 			my_port,
-			sock,
-			retries;
+			sock;
     connection_t	*connp;
 
     for (i = 0; i < max_connections; i++) {
@@ -777,7 +776,6 @@ static int Handle_login(int ind)
     connection_t	*connp = &Conn[ind];
     player		*pl;
     int			i,
-			n,
 			conn_bit;
     char		msg[MSG_LEN];
 
@@ -986,21 +984,33 @@ static int Handle_input(int ind)
 	return -1;
     }
     if (connp->r.len <= 0) {
+	/*
+	 * No input.
+	 */
 	return 0;
     }
     while (connp->r.ptr < connp->r.buf + connp->r.len) {
 	type = (connp->r.ptr[0] & 0xFF);
 	result = (*receive_tbl[type])(ind);
 	if (result == -1) {
+	    /*
+	     * Unrecoverable error.
+	     * Connection has been destroyed.
+	     */
 	    return -1;
 	}
 	if (result == 0) {
-	    /* Incomplete client packet */
-	    /* Drop rest of packet */
+	    /*
+	     * Incomplete client packet.
+	     * Drop rest of packet.
+	     */
 	    Sockbuf_clear(&connp->r);
 	    break;
 	}
 	if (result == 2) {
+	    /*
+	     * A new player has started playing.
+	     */
 	    login = 1;
 	}
     }
@@ -1010,6 +1020,7 @@ static int Handle_input(int ind)
 int Input(int contact_socket)
 {
     int			i,
+			j,
 			n,
 			r,
 			ind,
@@ -1035,6 +1046,7 @@ int Input(int contact_socket)
     contact_mask = (contact_socket != -1) ? (1 << contact_socket) : 0;
     max = contact_socket;
     fdmask = contact_mask;
+
     for (i = 0; i < max_connections; i++) {
 	connp = &Conn[i];
 	if (connp->state == CONN_FREE) {
@@ -1056,10 +1068,8 @@ int Input(int contact_socket)
 	    login_in_progress++;
 	    input_reliable[num_reliable++] = i;
 	    if (connp->state == CONN_SETUP) {
-		if (connp->setup == 0) {
-		    Handle_setup(i);
-		    continue;
-		}
+		Handle_setup(i);
+		continue;
 	    }
 	}
 	sock = connp->r.sock;
@@ -1071,7 +1081,7 @@ int Input(int contact_socket)
 	    max = sock;
 	}
     }
-    if (num_input > 0 || contact_mask != 0) {
+    if (fdmask != 0) {
 
 	/*
 	 * Clients should limit the number of packets send.
@@ -1086,6 +1096,37 @@ int Input(int contact_socket)
 		if (n == 0) {
 		    /* No input */
 		    break;
+		}
+		if (errno == EBADF) {
+		    /*
+		     * One of the connections was destroyed.
+		     * See if we can recover from this.
+		     * This is a dirty hack, which needs a better fix.
+		     */
+		    int found = 0;
+
+		    for (i = 0; i < num_input; i++) {
+			ind = input_ind[i];
+			connp = &Conn[ind];
+			if (connp->state != CONN_FREE) {
+			    continue;
+			}
+			/*
+			 * Oops indeed.
+			 */
+			CLR_BIT(fdmask, input_fd_bit[i]);
+			for (j = 0; j < num_reliable; j++) {
+			    if (input_reliable[j] != ind) {
+				continue;
+			    }
+			    input_reliable[j--]
+				    = input_reliable[--num_reliable];
+			}
+			input_ind[i--] = input_ind[--num_input];
+		    }
+		    if (found > 0) {
+			continue;
+		    }
 		}
 		if (errno != EINTR) {
 		    error("Select Input");

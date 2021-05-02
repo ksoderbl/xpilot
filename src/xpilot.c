@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.30 1993/10/27 18:36:34 bjoerns Exp $
+/* $Id: xpilot.c,v 3.32 1993/12/23 12:30:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -44,7 +44,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
-#if (SVR4)
+#if defined(SVR4) || defined(__svr4__)
 # include <sys/sockio.h>
 #endif
 #ifdef VMS
@@ -78,7 +78,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.30 1993/10/27 18:36:34 bjoerns Exp $";
+    "@(#)$Id: xpilot.c,v 3.32 1993/12/23 12:30:20 bert Exp $";
 #endif
 
 #define MAX_LINE	256
@@ -97,6 +97,7 @@ static char		nick_name[MAX_NAME_LEN],
 			shutdown_reason[MAX_CHARS];
 static int		auto_connect = false,
     			list_servers = false,
+			motd = true,
     			auto_shutdown = false;
 static unsigned		server_version;
 static int		team = TEAM_NOT_SET;
@@ -597,7 +598,7 @@ int main(int argc, char *argv[])
     extern bool		Is_allowed(char *);
 #endif
     void Parse_options(int *argcp, char **argvp, char *realName, char *host,
-		       int *port, int *my_team, int *list, int *join,
+		       int *port, int *my_team, int *list, int *join, int *motd,
 		       char *nickName, char *dispName, char *shut_msg);
 
 
@@ -608,6 +609,9 @@ int main(int argc, char *argv[])
 	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
+    if (strcmp(LOCALGURU, "xpilot@cs.uit.no")) {
+	printf("  " LOCALGURU " is responsible for the local installation.\n\n");
+    }
 
     Argc = argc;
     Argv = argv;
@@ -657,7 +661,7 @@ int main(int argc, char *argv[])
      * --- Check commandline arguments ---
      */
     Parse_options(&argc, argv, real_name, hostname,
-		  &contact_port, &team, &list_servers, &auto_connect,
+		  &contact_port, &team, &list_servers, &auto_connect, &motd,
 		  nick_name, display, shutdown_reason);
 
     if (list_servers) {
@@ -671,7 +675,7 @@ int main(int argc, char *argv[])
     /*
      * --- Message of the Day ---
      */
-    if (!auto_connect)
+    if (motd)
 	printfile(MOTDFILE);
     if (list_servers)
 	printf("LISTING AVAILABLE SERVERS:\n");
