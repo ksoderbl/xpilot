@@ -1,4 +1,4 @@
-/* types.h,v 1.1 1992/06/25 03:24:19 bjoerns Exp
+/* $Id: types.h,v 1.1 1992/06/25 03:24:19 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *

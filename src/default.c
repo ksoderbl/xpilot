@@ -1,4 +1,4 @@
-/* default.c,v 1.5 1992/06/27 02:14:15 bjoerns Exp
+/* $Id: default.c,v 1.10 1992/08/27 00:25:50 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -15,7 +15,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)default.c,v 1.5 1992/06/27 02:14:15 bjoerns Exp";
+    "@(#)$Id: default.c,v 1.10 1992/08/27 00:25:50 bjoerns Exp $";
 #endif
 
 #define ON(x)	      ( (strcasecmp(x, "true")==0) || (strcasecmp(x, "on")==0) )
@@ -49,7 +49,10 @@ void Get_defaults(int ind)
 	"keyShield",		KEY_SHIELD,
 	"keyFireShot",		KEY_FIRE_SHOT,
 	"keyFireMissile",	KEY_FIRE_MISSILE,
+        "keyFireTorpedo",       KEY_FIRE_TORPEDO,
+        "keyFireHeat",          KEY_FIRE_HEAT,
 	"keyDropMine",		KEY_DROP_MINE,
+	"keyDetachMine",	KEY_DETACH_MINE,
 	"keyTurnLeft",		KEY_TURN_LEFT,
 	"keyTurnRight",		KEY_TURN_RIGHT,
 	"keySelfDestruct",	KEY_SELF_DESTRUCT,
@@ -63,10 +66,14 @@ void Get_defaults(int ind)
 	"keyDecreasePower",	KEY_DECREASE_POWER,
 	"keyIncreaseTurnspeed",	KEY_INCREASE_TURNSPEED,
 	"keyDecreaseTurnspeed",	KEY_DECREASE_TURNSPEED,
+        "keyTankNext",          KEY_TANK_NEXT,
+        "keyTankPrev",          KEY_TANK_PREV,
+        "keyTankDetach",        KEY_TANK_DETACH,
 	"keyThrust",		KEY_THRUST,
 	"keyCloak",		KEY_CLOAK,
 	"keySlowdown",		KEY_SLOWDOWN,
-	"keySpeedup",		KEY_SPEEDUP
+	"keySpeedup",		KEY_SPEEDUP,
+	"keyEcm",		KEY_ECM,
     };
     static struct _keyDefs keyDefs[MAX_KEY_DEFS] =
     {
@@ -82,8 +89,12 @@ void Get_defaults(int ind)
 	XK_space,		KEY_SHIELD,
 	XK_Return,		KEY_FIRE_SHOT,
 	XK_backslash,		KEY_FIRE_MISSILE,
-	XK_Linefeed,		KEY_FIRE_MISSILE,
+	XK_Linefeed,		KEY_ECM,
+ 	XK_bracketleft,		KEY_ECM,
+        XK_quoteright,          KEY_FIRE_TORPEDO,
+        XK_semicolon,           KEY_FIRE_HEAT,
 	XK_Tab,			KEY_DROP_MINE,
+ 	XK_bracketright,	KEY_DETACH_MINE,
 	XK_a,			KEY_TURN_LEFT,
 	XK_s,			KEY_TURN_RIGHT,
 	XK_q,			KEY_SELF_DESTRUCT,
@@ -98,12 +109,15 @@ void Get_defaults(int ind)
 	XK_KP_Divide,		KEY_DECREASE_POWER,
 	XK_KP_Add,		KEY_INCREASE_TURNSPEED,
 	XK_KP_Subtract,		KEY_DECREASE_TURNSPEED,
+        XK_w,                   KEY_TANK_PREV,
+        XK_e,                   KEY_TANK_NEXT,
+        XK_r,                   KEY_TANK_DETACH,
 	XK_Shift_L,		KEY_THRUST,
 	XK_Shift_R,		KEY_THRUST,
 	XK_Delete,		KEY_CLOAK,
 	XK_BackSpace,		KEY_CLOAK,
-	XK_bracketright,	KEY_SPEEDUP,
-	XK_bracketleft,		KEY_SLOWDOWN
+	XK_minus, 		KEY_SPEEDUP,
+	XK_equal, 		KEY_SLOWDOWN
     };
 
 
@@ -118,11 +132,10 @@ void Get_defaults(int ind)
     pl->turnspeed_s		= 25.0;
     pl->turnresistance_s	= 0.12;
     pl->team			= 0;
-    pl->fuel3			= 500.0;
-    pl->fuel2			= 200.0;
-    pl->fuel1			= 100.0;
-    pl->instruments		= SHOW_HUD_INSTRUMENTS |\
-				  SHOW_HUD_HORIZONTAL;
+    pl->fuel.l3			= 500*FUEL_SCALE_FACT;
+    pl->fuel.l2			= 200*FUEL_SCALE_FACT;
+    pl->fuel.l1			= 100*FUEL_SCALE_FACT;
+    pl->instruments		= SHOW_HUD_INSTRUMENTS | SHOW_HUD_HORIZONTAL;
     bcopy(keyDefs, pl->keyDefs, sizeof(keyDefs));
 
     /*
@@ -170,13 +183,13 @@ void Get_defaults(int ind)
 	pl->team = atoi(str);
     str = XGetDefault(pl->disp, "xpilot", "fuelNotify");
     if (str)
-	pl->fuel3 = atod(str);
+	pl->fuel.l3 = atod(str)*FUEL_SCALE_FACT;
     str = XGetDefault(pl->disp, "xpilot", "fuelWarning");
     if (str)
-	pl->fuel2 = atod(str);
+	pl->fuel.l2 = atod(str)*FUEL_SCALE_FACT;
     str = XGetDefault(pl->disp, "xpilot", "fuelCritical");
     if (str)
-	pl->fuel1 = atod(str);
+	pl->fuel.l1 = atod(str)*FUEL_SCALE_FACT;
     
     /*
      * Instruments.
@@ -207,6 +220,13 @@ void Get_defaults(int ind)
 	    CLR_BIT(pl->instruments, SHOW_HUD_HORIZONTAL);
 	}
     }
+    str = XGetDefault(pl->disp, "xpilot", "speedFactHUD");
+    pl->hud_move_fact = str?atod(str):0.0;
+    str = XGetDefault(pl->disp, "xpilot", "speedFactPTR");
+    pl->ptr_move_fact = str?atod(str):0.0;
+    str = XGetDefault(pl->disp, "xpilot", "BackgroundPointDist");
+    pl->map_point_distance = str ? atoi(str) : 8;
+
 
     /* FUEL */
     str = XGetDefault(pl->disp, "xpilot", "fuelMeter");
@@ -252,7 +272,8 @@ void Get_defaults(int ind)
 	    char *p, *p1;
 	    int j;
 
-	    p1 = strdup(str);
+	    p1 = (char *)malloc(sizeof(char) * (strlen(str) + 1));
+	    strcpy(p1, str);
 	    p = strtok(p1, " \t\n");
 
 	    while (p) {

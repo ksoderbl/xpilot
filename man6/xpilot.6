@@ -142,6 +142,16 @@ dot where placement of the dot gives the direction, and the size of the dot
 gives the distance.  The dot will be filled if the player is not on the
 same team as you.  The distance to the player also numerically displayed on
 the top right corner of the HUD, it is measured in 'blocks'.
+.TP 12
+.B Velocity
+The position of the HUD changes with the current velocity. The distance from
+the center of your scrren is proportional to your velocity. Moving to the top
+moves the HUD to the bottom.
+.br
+In addition to the moving HUD, you can display a line from the center of the
+HUD to the center of your ship.
+.br
+Both indicators can be combined or used exclusivly.
 .RS -6
 
 .SH GAME PLAY
@@ -155,11 +165,15 @@ need some nifty \fBpiloting skills\fP and/or some heavy equipment to really
 enjoy living.  Another vital part of your machinery is your
 \fBenergy/fuel\fP - without it, you will surely die a horrible death.
 
-You may notice some red circles - either containing a plus (+), minus (+),
-clockwise or anti-clockwise arrow.  These are \fBgravs\fP which affect the
-gravity.  You may also notice some rotating circles, this is a
-\fBwormhole\fP, a shortcut through the space-time continuum (works like
-\fBteleporting\fP).
+You may notice some red circles - either containing a plus (+), minus
+(+), clockwise or anti-clockwise arrow.  These are \fBgravs\fP which
+affect the gravity.  You may also notice some rotating circles, this
+is a \fBwormhole\fP, a shortcut through the space-time continuum
+(works like \fBteleporting\fP).  Generally, when you go through a
+wormhole, you'll come out at the nearest wormhole in the direction you
+were travelling.  Some wormholes are enter-only and some are exit-only.
+The exit-only ones are invisible.  Passing through a wormhole will
+make you visible for a while if you were cloaked.
 
 During the game you might encounter red triangles - these are special items
 which will make your life easier.  As of today, these are:
@@ -177,16 +191,30 @@ Instrument pack - improves your sensors so that you can see cloakers more
 easily.
 .TP 12
 .B R
-Rear shot.
+Rear shot.  The more you pick up, the more awesome your firepower gets.
 .TP 12
 .B W
 Wide angle shots.  The more you pick up, the more awesome your firepower gets.
+.TP 12
+.B A
+After burner. Your main engine is more powerfull and uses your fuel more 
+efficiently.
 .TP 12
 .B S
 Pack of smart shots (missiles).  Default is four missiles in each pack.
 .TP 12
 .B M
 Pack of mines.  Default is one mine in each pack.
+.TP 12
+.B D
+Missile deflector. 
+Only one can be carried, and when used, it
+redirects all missiles targeted for you to the person 
+you have selected.
+.TP 12
+.B T
+Fuel tank. Increases your fuel capacity, but also increases your
+mass.
 
 .SH CONTROLS
 The game understands quite some keys, but not all of them are equally
@@ -245,17 +273,29 @@ the machines and the net varies.
 Drop a proximity mine.  The mine will detonate after a certain amount of
 time (quite large actually) or when a foe comes too near.
 .TP 12
+.B LF (lineFeed) {keyEcm}
+Fire an ECM pulse.
+.TP 12
 .B Home {keyChangeHome}
 Change home base.  You will need to be landed on the base of your choice.
 (The \fBHome\fP key is located just right of the \fBReturn\fP key on most
 HP-keyboards.)  These keys are convenient for HP keyboards, also somewhat
 adapted to SUN keyboards.
 .TP 12
+.B W {keyTankNext}
+If you have additional tanks, the current tank will be the next tank.
+.TP 12
+.B E {keyTankPrev}
+If you have additional tanks, the current tank will be the previous tank.
+.TP 12
+.B R {keyTankDetach}
+Detach the current tank (or the last additional tank). Heet-seeking missiles
+will follow this tank.
+.TP 12
 .B p {keyPause}
-Parking mode - you can only park while you're landed on your own home base,
-and when you park, you cannot rejoin the game until the P has stopped
-blinking (to prevent users from using this option to run away from a
-battle).
+Parking mode - you can only park while you're landed on your own home base, and
+when you park, you cannot rejoin the game until the P has stopped blinking (to
+prevent users from using this option to run away from a battle).
 
 .TP 0
 These keys let you adjust the control sensitivity:
@@ -281,10 +321,18 @@ Speeds up the game (owner only).
 .TP 0
 The following requires that you have a \fBlock\fP on somebody:
 .TP 12
-.B \e (backSlash) | LF (lineFeed) {keyFireMissile}
+.B \e (backSlash) {keyFireMissile}
 Fire smart missile if available.  The missile will home onto the player
 that you have currently locked on.  You must have \fBa clear lock\fP on a
 player for this to work.
+.TP 12
+.B \e (semicolon) {keyFireHeat}
+Fire a thrust controlled missile. Works like a smart missle, but is faster and 
+ECM isn't able to confuse it. Needs the thrust for navigating.
+.TP 12
+.B \e (singleQuote) {keyFireTorpedo}
+Fire a missile without flight control. It runs very fast in shot direction.
+No lock is required.
 .TP 12
 .B Select | Up | Down {keyLockClose}
 Will lock onto the closest player if he/she is within range.
@@ -357,6 +405,15 @@ Should the vertical lines in the HUD be drawn. (Default false)
 .B horizontalHUDLine
 Should the horizontal lines in the HUD be drawn. (Default true)
 .TP 12
+.B speedFactHUD
+Should the HUD me moved, to indicate the current velocity. Negativ values will
+inverse the moving of the HUD. (Default 0.0)
+.TP 12
+.B speedFactPTR
+Uses a red line to indicate the current velocity. On edge of the line is the
+center of the ship. The other end is moved in the same way, as the HUD, if
+speedFactPTR is set.
+.TP 12
 .B fuelMeter
 Determines if the fuel meter should be visible. This meter visualizes your
 fuel level in a different way than \fBfuelGauge\fP does.
@@ -369,6 +426,10 @@ Should the turnspeed meter be visible at all times. (Default false)
 .TP 12
 .B powerMeter
 Should the power meter be visible at all times. (Default false)
+.TP 12
+.B BackgroundPointDist
+Specifies the block distance between points, used in empty map regions. 
+8 is default, 0 means no points.
 .RS -6
 
 .SH EXAMPLES

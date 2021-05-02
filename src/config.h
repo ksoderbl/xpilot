@@ -1,4 +1,4 @@
-/* config.h,v 1.10 1992/06/26 17:04:14 bjoerns Exp
+/* $Id: config.h,v 1.14 1992/08/27 00:25:49 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -9,14 +9,14 @@
  */
 
 /*
- * Configure these variables, that's what they're here for.
+ * Configure these, that's what they're here for.
  */
 #ifndef LOCALGURU
-#    define LOCALGURU		"bjoerns@stud.cs.uit.no"
+#    define LOCALGURU		"ftp@csc.liv.ac.uk"
 #endif
 
 #ifndef LIBDIR
-#    define LIBDIR		"/usr/local/games/lib/xpilot/"
+#    define LIBDIR		"/usr/local/lib/X11/xpilot/"
 #endif
 
 #ifndef MOTDFILE
@@ -29,8 +29,30 @@
 #    define MAPDIR		LIBDIR "maps/"
 #endif
 
+
+/*
+ * The following macros decide the speed of the game and
+ * how often the server should draw a frame.  (Hmm...)
+ */
+
 #ifndef	UPDATES_PR_FRAME
 #    define UPDATES_PR_FRAME	1
+#endif
+
+#ifndef FRAMES_PR_SEC
+#    define FRAMES_PR_SEC	10
+#endif
+
+/*
+ *  If COMPRESSED_MAPS is defined, the server will attempt to uncompress
+ * maps on the fly (but only if neccessary). ZCAT_FORMAT should produce
+ * a command that will unpack the given .Z file to stdout (for use in popen).
+ */
+
+#define COMPRESSED_MAPS
+
+#ifndef ZCAT_FORMAT
+#    define ZCAT_FORMAT "zcat < %s"
 #endif
 
 /*
@@ -49,7 +71,7 @@
 /*
  * Leave these alone.
  */
-#define REPORT_ADDRESS	"bjoerns@stud.cs.uit.no"
+#define REPORT_ADDRESS	"ftp@csc.liv.ac.uk"
 
 #ifdef	DEBUG
 #    define D(x)	{ {x}; fflush(stdout); }

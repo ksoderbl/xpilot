@@ -1,4 +1,4 @@
-/* cmdline.c,v 1.5 1992/06/28 05:38:05 bjoerns Exp
+/* $Id: cmdline.c,v 1.8 1992/08/27 00:25:46 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -15,7 +15,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)cmdline.c,v 1.5 1992/06/28 05:38:05 bjoerns Exp";
+    "@(#)$Id: cmdline.c,v 1.8 1992/08/27 00:25:46 bjoerns Exp $";
 #endif
 
 double		Gravity = -0.14;	/* Power of gravity */
@@ -30,6 +30,10 @@ int		ShotsMax = 256;		/* Max shots pr. player */
 bool		ShotsGravity = true;	/* Shots affected by gravity */
 bool		LooseMass = false;	/* Loose mass when firering */
 
+bool		RawMode = false;	/* Let robots live even if there */
+					/* are no players logged in */
+bool		NoQuit = false;		/* Don't quit even if there are */
+					/* no human players playing */
 
 
 void Parser(int argc, char *argv[])
@@ -52,6 +56,10 @@ void Parser(int argc, char *argv[])
 		   "	-shotmass <real>	mass of players' shots\n"
 		   "	-shotlife <ticks>	how long shots should last\n"
 		   "	-shipmass <real>	mass of players' ship\n"
+		   "	-rawmode		don't sleep if there are "
+		   "only robots left\n"
+		   "	-noquit			don't quit if there are only "
+		   "robots left\n"
 		   "	-robots <int>		number of robots\n",
 		   argv[0]);
 	    exit(0);
@@ -66,6 +74,16 @@ void Parser(int argc, char *argv[])
 	    WantedNumRobots = atoi(argv[++i]);
 	    if (WantedNumRobots < 0)
 		WantedNumRobots = INT_MAX;
+	    continue;
+	}
+
+	if (strcmp("-rawmode", argv[i]) == 0) {
+	    RawMode = true;
+	    continue;
+	}
+
+	if (strcmp("-noquit", argv[i]) == 0) {
+	    NoQuit = true;
 	    continue;
 	}
 

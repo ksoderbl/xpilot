@@ -1,4 +1,4 @@
-/* bit.h,v 1.4 1992/06/25 03:23:46 bjoerns Exp
+/* $Id: bit.h,v 1.4 1992/06/25 03:23:46 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *

@@ -14,8 +14,11 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      socklib.c,v 1.3 1992/06/25 04:31:37 bjoerns Exp
- * Log:      socklib.c,v
+ * RCS:      $Id: socklib.c,v 1.4 1992/08/26 19:36:35 bjoerns Exp $
+ * Log:      $Log: socklib.c,v $
+ * Revision 1.4  1992/08/26  19:36:35  bjoerns
+ * Incorporated NCD patch.
+ *
  * Revision 1.3  1992/06/25  04:31:37  bjoerns
  * Added source id to socklib.
  *
@@ -41,6 +44,22 @@ static char sourceid[] =
 
 /* _SOCKLIB_LIBSOURCE must be defined int this file */
 #define _SOCKLIB_LIBSOURCE
+
+/* Include files */
+#include <sys/types.h>
+#if(hpux)
+#include <time.h>
+#else
+#include <sys/time.h>
+#endif
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <netdb.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <errno.h>
 
 /* Socklib Includes And Definitions */
 #include "socklib.h"

@@ -1,4 +1,4 @@
-/* global.h,v 1.6 1992/06/28 05:38:15 bjoerns Exp
+/* $Id: global.h,v 1.9 1992/08/27 00:25:56 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <setjmp.h>
 #include <X11/Xlib.h>
 #include <X11/Intrinsic.h>
 #include "config.h"
@@ -41,8 +42,10 @@ typedef struct {
 extern player		*Players[];
 extern object		*Obj[];
 extern wireobj		ships[];
+extern unsigned long	loops;
 extern long		Id;
 extern int		NumPlayers;
+extern int		NumPseudoPlayers;
 extern int		NumObjs;
 extern int		NumRobots, WantedNumRobots;
 extern World_map	World;
@@ -61,5 +64,7 @@ extern XColor		colors[];
 extern int		Delay;
 extern int		Shutdown, ShutdownDelay;
 extern int		RadarHeight;
+extern bool		RawMode;
+extern bool		NoQuit;
 
 #endif

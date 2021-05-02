@@ -1,4 +1,4 @@
-/* update.c,v 1.10 1992/06/28 05:38:32 bjoerns Exp
+/* $Id: update.c,v 1.14 1992/08/27 00:26:14 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -12,10 +12,11 @@
 #include "map.h"
 #include "score.h"
 #include "draw.h"
+#include "robot.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)update.c,v 1.10 1992/06/28 05:38:32 bjoerns Exp";
+    "@(#)$Id: update.c,v 1.14 1992/08/27 00:26:14 bjoerns Exp $";
 #endif
 
 
@@ -75,7 +76,7 @@ void Update_objects(void)
      */
     j = rand();
     for (i=0; i<NUM_ITEMS; i++)
-	if ((j%World.items[i].chance) == 0)
+	if (!(j%World.items[i].chance))
 	    if (World.items[i].num < World.items[i].max) {
 		World.items[i].num++;
 		Place_item(i);
@@ -85,9 +86,8 @@ void Update_objects(void)
      * Let the fuel stations regenerate some fuel.
      */
     for(i=0; i<World.NumFuels; i++) {
-	World.fuel[i].left += STATION_REGENERATION*NumPlayers;
-	if (World.fuel[i].left > MAX_STATION_FUEL)
-	    World.fuel[i].left = MAX_STATION_FUEL;
+	if ((World.fuel[i].fuel += STATION_REGENERATION) > MAX_STATION_FUEL)
+	    World.fuel[i].fuel = MAX_STATION_FUEL;
     }
 
     /*
@@ -96,7 +96,7 @@ void Update_objects(void)
     for (i=0; i<NumObjs; i++) {
 	update_object_pos(*Obj[i]);
 
-	if (Obj[i]->type == OBJ_SMART_SHOT)
+        if (BIT(Obj[i]->type,(OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO)))
 	    Move_smart_shot(i);
     }
 
@@ -105,7 +105,8 @@ void Update_objects(void)
      */
     for (i=0; i<World.NumCannons; i++) {
 	if (World.cannon[i].dead_time > 0) {
-	    World.cannon[i].dead_time--;
+	    if (!--World.cannon[i].dead_time)
+		World.block[World.cannon[i].pos.x][World.cannon[i].pos.y] = CANNON;
 	    continue;
 	}
 	if (World.cannon[i].active) {
@@ -114,6 +115,11 @@ void Update_objects(void)
 	}
 	World.cannon[i].active = false;
     }
+    
+    /*
+     * Updating Blasters, maybe a little bit of dust too?
+     */
+    Blaster_fire();
 
 
     /* * * * * *
@@ -122,6 +128,10 @@ void Update_objects(void)
      *
      */
     for (i=0; i<NumPlayers; i++) {
+#ifdef TURN_FUEL
+        long tf = 0;
+#endif
+
 	pl = Players[i];
 
 	/* Limits. */
@@ -131,8 +141,8 @@ void Update_objects(void)
 
 	if (pl->control_count>0)
 	    pl->control_count--;
-	if (pl->fuel_count>0)
-	    pl->fuel_count--;
+	if (pl->fuel.count>0)
+	    pl->fuel.count--;
 
 	if (pl->count>0) {
 	    pl->count--;
@@ -165,18 +175,30 @@ void Update_objects(void)
 	if ((!BIT(pl->status, PLAYING)) || BIT(pl->status, GAME_OVER))
 	    continue;
 
-#ifdef THRUST_TURN
-	if (pl->turnacc != 0.0)
-	    Turn_thrust(i);
-#endif
-
+        
 	/*
 	 * Compute turn
 	 */
+
 	pl->turnvel	+= pl->turnacc;
 	pl->turnvel	*= pl->turnresistance;
-	pl->double_dir	+= pl->turnvel;
+        
+#ifdef TURN_FUEL
+        tf = pl->oldturnvel-pl->turnvel;
+        tf = TURN_FUEL(tf);
+        if (pl->fuel.sum <= tf) {
+            tf = 0;
+            pl->turnacc = 0.0;
+            pl->turnvel = pl->oldturnvel;
+        } else {
+            Add_fuel(&(pl->fuel),-tf);
+            pl->oldturnvel = pl->turnvel;
+        }
+#endif
 
+
+	pl->double_dir	+= pl->turnvel;
+        
 	if (pl->double_dir < 0)
 	    pl->double_dir += RES;
 	if (pl->double_dir >= RES)
@@ -195,10 +217,10 @@ void Update_objects(void)
 	 * Compute energy drainage
 	 */
 	if (BIT(pl->used, OBJ_SHIELD))
-	    pl->fuel += ED_SHIELD;
+            Add_fuel(&(pl->fuel),ED_SHIELD);
 
 	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
-	    pl->fuel += ED_CLOAKING_DEVICE;
+            Add_fuel(&(pl->fuel),ED_CLOAKING_DEVICE);
 
 #define UPDATE_RATE 100
 
@@ -212,8 +234,8 @@ void Update_objects(void)
 	    else
 		if (pl->updateVisibility || Players[j]->updateVisibility ||
 		    rand() % UPDATE_RATE <
-		    ABS(loops - pl->visibility[j].lastChange))
-		{
+		    ABS(loops - pl->visibility[j].lastChange)) {
+
 		    pl->visibility[j].lastChange = loops;
 		    pl->visibility[j].canSee = rand() % (pl->sensors + 1) >
 			(rand() % (Players[j]->cloaks + 1));
@@ -223,50 +245,131 @@ void Update_objects(void)
 	if (BIT(pl->used, OBJ_REFUEL)) {
 	    if ((LENGTH((pl->pos.x-World.fuel[pl->fs].pos.x),
 		       (pl->pos.y-World.fuel[pl->fs].pos.y)) > 90.0)
-		|| (pl->fuel > pl->max_fuel)) {
+		|| (pl->fuel.sum >= pl->fuel.max)) {
 		CLR_BIT(pl->used, OBJ_REFUEL);
-	    } else
-		if (World.fuel[pl->fs].left > 5.0) {
-		    World.fuel[pl->fs].left -= 5.0;
-		    pl->fuel += 5.0;
-		} else {
-		    pl->fuel += World.fuel[pl->fs].left;
-		    World.fuel[pl->fs].left = 0.0;
-		    CLR_BIT(pl->used, OBJ_REFUEL);
-		}
+	    } else {
+                int i = pl->fuel.no_tanks;
+                int ct = pl->fuel.current;
+                
+                do {
+		    if (World.fuel[pl->fs].fuel > REFUEL_RATE) {
+		        World.fuel[pl->fs].fuel -= REFUEL_RATE;
+		        Add_fuel(&(pl->fuel),REFUEL_RATE);
+		    } else {
+		        Add_fuel(&(pl->fuel),World.fuel[pl->fs].fuel);
+		        World.fuel[pl->fs].fuel = 0;
+		        CLR_BIT(pl->used, OBJ_REFUEL);
+                        break;
+		    }
+                    if (pl->fuel.current == pl->fuel.no_tanks)
+                        pl->fuel.current = 0;
+                    else
+                        pl->fuel.current += 1;
+                } while (i--);
+                pl->fuel.current = ct;
+            }
 	}
-	if (pl->fuel <= 0.0) {
-	    pl->fuel = 0.0;
+	if (pl->fuel.sum <= 0) {
 	    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_CLOAKING_DEVICE);
 	    CLR_BIT(pl->status, THRUSTING);
 	}
-	if (pl->fuel > MAX_PLAYER_FUEL) {
-	    pl->fuel = MAX_PLAYER_FUEL;
+	if (pl->fuel.sum > (pl->fuel.max-REFUEL_RATE))
 	    CLR_BIT(pl->used, OBJ_REFUEL);
-	}
 
 	/*
 	 * Update acceleration vector etc.
 	 */
 	if (BIT(pl->status, THRUSTING)) {
-	    pl->acc.x = pl->power * tcos(pl->dir) / pl->mass;
-	    pl->acc.y = pl->power * tsin(pl->dir) / pl->mass;
-	    pl->fuel -= pl->power * 0.02;	/* Decrement fuel */
+            double power = pl->power;
+            long f = pl->power*0.02;
+            int a = pl->after_burners;
+
+            if (a) {
+                power = AFTER_BURN_POWER(power,a);
+                f=AFTER_BURN_FUEL(f,a);
+            }
+	    pl->acc.x = power * tcos(pl->dir) / pl->mass;
+	    pl->acc.y = power * tsin(pl->dir) / pl->mass;
+            Add_fuel(&(pl->fuel),-f); /* Decrement fuel */
 	} else {
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
 
-	pl->mass = pl->emptymass + (pl->fuel*0.005);
+	pl->mass = pl->emptymass + FUEL_MASS(pl->fuel.sum);
 
-	if (BIT(pl->status, WARPING)) {
-	    int dest;
+	if (BIT(pl->status, WARPING))
+	{
+	    int i, wx, wy, proximity, dir, nearestFront, nearestRear,
+	        proxFront, proxRear;
 
-	    dest = rand() % World.NumWormholes;
-	    pl->pos.x = World.wormhole[dest].x * BLOCK_SZ + 
-		(pl->vel.x < 0.0 ? -BLOCK_SZ : BLOCK_SZ) * 1.5;
-	    pl->pos.y = World.wormhole[dest].y * BLOCK_SZ +
-		(pl->vel.y < 0.0 ? -BLOCK_SZ : BLOCK_SZ) * 1.5;
+	    if (World.wormHoles[pl->wormHoleHit].countdown)
+		i = World.wormHoles[pl->wormHoleHit].lastdest;
+	    else if (rand()&3)
+	    {
+		do
+		    i = rand() % World.NumWormholes;
+		while (World.wormHoles[i].type == WORM_IN);
+	    }
+	    else
+	    {
+		nearestFront = nearestRear = -1;
+		proxFront = proxRear = 10000000;
+		
+		for (i = 0; i < World.NumWormholes; i++)
+		{
+		    if (i == pl->wormHoleHit ||
+			World.wormHoles[i].type == WORM_IN)
+			continue;
+		    
+		    wx = World.wormHoles[i].pos.x * BLOCK_SZ;
+		    wy = World.wormHoles[i].pos.y * BLOCK_SZ;
+		    
+		    proximity = ABS(pl->vel.y * (wx - pl->pos.x) +
+				    pl->vel.x * (wy - pl->pos.y));
+		    dir = pl->vel.x * (wx - pl->pos.x) +
+			pl->vel.y * (wy - pl->pos.y);
+		    
+		    if (dir < 0)
+		    {
+			if (proximity < proxRear)
+			{
+			    nearestRear = i;
+			    proxRear = proximity;
+			}
+		    }
+		    else
+			if (proximity < proxFront)
+			{
+			    nearestFront = i;
+			    proxFront = proximity;
+			}
+		}
+		
+		i = nearestFront < 0 ? nearestRear : nearestFront;
+	    }
+	    
+	    pl->pos.x = World.wormHoles[i].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
+	    pl->pos.y = World.wormHoles[i].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
+	    pl->vel.x /= WORM_BRAKE_FACTOR; pl->vel.y /= WORM_BRAKE_FACTOR;
+
+	    if (i != pl->wormHoleHit)
+	    {
+		World.wormHoles[pl->wormHoleHit].lastdest = i;
+		World.wormHoles[pl->wormHoleHit].countdown = WORMCOUNT;
+	    }
+
 	    CLR_BIT(pl->status, WARPING);
+	    SET_BIT(pl->status, WARPED);
+	}
+
+	pl->ecmInfo.size >>= 1;
+
+	if (BIT(pl->used, OBJ_ECM))
+	{
+	    pl->ecmInfo.pos.x = pl->pos.x;
+	    pl->ecmInfo.pos.y = pl->pos.y;
+	    pl->ecmInfo.size = ECM_DISTANCE * 2;
+	    CLR_BIT(pl->used, OBJ_ECM);
 	}
 
     update:
@@ -275,6 +378,10 @@ void Update_objects(void)
 
 	if (BIT(pl->status, THRUSTING))
 	    Thrust(i);
+#ifdef TURN_FUEL
+	if (tf)
+            Turn_thrust(i,TURN_SPARKS(tf));
+#endif
 
 	/*
 	 * Updating time player has used. Only used when timing
@@ -299,7 +406,7 @@ void Update_objects(void)
 				     Players[GetInd[pl->lock.pl_id]]->pos.x,
 				     pl->pos.y -
 				     Players[GetInd[pl->lock.pl_id]]->pos.y);
-	    pl->sensor_range = MAX(pl->fuel*ENERGY_RANGE_FACTOR,
+	    pl->sensor_range = MAX(pl->fuel.sum * ENERGY_RANGE_FACTOR,
 				   VISIBILITY_DISTANCE);
 	    break;
 
@@ -313,6 +420,10 @@ void Update_objects(void)
 	pl->world.y = pl->pos.y-CENTER;
     }
 
+    for (i=0; i<World.NumWormholes; i++)
+       if(World.wormHoles[i].countdown)
+          --World.wormHoles[i].countdown;
+	    
     for (i = 0; i < NumPlayers; i++)
     {
 	Players[i]->updateVisibility = 0;
@@ -333,11 +444,23 @@ void Update_objects(void)
 
 
     /*
-     * Kill players that ought to be killed.
+     * Update tanks, Kill players that ought to be killed.
      */
-    for (i=NumPlayers-1; i>=0; i--)
-	if (BIT(Players[i]->status, KILLED))
-	    Kill_player(i);
+    for (i=NumPlayers-1; i>=0; i--) {
+        player *pl = Players[i];
+        
+	if (BIT(pl->status, PLAYING)) Update_tanks(&(pl->fuel));
+	if (BIT(pl->status, KILLED)) {
+            if (pl->robot_mode!=RM_OBJECT)
+	        Kill_player(i);
+            else {
+                NumPseudoPlayers--;
+                Explode(i);
+                Delete_player(i);
+                Set_label_strings();
+            }
+        }
+    }
 
     /*
      * Kill shots that ought to be dead.

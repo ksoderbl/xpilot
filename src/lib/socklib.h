@@ -14,8 +14,11 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.1.1.1 1992/05/11 12:32:34 bjoerns Exp
- * Log:      socklib.h,v
+ * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.2 1992/08/26 19:36:36 bjoerns Exp $
+ * Log:      $Log: socklib.h,v $
+ * Revision 1.2  1992/08/26  19:36:36  bjoerns
+ * Incorporated NCD patch.
+ *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
  *
@@ -29,22 +32,6 @@
 
 #ifndef _SOCKLIB_INCLUDED
 #define _SOCKLIB_INCLUDED
-
-/* Include files */
-#include <sys/types.h>
-#if(hpux)
-#include <time.h>
-#else
-#include <sys/time.h>
-#endif
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <netdb.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <errno.h>
 
 /* Error values and their meanings */
 #define SL_ESOCKET		0	/* socket system call error */

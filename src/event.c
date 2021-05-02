@@ -1,4 +1,4 @@
-/* event.c,v 1.12 1992/06/28 05:38:14 bjoerns Exp
+/* $Id: event.c,v 1.18 1992/08/27 00:25:55 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,7 +22,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)event.c,v 1.12 1992/06/28 05:38:14 bjoerns Exp";
+    "@(#)$Id: event.c,v 1.18 1992/08/27 00:25:55 bjoerns Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {double _tmp = _a; _a = _b; _b = _tmp;}
@@ -106,6 +106,8 @@ void Key_event(int ind, XEvent *event)
 	case KEY_DECREASE_POWER:
 	case KEY_INCREASE_TURNSPEED:
 	case KEY_DECREASE_TURNSPEED:
+        case KEY_TANK_NEXT:
+        case KEY_TANK_PREV:
 	case KEY_SLOWDOWN:
 	case KEY_SPEEDUP:
 	    break;
@@ -129,12 +131,26 @@ void Key_event(int ind, XEvent *event)
 		    Delay = 0;
 		break;
 	    }
+        case KEY_TANK_NEXT:
+        case KEY_TANK_PREV:
+            if (pl->fuel.no_tanks) {
+                pl->fuel.current += (key==KEY_TANK_NEXT) ? 1 : -1;
+                pl->fuel.count = FUEL_NOTIFY;
+                if (pl->fuel.current < 0)
+                    pl->fuel.current = pl->fuel.no_tanks;
+                else if (pl->fuel.current > pl->fuel.no_tanks)
+                    pl->fuel.current = 0;
+            }
+            break;
+        case KEY_TANK_DETACH:
+            Tank_handle_detach(pl);
+            break;
 	case KEY_LOCK_NEXT:
 	case KEY_LOCK_PREV:
 	    i = GetInd[pl->lock.pl_id];
 	    if (NumPlayers > 1)
 		do {
-		    if ((KS==XK_Prior) || (KS==XK_Left))
+		    if (key==KEY_LOCK_PREV)
 			i--;
 		    else
 			i++;
@@ -201,19 +217,40 @@ void Key_event(int ind, XEvent *event)
 		Fire_shot(ind, OBJ_SHOT,
 			  MOD(pl->dir - (1+i)*SHOTS_ANGLE, RES));
 	    }
-	    if (BIT(pl->have, OBJ_REAR_SHOT))
+	    for (i=0; i<pl->rear_shots; i++) {
 		Fire_shot(ind, OBJ_SHOT,
-			  MOD(pl->dir+RES/2, RES));
+		      MOD(pl->dir + RES/2 +
+				(pl->rear_shots-1 - 2*i)*SHOTS_ANGLE/2, RES));
+	    }
 	    break;
-	    
+
 	case KEY_FIRE_MISSILE:
 	    if (pl->missiles > 0)
 		Fire_shot(ind, OBJ_SMART_SHOT, pl->dir);
 	    break;
-	    
+
+        case KEY_FIRE_HEAT:
+	    if (pl->missiles > 0)
+		Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
+
+	    break;
+
+        case KEY_FIRE_TORPEDO:
+	    if (pl->missiles > 0)
+		Fire_shot(ind, OBJ_TORPEDO, pl->dir);
+
+	    break;
+
 	case KEY_DROP_MINE:
 	    if (pl->mines > 0) {
 		Place_mine(ind);
+		pl->mines--;
+	    }
+	    break;
+
+	case KEY_DETACH_MINE:
+	    if (pl->mines > 0) {
+		Place_moving_mine(ind,pl->vel.x,pl->vel.y);
 		pl->mines--;
 	    }
 	    break;
@@ -280,7 +317,7 @@ void Key_event(int ind, XEvent *event)
 	    break;
 
 	case KEY_REFUEL:
-	    pl->fuel_count = 150;
+	    pl->fuel.count = FUEL_NOTIFY;
 	    Refuel(ind);
 	    break;
 
@@ -326,6 +363,16 @@ void Key_event(int ind, XEvent *event)
 	    {
 		pl->updateVisibility = 1;
 		TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
+	    }
+	    break;
+
+	case KEY_ECM:
+	    if (pl->ecms > 0 && pl->fuel.sum > -ED_ECM)
+	    {
+		SET_BIT(pl->used, OBJ_ECM);
+		do_ecm(pl);
+		pl->ecms--;
+                Add_fuel(&(pl->fuel),ED_ECM);
 	    }
 	    break;
 
@@ -389,16 +436,16 @@ void Key_event(int ind, XEvent *event)
     else if (event->type == KeyRelease) {	/* --- KEYRELEASE --- */
 	switch (key) {
 	case KEY_TURN_LEFT:
-	    pl->turnacc-=pl->turnspeed;
+	    pl->turnacc -= pl->turnspeed;
 	    break;
 
 	case KEY_TURN_RIGHT:
-	    pl->turnacc+=pl->turnspeed;
+	    pl->turnacc += pl->turnspeed;
 	    break;
 
 	case KEY_REFUEL:
 	    CLR_BIT(pl->used, OBJ_REFUEL);
-	    pl->fuel_count=20;
+	    pl->fuel.count = FUEL_NOTIFY;
 	    break;
 
 	case KEY_SHIELD:

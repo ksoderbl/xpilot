@@ -1,4 +1,4 @@
-/* score.h,v 1.6 1992/06/25 18:11:09 bjoerns Exp
+/* $Id: score.h,v 1.8 1992/08/27 00:26:11 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -11,13 +11,14 @@
 #ifndef SCORE_H
 #define SCORE_H
 
-#define ED_SHOT			-0.2
-#define ED_SMART_SHOT		-30.0
-#define ED_SHIELD		-0.20
-#define ED_CLOAKING_DEVICE	-0.07
-#define ED_SHOT_HIT		-25.0
-#define ED_SMART_SHOT_HIT	-120.0
-#define ED_PL_CRASH		-100.0
+#define ED_SHOT			(-0.2*FUEL_SCALE_FACT)
+#define ED_SMART_SHOT		(-30*FUEL_SCALE_FACT)
+#define ED_ECM			(-60*FUEL_SCALE_FACT)
+#define ED_SHIELD		(-0.20*FUEL_SCALE_FACT)
+#define ED_CLOAKING_DEVICE	(-0.07*FUEL_SCALE_FACT)
+#define ED_SHOT_HIT		(-25.0*FUEL_SCALE_FACT)
+#define ED_SMART_SHOT_HIT	(-120.0*FUEL_SCALE_FACT)
+#define ED_PL_CRASH		(-100.0*FUEL_SCALE_FACT)
 
 #define PTS_PR_PL_KILL	    	13	/* Points if you kill a player */
 #define PTS_PR_CANNON_KILL  	1	/* Points if you smash a cannon */
@@ -31,6 +32,7 @@
 
 #define CANNON_RATING	    	-500
 #define WALL_RATING	    	2000
+#define DUST_RATING             1000
 
 #define RATE_SIZE	    	20
 #define RATE_RANGE	    	1024
@@ -39,10 +41,6 @@
 {								\
     Players[ind]->score+=(points); 				\
     labels=true;						\
-}
-#define ENERGY(ind, drainage)					\
-{								\
-    Players[ind]->fuel = MAX(Players[ind]->fuel+drainage, 0.0); \
 }
 
 #endif

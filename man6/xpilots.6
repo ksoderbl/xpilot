@@ -20,9 +20,11 @@ xpilots \- XPilot/UX  Multiplayer gravity war game server
 
 .BR xpilots
 [\fB-map \fImap-file\fP]
+[\fB-robots \fInumber\fP]
+[\fB-rawmode\fP]
+[\fB-noquit\fP]
 [\fB-help\fP]
 [\fB-version\fP]
-[\fB-robots \fInumber\fP]
 
 .SH DESCRIPTION
 This manual explains the following topics:
@@ -57,6 +59,18 @@ Prints a short help, including the supported commandline options.
 .TP 15
 .B -version
 Prints the current version.
+
+.TP 15
+.B -noquit
+If this option is specified, xpilots won't quit when the last human player
+exits.
+
+.TP 15
+.B -rawmode
+If this option is specified, xpilots doesn't go to sleep when there are no
+human players logged into the game.  The \fBnoquit\fP option must be
+specified for this to have any effect after the first player joins the
+game.
 
 .TP 15
 .B -robots \fInumber\fP
@@ -181,10 +195,17 @@ the sign of the grav (positive/negative), or in the case of the curl gravs
 - push your fighter around as if it were in a whirlpool (try it or ask some
 physicist).
 .TP
-.B W
-Wormhole, works much like the famous SciFi term 'teleporting'.  Note that
+.B @
+Blasters.  Mark points in the map, where star dust is created.  Star dust
+consists of little stones, flying through the map.  Collisions with it have no
+effect, if the shield is active.  Otherwise fuel is reduced.  This points are
+not visible.
+.TP
+.B W I O
+Wormholes. These work much like the famous SciFi term 'teleporting'.  Note that
 it is not possible to have only one wormhole on a map, you must have none
-or more than one.
+or more than one.  'W's are bi-directional, 'I's (in) are enter-only.  'O's
+(out) are exit-only.  Note that exit-only wormholes are invisible.
 .TP
 .B d r f c
 Cannons.  They are pointing in the following directions (same order as

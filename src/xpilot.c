@@ -1,4 +1,4 @@
-/* xpilot.c,v 1.18 1992/06/28 05:38:37 bjoerns Exp
+/* $Id: xpilot.c,v 1.23 1992/08/26 19:36:29 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -18,7 +18,6 @@
 #    include <sys/types.h>
 #else
 #    include <string.h>
-#    include <unistd.h>
 #endif
 
 #include "pack.h"
@@ -29,7 +28,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)xpilot.c,v 1.18 1992/06/28 05:38:37 bjoerns Exp";
+    "@(#)$Id: xpilot.c,v 1.23 1992/08/26 19:36:29 bjoerns Exp $";
 #endif
 
 #define MAX_LINE	256
@@ -111,7 +110,7 @@ bool Get_contact_message(void)
 
 
     if (SocketReadable(socket_c)) {
-	if (DgramReceiveAny(socket_c, (char *)&pack, sizeof(pack_t)) == -1) {
+	if (DgramReceiveAny(socket_c, (char *)&pack, sizeof(pack)) == -1) {
 	    error("DgramReceiveAny, contact message");
 	    exit(-1);
 	}
@@ -529,9 +528,7 @@ int main(int argc, char *argv[])
 	}
 	if (strcmp(argv[i], "-team") == 0) {
 	    team = atoi(argv[++i]);
-	    if (team < 0)
-		team = 0;
-	    else if (team > 9)
+	    if (team > 9)
 		team = 9;
 	    continue;
 	}
@@ -588,7 +585,7 @@ int main(int argc, char *argv[])
 	exit (-1);
 #endif
 
-    SetTimeout(15, 0);
+    SetTimeout(45, 0);
 
     /*
      * --- Try to contact server ---
@@ -614,7 +611,7 @@ int main(int argc, char *argv[])
 	/*
 	sprintf(server_host, "%s255", base_addr);
 		if (DgramSend(socket_c, server_host, DEFAULT_PORT,
-			(char *)&req, sizeof(Pack))j);
+		(char *)&req, sizeof(contact_pack_t)));
 			IKKE FERDIG */
 
 	/*

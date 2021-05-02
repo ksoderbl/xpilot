@@ -1,4 +1,4 @@
-/* player.c,v 1.12 1992/06/28 05:38:24 bjoerns Exp
+/* $Id: player.c,v 1.16 1992/08/27 00:26:05 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -16,7 +16,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)player.c,v 1.12 1992/06/28 05:38:24 bjoerns Exp";
+    "@(#)$Id: player.c,v 1.16 1992/08/27 00:26:05 bjoerns Exp $";
 #endif
 
 
@@ -60,6 +60,9 @@ void Go_home(int ind)
     pl->vel.x = pl->vel.y = pl->velocity = 0.0;
 
     CLR_BIT(pl->status, THRUSTING);
+#ifdef	TURN_FUEL
+    pl->turnvel = pl->oldturnvel = 0.0;
+#endif
 
     if (pl->robot_mode != RM_NOT_ROBOT)
 	pl->robot_mode = RM_TAKE_OFF;
@@ -78,12 +81,19 @@ void Init_player(int ind)
     pl->acc.x	= pl->acc.y	= 0.0;
     pl->dir	= pl->double_dir= DIR_UP;
     pl->turnvel		= 0.0;
+#ifdef	TURN_FUEL
+    pl->oldturnvel	= 0.0;
+#endif
     pl->turnacc		= 0.0;
-    pl->fuel		= DEFAULT_PLAYER_FUEL + (rand()%400) - 200;
-    pl->max_fuel	= MAX_PLAYER_FUEL;
+    pl->fuel.no_tanks   = 0;
+    pl->fuel.current    = 0;
+    pl->fuel.sum        =
+    pl->fuel.tank[0]    = ( DEFAULT_PLAYER_FUEL
+			   + (((rand()%400)-200) << FUEL_SCALE_BITS) );
+    pl->fuel.max        = TANK_CAP(0);
+    pl->after_burners   = 0;
 
     Pick_startpos(ind);
-    Go_home(ind);
 
     if (BIT(World.rules->mode, TIMING)) {
 	pl->power	= MAX_PLAYER_POWER;
@@ -101,18 +111,20 @@ void Init_player(int ind)
     pl->best_lap	= 0;
     pl->count		= -1;
     pl->control_count	= 0;
-    pl->fuel_count	= 0;
+    pl->fuel.count	= 0;
 
     pl->type		= OBJ_PLAYER;
     pl->shots		= 0;
     pl->extra_shots	= 0;
+    pl->rear_shots	= 0;
     pl->missiles	= 0;
     pl->mines		= 0;
     pl->cloaks		= 0;
     pl->sensors		= 0;
     pl->forceVisible	= 0;
     pl->shot_speed	= ShotsSpeed;
-    pl->sensor_range	= MAX(pl->fuel*ENERGY_RANGE_FACTOR,VISIBILITY_DISTANCE);
+    pl->sensor_range	= MAX(pl->fuel.sum*ENERGY_RANGE_FACTOR,
+                              VISIBILITY_DISTANCE);
     pl->max_speed	= SPEED_LIMIT - pl->shot_speed;
     pl->shot_max	= ShotsMax;
     pl->shot_life	= ShotsLife;
@@ -120,6 +132,9 @@ void Init_player(int ind)
     pl->score		= 0;
     pl->fs		= 0;
     pl->name[0]		= '\0';
+    pl->ecms 		= 0;
+    pl->ecmInfo.size	= 0;
+    pl->damaged 	= 0;
 
     pl->info_press	= false;
     pl->help_press	= false;
@@ -130,6 +145,10 @@ void Init_player(int ind)
     pl->have		= DEF_HAVE;
     pl->used		= DEF_USED;
 
+    {   static unsigned int pseudo_team_no;
+
+        pl->pseudo_team = pseudo_team_no++;
+    }
     pl->mychar		= ' ';
     pl->life		= World.rules->lives;
 
@@ -159,29 +178,35 @@ void Init_player(int ind)
     pl->robot_mode	= RM_NOT_ROBOT;
     pl->robot_count	= 0;
     pl->robot_ind	= -1;
+    pl->robot_lock	= LOCK_NONE;
+    pl->robot_lock_id	= 0;
+
+    pl->wormDrawCount   = 0;
 
     pl->id		= Id;
     GetInd[Id]		= ind;
+
+    Go_home(ind);
+    
+    UpdateItemChances(NumPlayers-NumPseudoPlayers);
 }
 
 
 
 void Alloc_players(int number)
 {
+    player *x=(player*)malloc(number*sizeof(player));
     int i;
 
     for (i=0; i<number; i++)
-	Players[i]=(player *)malloc(sizeof(player));
+	Players[i]=x++;
 }
 
 
 
-void Free_players(int number)
+void Free_players(void)
 {
-    int i;
-
-    for (i=0; i<number; i++)		    
-	free(Players[i]);
+    free(Players[0]);
 }
 
 
@@ -198,12 +223,14 @@ void Set_label_strings(void)
      */
     for (i=0; i<NumPlayers; i++) {
 
-	hi = Players[i]->score;
+	hi = (tmp=Players[i])->score;
 	hi_ind = i;
 	for (j=i+1; j<NumPlayers; j++)
-	    if (Players[j]->score > hi)
-		hi = Players[hi_ind=j]->score;
-
+	    if (   ((pl=Players[j])->robot_mode!=RM_OBJECT && pl->score > hi)
+                || tmp->robot_mode==RM_OBJECT)
+            {   tmp = Players[hi_ind = j];
+		hi = pl->score;
+            }
 	if (hi_ind != i) {
 	    tmp = Players[hi_ind];
 	    Players[hi_ind] = Players[i];
@@ -219,7 +246,9 @@ void Set_label_strings(void)
     hi = (double)Players[0]->score / (Players[0]->life+1);
     hi_ind = 0;
     for (i=1; i<NumPlayers; i++)
-	if ((hi_tmp = (double)Players[i]->score/(Players[i]->life+1)) > hi) {
+        if (Players[i]->robot_mode==RM_OBJECT)
+            continue;
+	else if ((hi_tmp = (double)Players[i]->score/(Players[i]->life+1)) > hi) {
 	    hi = hi_tmp;
 	    hi_ind = i;
 	}
@@ -228,11 +257,25 @@ void Set_label_strings(void)
      * Re-formats the labels.
      */
     for (i=0; i<NumPlayers; i++) {
+	char name[100];
+
 	pl = Players[i];
 
-	sprintf(pl->lblstr, "%c%c %-19s%03d%6d", (hi_ind==i)?'*':pl->mychar,
-		(pl->team==0)?' ':pl->team+'0',
-		pl->name, pl->life, pl->score);
+        if (pl->robot_mode==RM_OBJECT)
+            pl->lblstr[0]='\0';
+        else {
+	    if (pl->robot_mode != RM_NOT_ROBOT
+		&& pl->robot_lock == LOCK_PLAYER) {
+	        sprintf(name, "%s (%s)", pl->name,
+		        Players[GetInd[pl->robot_lock_id]]->name);
+	    } else
+	        sprintf(name, "%s", pl->name);
+
+	    sprintf(pl->lblstr, "%c%c %-19s%03d%6d",
+		    (hi_ind==i) ? '*' : pl->mychar,
+		    (pl->team==0) ? ' ' : pl->team+'0',
+		    name, pl->life, pl->score);
+        }
     }
 
     Set_labels();
@@ -310,7 +353,7 @@ void Delete_player(int ind)
 	    Delete_shot(i);
 
     NumPlayers--;
-    if (pl->robot_mode != RM_NOT_ROBOT)
+    if (pl->robot_mode != RM_NOT_ROBOT && pl->robot_mode != RM_OBJECT)
 	NumRobots--;
 
     /*
@@ -325,6 +368,8 @@ void Delete_player(int ind)
     for (i=0; i<NumPlayers; i++)
 	if ((Players[i]->lock.pl_id == id) || NumPlayers <= 1)
 	    Players[i]->lock.tagged = LOCK_NONE;
+    
+    UpdateItemChances(NumPlayers-NumPseudoPlayers);
 }
 
 
@@ -342,10 +387,14 @@ void Kill_player(int ind)
     pl->double_dir	= pl->dir	= DIR_UP;
     pl->turnacc		= 0.0;
     pl->turnvel		= 0.0;
+#ifdef	TURN_FUEL
+    pl->oldturnvel	= 0.0;
+#endif
     pl->mass		= ShipMass;
     pl->status		|= WAITING_SHOTS | DEF_BITS;
     pl->status		&= ~(KILL_BITS);
     pl->extra_shots	= 0;
+    pl->rear_shots	= 0;
     pl->missiles	= 0;
     pl->mines		= 0;
     pl->cloaks		= 0;
@@ -358,12 +407,22 @@ void Kill_player(int ind)
     pl->last_time	= pl->time;
     pl->last_lap	= 0;
     pl->count		= RECOVERY_DELAY;
+    pl->ecms 		= 0;
+    pl->ecmInfo.size	= 0;
+    pl->damaged 	= 0;
 
-    pl->fuel *= 0.90;				/* Loose 10% of fuel */
-    pl->fuel = MAX(pl->fuel, MIN_PLAYER_FUEL+(rand()%(int)MIN_PLAYER_FUEL)/5);
+    pl->fuel.current    = 0;
+    pl->fuel.no_tanks	= 0;
+    pl->fuel.max        = TANK_CAP(0);
+    pl->fuel.sum       	*= 0.90;		/* Loose 10% of fuel */
+    if (pl->fuel.sum>pl->fuel.max) pl->fuel.sum = pl->fuel.max;
+    pl->fuel.tank[0]    =
+    pl->fuel.sum        = MAX(pl->fuel.sum,
+                              MIN_PLAYER_FUEL+(rand()%(int)MIN_PLAYER_FUEL)/5);
+    pl->after_burners	= 0;
 
     if (BIT(World.rules->mode, TIMING))
-	pl->fuel = RACE_PLAYER_FUEL;
+	pl->fuel.sum=pl->fuel.tank[0] = RACE_PLAYER_FUEL;
 
     if (BIT(pl->mode, LIMITED_LIVES))
 	pl->life--;

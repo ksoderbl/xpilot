@@ -1,4 +1,4 @@
-/* draw.c,v 1.13 1992/06/28 05:38:09 bjoerns Exp
+/* $Id: draw.c,v 1.18 1992/08/27 00:25:52 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,19 +22,19 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)draw.c,v 1.13 1992/06/28 05:38:09 bjoerns Exp";
+    "@(#)$Id: draw.c,v 1.18 1992/08/27 00:25:52 bjoerns Exp $";
 #endif
 
 
 #define X(i, co)  ((int) ((co) - Players[i]->world.x))
 #define Y(i, co)  ((int) (FULL-((co) - Players[i]->world.y)))
 
-#define Draw_meter(_p, x, y, title, per)				\
+#define Draw_meter(_p, x, y, title, val, max)				\
 {									\
-    player *p=(_p);							\
+    player *p = (_p);							\
     XSetForeground(p->disp, p->gc, p->colors[RED].pixel);		\
     XFillRectangle(p->disp, p->p_draw, p->gc, x+2, y+2,			\
-		   (int)(298*per), 8);					\
+		   (int)((298*val)/max), 8);				\
     XSetForeground(p->disp, p->gc, p->colors[WHITE].pixel);		\
     XDrawRectangle(p->disp, p->p_draw, p->gc, x, y, 300, 10);		\
     XDrawLine(p->disp, p->p_draw, p->gc, x, y-4, x, y+14);		\
@@ -45,9 +45,6 @@ static char sourceid[] =
     XDrawString(p->disp, p->p_draw, p->gc, (x)+305, (y)+10,		\
 		title, strlen(title));					\
 }
-
-#define UNKOWN_PLAYER	"* Unknown *"
-#define NO_PLAYER	"** None **"
 
 
 /*
@@ -144,6 +141,8 @@ void Draw_objects()
 	}
 #endif
 	
+	if (!Players[i]->damaged)
+	{
 	gcv.dash_offset = 0;
 	Display_hud(j, i);
 	Draw_world(j, i);
@@ -174,7 +173,8 @@ void Draw_objects()
 	Display_message(j, i);
 	
 	Draw_radar(j, i);
-	
+	}
+
 	/*
 	 * Now switch planes and clear the screen.
 	 */
@@ -190,8 +190,19 @@ void Draw_objects()
 	    XSetPlaneMask(dr->disp, dr->gc, dr->dbuf_state->drawing_planes);
 
 	XSetPlaneMask(dr->disp, dr->gc, dr->dbuf_state->drawing_planes);
-	XSetForeground(dr->disp, dr->gc, dr->colors[BLACK].pixel);
-	XFillRectangle(dr->disp, dr->p_draw, dr->gc, 0, 0, 768, 768);
+
+	if (Players[i]->damaged) {
+	    XSetFunction(dr->disp, dr->gc, GXxor);
+	    XSetForeground(dr->disp, dr->gc,
+			   dr->colors[BLACK].pixel ^ dr->colors[BLUE].pixel);
+	    XFillRectangle(dr->disp, dr->draw, dr->gc, 0, 0, 768, 768);
+	    XSetFunction(dr->disp, dr->gc, GXcopy);
+	    Players[i]->damaged--;
+	}
+	else {
+	    XSetForeground(dr->disp, dr->gc, dr->colors[BLACK].pixel);
+	    XFillRectangle(dr->disp, dr->p_draw, dr->gc, 0, 0, 768, 768);
+	}
 	/*	XFlush(dr->disp);   */
     }
 }
@@ -203,7 +214,7 @@ void Draw_ships(int draw, int data)
     player *dr = Players[draw];
     player *pl = Players[data];
     player *pl_i;
-    unsigned long mask=0;
+    unsigned long mask = 0;
     
     
     for(i=0; i<NumPlayers; i++) {
@@ -240,6 +251,14 @@ void Draw_ships(int draw, int data)
 		continue;
 	    }
 	    
+	    XSetForeground(dr->disp, dr->gc, dr->colors[pl_i->color].pixel);
+	    
+	    if (pl_i->ecmInfo.size)
+		XDrawArc(dr->disp, dr->p_draw, dr->gc,
+			 X(data, pl_i->ecmInfo.pos.x - pl_i->ecmInfo.size / 2),
+			 Y(data, pl_i->ecmInfo.pos.y + pl_i->ecmInfo.size / 2),
+			 pl_i->ecmInfo.size, pl_i->ecmInfo.size, 0, 64 * 360);
+
 	    if (!pl->visibility[i].canSee && i!=data && !TEAM(i, draw))
 		continue;
 	    
@@ -251,8 +270,6 @@ void Draw_ships(int draw, int data)
 	    points[2].y = Y(data, pl_i->pos.y + ships[pl_i->dir].pts[2].y);
 	    points[3].x = X(data, pl_i->pos.x + ships[pl_i->dir].pts[0].x);
 	    points[3].y = Y(data, pl_i->pos.y + ships[pl_i->dir].pts[0].y);
-	    
-	    XSetForeground(dr->disp, dr->gc, dr->colors[pl_i->color].pixel);
 	    
 	    /*
 	     * Determine if you the name of the player should be drawn below
@@ -317,7 +334,14 @@ void Draw_shots(int draw, int data)
     player *pl = Players[data];
     player *dr = Players[draw];
     object *shot;
-    
+#define BATCH /**/
+#ifdef BATCH
+#define BATCH_MALLOC  16
+    int lastcolor,size;
+    static XRectangle*rectangles[NUM_COLORS],*past_rect[NUM_COLORS];
+    XRectangle*cur_rect[NUM_COLORS],*rectangle;
+    for(i=NUM_COLORS;i--;cur_rect[i]=rectangles[i]);
+#endif
     
     for(i=0; i<NumObjs; i++) {
 	shot = Obj[i];
@@ -331,25 +355,62 @@ void Draw_shots(int draw, int data)
 	    if ((shot->id!=-1) &&
 		(TEAM(data, GetInd[shot->id])) && (shot->id != pl->id) &&
 		(shot->type != OBJ_CANNON_DEBRIS)) 
+#ifdef BATCH		
+		XSetForeground(dr->disp, dr->gc,
+		 dr->colors[lastcolor=BLUE].pixel);
+	    else
+		XSetForeground(dr->disp, dr->gc,
+		 dr->colors[lastcolor=shot->color].pixel);
+#else		
 		XSetForeground(dr->disp, dr->gc, dr->colors[BLUE].pixel);
 	    else
 		XSetForeground(dr->disp, dr->gc, dr->colors[shot->color].pixel);
-	    
+#endif
+#ifdef BATCH
+	    size = 2;
+#endif
 	    switch (shot->type) {
-	    case OBJ_SHOT:
-	    case OBJ_CANNON_SHOT:
-		XDrawRectangle(dr->disp, dr->p_draw, dr->gc, x, y, 2, 2);
-		break;
 	    case OBJ_SPARK:
 	    case OBJ_DEBRIS:
 	    case OBJ_CANNON_DEBRIS:
 		if (!BIT(dr->disp_type, DT_HAVE_COLOR))
+#ifdef BATCH
+		    size = 1;
+#else
 		    XDrawPoint(dr->disp, dr->p_draw, dr->gc, x, y);
 		else
-		    XDrawRectangle(dr->disp, dr->p_draw, dr->gc, x, y, 2, 2);
+#endif
+	    case OBJ_SHOT:
+	    case OBJ_CANNON_SHOT:
+#ifdef BATCH
+                 { if((rectangle=cur_rect[lastcolor]++)==past_rect[lastcolor])
+                    { if(!rectangles[lastcolor])
+                       { past_rect[lastcolor]=BATCH_MALLOC+
+			 (rectangles[lastcolor]= (XRectangle*)
+			 malloc(BATCH_MALLOC*sizeof(XRectangle)));
+                       }
+                      else
+                       { size_t l;
+                         l=past_rect[lastcolor]-rectangles[lastcolor]+
+			  BATCH_MALLOC;
+                         past_rect[lastcolor]=
+                         l+(rectangles[lastcolor]=(XRectangle*)
+			  realloc(rectangles[lastcolor],l*sizeof(XRectangle)));
+                       }
+                      cur_rect[lastcolor]=1+
+                       (rectangle=past_rect[lastcolor]-BATCH_MALLOC);
+                    }
+                   rectangle->x=x;rectangle->y=y;
+                   rectangle->width=rectangle->height=size;
+	       }
+#else
+		XDrawRectangle(dr->disp, dr->p_draw, dr->gc, x, y, 2, 2);
+#endif
 		break;
 
+	    case OBJ_TORPEDO:
 	    case OBJ_SMART_SHOT:
+	    case OBJ_HEAT_SHOT:
 		XSetLineAttributes(dr->disp, dr->gc, 4,
 				   LineSolid, CapButt, JoinMiter);
 		
@@ -362,6 +423,9 @@ void Draw_shots(int draw, int data)
 				   LineSolid, CapButt, JoinMiter);
 		break;
 
+	    case OBJ_DUST:
+		XDrawArc(dr->disp, dr->p_draw, dr->gc, x, y, shot->dir, shot->dir, 0, 64*360);
+		break;
 	    case OBJ_MINE:
 		XDrawArc(dr->disp, dr->p_draw, dr->gc, x, y, 8, 8, 0, 64*360);
 		break;
@@ -369,6 +433,10 @@ void Draw_shots(int draw, int data)
 		str[0] = 'W';
 		goto draw;
 		break;
+	    case OBJ_AFTER_BURNER:
+                str[0] = 'A';
+                goto draw;
+                break;
 	    case OBJ_REAR_SHOT:
 		str[0] = 'R';
 		goto draw;
@@ -387,6 +455,14 @@ void Draw_shots(int draw, int data)
 		break;
 	    case OBJ_SENSOR_PACK:
 		str[0] = 'I';
+		goto draw;
+		break;
+	    case OBJ_ECM:
+		str[0] = 'E';
+		goto draw;
+		break;
+	    case OBJ_TANK:
+		str[0] = 'T';
 		goto draw;
 		break;
 	    case OBJ_CLOAKING_DEVICE:
@@ -413,6 +489,14 @@ void Draw_shots(int draw, int data)
 	    }
 	}
     }
+#ifdef BATCH
+    for(i=NUM_COLORS;i--;)
+       if(rectangles[i])
+	{ XSetForeground(dr->disp, dr->gc, dr->colors[i].pixel);
+          XDrawRectangles(dr->disp, dr->p_draw, dr->gc, rectangles[i],
+	   cur_rect[i]-rectangles[i]);
+	}
+#endif
 }
 
 
@@ -422,22 +506,22 @@ void Draw_meters(int draw, int data)
 
 
     if (BIT(pl->instruments, SHOW_FUEL_METER) ||
-	(pl->fuel_count && !BIT(pl->instruments, SHOW_FUEL_GAUGE)))
-	Draw_meter(dr, 10, 10, "Fuel", (pl->fuel/pl->max_fuel));
+	(pl->fuel.count && !BIT(pl->instruments, SHOW_FUEL_GAUGE)))
+	Draw_meter(dr, 10, 10, "Fuel",pl->fuel.sum,pl->fuel.max);
     if (BIT(pl->instruments, SHOW_POWER_METER) || pl->control_count)
-	Draw_meter(dr, 10, 40, "Power", ((double)pl->power/MAX_PLAYER_POWER));
+     	Draw_meter(dr, 10, 40, "Power", pl->power, MAX_PLAYER_POWER);
     if (BIT(pl->instruments, SHOW_TURNSPEED_METER) || pl->control_count)
 	Draw_meter(dr, 10, 60, "Turnspeed",
-		   ((double)pl->turnspeed/MAX_PLAYER_TURNSPEED));
+		   pl->turnspeed, MAX_PLAYER_TURNSPEED);
     
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count>0)
 	Draw_meter(dr, (FULL-300)/2 -32, 3*FULL/4,
-		   "Self destructing", pl->count/150.0);
+		   "Self destructing", pl->count, 150);
     if (Shutdown != -1)
 	Draw_meter(dr, (FULL-300)/2 -32, 4*FULL/5,
-		   "SHUTDOWN", (double)Shutdown/(double)ShutdownDelay);
+		   "SHUTDOWN", Shutdown, ShutdownDelay);
     
-    /*	Draw_meter(dr, 10, 30, "Shots", ((double)pl->shots/pl->shot_max));  */
+    /*	Draw_meter(dr, 10, 30, "Shots", pl->shots,pl->shot_max);  */
 }
 
 
@@ -447,15 +531,39 @@ void Display_hud(int draw, int data)
     player *dr=Players[draw], *pl=Players[data];
     player *target=Players[GetInd[dr->lock.pl_id]];
     int size, vert_pos;
-    char str[20];
+    char str[50], *p;
     double dx, dy, theta;
+    int hud_pos_x;
+    int hud_pos_y;
     
+
+    
+    /* 
+     * show speed pointer
+     */
+    if (pl->ptr_move_fact != 0.0) {
+	XSetForeground(dr->disp, dr->gc, dr->colors[RED].pixel);
+        XDrawLine(dr->disp, dr->p_draw, dr->gc,
+	    CENTER,
+            CENTER,
+            CENTER-(pl->ptr_move_fact*pl->vel.x),
+            CENTER+(pl->ptr_move_fact*pl->vel.y)
+        );
+    }
+
     
     XSetForeground(dr->disp, dr->gc, dr->colors[BLUE].pixel);
-    
+
     if (!BIT(pl->instruments, SHOW_HUD_INSTRUMENTS))
 	return;
-    
+
+    /*
+     * display the hud
+     */
+
+    hud_pos_x = CENTER-(pl->hud_move_fact*pl->vel.x);
+    hud_pos_y = CENTER+(pl->hud_move_fact*pl->vel.y);
+
     /*
      * HUD frame.
      */
@@ -464,19 +572,19 @@ void Display_hud(int draw, int data)
     
     if (BIT(pl->instruments, SHOW_HUD_HORIZONTAL)) {
 	XDrawLine(dr->disp, dr->p_draw, dr->gc,
-		  CENTER-HUD_SIZE, CENTER-HUD_SIZE+HUD_OFFSET,
-		  CENTER+HUD_SIZE, CENTER-HUD_SIZE+HUD_OFFSET);
+		  hud_pos_x-HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET,
+		  hud_pos_x+HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET);
 	XDrawLine(dr->disp, dr->p_draw, dr->gc,
-		  CENTER-HUD_SIZE, CENTER+HUD_SIZE-HUD_OFFSET,
-		  CENTER+HUD_SIZE, CENTER+HUD_SIZE-HUD_OFFSET);
+		  hud_pos_x-HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET,
+		  hud_pos_x+HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET);
     }
     if (BIT(pl->instruments, SHOW_HUD_VERTICAL)) {
 	XDrawLine(dr->disp, dr->p_draw, dr->gc,
-		  CENTER-HUD_SIZE+HUD_OFFSET, CENTER-HUD_SIZE, 
-		  CENTER-HUD_SIZE+HUD_OFFSET, CENTER+HUD_SIZE);
+		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE, 
+		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y+HUD_SIZE);
 	XDrawLine(dr->disp, dr->p_draw, dr->gc,
-		  CENTER+HUD_SIZE-HUD_OFFSET, CENTER-HUD_SIZE,
-		  CENTER+HUD_SIZE-HUD_OFFSET, CENTER+HUD_SIZE);
+		  hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y-HUD_SIZE,
+		  hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y+HUD_SIZE);
     }
     gcv.line_style = LineSolid;
     XChangeGC(dr->disp, dr->gc, GCLineStyle, &gcv);
@@ -485,54 +593,94 @@ void Display_hud(int draw, int data)
     /*
      * Special items.
      */
-    vert_pos = CENTER - HUD_SIZE + HUD_OFFSET;
+    vert_pos = hud_pos_y - HUD_SIZE + HUD_OFFSET;
     
-    if (pl->mines > 0) {
-	vert_pos += HUD_ITEMS_SPACE;
-	sprintf(str, "M%02d", pl->mines);
-	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos, str, 3);
-    }
-    if (pl->missiles > 0) {
-	vert_pos += HUD_ITEMS_SPACE;
-	sprintf(str, "S%02d", pl->missiles);
-	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos, str, 3);
-    }
     if (pl->cloaks > 0) {
 	vert_pos += HUD_ITEMS_SPACE;
 	sprintf(str, "C%02d", pl->cloaks);
 	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos, str, 3);
+		    hud_pos_y-HUD_SIZE-4, vert_pos, str, 3);
     }
     if (pl->sensors > 0) {
 	vert_pos += HUD_ITEMS_SPACE;
 	sprintf(str, "I%02d", pl->sensors);
 	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos, str, 3);
+		    hud_pos_y-HUD_SIZE-4, vert_pos, str, 3);
+    }
+    if (pl->fuel.no_tanks > 0) {
+ 	vert_pos += HUD_ITEMS_SPACE;
+ 	sprintf(str, "T%02d", pl->fuel.no_tanks);
+ 	XDrawString(dr->disp, dr->p_draw, dr->gc,
+ 		    hud_pos_x-HUD_SIZE-4, vert_pos, str, 3);
     }
     if (pl->extra_shots > 0) {
 	vert_pos += HUD_ITEMS_SPACE;
 	sprintf(str, "W%02d", pl->extra_shots);
 	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos, str, 3);
+		    hud_pos_y-HUD_SIZE-4, vert_pos, str, 3);
     }
-    if (BIT(pl->have, OBJ_REAR_SHOT)) {
+    if (pl->rear_shots > 0) {
 	vert_pos += HUD_ITEMS_SPACE;
-	str[0] = 'R';
+	sprintf(str, "R%02d", pl->rear_shots);
 	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER-HUD_SIZE-4, vert_pos,
+		    hud_pos_y-HUD_SIZE-4, vert_pos,
+		    str, 3);
+    }
+    if (BIT(pl->have, OBJ_TANK)) {
+	vert_pos+=HUD_ITEMS_SPACE;
+	str[0]='T';
+	XDrawString(dr->disp, dr->p_draw, dr->gc,
+		    hud_pos_y-HUD_SIZE-4, vert_pos,
 		    str, 1);
     }
-    
-    
-    /* Fuel notify, HUD meter on */
-    if (pl->fuel_count || pl->fuel<pl->fuel3) {
-	sprintf(str, "%4.0f", pl->fuel);
-	XDrawString(dr->disp, dr->p_draw, dr->gc, CENTER+HUD_SIZE-HUD_OFFSET+2,
-		    CENTER+HUD_SIZE-HUD_OFFSET/2+6, str, 4);
+    if (pl->after_burners > 0) {
+ 	vert_pos += HUD_ITEMS_SPACE;
+ 	sprintf(str, "A%02d", pl->after_burners);
+ 	XDrawString(dr->disp, dr->p_draw, dr->gc,
+ 		    hud_pos_x-HUD_SIZE-4, vert_pos, str, 3);
     }
-    
+
+
+    /* Fuel notify, HUD meter on */
+    if (pl->fuel.count || pl->fuel.sum<pl->fuel.l3) {
+ 	sprintf(str, "%5d", pl->fuel.sum>>FUEL_SCALE_BITS);
+ 	XDrawString(dr->disp, dr->p_draw, dr->gc,
+		    hud_pos_x+HUD_SIZE-HUD_OFFSET+2,
+ 		    hud_pos_y+HUD_SIZE-HUD_OFFSET/2+6, str, 5);
+	if (pl->fuel.no_tanks) {
+	    if (pl->fuel.current)
+		sprintf(str," M =%4d",
+			pl->fuel.tank[pl->fuel.current]>>FUEL_SCALE_BITS);
+	    else
+		sprintf(str,"T%2d=%4d",
+			pl->fuel.current,
+			pl->fuel.tank[pl->fuel.current]>>FUEL_SCALE_BITS);
+ 	    XDrawString(dr->disp, dr->p_draw, dr->gc,
+			hud_pos_x+HUD_SIZE-HUD_OFFSET+2,
+ 		        hud_pos_y+HUD_SIZE-HUD_OFFSET/2+HUD_ITEMS_SPACE,
+			str, 8);
+	}
+    }
+
+    p = str;
+
+    if (pl->mines > 0) {
+	sprintf(p, "M%02d  ", pl->mines);
+	p += strlen(p);
+    }
+    if (pl->missiles > 0) {
+	sprintf(p, "S%02d  ", pl->missiles);
+	p += strlen(p);
+    }
+    if (pl->ecms > 0) {
+	sprintf(p, "E%02d", pl->ecms);
+	p += strlen(p);
+    }
+
+    if (p != str)
+	XDrawString(dr->disp, dr->p_draw, dr->gc, hud_pos_x-HUD_SIZE+HUD_OFFSET+4,
+		    hud_pos_y+HUD_SIZE, str, strlen(str));
+
     /*
      * Display direction arrow and miscellaneous target information.
      */
@@ -540,16 +688,28 @@ void Display_hud(int draw, int data)
     case LOCK_PLAYER:
 	dx=(target->pos.x - pl->pos.x);
 	dy=(target->pos.y - pl->pos.y);
+	size=strlen(target->name);
+	XDrawString(dr->disp, dr->p_draw, dr->gc,
+		hud_pos_x-target->name_length/2, hud_pos_y-HUD_SIZE+HUD_OFFSET/2+3,
+		target->name, size);
+	if ((!(BIT(World.rules->mode, LIMITED_VISIBILITY)) ||
+	     (pl->lock.distance <= pl->sensor_range))
+#ifndef SHOW_CLOAKERS_RANGE
+	    && (pl->visibility[GetInd[target->id]].canSee ||
+		TEAM(data, GetInd[dr->lock.pl_id]))
+#endif /* !SHOW_CLOAKERS_RANGE */
+	    )
+	{ sprintf(str, "%03d", (int)(pl->lock.distance/BLOCK_SZ));
+	  XDrawString(dr->disp, dr->p_draw, dr->gc,
+		    hud_pos_x+HUD_SIZE-HUD_OFFSET+2,
+		    hud_pos_y-HUD_SIZE+HUD_OFFSET/2+3, str, 3);
+	}
 	if ((BIT(World.rules->mode, LIMITED_VISIBILITY) &&
 	     (pl->lock.distance > pl->sensor_range)) ||
 	    (!pl->visibility[GetInd[target->id]].canSee &&
 	     !TEAM(data, GetInd[dr->lock.pl_id])) ||
 	    (dy==0.0 && dx==0.0))
 	    goto no_target;
-	sprintf(str, "%03d", (int)(pl->lock.distance/BLOCK_SZ));
-	XDrawString(dr->disp, dr->p_draw, dr->gc,
-		    CENTER+HUD_SIZE-HUD_OFFSET+2,
-		    CENTER-HUD_SIZE+HUD_OFFSET/2+3, str, 3);
 	break;
 	
     case LOCK_NONE:
@@ -560,49 +720,43 @@ void Display_hud(int draw, int data)
 	error("Unkown pl->lock.tagged.");
 	break;
     }
-    
+
     theta=atan2(dy, dx);	/* Only works for LOCK_PLAYER */
     
     if ((pl->lock.distance>WARNING_DISTANCE) || ((loops%2)==0)) {
 	size = 10000/(800+pl->lock.distance);
 	if (TEAM(data, GetInd[pl->lock.pl_id]))
 	    XDrawArc(dr->disp, dr->p_draw, dr->gc,
-		     (int)(CENTER+HUD_SIZE*0.6*cos(theta)),
-		     (int)(CENTER-HUD_SIZE*0.6*sin(theta)),
+		     (int)(hud_pos_y+HUD_SIZE*0.6*cos(theta)),
+		     (int)(hud_pos_y-HUD_SIZE*0.6*sin(theta)),
 		     size, size, 0, 64*360);
 	else
 	    XFillArc(dr->disp, dr->p_draw, dr->gc,
-		     (int)(CENTER+HUD_SIZE*0.6*cos(theta)),
-		     (int)(CENTER-HUD_SIZE*0.6*sin(theta)),
+		     (int)(hud_pos_y+HUD_SIZE*0.6*cos(theta)),
+		     (int)(hud_pos_y-HUD_SIZE*0.6*sin(theta)),
 		     size, size, 0, 64*360);
     }
-    
-    size=strlen(target->name);
-    XDrawString(dr->disp, dr->p_draw, dr->gc,
-		CENTER-target->name_length/2, CENTER-HUD_SIZE+HUD_OFFSET/2+3,
-		target->name, size);
     
     
     /* Fuel gauge, must be last */
  no_target:
-    
-    if (!((pl->fuel_count) ||
-	  (pl->fuel<pl->fuel3 &&
-	   ((pl->fuel<pl->fuel1 && (loops%4)<2) ||
-	    (pl->fuel<pl->fuel2 && pl->fuel>pl->fuel1 && (loops%8)<4) ||
-	    (pl->fuel>pl->fuel2)))))
+    if (!((pl->fuel.count) ||
+	  (pl->fuel.sum<pl->fuel.l3 &&
+	   ((pl->fuel.sum<pl->fuel.l1 && (loops%4)<2) ||
+	    (pl->fuel.sum<pl->fuel.l2 && pl->fuel.sum>pl->fuel.l1 && (loops%8)<4) ||
+	    (pl->fuel.sum>pl->fuel.l2)))))
 	return;
     
     XDrawRectangle(dr->disp, dr->p_draw, dr->gc,
-		   CENTER+HUD_SIZE-HUD_OFFSET+FUEL_GAUGE_OFFSET-1,
-		   CENTER-HUD_SIZE+HUD_OFFSET+FUEL_GAUGE_OFFSET-1,
+		   hud_pos_x+HUD_SIZE-HUD_OFFSET+FUEL_GAUGE_OFFSET-1,
+		   hud_pos_y-HUD_SIZE+HUD_OFFSET+FUEL_GAUGE_OFFSET-1,
 		   HUD_OFFSET-(2*FUEL_GAUGE_OFFSET)+2,
 		   HUD_FUEL_GAUGE_SIZE+2);
     
-    size = pl->fuel/pl->max_fuel*HUD_FUEL_GAUGE_SIZE;
+    if ((size = (HUD_FUEL_GAUGE_SIZE*pl->fuel.sum)/pl->fuel.max)<0) size=0;
     XFillRectangle(dr->disp, dr->p_draw, dr->gc,
-		   CENTER+HUD_SIZE-HUD_OFFSET+FUEL_GAUGE_OFFSET,
-		   CENTER-HUD_SIZE+HUD_OFFSET+FUEL_GAUGE_OFFSET
+		   hud_pos_x+HUD_SIZE-HUD_OFFSET+FUEL_GAUGE_OFFSET,
+		   hud_pos_y-HUD_SIZE+HUD_OFFSET+FUEL_GAUGE_OFFSET
 		   + (HUD_FUEL_GAUGE_SIZE-size),
 		   HUD_OFFSET-(2*FUEL_GAUGE_OFFSET), size);
     
@@ -625,11 +779,11 @@ void Display_fuel_gauge(int draw, int data)
     
     XSetForeground(dr->disp, dr->gc, dr->colors[RED].pixel);
     
-    percent = 64*(pl->fuel/pl->max_fuel)*360;
+    percent = ((64*pl->fuel.sum)/pl->fuel.max)*360;
     XFillArc(dr->disp, dr->p_draw, dr->gc,
 	     730 - 119, 36 - 29,
 	     58, 58, 90*64 - percent,
-	     (int)percent);
+	     percent);
     
     XSetForeground(dr->disp, dr->gc, dr->colors[WHITE].pixel);
     
@@ -705,7 +859,7 @@ void Display_compass(int draw, int data)
     switch (pl->lock.tagged) {
 
     case LOCK_NONE:
-	strcpy(string, NO_PLAYER);
+	strcpy(string, "** None **");
 	pl->lock.distance = DBL_MAX;
 	break;
 	
@@ -716,7 +870,7 @@ void Display_compass(int draw, int data)
 	     (pl->lock.distance > pl->sensor_range)) ||
 	    (!pl->visibility[pl_ind].canSee &&
 	     !TEAM(draw, GetInd[dr->lock.pl_id]))) {
-	    strcpy(string, UNKOWN_PLAYER);
+	    strcpy(string, "* Unkown *");
 	} else {
 	    sprintf(string, "%s: %5.2f",
 		    Players[pl_ind]->name, pl->lock.distance/BLOCK_SZ);
@@ -740,7 +894,7 @@ void Display_compass(int draw, int data)
 	     (pl->lock.distance>pl->sensor_range)))
 	    XDrawPoint(dr->disp, dr->p_draw, dr->gc, 730, 36);
 	else {
-	    if (BIT(Players[pl_ind]->status, INVISIBLE) &&
+	    if (pl->visibility[GetInd[pl->lock.pl_id]].canSee &&
 		!TEAM(draw, GetInd[dr->lock.pl_id]))
 		theta = 2*PI*(double)rand()/RAND_MAX;
 	    else
@@ -768,43 +922,49 @@ void Draw_cannon(int draw, int data)
     
     
     for (i=0; i<World.NumCannons; i++) {
-	if ((pl->world.x < (BLOCK_SZ*World.cannon[i].pos.x)) &&
-	    (pl->world.x+FULL > (BLOCK_SZ*World.cannon[i].pos.x)) &&
-	    (pl->world.y  < (BLOCK_SZ*World.cannon[i].pos.y)) &&
-	    (pl->world.y+FULL > (BLOCK_SZ*World.cannon[i].pos.y)) &&
+	if ((pl->world.x < (World.cannon[i].pos.x*BLOCK_SZ)) &&
+	    (pl->world.x+FULL > (World.cannon[i].pos.x*BLOCK_SZ)) &&
+	    (pl->world.y  < (World.cannon[i].pos.y*BLOCK_SZ)) &&
+	    (pl->world.y+FULL > (World.cannon[i].pos.y*BLOCK_SZ)) &&
 	    (World.cannon[i].dead_time == 0)) {
 	    
-	    if (World.cannon[i].dir == DIR_UP) {
+	    switch (World.cannon[i].dir)
+	      {
+	      case DIR_UP:
 		points[0].x = World.cannon[i].pos.x*BLOCK_SZ;
 		points[0].y = World.cannon[i].pos.y*BLOCK_SZ;
 		points[1].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ;
 		points[1].y = World.cannon[i].pos.y*BLOCK_SZ;
 		points[2].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ/2;
 		points[2].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ/3;
-	    }
-	    if (World.cannon[i].dir == DIR_DOWN) {
+		break;
+
+	      case DIR_DOWN:
 		points[0].x = World.cannon[i].pos.x*BLOCK_SZ;
 		points[0].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ;
 		points[1].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ;
 		points[1].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ;
 		points[2].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ/2;
 		points[2].y = World.cannon[i].pos.y*BLOCK_SZ+2*BLOCK_SZ/3;
-	    }
-	    if (World.cannon[i].dir == DIR_RIGHT) {
+		break;
+
+	      case DIR_RIGHT:
 		points[0].x = World.cannon[i].pos.x*BLOCK_SZ;
 		points[0].y = World.cannon[i].pos.y*BLOCK_SZ;
 		points[1].x = World.cannon[i].pos.x*BLOCK_SZ;
 		points[1].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ;
 		points[2].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ/3;
 		points[2].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ/2;
-	    }
-	    if (World.cannon[i].dir == DIR_LEFT) {
+		break;
+
+	      case DIR_LEFT:
 		points[0].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ;
 		points[0].y = World.cannon[i].pos.y*BLOCK_SZ;
 		points[1].x = World.cannon[i].pos.x*BLOCK_SZ+BLOCK_SZ;
 		points[1].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ;
 		points[2].x = World.cannon[i].pos.x*BLOCK_SZ+2*BLOCK_SZ/3;
 		points[2].y = World.cannon[i].pos.y*BLOCK_SZ+BLOCK_SZ/2;
+	        break;
 	    }
 	    
 	    points[0].x = X(data, points[0].x);
@@ -870,6 +1030,7 @@ void Draw_radar(int draw, int data)
     int i;
     player *pl = Players[data];
     player *dr = Players[draw];
+    object *shot;
     
     if (dr->s_radar != dr->p_radar)
 	/* Draw static radar onto radar */
@@ -894,7 +1055,37 @@ void Draw_radar(int draw, int data)
 		   dr->gcr, diamond,
 		   5, CoordModePrevious);
     }
-    
+#ifndef NO_SMART_MIS_RADAR
+    if (loops & 1)
+    {
+	XRectangle *rects, *p;
+	int nrects = 0;
+
+	p = rects = (XRectangle *) malloc(NumObjs * sizeof(XRectangle));
+
+	for (i = 0; i < NumObjs; i++)
+	{
+	    shot = Obj[i];
+	    if (   (   shot->type==OBJ_SMART_SHOT
+                    || shot->type==OBJ_TORPEDO
+                    || shot->type==OBJ_HEAT_SHOT) 
+                 && LENGTH(pl->pos.x - shot->pos.x, pl->pos.y - shot->pos.y) <=
+		                                              pl->sensor_range)
+	    {
+		p->x = 256 * (shot->pos.x / (World.x * BLOCK_SZ));
+	        p->y = RadarHeight -
+		    (RadarHeight * (shot->pos.y / (World.y * BLOCK_SZ)));
+		p->width = p->height = 2;
+		p++;
+		nrects++;
+	    }
+	}
+
+	XSetForeground(dr->disp, dr->gcr, dr->colors[WHITE].pixel);
+	XFillRectangles(dr->disp, dr->radar, dr->gcr, rects, nrects);
+	free(rects);
+    }
+#endif
     for(i=0; i<NumPlayers; i++) {
 	if (BIT(Players[i]->status, PLAYING) &&
 	    !BIT(Players[i]->status, GAME_OVER)) {
@@ -984,7 +1175,14 @@ void Display_time(int draw, int data)
 
 void Draw_world(int draw, int data)
 {
+/* SPEEDUP_1 saves for every Draw_world call about 450 int-double	*/
+/* comparisons								*/
+#define SPEEDUP_1
+
     int xi, yi, xb, yb, i, offset;
+#ifdef SPEEDUP_1
+    int xtop,ytop;		/* The upper limits in the for loop	*/
+#endif
     double x, y;
     static const int WS_PR_SC=1+(double)FULL/BLOCK_SZ;
     static const int INSIDE_WS=BLOCK_SZ-2;
@@ -992,15 +1190,29 @@ void Draw_world(int draw, int data)
     player *pl = Players[data];
     player *dr = Players[draw];
     
-    pl->wormDrawCount = (pl->wormDrawCount + 1) & 7;
     
+    pl->wormDrawCount = (pl->wormDrawCount + 1) & 7;
+
     xb = (pl->world.x/BLOCK_SZ); LIMIT(xb, 0, World.x-1);
     yb = (pl->world.y/BLOCK_SZ); LIMIT(yb, 0, World.y-1);
+#ifdef SPEEDUP_1
+    xtop=xb+WS_PR_SC+1;
+    ytop=yb+WS_PR_SC+1;
+    if(xtop>=World.x)
+      xtop=World.x;
+    if(ytop>=World.y)
+      ytop=World.y;
+#endif
 
+#ifndef SPEEDUP_1
     for (xi=xb; xi<=(WS_PR_SC+xb) && xi<World.x; xi++)
 	for (yi=yb; yi<=(WS_PR_SC+yb) && yi<World.y; yi++) {
+#else
+    for(xi=xb;xi<xtop;xi++)
+        for(yi=yb;yi<ytop;yi++) {
+#endif
 	    x = (xi*BLOCK_SZ); y=(yi*BLOCK_SZ);
-	    
+
 	    switch (World.block[xi][yi]) {
 		
 	    case FILLED:
@@ -1089,7 +1301,7 @@ void Draw_world(int draw, int data)
 				       X(data, x), Y(data, y+BLOCK_SZ),
 				       BLOCK_SZ, BLOCK_SZ);
 			XSetForeground(dr->disp, dr->gc, dr->colors[RED].pixel);
-			offset = INSIDE_WS*World.fuel[i].left/MAX_STATION_FUEL;
+			offset = INSIDE_WS*World.fuel[i].fuel/MAX_STATION_FUEL;
 			XFillRectangle(dr->disp, dr->p_draw, dr->gc,
 				       X(data, x)+1,
 				       Y(data, y+BLOCK_SZ)
@@ -1184,30 +1396,39 @@ void Draw_world(int draw, int data)
 		};
 #define _O 	wormOffset[pl->wormDrawCount]
 #define ARC(_x, _y, _w)							       \
-		XDrawArc(dr->disp, dr->draw, dr->gc,			       \
-			 X(data, x+1) + (_x), Y(data, y+BLOCK_SZ-1) + (_y), \
-			 INSIDE_WS - (_w), INSIDE_WS - (_w), 0, 64*360)
- 
-		XSetForeground(dr->disp, dr->gc, dr->colors[RED].pixel);
-		ARC(0, 0, 0);
-		ARC(_O[0], _O[1], _O[2]);
-		ARC(_O[0] * 2, _O[1] * 2, _O[2] * 2);
-		XSetForeground(dr->disp, dr->gc, dr->colors[BLUE].pixel);
+		XDrawArc(dr->disp, dr->p_draw, dr->gc,			       \
+			 X(data, xi * BLOCK_SZ) + (_x),			       \
+			 Y(data, yi * BLOCK_SZ + BLOCK_SZ) + (_y),	       \
+			 INSIDE_WS - (_w), INSIDE_WS - (_w), 0, 64 * 360)
+
+		if (World.wormHoles[wormXY(xi, yi)].type != WORM_OUT)
+		{
+		    XSetForeground(dr->disp, dr->gc, dr->colors[RED].pixel);
+		    ARC(0, 0, 0);
+		    ARC(_O[0], _O[1], _O[2]);
+		    ARC(_O[0] * 2, _O[1] * 2, _O[2] * 2);
+		    XSetForeground(dr->disp, dr->gc, dr->colors[BLUE].pixel);
+		}
 		break;
 	    }
 
-	    case SPACE:
-		if (((xi%8)==0) && ((yi%8)==0))
-		    if (BIT(dr->disp_type, DT_HAVE_COLOR)) {
+	    case SPACE: {
+                int bg_point_dist;
+                
+		if (   ((bg_point_dist = pl->map_point_distance) != 0)
+                    && ((xi%bg_point_dist)==0) 
+                    && ((yi%bg_point_dist)==0)
+                )
+/*		    if (BIT(dr->disp_type, DT_HAVE_COLOR)) { */
 			XDrawRectangle(dr->disp, dr->p_draw, dr->gc,
 				       X(data, xi*BLOCK_SZ+BLOCK_SZ/2),
 				       Y(data, yi*BLOCK_SZ+BLOCK_SZ/2),
 				       2, 2);
-		    } else {
+/*		    } else {
 			XDrawPoint(dr->disp, dr->p_draw, dr->gc,
 				   X(data, xi*BLOCK_SZ+BLOCK_SZ/2),
 				   Y(data, yi*BLOCK_SZ+BLOCK_SZ/2));
-		    }
+		    } */
 
 		
 #ifdef DRAW_GRAV_VECTORS
@@ -1224,7 +1445,7 @@ void Draw_world(int draw, int data)
 		XSetForeground(dr->disp, dr->gc, dr->colors[BLUE].pixel);
 #endif
 		break;
-		
+            }
 	    case BASE:
 		XSetForeground(dr->disp, dr->gc, dr->colors[WHITE].pixel);
 		XDrawLine(dr->disp, dr->p_draw, dr->gc,

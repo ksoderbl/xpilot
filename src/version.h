@@ -1,4 +1,4 @@
-/* version.h,v 1.10 1992/06/28 05:38:34 bjoerns Exp
+/* $Id: version.h,v 1.12 1992/07/12 17:36:08 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -12,7 +12,7 @@
 #define	VERSION_H
 
 #define MAJOR		"1"
-#define MINOR		"2"
+#define MINOR		"3beta"
 #define	PATCHLEVEL	"0"
 
 #define VERSION		MAJOR "." MINOR " PL" PATCHLEVEL

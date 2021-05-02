@@ -1,4 +1,4 @@
-/* dbuff.h,v 1.6 1992/06/25 03:23:51 bjoerns Exp
+/* $Id: dbuff.h,v 1.6 1992/06/25 03:23:51 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *

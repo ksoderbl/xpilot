@@ -1,4 +1,4 @@
-/* math.c,v 1.7 1992/06/28 05:38:19 bjoerns Exp
+/* $Id: math.c,v 1.8 1992/08/27 00:26:00 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -16,7 +16,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)math.c,v 1.7 1992/06/28 05:38:19 bjoerns Exp";
+    "@(#)$Id: math.c,v 1.8 1992/08/27 00:26:00 bjoerns Exp $";
 #endif
 
 double  	tbl_sin[TABLE_SIZE];
@@ -73,11 +73,14 @@ void Compute_gravity(void)
     double theta, avst, dx, dy;
 
 
-    for (xi=0; xi<World.x; xi++)
+    for (xi=0; xi<World.x; xi++) {
+        vector *line=World.gravity[xi];
+
 	for (yi=0; yi<World.y; yi++) {
-	    World.gravity[xi][yi].y = Gravity;
-	    World.gravity[xi][yi].x = 0.0;
+	    line[yi].y = Gravity;
+	    line[yi].x = 0.0;
 	}
+    }
 
     for (g=0; g<World.NumGravs; g++) {
 	gx = World.grav[g].pos.x;
@@ -85,6 +88,8 @@ void Compute_gravity(void)
 
 	for (xi = (gx>GRAV_RANGE) ? gx-GRAV_RANGE : 0;
 	     (xi<gx+GRAV_RANGE) && (xi<World.x); xi++)
+        {   vector *line=World.gravity[xi];
+
 	    for (yi = (gy>GRAV_RANGE) ? gy-GRAV_RANGE : 0;
 		 (yi<gy+GRAV_RANGE) && (yi<World.y); yi++) {
 		dx = (double)(gx - xi);
@@ -106,10 +111,9 @@ void Compute_gravity(void)
 		    World.block[gx][gy] == ACWISE_GRAV)
 		    theta += PI/2.0;
 
-		World.gravity[xi][yi].x += cos(theta)*World.grav[g].force/
-		    sqr(avst);
-		World.gravity[xi][yi].y += sin(theta)*World.grav[g].force/
-		    sqr(avst);
+		line[yi].x += cos(theta)*World.grav[g].force/sqr(avst);
+		line[yi].y += sin(theta)*World.grav[g].force/sqr(avst);
 	    }
+        }
     }
 }

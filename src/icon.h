@@ -1,4 +1,4 @@
-/* icon.h,v 1.3 1992/05/11 15:31:17 bjoerns Exp
+/* $Id: icon.h,v 1.3 1992/05/11 15:31:17 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *

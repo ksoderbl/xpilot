@@ -1,4 +1,4 @@
-/* dbuff.c,v 1.12 1992/06/25 18:10:52 bjoerns Exp
+/* $Id: dbuff.c,v 1.14 1992/08/26 19:36:03 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -25,18 +25,8 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)dbuff.c,v 1.12 1992/06/25 18:10:52 bjoerns Exp";
+    "@(#)$Id: dbuff.c,v 1.14 1992/08/26 19:36:03 bjoerns Exp $";
 #endif
-
-
-
-void itob(long i)
-{
-    if (i>1)
-	itob(i>>1);
-
-    putchar('0'+(i&1));
-}
 
 
 static void release(register dbuff_state_t *state)
@@ -72,15 +62,14 @@ dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
     register i, high_mask, low_mask;
 
 
-D(  printf("Start - double buffer (asked for %ld planes).\n", planes);)
-    state = (dbuff_state_t *) malloc(sizeof(dbuff_state_t));
+    state = (dbuff_state_t *) calloc(sizeof(dbuff_state_t), 1);
     if (state == NULL)
 	return NULL;
 
     state->map_size = 1 << (2 * planes);
     state->colormaps[0] = (XColor *) malloc(state->map_size * sizeof(XColor));
     state->colormaps[1] = (XColor *) malloc(state->map_size * sizeof(XColor));
-    state->planes = (unsigned long *) malloc ((2*planes) * sizeof(long));
+    state->planes = (unsigned long *) calloc ((2*planes) * sizeof(long), 1);
     if (state->colormaps[1] == NULL || state->colormaps[0] == NULL ||
 	state->planes == NULL) {
 	release(state);
@@ -95,13 +84,6 @@ D(  printf("Start - double buffer (asked for %ld planes).\n", planes);)
 	    release(state);
 	    return NULL;
 	}
-
-D(  	for (i=0; i<(2*planes); i++) {
-	    printf("state->planes[%d] = ", i);
-	    itob(state->planes[i]);
-	    putchar('\n');
-	}
-)
     }
 
     state->masks[0] = AllPlanes;
@@ -111,12 +93,6 @@ D(  	for (i=0; i<(2*planes); i++) {
 	state->masks[0] &= ~state->planes[i];
 	state->masks[1] &= ~state->planes[planes + i];
     }
-D(  for (i=0; i<(2*planes); i++) {
-	printf("state->masks[%d] = ", i);
-	itob(state->masks[i]);
-	putchar('\n');
-    }
-)
 
     if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR)) {
 	for (i=0; i<(1 << planes); i++) {
@@ -147,7 +123,6 @@ D(  for (i=0; i<(2*planes); i++) {
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
 
-D(  printf("End - double buffer, successful completion.\n");)
     return (state);
 }
     

@@ -1,4 +1,4 @@
-/* draw.h,v 1.9 1992/06/28 05:38:11 bjoerns Exp
+/* $Id: draw.h,v 1.10 1992/08/26 19:36:08 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -53,7 +53,9 @@ typedef struct {
 } message_t;
 
 #define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
-#define HaveColor(d)  (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor)
+#define HaveColor(d)							       \
+    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor ||	       \
+     DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
 
 #define FRAC(py)	    ((int)((py) * 1024.0/768.0))
 #define ShadowDrawString(i, d, w, gc, x, y, str, fg, bg)	\

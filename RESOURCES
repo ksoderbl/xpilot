@@ -22,7 +22,8 @@ xpilot*turnSpeedMeter:                  false
 xpilot*powerMeter:                      false
 
 !
-! These are the default keybindings, they are tailormade for HP keyboards:
+! These are the default keybindings, they are tailormade for HP keyboards, but
+! with some SUN functionality thrown in:
 !
 xpilot*keyLockNext:		Right Next
 xpilot*keyLockPrev:		Left Prior
@@ -40,12 +41,12 @@ xpilot*keyPause:		p
 xpilot*keyToggleVelocity:	v
 xpilot*keyToggleCompass:	c
 xpilot*keySwapSettings:		Escape
-xpilot*keyRefuel:		f Control_L
+xpilot*keyRefuel:		f Control_L Control_R Caps_Lock
 xpilot*keyIncreasePower:	KP_Multiply
 xpilot*keyDecreasePower:	KP_Divide
 xpilot*keyIncreaseTurnspeed:	KP_Add
 xpilot*keyDecreaseTurnspeed:	KP_Subtract
 xpilot*keyThrust:		Shift_L Shift_R
 xpilot*keyCloak:		BackSpace
-xpilot*keySlowdown:		bracketleft
-xpilot*keySpeedup:		bracketright
+xpilot*keySlowdown:		bracketleft braceleft
+xpilot*keySpeedup:		bracketright braceright

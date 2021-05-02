@@ -1,4 +1,4 @@
-/* xinit.c,v 1.9 1992/06/28 05:38:36 bjoerns Exp
+/* $Id: xinit.c,v 1.15 1992/08/27 00:26:15 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -13,7 +13,6 @@
 #include <X11/Xos.h>
 
 #include <stdio.h>
-#include <setjmp.h>
 #ifndef	apollo
 #    include <string.h>
 #endif
@@ -27,7 +26,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)xinit.c,v 1.9 1992/06/28 05:38:36 bjoerns Exp";
+    "@(#)$Id: xinit.c,v 1.15 1992/08/27 00:26:15 bjoerns Exp $";
 #endif
 
 /*
@@ -41,22 +40,6 @@ Atom		ProtocolAtom, KillAtom;
 #ifndef NO_ROTATING_DASHES
 char dashes[NO_OF_DASHES] = { 8, 4 };
 #endif
-
-
-/*
- * Define the window manager hints.
- */
-XWMHints xwmh = {
-    (InputHint|StateHint|IconPixmapHint),	/* Flags */
-    True,			/* Input -- Needed for OpenWindows at least */
-    NormalState,		/* Initial_state */
-    NULL,			/* Icon pixmap (set below) */
-    0,				/* Icon window */
-    0, 0,			/* Icon location */
-    0,				/* Icon mask */
-    0,				/* Window group -- mostly ignored */
-};
-XSizeHints		xsh;
 
 
 /*
@@ -80,10 +63,7 @@ u_byte Init_window(int ind)
      */
     pl->disp_type = DT_IS_DISPLAY;
     if (HavePlanes(pl->disp))
-	SET_BIT(pl->disp_type, DT_HAVE_PLANES);
-
-    if (HaveColor(pl->disp))
-	SET_BIT(pl->disp_type, DT_HAVE_COLOR);
+	SET_BIT(pl->disp_type, DT_HAVE_PLANES | DT_HAVE_COLOR);
 
 
     /*
@@ -110,7 +90,8 @@ u_byte Init_window(int ind)
     pl->dbuf_state = start_dbuff(ind, pl->disp,
 				 DefaultColormap(pl->disp,
 						 DefaultScreen(pl->disp)),
-				 2, pl->colors);
+				 BIT(pl->disp_type, DT_HAVE_COLOR) ? 2 : 1,
+				 pl->colors);
 
     if (pl->dbuf_state == NULL) {
 
@@ -125,7 +106,9 @@ u_byte Init_window(int ind)
 	/*
 	 * Try to initialize the double buffering again.
 	 */
-	pl->dbuf_state=start_dbuff(ind, pl->disp, pl->colormap, 2, pl->colors);
+	pl->dbuf_state = start_dbuff(ind, pl->disp, pl->colormap,
+				     BIT(pl->disp_type, DT_HAVE_COLOR) ? 2 : 1,
+				     pl->colors);
     }
 
     if (pl->dbuf_state == NULL) {
@@ -167,18 +150,19 @@ u_byte Init_window(int ind)
     pl->players = XCreateSimpleWindow(pl->disp, pl->top, 0, RadarHeight+24,
 				      256, 746-RadarHeight, 0, 0,
 				      pl->colors[window_color].pixel);
+#define HH	600
     pl->help_w = XCreateSimpleWindow(pl->disp, pl->draw, (FULL-420)/2,
-				     (FULL-470)/2, 420, 470,
+				     (FULL-HH)/2, 420, HH,
 				     5, pl->colors[WHITE].pixel,
 				     pl->colors[window_color].pixel);
     pl->help_close_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					   4, 470-26, 85, 22, 0, 0,
+					   4, HH-26, 85, 22, 0, 0,
 					   pl->colors[button_color].pixel);
     pl->help_next_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					  420/2-85/2, 470-26, 85, 22, 0, 0,
+					  420/2-85/2, HH-26, 85, 22, 0, 0,
 					  pl->colors[button_color].pixel);
     pl->help_prev_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					  420-89, 470-26, 85, 22, 0, 0,
+					  420-89, HH-26, 85, 22, 0, 0,
 					  pl->colors[button_color].pixel);
 
     pl->info_w = XCreateSimpleWindow(pl->disp, pl->draw, (FULL-500)/2, 
@@ -215,16 +199,63 @@ u_byte Init_window(int ind)
 
 
     /*
-     * Maps the windows, makes the visible. Voila!
+     * Initialize miscellaneous window hints and properties.
      */
-    XMapWindow(pl->disp, pl->top);
-    XMapWindow(pl->disp, pl->draw);
-    XMapWindow(pl->disp, pl->radar);
-    XMapWindow(pl->disp, pl->quit_b);
-    XMapWindow(pl->disp, pl->info_b);
-    XMapWindow(pl->disp, pl->help_b);
-    XMapWindow(pl->disp, pl->players);
+    {
+	extern char	**Argv;
+	extern int	Argc;
+	XClassHint	xclh;
+	XWMHints	xwmh;
+	XSizeHints	xsh;
 
+	xwmh.flags		= InputHint|StateHint|IconPixmapHint; 
+	xwmh.input		= True;
+	xwmh.initial_state	= NormalState;
+	xwmh.icon_pixmap	= XCreateBitmapFromData(pl->disp, pl->top,
+							icon_bits, icon_width,
+							icon_height);
+
+	xsh.flags = (PPosition|PSize|PMinSize|PMaxSize|PBaseSize);
+	xsh.width = xsh.base_width = xsh.min_width = xsh.max_width = 1026;
+	xsh.height = xsh.base_height = xsh.min_height = xsh.max_height = 768;
+	xsh.x = (DisplayWidth(pl->disp, DefaultScreen(pl->disp))
+		 - xsh.width) /2;
+	xsh.y = (DisplayHeight(pl->disp, DefaultScreen(pl->disp))
+		 - xsh.height) /2;
+
+	xclh.res_name = NULL;		/* NULL = Automatically uses Argv[0], */
+	xclh.res_class = "XPilot";	/* stripped for directory prefixes. */
+
+	/*
+	 * Set the above properties.
+	 */
+	XSetWMProperties(pl->disp, pl->top, NULL, NULL, Argv, Argc,
+			 &xsh, &xwmh, &xclh);
+
+	/*
+	 * Now initialize icon and window title name.
+	 */
+	sprintf(msg,
+		"Successful connection to server at \"%s\".", Server.host);
+	XStoreName(pl->disp, pl->top, msg);
+
+	sprintf(msg, "%s:%s", pl->name, Server.host);
+	XSetIconName(pl->disp, pl->top, msg);
+
+	/*
+	 * Specify IO error handler and the WM_DELETE_WINDOW atom in
+	 * an attempt to catch 'nasty' quits.
+	 */
+	ProtocolAtom = XInternAtom(pl->disp, "WM_PROTOCOLS", False);
+	KillAtom = XInternAtom(pl->disp, "WM_DELETE_WINDOW", False);
+	XSetWMProtocols(pl->disp, pl->top, &KillAtom, 1);
+	XSetIOErrorHandler(FatalError);
+    }
+
+
+    /*
+     * Initialize misc. pixmaps if this is monochrome.
+     */
     if (!BIT(pl->disp_type, DT_HAVE_PLANES)) {
 	pl->p_radar = XCreatePixmap(pl->disp, pl->radar, 256, RadarHeight, 1);
 	pl->s_radar = XCreatePixmap(pl->disp, pl->radar, 256, RadarHeight, 1);
@@ -270,48 +301,21 @@ u_byte Init_window(int ind)
     pl->scroll_len = strlen(pl->scroll);
 #endif
 
-    /*
-     * Making bitmaps.
-     */
-    xwmh.icon_pixmap = XCreateBitmapFromData(pl->disp, pl->top, icon_bits,
-					     icon_width, icon_height);
-
-
-    /*
-     * Prepare to catch the WM_DELETE_WINDOW 'event'.
-     * (Should perhaps do a XGetWMProtocols first, but really not neccessary
-     * for the moment.)	 Also add an error handler to catch the rest of those
-     * nasty closes.
-     */
-    ProtocolAtom = XInternAtom(pl->disp, "WM_PROTOCOLS", False);
-    KillAtom = XInternAtom(pl->disp, "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(pl->disp, pl->top, &KillAtom, 1);
-    XSetIOErrorHandler(FatalError);
-
-
-    /*
-     * Setting up the window properties; hints -
-     *
-     * icon pixmap, window names, placement, size etc.
-     */
-    xsh.flags = (PPosition|PSize|PMinSize|PMaxSize|PBaseSize);
-    xsh.width = xsh.base_width = xsh.min_width = xsh.max_width = 1026;
-    xsh.height = xsh.base_height = xsh.min_height = xsh.max_height = 768;
-    xsh.x = (DisplayWidth(pl->disp, DefaultScreen(pl->disp)) - xsh.width) / 2;
-    xsh.y = (DisplayHeight(pl->disp, DefaultScreen(pl->disp)) - xsh.height) / 2;
-
-    XSetWMNormalHints(pl->disp, pl->top, &xsh);
-    XSetWMHints(pl->disp, pl->top, &xwmh);
-
-    sprintf(msg, "Successful connection to server at \"%s\".", Server.host);
-    XStoreName(pl->disp, pl->top, msg);
-    sprintf(msg, "%s:%s", pl->name, Server.host);
-    XSetIconName(pl->disp, pl->top, msg);
-    
-
     XAutoRepeatOff(pl->disp);	    /* We don't want any autofire, yet! */
 
- 
+
+    /*
+     * Maps the windows, makes the visible. Voila!
+     */
+    XMapWindow(pl->disp, pl->top);
+    XMapWindow(pl->disp, pl->draw);
+    XMapWindow(pl->disp, pl->radar);
+    XMapWindow(pl->disp, pl->quit_b);
+    XMapWindow(pl->disp, pl->info_b);
+    XMapWindow(pl->disp, pl->help_b);
+    XMapWindow(pl->disp, pl->players);
+
+
     /*
      * Creates and initializes the graphic contexts.
      */
@@ -403,22 +407,21 @@ u_byte Init_window(int ind)
 
 void Alloc_msgs(int number)
 {
+    message_t *x=(message_t*)malloc(number*sizeof(message_t));
     int i;
 
     for (i=0; i<number; i++) {
-	Msg[i] = (message_t *)malloc(sizeof(message_t));
-	Msg[i]->txt[0] = '\0';
-	Msg[i]->life = 0;
+	Msg[i]=x;
+	x->txt[0] = '\0';
+	x->life = 0;
+        x++;
     }
 }
 
 
-void Free_msgs(int number)
+void Free_msgs(void)
 {
-    int i;
-
-    for (i=0; i<number; i++)
-	free(Msg[i]);
+    free(Msg[0]);
 }
 
 
@@ -478,7 +481,7 @@ void Expose_help_window(int ind)
 
     if (BIT(pl->disp_type, DT_HAVE_COLOR)) {
 	XSetForeground(pl->disp, pl->gctxt, pl->colors[BLUE].pixel);
-	XFillRectangle(pl->disp, pl->help_w, pl->gctxt, 0, 0, 420, 470);
+	XFillRectangle(pl->disp, pl->help_w, pl->gctxt, 0, 0, 420, HH);
 	XSetForeground(pl->disp, pl->gctxt, pl->colors[WHITE].pixel);
     } else
 	XClearWindow(pl->disp, pl->help_w);
@@ -502,8 +505,16 @@ void Expose_help_window(int ind)
 		       "'*'\'/'\n"
 		       "'+'\'-'\n"
 		       "Q\n"
+		       "Tab\n"
+		       "]\n"
 		       "\\\n"
+                       ";\n"
+                       "'\n"
+		       "[\n"
 		       "BackSpace\n"
+                       "W\n"
+                       "E\n"
+                       "R\n"
 		       "I\n",
 		       pl->colors[WHITE].pixel,pl->colors[BLACK].pixel);
 	DrawShadowText(ind, pl->disp, pl->help_w, pl->gctxt, 180, 7,
@@ -522,8 +533,16 @@ void Expose_help_window(int ind)
 		       "Increase/decrease engine power.\n"
 		       "Increase/decrease rotation speed.\n"
 		       "Self destruct.\n"
+		       "Place mine.\n"
+		       "Detach mine.\n"
 		       "Fire smart missile.\n"
+                       "Fire heat seeking missile.\n"
+                       "Fire torpedo (missile without lock).\n"
+		       "Trigger ECM.\n"
 		       "Turn on/off cloak.\n"
+                       "Switch to next tank.\n"
+                       "Switch to previous tank.\n"
+                       "Detach current tank.\n"
 		       "Toggle id mode.\n",
 		       pl->colors[WHITE].pixel,pl->colors[BLACK].pixel);
 	break;
@@ -690,6 +709,10 @@ int FatalError(Display *disp)
 {
     int i;
 
+#ifdef USE_SIGIO
+    if(Check_new_players())
+	longjmp(SavedEnv, 1);
+#endif
 
     for (i=0; i<NumPlayers; i++)
 	if (Players[i]->disp == disp)
@@ -735,8 +758,11 @@ void Set_labels(void)
 	XSetForeground(pl->disp, pl->gcp, pl->colors[WHITE].pixel);	*/
 	
 	for(i=0; i<NumPlayers; i++)
-	    ShadowDrawString(ind, pl->disp, pl->players, pl->gcp, 1, 20+(20*i),
-			     Players[i]->lblstr, pl->colors[WHITE].pixel,
+          if (pl->lblstr[0])
+              ShadowDrawString(ind, pl->disp, pl->players, pl->gcp,
+                             1, 20+(20*i),
+			     Players[i]->lblstr,
+                             pl->colors[WHITE].pixel,
 			     pl->colors[BLACK].pixel);
     }
 }

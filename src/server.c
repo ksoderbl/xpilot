@@ -1,4 +1,4 @@
-/* server.c,v 1.21 1992/06/28 05:38:31 bjoerns Exp
+/* $Id: server.c,v 1.29 1992/08/27 00:26:12 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -7,7 +7,8 @@
  *
  *	Copylefts are explained in the LICENSE file.
  */
-
+/* #define NO_status_OPTION /**/
+/* #define NO_AUTO_REPEAT /**/
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
@@ -15,11 +16,11 @@
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/times.h>
 #include <pwd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <setjmp.h>
 
 #include "global.h"
 #include "version.h"
@@ -28,36 +29,50 @@
 #include "draw.h"
 #include "robot.h"
 
+#ifndef		CLK_TCK
+#  ifndef 	HZ
+#    define	CLK_TCK		60
+#  else
+#    define	CLK_TCK		HZ
+#  endif
+#endif
+
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)server.c,v 1.21 1992/06/28 05:38:31 bjoerns Exp";
+    "@(#)$Id: server.c,v 1.29 1992/08/27 00:26:12 bjoerns Exp $";
 #endif
 
 
-#define CHECK_DELAY	0x3f
+#define CHECK_DELAY	(FRAMES_PR_SEC) /* 0x3f */
 #define	LOOP_DELAY	50
 
 /*
  * Global variables
  */
-int		Socket;
-pack_t		out;
 int		NumPlayers = 0;
+int		NumPseudoPlayers = 0;
 int		NumObjs;
 int		Num_alive = 0;
 player		*Players[MAX_PLAYERS];
 object		*Obj[MAX_TOTAL_SHOTS];
-static char	msg[MSG_LEN];
 long		Id = 1;		    /* Unique ID for each object */
 long		GetInd[MAX_ID];
 server		Server;
-static bool	Log = true;
-bool		Inside_window = true;
 int		RadarHeight;
 int		Shutdown = -1, ShutdownDelay = 1000;
 jmp_buf		SavedEnv;
 int		Delay = LOOP_DELAY;
+
+int	Argc;
+char	**Argv;
+
+static bool	Inside_window = true;
+static int	Socket;
+static pack_t	out;
+static char	msg[MSG_LEN];
+static bool	Log = true;
+static bool	NoPlayersEnteredYet = true;
 
 
 
@@ -66,6 +81,8 @@ int main(int argc, char *argv[])
     struct hostent *hinfo;
     struct passwd *pwent;
 
+
+    Argc = argc; Argv = argv;
 
     init_error(argv[0]);
 
@@ -78,9 +95,12 @@ int main(int argc, char *argv[])
     Make_table();			/* Make trigonometric tables */
 
     Compute_gravity();
-    Alloc_players(World.NumBases);	/* Allocate memory for players */
-    Alloc_shots(MAX_TOTAL_SHOTS);	/* Allocate memory for shots */
+
+    /* Allocate memory for players, shots and messages */
+    Alloc_players(World.NumBases+MAX_PSEUDO_PLAYERS);
+    Alloc_shots(MAX_TOTAL_SHOTS);
     Alloc_msgs(MAX_MSGS);
+
     Make_ships();
 
     /*
@@ -118,50 +138,27 @@ int main(int argc, char *argv[])
 	error("Could not create Dgram socket");
 	End_game();
     }
+
     SetTimeout(0, 0);
 
-/*    signal(SIGALRM, Handle_signal);*/	/* Get first client, then proceed. */
-/*    alarm(5*60);	*/		/* Signal me in 5 minutes. */
-/*    while (Check_new_players() == false)*/
-/*	sleep(1);*/
-/*    signal(SIGALRM, SIG_IGN);*/
+    /*
+     * Is the server in raw mode, that is - should it run even while
+     * there are noe players logged in.
+     */
+    if (RawMode) {
+	signal(SIGALRM, Handle_signal);	/* Get first client, then proceed. */
+	alarm(5*60);			/* Signal me in 5 minutes. */
+	while (Check_new_players() == false)
+	    sleep(2);
+	signal(SIGALRM, SIG_IGN);
+    }
     signal(SIGHUP, Handle_signal);
     signal(SIGTERM, Handle_signal);
     signal(SIGINT, Handle_signal);
-
+    
     Main_Loop();			    /* Entering main loop. */
     /* NEVER REACHED */
     return (0);
-}
-
-
-
-void Loop_delay()
-{
-    static long adj_sec = 0;
-    static long last_msec = 0;
-    long msec;
-    struct timeval tval;
-    struct timezone tzone;
-
-    if (adj_sec == 0) {
-      if (gettimeofday (&tval, &tzone) != 0)
-          return;
-
-      adj_sec = tval.tv_sec;
-      last_msec = (tval.tv_sec - adj_sec)*1000 + (tval.tv_usec)/1000;
-      return;
-    }
-
-    do {
-      if (gettimeofday (&tval, &tzone) != 0)
-          return;
-
-      msec = (tval.tv_sec - adj_sec)*1000 + (tval.tv_usec)/1000;
-  
-    } while (msec < last_msec + Delay);
-
-    last_msec = msec;
 }
 
 
@@ -174,32 +171,51 @@ void Main_Loop()
     XClientMessageEvent *cmev;
     register int i, x;
     static int loops = 0;
+    struct tms dummy_tms;
+    clock_t oldtimes=times(&dummy_tms);
 
+#ifndef SILENT
+    printf("server running!\n");
+#endif
 
     setjmp(SavedEnv);
 
-    while (true) {
-
-	if ((loops = (loops+1) & CHECK_DELAY) == 0)
-	    Check_new_players();
+    while (NoQuit
+	   || NumPlayers-NumPseudoPlayers>NumRobots
+	   || NoPlayersEnteredYet) {
+	
+	if ((loops = (loops+1) & CHECK_DELAY) == 0) {
+	    if (NumPlayers == NumRobots && !RawMode) {
+		while(Check_new_players() == false)
+		    sleep(5);
+	    } else
+		Check_new_players();
+	}
+	
+	{
+	    clock_t newtimes;
+	    if(((newtimes=times(&dummy_tms))-oldtimes) < CLK_TCK/FRAMES_PR_SEC)
+		usleep(1000000/FRAMES_PR_SEC
+		       - (newtimes-oldtimes)*1000000/CLK_TCK);
+	    oldtimes = newtimes; 
+	}
 
 	Update_objects();
-
+	
 	if (Shutdown > 0)		/* Check for possible shutdown, the */
 	    Shutdown--;			/* server will shutdown when Shutdown */
 	else				/* (a counter) reaches 0.  If the */
 	    if (Shutdown == 0)		/* counter is < 0 then now shutdown */
 		End_game();		/* is in progress. */
-
+	
 	if ((loops % UPDATES_PR_FRAME) == 0) {
-	    Loop_delay();
 	    Draw_objects();
 	}
-
+	
 	for (i=0; i<NumPlayers; i++) {
 	    if (Players[i]->disp_type == DT_NONE)
 		continue;
-
+	    
 	    for(x = XEventsQueued(Players[i]->disp,
 				  QueuedAfterFlush); x>0; x--) {
 		XNextEvent(Players[i]->disp, &event);
@@ -208,14 +224,11 @@ void Main_Loop()
 
 		case ClientMessage:
 		    cmev = (XClientMessageEvent *) &event;
-		    if (cmev->message_type == ProtocolAtom &&
-			cmev->data.l[0] == KillAtom) {
-			D(printf("Got WM_DELETE_WINDOW from %s@%s.\n",
-				 Players[i]->name,
-				 Player[i]->robot_mode == RM_NOT_ROBOT
-				 ? DisplayString(Players[i]->disp)
-				 : "noplace:0"));
+		    if (cmev->message_type == ProtocolAtom
+			&& cmev->data.l[0] == KillAtom) {
+
 			Quit(i);
+                        continue;
 		    }
 		    break;
 
@@ -234,9 +247,10 @@ void Main_Loop()
 		    break;
 
 		case ButtonRelease:
-		    if (event.xbutton.window == Players[i]->quit_b)
+		    if (event.xbutton.window == Players[i]->quit_b) {
 			Quit(i);
-		    else if (event.xbutton.window == Players[i]->info_close_b)
+                        continue;
+		    } else if (event.xbutton.window == Players[i]->info_close_b)
 			Info(i, Players[i]->info_close_b);
 		    else if (event.xbutton.window == Players[i]->help_close_b)
 			Help(i, Players[i]->help_close_b);
@@ -306,15 +320,15 @@ void End_game(void)
 	error("Shutting down...");
     }
 
-    for (i=0; i<NumPlayers; i++)	/* Shutdown server */
-	Quit(i);
+    while (NumPlayers > 0)	/* Kick out all remaining players */
+	Quit(NumPlayers-1);
 
     SocketClose(Socket);
-    Free_players(World.NumBases);
+    Free_players();
     Free_ships();
-    Free_shots(MAX_TOTAL_SHOTS);
+    Free_shots();
     Free_map();
-    Free_msgs(MAX_MSGS);
+    Free_msgs();
     Log_game("END");			    /* Log end */
 
     exit (0);
@@ -348,10 +362,10 @@ bool Check_new_players(void)
     pack_t		in;
     player		*pl;
 
-
     /*
      * Anyone cheating by turning auto-fire (also called auto-repeat :) on?
      */
+#ifndef NO_AUTO_REPEAT
     for (i=0; i<NumPlayers; i++) {
 	if (Players[i]->disp_type == DT_NONE)
 	    continue;
@@ -362,6 +376,7 @@ bool Check_new_players(void)
 		XAutoRepeatOff(Players[i]->disp);
 	}
     }
+#endif
 
     if (!SocketReadable(Socket))	/* No-one tried to connect. */
 	return (false);
@@ -428,8 +443,6 @@ bool Check_new_players(void)
 	    goto switch_end;
 	}
 
-	new_player = true;
-	
 	Init_player(NumPlayers);
 	pl = Players[NumPlayers];
 
@@ -486,6 +499,8 @@ bool Check_new_players(void)
 
 	    NumPlayers++;
 	    Id++;
+	    new_player = true;
+	    NoPlayersEnteredYet = false;
 	
 	    Set_message(msg);
 	    Set_label_strings();
@@ -500,7 +515,7 @@ bool Check_new_players(void)
     }
 	break;
 
-
+#ifndef NO_status_OPTION
     case REPORT_STATUS_pack:	{
 	/*
 	 * Someone asked for information.
@@ -515,13 +530,14 @@ bool Check_new_players(void)
 		"\nSERVER VERSION...: %s\n"
 		"STARTED BY.......: %s\n"
 		"STATUS...........: %s\n"
+		"MAX SPEED........: %d frames/second\n"
 		"WORLD (%3dx%3d)..: %s\n"
 		"      AUTHOR.....: %s\n"
 		"PLAYERS (%2d/%2d)..:\n",
 		TITLE, Server.name, lock && Shutdown==-1 ? "Locked " :
 		!lock && Shutdown!=-1 ? "Shutting down" :
 		lock && Shutdown!=-1 ? "Locked and shutting down" :
-		"Clear",
+		"Clear", FRAMES_PR_SEC,
 		World.x, World.y, World.name, World.author,
 		NumPlayers, World.NumBases);
 
@@ -543,6 +559,7 @@ bool Check_new_players(void)
 	out_size += strlen(s->str);
     }
 	break;
+#endif /* NO_status_OPTION */
 
 	
     case MESSAGE_pack:	{
@@ -669,7 +686,7 @@ bool Check_new_players(void)
     }
 
  switch_end:
-    if (answer && (DgramSend(Socket, in_host, in.core.port,
+    if (answer && (DgramSend(Socket, in_host, ntohl(in.core.port),
 			     (char *)&out, out_size)) == -1) {
 	error("Could not send request to client at %s.", in_host);
     }
@@ -698,20 +715,20 @@ bool Owner(char *name)
 void Handle_signal(int sig_no)
 {
     switch (sig_no) {
-/*    case SIGALRM:
+    case SIGALRM:
 	error("First player has yet to show his butt, I'm bored... Bye!");
 	SocketClose(Socket);
 	break;
-*/
+
     case SIGHUP:
     case SIGINT:
     case SIGTERM:
-	error("Caught signal %d, terminating.");
+	error("Caught signal %d, terminating.", sig_no);
 	End_game();
 	break;
 
     default:
-	error("Caught unkown signal: %d");
+	error("Caught unkown signal: %d", sig_no);
 	break;
     }
 

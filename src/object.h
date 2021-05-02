@@ -1,4 +1,4 @@
-/* object.h,v 1.6 1992/06/28 05:38:20 bjoerns Exp
+/* $Id: object.h,v 1.11 1992/08/27 00:26:01 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -33,6 +33,12 @@
 #define OBJ_MINE		(1L<<19)
 #define OBJ_MINE_PACK		(1L<<20)
 #define OBJ_SENSOR_PACK 	(1L<<21)
+#define OBJ_TANK		(1L<<22)
+#define OBJ_ECM 		(1L<<23)
+#define OBJ_DUST                (1L<<24)
+#define OBJ_TORPEDO             (1L<<25)
+#define OBJ_HEAT_SHOT           (1L<<26)
+#define OBJ_AFTER_BURNER        (1L<<27)
 #define OBJ_CANNON_DEBRIS	(1L<<30)	/* Cannon objects */
 #define OBJ_CANNON_SHOT		(1L<<31)
 
@@ -51,8 +57,9 @@
 #define FUEL_GAUGE		(1L<<13)
 #define VELOCITY_GAUGE		(1L<<14)
 #define POWER_GAUGE		(1L<<15)
-#define INVISIBLE		(1L<<16)
-#define WARPING			(1L<<17)
+#define WARPING			(1L<<16)
+#define WARPED			(1L<<17)
+#define CONFUSED 		(1L<<18)
 
 #define LOCK_NONE		1
 #define LOCK_PLAYER		2
@@ -63,7 +70,7 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
 } wireobj;
 
 typedef struct {
-    int		color;			/* Color of object */		
+    byte	color;			/* Color of object */		
     int		id;			/* For shots => id of player */
     position	pos;			/* World coordinates */
     vector	vel;
@@ -78,6 +85,7 @@ typedef struct {
     int		life;			/* No of ticks left to live */
     int		count;			/* Misc timings */
     long	status;
+    int		new_info;
 } object;
 
 
@@ -94,12 +102,18 @@ typedef enum {
     KEY_SHIELD,
     KEY_FIRE_SHOT,
     KEY_FIRE_MISSILE,
+    KEY_FIRE_TORPEDO,
+    KEY_FIRE_HEAT,
     KEY_DROP_MINE,
+    KEY_DETACH_MINE,
     KEY_TURN_LEFT,
     KEY_TURN_RIGHT,
     KEY_SELF_DESTRUCT,
     KEY_ID_MODE,
     KEY_PAUSE,
+    KEY_TANK_DETACH,
+    KEY_TANK_NEXT,
+    KEY_TANK_PREV,
     KEY_TOGGLE_VELOCITY,
     KEY_TOGGLE_COMPASS,
     KEY_SWAP_SETTINGS,
@@ -111,8 +125,10 @@ typedef enum {
     KEY_THRUST,
     KEY_CLOAK,
     KEY_SLOWDOWN,
-    KEY_SPEEDUP
+    KEY_SPEEDUP,
+    KEY_ECM
 } keys_t;
+
 
 
 /*
@@ -120,6 +136,17 @@ typedef enum {
  * makes it possible to use the same basic operations on both of them (mainly
  * used in update.c).
  */
+    typedef struct {
+        long    sum;                    /* sum of fuel in all tanks */
+        long    max;                    /* how much fuel can you take? */
+        int     current;                /* number of currently used tank */
+        int     no_tanks;               /* number of tanks */
+        long    tank[MAX_TANKS];
+        long	count;			/* Display fuel for how long? */
+        long	l1;			/* Fuel critical level */
+        long	l2;			/* Fuel warning level */
+        long	l3;			/* Fuel notify level */
+    } pl_fuel_t;
 typedef struct {
     byte	color;			/* Color of object */		
     int		id;			/* Unique id of object */
@@ -141,16 +168,16 @@ typedef struct {
     long	have;			/** Items you have **/
 
     long	control_count;		/* Display control for how long? */
-    long	fuel_count;		/* Display fuel for how long? */
-    double	fuel;			/* How long can you stay in the air? */
-    double	fuel1;			/* Fuel critical level */
-    double	fuel2;			/* Fuel warning level */
-    double	fuel3;			/* Fuel notify level */
-    double	max_fuel;		/* How much fuel can you take */
+    pl_fuel_t   fuel;                   /* ship tanks and the stored fuel */
+    int         after_burners;          /* number of after burners, powerfull*/
+                                        /* and efficient engine              */
     double	emptymass;		/* Mass of empty ship */
     double	double_dir;		/* Direction, in double var */
     double	turnresistance;		/* How much is lost in % */
     double	turnvel;		/* Current velocity of turn (right) */
+#ifdef TURN_FUEL
+    double	oldturnvel;		/* Last velocity of turn (right) */
+#endif
     double	turnacc;		/* Current acceleration of turn */
     long	mode;			/* Player mode, currently */
     long	instruments;		/* Instruments on screen (bitmask) */
@@ -165,14 +192,18 @@ typedef struct {
     double	power;			/* Force of thrust */
     double	power_s;		/* Saved power fiks */
     double	turnspeed_s;		/* Saved turnspeed */
+    double      hud_move_fact;          /* scale the hud-movement (speed) */
+    double      ptr_move_fact;          /* scale thes peed pointer length */
     double	turnresistance_s;	/* Saved (see above) */
     double	sensor_range;		/* Range of sensors (radar) */
     int		shots;			/* Number of active shots by player */
     int		extra_shots;		/* Number of extra shots / 2 */
+    int		rear_shots;		/* Number of rear shots */
     int		mines;			/* Number of mines. */
     int		cloaks;			/* Number of cloaks. */
     int		sensors;		/* Number of sensors */
     int		missiles;		/* Number of missiles. */
+    int		ecms;                   /* Number of ecms. */
     int		shot_max;		/* Maximum number of shots active */
     int		shot_life;		/* Number of ticks shot will live */
     double	shot_speed;		/* Speed of shots fired by player */
@@ -202,10 +233,12 @@ typedef struct {
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
     Display	*disp;			/* Display of player (pointer) */
+    int         map_point_distance;     /* distance of points in the background? */
     bool	info_press;		/* Player pressed the info button? */ 
     bool	help_press;		/* Player pressed the help button? */
     int		help_page;		/* Which page is the player on? */
     u_byte	team;			/* What team is the player on? */
+    unsigned int pseudo_team;           /* which team is used for my tanks (detaching!) */
 
     /*
      * Robot variables
@@ -213,6 +246,8 @@ typedef struct {
     u_byte	robot_mode;		/* For players -> RM_NOT_ROBOT */
     long	robot_count;		/* Misc timings, minimizes rand() use */
     int		robot_ind;		/* Index in the robot array */
+    int		robot_lock;
+    int		robot_lock_id;
      
     /* Miscellaneous graphic variables */
     u_byte	disp_type;		/* Display type */
@@ -260,8 +295,14 @@ typedef struct {
 	unsigned long	lastChange;
     } visibility[MAX_PLAYERS];
 
-    int updateVisibility, forceVisible;
-    int wormDrawCount;
+    int updateVisibility, forceVisible, damaged;
+    int wormDrawCount, wormHoleHit;
+
+    struct
+    {
+	int size;
+	position pos;
+    } ecmInfo;
 
     struct _keyDefs {
         KeySym	keysym;			/* Keysym-to-action array */

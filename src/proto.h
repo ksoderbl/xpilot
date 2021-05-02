@@ -1,4 +1,4 @@
-/* proto.h,v 1.5 1992/06/28 05:38:25 bjoerns Exp
+/* $Id: proto.h,v 1.7 1992/08/27 00:26:06 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,7 +22,7 @@
  */
 extern u_byte Init_window(int ind);
 extern void Alloc_msgs(int number);
-extern void Free_msgs(int number);
+extern void Free_msgs(void);
 extern void DrawShadowText(int ind, Display *disp, Window w, GC gc, int x,
 			   int start_y, char *str, Pixel fg, Pixel bg);
 extern void Expose_info_window(int ind);
@@ -40,6 +40,7 @@ extern void Set_labels(void);
 extern int Rate(int winner, int looser);
 extern void Check_collision(void);
 extern bool Landing(int ind, int point);
+extern void crash_wall(int,int,object*);
 
 /*
  * Prototypes for dbuff.c
@@ -97,6 +98,8 @@ extern void Free_map(void);
 extern void Alloc_map(void);
 extern void Load_map(char *map);
 extern void Generate_random_map(void);
+extern void add_blaster(int,int);
+extern void remove_crash_blaster(int);
 
 /*
  * Prototypes for math.c
@@ -115,13 +118,20 @@ extern void Parser(int argc, char *argv[]);
  * Prototypes for play.c
  */
 extern void Thrust(int ind);
-extern void Turn_thrust(int ind);
+#ifdef TURN_FUEL
+extern void Turn_thrust(int ind,int no_sparks);
+#endif
 extern void Recoil(object *ship, object *shot);
 extern void Delta_mv(object *ship, object *obj);
 extern void Alloc_shots(int number);
-extern void Free_shots(int number);
+extern void Free_shots(void);
+extern void Tank_handle_detach(player*);
+extern void Add_fuel(pl_fuel_t*,long);
+extern void Update_tanks(pl_fuel_t*);
 extern void Place_item(int type);
 extern void Place_mine(int ind);
+extern void Place_moving_mine(int ind, double vx, double vy);
+extern void Blaster_fire(void);
 extern void Cannon_fire(int ind);
 extern void Fire_shot(int ind, int type, int dir);
 extern void Delete_shot(int ind);
@@ -137,7 +147,7 @@ extern void Pick_startpos(int ind);
 extern void Go_home(int ind);
 extern void Init_player(int ind);
 extern void Alloc_players(int number);
-extern void Free_players(int number);
+extern void Free_players(void);
 extern void Set_label_strings(void);
 /*extern void Reset_all_players(void);*/
 extern void Compute_game_status(void);
@@ -154,6 +164,7 @@ extern void Update_robots(void);
  * Prototypes for rules.c
  */
 extern void Set_world_rules(int rule_ind);
+extern void UpdateItemChances(int num_players);
 
 /*
  * Prototypes for server.c

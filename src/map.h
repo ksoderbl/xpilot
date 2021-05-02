@@ -1,4 +1,4 @@
-/* map.h,v 1.6 1992/06/28 05:38:18 bjoerns Exp
+/* $Id: map.h,v 1.9 1992/08/27 00:25:59 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,11 +22,8 @@
  */
 #define DEFAULT_MAP		"continent"
 
-#define MAX_FUELS		128
-#define MAX_GRAVS		512
-#define MAX_CANNONS		512
 #define MAX_CHECKS		10
-#define MAX_WORMHOLES		50
+#define CRASH_BLASTERS          32
 
 #define SPACE			0
 #define BASE			1
@@ -45,6 +42,7 @@
 #define CWISE_GRAV		22
 #define ACWISE_GRAV		23
 #define WORMHOLE		24
+#define BLASTER                 25
 
 #ifndef MAP_DIR
 #define MAP_DIR			(LIBDIR "maps/")
@@ -62,19 +60,32 @@
 #define ITEM_REAR_SHOT		4
 #define ITEM_MINE_PACK		5
 #define ITEM_SENSOR_PACK	6
-#define NUM_ITEMS		7
-
-
+#define ITEM_TANK		7
+#define ITEM_ECM		8
+#define ITEM_AFTER_BURNER       9
+#define NUM_ITEMS               10
 
 typedef struct {
     position	pos;
-    double	left;
+    long	fuel;
 } fuel_t; 
 
 typedef struct {
     ipos	pos;
     double	force;
 } grav_t;
+
+typedef struct {
+    ipos	pos;
+    u_byte      orig;
+    int         fuel;
+    int         chance;
+    int         add_size;
+    int         base_size;
+    int         life;
+    int         speed_fact;
+    int         runtime;
+} blaster_t;
 
 typedef struct {
     ipos	pos;
@@ -87,8 +98,16 @@ typedef struct {
     int max;		/* Max on world at a given time */
     int num;		/* Number active right now */
     int chance;		/* Chance for the item to appear on this world */
+    int ref_chance;     /* given by default or map */
 } item_t;
 
+typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;
+
+typedef struct {
+    ipos pos;
+    int lastdest, countdown;
+    wormType type;
+} wormhole_t;
 
 typedef struct {
     int		x, y;				    /* Size of world */
@@ -103,16 +122,18 @@ typedef struct {
 
     int		NumBases;
     ipos	base[MAX_BASES];
+    int         NumBlasters;
+    blaster_t   *blaster;
     int		NumFuels;
-    fuel_t	fuel[MAX_FUELS];
+    fuel_t	*fuel;
     int		NumGravs;
-    grav_t	grav[MAX_GRAVS];
+    grav_t	*grav;
     int		NumCannons;
-    cannon_t	cannon[MAX_CANNONS];
+    cannon_t	*cannon;
     int		NumChecks;
     ipos	check[MAX_CHECKS];
     int		NumWormholes;
-    ipos	wormhole[MAX_WORMHOLES];
+    wormhole_t	*wormHoles;
 } World_map;
 
 #endif

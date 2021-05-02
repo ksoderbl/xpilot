@@ -1,4 +1,4 @@
-/* pack.h,v 1.7 1992/06/28 05:38:22 bjoerns Exp
+/* $Id: pack.h,v 1.7 1992/06/28 05:38:22 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *

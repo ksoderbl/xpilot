@@ -1,4 +1,4 @@
-/* syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp
+/* $Id: syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -26,7 +26,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp";
+    "@(#)$Id: syslimit.c,v 1.8 1992/06/27 02:14:24 bjoerns Exp $";
 #endif
 
 extern Pack		req;
