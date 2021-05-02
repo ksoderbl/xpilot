@@ -4,7 +4,7 @@
 .\"
 .TH XPILOTS 6 "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.5.4: Jul 15, 2002
+.ds ]W XPilot 4.5.5: 2010-01-20
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -124,7 +124,7 @@ or the equivalent
 .B -map fuzz2.xp
 is passed as command line arguments, the server will try to locate a file
 called \fBfuzz2.xp\fP in the current directory, or in a predefined
-directory (default is /home/bert/sf/xpilot/lib/maps/).
+directory (default is /usr/local/lib/xpilot/maps/).
 
 .TP 15
 .B -contactPort or port \fIinteger\fP
@@ -376,16 +376,16 @@ for details see the provided LICENSE file.
 
 .PD 0
 .TP 40
-.B /home/bert/sf/xpilot/lib/maps/
+.B /usr/local/lib/xpilot/maps/
 Miscellaneous maps.
 .TP 40
-.B /home/bert/sf/xpilot/lib/log
+.B /usr/local/lib/xpilot/log
 Log file.
 .TP 40
-.B /home/bert/sf/xpilot/lib/defaults
+.B /usr/local/lib/xpilot/defaults
 Defaults file.
 .TP 40
-.B /home/bert/sf/xpilot/lib/password
+.B /usr/local/lib/xpilot/password
 Password file.
 .PD
 

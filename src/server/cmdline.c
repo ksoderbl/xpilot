@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 5.53 2002/03/26 21:34:51 bertg Exp $
+/* $Id: cmdline.c,v 5.55 2002/08/21 14:22:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,6 +52,7 @@ list_t		expandList;		/* List of predefined settings. */
 DFLOAT		Gravity;		/* Power of gravity */
 DFLOAT		ShipMass;		/* Default mass of ship */
 DFLOAT		ballMass;		/* Default mass of balls */
+DFLOAT		minItemMass;		/* Minimum mass of each item */
 DFLOAT		ShotsMass;		/* Default mass of shots */
 DFLOAT		ShotsSpeed;		/* Default speed of shots */
 int		ShotsLife;		/* Default number of ticks */
@@ -304,6 +305,7 @@ char		*defaultShipShape;	/* What ship shape is used for players */
 					/* who do not define their own? */
 char		*tankShipShape;		/* What ship shape is used for tanks? */
 int		maxPauseTime;		/* Max. time you can stay paused for */
+int		maxClientsPerIP;		/* Max. number of clients that can login from the same IP */
 
 
 extern char	conf_logfile_string[];	/* Default name of log file */
@@ -400,6 +402,16 @@ static option_desc options[] = {
 	valReal,
 	tuner_ballmass,
 	"Mass of balls.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"minItemMass",
+	"minItemMass",
+	"1.0",
+	&minItemMass,
+	valReal,
+	tuner_dummy,
+	"The minimum mass per item when carried by a ship.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
@@ -1102,6 +1114,18 @@ static option_desc options[] = {
 	Set_deny_hosts,
 	"List of network addresses of computers which are denied service.\n"
 	"Each address may optionally be followed by a slash and a network mask.\n",
+	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
+    },
+    {
+	"maxClientsPerIP",
+	"maxPerIP",
+	"2",
+	&maxClientsPerIP,
+	valInt,
+	tuner_dummy,
+	"Maximum number of clients per IP address that are allowed to connect.\n"
+	"This prevents unfriendly players from occupying all the bases"
+	", effectively \"kicking\" paused players and denying other players to join.\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
     },
     {

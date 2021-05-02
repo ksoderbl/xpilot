@@ -1,4 +1,4 @@
-/* $Id: math.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
+/* $Id: math.c,v 5.2 2003/09/16 21:00:16 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -96,13 +96,13 @@ DFLOAT findDir(DFLOAT x, DFLOAT y)
 }
 
 
-DFLOAT rfrac(void)
+double rfrac(void)
 {
     /*
      * Return a pseudo-random value in the range { 0.0 <= x < 1.0 }.
      * Use randomMT() which returns a 32 bit PRN and multiply by 1/(1<<32).
      */
-    return (DFLOAT)((double) randomMT() * 0.00000000023283064365386962890625);
+    return (double) randomMT() * 0.00000000023283064365386962890625;
 }
 
 

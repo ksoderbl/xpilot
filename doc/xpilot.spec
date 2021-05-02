@@ -1,13 +1,13 @@
 #
 # XPilot RPM spec file.
 #
-# $Id: xpilot.spec,v 5.17 2002/07/14 14:22:30 bertg Exp $
+# $Id: xpilot.spec,v 5.19 2003/12/13 21:13:33 bertg Exp $
 #
 
 Summary:      A multiplayer Internet client/server 2D space game
 Name:         xpilot
-Version:      4.5.4
-Release:      15
+Version:      4.5.5beta
+Release:      17
 Group:        X11/Games/Video
 Copyright:    GPL
 Packager:     xpilot@xpilot.org
@@ -16,6 +16,7 @@ Source:       ftp://ftp.xpilot.org/pub/xpilot/xpilot-%{version}.tar.gz
 Patch:        xpilot-%{version}.dif
 Vendor:       XPilot
 Autoreqprov:  yes
+BuildRoot: %{_tmppath}/%{name}-%{version}-root
 
 %description
 XPilot is a multi-player 2D space game. Some features are borrowed
@@ -66,15 +67,16 @@ xmkmf -a
 make
 
 %install
-make install
-make install.man
-gzip -fnq9 /usr/X11R6/man/man6/xpilot.6
-gzip -fnq9 /usr/X11R6/man/man6/xpilots.6
-gzip -fnq9 /usr/X11R6/man/man6/xp-replay.6
-gzip -fnq9 /usr/X11R6/man/man6/xp-mapedit.6
+make install DESTDIR="$RPM_BUILD_ROOT"
+make install.man DESTDIR="$RPM_BUILD_ROOT"
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+%changelog
+
+* Tue Nov 26 2002 Bernd Petrovitsch <bernd@gams.at>
+- Use BuildRoot and $RPM_BUILD_ROOT.  Don't gzip manpages.
 
 %files
 %doc LICENSE
@@ -83,10 +85,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc doc/ChangeLog
 %doc doc/FAQ
 %doc doc/README*
-%doc /usr/X11R6/man/man6/xpilot.6.gz
-%doc /usr/X11R6/man/man6/xpilots.6.gz
-%doc /usr/X11R6/man/man6/xp-replay.6.gz
-%doc /usr/X11R6/man/man6/xp-mapedit.6.gz
+%doc /usr/X11R6/man/man6/xpilot.6*
+%doc /usr/X11R6/man/man6/xpilots.6*
+%doc /usr/X11R6/man/man6/xp-replay.6*
+%doc /usr/X11R6/man/man6/xp-mapedit.6*
 /usr/X11R6/bin/xpilot
 /usr/X11R6/bin/xpilots
 /usr/X11R6/bin/xp-replay

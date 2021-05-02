@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.29 2002/04/21 19:08:15 kimiko Exp $
+/* $Id: player.c,v 5.31 2003/09/16 21:01:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -46,6 +46,7 @@
 #include "error.h"
 #include "objpos.h"
 #include "draw.h"
+#include "commonproto.h"
 
 char player_version[] = VERSION;
 
@@ -322,6 +323,42 @@ void Player_used_kill(int ind)
     if (!BIT(DEF_HAVE, HAS_SHIELD)) {
 	CLR_BIT(pl->have, HAS_SHIELD);
     }
+}
+
+/*
+ * Calculate the mass of a player.
+ */
+void Player_set_mass(int ind)
+{
+    player		*pl = Players[ind];
+    DFLOAT		sum_item_mass = 0;
+    DFLOAT		item_mass;
+    int			item;
+
+    for (item = 0; item < NUM_ITEMS; item++) {
+
+	switch (item) {
+
+	case ITEM_FUEL:
+	case ITEM_TANK:
+	    item_mass = 0;
+	    break;
+
+	case ITEM_ARMOR:
+	    item_mass = pl->item[ITEM_ARMOR] * ARMOR_MASS;
+	    break;
+
+	default:
+	    item_mass = pl->item[item] * minItemMass;
+	    break;
+	}
+
+	sum_item_mass += item_mass;
+    }
+
+    pl->mass = pl->emptymass
+	       + FUEL_MASS(pl->fuel.sum)
+	       + sum_item_mass;
 }
 
 /*

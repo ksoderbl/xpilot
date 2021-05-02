@@ -3,6 +3,43 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.5.5 compared to release 4.5.4.
+
+Both meta servers' IP adresses changed and in the client this is hardcoded.
+Both IP addresses have been changed to the new meta server.
+
+When more than one instance of a sound was generated in a frame, all those
+instances would be sent to the client, causing unnecessary network load and
+deafening playback. This has been fixed by eliminating duplicate sounds in
+single frames.
+
+Added client support for playing sound through the Esound daemon.
+
+Added a new server option -minItemMass.  This option gives
+the mass per carried item for a player.  It's default value is 1.0.
+This makes your ship really heavy when carrying lots of items.
+Therefore player must become careful which items they pick up
+and which ones to drop when they become too heavy.
+
+Jarno van der Kolk submitted a new server option -maxClientsPerIP
+which limits the number of clients for one IP address to 2.
+
+Now there is a pause tax of 0.01 point per frame.  This is
+to discourage the long pausing of players who have accumulated
+a high score.
+
+When the server option cloakedShield was on then deflectors could
+not be turned on while being cloaked.  Fixed.  Thanks go to Paul Forman.
+
+Kristian Söderblom contributed several important bugfixes.
+
+Ben Armstrong submitted a patch which fixes a problem with a client passing
+the wrong version to a server when multiple servers are displayed.
+
+Cliff Johnson found and fixed a problem with the talk window and certain fonts.
+
+===============================================================================
+
 This is a summary of changes of release 4.5.4 compared to release 4.5.3.
 
 Team cannons could kill teammates with laser pulses.  Fixed.
@@ -33,6 +70,8 @@ Windows installation, at the end of a successful installation, offers
 to launch XPwho (for Internet games) and/or XPilotServer (for local games).
 Hopefully, this will help with newbie installations who start XPilot.exe
 and can't figure out why nothing happens.
+
+Winni submitted a patch to fix the hardcoded IP address of both meta servers.
 
 
 ===============================================================================
@@ -1790,6 +1829,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.81 2002/06/21 21:18:10 dik Exp $
+==== $Id: ChangeLog,v 5.91 2010/02/21 15:55:17 bertg Exp $
 ===============================================================================
 

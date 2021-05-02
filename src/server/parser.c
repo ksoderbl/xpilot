@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 5.17 2001/11/30 11:47:19 bertg Exp $
+/* $Id: parser.c,v 5.18 2003/09/16 21:01:21 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -573,6 +573,9 @@ int Get_option_value(const char *name, char *value, unsigned size)
 	return -2;	/* Variable not found */
     }
 
+    if ((opt->flags & OPT_VISIBLE) == 0)
+	return -3;
+
     switch (opt->type) {
     case valInt:
 	sprintf(value, "%d", *((int *)opt->variable));
@@ -584,6 +587,8 @@ int Get_option_value(const char *name, char *value, unsigned size)
 	sprintf(value, "%s", *((bool *)opt->variable) ? "true" : "false");
 	break;
     case valString:
+	if (*((char **)opt->variable) == NULL)
+	    return -4;
 	strlcpy(value, *((char **)opt->variable), size);
 	break;
     case valSec:

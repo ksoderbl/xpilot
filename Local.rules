@@ -1,4 +1,4 @@
-/* $Id: Local.rules,v 5.0 2001/04/07 20:00:56 dik Exp $
+/* $Id: Local.rules,v 5.1 2003/12/13 21:22:36 bertg Exp $
  *
  * NO NEED TO EDIT THIS FILE; ONLY EDIT Local.config.
  */
@@ -135,14 +135,14 @@ dst:: src deps								@@\
 	Create an executable target for some arbitrary program by running a
 	template through some filter.  prog must be a full pathname.
 
-	If the HasExecableScripts configuration parameter is not YES, make sure
+	If the ExecableScripts configuration parameter is not YES, make sure
 	the first line begins with a colon and write the script into a temp
 	file, have the program execute that, and remove the temp file when
 	done.  Ugly ugly ugly.
 */
 
 #ifndef	ExecScriptFromTemplateTarget
-#if HasExecableScripts		/* can use #! */
+#if ExecableScripts		/* can use #! */
 #define	ExecScriptFromTemplateTarget(prog,dst,src,command,deps)		@@\
 AllTarget(dst)								@@\
 StuffToClean(dst)							@@\
@@ -165,7 +165,7 @@ dst::  src deps								@@\
 	echo prog '$$x' '$$@' >> $@					@@\
 	echo $(RM) '$$x' >> $@						@@\
 	chmod a+x $@
-#endif /* HasExecableScripts */
+#endif /* ExecableScripts */
 #endif /* ExecScriptFromTemplateTarget */
 
 

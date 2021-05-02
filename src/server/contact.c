@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 5.8 2001/11/29 14:48:12 bertg Exp $
+/* $Id: contact.c,v 5.9 2002/08/21 14:22:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -62,6 +62,7 @@
 #include "server.h"
 #include "commonproto.h"
 #include "portability.h"
+#include "connection.h"
 
 char contact_version[] = VERSION;
 
@@ -744,6 +745,13 @@ static int Enter_player(char *real, char *nick, char *disp, int team,
     }
 
     /*
+     * Already too many clients logged in from that IP
+     */
+    if (Check_max_clients_per_IP(addr)) {
+	return E_GAME_LOCKED;
+    }
+
+    /*
      * Is the game full?
      */
     if (NumPlayers - NumPseudoPlayers + login_in_progress + NumQueuedPlayers
@@ -1041,6 +1049,10 @@ static int Queue_player(char *real, char *nick, char *disp, int team,
 	return E_GAME_FULL;
     }
     if (game_lock) {
+	return E_GAME_LOCKED;
+    }
+
+    if (Check_max_clients_per_IP(addr)) {
 	return E_GAME_LOCKED;
     }
 

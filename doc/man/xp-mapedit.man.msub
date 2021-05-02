@@ -1,0 +1,35 @@
+.\" Copyright 2002 Ben Armstrong <synrg@sanctuary.nslug.ns.ca>
+.\"
+.TH MAN 6 "15 Apr 2002" "Linux" "Debian GNU/Linux"
+.SH NAME
+xp-mapedit \- create and edit XPilot maps
+.SH SYNOPSIS
+.B xp-mapedit [-font \fIfont\fR] [-display \fIdisplay\fR] [mapfile]
+
+.B xp-mapedit [-help]
+
+.SH OPTIONS
+.TP 15
+.B -font \fIfont\fR
+Use this font instead of the default
+.TP 15
+.B -display \fIdisplay\fR
+Display map editor on this display instead of the current
+.TP 15
+.B -help
+Output this help
+
+.SH ARGUMENTS
+.TP 15
+.BR mapfile
+The filename of an existing or new xpilot map.
+
+.SH DESCRIPTION
+XPilot maps can be created and edited with this map editor.
+
+.SH SEE ALSO
+.BR xpilot (6),
+.BR xpilots (6)
+
+.SH AUTHOR
+Ben Armstrong <synrg@sanctuary.nslug.ns.ca>

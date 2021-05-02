@@ -1,4 +1,4 @@
-/* $Id: play.c,v 5.10 2001/12/11 12:45:13 bertg Exp $
+/* $Id: play.c,v 5.11 2003/09/16 21:01:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,6 +41,7 @@
 #include "saudio.h"
 #include "score.h"
 #include "objpos.h"
+#include "commonproto.h"
 
 char play_version[] = VERSION;
 

@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 5.10 2002/01/26 13:03:58 bertg Exp $
+/* $Id: netserver.h,v 5.11 2002/08/21 14:22:32 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -128,6 +128,7 @@ int Get_conn_version(int ind);
 const char *Get_player_addr(int ind);
 const char *Get_player_dpy(int ind);
 int Send_shape(int ind, int shape);
+int Check_max_clients_per_IP(char *host_addr);
 
 #endif
 

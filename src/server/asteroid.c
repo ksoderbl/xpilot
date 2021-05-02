@@ -1,4 +1,4 @@
-/* $Id: asteroid.c,v 5.17 2002/01/25 21:21:36 kimiko Exp $
+/* $Id: asteroid.c,v 5.18 2003/09/16 21:00:25 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,6 +44,7 @@
 #include "bit.h"
 #include "objpos.h"
 #include "asteroid.h"
+#include "commonproto.h"
 
 
 char asteroid_version[] = VERSION;
@@ -391,8 +392,8 @@ static void Place_asteroid(void)
 		if (px > World.width) px -= World.width;
 		if (py > World.height) py -= World.height;
 	    }
-	    if (px < 0 || px > World.width
-		|| py < 0 || py > World.height) {
+	    if (px < 0 || px >= World.width
+		|| py < 0 || py >= World.height) {
 		continue;
 	    }
 	} else {

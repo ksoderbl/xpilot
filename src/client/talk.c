@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 5.3 2001/06/02 21:01:15 bertg Exp $
+/* $Id: talk.c,v 5.4 2004/04/21 06:34:17 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -938,6 +938,8 @@ int Talk_paste(char *data, int data_len, bool overwrite)
     bool cursor_visible = false;
     int i;
 
+	if (char_width == 0)
+		char_width = 1;
     if (!selectionAndHistory || !data || data_len == 0 || strlen(data) == 0) {
 	return 0;
     }

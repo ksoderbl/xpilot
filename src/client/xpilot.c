@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 5.8 2001/11/29 12:08:37 bertg Exp $
+/* $Id: xpilot.c,v 5.9 2004/02/11 18:58:52 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 	result = Contact_servers(argc - 1, &argv[1],
 				 auto_connect, list_servers,
 				 auto_shutdown, shutdown_reason,
-				 0, 0, 0, 0,
+				 0, 0, 0, 0, 0,
 				 conpar);
     }
     else {

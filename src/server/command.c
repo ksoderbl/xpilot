@@ -1,4 +1,4 @@
-/* $Id: command.c,v 5.22 2002/06/08 13:39:44 bertg Exp $
+/* $Id: command.c,v 5.23 2003/09/16 21:00:46 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -462,7 +462,7 @@ static int Cmd_ally(char *arg, player *pl, int oper, char *msg)
 	AllyAccept  = 3,
 	AllyLeave   = 4,
 	AllyList    = 5,
-	NumAllyCmds = 6,
+	NumAllyCmds = 6
     };
     int			i, cmd;
 
@@ -829,6 +829,12 @@ static int Cmd_get(char *arg, player *pl, int oper, char *msg)
 	return CMD_RESULT_SUCCESS;
     case -2:
 	sprintf(msg, "No option named %s.", arg);
+	break;
+    case -3:
+	sprintf(msg, "Cannot show the value of this option.");
+	break;
+    case -4:
+	sprintf(msg, "No value has been set for option %s.", arg);
 	break;
     default:
 	strcpy(msg, "Generic error.");

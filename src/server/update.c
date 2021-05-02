@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.30 2002/06/11 03:59:39 dik Exp $
+/* $Id: update.c,v 5.34 2003/09/16 21:01:58 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -200,7 +200,8 @@ void Deflector(int ind, int on)
 
     if (on) {
 	if (!BIT(pl->used, HAS_DEFLECTOR) && pl->item[ITEM_DEFLECTOR] > 0) {
-	    if (!cloakedShield || !BIT(pl->used, HAS_CLOAKING_DEVICE)) {
+	    /* only allow deflector when cloaked shielding or not cloaked */
+	    if (cloakedShield || !BIT(pl->used, HAS_CLOAKING_DEVICE)) {
 		SET_BIT(pl->used, HAS_DEFLECTOR);
 		sound_play_player(pl, DEFLECTOR_SOUND);
 	    }
@@ -785,8 +786,17 @@ void Update_objects(void)
 	}
 
 
-	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
+	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING) {
+	    if (BIT(pl->status, PAUSE)) {
+		/* reduce paused player's score a little. */
+		pl->score -= 0.01;
+		/* only update paused score every 4 or 5 seconds. */
+		if ((frame_loops & 63) == 0) {
+		    updateScores = true;
+		}
+	    }
 	    continue;
+	}
 
 	if (round_delay > 0)
 	    continue;
@@ -1048,9 +1058,7 @@ void Update_objects(void)
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
 
-	pl->mass = pl->emptymass
-		   + FUEL_MASS(pl->fuel.sum)
-		   + pl->item[ITEM_ARMOR] * ARMOR_MASS;
+	Player_set_mass(i);
 
 	if (BIT(pl->status, WARPING)) {
 	    position w;
@@ -1138,8 +1146,8 @@ void Update_objects(void)
 		    }
 		}
 		if (!counter) {
-		    w.x = OBJ_X_IN_BLOCKS(pl);
-		    w.y = OBJ_Y_IN_BLOCKS(pl);
+		    w.x = OBJ_X_IN_PIXELS(pl);
+		    w.y = OBJ_Y_IN_PIXELS(pl);
 		}
 		if (counter
 		    && wormTime

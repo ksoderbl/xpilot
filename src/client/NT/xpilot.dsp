@@ -312,6 +312,11 @@ SOURCE=..\syslimit.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\talk.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=..\talk.h
 # End Source File
 # Begin Source File

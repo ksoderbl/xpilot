@@ -1,4 +1,4 @@
-/* $Id: defaults.h,v 5.10 2001/11/30 11:47:19 bertg Exp $
+/* $Id: defaults.h,v 5.11 2003/09/16 21:00:54 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,7 +34,7 @@ enum valType {
     valString,		/* variable is type char* */
     valSec,		/* variable is type int (converted to frames) */
     valPerSec,		/* variable is type float (converted to per-frame) */
-    valList,		/* variable is a list of elements of type char* */
+    valList		/* variable is a list of elements of type char* */
 };
 
 
@@ -46,7 +46,7 @@ enum _optOrigin {
     OPT_MAP		= 1,
     OPT_DEFAULTS	= 2,
     OPT_COMMAND		= 4,
-    OPT_PASSWORD	= 8,
+    OPT_PASSWORD	= 8
 };
 typedef enum _optOrigin optOrigin;
 
@@ -57,7 +57,7 @@ typedef enum _optOrigin optOrigin;
 enum _optOriginAny {
     OPT_NONE		= 0,	/* not settable */
     OPT_ORIGIN_ANY	= 7,	/* allow any of {map,defaults,command} */
-    OPT_VISIBLE		= 16,	/* can we query this option value? */
+    OPT_VISIBLE		= 16	/* can we query this option value? */
 };
 
 

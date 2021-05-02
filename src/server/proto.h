@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.46 2002/04/13 18:26:04 bertg Exp $
+/* $Id: proto.h,v 5.48 2003/09/16 21:01:48 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -109,7 +109,6 @@ int OFF(char *optval);
 int mod(int x, int y);
 int f2i(DFLOAT f);
 DFLOAT findDir(DFLOAT x, DFLOAT y);
-DFLOAT rfrac(void);
 void Make_table(void);
 
 
@@ -250,6 +249,7 @@ void Player_add_tank(int ind, long tank_fuel);
 void Player_remove_tank(int ind, int which_tank);
 void Player_hit_armor(int ind);
 void Player_used_kill(int ind);
+void Player_set_mass(int ind);
 int Init_player(int ind, shipobj *ship);
 void Alloc_players(int number);
 void Free_players(void);

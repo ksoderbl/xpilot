@@ -1,4 +1,4 @@
-/* $Id: laser.c,v 5.13 2002/05/01 16:33:25 bertg Exp $
+/* $Id: laser.c,v 5.14 2003/09/16 21:01:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,7 +47,7 @@
 #include "portability.h"
 #include "objpos.h"
 #include "asteroid.h"
-
+#include "commonproto.h"
 
 char laser_version[] = VERSION;
 
@@ -406,7 +406,7 @@ static list_t Laser_pulse_get_object_list(
 		dx = midx - ast->pos.x;
 		dy = midy - ast->pos.y;
 		dx = WRAP_DX(dx);
-		dy = WRAP_DX(dy);
+		dy = WRAP_DY(dy);
 		range = ast->pl_radius + pulse->len / 2;
 		if (sqr(dx) + sqr(dy) < sqr(range)) {
 		    List_push_back(output_obj_list, ast);
@@ -609,7 +609,7 @@ void Laser_pulse_collision(void)
 		    adx = x - ast->pos.x;
 		    ady = y - ast->pos.y;
 		    adx = WRAP_DX(adx);
-		    ady = WRAP_DX(ady);
+		    ady = WRAP_DY(ady);
 		    if (sqr(adx) + sqr(ady) <= sqr(ast->pl_radius)) {
 			obj->life = 0;
 			ast->life += ASTEROID_FUEL_HIT(ED_LASER_HIT,

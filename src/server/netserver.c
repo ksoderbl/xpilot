@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.32 2002/04/21 19:08:14 kimiko Exp $
+/* $Id: netserver.c,v 5.33 2002/08/21 14:22:31 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -3236,5 +3236,25 @@ static int Receive_audio_request(int ind)
     }
 
     return 1;
+}
+
+int Check_max_clients_per_IP(char *host_addr)
+{
+    int			i, clients_per_ip = 0;
+    connection_t	*connp;
+
+    if (maxClientsPerIP <= 0)
+	return 0;
+
+    for (i = 0; i < max_connections; i++) {
+	connp = &Conn[i];
+	if (connp->state != CONN_FREE && !strcasecmp(connp->addr, host_addr))
+	    clients_per_ip++;
+    }
+
+    if (clients_per_ip >= maxClientsPerIP)
+	return 1;
+
+    return 0;
 }
 

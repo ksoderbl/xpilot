@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 5.16 2002/05/22 11:22:24 bertg Exp $
+/* $Id: netclient.c,v 5.17 2002/09/07 17:16:57 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1325,7 +1325,7 @@ int Net_input(void)
      */
     n = Net_packet();
 
-    if (last_frame > oldest_frame) {
+    if (last_frame->loops > oldest_frame->loops) {
 	/*
 	 * Switch buffers to prevent gaps.
 	 */
@@ -1361,7 +1361,7 @@ int Net_input(void)
 	Net_flush();
     }
 
-    return 1 + (last_frame > oldest_frame);
+    return 1 + (last_frame->loops > oldest_frame->loops);
 }
 
 /*

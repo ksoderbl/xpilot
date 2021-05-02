@@ -1,4 +1,4 @@
-This is the README file for XPilot 4.5.4.
+This is the README file for XPilot 4.5.5.
 
 Copyright © 1991-2002 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
@@ -22,22 +22,6 @@ For further reading, see the manuals in the doc/man directory.
 
 
 
-OTHER SOURCES OF INFORMATION ON THE INTERNET
-
-XPilot FAQ: telnet meta.xpilot.org 4402
-	(also in the doc/ subdirectory)
-
-XPilot Page on WWW: http://www.xpilot.org/
-
-XPilot for Windows info on WWW: http://www.buckosoft.com/xpilot/
-
-XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
-
-XPilot FTP archive: ftp://ftp.xpilot.org/pub/
-
-XPilot newsgroup: rec.games.computer.xpilot
-
-
 CONTRIBUTED SOFTWARE
 
 Check out the contrib directory subdirectory for some extra nifty programs.
@@ -48,22 +32,4 @@ Also try the mapeditor which is included in this XPilot distribution.
 It is a nifty graphical editor with which you can design a new XPilot world.
 
 
-REPORTING PROBLEMS AND BUGS
-
-If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
-
-        xpilot@xpilot.org
-
-Remember to include the version of XPilot, your platform and the symptoms
-in as much detail as possible.
-
-
-DEVELOPERS CORNER
-
-A wider group of developers are discussing technical internals of the
-software on the mailing list xpilot-hacks@nslug.ns.ca. If you want to
-discuss your potential contributions to the source code, please see the
-URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
-information.
-
-$Id: README.txt,v 5.35 2002/07/14 14:08:26 bertg Exp $
+$Id: README.txt,v 5.42 2010/02/21 15:58:43 bertg Exp $

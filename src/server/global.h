@@ -1,4 +1,4 @@
-/* $Id: global.h,v 5.32 2002/03/21 18:20:20 kimiko Exp $
+/* $Id: global.h,v 5.34 2002/08/21 14:22:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -85,6 +85,7 @@ extern server_t		Server;
 extern list_t		expandList;
 extern DFLOAT		ShotsMass, ShipMass, ShotsSpeed, Gravity;
 extern DFLOAT		ballMass;
+extern DFLOAT		minItemMass;
 extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
 extern bool		shotHitFuelDrainUsesKineticEnergy;
@@ -225,6 +226,7 @@ extern int		targetDeadTime;
 extern bool		reportToMetaServer;
 extern bool		searchDomainForXPilot;
 extern char		*denyHosts;
+extern int		maxClientsPerIP;
 
 extern bool		playersOnRadar;
 extern bool		missilesOnRadar;

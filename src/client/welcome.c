@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 5.7 2002/04/11 22:17:37 bertg Exp $
+/* $Id: welcome.c,v 5.9 2010/01/18 09:13:11 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -81,8 +81,8 @@ char welcome_version[] = VERSION;
 #define NUM_METAS		2
 #define META_HOST		"meta.xpilot.org"
 #define META_HOST_TWO		"meta2.xpilot.org"
-#define META_IP			"129.242.13.151"
-#define META_IP_TWO		"132.235.197.27"
+#define META_IP			"64.235.48.198"
+#define META_IP_TWO		"64.235.48.198"
 #define META_PROG_PORT		4401
 #define NUM_META_DATA_FIELDS	18
 
@@ -351,6 +351,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     char			*server_addrs;
     char			*name_ptrs[MAX_LOCAL_SERVERS];
     char			*addr_ptrs[MAX_LOCAL_SERVERS];
+    unsigned			server_versions[MAX_LOCAL_SERVERS];
 
     Welcome_set_mode(ModeLocalnet);
 
@@ -372,7 +373,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     }
     Contact_servers(0, NULL, 0, 2, 0, NULL,
 		    MAX_LOCAL_SERVERS, &n,
-		    addr_ptrs, name_ptrs,
+		    addr_ptrs, name_ptrs, server_versions,
 		    conpar);
     LIMIT(n, 0, MAX_LOCAL_SERVERS);
 
@@ -425,6 +426,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    localnet_conpars[i] = *conpar;
 	    strlcpy(localnet_conpars[i].server_name, name_ptrs[i], MAX_HOST_LEN);
 	    strlcpy(localnet_conpars[i].server_addr, addr_ptrs[i], MAX_HOST_LEN);
+	    localnet_conpars[i].server_version = server_versions[i];
 	    button_width = max_width + 20;
 	    button_height = textFont->ascent + textFont->descent + 10;
 	    button_x = 20;
@@ -1245,7 +1247,7 @@ static int Internet_server_join_cb(int widget, void *user_data, const char **tex
     conpar->contact_port = sip->port;
     result = Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
 			     0, NULL,
-			     NULL, NULL,
+			     NULL, NULL, NULL,
 			     conpar);
     if (result) {
 	/* structure copy */

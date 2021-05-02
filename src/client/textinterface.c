@@ -1,4 +1,4 @@
-/* $Id: textinterface.c,v 5.7 2001/07/31 17:35:33 bertg Exp $
+/* $Id: textinterface.c,v 5.8 2004/02/11 18:58:52 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -807,6 +807,7 @@ int Contact_servers(int count, char **servers,
 		    int auto_shutdown, char *shutdown_reason,
 		    int find_max, int *num_found,
 		    char **server_addresses, char **server_names,
+		    unsigned *server_versions,
 		    Connect_param_t *conpar)
 {
     int			connected = false;
@@ -859,6 +860,9 @@ int Contact_servers(int count, char **servers,
 			    strlcpy(server_addresses[count],
 				    conpar->server_addr,
 				    MAX_HOST_LEN);
+			}
+			if (server_versions) {
+			    server_versions[count]=conpar->server_version;
 			}
 			count++;
 		    }

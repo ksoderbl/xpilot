@@ -1,4 +1,4 @@
-/* $Id: metaserver.h,v 5.1 2002/04/11 08:06:12 bertg Exp $
+/* $Id: metaserver.h,v 5.2 2010/01/18 09:13:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 #define META_PORT	5500
 #define META_HOST	"meta.xpilot.org"
 #define META_HOST_TWO	"meta2.xpilot.org"
-#define META_IP		"129.242.13.151"
-#define META_IP_TWO	"132.235.197.27"
+#define META_IP		"64.235.48.198"
+#define META_IP_TWO	"64.235.48.198"
 
 #endif

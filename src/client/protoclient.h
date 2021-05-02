@@ -1,4 +1,4 @@
-/* $Id: protoclient.h,v 5.4 2001/05/14 13:07:03 bertg Exp $
+/* $Id: protoclient.h,v 5.5 2004/02/11 18:58:52 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -128,6 +128,7 @@ int Contact_servers(int count, char **servers,
                     int auto_shutdown, char *shutdown_message,
                     int find_max, int *num_found,
                     char **server_addresses, char **server_names,
+		    unsigned *server_versions,
                     Connect_param_t *conpar);
 #endif
 

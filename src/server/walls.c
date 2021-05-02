@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.27 2002/04/21 09:31:18 bertg Exp $
+/* $Id: walls.c,v 5.28 2003/09/16 21:02:10 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -46,6 +46,7 @@
 #include "walls.h"
 #include "click.h"
 #include "objpos.h"
+#include "commonproto.h"
 
 char walls_version[] = VERSION;
 

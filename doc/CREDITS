@@ -20,12 +20,14 @@ Release 4.5 credits:
     Paul Alexander Drees    Asteroid Concentrators.
     Kimiko Koopman          Ball racing, kinetic energy in
                             shot hits, scores as floats,
-                            alliances, cannon defense.
+                            alliances, cannon defense,
+                            Esound support.
     Austin Donnelly         Auto-kick of paused players.
     Paul Alexander Drees    Bugfixes, sensitive mines,
                             asteroid concentrators, lag meter.
-    Thorsten Kroeger        Messages to standard output.
+    Thorsten Kroeger        Messages to standard output,
                             server security fix.
+    Kristian Söderblom      Several bugfixes.
 
 Release 4.4 credits:
 

@@ -1,4 +1,4 @@
-/* $Id: saudio.c,v 5.1 2001/11/29 14:48:12 bertg Exp $
+/* $Id: saudio.c,v 5.2 2002/08/04 10:56:03 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,19 +65,26 @@ static void queue_audio(player * pl, int index, int volume)
 {
     AudioQPtr       a, p, prev;
 
+    p = prev = (AudioQPtr)pl->audio;
+
+    while (p) {
+	if (p->index == index) {	/* same sound already in queue */
+	    if (p->volume < volume) {	/* weaker version: replace volume */
+		p->volume = volume;
+	    }
+	    return;
+	}
+	prev = p;
+	p = p->next;
+    }
+
+    /* not found in queue: add to end */
     if (!(a = (AudioQPtr) malloc(sizeof(AudioQRec))))
 	return;
 
     a->index = index;
     a->volume = volume;
     a->next = NULL;
-
-    p = prev = (AudioQPtr)pl->audio;
-
-    while (p) {
-	prev = p;
-	p = p->next;
-    }
 
     if (prev)
 	prev->next = a;

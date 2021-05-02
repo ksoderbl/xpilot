@@ -1,4 +1,4 @@
-/* $Id: item.c,v 5.24 2002/04/13 18:26:03 bertg Exp $
+/* $Id: item.c,v 5.25 2003/09/16 21:01:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -48,6 +48,7 @@
 #include "netserver.h"
 #include "error.h"
 #include "objpos.h"
+#include "commonproto.h"
 
 char item_version[] = VERSION;
 
