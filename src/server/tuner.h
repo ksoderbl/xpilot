@@ -1,4 +1,4 @@
-/* 
+/* $Id: tuner.h,v 1.2 2001/08/26 19:27:26 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -22,23 +22,26 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	VERSION_H
-#define	VERSION_H
+#ifndef	TUNER_H
+#define	TUNER_H
 
-#if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-2001"
-#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#   pragma VERSIONID		"XPilot 4.4.3"
+void tuner_plock(void);
+void tuner_shotsmax(void);
+void tuner_shipmass(void);
+void tuner_ballmass(void);
+void tuner_maxrobots(void);
+void tuner_minrobots(void);
+void tuner_playershielding(void);
+void tuner_playerstartsshielded(void);
+void tuner_worldlives(void);
+void tuner_cannonsmartness(void);
+void tuner_teamcannons(void);
+void tuner_cannonsuseitems(void);
+void tuner_wormtime(void);
+void tuner_modifiers(void);
+void tuner_minelife(void);
+void tuner_missilelife(void);
+void tuner_gameduration(void);
+void tuner_racelaps(void);
+
 #endif
-
-#define VERSION			"4.4.3"
-#ifdef	_WINDOWS
-#define	TITLE			"4.4.3-NT13"
-#define	VERSION_WINDOWS	"13"
-#else
-#define TITLE			"XPilot 4.4.3"
-#endif
-#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#define COPYRIGHT		"Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-
-#endif /* VERSION_H */

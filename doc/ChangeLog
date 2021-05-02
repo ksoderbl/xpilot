@@ -3,6 +3,28 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.4.3 compared to release 4.4.2.
+
+A bug was fixed regarding asteroids wrapping beyond map_width.
+
+Jude J Anthony submitted a bugfix for robots:
+    The problem appears to be a confusion between the global Obj[] array (object
+    *Obj[MAX_TOTAL_SHOTS], declared in server.c, and included through global.h)
+    and a local array of object pointers.  
+
+    Within Robot_default_play_check_objects(), at line 1874, we declare a local
+    array of object pointers (object **obj_list).  At line 1907, we get all
+    items within our visibility with Cell_get_objects(), placing them in the
+    obj_list.  At 1911, we loop j through all the items in obj_list, setting
+    shot to an object pointer within the list at 1913.  At line 1965, we run a
+    check for items of type OBJ_ITEM.  (Thus explaining why the error only
+    occurs with robots AND items.)
+
+    On line 1973, try to find the Importance of Obj[j], but j is actually an
+    index into obj_list. 
+
+===============================================================================
+
 This is a summary of changes of release 4.4.2 compared to release 4.4.1.
 
 Paul Alexander Drees submitted a bugfix for the Windows version of XPilot.
@@ -1509,6 +1531,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.38 2001/09/24 22:48:08 bertg Exp $
+==== $Id: ChangeLog,v 5.38.2.1 2001/11/04 21:05:19 dik Exp $
 ===============================================================================
 

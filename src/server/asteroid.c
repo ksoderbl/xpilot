@@ -1,4 +1,4 @@
-/* $Id: asteroid.c,v 5.12 2001/09/18 18:20:06 bertg Exp $
+/* $Id: asteroid.c,v 5.12.2.1 2001/11/04 18:53:08 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -259,7 +259,8 @@ static void Make_asteroid(DFLOAT x, DFLOAT y,
 {
     wireobject	*asteroid;
     DFLOAT	radius;
-    int		bx = x / BLOCK_SZ, by = y / BLOCK_SZ;
+	int		bx;
+	int		by;
 
     if (NumObjs >= MAX_TOTAL_SHOTS) {
 	return;
@@ -278,6 +279,9 @@ static void Make_asteroid(DFLOAT x, DFLOAT y,
     if (x < 0 || x >= World.width || y < 0 || y >= World.height) {
 	return;
     }
+
+    bx = x / BLOCK_SZ;
+	by = y / BLOCK_SZ;
     if (BIT(World.block[bx][by], FILLED_BIT|FUEL_BIT|TARGET_BIT|TREASURE_BIT)) {
 	return;
     } else if (BIT(World.block[bx][by], REC_LU|REC_RU|REC_LD|REC_RD)) {

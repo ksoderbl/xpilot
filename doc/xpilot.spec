@@ -1,13 +1,13 @@
 #
 # XPilot RPM spec file.
 #
-# $Id: xpilot.spec,v 5.7 2001/10/07 15:06:59 bertg Exp $
+# $Id: xpilot.spec,v 5.7.2.1 2001/11/06 14:12:43 bertg Exp $
 #
 
 Summary:      A multiplayer Internet client/server 2D space game
 Name:         xpilot
-Version:      4.4.2
-Release:      7
+Version:      4.4.3
+Release:      8
 Group:        X11/Games/Video
 Copyright:    GPL
 Packager:     xpilot@xpilot.org

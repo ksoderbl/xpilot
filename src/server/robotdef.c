@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 5.20 2001/08/26 19:27:26 gkoopman Exp $
+/* $Id: robotdef.c,v 5.20.2.1 2001/11/04 19:01:13 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1970,7 +1970,7 @@ static void Robot_default_play_check_objects(int ind,
 		    if (BIT(shot->status, RANDOM_ITEM)) {
 			imp = ROBOT_HANDY_ITEM;		/* It doesn't know what it is, so get it if it can */
 		    } else {
-			imp = Importance(ind, Obj[j]->info);
+			imp = Importance(ind, obj_list[j]->info);
 		    }
 		    if (imp > ROBOT_IGNORE_ITEM && imp >= *item_imp) {
 			*item_imp = imp;
@@ -2088,6 +2088,17 @@ static void Robot_default_play_check_objects(int ind,
 	    }
 	}
     }
+    // Convert *item_i from index in local obj_list[] to index in Obj[]
+    if (*item_i >= 0) {
+    for (j=0; (j < NumObjs) && (Obj[j]->id != obj_list[*item_i]->id); j++);
+    if (j >= NumObjs) {
+        *item_i = -1;  // Perhaps an error should be printed, too?
+    }
+    else {
+        *item_i = j;
+    }
+    }
+
 }
 
 static void Robot_default_play_check_lasers(int ind)
