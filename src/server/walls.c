@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.26 2002/01/27 22:58:55 kimiko Exp $
+/* $Id: walls.c,v 5.27 2002/04/21 09:31:18 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1772,7 +1772,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     if (targets_remaining > 0) {
 	sc = Rate(Players[killer]->score, CANNON_SCORE)/4;
 	sc = sc * (targets_total - targets_remaining) / (targets_total + 1);
-	if (sc > 0) {
+	if (sc >= 0.01) {
 	    SCORE(killer, sc,
 		  targ->pos.x, targ->pos.y, "Target: ");
 	}

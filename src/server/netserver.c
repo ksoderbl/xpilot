@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.31 2002/04/08 17:50:30 bertg Exp $
+/* $Id: netserver.c,v 5.32 2002/04/21 19:08:14 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1025,8 +1025,13 @@ static int Handle_login(int ind, char *errmsg, int errsize)
     Go_home(NumPlayers);
     if (pl->team != TEAM_NOT_SET) {
 	World.teams[pl->team].NumMembers++;
-	if (teamShareScore)
+	if (teamShareScore) {
+	    if (World.teams[pl->team].NumMembers == 1) {
+		/* reset team score on first player */
+		World.teams[pl->team].score = 0;
+	    }
 	    TEAM_SCORE(pl->team, 0);
+	}
     }
     NumPlayers++;
     request_ID();

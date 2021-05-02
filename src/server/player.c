@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.28 2002/04/13 18:26:04 bertg Exp $
+/* $Id: player.c,v 5.29 2002/04/21 19:08:15 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1733,7 +1733,7 @@ void Delete_player(int ind)
     if (pl->team != TEAM_NOT_SET && !IS_TANK_PTR(pl)) {
 	World.teams[pl->team].NumMembers--;
 	if (teamShareScore)
-	    TEAM_SCORE(pl->team, 0);	/* recalculate teamscores */
+	    TEAM_SCORE(pl->team, -(pl->score));	/* recalculate teamscores */
 	if (IS_ROBOT_PTR(pl))
 	    World.teams[pl->team].NumRobots--;
     }

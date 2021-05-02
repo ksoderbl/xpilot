@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 5.40 2002/01/18 23:37:29 kimiko Exp $
+/* $Id: frame.c,v 5.41 2002/04/21 20:31:37 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -760,6 +760,8 @@ static void Frame_shots(int conn, int ind)
 	case OBJ_SHOT:
 	case OBJ_CANNON_SHOT:
 	    if (Team_immune(shot->id, pl->id)
+		|| (shot->id != NO_ID
+		    && BIT(Players[GetInd[shot->id]]->status, PAUSE))
 		|| (shot->id == NO_ID
 		    && BIT(World.rules->mode, TEAM_PLAY)
 		    && shot->team == pl->team)) {
@@ -815,12 +817,17 @@ static void Frame_shots(int conn, int ind)
 		    if (BIT(mine->status, CONFUSED))
 			confused = 1;
 		}
-		laid_by_team = (Team_immune(mine->id, pl->id)
-				|| (BIT(mine->status, OWNERIMMUNE)
-				    && mine->owner == pl->id));
-		if (confused) {
-		    id = 0;
-		    laid_by_team = (rfrac() < 0.5f);
+		if (mine->id != NO_ID
+		    && BIT(Players[GetInd[mine->id]]->status, PAUSE)) {
+		    laid_by_team = 1;
+		} else {
+		    laid_by_team = (Team_immune(mine->id, pl->id)
+				    || (BIT(mine->status, OWNERIMMUNE)
+					&& mine->owner == pl->id));
+		    if (confused) {
+			id = 0;
+			laid_by_team = (rfrac() < 0.5f);
+		    }
 		}
 		Send_mine(conn, x, y, laid_by_team, id);
 	    }

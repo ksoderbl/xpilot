@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 5.59 2002/04/13 18:26:03 bertg Exp $
+/* $Id: collision.c,v 5.60 2002/04/21 20:31:31 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -647,6 +647,8 @@ static void PlayerObjectCollision(int ind)
 		       (pl->lock.pl_id == obj->id)) {
 		continue;
 	    } else if (Team_immune(obj->id, pl->id)) {
+		continue;
+	    } else if (BIT(Players[GetInd[obj->id]]->status, PAUSE)) {
 		continue;
 	    }
 	} else if (BIT(World.rules->mode, TEAM_PLAY)

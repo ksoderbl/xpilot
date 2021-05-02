@@ -3,6 +3,21 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.5.3 compared to release 4.5.2.
+
+Fixed a bug which caused paused players to become unpaused at end
+of round reset.
+
+Fixed two bugs that caused team scores to remain the same when a (or all)
+player(s) left. Scores of leaving players are now subtracted from the
+team score and the team score is reset when a team's first player enters.
+
+Objects from paused players are now inactive.  Other players can no
+longer collide with them.  Shots and mines from paused players will
+now be displayed in neutral colors.
+
+===============================================================================
+
 This is a summary of changes of release 4.5.2 compared to release 4.5.1.
 
 The IP address of the primary meta server was changed because
@@ -1741,6 +1756,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.72 2002/04/13 18:30:48 bertg Exp $
+==== $Id: ChangeLog,v 5.75 2002/04/21 20:40:34 bertg Exp $
 ===============================================================================
 

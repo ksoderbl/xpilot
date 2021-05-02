@@ -1,4 +1,4 @@
-/* $Id: command.c,v 5.20 2002/01/23 09:12:57 kimiko Exp $
+/* $Id: command.c,v 5.21 2002/04/21 19:08:14 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -413,11 +413,11 @@ static int Cmd_team(char *arg, player *pl, int oper, char *msg)
     }
     World.teams[pl->team].NumMembers--;
     if (teamShareScore)
-	TEAM_SCORE(pl->team, 0);
+	TEAM_SCORE(pl->team, -(pl->score));
     pl->team = team;
     World.teams[pl->team].NumMembers++;
     if (teamShareScore)
-	TEAM_SCORE(pl->team, 0);
+	TEAM_SCORE(pl->team, pl->score);
     if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    if (!TEAM(ind, i) && !BIT(Players[i]->status, PAUSE)) {

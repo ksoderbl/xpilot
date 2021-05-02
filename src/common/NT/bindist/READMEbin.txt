@@ -1,5 +1,5 @@
 This is the README for XPilot.exe Release 13 .
-XPilot.exe is based on 4.5.2 .
+XPilot.exe is based on 4.5.3 .
 
 Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 

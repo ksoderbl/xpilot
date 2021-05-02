@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 5.21 2002/02/07 10:52:00 bertg Exp $
+/* $Id: robot.c,v 5.22 2002/04/21 19:08:15 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -814,8 +814,13 @@ static void Robot_create(void)
     NumPlayers++;
     NumRobots++;
 
-    if (BIT(World.rules->mode, TEAM_PLAY) && teamShareScore)
+    if (BIT(World.rules->mode, TEAM_PLAY) && teamShareScore) {
+	if (World.teams[robot->team].NumMembers == 1) {
+	    /* reset team score on first player */
+	    World.teams[robot->team].score = 0;
+	}
 	TEAM_SCORE(robot->team, 0);
+    }
 
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
