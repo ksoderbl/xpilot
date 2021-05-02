@@ -1,9 +1,10 @@
-/* $Id: update.c,v 1.13 1993/04/18 16:46:26 kenrsc Exp $
+/* $Id: update.c,v 3.12 1993/08/02 12:55:40 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -14,10 +15,12 @@
 #include "score.h"
 #include "draw.h"
 #include "robot.h"
+#include "bit.h"
+#include "saudio.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 1.13 1993/04/18 16:46:26 kenrsc Exp $";
+    "@(#)$Id: update.c,v 3.12 1993/08/02 12:55:40 bjoerns Exp $";
 #endif
 
 
@@ -46,12 +49,82 @@ static char sourceid[] =
 	    (obj).pos.y += (obj).vel.y += (obj).acc.y;			\
 	}								\
 	if (!BIT(World.rules->mode, WRAP_PLAY)) {			\
-	    if ((obj).pos.x < 0) (obj).pos.x = 0;	    		\
-	    if ((obj).pos.x >= World.x * BLOCK_SZ)			\
-	        (obj).pos.x = World.x * BLOCK_SZ - 1;	    		\
-	    if ((obj).pos.y < 0) (obj).pos.y = 0;	    		\
-	    if ((obj).pos.y >= World.y * BLOCK_SZ)			\
-	      (obj).pos.y = World.y * BLOCK_SZ - 1;		 	\
+	    if ((obj).pos.x < 0) {					\
+		if (edgeBounce) {					\
+		    (obj).pos.x = -(obj).pos.x;				\
+		    if ((obj).vel.x < 0) {				\
+			(obj).vel.x = -(obj).vel.x;			\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = MOD2(RES / 2 - (obj).dir, RES);	\
+			}						\
+		    }							\
+		} else {						\
+		    (obj).pos.x = 0;					\
+		    if ((obj).vel.x < 0) {				\
+			(obj).vel.x = 0;				\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = ((obj).vel.y<0)?(3*RES/4):RES/4;\
+			}						\
+		    }							\
+		}							\
+	    }								\
+	    if ((obj).pos.x >= World.x * BLOCK_SZ) {			\
+		if (edgeBounce) {					\
+		    (obj).pos.x = 2 * World.x * BLOCK_SZ - (obj).pos.x; \
+		    if ((obj).vel.x > 0) {				\
+			(obj).vel.x = -(obj).vel.x;			\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = MOD2(RES / 2 - (obj).dir, RES);	\
+			}						\
+		    }							\
+		} else {						\
+		    (obj).pos.x = World.x * BLOCK_SZ - 1;    		\
+		    if ((obj).vel.x > 0) {				\
+			(obj).vel.x = 0;				\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = ((obj).vel.y<0)?(3*RES/4):RES/4;\
+			}						\
+		    }							\
+		}							\
+	    }								\
+	    if ((obj).pos.y < 0) {					\
+		if (edgeBounce) {					\
+		    (obj).pos.y = -(obj).pos.y;				\
+		    if ((obj).vel.y < 0) {				\
+			(obj).vel.y = -(obj).vel.y;			\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = MOD2(RES - (obj).dir, RES);	\
+			}						\
+		    }							\
+		} else {						\
+		    (obj).pos.y = 0;					\
+		    if ((obj).vel.y < 0) {				\
+			(obj).vel.y = 0;				\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = ((obj).vel.x<0)?(RES/2):0;	\
+			}						\
+		    }							\
+		}							\
+	    }								\
+	    if ((obj).pos.y >= World.y * BLOCK_SZ) {			\
+		if (edgeBounce) {					\
+		    (obj).pos.y = 2 * World.y * BLOCK_SZ - (obj).pos.y;	\
+		    if ((obj).vel.y > 0) {				\
+			(obj).vel.y = -(obj).vel.y;			\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = MOD2(RES - (obj).dir, RES);	\
+			}						\
+		    }							\
+		} else {						\
+		    (obj).pos.y = World.y * BLOCK_SZ - 1;		\
+		    if ((obj).vel.y > 0) {				\
+			(obj).vel.y = 0;				\
+			if ((obj).type != OBJ_PLAYER) {			\
+			    (obj).dir = ((obj).vel.x<0)?(RES/2):0;	\
+			}						\
+		    }							\
+		}							\
+	    }								\
 	} else {							\
 	    if ((obj).pos.x < 0) {					\
 		(obj).pos.x += World.x * BLOCK_SZ;	    		\
@@ -70,13 +143,43 @@ static char sourceid[] =
 		(obj).wrapped |= 2;					\
 	    }								\
 	}								\
-	/*  speed_limit(obj); */					\
-	(obj).velocity = LENGTH((obj).vel.x, (obj).vel.y);		\
     }									\
+    /*  speed_limit(obj); */						\
+    (obj).velocity = LENGTH((obj).vel.x, (obj).vel.y);			\
 }
 
 
 static char msg[MSG_LEN];
+
+
+#ifndef OLD_TRANSPORT_TO_HOME
+static void Transport_to_home(int ind)
+{
+    /*
+     * Transport a corpse from the place where it died back to its homebase.
+     * During the first part of the distance we give it a positive constant
+     * acceleration G, during the second part we make this a negative one -G.
+     * This results in a visually pleasing take off and landing.
+     */
+    player		*pl = Players[ind];
+    float		bx, by, dx, dy,	t, m;
+    const int		T = RECOVERY_DELAY;
+
+    bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
+    by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
+    dx = WRAP_DX(bx - pl->pos.x);
+    dy = WRAP_DY(by - pl->pos.y);
+    t = pl->count + 0.5f;
+    if (2 * t <= T) {
+	m = 2 / t;
+    } else {
+	t = T - t;
+	m = (4 * t) / (T * T - 2 * t * t);
+    }
+    pl->vel.x = dx * m;
+    pl->vel.y = dy * m;
+}
+#endif
 
 
 /********** **********
@@ -94,6 +197,21 @@ void Update_objects(void)
     Update_robots();
 
     /*
+     * Autorepeat fire, must unfortunately be done here, not in
+     * the player loop below, because of collisions between the shots
+     * and the auto-firing player that would otherwise occur.
+     */
+    if (fireRepeatRate > 0) {
+	for (i = 0; i < NumPlayers; i++) {
+	    pl = Players[i];
+	    if (BIT(pl->used, OBJ_FIRE)
+		&& loops - pl->shot_time >= fireRepeatRate) {
+		Fire_normal_shots(i);
+	    }
+	}
+    }
+
+    /*
      * Special items.
      */
     for (i=0; i<NUM_ITEMS; i++)
@@ -107,10 +225,26 @@ void Update_objects(void)
     /*
      * Let the fuel stations regenerate some fuel.
      */
-    for(i=0; i<World.NumFuels; i++) {
-	if ((World.fuel[i].fuel += STATION_REGENERATION * NumPlayers)
-	    > MAX_STATION_FUEL)
-	    World.fuel[i].fuel = MAX_STATION_FUEL;
+    if (NumPlayers > 0) {
+	int fuel = NumPlayers * STATION_REGENERATION;
+	int frames_per_update = MAX_STATION_FUEL / (fuel * BLOCK_SZ);
+	for (i=0; i<World.NumFuels; i++) {
+	    if (World.fuel[i].fuel == MAX_STATION_FUEL) {
+		continue;
+	    }
+	    if ((World.fuel[i].fuel += fuel) >= MAX_STATION_FUEL) {
+		World.fuel[i].fuel = MAX_STATION_FUEL;
+	    }
+	    else if (World.fuel[i].last_change + frames_per_update > loops) {
+		/*
+		 * We don't send fuelstation info to the clients every frame
+		 * if it wouldn't change their display.
+		 */
+		continue;
+	    }
+	    World.fuel[i].conn_mask = 0;
+	    World.fuel[i].last_change = loops;
+	}
     }
 
     /*
@@ -132,9 +266,12 @@ void Update_objects(void)
      */
     for (i=0; i<World.NumCannons; i++) {
 	if (World.cannon[i].dead_time > 0) {
-	    if (!--World.cannon[i].dead_time)
+	    if (!--World.cannon[i].dead_time) {
 		World.block[World.cannon[i].pos.x][World.cannon[i].pos.y]
 		    = CANNON;
+		World.cannon[i].conn_mask = 0;
+		World.cannon[i].last_change = loops;
+	    }
 	    continue;
 	}
 	if (World.cannon[i].active) {
@@ -144,6 +281,33 @@ void Update_objects(void)
 	World.cannon[i].active = false;
     }
     
+    /*
+     * Update targets
+     */
+    for (i = 0; i < World.NumTargets; i++) {
+	if (World.targets[i].dead_time > 0) {
+	    World.targets[i].dead_time--;
+	    World.targets[i].conn_mask = 0;
+	    World.targets[i].last_change = loops;
+	    continue;
+	}
+	else if (World.targets[i].damage == TARGET_DAMAGE) {
+	    continue;
+	}
+	World.targets[i].damage += TARGET_REPAIR_PER_FRAME;
+	if (World.targets[i].damage >= TARGET_DAMAGE) {
+	    World.targets[i].damage = TARGET_DAMAGE;
+	}
+	else if (World.targets[i].last_change + TARGET_UPDATE_DELAY < loops) {
+	    /*
+	     * We don't send target info to the clients every frame
+	     * if the latest repair wouldn't change their display.
+	     */
+	    continue;
+	}
+	World.targets[i].conn_mask = 0;
+	World.targets[i].last_change = loops;
+    }
 
     /* * * * * *
      *
@@ -162,18 +326,20 @@ void Update_objects(void)
 	LIMIT(pl->turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
 	LIMIT(pl->turnresistance, 0.0, 1.0);
 
-	if (pl->control_count > 0)
-	    pl->control_count--;
 	if (pl->fuel.count > 0)
 	    pl->fuel.count--;
 
 	if (pl->count > 0) {
 	    pl->count--;
 	    if (!BIT(pl->status, PLAYING)) {
+#ifdef OLD_TRANSPORT_TO_HOME
 		pl->vel.x = WRAP_DX(BLOCK_SZ * World.base[pl->home_base].pos.x
 			     + BLOCK_SZ/2 - pl->pos.x) / (pl->count + 1);
 		pl->vel.y = WRAP_DY(BLOCK_SZ * World.base[pl->home_base].pos.y
 			     + BLOCK_SZ/2 - pl->pos.y) / (pl->count + 1);
+#else
+		Transport_to_home(i);
+#endif
 		goto update;
 	    }
 	}
@@ -196,10 +362,19 @@ void Update_objects(void)
 	    }
 	}
 
-	if ((!BIT(pl->status, PLAYING)) || BIT(pl->status, GAME_OVER))
+	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
 	    continue;
 
-        
+	if (pl->shield_time > 0) {
+	    if (--pl->shield_time == 0) {
+		CLR_BIT(pl->used, OBJ_SHIELD);
+	    }
+	    if (BIT(pl->used, OBJ_SHIELD) == 0) {
+		CLR_BIT(pl->have, OBJ_SHIELD);
+		pl->shield_time = 0;
+	    }
+	}
+
 	/*
 	 * Compute turn
 	 */
@@ -273,10 +448,14 @@ void Update_objects(void)
                 do {
 		    if (World.fuel[pl->fs].fuel > REFUEL_RATE) {
 		        World.fuel[pl->fs].fuel -= REFUEL_RATE;
-		        Add_fuel(&(pl->fuel),REFUEL_RATE);
+			World.fuel[pl->fs].conn_mask = 0;
+			World.fuel[pl->fs].last_change = loops;
+		        Add_fuel(&(pl->fuel), REFUEL_RATE);
 		    } else {
-		        Add_fuel(&(pl->fuel),World.fuel[pl->fs].fuel);
+		        Add_fuel(&(pl->fuel), World.fuel[pl->fs].fuel);
 		        World.fuel[pl->fs].fuel = 0;
+		        World.fuel[pl->fs].conn_mask = 0;
+		        World.fuel[pl->fs].last_change = loops;
 		        CLR_BIT(pl->used, OBJ_REFUEL);
                         break;
 		    }
@@ -300,16 +479,16 @@ void Update_objects(void)
 	 */
 	if (BIT(pl->status, THRUSTING)) {
             float power = pl->power;
-            long f = pl->power*0.02;
-            int a = pl->after_burners;
+            float f = pl->power * 0.0006;
+            int a = pl->afterburners;
 
             if (a) {
-                power = AFTER_BURN_POWER(power,a);
-                f = AFTER_BURN_FUEL(f, a);
+                power = AFTER_BURN_POWER(power, a);
+                f = AFTER_BURN_FUEL((int)f, a);
             }
 	    pl->acc.x = power * tcos(pl->dir) / pl->mass;
 	    pl->acc.y = power * tsin(pl->dir) / pl->mass;
-            Add_fuel(&(pl->fuel), -f); /* Decrement fuel */
+            Add_fuel(&(pl->fuel), -f * FUEL_SCALE_FACT); /* Decrement fuel */
 	} else {
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
@@ -369,6 +548,8 @@ void Update_objects(void)
 #endif /* RANDOM_REAR_WORM */
 	    }
 
+            sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
+
 	    pl->wormHoleDest = j;
 	    pl->pos.x = World.wormHoles[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
 	    pl->pos.y = World.wormHoles[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
@@ -385,6 +566,8 @@ void Update_objects(void)
 
 	    CLR_BIT(pl->status, WARPING);
 	    SET_BIT(pl->status, WARPED);
+
+            sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 	}
 
 	pl->ecmInfo.size >>= 1;
@@ -395,6 +578,9 @@ void Update_objects(void)
 	    pl->ecmInfo.size = ECM_DISTANCE * 2;
 	    CLR_BIT(pl->used, OBJ_ECM);
 	}
+
+	if (pl->transInfo.count)
+	    pl->transInfo.count--;
 
     update:
 	if (!BIT(pl->status, PAUSE))
@@ -442,9 +628,9 @@ void Update_objects(void)
 
 	pl->world.x = pl->pos.x - CENTER;	/* Scroll */
 	pl->world.y = pl->pos.y - CENTER;
+	pl->wrappedWorld = 0;
 	if (BIT (World.rules->mode, WRAP_PLAY)) {
 	    pl->realWorld = pl->world;
-	    pl->wrappedWorld = 0;
 	    if (pl->world.x < 0) {
 		pl->wrappedWorld |= 1;
 		pl->world.x += World.x * BLOCK_SZ;
@@ -490,7 +676,8 @@ void Update_objects(void)
     for (i=NumPlayers-1; i>=0; i--) {
         player *pl = Players[i];
         
-	if (BIT(pl->status, PLAYING)) Update_tanks(&(pl->fuel));
+	if (BIT(pl->status, PLAYING))
+	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
             if (pl->robot_mode != RM_OBJECT) {
 		Throw_items(pl);

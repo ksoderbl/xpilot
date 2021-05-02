@@ -1,9 +1,10 @@
-/* $Id: map.c,v 1.15 1993/04/18 03:48:37 bjoerns Exp $
+/* $Id: map.c,v 3.9 1993/08/02 12:55:04 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -16,10 +17,13 @@
 
 #include "global.h"
 #include "map.h"
+#include "bit.h"
+
+#define GRAV_RANGE  10
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 1.15 1993/04/18 03:48:37 bjoerns Exp $";
+    "@(#)$Id: map.c,v 3.9 1993/08/02 12:55:04 bjoerns Exp $";
 #endif
 
 
@@ -29,14 +33,14 @@ static char sourceid[] =
 World_map World;
 
 
-u_short Find_closest_team(int indx);
+u_short Find_closest_team(int posx, int posy);
 
 
 /*
  * Sets as many blocks as possible to FILLED_NO_DRAW.
  * You won't notice any difference. :)
  */
-void Optimize_map()
+void Optimize_map(void)
 {
     int x, y, type;
 
@@ -98,12 +102,18 @@ void Init_map(void)
 {
     World.x		= 256;
     World.y		= 256;
+    World.diagonal	= (int) LENGTH(World.x, World.y);
+    World.width		= World.x * BLOCK_SZ;
+    World.height	= World.y * BLOCK_SZ;
+    World.hypotenuse	= (int) LENGTH(World.width, World.height);
     World.NumFuels	= 0;
     World.NumBases	= 0;
     World.NumGravs	= 0;
     World.NumCannons	= 0;
     World.NumBases	= 0;
     World.NumWormholes	= 0;
+    World.NumTreasures  = 0;
+    World.NumTargets    = 0;
 }
 
 
@@ -188,7 +198,7 @@ static void Map_error(int line_num)
 }
 
 
-void Grok_map()
+void Grok_map(void)
 {
     int i, x, y, c;
     bool done_line = false;
@@ -202,8 +212,14 @@ void Grok_map()
 	World.x += 2;
 	World.y += 2;
     }
-    strcpy(World.name, mapName);
-    strcpy(World.author, mapAuthor);
+    World.diagonal = (int) LENGTH(World.x, World.y);
+    World.width = World.x * BLOCK_SZ;
+    World.height = World.y * BLOCK_SZ;
+    World.hypotenuse = (int) LENGTH(World.width, World.height);
+    strncpy(World.name, mapName, sizeof(World.name) - 1);
+    World.name[sizeof(World.name) - 1] = '\0';
+    strncpy(World.author, mapAuthor, sizeof(World.author) - 1);
+    World.author[sizeof(World.author) - 1] = '\0';
     
     Alloc_map();
     
@@ -281,6 +297,12 @@ void Grok_map()
 	    case '#': 
 		World.NumFuels++;
 		break;
+	    case '!':
+		if (BIT(World.rules->mode, TEAM_PLAY))
+		    World.NumTargets++;
+		else
+		    World.block[x][y] = ' ';
+		break;
 	    case '_':
 	    case '0':
 	    case '1':
@@ -355,6 +377,12 @@ void Grok_map()
 	error("Out of memory - treasures");
 	exit(-1);
     }
+    if (World.NumTargets > 0
+	&& (World.targets = (target_t *)
+	    malloc(World.NumTargets * sizeof(target_t))) == NULL) {
+	error("Out of memory - targets");
+	exit(-1);
+    }
     if (World.NumBases > 0) {
 	if ((World.base = (base_t *)
 	    malloc(World.NumBases * sizeof(base_t))) == NULL) {
@@ -369,6 +397,7 @@ void Grok_map()
     World.NumGravs = 0;			/* (and reuse these counters) */
     World.NumWormholes = 0;		/* while inserting the objects */
     World.NumTreasures = 0;		/* into structures. */
+    World.NumTargets = 0;
     World.NumBases = 0;
     for (i=0; i<MAX_TEAMS; i++)
 	World.teams[i].NumMembers = World.teams[i].NumBases = 0;
@@ -415,6 +444,9 @@ void Grok_map()
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
+		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
 		case 'd':
@@ -423,6 +455,9 @@ void Grok_map()
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
+		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
 		case 'f':
@@ -431,6 +466,9 @@ void Grok_map()
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
+		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
 		case 'c':
@@ -439,6 +477,9 @@ void Grok_map()
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
+		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
 
@@ -447,6 +488,8 @@ void Grok_map()
 		    World.fuel[World.NumFuels].pos.x = x*BLOCK_SZ+BLOCK_SZ/2;
 		    World.fuel[World.NumFuels].pos.y = y*BLOCK_SZ+BLOCK_SZ/2;
 		    World.fuel[World.NumFuels].fuel = START_STATION_FUEL;
+		    World.fuel[World.NumFuels].conn_mask = -1;
+		    World.fuel[World.NumFuels].last_change = loops;
 		    World.NumFuels++;
 		    break;
 
@@ -462,7 +505,21 @@ void Grok_map()
 		     */
 		    World.NumTreasures++;
 		    break;
-		    
+		case '!':
+		    line[y] = TARGET;
+		    World.targets[World.NumTargets].pos.x = x;
+		    World.targets[World.NumTargets].pos.y = y;
+		    World.targets[World.NumTargets].pos.y = y;
+		    /*
+		     * Determining which team it belongs to is done later,
+		     * in Find_closest_team().
+		     */
+		    World.targets[World.NumTargets].dead_time = 0;
+		    World.targets[World.NumTargets].damage = TARGET_DAMAGE;
+		    World.targets[World.NumTargets].conn_mask = -1;
+		    World.targets[World.NumTargets].last_change = loops;
+		    World.NumTargets++;
+		    break;
 		case '_':
 		case '0':
 		case '1':
@@ -587,18 +644,23 @@ void Grok_map()
 	 * treasure.
 	 */
 	for (i=0; i<World.NumTreasures; i++) {
-	    u_short team = Find_closest_team(i);
+	    u_short team = Find_closest_team(World.treasures[i].pos.x,
+					     World.treasures[i].pos.y);
 	    if (team == TEAM_NOT_SET) {
 		error("Couldn't find a matching team for the treasure.");
 		World.treasures[i].have = false;
 	    }
 	    World.treasures[i].team = team;
 	}
+	for (i=0; i<World.NumTargets; i++) {
+	    u_short team = Find_closest_team(World.targets[i].pos.x,
+					     World.targets[i].pos.y);
+	    if (team == TEAM_NOT_SET) {
+		error("Couldn't find a matching team for the target.");
+	    }
+	    World.targets[i].team = team;
+	}	
     }
-
-    /* Calculating the world's diagonal length */
-
-    World.diagonal = sqrt(World.x*World.x + World.y*World.y);
 
     Optimize_map();
 
@@ -753,42 +815,169 @@ void Generate_random_map(void)
  */
 void Find_base_direction(void)
 {
-    int	i, x, y, dir;
+    int	i;
 
     for (i=0; i<World.NumBases; i++) {
-	x = World.base[i].pos.x;
-	y = World.base[i].pos.y;
-	dir = findDir(-World.gravity[x][y].x, -World.gravity[x][y].y);
+	int	x = World.base[i].pos.x,
+		y = World.base[i].pos.y,
+		dir;
+	double	dx = World.gravity[x][y].x,
+	    	dy = World.gravity[x][y].y;
 
-	dir = ((dir + RES/8) / (RES/4)) * (RES/4);
+	if (dx == 0.0 && dy == 0.0) {	/* Undefined direction? */
+	    dir = DIR_UP;	/* Should be set to direction of gravity! */
+	} else {
+	    dir = findDir(-dx, -dy);
+	    dir = ((dir + RES/8) / (RES/4)) * (RES/4);	/* round it */
+	    dir = MOD2(dir, RES);
+	}
 	World.base[i].dir = dir;
     }
 }
 
-
 /*
- * Find the team that is closest to this treasure and assign the treasure
- * to this team.
+ * Return the team that is closest to this position.
  */
-u_short Find_closest_team(int indx)
+u_short Find_closest_team(int posx, int posy)
 {
+    u_short team = TEAM_NOT_SET;
     int i;
     float closest = FLT_MAX, l;
-    treasure_t	*t = &World.treasures[indx];
 
-    t->team = TEAM_NOT_SET;
     for (i=0; i<World.NumBases; i++) {
-	if (World.base[i].team == TEAM_NOT_SET)
-	    continue;
+        if (World.base[i].team == TEAM_NOT_SET)
+            continue;
+        
+        l = Wrap_length(posx - World.base[i].pos.x,
+			posy - World.base[i].pos.y);
 	
-	l = LENGTH(t->pos.x - World.base[i].pos.x,
-		   t->pos.y - World.base[i].pos.y);
+        if (l < closest) {
+            team = World.base[i].team;
+            closest = l;
+        }	
+    }	
 
-	if (l < closest) {
-	    t->team = World.base[i].team;
-	    closest = l;
+    return team;
+}
+
+float Wrap_findDir(float dx, float dy)
+{
+    dx = WRAP_DX(dx);
+    dy = WRAP_DY(dy);
+    return findDir(dx, dy);
+}
+
+
+float Wrap_length(float dx, float dy)
+{
+    dx = WRAP_DX(dx);
+    dy = WRAP_DY(dy);
+    return LENGTH(dx, dy);
+}
+
+
+void Compute_gravity(void)
+{
+    int xi, yi, g, gx, gy, dx, dy;
+    int first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi, wrap;
+    float dist2, xforce, yforce;
+    double theta, clock;
+
+
+    wrap = (BIT(World.rules->mode, WRAP_PLAY) != 0);
+
+    if (gravityPointSource == false) {
+	theta = (gravityAngle * PI) / 180.0;
+	xforce = sin(theta) * Gravity;
+	yforce = cos(theta) * Gravity;
+	for (xi=0; xi<World.x; xi++) {
+	    vector *line = World.gravity[xi];
+
+	    for (yi=0; yi<World.y; yi++) {
+		line[yi].y = xforce;
+		line[yi].x = yforce;
+	    }
+	}
+    } else {
+	if (gravityClockwise) {
+	    clock = -PI / 2;
+	}
+	else if (gravityAnticlockwise) {
+	    clock = PI / 2;
+	}
+	else {
+	    clock = 0.0;
+	}
+	for (xi=0; xi<World.x; xi++) {
+	    vector *line = World.gravity[xi];
+
+	    for (yi=0; yi<World.y; yi++) {
+		dx = (xi - gravityPoint.x) * BLOCK_SZ;
+		dy = (yi - gravityPoint.x) * BLOCK_SZ;
+		dx = WRAP_DX(dx);
+		dy = WRAP_DX(dy);
+
+		if (dx == 0 && dy == 0) {
+		    line[yi].y = 0.0;
+		    line[yi].x = 0.0;
+		    continue;
+		}
+
+		theta = atan2((double)dy, (double)dx) + clock;
+
+		line[yi].x = cos(theta) * Gravity;
+		line[yi].y = sin(theta) * Gravity;
+	    }
 	}
     }
 
-    return t->team;
+    for (g=0; g<World.NumGravs; g++) {
+	gx = World.grav[g].pos.x;
+	gy = World.grav[g].pos.y;
+
+	if (gx - GRAV_RANGE >= 0 || wrap) {
+	    first_xi = gx - GRAV_RANGE;
+	} else {
+	    first_xi = 0;
+	}
+	if (gx + GRAV_RANGE < World.x || wrap) {
+	    last_xi = gx + GRAV_RANGE;
+	} else {
+	    last_xi = World.x - 1;
+	}
+	if (gy - GRAV_RANGE >= 0 || wrap) {
+	    first_yi = gy - GRAV_RANGE;
+	} else {
+	    first_yi = 0;
+	}
+	if (gy + GRAV_RANGE < World.y || wrap) {
+	    last_yi = gy + GRAV_RANGE;
+	} else {
+	    last_yi = World.y - 1;
+	}
+	for (xi = first_xi; xi <= last_xi; xi++) {
+	    vector *line = World.gravity[mod_xi = mod(xi, World.x)];
+
+	    for (yi = first_yi; yi <= last_yi; yi++) {
+
+		mod_yi = (wrap) ? mod(yi, World.y) : yi;
+
+		dx = gx - xi;
+		dy = gy - yi;
+
+		if (dy == 0 && dx == 0)		/* In a grav? */
+		    continue;
+
+		theta = atan2((double)dy, (double)dx);
+
+		if (World.block[gx][gy] == CWISE_GRAV
+		    || World.block[gx][gy] == ACWISE_GRAV)
+		    theta += PI/2.0;
+
+		dist2 = sqr(dx) + sqr(dy);
+		line[mod_yi].x += cos(theta) * World.grav[g].force / dist2;
+		line[mod_yi].y += sin(theta) * World.grav[g].force / dist2;
+	    }
+        }
+    }
 }

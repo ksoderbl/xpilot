@@ -1,9 +1,10 @@
-/* $Id: config.h,v 1.4 1993/04/18 03:48:31 bjoerns Exp $
+/* $Id: config.h,v 3.7 1993/06/28 20:53:28 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -72,24 +73,11 @@
  * a command that will unpack the given .Z file to stdout (for use in popen).
  */
 
-#define COMPRESSED_MAPS
+#undef COMPRESSED_MAPS
 
 #ifndef ZCAT_FORMAT
-#    define ZCAT_FORMAT "zcat < %s"
+#    define ZCAT_FORMAT "gzip -d -c < %s"
 #endif
-
-/*
- * If XHOST is defined, the hand-shake program will open a connection to the
- * specified host by executing XHOST_OPEN (%s will be substituted with the
- * server host) and closing it again with XHOST_CLOSE.  Note however that this
- * will only be done if the server complains that it couldn't open the display.
- *
- * All in all, a not perfect, but adequate solution, highly recommended for
- * X environments where Xauthority is used.
- */
-#define	XHOST
-#define XHOST_OPEN	"/usr/bin/X11/xhost +%s >/dev/null"
-#define XHOST_CLOSE	"/usr/bin/X11/xhost -%s >/dev/null"
 
 /*
  * Leave these alone.

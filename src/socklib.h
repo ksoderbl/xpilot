@@ -14,8 +14,20 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/socklib.h,v 1.1 1993/04/22 10:21:33 bjoerns Exp $
+ * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/socklib.h,v 3.2 1993/08/02 12:51:20 bjoerns Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 3.2  1993/08/02  12:51:20  bjoerns
+ * Patchlevel 2.
+ *
+ * Revision 3.1  1993/08/02  12:41:43  bjoerns
+ * Patchlevel 1.
+ *
+ * Revision 3.0  1993/05/21  18:36:41  bjoerns
+ * New client server release.
+ *
+ * Revision 1.2  1993/05/18  16:49:31  kenrsc
+ * Berts few changes !
+ *
  * Revision 1.1  1993/04/22  10:21:33  bjoerns
  * Moved socklib from lib to src.
  *
@@ -48,10 +60,6 @@
 #ifndef _SOCKLIB_INCLUDED
 #define _SOCKLIB_INCLUDED
 
-#if(hpux)
-#pragma HP_ALIGN NATURAL
-#endif
-
 /* Error values and their meanings */
 #define SL_ESOCKET		0	/* socket system call error */
 #define SL_EBIND		1	/* bind system call error */
@@ -77,35 +85,53 @@ extern struct sockaddr_in
 extern void	SetTimeout(int, int);
 extern int	CreateServerSocket(int);
 extern int	GetPortNum(int);
+extern int	GetPeerName(int, char *, int);
 extern int	CreateClientSocket(char *, int);
 extern int	SocketAccept(int);
+extern int	SocketLinger(int);
+extern int	SetSocketReceiveBufferSize(int, int);
+extern int	SetSocketSendBufferSize(int, int);
+extern int	SetSocketNoDelay(int, int);
+extern int	SetSocketNonBlocking(int, int);
+extern int	GetSocketError(int);
 extern int	SocketReadable(int);
 extern int	SocketRead(int, char *, int);
 extern int	SocketWrite(int, char *, int);
 extern int	SocketClose(int);
 extern int	CreateDgramSocket(int);
+extern int	DgramConnect(int, char *, int);
 extern int	DgramSend(int, char *, int, char *, int);
 extern int	DgramReceiveAny(int, char *, int);
 extern int	DgramReceive(int, char *, char *, int);
 extern int	DgramSendRec(int, char *, int, char *, int, char *, int);
 extern char	*DgramLastaddr(void);
+extern char	*DgramLastname(void);
 extern int	DgramLastport(void);
 #else /* __STDC__ */
 extern void	SetTimeout();
 extern int	CreateServerSocket();
 extern int	GetPortNum();
+extern int	GetPeerName();
 extern int	CreateClientSocket();
 extern int	SocketAccept();
+extern int	SocketLinger();
+extern int	SetSocketReceiveBufferSize();
+extern int	SetSocketSendBufferSize();
+extern int	SetSocketNoDelay();
+extern int	SetSocketNonBlocking();
+extern int	GetSocketError();
 extern int	SocketReadable();
 extern int	SocketRead();
 extern int	SocketWrite();
 extern int	SocketClose();
 extern int	CreateDgramSocket();
+extern int	DgramConnect();
 extern int	DgramSend();
 extern int	DgramReceiveAny();
 extern int	DgramReceive();
 extern int	DgramSendRec();
 extern char	*DgramLastaddr();
+extern char	*DgramLastname();
 extern int	DgramLastport();
 #endif /* __STDC__ */
 #endif /* _SOCKLIB_LIBSOURCE */

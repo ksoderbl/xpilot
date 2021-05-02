@@ -1,9 +1,10 @@
-/* $Id: defaults.h,v 1.1 1993/03/09 14:31:16 kenrsc Exp $
+/* $Id: defaults.h,v 3.3 1993/06/28 20:53:34 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
- *	    Bjxrn Stabell (bjoerns@staff.cs.uit.no)
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */

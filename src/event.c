@@ -1,35 +1,27 @@
-/* $Id: event.c,v 1.15 1993/04/18 17:11:01 bjoerns Exp $
+/* $Id: event.c,v 3.12 1993/08/03 11:53:37 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
 
-#include <X11/Xproto.h>
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/keysym.h>
-#ifdef	apollo
-#    include <X11/ap_keysym.h>
-#endif
-
 #include "global.h"
 #include "score.h"
 #include "map.h"
-#include "sound.h"
+#include "keys.h"
+#include "saudio.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 1.15 1993/04/18 17:11:01 bjoerns Exp $";
+    "@(#)$Id: event.c,v 3.12 1993/08/03 11:53:37 bjoerns Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
-
-#define CONTROL_DELAY	100
-
 
 /*
  * Globals.
@@ -38,76 +30,59 @@ static char		msg[MSG_LEN];
 
 
 
-void Refuel(int ind)
+static void Refuel(int ind)
 {
     player *pl = Players[ind];
-    int i, min = -1;
-    float l, min_dist=FLT_MAX;
+    int i;
+    float l, dist;
 
 
     if (!BIT(pl->have, OBJ_REFUEL))
 	return;
 
+    CLR_BIT(pl->used, OBJ_REFUEL);
     for (i=0; i<World.NumFuels; i++) {
 	l = Wrap_length(pl->pos.x - World.fuel[i].pos.x, 
 			pl->pos.y - World.fuel[i].pos.y);
-	if (min_dist > l) {
-	    min_dist = l;
-	    min = i;
+	if (BIT(pl->used, OBJ_REFUEL) == 0
+	    || l < dist) {
+	    SET_BIT(pl->used, OBJ_REFUEL);
+	    pl->fs = i;
+	    dist = l;
 	}
-    }
-
-    if (min >= 0) {
-	sound_play_player(pl, REFUEL_SOUND);
-	SET_BIT(pl->used, OBJ_REFUEL);
-	pl->fs = min;
     }
 }
 
 
-static keys_t Lookup_key(KeySym ks, player *pl, bool reset)
+int Handle_keyboard(int ind)
 {
-    keys_t ret = KEY_DUMMY;
-    static int i = 0;
+    player  	*pl = Players[ind];
+    int	    	i, j, k, key, pressed, xi, yi;
+    float  	dist, l;
 
-    if (reset)
-	i = 0;
 
-    while (i < MAX_KEY_DEFS && pl->keyDefs[i].key) {
-	if (pl->keyDefs[i].keysym == ks) {
-	    ret = pl->keyDefs[i].key;
-	    i++;
+    for (key = 0; key < NUM_KEYS; key++) {
+	if (pl->last_keyv[key / BITV_SIZE] == pl->prev_keyv[key / BITV_SIZE]) {
+	    key |= (BITV_SIZE - 1);
+	    continue;
+	}
+	while (BITV_ISSET(pl->last_keyv, key) == BITV_ISSET(pl->prev_keyv, key)) {
+	    if (++key >= NUM_KEYS) {
+		break;
+	    }
+	}
+	if (key >= NUM_KEYS) {
 	    break;
-	} else {
-	    i++;
 	}
-    }
+	pressed = BITV_ISSET(pl->last_keyv, key) != 0;
+	BITV_TOGGLE(pl->prev_keyv, key);
 
-    return (ret);
-}
-
-
-void Key_event(int ind, XEvent *event)
-{
-    KeySym  	KS;
-    int	    	i, xi, yi, min_ind;
-    player  	*pl;
-    float  	min, l;
-    keys_t	key;
-    bool	first_iteration = True;
-
-
-    pl = Players[ind];
-    KS = XLookupKeysym(&(event->xkey), 0);
-
-    while ((key = Lookup_key(KS, pl, first_iteration)) != KEY_DUMMY) {
-	first_iteration = False;
-
-	if (!BIT(pl->status, PLAYING))	/* Allow these functions */
-	    switch (key) {		/* while you're 'dead'. */
+	if (!BIT(pl->status, PLAYING))		/* Allow these functions */
+	    switch (key) {			/* while you're 'dead'. */
 	    case KEY_PAUSE:
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
+	    case KEY_LOCK_CLOSE:
 	    case KEY_ID_MODE:
 	    case KEY_TOGGLE_VELOCITY:
 	    case KEY_TOGGLE_COMPASS:
@@ -118,15 +93,14 @@ void Key_event(int ind, XEvent *event)
 	    case KEY_DECREASE_TURNSPEED:
 	    case KEY_TANK_NEXT:
 	    case KEY_TANK_PREV:
-	    case KEY_TURN_LEFT:	/* Needed so that we don't get */
-	    case KEY_TURN_RIGHT: /* out-of-sync with the turnacc */
+	    case KEY_TURN_LEFT:		/* Needed so that we don't get */
+	    case KEY_TURN_RIGHT:	/* out-of-sync with the turnacc */
 		break;
 	    default:
 		continue;
 	    }
 
-
-	if (event->type == KeyPress) { /* --- KEYPRESS --- */
+	if (pressed) { /* --- KEYPRESS --- */
 	    switch (key) {
 
 	    case KEY_TANK_NEXT:
@@ -160,23 +134,47 @@ void Key_event(int ind, XEvent *event)
 		    } while (i == ind);
 		break;
 
+	    case KEY_TOGGLE_COMPASS:
+		if (!BIT(pl->have, OBJ_COMPASS))
+		    break;
+		TOGGLE_BIT(pl->used, OBJ_COMPASS);
+		if (BIT(pl->used, OBJ_COMPASS) == 0) {
+		    break;
+		}
+		/*
+		 * Verify if the lock has ever been initialised at all
+		 * and if the lock is still valid.
+		 */
+		if (pl->lock.tagged == LOCK_PLAYER
+		    && NumPlayers > 1
+		    && (k = pl->lock.pl_id) > 0
+		    && k < Id
+		    && (i = GetInd[k]) > 0
+		    && i < NumPlayers
+		    && Players[i]->id == k
+		    && i != ind) {
+		    break;
+		}
+		/*FALLTHROUGH*/
+
 	    case KEY_LOCK_CLOSE:
-		min = FLT_MAX;
+		dist = FLT_MAX;
+		pl->lock.tagged = LOCK_NONE;
 		for (i=0; i<NumPlayers; i++) {
-		    if (TEAM(ind, i) || !BIT(Players[i]->status, PLAYING))
+		    if (TEAM(ind, i)
+			|| BIT(Players[i]->status, PLAYING|GAME_OVER)
+			    != PLAYING)
 			continue;
 		    l = Wrap_length(Players[i]->pos.x - pl->pos.x,
 				    Players[i]->pos.y - pl->pos.y);
-		    if (l < min && i != ind) {
-			min = l;
-			min_ind = i;
+		    if ((pl->lock.tagged == LOCK_NONE
+			 || dist > l)
+			&& i != ind) {
+			pl->lock.pl_id = Players[i]->id;
+			pl->lock.tagged = LOCK_PLAYER;
+			dist = l;
 		    }
 		}
-		if (min < FLT_MAX) {
-		    pl->lock.pl_id = Players[min_ind]->id;
-		    pl->lock.tagged = LOCK_PLAYER;
-		} else
-		    pl->lock.tagged = LOCK_NONE;
 		break;
 
 	    case KEY_CHANGE_HOME:
@@ -205,17 +203,24 @@ void Key_event(int ind, XEvent *event)
 			    sprintf(msg, "%s has taken over %s's home base.",
 				    pl->name, Players[i]->name);
 			}
-		    if (msg[0])
-		    {
+		    if (msg[0]) {
 			sound_play_all(CHANGE_HOME_SOUND);
 			Set_message(msg);
+		    }
+		    for (i = 0; i < NumPlayers; i++) {
+			if (Players[i]->conn != NOT_CONNECTED) {
+			    Send_base(Players[i]->conn,
+				      pl->id, 
+				      pl->home_base);
+			}
 		    }
 		}
 		break;
 
 	    case KEY_SHIELD:
-		if (BIT(pl->have, OBJ_SHIELD))
+		if (BIT(pl->have, OBJ_SHIELD)) {
 		    SET_BIT(pl->used, OBJ_SHIELD);
+		}
 		break;
 
 	    case KEY_DROP_BALL:
@@ -230,19 +235,11 @@ void Key_event(int ind, XEvent *event)
 		break;
 
 	    case KEY_FIRE_SHOT:
-		Fire_shot(ind, OBJ_SHOT, pl->dir);
-		for (i=0; i<pl->extra_shots; i++) {
-		    Fire_shot(ind, OBJ_SHOT,
-			      MOD2(pl->dir + (1+i)*SHOTS_ANGLE, RES));
-		    Fire_shot(ind, OBJ_SHOT,
-			      MOD2(pl->dir - (1+i)*SHOTS_ANGLE, RES));
+		if (!BIT(pl->used, OBJ_SHIELD|OBJ_FIRE)
+		    && BIT(pl->have, OBJ_FIRE)) {
+		    Fire_normal_shots(ind);
 		}
-		for (i=0; i<pl->rear_shots; i++) {
-		    Fire_shot(ind, OBJ_SHOT,
-			      MOD2(pl->dir + RES/2
-				   + (pl->rear_shots-1 - 2*i) * SHOTS_ANGLE/2,
-				   RES));
-		}
+		SET_BIT(pl->used, OBJ_FIRE);
 		break;
 
 	    case KEY_FIRE_MISSILE:
@@ -262,12 +259,10 @@ void Key_event(int ind, XEvent *event)
 
 		break;
 
-            case KEY_FIRE_NUKE:
+	    case KEY_FIRE_NUKE:
 		if (BIT(World.rules->mode, ALLOW_NUKES)
 		    && pl->missiles > NUKE_MIN_SMART) {
 		    Fire_shot(ind, OBJ_NUKE, pl->dir);
-		    sprintf(msg, "%s has launched a nuke!", pl->name);
-		    Set_message(msg);
 		}
 		break;
 
@@ -286,21 +281,20 @@ void Key_event(int ind, XEvent *event)
 		break;
 
 	    case KEY_TURN_LEFT:
-		pl->turnacc += pl->turnspeed;
-		break;
-	    
 	    case KEY_TURN_RIGHT:
-		pl->turnacc -= pl->turnspeed;
+		pl->turnacc = 0;
+		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
+		    pl->turnacc += pl->turnspeed;
+		}
+		if (BITV_ISSET(pl->last_keyv, KEY_TURN_RIGHT)) {
+		    pl->turnacc -= pl->turnspeed;
+		}
 		break;
 
 	    case KEY_SELF_DESTRUCT:
 		TOGGLE_BIT(pl->status, SELF_DESTRUCT);
 		if (BIT(pl->status, SELF_DESTRUCT))
 		    pl->count = 150;
-		break;
-
-	    case KEY_ID_MODE:
-		TOGGLE_BIT(pl->status, ID_MODE);
 		break;
 
 	    case KEY_PAUSE:
@@ -312,13 +306,19 @@ void Key_event(int ind, XEvent *event)
 			&& World.base[pl->home_base].pos.y == yi)) {
 		    if (!BIT(pl->status, PAUSE)) { /* Turn pause mode on */
 			pl->count = MIN_PAUSE;
+			pl->updateVisibility = 1;
 			SET_BIT(pl->status, PAUSE);
 			CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
 		    } else
 			if (pl->count <= 0) {
 			    CLR_BIT(pl->status, PAUSE);
-			    if (!BIT(pl->status, GAME_OVER))
+			    if (!BIT(pl->status, GAME_OVER)) {
+				Go_home(ind);
 				SET_BIT(pl->status, PLAYING);
+				BITV_SET(pl->last_keyv, key);
+				BITV_SET(pl->prev_keyv, key);
+				return 1;
+			    }
 			}
 		}
 		break;
@@ -327,24 +327,12 @@ void Key_event(int ind, XEvent *event)
 		TOGGLE_BIT(pl->status, VELOCITY_GAUGE);
 		break;
 
-	    case KEY_TOGGLE_COMPASS:
-		if (!BIT(pl->have, OBJ_COMPASS))
-		    break;
-		TOGGLE_BIT(pl->used, OBJ_COMPASS);
-		if (BIT(pl->used, OBJ_COMPASS))
-		    if (NumPlayers > 1) {
-			pl->lock.tagged = LOCK_PLAYER;
-		    } else
-			pl->lock.tagged = LOCK_NONE;
-		break;
-
 	    case KEY_SWAP_SETTINGS:
 		if (pl->turnacc == 0.0) {
 		    SWAP(pl->power, pl->power_s);
 		    SWAP(pl->turnspeed, pl->turnspeed_s);
 		    SWAP(pl->turnresistance, pl->turnresistance_s);
 		}
-		pl->control_count = CONTROL_DELAY;
 		break;
 
 	    case KEY_REFUEL:
@@ -360,124 +348,69 @@ void Key_event(int ind, XEvent *event)
 	    case KEY_INCREASE_POWER:
 		pl->power *= 1.10;
 		pl->power = MIN(pl->power, MAX_PLAYER_POWER);
-		pl->control_count = CONTROL_DELAY;
 		break;
 
 	    case KEY_DECREASE_POWER:
 		pl->power *= 0.90;
-		pl->power=MAX(pl->power, MIN_PLAYER_POWER);
-		pl->control_count = CONTROL_DELAY;
+		pl->power = MAX(pl->power, MIN_PLAYER_POWER);
 		break;
 
 	    case KEY_INCREASE_TURNSPEED:
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 1.05;
 		pl->turnspeed = MIN(pl->turnspeed, MAX_PLAYER_TURNSPEED);
-		pl->control_count = CONTROL_DELAY;
 		break;
 
 	    case KEY_DECREASE_TURNSPEED:
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 0.95;
 		pl->turnspeed = MAX(pl->turnspeed, MIN_PLAYER_TURNSPEED);
-		pl->control_count = CONTROL_DELAY;
 		break;
-		/*
-		   case XK_KP_0:
-		   case XK_0:
-		   if (BIT(pl->used, OBJ_TRAINER))
-		   pl->vel.x = pl->vel.y = 0.0;
-		   pl->turnacc = 0.0;
-		   break;
-		   */
+
 	    case KEY_THRUST:
 		SET_BIT(pl->status, THRUSTING);
 		break;
 
 	    case KEY_CLOAK:
-		if (pl->cloaks > 0)
-		    {
-			sound_play_player(pl, CLOAK_SOUND);
-			pl->updateVisibility = 1;
-			TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
-		    }
+		if (pl->cloaks > 0) {
+		    sound_play_player(pl, CLOAK_SOUND);
+		    pl->updateVisibility = 1;
+		    TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
+		}
 		break;
 
 	    case KEY_ECM:
-		if (pl->ecms > 0 && pl->fuel.sum > -ED_ECM)
-		    {
-			SET_BIT(pl->used, OBJ_ECM);
-			do_ecm(pl);
-			pl->ecms--;
-			Add_fuel(&(pl->fuel), ED_ECM);
+		if (pl->ecms > 0 && pl->fuel.sum > -ED_ECM) {
+		    SET_BIT(pl->used, OBJ_ECM);
+		    do_ecm(pl);
+		    pl->ecms--;
+		    Add_fuel(&(pl->fuel), ED_ECM);
+		}
+		break;
+
+	    case KEY_TRANSPORTER:
+		if (pl->transporters > 0 && pl->fuel.sum > -ED_TRANSPORTER) {
+		    do_transporter(pl);
+		    pl->transporters--;
+		    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
 		    }
 		break;
-
-#ifdef	CHEAT
-	    case XK_KP_F1:
-		if (!BIT(pl->have, OBJ_TRAINER))
-		    continue;
-		if (BIT(pl->used, OBJ_TRAINER)) {
-		    SET_BIT(pl->status, GRAVITY);
-		    sprintf(msg, "%s is no longer a cheater.", pl->name);
-		    Set_message(msg);
-		    pl->mychar=' ';
-		} else {
-		    sprintf(msg, "%s has become a cheater.", pl->name);
-		    Set_message(msg);
-		    pl->mychar='C';
-		}
-		TOGGLE_BIT(pl->used, OBJ_TRAINER);
-		updateScores = true;
-		break;
-
-	    case XK_KP_F4:
-		if (!BIT(pl->have, OBJ_TRAINER))
-		    continue;
-		if (BIT(pl->used, OBJ_TRAINER)) {
-		    SET_BIT(pl->status, GRAVITY);
-		    sprintf(msg, "%s has reentered our dimension.", pl->name);
-		    Set_message(msg);
-		    pl->mychar = ' ';
-		} else {
-		    CLR_BIT(pl->status, GRAVITY);
-		    sprintf(msg, "%s has entered the twilight zone.",
-			    pl->name);
-		    Set_message(msg);
-		    pl->mychar = 'T';
-		}
-		TOGGLE_BIT(pl->used, OBJ_TRAINER);
-		updateLables = true;
-		break;
-
-	    case XK_KP_Tab:
-		pl->mines += 100;
-		break;
-	    case XK_KP_Enter:
-		pl->missiles += 100;
-		break;
-	    case XK_KP_Separator:
-		pl->extra_shots += 5;
-		break;
-	    case XK_KP_Decimal:
-		pl->fuel = pl->max_fuel;
-		break;
-#endif
 
 	    default:
 		break;
 	    }
-	}
-
-
-	else if (event->type == KeyRelease) { /* --- KEYRELEASE --- */
+	} else {
+	    /* --- KEYRELEASE --- */
 	    switch (key) {
 	    case KEY_TURN_LEFT:
-		pl->turnacc -= pl->turnspeed;
-		break;
-
 	    case KEY_TURN_RIGHT:
-		pl->turnacc += pl->turnspeed;
+		pl->turnacc = 0;
+		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
+		    pl->turnacc += pl->turnspeed;
+		}
+		if (BITV_ISSET(pl->last_keyv, KEY_TURN_RIGHT)) {
+		    pl->turnacc -= pl->turnspeed;
+		}
 		break;
 
 	    case KEY_REFUEL:
@@ -493,6 +426,10 @@ void Key_event(int ind, XEvent *event)
 		CLR_BIT(pl->used, OBJ_SHIELD);
 		break;
 
+	    case KEY_FIRE_SHOT:
+		CLR_BIT(pl->used, OBJ_FIRE);
+		break;
+
 	    case KEY_THRUST:
 		CLR_BIT(pl->status, THRUSTING);
 		break;
@@ -502,4 +439,8 @@ void Key_event(int ind, XEvent *event)
 	    }
 	}
     }
+    memcpy(pl->prev_keyv, pl->last_keyv, sizeof(pl->last_keyv));
+    pl->key_changed = 0;
+
+    return 1;
 }

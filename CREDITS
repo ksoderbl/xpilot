@@ -1,17 +1,37 @@
-Pre-v1.2 credits:
+This is a very abbreviated credit list.  We couldn't possibly enumerate
+all the people who have been involved in XPilot, especially since we have
+no such list at hand. :)
 
-	Arne Helme			socklib
-	Tom Grydeland			maps, fonts and ideas
+Release 3.0 credits:
 
-	Lots of, LOTS OF beta testers at our site
+	Maurice Abraham			Robots, more flexible bouncing etc.
+	Mark Boyns, David J. Bianco	RPlay - original sound support.
+	Greg Renda			Sound scheme client/serverized
+					and added NCD sound support.
+	Dave Lemke
+	Makoto Matsushita
+	& all the beta testers
 
-We'd like to thank the following persons, without them there wouldn't have
-been a v1.2.
+Version 2.0 credits:	(Never released)
 
-	Christos Zoulas			monochrome fixes
-	Abraham Maurice			robots, timing
-	Greg Renda			rebinding of keys, wormholes etc.
+	Bert Gÿsbers			Too much to mention really.
+	Robert Blum + more from Aachen	Lots of features.
+	Andy Skinner			Target code and maps.
+	Paul Gardner			Random map generator + optimisations.
+	Greg Renda
+	Randall	Severly
+	Evan Miller
+	Eric Flink
+	Karthik P. Sheka
+	Stig Sæther Bakken
+	Jim Hickey
+	Harvey Thompson
 
+Version 1.2 credits:
+
+	Christos Zoulas			Monochrome fixes
+	Abraham Maurice			Robots, timing.
+	Greg Renda			Rebinding of keys, wormholes etc.
 	Dave Lemke
 	Keith Cantrell
 	Chris Marshall
@@ -19,3 +39,10 @@ been a v1.2.
 	Martin Rutishauser
 	Frank Tore Johansen
 	Hermann Dunkel
+
+Pre version 1.2 credits:
+
+	Arne Helme			Socklib
+	Tom Grydeland			Maps, fonts and ideas
+
+	Lots of, LOTS OF beta testers at our site

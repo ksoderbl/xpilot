@@ -1,27 +1,13 @@
-$Id: BUGS,v 1.4 1993/04/22 17:11:30 bjoerns Exp $
+$Id: BUGS,v 3.5 1993/06/30 15:43:05 bjoerns Exp $
 
 Default visual is used, not proper one.  (I.e. someone with TrueColor as
 default visual cannot play the game, even if the X server supports
 PseudoColor too.)
-
-Sometimes you're able to lock on yourself.
 
 The ball-string has doesn't take heavy tension, it produces wild, lethal
 occilations.
 
 Ball should be affected by object collisions.
 
-When you're hit from a no-player smart shot, it says 'Playername was
-hit by Playername'.
-
-The game should handle different font sizes properly, for instance the
-help windows tend to look strange (this might be partly solved if we
-distribute XPilot with our own font).
-
-Radar should draw real blocks, not just pixels
-
 Players can fly through walls at high speed, this isn't the case for
 objects (they use different collision detection methods).
-
-The Delta_mv() routine doesn't appear to work correctly.  This is easiest
-seen with many items - you are thrown to the right all the time.

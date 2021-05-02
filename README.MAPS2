@@ -21,6 +21,7 @@ The new map format is as follows:
 	_			Neutral base
 	0..9			Base belonging to team n
 	*			Treasure (belongs to team with closest base)
+	!			Target (belongs to team with closest base)
 
 	+, -			Positive/repelling and negative/attracting grav
 	>, <			Clockwise and anti-clockwise grav

@@ -1,13 +1,13 @@
-/* $Id: option.c,v 1.5 1993/04/18 14:53:19 kenrsc Exp $
+/* $Id: option.c,v 3.5 1993/08/02 12:51:05 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
-/* $NCDId: @(#)option.c,v 1.1 1992/09/10 03:26:33 mellon Exp $ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -339,8 +339,15 @@ static void parseLine(FILE *ifile)
 	free(head);
 	return;
     }
-    if (multiline)
+    if (multiline) {
 	value = getMultilineValue(value, ifile);
+	/*
+	 * This dynamic memory returned by getMultilineValue()
+	 * is not freed anywhere.  Thanks to a Purify report
+	 * by Daniel Edward Lovinger <del+@cmu.edu>.
+	 * This problem is not so easy to fix.  Later.
+	 */
+    }
     addOption(name, value, override, (optionDesc *) 0);
 
     /*
@@ -425,6 +432,7 @@ bool parseDefaultsFile(char *filename)
     if (ifile == NULL) {
 	ifname = malloc(strlen(filename) + strlen(MAPDIR) + 5);
 	FileName = ifname;
+	strcpy(ifname, filename);
 	strcat(ifname, ".map");				/* "FILE.map" */
 	ifile = fopen(ifname, "r");
 
@@ -501,7 +509,7 @@ void parseOptions(void)
 
 		    case valBool:
 			{
-			    int        *ptr = desc->variable;
+			    bool	*ptr = desc->variable;
 
 			    if (!strcasecmp(tmp->value, "yes")
 				|| !strcasecmp(tmp->value, "on")

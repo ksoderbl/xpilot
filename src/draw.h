@@ -1,15 +1,18 @@
-/* $Id: draw.h,v 1.3 1993/03/23 17:54:06 bjoerns Exp $
+/* $Id: draw.h,v 3.6 1993/06/28 20:53:35 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
 
 #ifndef	DRAW_H
 #define	DRAW_H
+
+#include "types.h"
 
 #define NUM_COLORS	    4
 
@@ -37,36 +40,30 @@
 #ifndef NO_ROTATING_DASHES
 #define NUM_DASHES	    2
 #define DASHES_LENGTH	    12
-extern char dashes[];
 #endif
 
 #define HUD_SIZE	    90		    /* Size/2 of HUD lines */
 #define HUD_OFFSET	    20		    /* Hud line offset */
 #define FUEL_GAUGE_OFFSET   6
-#define HUD_ITEMS_SPACE	    (2*(HUD_SIZE-HUD_OFFSET)/7.0)
 #define HUD_FUEL_GAUGE_SIZE (2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
-
-#define HELP_PAGES	    2
 
 typedef struct {
     char txt[MSG_LEN];
+    short len;
     long life;
 } message_t;
 
+typedef struct {			/* Defines wire-obj, i.e. ship */
+    position	*pts;
+    int		num_points;
+} wireobj;
+
 #define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
-#define HaveColor(d)							       \
-    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor ||	       \
-     DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
+#define HaveColor(d)							\
+    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor		\
+     || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
 
 #define FRAC(py)	    ((int)((py) * 1024.0/768.0))
-#define ShadowDrawString(i, d, w, gc, x, y, str, fg, bg)	\
-{								\
-	if (BIT(Players[i]->disp_type, DT_HAVE_COLOR)) {	\
-	    XSetForeground(d, gc, bg);				\
-	    XDrawString(d, w, gc, x+1, y+1, str, strlen(str));	\
-	}							\
-	XSetForeground(d, gc, fg);				\
-	XDrawString(d, w, gc, x-1, y-1, str, strlen(str));	\
-}
+
 
 #endif

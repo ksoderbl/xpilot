@@ -1,0 +1,11 @@
+! $Id: KEYRESOURCES,v 3.1 1993/07/05 08:12:20 bjoerns Exp $
+!
+! This file contains example resources for some other keyboards than HPs.
+
+!
+! For sun clones
+!
+xpilot.keyLockNext:	Right
+xpilot.keyLockPrev:	Left
+xpilot.keyLockClose:	Up
+xpilot.keyFireMissile:	Linefeed

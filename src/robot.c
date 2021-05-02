@@ -1,9 +1,10 @@
-/* $Id: robot.c,v 1.16 1993/04/18 16:46:23 kenrsc Exp $
+/* $Id: robot.c,v 3.9 1993/08/03 11:53:39 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  *
@@ -16,6 +17,7 @@
 #include "score.h"
 #include "draw.h"
 #include "robot.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
@@ -131,7 +133,7 @@ static void Delete_robot(void)
     }
 
     if (low_i >= 0) {
-	Quit(low_i);
+	Delete_player(low_i);
     }
 }
 
@@ -153,33 +155,32 @@ static void New_robot(void)
     Init_player(NumPlayers);
     robot = Players[NumPlayers];
 
- new_name:
-    num = rand() % MAX_ROBOTS;
+    do {
+	num = rand() % MAX_ROBOTS;
 
-    for (i = 0; i < NumPlayers; i++)
-	if (num == Players[i]->robot_ind)
-	    goto new_name;
+	for (i = 0; i < NumPlayers; i++)
+	    if (num == Players[i]->robot_ind)
+		break;
+    } while (i < NumPlayers);
 
     rob = &Robots[num];
 
     strcpy(robot->name, rob->name);
     strcpy(robot->realname, "robot");
 
-    robot->disp_type = DT_NONE;
     robot->color = WHITE;
-    robot->name_length = strlen(robot->name) * 6;
     robot->turnspeed = MAX_PLAYER_TURNSPEED;
     robot->turnspeed_s = MAX_PLAYER_TURNSPEED;
     robot->turnresistance = 0.12;
     robot->turnresistance_s = 0.12;
     robot->power = MAX_PLAYER_POWER;
     robot->power_s = MAX_PLAYER_POWER;
-    robot->instruments = 0;
     if (BIT(World.rules->mode, TEAM_PLAY))
 	robot->team = 0;		/* Robots are on their own team */
     robot->mychar = 'R';
     robot->robot_mode = RM_TAKE_OFF;
     robot->robot_ind = num;
+    robot->conn = NOT_CONNECTED;
 
     robot->fuel.l1 = 100 * FUEL_SCALE_FACT;
     robot->fuel.l2 = 200 * FUEL_SCALE_FACT;
@@ -197,6 +198,45 @@ static void New_robot(void)
     World.teams[0].NumMembers++;
     Id++;
     NumRobots++;
+
+    for (i = 0; i < NumPlayers - 1; i++) {
+	if (Players[i]->conn != NOT_CONNECTED) {
+	    Send_player(Players[i]->conn, robot->id, robot->team,
+			robot->mychar, robot->name);
+	    Send_base(Players[i]->conn, robot->id, robot->home_base);
+	}
+    }
+
+    {
+	static char *msgs[] = {
+	    /*
+	     * Insert your own witty messages here
+	     * and remove the silly ones.
+	     */
+	    "%s just can't stand you anymore.",
+	    "%s has come to give you a hard time.",
+	    "%s is looking for trouble.",
+	    "%s has a very loose trigger finger.",
+	    "Have fear, %s is here.",
+	    "Prepare to die by the hands of %s.",
+	    "%s is untouchable.",
+	    "%s is in a gruesome mood.",
+	    "%s is in a killing mood.",
+	    "%s wants you for dessert.",
+	    "%s vows to torment you in this life and the next.",
+	    "%s has no sense of humour.",
+	    "%s is back from the Sirius wars, and he's in a violent mood."
+	};
+	static int	next_msg = -1;
+	char		msg[MSG_LEN];
+
+	if (next_msg == -1) {
+	    next_msg = rand();
+	}
+	next_msg = (next_msg + 1) % NELEM(msgs);
+	sprintf(msg, msgs[next_msg], robot->name);
+	Set_message(msg);
+    }
 
 #ifndef	SILENT
     printf("%s (%d, %s) starts at startpos %d.\n",
@@ -502,13 +542,23 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
     vector     *gravity;
     int         gravity_dir;
     long 	dx, dy;
+    float	velocity;
 
     pl = Players[ind];
     safe_width = 3 * SHIP_SZ / 2;
+    /* Prevent overflow. */
+    velocity = (pl->velocity <= SPEED_LIMIT) ? pl->velocity : SPEED_LIMIT;
     stop_dist =
-	(RES * pl->velocity) / (MAX_PLAYER_TURNSPEED * pl->turnresistance)
-	+ (pl->velocity * pl->velocity * pl->mass) / (2 * MAX_PLAYER_POWER)
+	(RES * velocity) / (MAX_PLAYER_TURNSPEED * pl->turnresistance)
+	+ (velocity * velocity * pl->mass) / (2 * MAX_PLAYER_POWER)
 	+ safe_width;
+    /*
+     * Limit the look ahead.  For very high speeds the current code
+     * is ineffective and much too inefficient.
+     */
+    if (stop_dist > 6 * BLOCK_SZ) {
+	stop_dist = 6 * BLOCK_SZ;
+    }
     evade = false;
 
     if (pl->velocity <= 0.2)
@@ -792,7 +842,7 @@ static bool Check_robot_target(int ind,
 	if (pl->mines && item_dist < 8 * BLOCK_SZ) {
 	    Place_moving_mine(ind, pl->vel.x, pl->vel.y);
 	    pl->mines--;
-	    new_mode = rand() & 1 ? RM_EVADE_RIGHT : RM_EVADE_LEFT;
+	    new_mode = (rand() & 1) ? RM_EVADE_RIGHT : RM_EVADE_LEFT;
 	}
     } else if (new_mode == RM_CANNON_KILL && item_dist <= 0) {
 
@@ -858,12 +908,19 @@ static bool Check_robot_target(int ind,
     if (new_mode == RM_ATTACK) {
 	if (pl->ecms > 0 && item_dist < ECM_DISTANCE / 2) {
 	    USE_ECM(pl);
-	} else if ((pl->robot_count % 10) == 0 && pl->missiles > 0) {
-	  if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & 1))
+	} else if (pl->transporters > 0 && item_dist < TRANSPORTER_DISTANCE &&
+	    pl->fuel.sum > -ED_TRANSPORTER)
+	{
+	    do_transporter(pl);
+	    pl->transporters--;
+	    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
+	}
+	else if ((pl->robot_count % 10) == 0 && pl->missiles > 0) {
+	  if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & allowNukes))
 	    Fire_shot(ind, OBJ_NUKE, pl->dir);
 	  else
 	    Fire_shot(ind,
-		      rand() & 1 ? OBJ_SMART_SHOT : OBJ_HEAT_SHOT,
+		      (rand() & 1) ? OBJ_SMART_SHOT : OBJ_HEAT_SHOT,
 		      pl->dir);
 
 	} else if ((pl->robot_count % 2) == 0
@@ -873,23 +930,13 @@ static bool Check_robot_target(int ind,
 			   % (110 - Robots[pl->robot_ind].attack))
 		       < 15+attack_level)) {
 
-	    if (pl->missiles > 0 && rand() & 63 == 0)
-	      if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & 1))
+	    if (pl->missiles > 0 && (rand() & 63) == 0)
+	      if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & allowNukes))
 		Fire_shot(ind, OBJ_NUKE, pl->dir);
 	      else
-	      Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
-	    Fire_shot(ind, OBJ_SHOT, pl->dir);
-	    for (i = 0; i < pl->extra_shots; i++) {
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir + (1 + i) * SHOTS_ANGLE, RES));
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir - (1 + i) * SHOTS_ANGLE, RES));
-	    }
-	    for (i = 0; i < pl->rear_shots; i++) {
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir + RES / 2 +
-			(pl->rear_shots - 1 - 2 * i) * SHOTS_ANGLE / 2, RES));
-	    }
+		Fire_shot(ind, OBJ_SMART_SHOT, pl->dir);
+	    else
+	      Fire_normal_shots(ind);
 	}
 	if (pl->fuel.sum < pl->fuel.l2 && pl->mines > 0
 	    && (pl->robot_count % 30) == 0) {
@@ -900,19 +947,7 @@ static bool Check_robot_target(int ind,
     }
     if (new_mode == RM_CANNON_KILL && !slowing) {
 	if ((pl->robot_count % 2) == 0 && item_dist < VISIBILITY_DISTANCE) {
-
-	    Fire_shot(ind, OBJ_SHOT, pl->dir);
-	    for (i = 0; i < pl->extra_shots; i++) {
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir + (1 + i) * SHOTS_ANGLE, RES));
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir - (1 + i) * SHOTS_ANGLE, RES));
-	    }
-	    for (i = 0; i < pl->rear_shots; i++) {
-		Fire_shot(ind, OBJ_SHOT,
-			  MOD2(pl->dir + RES / 2 +
-			(pl->rear_shots - 1 - 2 * i) * SHOTS_ANGLE / 2, RES));
-	    }
+	    Fire_normal_shots(ind);
 	}
     }
     pl->robot_mode = new_mode;
@@ -1000,6 +1035,8 @@ void Update_robots(void)
     bool        evade_checked;
     int         attack_level;
     int         shoot_time;
+    char	msg[MSG_LEN];
+    static int	new_robot_delay;
 
 
     if (NumRobots < WantedNumRobots
@@ -1008,7 +1045,10 @@ void Update_robots(void)
 	&& !(BIT(World.rules->mode, TEAM_PLAY)
 	     && World.teams[0].NumMembers >= World.teams[0].NumBases)) {
 
-	New_robot();
+	if (++new_robot_delay >= RECOVERY_DELAY) {
+	    New_robot();
+	    new_robot_delay = 0;
+	}
     } else if (NumPlayers - NumPseudoPlayers >= World.NumBases
 	       && NumRobots > 0) {
 	Delete_robot();
@@ -1030,6 +1070,28 @@ void Update_robots(void)
 	    }
 	    continue;
 	}
+
+	if (robotsLeave && pl->life > 0) {
+	    msg[0] = '\0';
+	    if (robotLeaveLife > 0 && pl->life >= robotLeaveLife) {
+		sprintf(msg, "%s retired.", pl->name);
+	    }
+	    else if (robotLeaveScore != 0 && pl->score < robotLeaveScore) {
+		sprintf(msg, "%s left out of disappointment.", pl->name);
+	    }
+	    else if (robotLeaveRatio != 0 && pl->score / (pl->life + 1)
+		    < robotLeaveRatio) {
+		sprintf(msg, "%s played too badly.", pl->name);
+	    }
+	    if (msg[0] != '\0') {
+		Set_message(msg);
+		Delete_player(i);
+		updateScores = true;
+		i--;
+		continue;
+	    }
+	}
+
 	if (!BIT(pl->status, PLAYING))
 	    continue;
 
@@ -1058,14 +1120,14 @@ void Update_robots(void)
 
 	    switch (shot->type) {
 	    case OBJ_WIDEANGLE_SHOT:
-	    case OBJ_REAR_SHOT:
-	    case OBJ_SMART_SHOT_PACK:
+	    case OBJ_BACK_SHOT:
+	    case OBJ_ROCKET_PACK:
 	    case OBJ_CLOAKING_DEVICE:
 	    case OBJ_ENERGY_PACK:
 	    case OBJ_MINE_PACK:
 	    case OBJ_SENSOR_PACK:
 	    case OBJ_ECM:
-	    case OBJ_AFTER_BURNER:
+	    case OBJ_AFTERBURNER:
 	    case OBJ_TANK:
 		if ((dx = shot->pos.x - pl->pos.x, dx = WRAP_DX(dx),
 			ABS(dx)) < item_dist
@@ -1128,8 +1190,14 @@ void Update_robots(void)
 
 	/* Note: Only take time to navigate if not being shot at */
 	if (!BIT(pl->used, OBJ_SHIELD)
-	    && Check_robot_navigate(i, &evade_checked))
+	    && Check_robot_navigate(i, &evade_checked)) {
+	    if (playerShielding == 0
+		&& playerStartsShielded != 0
+		&& BIT(pl->have, OBJ_SHIELD)) {
+		SET_BIT(pl->used, OBJ_SHIELD);
+	    }
 	    continue;
+	}
 
 	ship_i = -1;
 	ship_dist = (pl->fuel.sum >= pl->fuel.l1 ? SHIP_SZ * 6 : 0);
@@ -1212,8 +1280,14 @@ void Update_robots(void)
 	    }
 	}
 	if (!evade_checked) {
-	    if (Check_robot_evade(i, mine_i, ship_i))
+	    if (Check_robot_evade(i, mine_i, ship_i)) {
+		if (playerShielding == 0
+		    && playerStartsShielded != 0
+		    && BIT(pl->have, OBJ_SHIELD)) {
+		    SET_BIT(pl->used, OBJ_SHIELD);
+		}
 		continue;
+	    }
 	}
 	if (item_i >= 0 && enemy_dist > /* 2* */ item_dist
 	    /* && enemy_dist > 12*BLOCK_SZ */ ) {
@@ -1245,8 +1319,14 @@ void Update_robots(void)
 		continue;
 	}
 
-	if (Check_robot_hunt(i))
+	if (Check_robot_hunt(i)) {
+	    if (playerShielding == 0
+		&& playerStartsShielded != 0
+		&& BIT(pl->have, OBJ_SHIELD)) {
+		SET_BIT(pl->used, OBJ_SHIELD);
+	    }
 	    continue;
+	}
 
 	cannon_i = -1;
 	cannon_dist = VISIBILITY_DISTANCE;
@@ -1319,6 +1399,12 @@ void Update_robots(void)
 	    Add_fuel(&(pl->fuel), (int)(FUEL_SCALE_FACT * 0.02));
 	if (pl->fuel.sum < MIN_PLAYER_FUEL)
 	    Add_fuel(&(pl->fuel), pl->fuel.sum - MIN_PLAYER_FUEL);
+
+	if (playerShielding == 0
+	    && playerStartsShielded != 0
+	    && BIT(pl->have, OBJ_SHIELD)) {
+	    SET_BIT(pl->used, OBJ_SHIELD);
+	}
 
 	if (pl->vel.y < (-NORMAL_ROBOT_SPEED) || (pl->robot_count % 64) < 32) {
 

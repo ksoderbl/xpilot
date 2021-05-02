@@ -1,9 +1,10 @@
-/* $Id: const.h,v 1.11 1993/04/18 16:46:15 kenrsc Exp $
+/* $Id: const.h,v 3.10 1993/08/02 12:54:56 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -19,10 +20,14 @@
  * MAXFLOAT and INT_MAX instead.
  */
 #ifndef	FLT_MAX
-#   if defined(__sun__)
-#       include <values.h>	/* MAXFLOAT for suns */
+#   if defined(__sgi)
+#       include <float.h>	/* FLT_MAX for SGI Personal Iris */
+#   else
+#	if defined(__sun__)
+#           include <values.h>	/* MAXFLOAT for suns */
+#	endif
+#	define  FLT_MAX	MAXFLOAT
 #   endif
-#   define  FLT_MAX	MAXFLOAT
 #endif
 #ifndef	RAND_MAX
 #   define  RAND_MAX	INT_MAX
@@ -33,6 +38,11 @@
 #   define PI		3.14159265358979323846
 #else
 #   define	PI		M_PI
+#endif
+
+/* Not everyone has LINE_MAX either, *sigh* */
+#ifndef LINE_MAX
+#   define LINE_MAX 2048
 #endif
 
 #define RES		        128
@@ -51,7 +61,7 @@
 #   define MAX(x, y)		( (x)>(y) ? (x) : (y) )
 #endif
 #define sqr(x)			( (x)*(x) )
-#define LENGTH(x, y)		( sqrt( (double) (sqr(x) + sqr(y)) ) )
+#define LENGTH(x, y)		( hypot( (double) (x), (double) (y) ) )
 #define LIMIT(val, lo, hi)	( val = val>hi ? hi : (val<lo ? lo : val) )
 
 /*
@@ -105,7 +115,7 @@
 #define MAX_CHARS		80
 #define MSG_LEN			256
 
-#define	MAX_KEY_DEFS		100
+#define FONT_LEN		256
 
 #define MAX_STATUS_CHARS	200
 
@@ -135,15 +145,21 @@
 #define DEFAULT_PLAYER_FUEL	(1000<<FUEL_SCALE_BITS)
 #define FUEL_NOTIFY             (16*FPS)
 
-#define LG2_MAX_AFTER_BURNER    4
+#define TARGET_DEAD_TIME	(FPS * 60)
+#define TARGET_DAMAGE		(250<<FUEL_SCALE_BITS)
+#define TARGET_REPAIR_PER_FRAME	(TARGET_DAMAGE / (FPS * 60 * 10))
+#define TARGET_UPDATE_DELAY	(TARGET_DAMAGE / (TARGET_REPAIR_PER_FRAME \
+				    * BLOCK_SZ))
+
+#define LG2_MAX_AFTERBURNER    4
 #define ALT_SPARK_MASS_FACT     4.2
 #define ALT_FUEL_FACT           3
-#define MAX_AFTER_BURNER        ((1<<LG2_MAX_AFTER_BURNER)-1)
-#define AFTER_BURN_SPARKS(s,n)  (((s)*(n))>>LG2_MAX_AFTER_BURNER)
+#define MAX_AFTERBURNER        ((1<<LG2_MAX_AFTERBURNER)-1)
+#define AFTER_BURN_SPARKS(s,n)  (((s)*(n))>>LG2_MAX_AFTERBURNER)
 #define AFTER_BURN_POWER(p,n)   \
- ((p)*(1.0+(n)*((ALT_SPARK_MASS_FACT-1.0)/(MAX_AFTER_BURNER+1.0))))
+ ((p)*(1.0+(n)*((ALT_SPARK_MASS_FACT-1.0)/(MAX_AFTERBURNER+1.0))))
 #define AFTER_BURN_FUEL(f,n)    \
- (((f)*((1<<LG2_MAX_AFTER_BURNER)+(n)*(ALT_FUEL_FACT-1)))>>LG2_MAX_AFTER_BURNER)
+ (((f)*((MAX_AFTERBURNER+1)+(n)*(ALT_FUEL_FACT-1)))/(MAX_AFTERBURNER+1.0))
 
 #ifdef	TURN_THRUST
 #  define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
@@ -169,6 +185,8 @@
 
 #define ECM_DISTANCE		(VISIBILITY_DISTANCE*0.2)
 #define ECM_MIS_FACT		1.5
+
+#define TRANSPORTER_DISTANCE	ECM_DISTANCE
 
 #define MINE_RANGE              (VISIBILITY_DISTANCE*0.1)
 #define MINE_MASS               30.0
@@ -215,7 +233,8 @@
 
 #define DEBRIS_MASS             4.5
 #define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)
-#define DEBRIS_LIFE(intensity)  ((rand()%(1+intensity>1))|8)
+#define DEBRIS_LIFE(intensity)  ((rand()%(1+intensity>>1))|8)
+#define DEBRIS_TYPES		(NUM_COLORS * 3 * 3)
 
 #define PL_DEBRIS_MASS          3.5
 #define PL_DEBRIS_SPEED(mass)   DEBRIS_SPEED(((int)mass)<<1)
@@ -233,5 +252,15 @@
 #else
 #define INLINE
 #endif /* __GNUC__ */
+
+#if defined(__sun__)
+#  define srand(s)	srandom(s)
+#  define rand()	random()
+#endif /* __sun__ */
+
+#if defined(ultrix) || defined(AIX)
+/* STDRUP_OBJ should be uncomented in Makefile also */
+extern char* strdup(const char*);
+#endif
 
 #endif

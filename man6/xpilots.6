@@ -11,14 +11,19 @@
 .\" (c) Copyright 1991, UiT, all rights reserved.
 .\"
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-.TH XPILOTS 6 "Version 1.2" "BS & KRS"
-.ad b
+.TH XPILOTS 6 "Requires UDP/IP and The X Window System"
+.ds )H GNU Public License applies
+.ds ]W Release 3.0, July 1993
+.if n .ad l	\" If nroff formatter, adjust left margin only
+.if t .ad b	\" If troff formatter, adjust both margins
+
 .SH NAME
 xpilots \- XPilot/UX  Multiplayer gravity war game server
 
 .SH SYNOPSIS
 
 .BR xpilots
+
 [\fB-map \fImap-file\fP]
 [\fB-robots \fInumber\fP]
 [\fB-rawmode\fP]
@@ -26,7 +31,9 @@ xpilots \- XPilot/UX  Multiplayer gravity war game server
 [\fB-help\fP]
 [\fB-version\fP]
 
+
 .SH DESCRIPTION
+
 This manual explains the following topics:
 .IP
 .B - Setting up a server.
@@ -38,7 +45,11 @@ This manual explains the following topics:
 Complete coverage of the game basics and how to connect to a server are
 given in the manual pages for \fIxpilot(6)\fP.
 
+
 .SS Options
+
+This section only describes the main options.  For a list of all
+options, try \fBxpilots -help\fP.
 .TP 15
 .B -map \fImap-name\fP
 This option allows you to select the map you will use for this server.  If
@@ -98,188 +109,31 @@ Lock/unlock the game.  This prevents other users from joining the game.
 .TP 15
 .B d
 Shutdown/cancel shutdown.  This command will ask for a reason and a
-shutdown delay (in ticks) and transmit these to the server.  A timer will
+shutdown delay (in seconds) and transmit these to the server.  A timer will
 appear showing how much time is left before the game goes down.  If you
 don't specify a delay, you will be canceling an already initiated shutdown.
 
-.SH MAPS
-Maps are currently implemented as plain ASCII-text files with the letters
-having special meanings.  The required \fB.map\fP suffix is not allowed to
-exist in any other part of the name.
-
-.SS Format
-The format of the map file is as follows:
-.RS 6
-.TP
-.PD 0
-\fIx-width\fPx\fIy-width\fP		(dimensions)
-.TP
-\fIrule-number\fP
-.TP
-\fImap-name\fP
-.TP
-\fIauthor-name\fP
-.TP
-\fImap-data\fP
-.PD 1
-.RS -6
-
-.SS Contents
-The \fIdimensions\fR are in blocks, with each character in the map-data
-corresponding to one block.  If the x-dimension specification is smaller
-than the actual map size, the map is cut off at that x-coordinate.  If it
-is larger, the map is padded with blanks.  A similar rule applies in the
-y-direction.
-
-The following \fIrule\fR numbers are available:
-.RS 6
-.TP 6
-.B 0
-Custom.  Player killings, shield and limited visibility all enabled.
-.TP
-.B 1, 2
-Reserved for future expansion.
-.TP
-.B 3
-Race.  No player killings.
-.TP
-.B 4
-Dogfight.  As custom but not with limited visibility.
-.TP
-.B 5
-Dogfight (limited).  As for normal dogfight, but with limited lives.  When
-a player gets \fBgame over\fP, he or she will not (re)enter the game until
-the game declares and honors a winner.  The \fBdefault mode\fP for new
-players is \fBgame over\fP.
-.RS -6
-.TP 0
-The \fImap name\fR should be no longer than 60-80 characters and may
-consist of spaces.  Though, a short and concise name is preferred.
-.TP
-The \fIauthor name\fR shouldn't need any explanation.  Please use real
-name, nothing more, nothing less.
-.TP
-\fIMap data\fR contains the geography of the world.  Each character
-represents a block in the world, and unknown characters are interpreted as
-\fBspace\fP.  Avoid the use of \fBTAB\fP as the program will interpret it
-as one character, while the normal editor will usually do an expansion.
-.TP
-\fINB!\fP This implementation will not handle auto-wraparound, a player
-that leaves the play-field will be destroyed.  The best way to handle this
-is to implement a frame of filled blocks around the playing area.  Also
-note that you will have to comply with the maximum settings of the server,
-so have a look at the map.h file in the distribution.
-
-.SS Character descriptions
-The following characters (case sensitive) have special interpretations:
-.RS 8
-.TP 4
-.B x
-A filled square/block.
-.TP
-.B q w s a
-Filled triangles.  They are filled in these corners (same order as above):
-down-right, down-left, up-left and up-right.
-.TP
-.B *
-Starting position.  The number of starting positions determine how many
-players the world can take.
-.TP
-.B F
-Fuel station.  Obviously, this is a place where you can refuel.
-.TP
-.B + - < >
-Positive, negative, curl anti-clockwise and curl clock-wise 'grav'
-(gravitational source).  These will push or pull your fighter, depending on
-the sign of the grav (positive/negative), or in the case of the curl gravs
-- push your fighter around as if it were in a whirlpool (try it or ask some
-physicist).
-.TP
-.B @
-Blasters.  Mark points in the map, where star dust is created.  Star dust
-consists of little stones, flying through the map.  Collisions with it have no
-effect, if the shield is active.  Otherwise fuel is reduced.  This points are
-not visible.
-.TP
-.B W I O
-Wormholes. These work much like the famous SciFi term 'teleporting'.  Note that
-it is not possible to have only one wormhole on a map, you must have none
-or more than one.  'W's are bi-directional, 'I's (in) are enter-only.  'O's
-(out) are exit-only.  Note that exit-only wormholes are invisible.
-.TP
-.B d r f c
-Cannons.  They are pointing in the following directions (same order as
-above): left, up, right and down.  These tend to make life difficult for a
-novice player, go easy on them, will ya?
-.TP
-.B 0..9
-Control posts.  These are only applicable in the \fBrace mode\fP.  The
-track starts at 0, and the final posts are 9 and 0, thereby completing a
-lap.
-.TP
-.B space (and every other characters)
-Blanks.
-
-.SH EXAMPLE
-This is is an example of a small map: (The dots may be substituted by
-spaces)
-.IP
-.PD 0
-.B 6x6
-.IP
-.B 0
-.IP
-.B Micro cosmos
-.IP
-.B A. N. Other Jr.
-.IP
-.B xxxxxx
-.IP
-.B xF..dx
-.IP
-.B x....x
-.IP
-.B xw.*.x
-.IP
-.B xxxxxx
-.PD 1
-.PP
-If this is saved to a file with a \fB.map\fP suffix, you may try it with
-the command:
-.IP
-.B xpilots -map <filename>
-.PP
-
-.SH NOTES
-There are even special fonts which make editing maps even simpler.  They
-are called \fBmap-5\fP, \fBmap-7\fP and \fBmap-9\fP.
-.TP 0
-To use them, you will probably have to add their directory to your
-\fBfont-path\fP.  This is usually done with the \fIxset(1)\fR command, i.e.:
-.PP
-.IP
-.B xset fp+ /usr/local/lib/X11/fonts
-.IP
-.B xset fp rehash
-.PP
-To use it with for example the \fIemacs(1)\fR editor, you will have to use
-a command like:
-.IP
-.B emacs -fn map-9 mapfile.map
-.PP
-Remember though, that editing text with this font is virtually impossible.
 
 .SH WARNINGS AND BUGS
+
 See \fIxpilot(6)\fP.
 
+
 .SH AUTHORS
-The \fIxpilot\fP product was developed by Bjoern Stabell and Ken Ronny
-Schouten at the University of Tromsoe, Norway.
+
+\fBXPilot\fP was developed by
+Bjoern Stabell (bjoerns@staff.cs.uit.no) and
+Ken Ronny Schouten (kenrsc@stud.cs.uit.no) from the University of Tromsoe, and
+Bert Gijsbers (bert@mc.bio.uva.nl) from the University of Amsterdam.
+
 
 .SH CREDITS
+
 See the provided CREDITS file.
 
+
 .SH FILES
+
 .PD 0
 .TP 40
 .B /usr/local/games/lib/xpilot/maps/*.map
@@ -292,5 +146,7 @@ Log file.
 Fonts to ease map making.
 .PD
 
+
 .SH SEE ALSO
+
 xpilot(6), xset(1), emacs(1)

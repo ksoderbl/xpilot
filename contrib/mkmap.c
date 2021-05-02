@@ -1,5 +1,7 @@
-/* A simple random-world generator for Xpilot.
+/*
+ * A simple random-world generator for Xpilot.
  * Written by Paul Gardner (pgar@excalib.com) 2/93.
+ * This is for version 1 maps.
  */
 
 #include <stdio.h>
@@ -8,10 +10,6 @@
 
 /* Xpilot headers */
 #include "limits.h"
-#define MAX_CANNONS 4096
-#define MAX_FUELS	4096
-#define MAX_GRAVS	4096
-#define MAX_WORMHOLES	4096
 #include "map.h"
 
 #ifdef _HPUX_SOURCE
@@ -325,6 +323,7 @@ char **argv;
 						continue;
 					terrain[j].density =
 						atoi( &argv[i][2+strlen(terrain[j].name)] );
+					break;
 				}
 				break;
 			default: bad_option( argv[i] );
@@ -395,7 +394,6 @@ char **argv;
 				SETMAP( map, x, y, GETMAP(tmpmap,x,y) );
 	}
 
-	/* place half-filleds */
 	for ( y=1 ; y<ht-1 ; y++ )
 		for ( x=1 ; x<wd-1 ; x++ )
 		{
@@ -407,6 +405,15 @@ char **argv;
 			s = GETMAP(map,x,y+1);
 			w = GETMAP(map,x-1,y);
 			e = GETMAP(map,x+1,y);
+
+			/* fill SPACEs that are completely surrounded by non-SPACEs */
+			if ( (n!=SPACE) && (s!=SPACE) && (e!=SPACE) && (w!=SPACE) )
+			{
+				SETMAP( map, x, y, FILLED );
+				continue;
+			}
+
+			/* place half-filleds */
 			if ( (s==SPACE) && (e==SPACE) && (n==FILLED) && (w==FILLED) )
 				SETMAP( map, x, y, (random() % 2) ? NW_FILLED : SPACE );
 			if ( (s==SPACE) && (w==SPACE) && (n==FILLED) && (e==FILLED) )
@@ -458,3 +465,4 @@ char **argv;
 	fclose( fp );
 	exit( 0 );
 }
+

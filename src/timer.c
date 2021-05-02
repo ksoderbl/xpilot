@@ -1,9 +1,12 @@
-/* $Id: timer.c,v 1.5 1993/04/16 12:22:56 bjoerns Exp $
+/* $Id: timer.c,v 3.6 1993/08/02 12:41:46 bjoerns Exp $
  *
- *	This file is part of the XPilot project.
+ *	This file is part of the XPilot project, written by
+ *
+ *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
+ *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *
  *	Copylefts are explained in the LICENSE file.
- *
- *	Thanks to Bert Gijsbers for this piece of code.
  */
 
 #include <stdio.h>
@@ -11,6 +14,39 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <stdlib.h>
+
+#ifdef _SONYNEWS_SOURCE
+/*
+ * Sony NEWS doesn't have the sigset family.
+ */
+typedef unsigned int    sigset_t;
+#define sigemptyset(set)        (*(set) = 0)
+#define sigfillset(set)         (*(set) = ~(sigset_t)0, 0)
+#define sigaddset(set,signo)    (*(set) |= sigmask(signo), 0)
+#define sigdelset(set,signo)    (*(set) &= ~sigmask(signo), 0)
+#define sigismember(set,signo)  ((*(set) & sigmask(signo)) != 0)
+
+#define SIG_BLOCK       1
+#define SIG_UNBLOCK     2
+#define SIG_SETMASK     3
+
+static int __sigtemp;           /* For use with sigprocmask */
+
+#define sigprocmask(how,set,oset) \
+	((__sigtemp = (((how) == SIG_BLOCK) ? \
+	sigblock(0) | *(set) : (((how) == SIG_UNBLOCK) ? \
+	sigblock(0) & ~(*(set)) : ((how) == SIG_SETMASK ? \
+	*(set) : sigblock(0))))), ((oset) ? \
+	(*(oset) = sigsetmask(__sigtemp)) : sigsetmask(__sigtemp)), 0)
+
+/*
+ * Sony NEWS doesn't have sigaction(), using sigvec() instead.
+ */
+#define sigaction sigvec
+#define sa_handler sv_handler
+#define sa_mask sv_mask
+#define sa_flags sv_flags
+#endif
 
 
 extern int  framesPerSecond;
@@ -46,6 +82,14 @@ void Loop_delay(void)
 
     last_msec = msec;
 }
+
+void block_timer(void)
+{	/* dummy */
+}
+
+void allow_timer(void)
+{	/* dummy */
+}
 #else
 
 static volatile long   timer_count,	/* SIGALRMs that have occurred */
@@ -77,10 +121,20 @@ static void catch_timer(int signum)
 static void sig_ok(int signum, int flag)
 {
     sigset_t    sigset;
+#ifdef _SONYNEWS_SOURCE
+    /* Dummy variable */
+    sigset_t	osigset;
+    int		flag_block;
+#endif
 
     sigemptyset(&sigset);
     sigaddset(&sigset, signum);
+#ifdef _SONYNEWS_SOURCE
+    flag_block = (flag) ? SIG_UNBLOCK : SIG_BLOCK;
+    if (sigprocmask(flag_block, &sigset, &osigset) == -1) {
+#else
     if (sigprocmask((flag) ? SIG_UNBLOCK : SIG_BLOCK, &sigset, NULL) == -1) {
+#endif
 	error("sigprocmask(%d,%d)", signum, flag);
 	exit(1);
     }
@@ -90,7 +144,7 @@ static void sig_ok(int signum, int flag)
  * Prevent the real-time timer from interrupting system calls.
  * Globally accessible.
  */
-void block_timer()
+void block_timer(void)
 {
     sig_ok(SIGALRM, 0);
 }
@@ -99,7 +153,7 @@ void block_timer()
  * Unblock the real-time timer.
  * Globally accessible.
  */
-void allow_timer()
+void allow_timer(void)
 {
     sig_ok(SIGALRM, 1);
 }
@@ -180,7 +234,6 @@ void Loop_delay(void)
     else if (++timers_used + 2 < timer_count) {
 	/*
 	 * The host, network or X servers can't keep up with our rate.
-	 * This also happens if a new player is logging in.
 	 * Adjust, but allow an overload if it is of short duration.
 	 */
 	timers_used = timer_count - 2;

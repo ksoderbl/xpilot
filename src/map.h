@@ -1,9 +1,10 @@
-/* $Id: map.h,v 1.13 1993/04/18 03:48:38 bjoerns Exp $
+/* $Id: map.h,v 3.5 1993/08/02 12:55:06 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -14,6 +15,7 @@
 #include "types.h"
 #include "rules.h"
 #include "const.h"
+#include "item.h"
 
 #define SPACE			0
 #define BASE			1
@@ -33,25 +35,12 @@
 #define ACWISE_GRAV		23
 #define WORMHOLE		24
 #define TREASURE		25
+#define	TARGET			26
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)
 #define DIR_LEFT		(RES/2)
 #define DIR_DOWN		(3*RES/4)
-
-#define ITEM_SMART_SHOT_PACK	0
-#define ITEM_CLOAKING_DEVICE	1
-#define ITEM_ENERGY_PACK	2
-#define ITEM_WIDEANGLE_SHOT	3
-#define ITEM_REAR_SHOT		4
-#define ITEM_MINE_PACK		5
-#define ITEM_SENSOR_PACK	6
-#define ITEM_TANK		7
-#define ITEM_ECM		8
-#define ITEM_AFTER_BURNER	9
-#define ITEM_BALL		10
-#define ITEM_TREASURE		11
-#define NUM_ITEMS		12
 
 /* Do NOT change these! */
 #define MAX_CHECKS		26
@@ -60,6 +49,8 @@
 typedef struct {
     position	pos;
     long	fuel;
+    unsigned	conn_mask;
+    long	last_change;
 } fuel_t; 
 
 typedef struct {
@@ -78,6 +69,8 @@ typedef struct {
     int		dir;
     int		dead_time;
     bool	active;
+    unsigned	conn_mask;
+    long	last_change;
 } cannon_t;
 
 typedef struct {
@@ -102,13 +95,25 @@ typedef struct {
 } treasure_t;
 
 typedef struct {
+    ipos       pos;
+    u_short    team;
+    int        dead_time;
+    int        damage;
+    unsigned	conn_mask;
+    long	last_change;
+} target_t;
+
+typedef struct {
     int		NumMembers;
     int		NumBases;
 } team_t;
     
 
 typedef struct {
-    int		x, y;		/* Size of world */
+    int		x, y;		/* Size of world in blocks */
+    int		diagonal;	/* Diagonal length in blocks */
+    int		width, height;	/* Size of world in pixels (optimization) */
+    int		hypotenuse;	/* Diagonal length in pixels (optimization) */
     rules_t	*rules;
     char	name[MAX_CHARS];
     char	author[MAX_CHARS];
@@ -119,8 +124,6 @@ typedef struct {
     item_t	items[NUM_ITEMS];
 
     team_t	teams[MAX_TEAMS];
-
-    int		diagonal;
 
     int		NumBases;
     base_t	*base;
@@ -136,6 +139,8 @@ typedef struct {
     wormhole_t	*wormHoles;
     int		NumTreasures;
     treasure_t	*treasures;
+    int         NumTargets;
+    target_t    *targets;
 } World_map;
 
 #endif

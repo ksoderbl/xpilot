@@ -1,31 +1,28 @@
-/* $Id: dbuff.c,v 1.1 1993/03/09 14:31:12 kenrsc Exp $
+/* $Id: dbuff.c,v 3.3 1993/06/28 20:53:31 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
 
 #include <stdio.h>
-#ifdef	apollo
-#    include <stdlib.h>
-#else
-#    include <malloc.h>
-#endif
+#include <stdlib.h>
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 
-#include "global.h"
+#include "client.h"
 #include "draw.h"
-#include "config.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 1.1 1993/03/09 14:31:12 kenrsc Exp $";
+    "@(#)$Id: dbuff.c,v 3.3 1993/06/28 20:53:31 bjoerns Exp $";
 #endif
 
 
@@ -55,7 +52,8 @@ static long color(register dbuff_state_t *state, register long simple_color)
 }
 
 
-dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
+dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
+			   dbuff_t type,
 			   unsigned long planes, XColor *colors)
 {
     register dbuff_state_t *state;
@@ -78,7 +76,9 @@ dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
     state->display = display;
     state->cmap = cmap;
 
-    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR)) {
+    state->type = type;
+
+    if (state->type == COLOR_SWITCH) {
 	if (XAllocColorCells(state->display, state->cmap, False,
 			     state->planes, 2*planes, &state->pixel, 1) == 0) {
 	    release(state);
@@ -94,7 +94,7 @@ dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
 	state->masks[1] &= ~state->planes[planes + i];
     }
 
-    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR)) {
+    if (state->type == COLOR_SWITCH) {
 	for (i=0; i<(1 << planes); i++) {
 	    colors[i].pixel = color(state, i | (i << planes));
 	    colors[i].flags = DoRed | DoGreen | DoBlue;
@@ -119,7 +119,7 @@ dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
 
     state->buffer = 0;
     state->drawing_planes = state->masks[state->buffer];
-    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+    if (state->type == COLOR_SWITCH)
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
 
@@ -128,11 +128,11 @@ dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
     
 
 
-void dbuff_switch(register int ind, register dbuff_state_t *state)
+void dbuff_switch(dbuff_state_t *state)
 {
     state->buffer ^= 1;
 
-    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+    if (state->type == COLOR_SWITCH)
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
 
@@ -141,9 +141,9 @@ void dbuff_switch(register int ind, register dbuff_state_t *state)
 
 
 
-void end_dbuff(int ind, dbuff_state_t *state)
+void end_dbuff(dbuff_state_t *state)
 {
-    if (BIT(Players[ind]->disp_type, DT_HAVE_COLOR))
+    if (state->type == COLOR_SWITCH)
 	XFreeColors(state->display, state->cmap,
 		    &state->pixel, 1, ~(state->masks[0] & state->masks[1]));
     release(state);

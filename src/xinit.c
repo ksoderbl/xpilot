@@ -1,9 +1,10 @@
-/* $Id: xinit.c,v 1.4 1993/03/23 17:54:18 bjoerns Exp $
+/* $Id: xinit.c,v 3.25 1993/08/03 11:53:42 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -11,193 +12,412 @@
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#include <X11/Xutil.h>
 
 #include <stdio.h>
-#ifndef	apollo
+#include <stdlib.h>
+#include <ctype.h>
+#ifndef	__apollo
 #    include <string.h>
 #endif
+#include <limits.h>
 
-#include "global.h"
-#include "map.h"
-#include "draw.h"
 #include "version.h"
 #include "icon.h"
-#include "pack.h"
+#include "client.h"
+#include "paint.h"
+#include "draw.h"
+#include "xinit.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 1.4 1993/03/23 17:54:18 bjoerns Exp $";
+    "@(#)$Id: xinit.c,v 3.25 1993/08/03 11:53:42 bjoerns Exp $";
 #endif
+
+extern message_t	*Msg[];
+extern int		RadarHeight;
 
 /*
  * Globals.
  */
-static char		msg[MSG_LEN];
+int	ButtonHeight;
+Atom	ProtocolAtom, KillAtom;
+bool	talk_mapped;
+
+
 static XFontStruct	*font;
 static message_t	*MsgBlock;
+static char		*keyHelpList = NULL, *keyHelpDesc = NULL;
+static int		buttonColor, windowColor;
+static int		KeyDescOffset;
+static bool		about_created;
+static bool		help_created;
+static bool		talk_created;
+static char		talk_str[MAX_CHARS];
+static struct {
+    bool		visible;
+    short		offset;
+} talk_cursor;
 
-Atom		ProtocolAtom, KillAtom;
+
+/*
+ * Item structures
+ */
+#include "item.h"
+
+#include "items/itemRocketPack.xbm"
+#include "items/itemCloakingDevice.xbm"
+#include "items/itemEnergyPack.xbm"
+#include "items/itemWideangleShot.xbm"
+#include "items/itemRearShot.xbm"
+#include "items/itemMinePack.xbm"
+#include "items/itemSensorPack.xbm"
+#include "items/itemTank.xbm"
+#include "items/itemEcm.xbm"
+#include "items/itemAfterburner.xbm"
+#include "items/itemTransporter.xbm"
+/* NB!  Is dependent on the order of the items in item.h */
+static struct {
+    char*	data;
+    char*	helpText;
+} itemBitmapData[NUM_ITEMS] = {
+    {	itemEnergyPack_bits,
+	    "Extra energy/fuel"					},
+    {	itemWideangleShot_bits,
+	    "Extra front cannons"				},
+    {	itemRearShot_bits,
+	    "Extra rear cannon"					},
+    {	itemAfterburner_bits,
+	    "Afterburner; makes your engines more efficient"	},
+    {	itemCloakingDevice_bits,
+	    "Cloaking device; "
+	    "makes you invisible, both on radar and on screen"	},
+    {	itemSensorPack_bits,
+	    "Sensor; "
+	    "enables you to see cloaked opponents more easily"	},
+    {	itemTransporter_bits,
+	    "Transporter; enables you to steal equipment from "
+	    "other players"					},
+    {	itemTank_bits,
+	    "Tank; "
+	    "makes refueling quicker, increases maximum fuel "
+	    "capacity and can be jettisoned to confuse enemies"	},
+    {	itemMinePack_bits,
+	    "Mine; "
+	    "can be dropped as a bomb or as a stationary mine"	},
+    {	itemRocketPack_bits,
+	    "Rocket; can be utilized as smart missile, "
+	    "heat seaking missile, nuclear missile or just a "
+	    "plain unguided missile (torpedo)"			},
+    {	itemEcm_bits,
+	    "ECM (Electronic Counter Measures); "
+	    "can be used to disturb electronic equipment, for instance "
+	    "can it be used to confuse smart missiles and reprogram "
+	    "robots to seak certain players"			},
+};
+Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
+    
 
 #ifndef NO_ROTATING_DASHES
 char dashes[NUM_DASHES] = { 8, 4 };
 #endif
 
+/* How far away objects should be placed from each other etc... */
+#define BORDER	10
+#define BTN_BORDER 4
+
+/* Information window dimensions */
+#define ABOUT_WINDOW_WIDTH	600
+#define ABOUT_WINDOW_HEIGHT	768
+#define TALK_TEXT_HEIGHT	(textFont->ascent + textFont->descent)
+#define TALK_OUTSIDE_BORDER	2
+#define TALK_INSIDE_BORDER	3
+#define TALK_WINDOW_HEIGHT	(TALK_TEXT_HEIGHT + 2 * TALK_INSIDE_BORDER)
+#define TALK_WINDOW_X		(50 - TALK_OUTSIDE_BORDER)
+#define TALK_WINDOW_Y		(768*3/4 - TALK_WINDOW_HEIGHT/2)
+#define TALK_WINDOW_WIDTH	(768 - 2*(TALK_WINDOW_X + TALK_OUTSIDE_BORDER))
+
+#define CTRL(c)			((c) & 0x1F)
+
+static void createAboutWindow(void);
+static void createHelpWindow(void);
+static void createTalkWindow(void);
+
 
 /*
- * The following function initializes a player window.  It returns SUCCESS if
- * the initialization was successful, E_DISPLAY if it couldn't open display,
- * or E_DBUFF if it couldn't initialize the double buffering routine.
+ * Set specified font for that GC.
+ * Return font that is used for this GC, even if setting a new
+ * font failed (return default font in that case).
  */
-u_byte Init_window(int ind)
+XFontStruct* Set_font(Display* dpy, GC gc, char* fontName)
 {
-    int			i, p, button_color, window_color;
+    XFontStruct*	font;
+
+    if ((font = XLoadQueryFont(dpy, fontName)) == NULL) {
+	error("Couldn't find font '%s', using default font", fontName);
+	font = XQueryFont(dpy, XGContextFromGC(gc));
+    } else
+	XSetFont(dpy, gc, font->fid);
+
+    return font;
+}
+
+
+/*
+ * Parse the user configurable color definitions.
+ */
+int Parse_colors(Colormap cmap)
+{
+    int			i;
+
+    for (i = 0; i < 4; i++) {
+	if (XParseColor(dpy, cmap, color_names[i], &colors[i]) == 0) {
+	    printf("Can't parse color %d \"%s\"\n",
+		   i, color_names[i]);
+	    if (XParseColor(dpy, cmap, color_defaults[i], &colors[i]) == 0) {
+		printf("Can't parse default color %d \"%s\"\n",
+		       i, color_defaults[i]);
+		return -1;
+	    }
+	}
+    }
+    return 0;
+}
+
+
+/*
+ * The following function initializes a player window.
+ * It returns 0 if the initialization was successful, 
+ * or -1 if it couldn't initialize the double buffering routine.
+ */
+int Init_window(void)
+{
+    int			i, p, values;
     XGCValues		xgc;
-#ifdef	SCROLL
-    char		title[256];
-#endif
-    player		*pl = Players[ind];
-    static char		msg[256];
+    char		msg[256];
 
 
     /*
      * Get misc. display info.
      */
-    pl->disp_type = DT_IS_DISPLAY;
-    if (HavePlanes(pl->disp))
-	SET_BIT(pl->disp_type, DT_HAVE_PLANES | DT_HAVE_COLOR);
+    dpy_type = DT_IS_DISPLAY;
+    if (HavePlanes(dpy))
+	SET_BIT(dpy_type, DT_HAVE_PLANES | DT_HAVE_COLOR);
 
 
-    /*
-     * Initializes colors.
-     */
-    pl->colors[BLACK].red	= 0; 
-    pl->colors[BLACK].green	= 0; 
-    pl->colors[BLACK].blue	= 0; 
-    pl->colors[WHITE].red	= 65535;
-    pl->colors[WHITE].green	= 65535;
-    pl->colors[WHITE].blue	= 65535;
-    pl->colors[BLUE].red	= 10000;
-    pl->colors[BLUE].green	= 30000;
-    pl->colors[BLUE].blue	= 65535;
-    pl->colors[RED].red		= 65535;
-    pl->colors[RED].green	= 15000;
-    pl->colors[RED].blue	= 10000;
-    pl->colormap		= NULL;
+    colormap = 0;
 
+    if (Parse_colors(DefaultColormap(dpy, DefaultScreen(dpy))) == -1) {
+	return -1;
+    }
 
     /*
      * Initializes the double buffering routine.
      */
-    pl->dbuf_state = start_dbuff(ind, pl->disp,
-				 DefaultColormap(pl->disp,
-						 DefaultScreen(pl->disp)),
-				 BIT(pl->disp_type, DT_HAVE_COLOR) ? 2 : 1,
-				 pl->colors);
+    dbuf_state = start_dbuff(dpy,
+			     DefaultColormap(dpy,
+					     DefaultScreen(dpy)),
+			     BIT(dpy_type, DT_HAVE_COLOR)
+			     ? COLOR_SWITCH : PIXMAP_COPY,
+			     BIT(dpy_type, DT_HAVE_COLOR) ? 2 : 1,
+			     colors);
 
-    if (pl->dbuf_state == NULL) {
+    if (dbuf_state == NULL) {
 
-	error("Short of colors, creating private cmap for '%s'", pl->name);
+	error("Short of colors, creating private cmap for '%s'", name);
 	/*
 	 * Create a private colormap if we can't allocate enough colors.
 	 */
-	pl->colormap = XCreateColormap(pl->disp, DefaultRootWindow(pl->disp),
-				       DefaultVisual(pl->disp,
-						     DefaultScreen(pl->disp)),
-				       AllocNone);
+	colormap = XCreateColormap(dpy, DefaultRootWindow(dpy),
+				   DefaultVisual(dpy,
+						 DefaultScreen(dpy)),
+				   AllocNone);
 	/*
 	 * Try to initialize the double buffering again.
 	 */
-	pl->dbuf_state = start_dbuff(ind, pl->disp, pl->colormap,
-				     BIT(pl->disp_type, DT_HAVE_COLOR) ? 2 : 1,
-				     pl->colors);
+	dbuf_state = start_dbuff(dpy, colormap,
+				 BIT(dpy_type, DT_HAVE_COLOR)
+				 ? COLOR_SWITCH : PIXMAP_COPY,
+				 BIT(dpy_type, DT_HAVE_COLOR) ? 2 : 1,
+				 colors);
     }
 
-    if (pl->dbuf_state == NULL) {
-	XCloseDisplay(pl->disp);
-	return (E_DBUFF);
+    if (dbuf_state == NULL) {
+	/* Can't setup double buffering */
+	return -1;
+    }
+
+
+    about_created = false;
+    help_created = false;
+    talk_created = false;
+    talk_mapped = false;
+    talk_str[0] = '\0';
+
+
+    /*
+     * Create toplevel window (we need this first so that we can create GCs)
+     */
+    top = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0,
+			      1026, 768, 0, 0, colors[WHITE].pixel);
+    if (colormap)
+	XSetWindowColormap(dpy, top, colormap);
+
+
+    /*
+     * Create item bitmaps
+     */
+    for (i=0; i<NUM_ITEMS; i++)
+	itemBitmaps[i]
+	    = XCreateBitmapFromData(dpy, top,
+				    (char *)itemBitmapData[i].data,
+				    ITEM_SIZE, ITEM_SIZE);
+
+
+    /*
+     * Creates and initializes the graphic contexts.
+     */
+    xgc.line_width = 0;
+    xgc.line_style = LineSolid;
+    xgc.cap_style = CapButt;
+    xgc.join_style = JoinMiter;		/* I think this is fastest, is it? */
+    xgc.graphics_exposures = False;
+    values
+	= GCLineWidth|GCLineStyle|GCCapStyle|GCJoinStyle|GCGraphicsExposures;
+
+    messageGC
+	= XCreateGC(dpy, top, values, &xgc);
+    radarGC
+	= XCreateGC(dpy, top, values, &xgc);
+    buttonGC
+	= XCreateGC(dpy, top, values, &xgc);
+    scoreListGC
+	= XCreateGC(dpy, top, values, &xgc);
+    textGC
+	= XCreateGC(dpy, top, values, &xgc);
+    gc
+	= XCreateGC(dpy, top, values, &xgc);
+    XSetBackground(dpy, gc, colors[BLACK].pixel);
+    XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
+
+
+    /*
+     * Set fonts
+     */
+    gameFont
+	= Set_font(dpy, gc, gameFontName);
+    messageFont
+	= Set_font(dpy, messageGC, messageFontName);
+    scoreListFont
+	= Set_font(dpy, scoreListGC, scoreListFontName);
+    buttonFont
+	= Set_font(dpy, buttonGC, buttonFontName);
+    textFont
+	= Set_font(dpy, textGC, textFontName);
+
+    XSetState(dpy, gc,
+	      WhitePixel(dpy, DefaultScreen(dpy)),
+	      BlackPixel(dpy, DefaultScreen(dpy)),
+	      GXcopy, AllPlanes);
+    XSetState(dpy, radarGC,
+	      WhitePixel(dpy, DefaultScreen(dpy)),
+	      BlackPixel(dpy, DefaultScreen(dpy)),
+	      GXcopy, AllPlanes);
+    XSetState(dpy, messageGC,
+	      WhitePixel(dpy, DefaultScreen(dpy)),
+	      BlackPixel(dpy, DefaultScreen(dpy)),
+	      GXcopy, AllPlanes);
+    XSetState(dpy, buttonGC,
+	      WhitePixel(dpy, DefaultScreen(dpy)),
+	      BlackPixel(dpy, DefaultScreen(dpy)),
+	      GXcopy, AllPlanes);
+    XSetState(dpy, scoreListGC,
+	      WhitePixel(dpy, DefaultScreen(dpy)),
+	      BlackPixel(dpy, DefaultScreen(dpy)),
+	      GXcopy, AllPlanes);
+
+    
+    if (BIT(dpy_type, DT_HAVE_PLANES))
+	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
+
+
+    /*
+     * A little hack that enables us to draw on both sets of double buffering
+     * planes at once.
+     */
+    for (p=0; p<2; p++) {
+	dpl_1[p] = dpl_2[p] = 0;
+
+	for (i=0; i<32; i++)
+	    if (!((1<<i)&dbuf_state->masks[p]))
+		if (dpl_1[p])
+		    dpl_2[p] = 1<<i;
+		else
+		    dpl_1[p] = 1<<i;
     }
 
 
     /*
      * Creates the windows.
      */
-    if (BIT(pl->disp_type, DT_HAVE_COLOR)) {
-	window_color = BLUE;
-	button_color = RED;
+    if (BIT(dpy_type, DT_HAVE_COLOR)) {
+	windowColor = BLUE;
+	buttonColor = RED;
     } else {
-	button_color = BLACK;
-	window_color = BLACK;
+	buttonColor = BLACK;
+	windowColor = BLACK;
     }
 
-    pl->top = XCreateSimpleWindow(pl->disp, DefaultRootWindow(pl->disp), 0, 0,
-				  1026, 768, 0, 0, pl->colors[WHITE].pixel);
-    if (pl->colormap)
-	XSetWindowColormap(pl->disp, pl->top, pl->colormap);
+    draw = XCreateSimpleWindow(dpy, top, 258, 0,
+			       768, 768, 0, 0, colors[BLACK].pixel);
+    radar = XCreateSimpleWindow(dpy, top, 0, 0,
+				256, RadarHeight, 0, 0,
+				colors[BLACK].pixel);
 
-    pl->draw = XCreateSimpleWindow(pl->disp, pl->top, 258, 0,
-				   768, 768, 0, 0, pl->colors[BLACK].pixel);
-    pl->radar = XCreateSimpleWindow(pl->disp, pl->top, 0, 0,
-				    256, RadarHeight, 0, 0,
-				    pl->colors[BLACK].pixel);
-    pl->quit_b = XCreateSimpleWindow(pl->disp, pl->top, 0, RadarHeight+1,
-				     85, 22, 0, 0,
-				     pl->colors[button_color].pixel);
-    pl->info_b = XCreateSimpleWindow(pl->disp, pl->top, 86, RadarHeight+1,
-				     85, 22, 0, 0,
-				     pl->colors[button_color].pixel);
-    pl->help_b = XCreateSimpleWindow(pl->disp, pl->top, 172, RadarHeight+1,
-				     84, 22, 0, 0,
-				     pl->colors[button_color].pixel);
-    pl->players = XCreateSimpleWindow(pl->disp, pl->top, 0, RadarHeight+24,
-				      256, 746-RadarHeight, 0, 0,
-				      pl->colors[window_color].pixel);
-#define HH	600
-    pl->help_w = XCreateSimpleWindow(pl->disp, pl->draw, (FULL-420)/2,
-				     (FULL-HH)/2, 420, HH,
-				     5, pl->colors[WHITE].pixel,
-				     pl->colors[window_color].pixel);
-    pl->help_close_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					   4, HH-26, 85, 22, 0, 0,
-					   pl->colors[button_color].pixel);
-    pl->help_next_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					  420/2-85/2, HH-26, 85, 22, 0, 0,
-					  pl->colors[button_color].pixel);
-    pl->help_prev_b = XCreateSimpleWindow(pl->disp, pl->help_w,
-					  420-89, HH-26, 85, 22, 0, 0,
-					  pl->colors[button_color].pixel);
+    /* Create buttons */
+#define BUTTON_WIDTH	84
+    ButtonHeight
+	= buttonFont->ascent + buttonFont->descent + 2*BTN_BORDER;
 
-    pl->info_w = XCreateSimpleWindow(pl->disp, pl->draw, (FULL-500)/2, 
-				     (FULL-500)/2, 500, 500,
-				     5, pl->colors[WHITE].pixel, 
-				     pl->colors[window_color].pixel);
-    pl->info_close_b = XCreateSimpleWindow(pl->disp, pl->info_w, 4, 500-26, 85,
-					   22, 0, 0,
-					   pl->colors[button_color].pixel);
+    quit_b
+	= XCreateSimpleWindow(dpy, top,
+			      1 + 0*BUTTON_WIDTH, RadarHeight+1,
+			      BUTTON_WIDTH, ButtonHeight, 0, 0,
+			      colors[buttonColor].pixel);
+    about_b
+	= XCreateSimpleWindow(dpy, top,
+			      2 + 1*BUTTON_WIDTH, RadarHeight+1,
+			      BUTTON_WIDTH, ButtonHeight, 0, 0,
+			      colors[buttonColor].pixel);
+    help_b
+	= XCreateSimpleWindow(dpy, top,
+			      3 + 2*BUTTON_WIDTH, RadarHeight+1,
+			      BUTTON_WIDTH, ButtonHeight, 0, 0,
+			      colors[buttonColor].pixel);
 
+    /* Create score list window */
+    players
+	= XCreateSimpleWindow(dpy, top, 0, RadarHeight+ButtonHeight+2,
+			      256, 768 - (RadarHeight - ButtonHeight - 2),
+			      0, 0,
+			      colors[windowColor].pixel);
 
     /*
      * Selecting events the we can handle.
      */
-    XSelectInput(pl->disp, pl->top,
+    XSelectInput(dpy, top,
 		 KeyPressMask | KeyReleaseMask
 		 | FocusChangeMask | StructureNotifyMask);
-    XSelectInput(pl->disp, pl->quit_b,
+    XSelectInput(dpy, quit_b,
 		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(pl->disp, pl->info_close_b,
-		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(pl->disp, pl->help_close_b,
-		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(pl->disp, pl->help_next_b,
-		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(pl->disp, pl->help_prev_b,
-		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(pl->disp, pl->info_b, ButtonPressMask | ExposureMask);
-    XSelectInput(pl->disp, pl->help_b, ButtonPressMask | ExposureMask);
-    XSelectInput(pl->disp, pl->info_w, ExposureMask);
-    XSelectInput(pl->disp, pl->help_w, ExposureMask);
-    XSelectInput(pl->disp, pl->radar, ExposureMask);
-    XSelectInput(pl->disp, pl->players, ExposureMask);
-    XSelectInput(pl->disp, pl->draw, 0);
+    XSelectInput(dpy, about_b,
+		 ButtonPressMask | ButtonReleaseMask| ExposureMask);
+    XSelectInput(dpy, help_b,
+		 ButtonPressMask | ButtonReleaseMask | ExposureMask);
+    XSelectInput(dpy, radar, ExposureMask);
+    XSelectInput(dpy, players, ExposureMask);
+    XSelectInput(dpy, draw, 0);
 
 
     /*
@@ -210,47 +430,45 @@ u_byte Init_window(int ind)
 	XWMHints	xwmh;
 	XSizeHints	xsh;
 
-	xwmh.flags		= InputHint|StateHint|IconPixmapHint; 
-	xwmh.input		= True;
-	xwmh.initial_state	= NormalState;
-	xwmh.icon_pixmap	= XCreateBitmapFromData(pl->disp, pl->top,
-							icon_bits, icon_width,
-							icon_height);
+	xwmh.flags	   = InputHint|StateHint|IconPixmapHint; 
+	xwmh.input	   = True;
+	xwmh.initial_state = NormalState;
+	xwmh.icon_pixmap   = XCreateBitmapFromData(dpy, top,
+						   (char *)icon_bits,
+						   icon_width, icon_height);
 
 	xsh.flags = (PPosition|PSize|PMinSize|PMaxSize|PBaseSize);
 	xsh.width = xsh.base_width = xsh.min_width = xsh.max_width = 1026;
 	xsh.height = xsh.base_height = xsh.min_height = xsh.max_height = 768;
-	xsh.x = (DisplayWidth(pl->disp, DefaultScreen(pl->disp))
-		 - xsh.width) /2;
-	xsh.y = (DisplayHeight(pl->disp, DefaultScreen(pl->disp))
-		 - xsh.height) /2;
+	xsh.x = (DisplayWidth(dpy, DefaultScreen(dpy)) - xsh.width) /2;
+	xsh.y = (DisplayHeight(dpy, DefaultScreen(dpy)) - xsh.height) /2;
 
-	xclh.res_name = NULL;		/* NULL: Automatically uses Argv[0], */
-	xclh.res_class = "XPilot";	/* stripped of directory prefixes. */
+	xclh.res_name = NULL;	/* NULL: Automatically uses Argv[0], */
+	xclh.res_class = "XPilot"; /* stripped of directory prefixes. */
 
 	/*
 	 * Set the above properties.
 	 */
-	XSetWMProperties(pl->disp, pl->top, NULL, NULL, Argv, Argc,
+	XSetWMProperties(dpy, top, NULL, NULL, Argv, Argc,
 			 &xsh, &xwmh, &xclh);
 
 	/*
 	 * Now initialize icon and window title name.
 	 */
 	sprintf(msg,
-		"Successful connection to server at \"%s\".", Server.host);
-	XStoreName(pl->disp, pl->top, msg);
+		"Successful connection to server at \"%s\".", servername);
+	XStoreName(dpy, top, msg);
 
-	sprintf(msg, "%s:%s", pl->name, Server.host);
-	XSetIconName(pl->disp, pl->top, msg);
+	sprintf(msg, "%s:%s", name, servername);
+	XSetIconName(dpy, top, msg);
 
 	/*
 	 * Specify IO error handler and the WM_DELETE_WINDOW atom in
 	 * an attempt to catch 'nasty' quits.
 	 */
-	ProtocolAtom = XInternAtom(pl->disp, "WM_PROTOCOLS", False);
-	KillAtom = XInternAtom(pl->disp, "WM_DELETE_WINDOW", False);
-	XSetWMProtocols(pl->disp, pl->top, &KillAtom, 1);
+	ProtocolAtom = XInternAtom(dpy, "WM_PROTOCOLS", False);
+	KillAtom = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+	XSetWMProtocols(dpy, top, &KillAtom, 1);
 	XSetIOErrorHandler(FatalError);
     }
 
@@ -258,160 +476,53 @@ u_byte Init_window(int ind)
     /*
      * Initialize misc. pixmaps if this is monochrome.
      */
-    if (!BIT(pl->disp_type, DT_HAVE_PLANES)) {
-	pl->p_radar = XCreatePixmap(pl->disp, pl->radar, 256, RadarHeight, 1);
-	pl->s_radar = XCreatePixmap(pl->disp, pl->radar, 256, RadarHeight, 1);
-	pl->p_draw  = XCreatePixmap(pl->disp, pl->draw, 768, 768, 1);
+    if (!BIT(dpy_type, DT_HAVE_PLANES)) {
+	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, 1);
+	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, 1);
+	p_draw  = XCreatePixmap(dpy, draw, 768, 768, 1);
     }
     else {
-	pl->p_radar = pl->radar;
-	pl->s_radar = pl->radar;
-	pl->p_draw = pl->draw;
+	if (BIT(instruments, SHOW_SLIDING_RADAR) != 0) {
+	    s_radar = XCreatePixmap(dpy, radar,
+				    256, RadarHeight,
+				    DefaultDepth(dpy, DefaultScreen(dpy)));
+	} else {
+	    s_radar = radar;
+	}
+	p_radar = s_radar;
+	p_draw = draw;
     }
 
-    /*
-     * Following initializes the text that may be specified to scroll
-     * across the window title.
-     */
-#ifdef SCROLL
-    sprintf(pl->scroll, "						    "
-	    "					"
-	    TITLE "\"%s\" connected to server at \"%s\"..... "
-	    "The game world is %s, dimensions: %d boxes wide and %d boxes "
-	    "high. It was created, and made made available, by %s. You are "
-	    "playing with rules bitfield $%04lx, huh? Well, don't let it "
-	    "bother you. You will find %d cannons, %d gravs and %d starting "
-	    "positions in this world. Not to mention %d energy stations, "
-	    "which will hopefully satisfy your needs. If you are playing in "
-	    "race mode, it might help to inform you that there are %d "
-	    "checkpoints in each round............. "
-	    "Controls: 'a' and 's' turn your "
-	    "fighter left and right, 'shift' activates your splendid "
-	    "(but aye so energy-consuming) engines. 'Return' fires your "
-	    "cannon, and if you have first activated the compass/lock-"
-	    "computer and selected a target (with either 'Select' (nearest), "
-	    "'Next' or 'Prev') - you may fire smart missiles by pressing the "
-	    "'\\' (BackSlash) key..... Other controls are: 'ctrl' or 'f' for "
-	    "recharging your energy, obtained by maneuvering close to an "
-	    "energy station and holding down the appropriate key. 'Space' "
-	    "or 'Meta-R' activates your shield. So, All that's left is to "
-	    "wish you good luck... :)	   Who knows, you might need it? :) "
-	    "								  ",
-	    pl->name, Server.host, World.name, World.x, World.y, World.author,
-	    World.rules->mode, World.NumCannons, World.NumGravs,
-	    World.NumBases, World.NumFuels, World.NumChecks);
-    pl->scroll_len = strlen(pl->scroll);
-#endif
-
-    XAutoRepeatOff(pl->disp);	    /* We don't want any autofire, yet! */
+    XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
 
 
     /*
      * Maps the windows, makes the visible. Voila!
      */
-    XMapWindow(pl->disp, pl->top);
-    XMapWindow(pl->disp, pl->draw);
-    XMapWindow(pl->disp, pl->radar);
-    XMapWindow(pl->disp, pl->quit_b);
-    XMapWindow(pl->disp, pl->info_b);
-    XMapWindow(pl->disp, pl->help_b);
-    XMapWindow(pl->disp, pl->players);
+    XMapWindow(dpy, draw);
+    XMapWindow(dpy, radar);
+    XMapWindow(dpy, quit_b);
+    XMapWindow(dpy, about_b);
+    XMapWindow(dpy, help_b);
+    XMapWindow(dpy, players);
+    XMapWindow(dpy, top);
 
 
-    /*
-     * Creates and initializes the graphic contexts.
-     */
-    pl->gc = XCreateGC(pl->disp, pl->draw, 0, &xgc);
-    pl->gcr = XCreateGC(pl->disp, pl->radar, 0, &xgc);
-    pl->gcb = XCreateGC(pl->disp, pl->quit_b, 0, &xgc);
-    pl->gcp = XCreateGC(pl->disp, pl->players, 0, &xgc);
-    pl->gctxt = XCreateGC(pl->disp, pl->info_w, 0, &xgc);
+    XSync(dpy, False);
 
-    XSetBackground(pl->disp, pl->gc, pl->colors[BLACK].pixel);
-    XSetDashes(pl->disp, pl->gc, 0, dashes, NUM_DASHES);
-    XSetLineAttributes(pl->disp, pl->gc, 0, LineSolid, CapButt, JoinBevel);
-    pl->color = WHITE;
-
-    if ((font = XLoadQueryFont(pl->disp,
-	      "-*-*-medium-r-*-*-12-120-75-75-m-70-iso8859-1")) == NULL) {
-	error("Could not load font. Will use default font");
-    } else
-	XSetFont(pl->disp, pl->gc, font->fid);
-
-    if ((font = XLoadQueryFont(pl->disp,
-	      "-*-*-bold-o-*-*-14-140-75-75-m-90-iso8859-1")) == NULL) {
-	error("Could not load font. Will use default font....");
-    } else
-	XSetFont(pl->disp, pl->gcb, font->fid);
-
-    if ((font = XLoadQueryFont(pl->disp,
-	      "-*-*-bold-i-*-*-17-120-100-100-p-86-iso8859-1")) == NULL) {
-	error("Could not load font. Will use default font....");
-    } else
-	XSetFont(pl->disp, pl->gctxt, font->fid);	
-
-    if ((font = XLoadQueryFont(pl->disp,
-	      "-*-*-bold-*-*-*-13-120-75-75-c-80-iso8859-1")) == NULL) {
-	error("Could not load font. Will use default font....");
-    } else
-	XSetFont(pl->disp, pl->gcp, font->fid);
-
-    XSetState(pl->disp, pl->gcr,
-	      WhitePixel(pl->disp, DefaultScreen(pl->disp)),
-	      BlackPixel(pl->disp, DefaultScreen(pl->disp)),
-	      GXcopy, AllPlanes);
-    XSetState(pl->disp, pl->gc,
-	      WhitePixel(pl->disp, DefaultScreen(pl->disp)),
-	      BlackPixel(pl->disp, DefaultScreen(pl->disp)),
-	      GXcopy, AllPlanes);
-    XSetState(pl->disp, pl->gcb,
-	      WhitePixel(pl->disp, DefaultScreen(pl->disp)),
-	      BlackPixel(pl->disp, DefaultScreen(pl->disp)),
-	      GXcopy, AllPlanes);
-    XSetState(pl->disp, pl->gcp,
-	      WhitePixel(pl->disp, DefaultScreen(pl->disp)),
-	      BlackPixel(pl->disp, DefaultScreen(pl->disp)),
-	      GXcopy, AllPlanes);
-
-    
-    if (BIT(pl->disp_type, DT_HAVE_PLANES))
-	XSetPlaneMask(pl->disp, pl->gc, pl->dbuf_state->drawing_planes);
-
-
-    /*
-     * Get length of name in pixels (with drawing area font) for future
-     * use. (not correct if players use different fonts)
-     */
-    pl->name_length = XTextWidth(XQueryFont(pl->disp, XGContextFromGC(pl->gc)),
-				 pl->name, strlen(pl->name));
-
-
-    /*
-     * A little hack that enables us to draw on both sets of double buffering
-     * planes at once.
-     */
-    pl->dpl_1[0] = pl->dpl_2[0] = pl->dpl_1[1] = pl->dpl_2[0] = 0;
-
-    for (p=0; p<2; p++) {
-	pl->dpl_1[p] = pl->dpl_2[p] = 0;
-
-	for (i=0; i<32; i++)
-	    if (!((1<<i)&pl->dbuf_state->masks[p]))
-		if (pl->dpl_1[p])
-		    pl->dpl_2[p] = 1<<i;
-		else
-		    pl->dpl_1[p] = 1<<i;
-    }
-
-    return (SUCCESS);
+    return 0;
 }
 
 
-void Alloc_msgs(int number)
+int Alloc_msgs(int number)
 {
-    message_t *x=(message_t*)malloc(number*sizeof(message_t));
+    message_t *x;
     int i;
 
+    if ((x = (message_t *)malloc(number * sizeof(message_t))) == NULL) {
+	error("No memory for messages");
+	return -1;
+    }
     MsgBlock = x;
     for (i=0; i<number; i++) {
 	Msg[i]=x;
@@ -419,6 +530,7 @@ void Alloc_msgs(int number)
 	x->life = 0;
         x++;
     }
+    return 0;
 }
 
 
@@ -428,250 +540,629 @@ void Free_msgs(void)
 }
 
 
-void DrawShadowText(int ind, Display *disp, Window w, GC gc, int x,
-		    int start_y, char *str, Pixel fg, Pixel bg)
+void ShadowDrawString(Display* dpy, Window w, GC gc,
+		      int x, int y, char* str, Pixel fg, Pixel bg)
 {
-    char line[256];
-    int i, y = start_y;
+    if (HaveColor(dpy)) {
+	XSetForeground(dpy, gc, bg);
+	XDrawString(dpy, w, gc, x+1, y+1, str, strlen(str));
+	x--; y--;
+    }
+    XSetForeground(dpy, gc, fg);
+    XDrawString(dpy, w, gc, x, y, str, strlen(str));
+}
 
+
+/*
+ * General text formatting routine which does wrap around
+ * if necessary at whitespaces.  The function returns the
+ * vertical position it ended at.
+ */
+int DrawShadowText(Display* dpy, Window w, GC gc,
+		    int x_border, int y_start,
+		    char *str, Pixel fg, Pixel bg)
+{
+    XFontStruct*	font = XQueryFont(dpy, XGContextFromGC(gc));
+    int			y, x;
+    XWindowAttributes	wattr;
 
     if (str==NULL || *str=='\0')
-	return;
+	return 0;
+
+    /* Get width of window */
+    XGetWindowAttributes(dpy, w, &wattr);
+
+    /* Start position */
+    x = x_border;
+    y = y_start + font->ascent;
 
     do {
+	char word[LINE_MAX];
+	int wordLen, i;
 
-	for (i=0; *str != '\0' && *str != '\n'; str++, i++)
-	    line[i] = *str;
-	line[i] = '\0';
+	for (i=0; *str && !isspace(*str) && i < LINE_MAX-1; str++, i++)
+	    word[i] = *str;
+	word[i] = '\0';
 
-	y += 20;
+	/* Word length in pixels */
+	wordLen = XTextWidth(font, word, i);
 
-	ShadowDrawString(ind, disp, w, gc, x, y, line, fg, bg);
+	/* We need a linebreak? */
+	if (x + wordLen > wattr.width - BORDER) {
+	    x = x_border;
+	    y += font->ascent + font->descent + 1;
+	}
 
-    } while (*(++str) != '\0');
+	/* Draw word and move cursor to point to after this word */
+	ShadowDrawString(dpy, w, gc, x, y, word, fg, bg);
+	x += wordLen;
+
+	/* Handle whitespace */
+	for (; isspace(*str); str++)
+	    switch (*str) {
+		/* New paragraph */
+	    case '\n':
+		x = x_border;
+		y += font->ascent + font->descent + 1;
+		break;
+
+		/* Just a space */
+	    default:
+		x += XTextWidth(font, " ", 1);
+		break;
+	    }
+    } while (*str != '\0');
+
+    return y + font->descent + 1;
 }
 
 
-void Expose_info_window(int ind)
+#define NUM_ABOUT_PAGES	3
+
+void Expose_about_window(void)
 {
-    player *pl = Players[ind];
+    XClearWindow(dpy, about_w);
 
+    switch (about_page) {
+    case 0: {
+	int	i, y;
+	y = DrawShadowText(dpy, about_w, textGC,
+			   BORDER, BORDER,
+			   "BONUS ITEMS\n"
+			   "\n"
+			   "Scattered around the world you might find some "
+			   "of these red triangle objects.  They are "
+			   "well worth picking up since they either improve "
+			   "on the equipment you have, or they give you "
+			   "new equipment.  If a fighter explodes, some of "
+			   "its equipment might be found among the debris.",
+			   colors[WHITE].pixel, colors[BLACK].pixel);
+	y += ITEM_SIZE + BORDER;
+	for (i=0; i<NUM_ITEMS; i++) {
+	    int old_y = y;
 
-    DrawShadowText(ind, pl->disp, pl->info_w, pl->gctxt, 24, 14,
-	   "\n\n"
-	   "MISCELLANEOUS INFORMATION\n"
-	   "\n\n"
-	   "XPilot is still not a finished product, so please apology for\n"
-	   "any bugs etc.  However, if you find any, we would greatly\n"
-	   "appreciate that you reported to us.\n"
-	   "\n"
-	   "New versions are continuously being developed, but at a random\n"
-	   "rate.  Currently, this isn't very fast at all, mainly due to the\n"
-	   "mandatory work in conjunction with our studies (really!!).\n"
-	   "\n"
-	   "For more info, read the man pages for xpilot(6) and xpilots(6).\n"
-	   "\n\n"
-	   "Good luck as a future fighter-pilot,\n"
-	   "Bjørn Stabell & Ken Ronny Schouten\n",
-	   pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-}
+	    /* Draw description text */
+	    y = DrawShadowText(dpy, about_w, textGC,
+			       5*BORDER + 2*ITEM_SIZE, y,
+			       itemBitmapData[i].helpText,
+			       colors[WHITE].pixel, colors[BLACK].pixel);
 
+	    /* Paint the item on the left side */
+	    XSetForeground(dpy, textGC, colors[BLACK].pixel);
+	    XFillRectangle(dpy, about_w, textGC,
+			   BORDER, old_y - (ITEM_SIZE + BORDER)/2,
+			   2*ITEM_SIZE+2*BORDER, y-old_y+BORDER+ITEM_SIZE);
+	    XSetForeground(dpy, textGC, colors[RED].pixel);
+	    Paint_item(i, about_w, textGC, 2*BORDER + ITEM_SIZE, (y+old_y)/2);
+	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
 
-void Expose_help_window(int ind)
-{
-    player *pl = Players[ind];
-
-
-    if (BIT(pl->disp_type, DT_HAVE_COLOR)) {
-	XSetForeground(pl->disp, pl->gctxt, pl->colors[BLUE].pixel);
-	XFillRectangle(pl->disp, pl->help_w, pl->gctxt, 0, 0, 420, HH);
-	XSetForeground(pl->disp, pl->gctxt, pl->colors[WHITE].pixel);
-    } else
-	XClearWindow(pl->disp, pl->help_w);
-    
-    switch (pl->help_page) {
-    case 0:
-	DrawShadowText(ind, pl->disp, pl->help_w, pl->gctxt, 15, 7,
-		       "KEYS:\n"
-		       "\n"
-		       "A\n"
-		       "S\n"
-		       "F or CTRL\n"
-		       "Space|META_R\n"
-		       "SHIFT\n"
-		       "Return\n"
-		       "\n"
-		       "HOME\n"
-		       "SELECT|Up|Down\n"
-		       "NEXT\n"
-		       "PREV\n"
-		       "'*'\'/'\n"
-		       "'+'\'-'\n"
-		       "Q\n"
-		       "Tab\n"
-		       "]\n"
-		       "\\\n"
-                       ";\n"
-                       "'\n"
-		       "[\n"
-		       "BackSpace\n"
-                       "W\n"
-                       "E\n"
-                       "R\n"
-		       "I\n",
-		       pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-	DrawShadowText(ind, pl->disp, pl->help_w, pl->gctxt, 180, 7,
-		       "\n\n"
-		       "Rotate left.\n"
-		       "Rotate right.\n"
-		       "Refueling.\n"
-		       "Shield.\n"
-		       "Thrust.\n"
-		       "Fire.\n"
-		       "\n"
-		       "Change home base, if on new base.\n"
-		       "Lock on nearest player, if in range.\n"
-		       "Lock on next player.\n"
-		       "Lock on previous player.\n"
-		       "Increase/decrease engine power.\n"
-		       "Increase/decrease rotation speed.\n"
-		       "Self destruct.\n"
-		       "Place mine.\n"
-		       "Detach mine.\n"
-		       "Fire smart missile.\n"
-                       "Fire heat seeking missile.\n"
-                       "Fire torpedo (missile without lock).\n"
-		       "Trigger ECM.\n"
-		       "Turn on/off cloak.\n"
-                       "Switch to next tank.\n"
-                       "Switch to previous tank.\n"
-                       "Detach current tank.\n"
-		       "Toggle id mode.\n",
-		       pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
+	    y += ITEM_SIZE + BORDER;
+	}
+    }
 	break;
-
+	    
     case 1:
-	DrawShadowText(ind, pl->disp, pl->help_w, pl->gctxt,20,7,
-	       "GAME OBJECTIVE:\n"
-	       "\n"
-	       "The primary goal of the game is to collect points by\n"
-	       "destroying friends and cannons with your guns.\n"
-	       "\n"
-	       "Another important task is to refuel your ship.	This is\n"
-	       "vital because your engine, radar, guns and shields all\n"
-	       "require fuel.  Some even work better the more fuel you\n"
-	       "have aboard (mainly the radar).\n"
-	       "\n"
-	       "Scattered around the world you will find some stationary\n"
-	       "objects resembling red triangles.  These are bonus items\n"
-	       "that may help you in a multitude of ways; first, the most\n"
-	       "normal item, is the fuel-packs labeled F, then there are\n"
-	       "smart missiles labeled S, wide angle shots labeled W, and\n"
-	       "lastly you may by lucky enough to find a cloaking device\n"
-	       "labeled, you guessed it, C.\n"
-	       "\n",
-	       pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
+	DrawShadowText(dpy, about_w, textGC,
+	BORDER, BORDER,
+	"GAME OBJECTIVE\n"
+	"\n"
+	"The primary goal of the game is to collect points and increase "
+	"your rating by destroying enemy fighters and cannons.  "
+	"You are equipped with a machine gun when you start the game, "
+	"but after a while you should have managed to collect some other "
+	"fancy equipment.\n"
+	"\n"
+	"Another important task is to refuel your ship.  This is "
+	"vital because your engine, radar, weapons and shields all "
+	"require fuel.  Some even work better the more fuel you "
+	"have aboard (mainly the radar).\n"
+	"\n"
+	"Optional modes include variations on this game play: "
+	"you can play together in teams, you can disable shields "
+	"(and all other equipment if you like), "
+	"you can race against time and fellow players, and much much more.",
+	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;
-    case HELP_PAGES:
+
+    case 2:
+	DrawShadowText(dpy, about_w, textGC,
+	BORDER, BORDER,
+	"ABOUT XPILOT\n"
+	"\n"
+	"XPilot is still not a finished product, so please apology for "
+	"any bugs etc.  However, if you find any, we would greatly "
+	"appreciate that you reported to us.\n"
+	"\n"
+	"New versions are continuously being developed, but at a random "
+	"rate.  Currently, this isn't very fast at all, mainly due to the "
+	"mandatory work in conjunction with our studies (really!!).\n"
+	"\n"
+	"For more info, read the man pages for xpilot(6) and xpilots(6).\n"
+	"\n\n"
+	"Good luck as a future xpilot,\n"
+	"Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers",
+	colors[WHITE].pixel, colors[BLACK].pixel);
+	break;
+
+    default:
+	error("Unkown page number %d\n", about_page);
+	break;
+    }
+}
+
+
+static void createAboutWindow(void)
+{
+    const int			windowWidth = ABOUT_WINDOW_WIDTH,
+    				buttonWindowHeight = 2*BTN_BORDER
+				    + buttonFont->ascent + buttonFont->descent,
+				windowHeight = ABOUT_WINDOW_HEIGHT;
+    int				textWidth;
+    XSetWindowAttributes	setAttr;
+
+
+    /*
+     * Create the window and initialize window name.
+     */
+    about_w
+	= XCreateSimpleWindow(dpy, DefaultRootWindow(dpy),
+			      0, 0,
+			      windowWidth, windowHeight,
+			      2, colors[WHITE].pixel, 
+			      colors[windowColor].pixel);
+    if (colormap)
+	XSetWindowColormap(dpy, about_w, colormap);
+    XStoreName(dpy, about_w, "XPilot - information");
+    XSetIconName(dpy, about_w, "XPilot/info");
+
+    /*
+     * Enable backing store if possible.
+     */
+    setAttr.backing_store = Always;
+    XChangeWindowAttributes(dpy, about_w, CWBackingStore, &setAttr);
+
+    textWidth = XTextWidth(buttonFont, "CLOSE", 5);
+    about_close_b
+	= XCreateSimpleWindow(dpy, about_w,
+			      BORDER, (windowHeight - BORDER
+				       - buttonWindowHeight - 4),
+			      2*BTN_BORDER + textWidth,
+			      buttonWindowHeight,
+			      0, 0,
+			      colors[buttonColor].pixel);
+
+    /*
+     * Create 'buttons' in the window.
+     */
+    textWidth = XTextWidth(buttonFont, "NEXT", 4);
+    about_next_b
+	= XCreateSimpleWindow(dpy, about_w,
+			      windowWidth/2 - BTN_BORDER - textWidth/2,
+			      windowHeight - BORDER - buttonWindowHeight - 4,
+			      2*BTN_BORDER + textWidth, buttonWindowHeight,
+			      0, 0,
+			      colors[buttonColor].pixel);
+    textWidth = XTextWidth(buttonFont, "PREV", 4);
+    about_prev_b
+	= XCreateSimpleWindow(dpy, about_w,
+			      windowWidth - BORDER - 2*BTN_BORDER - textWidth,
+			      windowHeight - BORDER - buttonWindowHeight - 4,
+			      2*BTN_BORDER + textWidth, buttonWindowHeight,
+			      0, 0,
+			      colors[buttonColor].pixel);
+
+    XSelectInput(dpy, about_close_b,
+		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
+    XSelectInput(dpy, about_next_b,
+		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
+    XSelectInput(dpy, about_prev_b,
+		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
+    XSelectInput(dpy, about_w, ExposureMask);
+
+    Expose_about_window();
+}
+
+
+static void createHelpWindow(void)
+{
+    const int			buttonWindowHeight = 2*BTN_BORDER
+				    + buttonFont->ascent + buttonFont->descent;
+    int				windowWidth = 0,
+				windowHeight = 0,
+				maxKeyNameLen = 0,
+				maxKeyDescLen = 0;
+    XSetWindowAttributes	setAttr;
+    extern char* Get_keyhelpstring(keys_t);
+
+    if (keyHelpList == NULL) {
+	int	sizeList = 1, sizeDesc = 1, i = 0;
+
+	/*
+	 * Make sure the strings are empty and null terminated.
+	 */
+	keyHelpList = malloc(1);
+	keyHelpList[0] = '\0';
+	keyHelpDesc = malloc(1);
+	keyHelpDesc[0] = '\0';
+
+	/*
+	 * Build the key help string, and while we're at it find
+	 * the extent (physical :) of the text.
+	 */
+	for (i = 0; i < maxKeyDefs; i++) {
+	    int len;
+	    char* str;
+
+	    /*
+	     * Key name
+	     */
+	    str = XKeysymToString(keyDefs[i].keysym);
+	    sizeList += strlen(str) + 1;
+	    keyHelpList = realloc(keyHelpList, sizeList);
+	    strcat(keyHelpList, str);
+	    keyHelpList[sizeList-2] = '\n';
+	    keyHelpList[sizeList-1] = '\0';
+
+	    /* Store longest keysym name */
+	    len = XTextWidth(textFont, str, strlen(str));
+	    if (len > maxKeyNameLen)
+		maxKeyNameLen = len;
+
+	    /*
+	     * Description of action invoked for this key
+	     */
+	    str = Get_keyhelpstring(keyDefs[i].key);
+	    sizeDesc += strlen(str) + 1;
+	    keyHelpDesc = realloc(keyHelpDesc, sizeDesc);
+	    strcat(keyHelpDesc, str);
+	    keyHelpDesc[sizeDesc-2] = '\n';
+	    keyHelpDesc[sizeDesc-1] = '\0';
+
+	    /* Store longest desc */
+	    len = XTextWidth(textFont, str, strlen(str));
+	    if (len > maxKeyDescLen)
+		maxKeyDescLen = len;
+
+	    windowHeight += textFont->ascent + textFont->descent + 1;
+	}
+    }
+
+    /*
+     * Now calculate window dimensions and the offset we need to
+     * put the description (the x coordinate it should begin on).
+     */
+    windowHeight += buttonWindowHeight + 4 + 3*BORDER;
+    windowWidth = 4*BORDER + maxKeyNameLen + maxKeyDescLen;
+    KeyDescOffset = 3*BORDER + maxKeyNameLen;
+
+    /*
+     * Create main window.
+     */
+    help_w
+	= XCreateSimpleWindow(dpy, DefaultRootWindow(dpy),
+			      0, 0,
+			      windowWidth, windowHeight,
+			      2, colors[WHITE].pixel,
+			      colors[windowColor].pixel);
+    if (colormap)
+	XSetWindowColormap(dpy, help_w, colormap);
+    XStoreName(dpy, help_w, "XPilot - key reference");
+    XSetIconName(dpy, help_w, "XPilot/keys");
+
+    /*
+     * Enable backing store if possible.
+     */
+    setAttr.backing_store = Always;
+    XChangeWindowAttributes(dpy, help_w, CWBackingStore, &setAttr);
+
+    /*
+     * Create buttons.
+     */
+    help_close_b
+	= XCreateSimpleWindow(dpy, help_w,
+			      BORDER,
+			      (windowHeight - BORDER - buttonWindowHeight - 4),
+			      (XTextWidth(buttonFont,
+					  "CLOSE", 5) + 2*BTN_BORDER),
+			      buttonWindowHeight,
+			      0, 0,
+			      colors[buttonColor].pixel);
+    XSelectInput(dpy, help_close_b,
+		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
+    XSelectInput(dpy, help_w, ExposureMask);
+
+    Expose_help_window();
+}
+
+    
+void Expose_help_window(void)
+{
+    XClearWindow(dpy, help_w);
+
+    DrawShadowText(dpy, help_w, textGC,
+		   BORDER, BORDER, keyHelpList,
+		   colors[WHITE].pixel, colors[BLACK].pixel);
+    DrawShadowText(dpy, help_w, textGC,
+		   KeyDescOffset, BORDER, keyHelpDesc,
+		   colors[WHITE].pixel, colors[BLACK].pixel);
+}
+
+
+void Expose_button_window(int color, Window w)
+{
+    if (BIT(dpy_type, DT_HAVE_COLOR)) {
+	XWindowAttributes	wattr;			/* Get window height */
+	XGetWindowAttributes(dpy, w, &wattr);	/* and width */
+
+	XSetForeground(dpy, buttonGC, colors[color].pixel);
+	XFillRectangle(dpy, w, buttonGC, 0, 0, wattr.width, wattr.height);
+	XSetForeground(dpy, buttonGC, colors[WHITE].pixel);
+    } else
+	XClearWindow(dpy, w);
+
+    if (w == quit_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 (BUTTON_WIDTH
+			  - XTextWidth(buttonFont, "QUIT", 4)) / 2,
+			 BTN_BORDER + buttonFont->ascent,
+			 "QUIT",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+
+    if (w == about_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 (BUTTON_WIDTH
+			  - XTextWidth(buttonFont, "ABOUT", 5)) / 2,
+			 BTN_BORDER + buttonFont->ascent,
+			 "ABOUT", 
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+    if (w == about_close_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
+			 "CLOSE",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+    if (w == about_next_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
+			 "NEXT",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+    if (w == about_prev_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
+			 "PREV",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+
+    if (w == help_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 (BUTTON_WIDTH
+			  - XTextWidth(buttonFont, "KEYS", 4)) / 2,
+			 BTN_BORDER + buttonFont->ascent,
+			 "KEYS",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+    if (w == help_close_b)
+	ShadowDrawString(dpy, w, buttonGC,
+			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
+			 "CLOSE",
+			 colors[WHITE].pixel, colors[BLACK].pixel);
+}
+
+
+void About(Window w)
+{
+    if (about_created == false) {
+	createAboutWindow();
+	about_created = true;
+    }
+    if (w == about_b) {
+	XMapWindow(dpy, about_w);
+	XMapSubwindows(dpy, about_w);
+    } else if (w == about_close_b) {
+	about_page = 0;
+	XUnmapSubwindows(dpy, about_w);
+	XUnmapWindow(dpy, about_w);
+    } else if (w == about_next_b) {
+	about_page++;
+	if (about_page == NUM_ABOUT_PAGES)
+	    about_page = 0;
+	Expose_about_window();
+    } else if (w == about_prev_b) {
+	about_page--;
+	if (about_page == -1)
+	    about_page = NUM_ABOUT_PAGES-1;
+	Expose_about_window();
+    }
+}
+
+
+void Help(Window w)
+{
+    if (help_created == false) {
+	createHelpWindow();
+	help_created = true;
+    }
+    if (w == help_b) {
+	XMapWindow(dpy, help_w);
+	XMapSubwindows(dpy, help_w);
+    } else if (w == help_close_b) {
+	XUnmapSubwindows(dpy, help_w);
+	XUnmapWindow(dpy, help_w);
+    }
+}
+
+
+static void createTalkWindow(void)
+{
+    /*
+     * Create talk window.
+     */
+    talk_w
+	= XCreateSimpleWindow(dpy, draw,
+			      TALK_WINDOW_X, TALK_WINDOW_Y,
+			      TALK_WINDOW_WIDTH, TALK_WINDOW_HEIGHT,
+			      TALK_OUTSIDE_BORDER, colors[WHITE].pixel,
+			      colors[BLACK].pixel);
+
+    XSelectInput(dpy, talk_w, KeyPressMask | KeyReleaseMask | ExposureMask);
+}
+
+
+void Talk_cursor(bool visible)
+{
+    if (talk_mapped == false || visible == talk_cursor.visible) {
+	return;
+    }
+    if (visible == false) {
+	XSetForeground(dpy, textGC, colors[BLACK].pixel);
+	XDrawString(dpy, talk_w, textGC,
+		    talk_cursor.offset + TALK_INSIDE_BORDER,
+		    textFont->ascent + TALK_INSIDE_BORDER,
+		    "_", 1);
+	XSetForeground(dpy, textGC, colors[WHITE].pixel);
+	talk_cursor.visible = false;
+    } else {
+	talk_cursor.offset = XTextWidth(textFont, talk_str, strlen(talk_str));
+	XDrawString(dpy, talk_w, textGC,
+		    talk_cursor.offset + TALK_INSIDE_BORDER,
+		    textFont->ascent + TALK_INSIDE_BORDER,
+		    "_", 1);
+	talk_cursor.visible = true;
+    }
+}
+
+
+void Talk_map_window(bool map)
+{
+    if (map == true) {
+	if (talk_created == false) {
+	    createTalkWindow();
+	    talk_created = true;
+	}
+	XMapWindow(dpy, talk_w);
+	talk_mapped = true;
+    }
+    else if (talk_created == true) {
+	XUnmapWindow(dpy, talk_w);
+	talk_mapped = false;
+    }
+    talk_cursor.visible = false;
+}
+
+
+void Talk_event(XEvent *event)
+{
+    char		ch;
+    bool		cursor_visible = talk_cursor.visible;
+    int			i, count, oldlen, newlen, oldwidth, newwidth;
+    KeySym		keysym;
+    XComposeStatus	compose;
+
+    switch (event->type) {
+
+    case Expose:
+	XClearWindow(dpy, talk_w);
+	XDrawString(dpy, talk_w, textGC,
+		    TALK_INSIDE_BORDER, textFont->ascent + TALK_INSIDE_BORDER,
+		    talk_str, strlen(talk_str));
+	if (cursor_visible == true) {
+	    talk_cursor.visible = false;
+	    Talk_cursor(cursor_visible);
+	}
+	break;
+
+    case KeyRelease:
+	break;
+
+    case KeyPress:
+	count = XLookupString(&event->xkey, &ch, 1, &keysym, &compose);
+	if (count == NoSymbol || ch == '\0') {
+	    /**/
+	}
+	else if (ch == '\r' || ch == '\n') {
+	    if (talk_str[0] != '\0') {
+		if (version < 0x3030) {
+		    Add_message("<<Talking is not supported by this server>>");
+		} else {
+		    Net_talk(talk_str);
+		}
+		talk_str[0] = '\0';
+	    }
+	    Talk_map_window(false);
+	}
+	else if (ch == '\033') {
+	    talk_str[0] = '\0';
+	    Talk_map_window(false);
+	}
+	else if (ch == '\b' || ch == '\177'
+		 || ch == CTRL('W') || ch == CTRL('U')) {
+	    Talk_cursor(false);
+	    oldlen = strlen(talk_str);
+	    newlen = oldlen;
+	    if (ch == CTRL('W')) {
+		for (i = oldlen; i > 0 && talk_str[i - 1] == ' '; i--) {
+		    newlen--;
+		}
+		for (; i > 0 && talk_str[i - 1] != ' '; i--) {
+		    newlen--;
+		}
+	    }
+	    else if (ch == CTRL('U')) {
+		newlen = 0;
+	    }
+	    else if (oldlen > 0) {
+		newlen = oldlen - 1;
+	    }
+	    newwidth = XTextWidth(textFont, talk_str, newlen);
+	    XSetForeground(dpy, textGC, colors[BLACK].pixel);
+	    XDrawString(dpy, talk_w, textGC,
+			newwidth + TALK_INSIDE_BORDER,
+			textFont->ascent + TALK_INSIDE_BORDER,
+			&talk_str[newlen], oldlen - newlen);
+	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
+	    talk_str[newlen] = '\0';
+	    Talk_cursor(cursor_visible);
+	}
+	else if ((ch & 0x7F) != ch || isprint(ch)) {
+	    oldlen = strlen(talk_str);
+	    oldwidth = XTextWidth(textFont, talk_str, oldlen);
+	    if (oldlen >= MAX_CHARS - 2
+		|| oldwidth >= TALK_WINDOW_WIDTH - 2*TALK_INSIDE_BORDER - 5) {
+		XBell(dpy, 100);
+	    }
+	    else {
+		oldwidth = XTextWidth(textFont, talk_str, oldlen);
+		talk_str[oldlen] = ch;
+		talk_str[oldlen + 1] = '\0';
+		Talk_cursor(false);
+		XDrawString(dpy, talk_w, textGC,
+			    oldwidth + TALK_INSIDE_BORDER,
+			    textFont->ascent + TALK_INSIDE_BORDER,
+			    &talk_str[oldlen], 1);
+		Talk_cursor(cursor_visible);
+	    }
+	}
+	break;
+
     default:
 	break;
-    }
-}
-
-
-void Expose_button_window(int ind, int color, Window w)
-{
-    player *pl = Players[ind];
-
-
-    if (BIT(pl->disp_type, DT_HAVE_COLOR)) {
-	XSetForeground(pl->disp, pl->gcb, pl->colors[color].pixel);
-	XFillRectangle(pl->disp, w, pl->gcb, 0, 0, 256, 22);
-	XSetForeground(pl->disp, pl->gcb, pl->colors[WHITE].pixel);
-    } else
-	XClearWindow(pl->disp, w);
-
-    if (w == pl->quit_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 24, 16, "QUIT", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->info_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 24, 16, "INFO", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->help_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 24, 16, "HELP", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->info_close_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 20, 16, "CLOSE", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->help_close_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 20, 16, "CLOSE", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->help_next_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 24, 16, "NEXT", 
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-    if (w == pl->help_prev_b)
-	ShadowDrawString(ind, pl->disp, w, pl->gcb, 22, 16, "PREV",
-			 pl->colors[WHITE].pixel, pl->colors[BLACK].pixel);
-}
-
-
-void Info(int ind, Window w)
-{
-    player *pl = Players[ind];
-
-    
-    if (pl->info_press && w != pl->info_close_b)
-	return;
-    else if (w == pl->info_b) {
-	if (pl->help_press = true)
-	    Help(ind, pl->help_close_b);
-
-	pl->info_press = true;
-
-	XMapWindow(pl->disp, pl->info_w);
-	XMapSubwindows(pl->disp, pl->info_w);
-    } else {
-	pl->info_press = false;
-	Expose_button_window(ind, RED, pl->info_b);
-	XUnmapSubwindows(pl->disp, pl->info_w);
-	XUnmapWindow(pl->disp, pl->info_w);
-    }
-}
-
-
-void Help(int ind, Window w)
-{
-    player *pl = Players[ind];
-
-    
-    if (pl->help_press && w == pl->help_b) 
-	return;
-    else if (w == pl->help_b) {
-	if (pl->info_press = true)
-	    Info(ind, pl->info_close_b);
-
-	pl->help_press = true;
-
-	XMapWindow(pl->disp,pl->help_w);
-	XMapSubwindows(pl->disp, pl->help_w);
-    } else if (w == pl->help_close_b) {
-	pl->help_press = false;
-	pl->help_page = 0;
-	Expose_button_window(ind, RED, pl->help_b);
-	XUnmapSubwindows(pl->disp, pl->help_w);
-	XUnmapWindow(pl->disp,pl->help_w);
-    } else if (w == pl->help_next_b) {
-	Expose_button_window(ind, RED, pl->help_next_b);
-	pl->help_page++;
-	if (pl->help_page == HELP_PAGES)
-	    pl->help_page = 0;
-	Expose_help_window(ind);
-    } else if (w == pl->help_prev_b) {
-	Expose_button_window(ind, RED, pl->help_prev_b);
-	pl->help_page--;
-	if (pl->help_page == -1)
-	    pl->help_page = HELP_PAGES-1;
-	Expose_help_window(ind);
     }
 }
 
@@ -679,86 +1170,34 @@ void Help(int ind, Window w)
 /*
  * Cleanup player structure, close the display etc.
  */
-void Quit(int ind)
+void Quit(void)
 {
-    player *pl = Players[ind];
-
-
-    sprintf(msg, "%s left the game.", Players[ind]->name);
-    Set_message(msg);
-
-    if (pl->disp_type != DT_NONE) {
-	Expose_button_window(ind, RED, Players[ind]->quit_b);
-
-	XAutoRepeatOn(pl->disp);
-
-	end_dbuff(ind, pl->dbuf_state);	    		/* Clean up */
-	if (pl->colormap)
-	    XFreeColormap(pl->disp, pl->colormap);
-	XCloseDisplay(pl->disp);
-    }
-
-    Delete_player(ind);
-    updateScores = true;
-}
-
-
-/*
- * This is quite rude, but it keeps the whole game from going down because
- * of just one user.
- */
-int FatalError(Display *disp)
-{
-    int i;
-
-#ifdef USE_SIGIO
-    if(Check_new_players())
-	longjmp(SavedEnv, 1);
-#endif
-
-    for (i=0; i<NumPlayers; i++)
-	if (Players[i]->disp == disp)
-	    break;
-
-    if (i < NumPlayers) {	    /* Found the display. */
-	printf("Player %s@%s did a nasty quit.\n",
-	       Players[i]->name, DisplayString(Players[i]->disp));
-
-	Quit(i);
-	/*
-	 * We got through Quit(), therefore there are some more players, just
-	 * longjmp() back and continue... :)
-	 */
-	longjmp(SavedEnv, 1);
-
-    } else {
-	error("Fatal I/O error. Couldn't determine which player caused it");
-    }
-    return (0);
-}
-
-
-
-void Draw_score_table(void)
-{
-    int register i, ind;
-    player *pl;
-
-
-    for(ind=0; ind<NumPlayers; ind++) {
-	pl = Players[ind];
-
-	if (pl->disp_type == DT_NONE)
-	    continue;
-
-	XClearWindow(pl->disp, pl->players);
-	
-	for(i=0; i<NumPlayers; i++)
-	    ShadowDrawString(ind, pl->disp, pl->players, pl->gcp,
-                             1, 20+(20*i),
-			     Players[i]->lblstr,
-                             pl->colors[WHITE].pixel,
-			     pl->colors[BLACK].pixel);
+    if (dpy != NULL) {
+	XAutoRepeatOn(dpy);
+	if (quit_b) {
+	    Expose_button_window(RED, quit_b);
+	    quit_b = 0;
+	}
+	if (dbuf_state) {
+	    end_dbuff(dbuf_state);
+	    dbuf_state = NULL;
+	}
+	if (colormap) {
+	    XFreeColormap(dpy, colormap);
+	    colormap = 0;
+	}
+	XCloseDisplay(dpy);
+	dpy = NULL;
     }
 }
 
+
+int FatalError(Display *dpy)
+{
+    Net_cleanup();
+    /*
+     * Quit(&client);
+     * It's already a fatal I/O error, nothing to cleanup.
+     */
+    exit(0);
+}

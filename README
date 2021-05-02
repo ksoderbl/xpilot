@@ -6,21 +6,33 @@
  /   /  /         /    /       /    /     /
 /     / /         /    //////   ////      /
 
-////////  V e r s i o n   2 . 0  ////////////
+////////  R e l e a s e   3 . 0  ////////////
 
 
 
 COPYRIGHT & DISCLAIMER STUFF:
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-Copyright (C) 1991-93 by Bjoern Stabell and Ken Ronny Schouten.
-                         University of Tromsoe, Norway.
-                         Email: bjoerns@staff.cs.uit.no,
-                                kenrsc@stud.cs.uit.no
+Copyright (C) 1991-93 by
 
+	Bjoern Stabell (bjoerns@staff.cs.uit.no),
+	Ken Ronny Schouten (kenrsc@stud.cs.uit.no) and
+	Bert Gijsbers (bert@mc.bio.uva.nl)
+                                
 Please see the LICENSE file for further details.  You may not
 distribute this project without this file (README) and the
 LICENSE file included.
+
+
+
+NOTE:
+\\\\\
+
+The documentation is far from complete, though we have tried to remove
+all the errors from it.  Because of lack of time, the map format is
+only explained in README.MAPS and README.MAPS2, not in the server
+manual page (xpilots(6)).  The client manual page (xpilot(6)) is more
+or less up to date.
 
 
 
@@ -41,8 +53,8 @@ INSTALLATION:
 \\\\\\\\\\\\\
 
 *   In the src directory, edit the config.h and Imakefile files to suit
-    your environment.  If you don't have Imake, you may have to hack a
-    bit on Makefile.std.
+    your environment.  If you don't have Imake, you can use Makefile.std
+    (just rename it to Makefile and type 'make' for more info).
 
 *   If you have Imake, issue the following command:
 
@@ -74,9 +86,11 @@ INSTALLATION:
     An /bin/ls -l on this directory gives:
 
         total 500
-        -rw-rw-rw-   1 bjoerns  siving90   29859  May  5 21:32 log	(+)
-        drwxr-xr-x   2 bjoerns  siving90    1024  Apr  5 16:16 maps
-        -rw-r--r--   1 bjoerns  siving90     320  Jun 20 13:20 motd
+        -rw-r--r--   1 bjoerns  staff        739 Jun 25 02:27 defaults
+        -rw-rw-rw-   1 bjoerns  staff     29859  May  5 21:32 log	(+)
+        drwxr-xr-x   2 bjoerns  staff      1024  Apr  5 16:16 maps
+        -rw-r--r--   1 bjoerns  staff       320  Jun 20 13:20 motd
+        -rw-r--r--   1 bjoerns  staff       320  Jun 20 13:20 motd
 
     (+)Note, if you have logging enabled you will have to touch a file called
        log in the LIBDIR and give other users write permission to it. This is
@@ -85,8 +99,8 @@ INSTALLATION:
     Also note that the `motd' isn't included, you should make one yourself
     if you feel the need for it.
 
-*   If you want to use sound (rplay needed), copy the src/lib/sounds file
-    to LIBDIR+"sounds".
+*   If you want to use sound (rplay or NCD displays needed), copy the
+    src/lib/sounds file to LIBDIR+"sounds".
 
 *   Copy the manual pages to a suitable place.  If you don't know where to
     put them, don't bother.  You may still read them with the following
@@ -108,4 +122,4 @@ Remember to include the version of XPilot, your platform, the symptoms
 and a fix (if you have one) when reporting bugs.
 
 There is a mailing list for XPilot - please send an email to
-xpilot-request@cs.uit.no with subject 'info' if you want to know more.
+xpilot-request@cs.uit.no with subject `info' if you want to know more.

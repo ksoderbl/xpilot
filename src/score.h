@@ -1,9 +1,10 @@
-/* $Id: score.h,v 1.3 1993/03/23 17:54:12 bjoerns Exp $
+/* $Id: score.h,v 3.4 1993/06/28 20:54:19 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -14,6 +15,7 @@
 #define ED_SHOT			(-0.2*FUEL_SCALE_FACT)
 #define ED_SMART_SHOT		(-30*FUEL_SCALE_FACT)
 #define ED_ECM			(-60*FUEL_SCALE_FACT)
+#define ED_TRANSPORTER		(-60*FUEL_SCALE_FACT)
 #define ED_SHIELD		(-0.20*FUEL_SCALE_FACT)
 #define ED_CLOAKING_DEVICE	(-0.07*FUEL_SCALE_FACT)
 #define ED_SHOT_HIT		(-25.0*FUEL_SCALE_FACT)
@@ -30,16 +32,9 @@
 #define PTS_SUICIDE	    	-25	/* Points if you are #$@ enough to */
 					/* commit suicide. */
 
-#define CANNON_RATING	    	-500
-#define WALL_RATING	    	2000
+#define CANNON_SCORE	    	-500
+#define WALL_SCORE	    	2000
 
 #define RATE_SIZE	    	20
 #define RATE_RANGE	    	1024
-
-#define SCORE(ind, points) 					\
-{								\
-    Players[ind]->score += (points); 				\
-    updateScores = true;					\
-}
-
 #endif

@@ -1,40 +1,20 @@
-/* $Id: proto.h,v 1.10 1993/04/18 03:48:41 bjoerns Exp $
+/* $Id: proto.h,v 3.6 1993/08/02 12:55:30 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
- *
- * $NCDId: @(#)proto.h,v 1.7 1992/09/10 03:26:40 mellon Exp $
  */
 
 #ifndef	PROTO_H
 #define	PROTO_H
 
-#include <X11/Xlib.h>
 #include "types.h"
 #include "object.h"
-#include "pack.h"
 
-
-/*
- * Prototypes for xinit.c
- */
-extern u_byte Init_window(int ind);
-extern void Alloc_msgs(int number);
-extern void Free_msgs(void);
-extern void DrawShadowText(int ind, Display *disp, Window w, GC gc, int x,
-			   int start_y, char *str, Pixel fg, Pixel bg);
-extern void Expose_info_window(int ind);
-extern void Expose_help_window(int ind);
-extern void Expose_button_window(int ind, int color, Window w);
-extern void Info(int ind, Window w);
-extern void Help(int ind, Window w);
-extern void Quit(int ind);
-extern int FatalError(Display *disp);
-extern void Draw_score_table(void);
 
 /*
  * Prototypes for collision.c
@@ -43,47 +23,9 @@ extern void Check_collision(void);
 extern int wormXY(int x, int y);
 
 /*
- * Prototypes for dbuff.c
- */
-extern void itob(long i);
-extern dbuff_state_t *start_dbuff(int ind, Display *display, Colormap cmap,
-				  unsigned long planes, XColor *colors);
-extern void dbuff_switch(register int ind, register dbuff_state_t *state);
-extern void end_dbuff(int ind, dbuff_state_t *state);
-
-/*
- * Prototypes for def.c
- */
-extern void Get_defaults(int ind);
-
-/*
- * Prototypes for draw.c
- */
-extern char *scroll(char *string, int start, int length);
-extern void Draw_objects(void);
-extern void Draw_ships(int draw, int data);
-extern void Draw_shots(int draw, int data);
-extern void Draw_meters(int draw, int data);
-extern void Draw_HUD(int draw, int data);
-extern void Draw_cannon(int draw, int data);
-extern void Draw_bases(int draw, int data);
-extern void Display_message(int draw, int ind);
-extern void Set_message(char *message);
-extern void Draw_radar(int draw, int data);
-extern void Display_time(int draw, int data);
-extern void Draw_world(int draw, int data);
-extern void Draw_world_radar(int draw);
-
-/*
  * Prototypes for error.c
  */
 #include "error.h"
-
-/*
- * Prototypes for event.c
- */
-extern void Refuel(int ind);
-extern void Key_event(int ind, XEvent *event);
 
 /*
  * Prototypes for map.c
@@ -96,6 +38,9 @@ extern void Alloc_map(void);
 extern void Grok_map(void);
 extern void Generate_random_map(void);
 extern void Find_base_direction(void);
+extern void Compute_gravity(void);
+extern float Wrap_findDir(float dx, float dy);
+extern float Wrap_length(float dx, float dy);
 
 /*
  * Prototypes for math.c
@@ -104,10 +49,7 @@ extern int mod(int, int);
 extern void Make_table(void);
 extern void Make_ships(void);
 extern void Free_ships(void);
-extern void Compute_gravity(void);
 extern float findDir (float x, float y);
-extern float Wrap_findDir(float dx, float dy);
-extern float Wrap_length(float dx, float dy);
 
 /*
  * Prototypes for parser.c
@@ -135,6 +77,7 @@ extern void Place_mine(int ind);
 extern void Place_moving_mine(int ind, float vx, float vy);
 extern void Cannon_fire(int ind);
 extern void Fire_shot(int ind, int type, int dir);
+extern void Fire_normal_shots(int ind);
 extern void Make_ball(int id, float x, float y, bool grav, int treasure);
 extern void Delete_shot(int ind);
 extern void Move_smart_shot(int ind);
@@ -175,11 +118,11 @@ extern void UpdateItemChances(int num_players);
 extern int main(int argc, char *argv[]);
 extern void Main_Loop(void);
 extern void End_game(void);
-extern void Dump_pack(core_pack_t *p);
 extern bool Check_new_players(void);
 extern bool Owner(char *name);
 extern void Handle_signal(int sig_no);
 extern void Log_game(char *heading);
+extern void Server_info(char *, unsigned);
 
 /*
  * Prototypes for syslimit.c
@@ -192,18 +135,8 @@ extern bool Is_allowed(void);
 extern void Update_objects(void);
 
 /*
- * Prototypes for xpilot.c
- */
-extern void initaddr(void);
-extern void printfile(char *name);
-extern bool Get_contact_message(void);
-extern int Get_reply_message(reply_pack_t *p);
-extern bool Connect_to_server(void);
-
-/*
  * Prototypes for option.c
  */
-
 extern void addOption (char *name, char *value, int override, void *def);
 extern char *getOption (char *name);
 extern bool parseDefaultsFile (char *filename);

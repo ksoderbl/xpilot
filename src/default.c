@@ -1,315 +1,777 @@
-/* $Id: default.c,v 1.6 1993/04/18 16:46:16 kenrsc Exp $
+/* $Id: default.c,v 3.21 1993/08/03 21:09:14 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
 
+#include <X11/Xos.h>
 #include <X11/keysym.h>
-#include "global.h"
-#include "pack.h"
+#ifdef	__apollo
+#    include <X11/ap_keysym.h>
+#endif
+#include <X11/Intrinsic.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include "version.h"
+#include "config.h"
 #include "const.h"
+#include "object.h"
+#include "client.h"
+#include "paint.h"
+#include "draw.h"
+#include "pack.h"
+#include "bit.h"
+#include "netclient.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 1.6 1993/04/18 16:46:16 kenrsc Exp $";
+    "@(#)$Id: default.c,v 3.21 1993/08/03 21:09:14 bjoerns Exp $";
 #endif
+
+/*
+ * Default fonts
+ */
+#define GAME_FONT		"-*-times-*-*-*-*-18-*-*-*-*-*-iso8859-1"
+#define MESSAGE_FONT		"-*-times-*-*-*-*-14-*-*-*-*-*-iso8859-1"
+#define SCORE_LIST_FONT		"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
+#define BUTTON_FONT		"-*-*-bold-o-*-*-14-*-*-*-*-*-iso8859-1"
+#define TEXT_FONT		"-*-*-bold-i-*-*-14-*-*-*-p-*-iso8859-1"
+
+/*
+ * Default colors.
+ */
+#define COLOR_BLACK		"#000000"
+#define COLOR_WHITE		"#FFFFFF"
+#define COLOR_BLUE		"#4E7CFF"
+#define COLOR_RED		"#FF3A27"
+
+static struct _keyResources
+{
+    char	*resource;
+    char	*fallback;
+    keys_t	key;
+    char	*helpLine;
+} keyResources[] = {
+    { "keyTurnLeft",			"a",
+	KEY_TURN_LEFT,			"Turn left (anti-clockwise)" },
+    { "keyTurnRight",			"s",
+	KEY_TURN_RIGHT,			"Turn right (clockwise)" },
+    { "keyThrust",			"Shift_R Shift_L",
+	KEY_THRUST,			"Thrust" },
+    { "keyShield",			"space Meta_R",
+	KEY_SHIELD,			"Raise shield" },
+    { "keyFireShot",			"Return Linefeed",
+	KEY_FIRE_SHOT,			"Fire shot" },
+    { "keyFireMissile",			"backslash",
+	KEY_FIRE_MISSILE,		"Fire smart missile" },
+    { "keyFireTorpedo",			"quoteright",
+	KEY_FIRE_TORPEDO,		"Fire unguided torpedo" },
+    { "keyFireHeat",			"semicolon",
+	KEY_FIRE_HEAT,			"Fire heat seaking missile" },
+    { "keyFireNuke",			"n",
+	KEY_FIRE_NUKE,			"Fire nuclear missile" },
+    { "keyDropMine",			"Tab",
+	KEY_DROP_MINE,			"Drop a mine (bomb)" },
+    { "keyDetachMine",			"bracketright",
+	KEY_DETACH_MINE,		"Detach a mine" },
+    { "keyLockClose",			"Select Up Down",
+	KEY_LOCK_CLOSE,			"Lock on closest player" },
+    { "keyLockNext",			"Next Right",
+	KEY_LOCK_NEXT,			"Lock on next player" },
+    { "keyLockPrev",			"Prior Left",
+	KEY_LOCK_PREV,			"Lock on previous player" },
+    { "keyRefuel",			"f Control_L Control_R Caps_Lock",
+	KEY_REFUEL,			"Refuel" },
+    { "keyCloak",			"Delete BackSpace",
+	KEY_CLOAK,			"Toggle cloakdevice" },
+    { "keyEcm",				"bracketleft",
+	KEY_ECM,			"Use ECM" },
+    { "keySelfDestruct",		"q",
+	KEY_SELF_DESTRUCT,		"Toggle self destruct" },
+    { "keyIdMode",			"i",
+	KEY_ID_MODE,			"Toggle ID mode" },
+    { "keyPause",			"p Pause",
+	KEY_PAUSE,			"Toggle pause mode" },
+    { "keySwapSettings",		"Escape",
+	KEY_SWAP_SETTINGS,		"Swap control settings" },
+    { "keyChangeHome",			"Home h",
+	KEY_CHANGE_HOME,		"Change home base" },
+    { "keyConnector",			"Control_L",
+	KEY_CONNECTOR,			"Use connector (pick up ball)" },
+    { "keyDropBall",			"d",
+	KEY_DROP_BALL,			"Drop a ball" },
+    { "keyTankNext",			"e",
+	KEY_TANK_NEXT,			"Shift to next tank" },
+    { "keyTankPrev",			"w",
+	KEY_TANK_PREV,			"Shift to previous tank" },
+    { "keyTankDetach",			"r",
+	KEY_TANK_DETACH,		"Detach tank" },
+    { "keyIncreasePower",		"KP_Multiply",
+	KEY_INCREASE_POWER,		"Increase power" },
+    { "keyDecreasePower",		"KP_Divide",
+	KEY_DECREASE_POWER,		"Decrease power" },
+    { "keyIncreaseTurnspeed",		"KP_Add",
+	KEY_INCREASE_TURNSPEED,		"Increase turnspeed" },
+    { "keyDecreaseTurnspeed",		"KP_Subtract",
+	KEY_DECREASE_TURNSPEED,		"Decrease turnspeed" },
+    { "keyTransporter",			"t",
+	KEY_TRANSPORTER,		"Use transporter" },
+    { "keyTalk",			"m",
+	KEY_TALK,			"Enable/disable talk window" },
+    { "keyToggleVelocity",		"v",
+	KEY_TOGGLE_VELOCITY,		"N/A" },
+    { "keyToggleCompass",		"c",
+	KEY_TOGGLE_COMPASS,		"N/A" }
+};
+
+
+static XrmOptionDescRec opts[] = {
+    { "-help",				".help",
+    	XrmoptionIsArg,				NULL },
+    { "-version",			".version",
+    	XrmoptionIsArg,				NULL },
+    { "-name",				".name",
+    	XrmoptionSepArg,			NULL },
+    { "-join",				".join",
+	XrmoptionIsArg,				NULL },
+    { "-list",				".list",
+	XrmoptionIsArg,				NULL },
+    { "-team",				".team",
+	XrmoptionSepArg,			NULL },
+    { "-display",			".display",
+    	XrmoptionSepArg,			NULL },
+    { "-shutdown",			".shutdown",
+    	XrmoptionSepArg,			NULL },
+    { "-port",				".port",
+    	XrmoptionSepArg,			NULL },
+#ifdef SOUND
+    { "-sounds",			".sounds",
+    	XrmoptionSepArg,			NULL },
+    { "-maxVolume",			".maxVolume",
+    	XrmoptionSepArg,			NULL },
+#endif
+    { "-power",				".power",
+    	XrmoptionSepArg,			NULL },
+    { "-turnspeed",			".turnspeed",
+    	XrmoptionSepArg,			NULL },
+    { "-turnresistance",		".turnresistance",
+    	XrmoptionSepArg,			NULL },
+    { "-altPower",			".altPower",
+    	XrmoptionSepArg,			NULL },
+    { "-altTurnspeed",			".altTurnspeed",
+    	XrmoptionSepArg,			NULL },
+    { "-altTurnresistance",		".altTurnresistance",
+    	XrmoptionSepArg,			NULL },
+    { "-fuelNotify",			".fuelNotify",
+    	XrmoptionSepArg,			NULL },
+    { "-fuelWarning",			".fuelWarning",
+    	XrmoptionSepArg,			NULL },
+    { "-fuelCritical",			".fuelCritical",
+    	XrmoptionSepArg,			NULL },
+    { "-showHUD",			".showHUD",
+    	XrmoptionSepArg,			NULL },
+    { "-verticalHUDLine",		".verticalHUDLine",
+    	XrmoptionSepArg,			NULL },
+    { "-horizontalHUDLine",		".horizontalHUDLine",
+    	XrmoptionSepArg,			NULL },
+    { "-speedFactHUD",			".speedFactHUD",
+    	XrmoptionSepArg,			NULL },
+    { "-speedFactPTR",			".speedFactPTR",
+    	XrmoptionSepArg,			NULL },
+    { "-fuelMeter",			".fuelMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-fuelGauge",			".fuelGauge",
+    	XrmoptionSepArg,			NULL },
+    { "-turnSpeedMeter",		".turnSpeedMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-powerMeter",			".powerMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-packetSizeMeter",		".packetSizeMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-packetLossMeter",		".packetLossMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-packetDropMeter",		".packetDropMeter",
+    	XrmoptionSepArg,			NULL },
+    { "-slidingRadar",			".slidingRadar",
+    	XrmoptionSepArg,			NULL },
+    { "-outlineWorld",			".outlineWorld",
+    	XrmoptionSepArg,			NULL },
+    { "-gameFont",			".gameFont",
+    	XrmoptionSepArg,			NULL },
+    { "-scoreListFont",			".scoreListFont",
+    	XrmoptionSepArg,			NULL },
+    { "-buttonFont",			".buttonFont",
+    	XrmoptionSepArg,			NULL },
+    { "-textFont",			".textFont",
+    	XrmoptionSepArg,			NULL },
+    { "-backGroundPointDist",		".backGroundPointDist",
+	XrmoptionSepArg,			NULL },
+    { "-receiveWindowSize",		".receiveWindowSize",
+    	XrmoptionSepArg,			NULL },
+    { "-black",				".black",
+    	XrmoptionSepArg,			NULL },
+    { "-white",				".white",
+    	XrmoptionSepArg,			NULL },
+    { "-blue",				".blue",
+    	XrmoptionSepArg,			NULL },
+    { "-red",				".red",
+    	XrmoptionSepArg,			NULL },
+    { "-keyTurnLeft",			".keyTurnLeft",
+	XrmoptionSepArg,			NULL },
+    { "-keyTurnRight",			".keyTurnRight",
+	XrmoptionSepArg,			NULL },
+    { "-keyThrust",			".keyThrust",
+	XrmoptionSepArg,			NULL },
+    { "-keyShield",			".keyShield",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireShot",			".keyFireShot",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireMissile",		".keyFireMissile",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireTorpedo",		".keyFireTorpedo",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireHeat",			".keyFireHeat",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireNuke",			".keyFireNuke",
+	XrmoptionSepArg,			NULL },
+    { "-keyDropMine",			".keyDropMine",
+	XrmoptionSepArg,			NULL },
+    { "-keyDetachMine",			".keyDetachMine",
+	XrmoptionSepArg,			NULL },
+    { "-keyLockClose",			".keyLockClose",
+	XrmoptionSepArg,			NULL },
+    { "-keyLockNext",			".keyLockNext",
+	XrmoptionSepArg,			NULL },
+    { "-keyLockPrev",			".keyLockPrev",
+	XrmoptionSepArg,			NULL },
+    { "-keyRefuel",			".keyRefuel",
+	XrmoptionSepArg,			NULL },
+    { "-keyCloak",			".keyCloak",
+	XrmoptionSepArg,			NULL },
+    { "-keyEcm",			".keyEcm",
+	XrmoptionSepArg,			NULL },
+    { "-keySelfDestruct",		".keySelfDestruct",
+	XrmoptionSepArg,			NULL },
+    { "-keyIdMode",			".keyIdMode",
+	XrmoptionSepArg,			NULL },
+    { "-keyPause",			".keyPause",
+	XrmoptionSepArg,			NULL },
+    { "-keySwapSettings",		".keySwapSettings",
+	XrmoptionSepArg,			NULL },
+    { "-keyChangeHome",			".keyChangeHome",
+	XrmoptionSepArg,			NULL },
+    { "-keyConnector",			".keyConnector",
+	XrmoptionSepArg,			NULL },
+    { "-keyDropBall",			".keyDropBall",
+	XrmoptionSepArg,			NULL },
+    { "-keyTankNext",			".keyTankNext",
+	XrmoptionSepArg,			NULL },
+    { "-keyTankPrev",			".keyTankPrev",
+	XrmoptionSepArg,			NULL },
+    { "-keyTankDetach",			".keyTankDetach",
+	XrmoptionSepArg,			NULL },
+    { "-keyIncreasePower",		".keyIncreasePower",
+	XrmoptionSepArg,			NULL },
+    { "-keyDecreasePower",		".keyDecreasePower",
+	XrmoptionSepArg,			NULL },
+    { "-keyIncreaseTurnspeed",		".keyIncreaseTurnspeed",
+	XrmoptionSepArg,			NULL },
+    { "-keyDecreaseTurnspeed",		".keyDecreaseTurnspeed",
+	XrmoptionSepArg,			NULL },
+    { "-keyTransporter",		".keyTransporter",
+	XrmoptionSepArg,			NULL },
+    { "-keyTalk",			".keyTalk",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleVelocity",		".keyToggleVelocity",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleCompass",		".keyToggleCompass",
+	XrmoptionSepArg,			NULL }
+};
 
 
 static int ON(char *optval)
 {
-    return (strcasecmp(optval, "true") == 0
-	    || strcasecmp(optval, "on") == 0
-	    || strcasecmp(optval, "yes") == 0);
+    return (strncasecmp(optval, "true", 4) == 0
+	    || strncasecmp(optval, "on", 2) == 0
+	    || strncasecmp(optval, "yes", 3) == 0);
 }
 
 
-static float atod(char *str)
+char* Get_keyhelpstring(keys_t key)
 {
-    float tmp;
+    int i=0;
+    char* str = "Oops";
 
-    sscanf(str, "%f", &tmp);
-    return (tmp);
-}
-
-
-void Get_defaults(int ind)
-{
-    char		*str;
-    int			i;
-    player		*pl = Players[ind];
-    static struct _keyResources
-    {
-	char    *resource;
-	keys_t	key;
-    } keyResources[] = {
-	"keyLockNext", 		KEY_LOCK_NEXT,
-	"keyLockPrev", 		KEY_LOCK_PREV,
-	"keyLockClose", 	KEY_LOCK_CLOSE,
-	"keyChangeHome",	KEY_CHANGE_HOME,
-	"keyShield",		KEY_SHIELD,
-	"keyFireShot",		KEY_FIRE_SHOT,
-	"keyFireMissile",	KEY_FIRE_MISSILE,
-        "keyFireTorpedo",       KEY_FIRE_TORPEDO,
-        "keyFireHeat",          KEY_FIRE_HEAT,
-	"keyFireNuke",          KEY_FIRE_NUKE,
-	"keyDropMine",		KEY_DROP_MINE,
-	"keyDetachMine",	KEY_DETACH_MINE,
-	"keyTurnLeft",		KEY_TURN_LEFT,
-	"keyTurnRight",		KEY_TURN_RIGHT,
-	"keySelfDestruct",	KEY_SELF_DESTRUCT,
-	"keyIdMode",		KEY_ID_MODE,
-	"keyPause",		KEY_PAUSE,
-	"keyToggleVelocity",	KEY_TOGGLE_VELOCITY,
-	"keyToggleCompass",	KEY_TOGGLE_COMPASS,
-	"keySwapSettings",	KEY_SWAP_SETTINGS,
-	"keyRefuel",		KEY_REFUEL,
-	"keyConnector",		KEY_CONNECTOR,
-	"keyIncreasePower",	KEY_INCREASE_POWER,
-	"keyDecreasePower",	KEY_DECREASE_POWER,
-	"keyIncreaseTurnspeed",	KEY_INCREASE_TURNSPEED,
-	"keyDecreaseTurnspeed",	KEY_DECREASE_TURNSPEED,
-        "keyTankNext",          KEY_TANK_NEXT,
-        "keyTankPrev",          KEY_TANK_PREV,
-        "keyTankDetach",        KEY_TANK_DETACH,
-	"keyThrust",		KEY_THRUST,
-	"keyCloak",		KEY_CLOAK,
-	"keyEcm",		KEY_ECM,
-	"keyDropBall",		KEY_DROP_BALL,
-    };
-    static struct _keyDefs keyDefs[MAX_KEY_DEFS] =
-    {
-	XK_Left,		KEY_LOCK_PREV,
-	XK_Right,		KEY_LOCK_NEXT,
-	XK_Next,		KEY_LOCK_NEXT,
-	XK_Prior,		KEY_LOCK_PREV,
-	XK_Up,			KEY_LOCK_CLOSE,
-	XK_Down,		KEY_LOCK_CLOSE,
-	XK_Select,		KEY_LOCK_CLOSE,
-	XK_Home,		KEY_CHANGE_HOME,
-	XK_Meta_R,		KEY_SHIELD,
-	XK_space,		KEY_SHIELD,
-	XK_Return,		KEY_FIRE_SHOT,
-	XK_backslash,		KEY_FIRE_MISSILE,
-	XK_Linefeed,		KEY_ECM,
- 	XK_bracketleft,		KEY_ECM,
-        XK_quoteright,          KEY_FIRE_TORPEDO,
-        XK_semicolon,           KEY_FIRE_HEAT,
-	XK_n,                   KEY_FIRE_NUKE,
-	XK_Tab,			KEY_DROP_MINE,
- 	XK_bracketright,	KEY_DETACH_MINE,
-	XK_a,			KEY_TURN_LEFT,
-	XK_s,			KEY_TURN_RIGHT,
-	XK_q,			KEY_SELF_DESTRUCT,
-	XK_i,			KEY_ID_MODE,
-	XK_p,			KEY_PAUSE,
-	XK_v,			KEY_TOGGLE_VELOCITY,
-	XK_c,			KEY_TOGGLE_COMPASS,
-	XK_Escape,		KEY_SWAP_SETTINGS,
-	XK_f,			KEY_REFUEL,
-	XK_Control_L,		KEY_REFUEL,
-	XK_Control_L,		KEY_CONNECTOR,
-	XK_space,		KEY_CONNECTOR,
-	XK_KP_Multiply,		KEY_INCREASE_POWER,
-	XK_KP_Divide,		KEY_DECREASE_POWER,
-	XK_KP_Add,		KEY_INCREASE_TURNSPEED,
-	XK_KP_Subtract,		KEY_DECREASE_TURNSPEED,
-        XK_w,                   KEY_TANK_PREV,
-        XK_e,                   KEY_TANK_NEXT,
-        XK_r,                   KEY_TANK_DETACH,
-	XK_Shift_L,		KEY_THRUST,
-	XK_Shift_R,		KEY_THRUST,
-	XK_Delete,		KEY_CLOAK,
-	XK_BackSpace,		KEY_CLOAK,
-	XK_d,			KEY_DROP_BALL,
-    };
-
-
-    /*
-     * Defaults.
-     */
-    pl->power			= 45.0;
-    pl->turnspeed		= 30.0;
-    pl->turnresistance		= 0.12;
-
-    pl->power_s			= 35.0;
-    pl->turnspeed_s		= 25.0;
-    pl->turnresistance_s	= 0.12;
-    pl->team			= TEAM_NOT_SET;
-    pl->fuel.l3			= 500*FUEL_SCALE_FACT;
-    pl->fuel.l2			= 200*FUEL_SCALE_FACT;
-    pl->fuel.l1			= 100*FUEL_SCALE_FACT;
-    pl->instruments		= SHOW_HUD_INSTRUMENTS | SHOW_HUD_HORIZONTAL;
-    bcopy(keyDefs, pl->keyDefs, sizeof(keyDefs));
-
-    /*
-     * Name
-     */
-    if (pl->name[0] == '\0') {
-	if ((pl->disp != NULL)
-	    && (str = XGetDefault(pl->disp, "xpilot", "name")) != NULL)
-	    strncpy(pl->name, str, MAX_NAME_LEN);
-	else
-	    strcpy(pl->name, pl->realname);
-    }
-    CAP_LETTER(pl->name[0]);
-
-
-    /*
-     * Control sensitivity.
-     */
-    str = XGetDefault(pl->disp, "xpilot", "power");
-    if (str)
-	pl->power = atod(str);
-    str = XGetDefault(pl->disp, "xpilot", "turnSpeed");
-    if (str)
-	pl->turnspeed = atod(str);
-    str = XGetDefault(pl->disp, "xpilot", "turnResistance");
-    if (str)
-	pl->turnresistance = atod(str);
-
-    str = XGetDefault(pl->disp, "xpilot", "altPower");
-    if (str)
-	pl->power_s = atod(str);
-    str = XGetDefault(pl->disp, "xpilot", "altTurnSpeed");
-    if (str)
-	pl->turnspeed_s = atod(str);
-    str = XGetDefault(pl->disp, "xpilot", "altTurnResistance");
-    if (str)
-	pl->turnresistance_s = atod(str);
-
-
-    /*
-     * Misc. data, fuel limits on HUD.
-     */
-    str = XGetDefault(pl->disp, "xpilot", "team");
-    if (str)
-	pl->team = atoi(str);
-    str = XGetDefault(pl->disp, "xpilot", "fuelNotify");
-    if (str)
-	pl->fuel.l3 = atod(str)*FUEL_SCALE_FACT;
-    str = XGetDefault(pl->disp, "xpilot", "fuelWarning");
-    if (str)
-	pl->fuel.l2 = atod(str)*FUEL_SCALE_FACT;
-    str = XGetDefault(pl->disp, "xpilot", "fuelCritical");
-    if (str)
-	pl->fuel.l1 = atod(str)*FUEL_SCALE_FACT;
-    
-    /*
-     * Instruments.
-     */
-
-    /* HUD */
-    str = XGetDefault(pl->disp, "xpilot", "showHUD");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_HUD_INSTRUMENTS);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_HUD_INSTRUMENTS);
-	}
-    }
-    str = XGetDefault(pl->disp, "xpilot", "verticalHUDLine");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_HUD_VERTICAL);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_HUD_VERTICAL);
-	}
-    }
-    str = XGetDefault(pl->disp, "xpilot", "horizontalHUDLine");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_HUD_HORIZONTAL);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_HUD_HORIZONTAL);
-	}
-    }
-    str = XGetDefault(pl->disp, "xpilot", "speedFactHUD");
-    pl->hud_move_fact = str?atod(str):0.0;
-    str = XGetDefault(pl->disp, "xpilot", "speedFactPTR");
-    pl->ptr_move_fact = str?atod(str):0.0;
-    str = XGetDefault(pl->disp, "xpilot", "BackgroundPointDist");
-    pl->map_point_distance = str ? atoi(str) : 8;
-
-
-    /* FUEL */
-    str = XGetDefault(pl->disp, "xpilot", "fuelMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_FUEL_METER);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_FUEL_METER);
-	}
-    }
-    str = XGetDefault(pl->disp, "xpilot", "fuelGauge");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_FUEL_GAUGE);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_FUEL_GAUGE);
-	}
-    }
-
-    /* Misc. meters. */
-    str = XGetDefault(pl->disp, "xpilot", "turnSpeedMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_TURNSPEED_METER);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_TURNSPEED_METER);
-	}
-    }
-    str = XGetDefault(pl->disp, "xpilot", "powerMeter");
-    if (str) {
-	if (ON(str)) {
-	    SET_BIT(pl->instruments, SHOW_POWER_METER);
-	} else {
-	    CLR_BIT(pl->instruments, SHOW_POWER_METER);
-	}
-    }
-
-    /* key bindings */
     for (i = 0; i < NELEM(keyResources); i++)
-	if (str = XGetDefault(pl->disp, "xpilot", keyResources[i].resource))
-	{
-	    KeySym ks;
-	    char *p, *p1;
-	    int j;
+	if (keyResources[i].key == key) {
+	    str = keyResources[i].helpLine;
+	    break;
+	}
 
-	    if ((p1 = (char *)malloc(sizeof(char) * (strlen(str) + 1)))
-		== NULL) {
-		error("No memory for key bindings");
+    return str;
+}
+
+
+void Usage(void)
+{
+    int			i;
+
+    printf("Usage: xpilot [-options ...] [server]\n");
+    printf("Where options include:\n");
+    for (i = 0; i < NELEM(opts); i++) {
+	printf("\t%s%s\n", opts[i].option,
+	       (opts[i].argKind == XrmoptionSepArg) ?  " <value>" : "");
+    }
+    printf("If no server is specified then the command will affect\n");
+    printf("the servers on your local network\n");
+    printf("Try: `telnet xpilot.cs.uit.no 4400' to see some remote servers\n");
+
+    exit(1);
+}
+
+
+static int Get_resource(XrmDatabase db, char *myName, char *myClass,
+			char *resource, char *fallback, char *result,
+			unsigned size)
+{
+    int			i,
+			len;
+    char		str_name[80],
+			str_class[80],
+			*str_type[10];
+    XrmValue		rmValue;
+
+    sprintf(str_name, "%s.%s", myName, resource);
+    sprintf(str_class, "%s.%c%s", myClass,
+	    isupper(*resource) ? toupper(*resource) : *resource, resource + 1);
+
+    if (XrmGetResource(db, str_name, str_class, str_type, &rmValue) == True) {
+	if (rmValue.addr == NULL) {
+	    len = 0;
+	} else {
+	    len = MIN(rmValue.size, size);
+	    strncpy(result, rmValue.addr, len);
+	}
+	result[len] = '\0';
+	for (i = 0; i < NELEM(opts); i++) {
+	    if (opts[i].argKind == XrmoptionIsArg
+		&& (strcmp(result, opts[i].option) == 0
+		    || strcmp(result, opts[i].specifier) == 0)) {
+		strncpy(result, "True", size);
+		result[size - 1] = '\0';
+		break;
+	    }
+	}
+	return 1;
+    }
+    if (fallback != NULL) {
+	strncpy(result, fallback, size - 1);
+	result[size - 1] = '\0';
+    } else {
+	result[0] = '\0';
+    }
+    return 0;
+}
+
+
+static void Get_float_resource(XrmDatabase db, char *myName, char *myClass,
+			       char *resource, float fallback, float *result)
+{
+    char		resValue[MAX_CHARS];
+
+    if (Get_resource(db, myName, myClass, resource, NULL, resValue,
+		     sizeof resValue) == 0
+	|| sscanf(resValue, "%f", result) <= 0) {
+	*result = fallback;
+    }
+}
+
+
+static void Get_bool_resource(XrmDatabase db, char *myName, char *myClass,
+			      char *resource, char *fallback, int *result)
+{
+    char		resValue[MAX_CHARS];
+
+    Get_resource(db, myName, myClass, resource, fallback, resValue,
+		 sizeof resValue);
+    *result = (ON(resValue) != 0);
+}
+
+
+static void Get_int_resource(XrmDatabase db, char *myName, char *myClass,
+			     char *resource, int fallback, int *result)
+{
+    char		resValue[MAX_CHARS];
+
+    if (Get_resource(db, myName, myClass, resource, NULL, resValue,
+		     sizeof resValue) == 0
+	|| sscanf(resValue, "%d", result) <= 0) {
+	*result = fallback;
+    }
+}
+
+
+static void Get_file_defaults(XrmDatabase *rDBptr,
+			       char *myName, char *myClass)
+{
+    int			len;
+    char		*ptr,
+			*lang = getenv("LANG"),
+			*home = getenv("HOME"),
+			path[MAXPATHLEN];
+    XrmDatabase		tmpDB;
+
+    sprintf(path, "%s%s", LIBDIR, myClass);
+    *rDBptr = XrmGetFileDatabase(path);
+
+    if (lang != NULL) {
+	sprintf(path, "/usr/lib/X11/%s/app-defaults/%s", lang, myClass);
+	if (access(path, 0) == -1) {
+	    sprintf(path, "/usr/lib/X11/app-defaults/%s", myClass);
+	}
+    } else {
+	sprintf(path, "/usr/lib/X11/%s", myClass);
+    }
+    tmpDB = XrmGetFileDatabase(path);
+    XrmMergeDatabases(tmpDB, rDBptr);
+
+    if ((ptr = getenv("XUSERFILESEARCHPATH")) != NULL) {
+	sprintf(path, "%s/%s", ptr, myClass);
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+    else if ((ptr = getenv("XAPPLRESDIR")) != NULL) {
+	if (lang != NULL) {
+	    sprintf(path, "%s/%s/%s", ptr, lang, myClass);
+	    if (access(path, 0) == -1) {
+		sprintf(path, "%s/%s", ptr, myClass);
+	    }
+	} else {
+	    sprintf(path, "%s/%s", ptr, myClass);
+	}
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+    else if (home != NULL) {
+	if (lang != NULL) {
+	    sprintf(path, "%s/%s/%s", ptr, lang, myClass);
+	    if (access(path, 0) == -1) {
+		sprintf(path, "%s/%s", ptr, myClass);
+	    }
+	} else {
+	    sprintf(path, "%s/%s", ptr, myClass);
+	}
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+
+    if ((ptr = XResourceManagerString(dpy)) != NULL) {
+	tmpDB = XrmGetStringDatabase(ptr);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+    else if (home != NULL) {
+	sprintf(path, "%s/.Xdefaults", home);
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+
+    if ((ptr = getenv("XENVIRONMENT")) != NULL) {
+	tmpDB = XrmGetFileDatabase(ptr);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+    else if (home != NULL) {
+	sprintf(path, "%s/.Xdefaults-", home);
+	len = strlen(path);
+	gethostname(&path[len], sizeof path - len);
+	path[sizeof path - 1] = '\0';
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+
+    if (home != NULL) {
+	sprintf(path, "%s/.xpilotrc", home);
+	tmpDB = XrmGetFileDatabase(path);
+	XrmMergeDatabases(tmpDB, rDBptr);
+    }
+}
+
+
+void Parse_options(int *argcp, char **argvp, char *realName, char *host,
+		   int *port, int *my_team, int *list, int *join,
+		   char *nickName, char *dispName, char *shut_msg)
+{
+    int			i,
+			j,
+			num;
+    keys_t		key;
+    KeySym		ks;
+    char		*ptr,
+			*str,
+			*myName = "xpilot",
+			*myClass = "XPilot",
+			resValue[MAX_CHARS];
+    XrmDatabase		argDB, rDB;
+
+    XrmInitialize();
+
+    argDB = 0;
+    XrmParseCommand(&argDB, opts, NELEM(opts), myClass, argcp, argvp);
+
+    /*
+     * Check for bad arguments.
+     */
+    for (i = 1; i < *argcp; i++) {
+	if (argvp[i][0] == '-') {
+	    errno = 0;
+	    error("Unknown option '%s'", argvp[i]);
+	    Usage();
+	}
+    }
+
+    if (Get_resource(argDB, myName, myClass, "help", NULL, resValue,
+		     sizeof resValue) != 0) {
+	Usage();
+    }
+
+    if (Get_resource(argDB, myName, myClass, "version", NULL, resValue,
+		     sizeof resValue) != 0) {
+	puts(TITLE);
+	exit(0);
+    }
+
+    Get_resource(argDB, myName, myClass, "shutdown", "", shut_msg,
+		 MAX_CHARS);
+
+    if (Get_resource(argDB, myName, myClass, "display", NULL, dispName,
+		     MAX_DISP_LEN) == 0
+	|| dispName[0] == '\0') {
+	if ((ptr = getenv("DISPLAY")) != NULL) {
+	    strncpy(dispName, ptr, MAX_DISP_LEN);
+	    dispName[MAX_DISP_LEN - 1] = '\0';
+	} else {
+	    strcpy(dispName, ":0.0");
+	}
+    }
+#ifndef LINUX
+    if (dispName[0] == '\0'
+	|| strstr(dispName, "unix:0") != NULL
+	|| strstr(dispName, "local:0") != NULL
+	|| strstr(dispName, "localhost:0") != NULL
+	|| strcmp(dispName, ":0.0") == 0
+	|| strcmp(dispName, ":0") == 0) {
+	sprintf(dispName, "%s:0", host);
+    }
+#endif
+    if ((dpy = XOpenDisplay(dispName)) == NULL) {
+	error("Can't open display '%s'", dispName);
+	exit(1);
+    }
+
+    Get_file_defaults(&rDB, myName, myClass);
+
+    XrmMergeDatabases(argDB, &rDB);
+
+    Get_resource(rDB, myName, myClass, "name", realName, nickName,
+		 MAX_NAME_LEN);
+    CAP_LETTER(nickName[0]);
+    if (nickName[0] < 'A' || nickName[0] > 'Z') {
+	errno = 0;
+	error("Your player name \"%s\" should start with an uppercase letter",
+	    nickName);
+	exit(1);
+    }
+    strncpy(realname, realName, sizeof(realname) - 1);
+    strncpy(name, nickName, sizeof(name) - 1);
+
+    Get_int_resource(rDB, myName, myClass, "team", TEAM_NOT_SET, my_team);
+    if (*my_team < 0 || *my_team > 9) {
+	*my_team = TEAM_NOT_SET;
+    }
+    team = *my_team;
+    Get_int_resource(rDB, myName, myClass, "port", SERVER_PORT, port);
+    Get_bool_resource(rDB, myName, myClass, "list", "False", list);
+    Get_bool_resource(rDB, myName, myClass, "join", "False", join);
+
+    Get_float_resource(rDB, myName, myClass, "power", 45.0, &power);
+    Get_float_resource(rDB, myName, myClass, "turnSpeed", 35.0, &turnspeed);
+    Get_float_resource(rDB, myName, myClass, "turnResistance", 0.12,
+		       &turnresistance);
+    Get_float_resource(rDB, myName, myClass, "altPower", 35.0, &power_s);
+    Get_float_resource(rDB, myName, myClass, "altTurnspeed", 25.0,
+		       &turnspeed_s);
+    Get_float_resource(rDB, myName, myClass, "altTurnResistance", 0.12,
+		       &turnresistance_s);
+
+    Get_int_resource(rDB, myName, myClass, "backgroundPointDist", 8,
+		     &map_point_distance);
+
+    color_defaults[BLACK] = COLOR_BLACK;
+    color_defaults[WHITE] = COLOR_WHITE;
+    color_defaults[BLUE] = COLOR_BLUE;
+    color_defaults[RED] = COLOR_RED;
+    Get_resource(rDB, myName, myClass, "black", color_defaults[BLACK],
+		 color_names[BLACK], sizeof(color_names[BLACK]));
+    Get_resource(rDB, myName, myClass, "white", color_defaults[WHITE],
+		 color_names[WHITE], sizeof(color_names[WHITE]));
+    Get_resource(rDB, myName, myClass, "blue", color_defaults[BLUE],
+		 color_names[BLUE], sizeof(color_names[BLUE]));
+    Get_resource(rDB, myName, myClass, "red", color_defaults[RED],
+		 color_names[RED], sizeof(color_names[RED]));
+
+    instruments = 0;
+    Get_bool_resource(rDB, myName, myClass, "showShipName", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_SHIP_NAME);
+    }
+    Get_bool_resource(rDB, myName, myClass, "showHUD", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_HUD_INSTRUMENTS);
+    }
+    Get_bool_resource(rDB, myName, myClass, "verticalHUDLine", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_HUD_VERTICAL);
+    }
+    Get_bool_resource(rDB, myName, myClass, "horizontalHUDLine", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_HUD_HORIZONTAL);
+    }
+    Get_bool_resource(rDB, myName, myClass, "fuelMeter", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_FUEL_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "fuelGauge", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_FUEL_GAUGE);
+    }
+    Get_bool_resource(rDB, myName, myClass, "turnSpeedMeter", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_TURNSPEED_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "powerMeter", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_POWER_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "packetSizeMeter", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_PACKET_SIZE_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "packetLossMeter", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_PACKET_LOSS_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "packetDropMeter", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_PACKET_DROP_METER);
+    }
+    Get_bool_resource(rDB, myName, myClass, "slidingRadar", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_SLIDING_RADAR);
+    }
+    Get_bool_resource(rDB, myName, myClass, "outlineWorld", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_OUTLINE_WORLD);
+    }
+
+    Get_float_resource(rDB, myName, myClass, "speedFactHUD", 0.0,
+		       &hud_move_fact);
+    Get_float_resource(rDB, myName, myClass, "speedFactPTR", 0.0,
+		       &ptr_move_fact);
+    Get_int_resource(rDB, myName, myClass, "fuelNotify", 500, &fuelLevel3);
+    Get_int_resource(rDB, myName, myClass, "fuelWarning", 200, &fuelLevel2);
+    Get_int_resource(rDB, myName, myClass, "fuelCritical", 100, &fuelLevel1);
+
+    Get_resource(rDB, myName, myClass, "gameFont", GAME_FONT,
+		 gameFontName, sizeof gameFontName);
+    Get_resource(rDB, myName, myClass, "messageFont", MESSAGE_FONT,
+		 messageFontName, sizeof messageFontName);
+    Get_resource(rDB, myName, myClass, "scoreListFont", SCORE_LIST_FONT,
+		 scoreListFontName, sizeof scoreListFontName);
+    Get_resource(rDB, myName, myClass, "buttonFont", BUTTON_FONT,
+		 buttonFontName, sizeof buttonFontName);
+    Get_resource(rDB, myName, myClass, "textFont", TEXT_FONT,
+		 textFontName, sizeof textFontName);
+
+    Get_int_resource(rDB, myName, myClass, "receiveWindowSize",
+		     DEF_RECEIVE_WINDOW_SIZE, &receive_window_size);
+
+#ifdef SOUND
+    Get_resource(rDB, myName, myClass, "sounds", SOUNDFILE, sounds,
+		 sizeof sounds);
+
+    Get_int_resource(rDB, myName, myClass, "maxVolume", 100, &maxVolume);
+#endif
+
+
+    /*
+     * Key bindings
+     */
+    maxKeyDefs = 2 * NUM_KEYS;
+    if ((keyDefs = (keydefs_t *)
+	malloc(maxKeyDefs * sizeof(keydefs_t))) == NULL) {
+	error("No memory for key bindings");
+	exit(1);
+    }
+    num = 0;
+    for (i = 0; i < NELEM(keyResources); i++) {
+	key = keyResources[i].key;
+	Get_resource(rDB, myName, myClass,
+		     keyResources[i].resource, keyResources[i].fallback,
+		     resValue, sizeof resValue);
+
+	for (str = strtok(resValue, " \t\r\n");
+	    str != NULL;
+	    str = strtok(NULL, " \t\r\n")) {
+
+	    if ((ks = XStringToKeysym(str)) == NoSymbol) {
+		printf("\"%s\" is not a valid keysym.\n", str);
 		continue;
 	    }
-	    strcpy(p1, str);
-	    p = strtok(p1, " \t\n");
 
-	    while (p) {
-		if ((ks = XStringToKeysym(p)) == NoSymbol) {
-		    printf("%s is not a valid keysym.\n", p);
+	    for (j = 0; j < num; j++) {
+		if (keyDefs[j].keysym == ks
+		    && keyDefs[j].key == key) {
 		    break;
 		}
-
-		for (j = 0; j < MAX_KEY_DEFS; j++)
-		    if (!pl->keyDefs[j].keysym || pl->keyDefs[j].keysym == ks) {
-			pl->keyDefs[j].keysym = ks;
-			pl->keyDefs[j].key = keyResources[i].key;
-			break;
-		    }
-
-		if (j >= MAX_KEY_DEFS) {
-		    printf("Too may key definitions.  Only %d allowed.\n",
-			   MAX_KEY_DEFS);
-		    i = NELEM(keyResources);
-		    break;
+	    }
+	    if (j < num) {
+		continue;
+	    }
+	    if (num >= maxKeyDefs) {
+		maxKeyDefs += NUM_KEYS;
+		if ((keyDefs = (keydefs_t *)
+		    realloc(keyDefs, maxKeyDefs * sizeof(keydefs_t)))
+		    == NULL) {
+		    error("No memory for key bindings");
+		    exit(1);
 		}
-
-		p = strtok(NULL, " \t\n");
 	    }
 
-	    free(p1);
+	    keyDefs[num].keysym = ks;
+	    keyDefs[num].key = key;
+	    num++;
 	}
+    }
+    if (num < maxKeyDefs) {
+	maxKeyDefs = num;
+	if ((keyDefs = (keydefs_t *)
+	    realloc(keyDefs, maxKeyDefs * sizeof(keydefs_t))) == NULL) {
+	    error("No memory for key bindings");
+	    exit(1);
+	}
+    }
+
+#ifdef SOUND
+    audioInit(dispName);
+#endif /* SOUND */
 }

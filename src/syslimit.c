@@ -1,9 +1,10 @@
-/* $Id: syslimit.c,v 1.2 1993/03/11 23:40:39 bjoerns Exp $
+/* $Id: syslimit.c,v 3.2 1993/06/28 20:54:25 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -26,7 +27,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 1.2 1993/03/11 23:40:39 bjoerns Exp $";
+    "@(#)$Id: syslimit.c,v 3.2 1993/06/28 20:54:25 bjoerns Exp $";
 #endif
 
 

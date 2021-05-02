@@ -1,9 +1,10 @@
-/* $Id: object.h,v 1.11 1993/04/18 16:46:20 kenrsc Exp $
+/* $Id: object.h,v 3.11 1993/08/02 12:55:18 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -13,18 +14,20 @@
 
 #include "const.h"
 #include "types.h"
-#include "dbuff.h"
+#include "bit.h"
+#include "keys.h"
 
 
-#define OBJ_PLAYER		(1UL<<0)		/* Types of objects */
+#define OBJ_PLAYER		(1UL<<0)	/* Types of objects */
 #define OBJ_DEBRIS		(1UL<<1)
 #define OBJ_SPARK		(1UL<<2)
-#define OBJ_NUKE                (1L<<3)
-#define OBJ_BALL_PACK		(1UL<<6)
+#define OBJ_NUKE		(1UL<<3)
+#define OBJ_CANNON_DEBRIS	(1UL<<4)	/* Cannon objects */
+#define OBJ_CANNON_SHOT		(1UL<<5)
 #define OBJ_BALL		(1UL<<7)
-#define OBJ_SHOT		(1UL<<8)		/* Misc. objects */
+#define OBJ_SHOT		(1UL<<8)	/* Misc. objects */
 #define OBJ_SMART_SHOT		(1UL<<9)
-#define OBJ_SMART_SHOT_PACK	(1UL<<10)
+#define OBJ_ROCKET_PACK		(1UL<<10)
 #define OBJ_CLOAKING_DEVICE	(1UL<<11)
 #define OBJ_ENERGY_PACK		(1UL<<12)
 #define OBJ_WIDEANGLE_SHOT	(1UL<<13)
@@ -32,7 +35,7 @@
 #define OBJ_SHIELD		(1UL<<15)
 #define OBJ_REFUEL		(1UL<<16)
 #define OBJ_COMPASS		(1UL<<17)
-#define OBJ_REAR_SHOT		(1UL<<18)
+#define OBJ_BACK_SHOT		(1UL<<18)
 #define OBJ_MINE		(1UL<<19)
 #define OBJ_MINE_PACK		(1UL<<20)
 #define OBJ_SENSOR_PACK		(1UL<<21)
@@ -40,10 +43,10 @@
 #define OBJ_ECM			(1UL<<23)
 #define OBJ_TORPEDO		(1UL<<24)
 #define OBJ_HEAT_SHOT		(1UL<<25)
-#define OBJ_AFTER_BURNER	(1UL<<26)
-#define OBJ_CONNECTOR		(1UL<<26)
-#define OBJ_CANNON_DEBRIS	(1UL<<30)	/* Cannon objects */
-#define OBJ_CANNON_SHOT		(1UL<<31)
+#define OBJ_AFTERBURNER		(1UL<<26)
+#define OBJ_CONNECTOR		(1UL<<27)
+#define OBJ_TRANSPORTER         (1UL<<28)
+#define OBJ_FIRE		(1UL<<29)
 
 /*
  * Possible player status bits
@@ -55,7 +58,6 @@
 #define SELF_DESTRUCT		(1L<<4)
 #define GRAVITY			(1L<<5)
 #define SHOT_GRAVITY		(1L<<6)
-#define ID_MODE			(1L<<8)
 #define LOOSE_MASS		(1L<<9)
 #define PAUSE			(1L<<10)
 #define GAME_OVER		(1L<<11)
@@ -70,10 +72,7 @@
 #define LOCK_NONE		1
 #define LOCK_PLAYER		2
 
-typedef struct {			/* Defines wire-obj, i.e. ship */
-    position	*pts;
-    int		num_points;
-} wireobj;
+#define NOT_CONNECTED		(-1)
 
 typedef struct {
     byte	color;			/* Color of object */		
@@ -102,48 +101,6 @@ typedef struct {
     int		new_info;
     float	length;			/* Distance between ball and player */
 } object;
-
-
-/*
- * The following enum type defines the possible actions as a result of
- * a keypress.
- */
-typedef enum {
-    KEY_DUMMY,
-    KEY_LOCK_NEXT,
-    KEY_LOCK_PREV,
-    KEY_LOCK_CLOSE,
-    KEY_CHANGE_HOME,
-    KEY_SHIELD,
-    KEY_FIRE_SHOT,
-    KEY_FIRE_MISSILE,
-    KEY_FIRE_TORPEDO,
-    KEY_FIRE_NUKE,
-    KEY_FIRE_HEAT,
-    KEY_DROP_MINE,
-    KEY_DETACH_MINE,
-    KEY_TURN_LEFT,
-    KEY_TURN_RIGHT,
-    KEY_SELF_DESTRUCT,
-    KEY_ID_MODE,
-    KEY_PAUSE,
-    KEY_TANK_DETACH,
-    KEY_TANK_NEXT,
-    KEY_TANK_PREV,
-    KEY_TOGGLE_VELOCITY,
-    KEY_TOGGLE_COMPASS,
-    KEY_SWAP_SETTINGS,
-    KEY_REFUEL,
-    KEY_CONNECTOR,
-    KEY_INCREASE_POWER,
-    KEY_DECREASE_POWER,
-    KEY_INCREASE_TURNSPEED,
-    KEY_DECREASE_TURNSPEED,
-    KEY_THRUST,
-    KEY_CLOAK,
-    KEY_ECM,
-    KEY_DROP_BALL
-} keys_t;
 
 
 /*
@@ -191,9 +148,9 @@ typedef struct {
     long	used;			/** Items you use **/
     long	have;			/** Items you have **/
 
-    long	control_count;		/* Display control for how long? */
+    int		shield_time;		/* Shields if no playerShielding */
     pl_fuel_t	fuel;			/* ship tanks and the stored fuel */
-    int		after_burners;		/* number of after burners, powerfull*/
+    int		afterburners;		/* number of after burners, powerfull*/
 					/* and efficient engine		     */
     float	emptymass;		/* Mass of empty ship */
     float	float_dir;		/* Direction, in float var */
@@ -204,15 +161,9 @@ typedef struct {
 #endif
     float	turnacc;		/* Current acceleration of turn */
     long	mode;			/* Player mode, currently */
-    long	instruments;		/* Instruments on screen (bitmask) */
-#define SHOW_HUD_INSTRUMENTS	(1<<0)		    
-#define SHOW_HUD_VERTICAL	(1<<1)
-#define SHOW_HUD_HORIZONTAL	(1<<2)
-#define SHOW_FUEL_METER		(1<<3)
-#define SHOW_FUEL_GAUGE		(1<<4)
-#define SHOW_TURNSPEED_METER	(1<<5)
-#define SHOW_POWER_METER	(1<<6)
     long	score;			/* Current score of player */
+    long	prev_score;		/* Last score that has been updated */
+    int		prev_life;		/* Last life that has been updated */
     float	power;			/* Force of thrust */
     float	power_s;		/* Saved power fiks */
     float	turnspeed_s;		/* Saved turnspeed */
@@ -222,19 +173,21 @@ typedef struct {
     float	sensor_range;		/* Range of sensors (radar) */
     int		shots;			/* Number of active shots by player */
     int		extra_shots;		/* Number of extra shots / 2 */
-    int		rear_shots;		/* Number of rear shots */
+    int		back_shots;		/* Number of rear shots */
     int		mines;			/* Number of mines. */
     int		cloaks;			/* Number of cloaks. */
     int		sensors;		/* Number of sensors */
     int		missiles;		/* Number of missiles. */
     int		ecms;			/* Number of ecms. */
+    int		transporters;		/* number of transporters */
     int		shot_max;		/* Maximum number of shots active */
     int		shot_life;		/* Number of ticks shot will live */
     float	shot_speed;		/* Speed of shots fired by player */
     float	shot_mass;		/* Mass of shots fired by player */
+    long	shot_time;		/* Time of last shot fired by player */
     int		fs;			/* Connected to fuel station fs */
     int		check;			/* Next check point to pass */
-    int		time;			/* The time aa player has used */
+    int		time;			/* The time a player has used */
     int		round;			/* Number of rounds player have done */
     int		best_lap;		/* Players best lap time */
     int		best_run;		/* Best race time */
@@ -258,14 +211,9 @@ typedef struct {
     } lock;
 
     char	mychar;			/* Special char for player */
-    char	lblstr[MAX_CHARS];	/* Label string for player */
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
-    Display	*disp;			/* Display of player (pointer) */
-    int		map_point_distance;	/* spacing of navigation points */
-    bool	info_press;		/* Player pressed the info button? */ 
-    bool	help_press;		/* Player pressed the help button? */
-    int		help_page;		/* Which page is the player on? */
+    char	dispname[MAX_CHARS];	/* Display name of player */
     u_short	team;			/* What team is the player on? */
     u_short	pseudo_team;		/* Which team is used for my tanks */
 					/* (detaching!) */
@@ -278,48 +226,6 @@ typedef struct {
     int		robot_ind;		/* Index in the robot array */
     int		robot_lock;
     int		robot_lock_id;
-     
-    /* Miscellaneous graphic variables */
-    u_byte	disp_type;		/* Display type */
-#define	DT_NONE			0
-#define	DT_HAVE_COLOR		1
-#define	DT_HAVE_PLANES		2
-#define	DT_IS_DISPLAY		4
-    int		name_length;		/* Length of name in pixels */
-    GC		gc;			/* GC for the drawing area */
-    GC		gcr;			/* GC for the radar */
-    GC		gcb;			/* GC for the buttons */
-    GC		gcp;			/* GC for the player list */
-    GC		gctxt;			/* GC for the info/help text */
-    Window	top;			/* Top-level window (topshell) */
-    Window	draw;			/* Main play window */
-    Pixmap	p_draw;			/* Saved pixmap for the drawing */
-					/* area (monochromes use this) */
-    Window	radar;			/* Radar window */
-    Window	players;		/* Player list window */
-    Pixmap	p_radar, s_radar;	/* Pixmaps for the radar (implements */
-					/* the planes hack on the radar for */
-					/* monochromes) */
-    long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-    Window	quit_b;			/* Quit button */
-    Window	help_b;			/* Help window button */
-    Window	info_b;			/* Info button */
-    Window	help_w;			/* Help window */
-    Window	info_w;			/* Info window */
-    Window	info_close_b;		/* Info window's close button */
-    Window	help_close_b;		/* Help window's close button */
-    Window	help_next_b;		/* Help window's next button */
-    Window	help_prev_b;		/* Help window's prevsious button */
-    XColor	colors[4];		/* Colors */
-    Colormap	colormap;		/* Private colormap */
-    bool	gotFocus;
-
-    dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
-
-#ifdef SCROLL
-    char	scroll[MAX_SCROLL_LEN]; /* Scrolling string */
-    int		scroll_len;		/* Scrolling string length */
-#endif
 
     struct _visibility {
 	int	canSee;
@@ -334,12 +240,20 @@ typedef struct {
 	position pos;
     } ecmInfo;
 
-    struct _keyDefs {
-	KeySym	keysym;			/* Keysym-to-action array */
-	keys_t	key;
-    } keyDefs[MAX_KEY_DEFS];
+    struct {
+	int count, pl_id;
+    } transInfo;
 
     int	rplay_fd;			/* rplay UDP socket fd */
+
+    int conn;				/* connection index, -1 if robot */
+    unsigned version;			/* XPilot version number of client */
+
+    BITV_DECL(last_keyv, NUM_KEYS);	/* Keyboard state */
+    BITV_DECL(prev_keyv, NUM_KEYS);	/* Keyboard state */
+    int key_changed;
+
+    void *audio;			/* audio private data */
 } player;
 
 #endif

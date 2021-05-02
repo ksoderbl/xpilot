@@ -14,8 +14,207 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 1.1 1993/04/22 10:21:32 bjoerns Exp $
+ * 1993/05/22 bert
+ * Changed SocketReadable to check for return value of select()
+ * and changed unused fd sets to NULL pointers.
+ *
+ * Revision so-and-so, Id: bla-bla, Code: too.  Bert Gÿsbers April/Mai 93
+ * Added several interface calls to get/setsockopt/ioctl calls for use
+ * in the client/server version of XPilot.
+ * Also, (Please Note!) I removed the linger stuff from the SocketAccept()
+ * function into a separate function call.  When a socket is non-blocking
+ * then lingering on close didn't seem like a good idea to me.
+ *
+ * RCS:      $Id: socklib.c,v 3.7 1993/08/02 12:55:37 bjoerns Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.7  1993/08/02  12:55:37  bjoerns
+ * Patchlevel 3.
+ *
+ * Revision 3.6  1993/08/02  12:51:18  bjoerns
+ * Patchlevel 2.
+ *
+ * Revision 3.5  1993/08/02  12:41:41  bjoerns
+ * Patchlevel 1.
+ *
+ * Revision 3.4  1993/06/28  20:54:22  bjoerns
+ * Added an Imakefile and renamed Makefile to Makefile.std.
+ * Made Bert's last name 8-bit.
+ *
+ * Revision 3.3  1993/06/28  11:43:36  bjoerns
+ * Applied PL8 which was handled completely by Bert Gÿsbers.
+ *
+ *
+ * SUMMARY OF CHANGES
+ *
+ * Andy Skinner contributed a new targetKillTeam option.
+ * When turned on it will kill all players in the team that just
+ * lost their target.  The default value is off/inactive.
+ *
+ * Any remaining problems  with the login sequence should be fixed
+ * due to a thorough revision/rewrite of the receive-window-size code.
+ * E.g., the `ufo-problem' reported by Andy should be gone.
+ *
+ * Player info is now transmitted and stored in a less bugprone way.
+ * All problems with player names and radar visibility should
+ * now be fixed.
+ *
+ * The flashing of the 'F' in fuelstations should now be gone.
+ * The solution was to use the proper pre-xored pixel value as
+ * foreground for xor operations.
+ *
+ * Drawing the new score objects now also work across edge wrap.
+ *
+ * Shots are now killed if they hit a cannon.
+ *
+ * In Move_smart_shot() `min' wasn't allways initialised before use.
+ *
+ * The PacketDrawMeter is removed (was overkill).
+ *
+ * The mineDraw resource is removed (was overkill).
+ *
+ * Mines are now drawn like they already appeared in the new
+ * items and HUD instead of a small-blue-almost-invisible circle.
+ *
+ * Several functions have now a (void) prototype when no arguments
+ * to shut up the compiler.
+ *
+ * The backgroundPointDist resource code is now checking for division
+ * by zero.
+ *
+ * The printing of duplicate reliable data packet info is commented out.
+ *
+ * The drawing of fuelstations is buffered and optimised to reduce
+ * changing of GCs.
+ *
+ * The '#ifdef SOUND' statement in sound.c is now on top of the sound.c file
+ * like suggested in alt.games.xpilot.
+ *
+ * DrawShadowText() wasn't always returning a value.
+ *
+ * Small changes to pixmaps for Tank, Transporter and Cloak items.
+ *
+ * Revision 3.2  1993/06/12  20:35:37  bjoerns
+ * Applied yet anoter patch from Bert, this time he has implemented clustering of objects (sparks for the moment).
+ *
+ * Revision 3.1  1993/05/28  18:04:02  bjoerns
+ * Applied new giant patch from Bert.  Here's a summary I got from him:
+ *
+ * changes to Makefile:
+ * 	some AIX flags
+ * 	new include file dependencies
+ * client.c:
+ * 	Target test.
+ * 	player info bug fix (already mailed to you).
+ * 	More accurate RadarHeight calculation.
+ * client.h:
+ * 	"self_visible" boolean flag in client structure.
+ * 	new prototype for Client_flush().
+ * cmdline.c:
+ * 	playerStartsShielded flag for PlayerShielding=false mode
+ * 	playersOnRadar if players are visible on radar (default=true)
+ * 	missilesOnRadar if missiles are visible on radar (default=true)
+ * collision.c:
+ * 	new interesting experiment with collision detection for objects,
+ * 	now only test objects that have already passed the ObjectCollision
+ * 	function this timeframe (simple change, should be an improvement I hope)
+ * const.h:
+ * 	Experiment with hypot() in LENGTH() macro, untested yet.
+ * 	TARGET_DEAD_TIME is defined in some amount of FPS.
+ * 	A little higher amount of TARGET_DAMAGE and TARGET_REPAIR_PER_FRAME.
+ * event.c:
+ * 	Changes to  Refuel() and Player_lock_closest(), I did these because
+ * 	I hadn't your changes available.  Might be skipped.
+ * 	Removed pl->control_count stuff as these are only needed in the client.
+ * frame.c:
+ * 	Added new visibility detection stuff for map data.
+ * 	It didn't work in PL0 at the edges for cannons and fuelstations.
+ * 	This one works perfect for cannons and fuelstations, but has a tough
+ * 	to find bug for target info.  Target info is only correctly displayed
+ * 	if the player ship is above the target, not below or equal.  Strange!
+ * 	Changed radar stuff to incorporate the new playersOnRadar and
+ * 	missilesOnRadar options.
+ * global.h:
+ * 	New declarations for the new commandline options.
+ * join.c:
+ * 	Flushing of display stuff, probably not necessary.
+ * 	But David had some kind of strange problem.
+ * 	May be removed.
+ * net.c:
+ * 	Changed ifdefs for memmove as AIX doesn't have that either.
+ * 	Also, AIX does not use EWOULDBLOCK but EAGAIN instead.
+ * netclient.c:
+ * 	Removed Check_packet_type().  Not needed anymore.
+ * 	Changed Kernel network buffer sizes ifdefs as AIX has smaller
+ * 	socket buffers by default.
+ * 	Added stuff for PKT_PLAY to also handle premature frames.
+ * 	May evetually not be needed or in a different way.
+ * netserver.c:
+ * 	Big changes in states a new connection can be in.
+ * 	Removed duplicate code.  Other cleanups.
+ * 	A little better retransmission code + bug fix which you already have.
+ * 	AIX doesn't have strdup().
+ * 	More different types of packet dispatch tables.
+ * 	Removed the CONN_ACCEPTED state.  Added CONN_DRAIN and CONN_READY
+ * 	to wait until client has acked all reliable data.
+ * 	Added war stuff for new players.
+ * 	Made an upper limit of 5 for maximum input packet reads per frame.
+ * 	Some functions now are static.
+ * netserver.h:
+ * 	See netserver.c.
+ * object.h:
+ * 	Removed control_count.
+ * 	Added shield_time which gives the time a player still has shields left
+ * 	after restart if mode is playerShielding=false and
+ * 	playerStartsShielded=true.
+ * paint.c:
+ * 	Add drawing of transporter lines together with drawing of refuel lines
+ * 	and connector lines.
+ * 	Added proper control_count decrease.
+ * 	New radar stuff.  Improved accuracy.  And better radar map drawing.
+ * 	Changed drawing color of target damage, but I don't like it.  Damage lines
+ * 	are now drawn in opposite color.  See if you dislike it as much as I do.
+ * 	No more direction line of self on radar when dead, like Bjoern disliked.
+ * 	I experimented somewhat with the drawing of a cross instead, but
+ * 	removed it also again.  Now nothing is drawn when dead, just like 2.0.
+ * play.c:
+ * 	Small fix to remove AIX compiler complaint, it improves code readability
+ * 	too I think.  Unimportant.
+ * player.c:
+ * 	New playerShielding code for playerStartsShielded option.
+ * 	Bugfix for race mode when only one player is playing.
+ * robot.c:
+ * 	New playerShielding code for playerStartsShielded option.
+ * server.c:
+ * 	Removed RadarHeight stuff as this is only needed in the client.
+ * 	Bugfix for Wait_for_new_players() to disable the real-time interval
+ * 	timer when noone is playing.  Otherwise all selects() would have been
+ * 	interrupted at a rate of FPS.
+ * socklib.c:
+ * 	Changed SocketReadable() to check for select returning -1.
+ * timer.c:
+ * 	Dummy routines if defined BUSYLOOP for block_timer() and allow_timer().
+ * update.c:
+ * 	New transport to home stuff after death.  I really like this and
+ * 	am curious to know if you do too.  You now are transported back to
+ * 	home with a constant acceleration and deacceleration.  Try it!
+ * 	The old code is preserved with an ifdef.
+ * xinit.c:
+ * 	I think I fixed two syntax bugs, but please have a careful look yourself.
+ * 	There were two statements like: if (a = b), instead of: if (a == b).
+ *
+ * That's all sofar.
+ *
+ * Bert
+ *
+ * Revision 3.0  1993/05/21  18:36:39  bjoerns
+ * New client server release.
+ *
+ * Revision 1.3  1993/05/20  17:33:53  kenrsc
+ * Bert changes from M -> R version !!!!!
+ *
+ * Revision 1.2  1993/05/18  16:49:30  kenrsc
+ * Berts few changes !
+ *
  * Revision 1.1  1993/04/22  10:21:32  bjoerns
  * Moved socklib from lib to src.
  *
@@ -69,13 +268,18 @@ static char sourceid[] =
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/param.h>
-#if(hpux)
+#include <sys/ioctl.h>
+#if (SVR4)
+#include <sys/filio.h>
+#endif
+#if (__hpux)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
@@ -296,6 +500,71 @@ int	fd;
 /*
  *******************************************************************************
  *
+ *	GetPeerName()
+ *
+ *******************************************************************************
+ * Description
+ *	Returns the hostname of the peer of connected stream socket.
+ *
+ * Input Parameters
+ *	fd		- The connected stream socket descriptor.
+ *	namelen		- Maximum length of the peer name.
+ *
+ * Output Parameters
+ *	The hostname of the peer in a byte array.
+ *
+ * Return Value
+ *	-1 on failure, 0 on success.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	getpeername
+ *	gethostbyaddr
+ *	inet_ntoa
+ *
+ * Called By
+ *	User applications
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+GetPeerName(int fd, char *name, int namelen)
+#else
+GetPeerName(fd, name, namelen)
+int	fd;
+char	*name;
+int	namelen;
+#endif /* __STDC__ */
+{
+    int			len;
+    struct sockaddr_in	addr;
+    struct hostent	*hp;
+
+    len = sizeof(struct sockaddr_in);
+    if (getpeername(fd, (struct sockaddr *)&addr, &len) < 0)
+	return (-1);
+
+    hp = gethostbyaddr((char *)&addr.sin_addr.s_addr, 4, AF_INET);
+    if (hp != NULL)
+    {
+	strncpy(name, hp->h_name, namelen);
+    }
+    else
+    {
+	strncpy(name, inet_ntoa(addr.sin_addr), namelen);
+    }
+    name[namelen - 1] = '\0';
+
+    return (0);
+} /* GetPeerName */
+
+
+/*
+ *******************************************************************************
+ *
  *	CreateClientSocket()
  *
  *******************************************************************************
@@ -400,12 +669,12 @@ int	port;
  *	None
  *
  * External Calls
- *	setsockopt
+ *	none
  *	
  * Called By
  *	User applications.
  *
- * Originally coded by Arne Helme
+ * Originally coded by Arne Helme.
  */
 int 
 #ifdef __STDC__
@@ -415,7 +684,54 @@ SocketAccept(fd)
 int	fd;
 #endif /* __STDC__ */
 {
-    int				socket;
+    return accept(fd, NULL, 0);
+} /* SocketAccept */
+
+
+/*
+ *******************************************************************************
+ *
+ *	SocketLinger()
+ *
+ *******************************************************************************
+ * Description
+ *	This function is called on a stream socket to set the linger option.
+ *	
+ * Input Parameters
+ *	fd		- The stream socket to set the linger option on.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	setsockopt
+ *	
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Arne Helme, but moved out of SocketAccept by Bert.
+ */
+int 
+#ifdef __STDC__
+SocketLinger(int fd)
+#else
+SocketLinger(fd)
+int	fd;
+#endif /* __STDC__ */
+{
+#ifdef LINUX
+    /*
+     * As of 0.99.9 Linux doesn't have LINGER stuff.
+     * This is likely to be improved in later versions however.
+     */
+    return 0;
+#else
 #ifdef	__hp9000s300
     long			linger = 1;
     int				lsize  = sizeof(long);
@@ -423,14 +739,237 @@ int	fd;
     static struct linger	linger = {1, 300};
     int				lsize  = sizeof(struct linger);
 #endif
-    socket = accept(fd, NULL, 0);
+    return setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *)&linger, lsize);
+#endif
+} /* SocketLinger */
 
-    if (setsockopt(socket, SOL_SOCKET, SO_LINGER, (char *)&linger,
-		   lsize) == -1)
-	return (-1);
-    else
-	return (socket);
-} /* SocketAccept */
+
+/*
+ *******************************************************************************
+ *
+ *	SetSocketReceiveBufferSize()
+ *
+ *******************************************************************************
+ * Description
+ *	Set the receive buffer size for either a stream or a datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor to operate on.
+ *	size		- The new buffer size to use by the kernel.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	none
+ *
+ * External Calls
+ *	setsockopt
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+SetSocketReceiveBufferSize(int fd, int size)
+#else
+SetSocketReceiveBufferSize(fd, size)
+int	fd;
+int	size;
+#endif /* __STDC__ */
+{
+    return (setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+	(char *)&size, sizeof(size)));
+} /* SetSocketReceiveBufferSize */
+
+
+/*
+ *******************************************************************************
+ *
+ *	SetSocketSendBufferSize()
+ *
+ *******************************************************************************
+ * Description
+ *	Set the send buffer size for either a stream or a datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor to operate on.
+ *	size		- The new buffer size to use by the kernel.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	none
+ *
+ * External Calls
+ *	setsockopt
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+SetSocketSendBufferSize(int fd, int size)
+#else
+SetSocketSendBufferSize(fd, size)
+int	fd;
+int	size;
+#endif /* __STDC__ */
+{
+    return (setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+	(char *)&size, sizeof(size)));
+} /* SetSocketSendBufferSize */
+
+
+/*
+ *******************************************************************************
+ *
+ *	SetSocketNoDelay()
+ *
+ *******************************************************************************
+ * Description
+ *	Set the TCP_NODELAY option on a connected stream socket.
+ *
+ * Input Parameters
+ *	fd		- The stream socket descriptor to operate on.
+ *	flag		- One to turn it on, zero to turn it off.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	none
+ *
+ * External Calls
+ *	setsockopt
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+SetSocketNoDelay(int fd, int flag)
+#else
+SetSocketNoDelay(fd, flag)
+int	fd;
+int	flag;
+#endif /* __STDC__ */
+{
+    return (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+	(char *)&flag, sizeof(flag)));
+} /* SetSocketNoDelay */
+
+
+/*
+ *******************************************************************************
+ *
+ *	SetSocketNonBlocking()
+ *
+ *******************************************************************************
+ * Description
+ *	Set the nonblocking option on a socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor to operate on.
+ *	flag		- One to turn it on, zero to turn it off.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	none
+ *
+ * External Calls
+ *	ioctl
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+SetSocketNonBlocking(int fd, int flag)
+#else
+SetSocketNonBlocking(fd, flag)
+int	fd;
+int	flag;
+#endif /* __STDC__ */
+{
+#if (_SEQUENT_)
+    return (fcntl(fd, F_SETFL, (flag * O_NDELAY)));
+#else
+    return (ioctl(fd, FIONBIO, &flag));
+#endif
+} /* SetSocketNonBlocking */
+
+
+/*
+ *******************************************************************************
+ *
+ *	GetSocketError()
+ *
+ *******************************************************************************
+ * Description
+ *	Clear the error status for the socket and return the error in errno.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor to operate on.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	errno
+ *
+ * External Calls
+ *	getsockopt
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+GetSocketError(int fd)
+#else
+GetSocketError(fd)
+int	fd;
+#endif /* __STDC__ */
+{
+    int	error, size;
+
+    size = sizeof(error);
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR,
+	(char *)&error, &size) == -1) {
+	return -1;
+    }
+    errno = error;
+    return 0;
+} /* GetSocketError */
 
 
 /*
@@ -449,7 +988,7 @@ int	fd;
  *	None
  *
  * Return Value
- *	TRUE (non-zero) or FALSE (zero).
+ *	TRUE (non-zero) or FALSE (zero) (or -1 if select() fails).
  *
  * Globals Referenced
  *	socket_timeout
@@ -470,7 +1009,7 @@ SocketReadable(fd)
 int	fd;
 #endif /* __STDC__ */
 {
-    int			readfds = 0, writefds = 0, exceptfds = 0;
+    int			readfds;
     struct timeval	timeout;
 
     timerclear(&timeout); /* macro function */
@@ -478,7 +1017,8 @@ int	fd;
     timeout.tv_usec = sl_timeout_us;
     readfds = (1 << fd);
 
-    (void) select(fd + 1, &readfds, &writefds, &exceptfds, &timeout);
+    if (select(fd + 1, &readfds, NULL, NULL, &timeout) == -1)
+	return ((errno == EINTR) ? 0 : -1);
     
     if (readfds & (1 << fd))
 	return (1);
@@ -685,7 +1225,7 @@ int	fd;
     if (shutdown(fd, 2) == -1)
     {
 	sl_errno = SL_ESHUTD;
-	return (-1);
+	/* return (-1);  ***BG: need close always */
     }
 
     if (close(fd) == -1)
@@ -757,12 +1297,87 @@ int	port;
     if (retval < 0)
     {
 	sl_errno = SL_EBIND;
+	retval = errno;
 	(void) close(fd);
+	errno = retval;
 	return (-1);
     }
 
     return (fd);
 } /* CreateDgramSocket */
+
+
+/*
+ *******************************************************************************
+ *
+ *	DgramConnect()
+ *
+ *******************************************************************************
+ * Description
+ *	Associate a datagram socket with a peer.
+ *
+ * Input Parameters
+ *	fd		- The socket to operate on.
+ *	host		- The host name.
+ *	port		- The port number. 
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on error, 0 on success
+ *
+ * Globals Referenced
+ *	sl_errno	- If any errors occured: SL_EHOSTNAME, SL_ECONNECT.
+ *
+ * External Calls
+ *	connect
+ *	gethostbyname
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+DgramConnect(int fd, char *host, int port)
+#else
+DgramConnect(fd, host, port)
+int	fd;
+char	*host;
+int	port;
+#endif /* __STDC__ */
+{
+    struct sockaddr_in	addr_in;
+    struct hostent	*hp;
+    int			retval;
+
+    memset((char *)&addr_in, 0, sizeof(addr_in));
+    addr_in.sin_addr.s_addr 	= inet_addr(host);
+    if (addr_in.sin_addr.s_addr == (unsigned long)-1)
+    {
+	hp = gethostbyname(host);
+	if (hp == NULL)
+	{
+	    sl_errno = SL_EHOSTNAME;
+	    return (-1);
+	}
+	else
+	    addr_in.sin_addr.s_addr = 
+		((struct in_addr*)(hp->h_addr))->s_addr;
+    }
+    addr_in.sin_family		= AF_INET;
+    addr_in.sin_port		= htons(port);
+    retval = connect(fd, (struct sockaddr *)&addr_in, sizeof(addr_in));
+    if (retval < 0)
+    {
+	sl_errno = SL_ECONNECT;
+	return (-1);
+    }
+
+    return (0);
+} /* DgramConnect */
 
 
 /*
@@ -1130,7 +1745,61 @@ DgramLastaddr()
 #endif /* __STDC__ */
 {
     return (inet_ntoa(sl_dgram_lastaddr.sin_addr));
-} /* Dgram_Lastaddr */
+} /* DgramLastaddr */
+
+
+/*
+ *******************************************************************************
+ *
+ *	DgramLastname()
+ *
+ *******************************************************************************
+ * Description
+ *	Does a name lookup for the last host address from the
+ *	global variable sl_dgram_lastaddr.  If this nameserver
+ *	query fails then it resorts to DgramLastaddr().
+ *
+ * Input Parameters
+ *	None
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	Pointer to string containing the hostname. Warning, the string
+ *	resides in static memory area.
+ *
+ * Globals Referenced
+ *	sl_dgram_lastaddr
+ *
+ * External Calls
+ *	inet_ntoa
+ *	gethostbyaddr
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+char *
+#ifdef __STDC__
+DgramLastname(void)
+#else
+DgramLastname()
+#endif /* __STDC__ */
+{
+    struct hostent	*he;
+    char		*str;
+
+    he = gethostbyaddr((char *)&sl_dgram_lastaddr.sin_addr,
+		       sizeof(struct in_addr), AF_INET);
+    if (he == NULL) {
+	str = inet_ntoa(sl_dgram_lastaddr.sin_addr);
+    } else {
+	str = (char *) he->h_name;
+    }
+    return str;
+} /* DgramLastname */
 
 
 /*
@@ -1170,7 +1839,7 @@ DgramLastport()
 #endif /* __STDC__ */
 {
     return (ntohs((int)sl_dgram_lastaddr.sin_port));
-} /* Dgram_Lastaddr */
+} /* DgramLastport */
 
 
 #if defined(__sun__)

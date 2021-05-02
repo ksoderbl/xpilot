@@ -1,9 +1,10 @@
-/* $Id: xpilot.c,v 1.10 1993/03/25 14:45:12 bjoerns Exp $
+/* $Id: xpilot.c,v 3.11 1993/08/03 11:53:44 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -17,11 +18,17 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#if (SVR4)
+# include <sys/sockio.h>
+#endif
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifndef LINUX
 #include <net/if.h>
+#endif
 #include <netdb.h>
-#if  !defined(apollo)
+#if  !defined(__apollo)
 #    include <string.h>
 #endif
 
@@ -29,74 +36,68 @@
 #include "pack.h"
 #include "bit.h"
 #include "version.h"
+#include "net.h"
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 1.10 1993/03/25 14:45:12 bjoerns Exp $";
+    "@(#)$Id: xpilot.c,v 3.11 1993/08/03 11:53:44 bjoerns Exp $";
 #endif
 
 #define MAX_LINE	256
 
-int		socket_c,		/* Contact socket */
-    		socket_i,		/* Info socket */
-    		server_port;
-pack_t		req;
-core_pack_t	*core = &req.core;
-char		name[MAX_NAME_LEN],
-    		base_addr[MAX_LINE],
-    		server_host[MAX_LINE],
-    		hostname[MAX_LINE],
-    		display[MAX_DISP_LEN],
-		shutdown_reason[MAX_ARG_LEN];
-bool		auto_connect = false,
-    		list_servers = false,
-    		auto_shutdown = false;
-u_short		team = TEAM_NOT_SET;
+static int		socket_c,		/* Contact socket */
+    			contact_port,
+    			server_port,
+    			login_port;
+static char		nick_name[MAX_NAME_LEN],
+			real_name[MAX_NAME_LEN],
+    			server_host[MAXHOSTNAMELEN],
+    			server_name[MAXHOSTNAMELEN],
+    			hostname[MAXHOSTNAMELEN],
+    			display[MAX_DISP_LEN],
+			shutdown_reason[MAX_CHARS];
+static int		auto_connect = false,
+    			list_servers = false,
+    			auto_shutdown = false;
+static unsigned		server_version;
+static int		team = TEAM_NOT_SET;
+static sockbuf_t	sbuf;			/* contact buffer */
+
+char			**Argv;
+int			Argc;
 
 
-/*
- * NOTE (base_addr) that this routine only handles the first net address.  If
- * the machine has more than one connection, you'll have to specify the server
- * machine manually if it isn't on the first net.
- */
-void initaddr()
+static int Query_all(int sockfd, int port, char *msg, int msglen);
+
+
+static void initaddr(void)
 {
-    struct hostent	*hinfo, *he;
-    char		tmp[MAX_LINE];
-    int			i;
+    struct hostent	*hinfo;
 
 
-    base_addr[0] = '\0';
-    gethostname(hostname, MAX_LINE);
-    if ((hinfo = gethostbyname(hostname)) == NULL) {
-	error("gethostbyname");
-	exit (-1);
-    }
-
-    /* Get base address (cluster address?) */
-
-    for (i=0; i<hinfo->h_length-1; i++) {
-	sprintf(tmp, "%d.", (unsigned char)hinfo->h_addr[i]);
-	strcat(base_addr, tmp);
-    }
+    gethostname(hostname, sizeof hostname);
 
     /*
      * Get host's official name.
      */
-    strcpy(hostname, hinfo->h_name);
+    if ((hinfo = gethostbyname(hostname)) == NULL) {
+	error("gethostbyname");
+    } else {
+	strcpy(hostname, hinfo->h_name);
+    }
 }
 
 
 
-void printfile(char *name)
+static void printfile(char *filename)
 {
     FILE *fp;
     char c;
 
 
-    if ((fp=fopen(name, "r")) == NULL) {
-/*	error(name);	*/
+    if ((fp=fopen(filename, "r")) == NULL) {
+/*	error(filename);	*/
 	return;
     }
 
@@ -108,58 +109,106 @@ void printfile(char *name)
 
 
 
-bool Get_contact_message(void)
+static bool Get_contact_message(void)
 {
+    int			len;
+    unsigned		magic;
+    unsigned char	reply_to, status;
     bool		readable = false;
-    contact_pack_t	pack;
 
+    while (readable == false && SocketReadable(socket_c) > 0) {
 
-    if (SocketReadable(socket_c)) {
-	if (DgramReceiveAny(socket_c, (char *)&pack, sizeof(pack)) == -1) {
+	Sockbuf_clear(&sbuf);
+	len = DgramReceiveAny(sbuf.sock, sbuf.buf, sbuf.size);
+	if (len <= 0) {
+	    if (len == 0) {
+		continue;
+	    }
 	    error("DgramReceiveAny, contact message");
 	    exit(-1);
 	}
-	readable = true;
+	sbuf.len = len;
 
 	/*
 	 * Now get server's host and port.
 	 */
 	strcpy(server_host, DgramLastaddr());
-	server_port = pack.port = ntohl(pack.port);
-	pack.magic = ntohl(pack.magic);
+	server_port = DgramLastport();
+	strcpy(server_name, DgramLastname());
 
-	if (pack.magic != MAGIC) {
-	    error("Bad magic on contact message (0x%lx).", pack.magic);
-	    return (false);
+	if (Packet_scanf(&sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0) {
+	    errno = 0;
+	    error("Incomplete contact reply message (%d)", len);
+	}
+	else if ((magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
+	    errno = 0;
+	    error("Bad magic on contact message (0x%x).", magic);
+	}
+	else if ((server_version = MAGIC2VERSION(magic)) < MIN_SERVER_VERSION
+	    || server_version > MAX_SERVER_VERSION) {
+	    printf("Incompatible version with server %s (%04x,%04x).\n\n",
+		server_name, MY_VERSION, MAGIC2VERSION(magic));
+	}
+	else if (server_version == 0x3020
+	    && reply_to == CONTACT_pack
+	    && status == E_VERSION) {
+	    /*
+	     * This server doesn't know that we can join him.
+	     * Resend the contact message to him adapted to his version.
+	     */
+	    Sockbuf_clear(&sbuf);
+	    Packet_printf(&sbuf, "%lu%s%hu%c", VERSION2MAGIC(0x3020),
+			  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
+	    if (DgramSend(sbuf.sock, server_host, server_port,
+			  sbuf.buf, sbuf.len) == -1) {
+		error("Can't send contact request to %s/%d",
+		      server_host, server_port);
+		exit(1);
+	    }
+	}
+	else {
+	    /*
+	     * Found one which we can talk to.
+	     */
+	    readable = true;
 	}
     }
-    
+
     return (readable);
 }
 
 
 
-int Get_reply_message(reply_pack_t *p)
+static int Get_reply_message(sockbuf_t *ibuf)
 {
-    int len;
+    int			len;
+    unsigned		magic;
 
 
-    if (SocketReadable(socket_i)) {
-	if ((len=DgramReceiveAny(socket_i, (char *)p,
-				 sizeof(reply_pack_t))) == -1) {
-	    error("DgramReceiveAny, reply message");
+    if (SocketReadable(ibuf->sock)) {
+	Sockbuf_clear(ibuf);
+	if ((len = read(ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
+	    error("Can't read reply message");
 	    exit(-1);
-	} else {
-	    /*
-	     * Watch out for big/little-endian problems.
-	     */
-	    p->magic = ntohl(p->magic);
-	    p->port = ntohl(p->port);
+	}
 
-	    if (p->magic != MAGIC) {
-		error("Wrong MAGIC in pack (0x%lx).", p->magic);
-		return (0);
-	    }
+	ibuf->len = len;
+	if (Packet_scanf(ibuf, "%u", &magic) <= 0) {
+	    errno = 0;
+	    error("Incomplete reply packet (%d)", len);
+	    return (0);
+	}
+
+	if ((magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
+	    errno = 0;
+	    error("Wrong MAGIC in reply pack (0x%x).", magic);
+	    return (0);
+	}
+
+	if (MAGIC2VERSION(magic) != server_version) {
+	    printf("Incompatible version with server on %s (%04x,%04x).\n\n",
+		server_name, MY_VERSION, MAGIC2VERSION(magic));
+	    return (0);
 	}
     } else
 	return (0);
@@ -175,229 +224,204 @@ int Get_reply_message(reply_pack_t *p)
  * server (connected to server), or false if the player wants to have a
  * look at the next server.
  */
-bool Connect_to_server(void)
+static bool Process_commands(sockbuf_t *ibuf)
 {
-    int			len;
-    bool		contact, xhost_is_done;
-    char		c, str[MAX_LINE];
-    reply_pack_t	reply;
-    struct hostent	*he;
-    int			Query_all(int sockfd, int port, char *msg, int msglen);
+    int			delay;
+    char		c, status, reply_to, str[MAX_LINE];
+    unsigned short	port;
 
 
-    core->port = htonl(GetPortNum(socket_i));
-
- again:
-    xhost_is_done = false;
-
-    /*
-     * Now, what do you want from the server?
-     */
-    if (!auto_connect) {
-	if ((he = gethostbyaddr((char *)&sl_dgram_lastaddr.sin_addr,
-				sizeof(struct in_addr), AF_INET)) == NULL) {
-	    error("gethostbyname() couldn't lookup server's name");
-	    exit (-1);
-	}
-
-	printf("*** Server on %s. Enter command> ", he->h_name);
-
-	gets(str);
-	c = str[0];
-	CAP_LETTER(c);
-    } else {
-	if (list_servers)
-	    c = 'S';
-	else if (auto_shutdown)
-	    c = 'D';
-	else
-	    c = 'J';
-    }
-
-    contact = true;
-    switch (c) {
+    for (;;) {
 
 	/*
-	 * Owner only commands:
+	 * Now, what do you want from the server?
 	 */
-    case 'K':	{
-	kick_player_pack_t	*p = &req.command;
+	if (!auto_connect) {
+	    printf("*** Server on %s. Enter command> ", server_name);
 
-	p->type = KICK_PLAYER_pack;
-	printf("Enter name of victim: ");
-	fflush(stdout);
-	gets(p->arg_str);
-    }
-	break;
-
-    case 'M':	{			/* Send a message to server. */
-	message_pack_t	*p = &req.command;
-
-	p->type = MESSAGE_pack;
-	printf("Enter message: ");
-	fflush(stdout);
-	gets(p->arg_str);
-    }
-	break;
-
-	/*
-	 * Public commands:
-	 */
-    case 'N':				/* Next server. */
-	return (false);
-	break;
-
-    case 'S':	{			/* Report status. */
-	report_status_pack_t	*p = &req.command;
-
-	p->type = REPORT_STATUS_pack;
-    }
-	break;
-
-    case 'D':	{
-	shutdown_pack_t		*p = &req.command;
-
-	p->type = SHUTDOWN_pack;
-	if (!auto_shutdown) {
-	    printf("Enter delay: ");
-	    gets(p->arg_str);
-	    /*
-	     * No argument = cancel shutdown = arg_int=0
-	     */
-	    if (sscanf(p->arg_str, "%d", &p->arg_int) <= 0) {
-		p->arg_int = 0;
-	    } else
-		if (p->arg_int <= 0)
-		    p->arg_int = 1;
-
-	    printf("Enter reason: ");
-	    gets(p->arg_str);
+	    gets(str);
+	    c = str[0];
+	    CAP_LETTER(c);
 	} else {
-	    strcpy(p->arg_str, shutdown_reason);
-	    p->arg_int = 600;
+	    if (list_servers)
+		c = 'S';
+	    else if (auto_shutdown)
+		c = 'D';
+	    else
+		c = 'J';
 	}
-	p->arg_int = htonl(p->arg_int);		/* Big/little endian */
-    }
-	break;
 
-    case 'Q':
-	exit (0);
-	break;
+	Sockbuf_clear(ibuf);
+	Packet_printf(ibuf, "%lu%s%hu", VERSION2MAGIC(server_version),
+		      real_name, GetPortNum(ibuf->sock));
 
-    case 'L':	{
-	lock_game_pack_t	*p = &req.command;
+	switch (c) {
 
-	p->type = LOCK_GAME_pack;
-    }
-	break;
+	    /*
+	     * Owner only commands:
+	     */
+	case 'K':
+	    printf("Enter name of victim: ");
+	    fflush(stdout);
+	    gets(str);
+	    str[MAX_NAME_LEN - 1] = '\0';
+	    Packet_printf(ibuf, "%c%s", KICK_PLAYER_pack, str);
+	    break;
 
-    case '\0':
-    case 'J':	{			/* Trying to enter game. */
-	enter_game_pack_t	*p = &req.enter;
+	case 'M':				/* Send a message to server. */
+	    printf("Enter message: ");
+	    fflush(stdout);
+	    gets(str);
+	    str[MAX_CHARS - 1] = '\0';
+	    Packet_printf(ibuf, "%c%s", MESSAGE_pack, str);
+	    break;
 
-	p->type = ENTER_GAME_pack;
-	strcpy(p->nick, name);
-	strcpy(p->display, display);
-	p->team = htons(team);
-    }
-	break;
+	    /*
+	     * Public commands:
+	     */
+	case 'N':				/* Next server. */
+	    return (false);
+	    break;
 
-    case '?':
-    case 'H':				/* Help. */
-    default:
-        printf("CLIENT VERSION...: %s\n", TITLE);
-        printf("Supported commands are:\n"
-               "H/?  -   Help - this text.\n"
-               "N    -   Next server, skip this one.\n"
-               "S    -   list Status.\n"
-               "Q    -   Quit.\n"
-               "K    -   Kick a player.               (only owner)\n"
-               "M    -   send a Message.              (only owner)\n"
-               "L    -   Lock/unLock server access.   (only owner)\n"
-               "D(*) -   shutDown/cancel shutDown.    (only owner)\n"
-               "J or just Return enters the game.\n"
-               "* If you don't specify any delay, you will signal that\n"
-	       "  the server should stop an ongoing shutdown.\n");
-        goto again;
-        break;
-    }
+	case 'S':				/* Report status. */
+	    Packet_printf(ibuf, "%c", REPORT_STATUS_pack);
+	    break;
 
- retry:
-    /*
-     * Do you want to contact the server, or carry on?
-     */
-    if (contact) {
-	if (DgramSend(socket_i, server_host, server_port,
-		      (char *)&req, sizeof(reply_pack_t)) == -1) {
-	    error("Couldn't send request to server (DgramSend)");
+	case 'D':				/* Shutdown */
+	    if (!auto_shutdown) {
+		printf("Enter delay in seconds or return for cancel: ");
+		gets(str);
+		/*
+		 * No argument = cancel shutdown = arg_int=0
+		 */
+		if (sscanf(str, "%d", &delay) <= 0) {
+		    delay = 0;
+		} else
+		    if (delay <= 0)
+			delay = 1;
+
+		printf("Enter reason: ");
+		gets(str);
+	    } else {
+		strcpy(str, shutdown_reason);
+		delay = 60;
+	    }
+	    str[MAX_CHARS - 1] = '\0';
+	    Packet_printf(ibuf, "%c%d%s", SHUTDOWN_pack, delay, str);
+	    break;
+
+	case 'Q':
+	    exit (0);
+	    break;
+
+	case 'L':				/* Lock the game. */
+	    Packet_printf(ibuf, "%c", LOCK_GAME_pack);
+	    break;
+
+	case '\0':
+	case 'J':				/* Trying to enter game. */
+	    Packet_printf(ibuf, "%c%s%s%d", ENTER_GAME_pack,
+			  nick_name, display, team);
+	    break;
+
+	case '?':
+	case 'H':				/* Help. */
+	default:
+	    printf("CLIENT VERSION...: %s\n", TITLE);
+	    printf("Supported commands are:\n"
+		   "H/?  -   Help - this text.\n"
+		   "N    -   Next server, skip this one.\n"
+		   "S    -   list Status.\n"
+		   "Q    -   Quit.\n"
+		   "K    -   Kick a player.               (only owner)\n"
+		   "M    -   send a Message.              (only owner)\n"
+		   "L    -   Lock/unLock server access.   (only owner)\n"
+		   "D(*) -   shutDown/cancel shutDown.    (only owner)\n"
+		   "J or just Return enters the game.\n"
+		   "* If you don't specify any delay, you will signal that\n"
+		   "  the server should stop an ongoing shutdown.\n");
+
+	    /*
+	     * Next command.
+	     */
+	    continue;
+	}
+
+	if (write(ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
+	    error("Couldn't send request to server (write)", ibuf->len);
 	    exit(-1);
 	}
 
 	/*
 	 * Get reply message.  If we failed, return false (next server).
 	 */
-	if ((len = Get_reply_message(&reply)) < sizeof(core_pack_t)) {
-	    error("No answer from server (packet length %d)", len);
+	if (Get_reply_message(ibuf) <= 0) {
+	    errno = 0;
+	    error("No answer from server");
 	    return (false);
 	}
-
-	/*
-	 * Did the reply include a string?
-	 */
-	if (len > sizeof(core_pack_t) && (!auto_connect || list_servers)) {
-	    if (list_servers)
-		printf("SERVER HOST......: %s\n", server_host);
-	    printf("%s", reply.str);
+	if (Packet_scanf(ibuf, "%c%c", &reply_to, &status) <= 0) {
+	    errno = 0;
+	    error("Incomplete reply from server");
+	    return (false);
 	}
 
 	/*
 	 * Now try and interpret the result.
 	 */
 	errno = 0;
-	switch (reply.status) {
+	switch (status) {
 
 	case SUCCESS:
 	    /*
 	     * Oh glorious success.
 	     */
-	    switch (req.core.type) {
+	    switch (reply_to) {
+	    case REPORT_STATUS_pack:
+		/*
+		 * Did the reply include a string?
+		 */
+		if (ibuf->len > ibuf->ptr - ibuf->buf
+		    && (!auto_connect || list_servers)) {
+		    if (list_servers)
+			printf("SERVER HOST......: %s\n", server_host);
+		    if (*ibuf->ptr != '\0') {
+			if (ibuf->len < ibuf->size) {
+			    ibuf->buf[ibuf->len] = '\0';
+			} else {
+			    ibuf->buf[ibuf->size - 1] = '\0';
+			}
+			printf("%s", ibuf->ptr);
+			if (ibuf->ptr[strlen(ibuf->ptr) - 1] != '\n') {
+			    printf("\n");
+			}
+		    }
+		}
+		break;
+
 	    case SHUTDOWN_pack:
-		if (ntohl(req.command.arg_int) == 0)
+		if (delay == 0) {
 		    puts("*** Shutdown stopped.");
-		else
+		} else {
 		    puts("*** Shutdown initiated.");
+		}
 		break;
+
 	    case ENTER_GAME_pack:
-		puts("*** You have entered the game.");
+		if (Packet_scanf(ibuf, "%hu", &port) <= 0) {
+		    errno = 0;
+		    error("Incomplete login reply from server");
+		    login_port = -1;
+		} else {
+		    login_port = port;
+		    printf("*** Login allowed\n");
+		}
 		break;
+
 	    default:
 		puts("*** Operation successful.");
 		break;
 	    }
-	    break;
-
-	case E_DISPLAY:
-#ifdef	XHOST
-	    /*
-	     * Now this is something we might fix.  The server couldn't open
-	     * the display, maybe we should try "xhost +server" and then
-	     * "xhost -server" when we're finished?
-	     */
-	    if (xhost_is_done) {
-		error("Couldn't open display");
-		exit (-1);
-	    }
-
-	    sprintf(str, XHOST_OPEN, server_host);
-	    system(str);
-	    xhost_is_done = true;
-	    goto retry;
-#else
-	    error("This version does not automatically use xhost "
-		  "to allow the server to connect\n"
-		  "to your display, you will have to do it manually"
-		  "if you want to join the game.");
-#endif
 	    break;
 
 	case E_NOT_OWNER:
@@ -407,7 +431,7 @@ bool Connect_to_server(void)
 	    error("Sorry, game full");
 	    break;
 	case E_TEAM_FULL:
-	    error("Sorry, team full");
+	    error("Sorry, team %d is full", team);
 	    break;
 	case E_TEAM_NOT_SET:
 	    error("Sorry, team play selected "
@@ -425,8 +449,17 @@ bool Connect_to_server(void)
 	case E_IN_USE:
 	    error("Your nick is already used");
 	    break;
+	case E_SOCKET:
+	    error("Server can't setup socket");
+	    break;
+	case E_INVAL:
+	    error("Invalid input parameters says the server (?)");
+	    break;
+	case E_VERSION:
+	    error("We have an incompatible version says the server");
+	    break;
 	default:
-	    error("Wrong status '%d'", reply.status);
+	    error("Wrong status '%d'", status);
 	    break;
 	}
 
@@ -436,36 +469,64 @@ bool Connect_to_server(void)
 	if (auto_shutdown)	/* Do the same if we've sent a -shutdown */
 	    return (false);
 
-#ifdef	XHOST
-	if (xhost_is_done) {
-	    sprintf(str, XHOST_CLOSE, server_host);
-	    system(str);
-	    xhost_is_done = false;
-	}
-#endif
-
 	/*
 	 * If we wanted to enter the game and we were allowed to, return true
 	 * (we are done).  If we weren't allowed, either return false (get next
 	 * server) if we are auto_connecting or get next command if we aren't
 	 * auto_connecting (interactive).
 	 */
-	if (core->type == ENTER_GAME_pack) {
-	    if (core->status == SUCCESS) {
+	if (reply_to == ENTER_GAME_pack) {
+	    if (status == SUCCESS && login_port > 0) {
 		return (true);
 	    } else {
 		if (auto_connect)
 		    return (false);
 	    }
 	}
+
+	/*
+	 * Get next command.
+	 */
     }
 
-    /*
-     * Get next command.
-     */
-    goto again;
+    /*NOTREACHED*/
 }
 
+
+
+/*
+ * Setup a socket and a buffer for client-server messages.
+ * We do this again for each server to prevent getting
+ * old messages from past servers.
+ */
+static bool Connect_to_server(void)
+{
+    int			socket_i;		/* Info socket */
+    sockbuf_t		ibuf;			/* info buffer */
+    bool		result;
+
+    if ((socket_i = CreateDgramSocket(0)) == -1) {
+	error("Could not create info socket");
+	exit(-1);
+    }
+    if (DgramConnect(socket_i, server_host, server_port) == -1) {
+	error("Can't connect to server %s on port %d\n",
+	      server_host, server_port);
+	SocketClose(socket_i);
+	return (false);
+    }
+    if (Sockbuf_init(&ibuf, socket_i, CLIENT_RECV_SIZE,
+		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+	error("No memory for info buffer");
+	SocketClose(socket_i);
+	exit(-1);
+    }
+    result = Process_commands(&ibuf);
+    SocketClose(socket_i);
+    Sockbuf_cleanup(&ibuf);
+
+    return result;
+}
 
 
 
@@ -474,116 +535,67 @@ bool Connect_to_server(void)
  */
 int main(int argc, char *argv[])
 {
-    char		machine[MAX_LINE], *disp;
+    char		*disp;
     int			i;
     struct passwd	*pwent;
     bool		connected = false;
 #ifdef	LIMIT_ACCESS
     extern bool		Is_allowed(char *);
 #endif
+    void Parse_options(int *argcp, char **argvp, char *realName, char *host,
+		       int *port, int *my_team, int *list, int *join,
+		       char *nickName, char *dispName, char *shut_msg);
 
+
+    Argc = argc;
+    Argv = argv;
 
     /*
      * --- Miscellaneous initialization ---
      */
-    initaddr();
     init_error(argv[0]);
-
-    if ((socket_i = CreateDgramSocket(0)) == -1) {
-	error("Could not create info socket");
-	exit(-1);
-    }
+    contact_port = SERVER_PORT;
+    initaddr();
 
     if ((socket_c = CreateDgramSocket(0)) == -1) {
 	error("Could not create connection socket");
 	SocketClose(socket_c);
 	exit(-1);
     }
-
-    machine[0] = name[0] = '\0';
-    if (!(disp = getenv("DISPLAY")))
-    {
-	fprintf(stderr, "DISPLAY environment variable not set\n");
+    if (Sockbuf_init(&sbuf, socket_c, CLIENT_RECV_SIZE,
+		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+	error("No memory for contact buffer");
+	SocketClose(socket_c);
 	exit(-1);
     }
-    strcpy(display, disp);
 
     /*
      * --- Setup core of pack ---
      */
-    core->magic = htonl(MAGIC);
-    core->type = CONTACT_pack;
-    pwent = getpwuid(geteuid()); strcpy(core->realname, pwent->pw_name);
-    core->port = htonl(GetPortNum(socket_c));
-    core->status = SUCCESS;
+    if ((pwent = getpwuid(geteuid())) == NULL) {
+	error("Can't get user info for user id %d", geteuid());
+	exit(1);
+    }
+    strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
+    nick_name[0] = '\0';
+    Sockbuf_clear(&sbuf);
+    Packet_printf(&sbuf, "%lu%s%hu%c", MAGIC,
+		  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
 
 
     /*
      * --- Check commandline arguments ---
      */
-    for(i=1; i<argc; i++) {
-	if (strncmp(argv[i], "-help", 2) == 0) {
-	    printf("Usage:	%s [-options ..] [server]\n\n"
-		   "Where options include:\n"
-		   "	-help			print out this message\n"
-		   "	-version		print out current version\n"
-		   "	-name <nick>		specifies a nick name\n"
-		   "	-team <number>		specifies team number\n"
-		   "	-join			enables auto join mode\n"
-		   "	-list			lists all accessible servers\n"
-		   "	-shutdown [msg]		shuts down the server\n"
-		   "	-display		which X server to contact\n"
-		   "	server			which game server to contact\n"
-		   "\nIf no server is specified, the command will affect all "
-		   "servers.\n", argv[0]);
-	    exit(0);
-	}
-	if (strncmp(argv[i], "-version", 2) == 0) {
-	    puts(TITLE);
-	    exit(0);
-	}
-	if (strcmp(argv[i], "-name") == 0) {
-	    strcpy(name, argv[++i]);
-	    continue;
-	}
-	if (strcmp(argv[i], "-join") == 0) {
-	    auto_connect = true;
-	    continue;
-	}
-	if (strcmp(argv[i], "-team") == 0) {
-	    team = atoi(argv[++i]);
-	    if (team > 9) {
-		error("Invalid team number %d", team);
-		team = TEAM_NOT_SET;
-	    } else if (team < 0) {
-		error("Invalid team number %d", team);
-		team = TEAM_NOT_SET;
-	    }
-	    continue;
-	}
-	if (strcmp(argv[i], "-list") == 0) {
-	    list_servers = true;
-	    auto_connect = true;
-	    continue;
-	}
-	if (strcmp(argv[i], "-display") == 0) {
-	    strcpy(display, argv[++i]);
-	    continue;
-	}
-	if (strcmp(argv[i], "-shutdown") == 0) {
-	    auto_shutdown = true;
-	    auto_connect = true;
-	    if (argc > i+1)
-		strcpy(shutdown_reason, argv[++i]);
-	    else
-		strcpy(shutdown_reason, "Unknown reason.");
-	    continue;
-	}
+    Parse_options(&argc, argv, real_name, hostname,
+		  &contact_port, &team, &list_servers, &auto_connect,
+		  nick_name, display, shutdown_reason);
 
-	if (argv[i][0] == '-') {
-	    error("Unkown option '%s'", argv[i]);
-	} else
-	    strcpy(server_host, argv[i]);
+    if (list_servers) {
+	auto_connect = true;
+    }
+    if (shutdown_reason[0] != '\0') {
+	auto_shutdown = true;
+	auto_connect = true;
     }
 
     /*
@@ -594,17 +606,6 @@ int main(int argc, char *argv[])
     if (list_servers)
 	printf("LISTING AVAILABLE SERVERS:\n");
 
-    /*
-     * --- Correct the display --- May need modification
-     */
-    if (display[0] == '\0'
-	|| strstr(display, "unix:0") != NULL
-	|| strstr(display, "local:0") != NULL
-	|| strcmp(display, ":0.0") == 0
-	|| strcmp(display, ":0") == 0)
-	sprintf(display, "%s:0", hostname);
-
-
 #ifdef	LIMIT_ACCESS
     /*
      * If sysadm's have complained alot, check for free machines before
@@ -614,21 +615,31 @@ int main(int argc, char *argv[])
 	exit (-1);
 #endif
 
+    if (argc > 1) {
+	strncpy(server_host, argv[1], sizeof server_host - 1);
+    }
+
     /*
      * --- Try to contact server ---
      */
     if (server_host[0] != '\0') {	/* Server specified on command line? */
-	DgramSend(socket_c, server_host, SERVER_PORT,
-		  (char *)&req, sizeof(contact_pack_t));
+	if (DgramSend(sbuf.sock, server_host, contact_port,
+		      sbuf.buf, sbuf.len) == -1) {
+	    error("Can't send contact request");
+	    exit(1);
+	}
 
 	if (Get_contact_message())
 	    connected = Connect_to_server();
 
-    } else {				/* Search after servers... */
+    } else {				/* Search for servers... */
+#ifdef LINUX
+	printf("If you have LINUX defined during compilation than\n"
+	       "you need to specify which host to connect to.\n");
+#else
 	SetTimeout(10, 0);
-	if (Query_all(socket_c, SERVER_PORT,
-		  (char *)&req, sizeof(contact_pack_t)) == -1) {
-	    error("Couldn't send query packets");
+	if (Query_all(sbuf.sock, contact_port, sbuf.buf, sbuf.len) == -1) {
+	    error("Couldn't send contact requests");
 	    exit(1);
 	}
 	D( printf("\n"); );
@@ -637,9 +648,18 @@ int main(int argc, char *argv[])
 	 * Wait for answer.
 	 */
 	while (Get_contact_message()) {
-	    if (connected = Connect_to_server())
+	    if ((connected = Connect_to_server()) != 0) {
 		break;
+	    }
 	}
+#endif
+    }
+
+    close(socket_c);
+    Sockbuf_cleanup(&sbuf);
+    if (connected) {
+	Join(server_host, login_port, real_name, nick_name, display,
+	     server_version);
     }
 
     exit(connected==true ? 0 : -1);
@@ -647,9 +667,10 @@ int main(int argc, char *argv[])
 
 
 
+#ifndef LINUX
 /*
  * Code which uses 'real' broadcasting to find server.  Provided by
- * Bert Gijsbers.  Thanks alot!
+ * Bert Gÿsbers.  Thanks alot!
  */
 
 #ifndef MAX_INTERFACE
@@ -660,7 +681,7 @@ int main(int argc, char *argv[])
 /*
  * Enable broadcasting on a (datagram) socket.
  */
-int Enable_broadcast(int sockfd)
+static int Enable_broadcast(int sockfd)
 {
     int         flag = 1;	/* Turn it ON */
 
@@ -678,7 +699,7 @@ int Enable_broadcast(int sockfd)
  * bits in the host part of the subnet mask.
  * Subnets with irregular subnet bits are properly handled (I hope).
  */
-int Query_subnet(int sockfd,
+static int Query_subnet(int sockfd,
 		 struct sockaddr_in *host_addr,
 		 struct sockaddr_in *mask_addr,
 		 char *msg,
@@ -751,7 +772,7 @@ int Query_subnet(int sockfd,
  * on one of the other interfaces in order to reduce the chance that
  * we get multiple responses from the same server.
  */
-int Query_all(int sockfd, int port, char *msg, int msglen)
+static int Query_all(int sockfd, int port, char *msg, int msglen)
 {
     int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
     struct sockaddr_in	addr, mask, loopback;
@@ -942,3 +963,4 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
 
     return count;
 }
+#endif

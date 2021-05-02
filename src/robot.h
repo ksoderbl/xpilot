@@ -1,11 +1,15 @@
-/* robot.h,v 1.3 1992/06/28 05:38:28 bjoerns Exp
+/* $Id: robot.h,v 3.3 1993/06/28 20:54:12 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
+ *
+ *      Thanks to Maurice Abraham for this piece of code.
+ *      Note that some modifications have been done.
  */
 
 #define	NORMAL_ROBOT_SPEED	3.0

@@ -1,20 +1,27 @@
 /*
  * Name: mapmapper
- * Author: Bert Gijsbers (bert@mc.bio.uva.nl)
+ * Author: Bert Gÿsbers (bert@mc.bio.uva.nl)
  * Date: 28 March 93
- * Version: 1.0
+ * Version: 1.2
  * Description: Maps the Xpilot 1.2 maps to Xpilot 2.0 format.
  * Usage: mapmapper [ -f ] [ 1.2-map [ 2.0-map ] ]
  * If the output filename or the input filename is missing,
  * then standard output and/or standard input are used.
  * Options: -f: don't ask silly questions if the output file already exists.
+ *
+ * Changes:
+ * Added more informative messages for lines which don't have enough map data.
+ *
+ * 1.2 added conversion for In and Out wormholes, previously only normal
+ * wormholes were handled.  Pointed out by Tomas Kristensen (tk@iesd.auc.dk)
+ * Blasters are now converted to filled blocks instead of spaces.
  */
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: mapmapper.c,v 1.1 1993/03/28 17:52:15 bjoerns Exp $";
+    "@(#)$Id: mapmapper.c,v 3.2 1993/06/28 20:54:53 bjoerns Exp $";
 static char versionid[] =
-    "@(#)Version 1.0";
+    "@(#)Version 1.2";
 #endif
 
 #include <unistd.h>
@@ -122,6 +129,10 @@ static void read_old_map (FILE *fp, struct map *map)
     {
 	if (c == '\n')
 	{
+	    if (x < map->x)
+	    {
+		fprintf (stderr, "Not enough data on map data line %d\n", y + 1);
+	    }
 	    if (++y >= map->y)
 	    {
 		break;
@@ -136,6 +147,15 @@ static void read_old_map (FILE *fp, struct map *map)
     }
     if (i != map->x * map->y)
     {
+	if (x < map->x && y < map->y)
+	{
+	    fprintf (stderr, "Not enough data on map data line %d\n", y);
+	}
+	if (y + (x >= map->x) < map->y)
+	{
+	    fprintf (stderr, "Could read only %d whole lines of map data\n",
+		y + (x >= map->x));
+	}
 	fprintf (stderr, "Can't read all map data\n");
 	exit (1);
     }
@@ -161,6 +181,9 @@ static void convert_map_data (struct map *map)
 	{'>', '>'},
 	{'<', '<'},
 	{'W', '@'},
+	{'I', '('},
+	{'O', ')'},
+	{'@', 'x'},
 	{'0', 'A'},
 	{'1', 'B'},
 	{'2', 'C'},

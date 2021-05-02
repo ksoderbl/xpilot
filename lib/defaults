@@ -1,18 +1,19 @@
 # Set maximum density of any given item type to 1 every 12000 blocks.
 # For instance, no more than 3 items may exist in Continent (the default map).
-maxItemDensity:		0.00012
+maxItemDensity:         3.46021e-04
 
 # Set probability of for each item to appear at a tick in a block
-itemAfterBurnerProb:	0.0000000009
-itemRearshotProb:	0.000000004
-itemSensorProb:		0.000000001
-itemTankProb:		0.0000000008
-itemMineProb:		0.000000002
-itemMissileProb:	0.000000003
-itemEnergyPackProb:	0.0000000002
-itemCloakProb:		0.0000000006
-itemECMProb:		0.000000001
-itemWideangleProb:	0.000000005
+itemEnergyPackProb:     4.01323e-09
+itemTankProb:           2.40292e-09
+itemECMProb:            1.92426e-09
+itemMineProb:           6.40779e-09
+itemMissileProb:        1.92426e-09
+itemCloakProb:          1.60596e-09
+itemSensorProb:         1.60596e-09
+itemWideangleProb:      2.70371e-09
+itemRearshotProb:       2.94386e-09
+itemAfterburnerProb:    2.74620e-09
+itemTransporterProb:    1.60596e-09
 
 # No moving items please
 movingItemProb:		0.0

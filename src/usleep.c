@@ -18,7 +18,7 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 1.1 1993/03/09 14:32:00 kenrsc Exp $";
+    "@(#)$Id: usleep.c,v 3.1 1993/08/02 12:55:41 bjoerns Exp $";
 #endif
 
 
@@ -35,17 +35,4 @@ usleep(usec)
     (void) select(0, (void *) 0, (void *) 0, (void *) 0, &timeout);
 /*#endif*/
     return 0;
-}
-
-/*
- * returns the number of seconds since 01-Jan-70.
- * This is used to control rate and timeout in many of the animations.
- */
-long
-seconds()
-{
-    struct timeval now;
-
-    (void) gettimeofday(&now, (struct timezone *) 0);
-    return now.tv_sec;
 }

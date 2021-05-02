@@ -1,9 +1,10 @@
-/* $Id: player.c,v 1.19 1993/04/16 12:22:53 bjoerns Exp $
+/* $Id: player.c,v 3.10 1993/06/30 15:43:10 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -13,10 +14,11 @@
 #include "map.h"
 #include "score.h"
 #include "robot.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 1.19 1993/04/16 12:22:53 bjoerns Exp $";
+    "@(#)$Id: player.c,v 3.10 1993/06/30 15:43:10 bjoerns Exp $";
 #endif
 
 
@@ -31,6 +33,7 @@ bool	updateScores = true;
 
 void Pick_startpos(int ind)
 {
+    player	*pl = Players[ind];
     int		i, num_free, pick, seen;
     static int	prev_num_bases = 0;
     static char	*free_bases = NULL;
@@ -48,7 +51,7 @@ void Pick_startpos(int ind)
     }
     num_free = 0;
     for (i = 0; i < World.NumBases; i++) {
-	if (World.base[i].team == Players[ind]->team) {
+	if (World.base[i].team == pl->team) {
 	    num_free++;
 	    free_bases[i] = 1;
 	} else {
@@ -68,7 +71,22 @@ void Pick_startpos(int ind)
 	    if (seen < pick) {
 		seen++;
 	    } else {
-		Players[ind]->home_base = i;
+		pl->home_base = i;
+		if (ind < NumPlayers) {
+		    for (i = 0; i < NumPlayers; i++) {
+			if (Players[i]->conn != NOT_CONNECTED) {
+			    Send_base(Players[i]->conn,
+				      pl->id, 
+				      pl->home_base);
+			}
+		    }
+		    if (BIT(pl->status, PLAYING) == 0) {
+			pl->count = RECOVERY_DELAY;
+		    }
+		    else if (BIT(pl->status, PAUSE)) {
+			Go_home(ind);
+		    }
+		}
 		return;
 	    }
 	}
@@ -97,7 +115,18 @@ void Go_home(int ind)
     pl->prevpos = pl->pos;
     pl->acc.x = pl->acc.y = 0.0;
     pl->vel.x = pl->vel.y = pl->velocity = 0.0;
-
+    pl->turnacc = pl->turnvel = 0.0;
+    memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
+    memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
+    pl->key_changed = 0;
+    CLR_BIT(pl->used, OBJ_CONNECTOR | OBJ_REFUEL);
+    if (playerStartsShielded != 0) {
+	SET_BIT(pl->used, OBJ_SHIELD);
+	if (playerShielding == 0) {
+	    pl->shield_time = 2 * FPS;
+	    SET_BIT(pl->have, OBJ_SHIELD);
+	}
+    }
     CLR_BIT(pl->status, THRUSTING);
 
     if (pl->robot_mode != RM_NOT_ROBOT)
@@ -115,19 +144,28 @@ void Init_player(int ind)
     pl->world.x = pl->world.y	= 0.0;
     pl->vel.x	= pl->vel.y	= 0.0;
     pl->acc.x	= pl->acc.y	= 0.0;
-    pl->dir	= pl->float_dir= DIR_UP;
+    pl->dir	= pl->float_dir = DIR_UP;
     pl->turnvel		= 0.0;
 #ifdef	TURN_FUEL
     pl->oldturnvel	= 0.0;
 #endif
     pl->turnacc		= 0.0;
-    pl->fuel.num_tanks   = 0;
+    pl->fuel.num_tanks  = 0;
     pl->fuel.current    = 0;
     pl->fuel.sum        =
     pl->fuel.tank[0]    = ( DEFAULT_PLAYER_FUEL
 			   + (((rand()%400)-200) << FUEL_SCALE_BITS) );
     pl->fuel.max        = TANK_CAP(0);
-    pl->after_burners   = 0;
+    pl->afterburners   = 0;
+    pl->transporters    = 0;
+    pl->transInfo.count	= 0;
+
+    pl->power			= 45.0;
+    pl->turnspeed		= 30.0;
+    pl->turnresistance		= 0.12;
+    pl->power_s			= 35.0;
+    pl->turnspeed_s		= 25.0;
+    pl->turnresistance_s	= 0.12;
 
     if (BIT(World.rules->mode, TIMING)) {
 	pl->power	= MAX_PLAYER_POWER;
@@ -144,13 +182,13 @@ void Init_player(int ind)
     pl->best_run	= 0;
     pl->best_lap	= 0;
     pl->count		= -1;
-    pl->control_count	= 0;
     pl->fuel.count	= 0;
+    pl->shield_time	= 0;
 
     pl->type		= OBJ_PLAYER;
     pl->shots		= 0;
     pl->extra_shots	= 0;
-    pl->rear_shots	= 0;
+    pl->back_shots	= 0;
     pl->missiles	= 0;
     pl->mines		= 0;
     pl->cloaks		= 0;
@@ -163,16 +201,13 @@ void Init_player(int ind)
     pl->shot_max	= ShotsMax;
     pl->shot_life	= ShotsLife;
     pl->shot_mass	= ShotsMass;
+    pl->color		= WHITE;
     pl->score		= 0;
     pl->fs		= 0;
     pl->name[0]		= '\0';
     pl->ecms 		= 0;
     pl->ecmInfo.size	= 0;
     pl->damaged 	= 0;
-
-    pl->info_press	= false;
-    pl->help_press	= false;
-    pl->help_page	= 0;
 
     pl->mode		= World.rules->mode;
     pl->status		= PLAYING | GRAVITY | DEF_BITS;
@@ -219,6 +254,8 @@ void Init_player(int ind)
     pl->id		= Id;
     GetInd[Id]		= ind;
     pl->rplay_fd	= -1;
+    pl->conn		= NOT_CONNECTED;
+    pl->audio		= NULL;
 }
 
 
@@ -263,65 +300,25 @@ void Free_players(void)
 
 void Update_score_table(void)
 {
-    int i, j, hi_ind;
-    float hi, hi_tmp;
-    player *pl, *tmp;
+    int			i, j;
+    player		*pl, *tmp;
 
-
-    /*
-     * Sorts players after score. (selection sort)
-     */
-    for (i=0; i<NumPlayers; i++) {
-
-	hi = (tmp=Players[i])->score;
-	hi_ind = i;
-	for (j=i+1; j<NumPlayers; j++)
-	    if ((pl=Players[j])->score > hi) {
-		tmp = Players[hi_ind = j];
-		hi = pl->score;
-            }
-	if (hi_ind != i) {
-	    tmp = Players[hi_ind];
-	    Players[hi_ind] = Players[i];
-	    Players[i] = tmp;
-	    GetInd[Players[i]->id] = i;
-	    GetInd[Players[hi_ind]->id] = hi_ind;
-	}
-    }
-
-    /*
-     * Get the person with the best kill-ratio (i.e. score/number of deaths.)
-     */
-    hi = (float)Players[0]->score / (Players[0]->life+1);
-    hi_ind = 0;
-    for (i=1; i<NumPlayers; i++)
-	if ((hi_tmp=(float)Players[i]->score/(Players[i]->life+1))>hi) {
-	    hi = hi_tmp;
-	    hi_ind = i;
-	}
-
-    /*
-     * Re-formats the labels.
-     */
-    for (i=0; i<NumPlayers; i++) {
-	char name[100];
-
+    for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
-
-	if (pl->robot_mode != RM_NOT_ROBOT
-	    && pl->robot_lock == LOCK_PLAYER) {
-	    sprintf(name, "%s (%s)", pl->name,
-		    Players[GetInd[pl->robot_lock_id]]->name);
-	} else
-	    sprintf(name, "%s", pl->name);
-
-	sprintf(pl->lblstr, "%c%c %-19s%03d%6d",
-		(hi_ind == i) ? '*' : pl->mychar,
-		(pl->team == TEAM_NOT_SET) ? ' ' : pl->team+'0',
-		name, pl->life, pl->score);
+	if (pl->conn == NOT_CONNECTED) {
+	    continue;
+	}
+	for (j = 0; j < NumPlayers; j++) {
+	    tmp = Players[j];
+	    if (tmp->score != tmp->prev_score ||
+		tmp->life != tmp->prev_life) {
+		if (Send_score(pl->conn, tmp->id,
+		    tmp->score, tmp->life) == -1) {
+		    break;
+		}
+	    }
+	}
     }
-
-    Draw_score_table();
     updateScores = false;
 }
 
@@ -414,7 +411,7 @@ void Compute_game_status(void)
 		ind = i; 	/* Tag player that's alive */
 	    }
 
-	if (num_players == 1) {
+	if (num_players == 1 && NumPlayers > 1) {
 	    sprintf(msg, "%s has won the game !", Players[ind]->name);
 	    Set_message(msg);
 	    /* Start up all player's again */
@@ -441,6 +438,9 @@ void Delete_player(int ind)
 	if (Obj[i]->id == id)
 	    Delete_shot(i);
 
+#ifdef SOUND
+    sound_close(pl);
+#endif /* SOUND */
     NumPlayers--;
     
     if (pl->team != TEAM_NOT_SET)
@@ -458,9 +458,21 @@ void Delete_player(int ind)
 
     GetInd[Players[ind]->id] = ind;
 
-    for (i=0; i<NumPlayers; i++)
+    for (i=0; i<NumPlayers; i++) {
 	if ((Players[i]->lock.pl_id == id) || NumPlayers <= 1)
 	    Players[i]->lock.tagged = LOCK_NONE;
+	if (Players[i]->robot_mode != RM_NOT_ROBOT
+	    && Players[i]->robot_lock == LOCK_PLAYER
+	    && Players[i]->robot_lock_id == id) {
+	    Players[i]->robot_lock = LOCK_NONE;
+	}
+    }
+
+    for (i = 0; i < NumPlayers; i++) {
+	if (Players[i]->conn != NOT_CONNECTED) {
+	    Send_leave(Players[i]->conn, id);
+	}
+    }
 }
 
 
@@ -475,11 +487,11 @@ void Kill_player(int ind)
     pl			= Players[ind];
     pl->vel.x		= pl->vel.y	= 0.0;
     pl->acc.x		= pl->acc.y	= 0.0;
-    pl->mass		= ShipMass;
+    pl->emptymass	= pl->mass	= ShipMass;
     pl->status		|= WAITING_SHOTS | DEF_BITS;
     pl->status		&= ~(KILL_BITS);
     pl->extra_shots	= 0;
-    pl->rear_shots	= 0;
+    pl->back_shots	= 0;
     pl->missiles	= 0;
     pl->mines		= 0;
     pl->cloaks		= 0;
@@ -495,6 +507,7 @@ void Kill_player(int ind)
     pl->ecms 		= 0;
     pl->ecmInfo.size	= 0;
     pl->damaged 	= 0;
+    pl->lock.distance	= 0;
 
     pl->fuel.current    = 0;
     pl->fuel.num_tanks	= 0;
@@ -504,7 +517,9 @@ void Kill_player(int ind)
     pl->fuel.tank[0]    =
     pl->fuel.sum        = MAX(pl->fuel.sum,
                               MIN_PLAYER_FUEL+(rand()%(int)MIN_PLAYER_FUEL)/5);
-    pl->after_burners	= 0;
+    pl->afterburners	= 0;
+    pl->transporters    = 0;
+    pl->transInfo.count	= 0;
 
     if (BIT(World.rules->mode, TIMING))
 	pl->fuel.sum = pl->fuel.tank[0] = RACE_PLAYER_FUEL;
@@ -531,4 +546,3 @@ void Kill_player(int ind)
     pl->used	&= ~(USED_KILL);
     pl->used	&= pl->have;
 }
-

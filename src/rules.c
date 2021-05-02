@@ -1,9 +1,10 @@
-/* $Id: rules.c,v 1.11 1993/04/18 17:11:04 bjoerns Exp $
+/* $Id: rules.c,v 3.5 1993/08/02 12:55:33 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -11,22 +12,23 @@
 #include "global.h"
 #include "map.h"
 #include "rules.h"
+#include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 1.11 1993/04/18 17:11:04 bjoerns Exp $";
+    "@(#)$Id: rules.c,v 3.5 1993/08/02 12:55:33 bjoerns Exp $";
 #endif
 
 
 long	KILLING_SHOTS =
           (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
 	   |OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_NUKE);
-long	DEF_BITS = (ID_MODE|VELOCITY_GAUGE|FUEL_GAUGE|POWER_GAUGE);
+long	DEF_BITS = (VELOCITY_GAUGE|FUEL_GAUGE|POWER_GAUGE);
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
 long	DEF_HAVE =
-	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_CONNECTOR);
+	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_CONNECTOR|OBJ_FIRE);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
-long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR);
+long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR|OBJ_FIRE);
 
 
 /*
@@ -88,12 +90,13 @@ void Set_world_rules(void)
     Init_item(ITEM_TANK, itemTankProb);
     Init_item(ITEM_ECM, itemECMProb);
     Init_item(ITEM_MINE_PACK, itemMineProb);
-    Init_item(ITEM_SMART_SHOT_PACK, itemMissileProb);
+    Init_item(ITEM_ROCKET_PACK, itemMissileProb);
     Init_item(ITEM_CLOAKING_DEVICE, itemCloakProb);
     Init_item(ITEM_SENSOR_PACK, itemSensorProb);
     Init_item(ITEM_WIDEANGLE_SHOT, itemWideangleProb);
-    Init_item(ITEM_REAR_SHOT, itemRearshotProb);
-    Init_item(ITEM_AFTER_BURNER, itemAfterburnerProb);
+    Init_item(ITEM_BACK_SHOT, itemRearshotProb);
+    Init_item(ITEM_AFTERBURNER, itemAfterburnerProb);
+    Init_item(ITEM_TRANSPORTER, itemTransporterProb);
     DEF_USED &= DEF_HAVE;
 
     /*

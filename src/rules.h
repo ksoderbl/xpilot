@@ -1,9 +1,10 @@
-/* $Id: rules.h,v 1.2 1993/04/18 17:11:05 bjoerns Exp $
+/* $Id: rules.h,v 3.2 1993/06/28 20:54:16 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */

@@ -1,9 +1,10 @@
-/* $Id: types.h,v 1.1 1993/03/09 14:31:57 kenrsc Exp $
+/* $Id: types.h,v 3.3 1993/08/02 12:55:39 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
@@ -15,6 +16,10 @@
 
 typedef signed char	byte;
 typedef unsigned char	u_byte;
+
+#if (_SEQUENT_)
+typedef unsigned short	u_short;
+#endif
 
 typedef enum {true = 1, false = 0} bool;
 

@@ -1,9 +1,10 @@
-/* $Id: icon.h,v 1.2 1993/04/16 12:22:44 bjoerns Exp $
+/* $Id: icon.h,v 3.2 1993/06/28 20:53:40 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
  *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
  *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
+ *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
  *
  *	Copylefts are explained in the LICENSE file.
  */
