@@ -1,4 +1,4 @@
-/* $Id: paintdata.h,v 4.5 2001/02/19 23:36:41 bert Exp $
+/* $Id: paintdata.h,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

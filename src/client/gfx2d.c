@@ -1,4 +1,4 @@
-/* $Id: gfx2d.c,v 1.12 2001/03/20 18:37:57 bert Exp $
+/* $Id: gfx2d.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -156,7 +156,7 @@ static int Picture_find_path(const char *filename, char *path)
     }
 
     error("Can't find PPM file \"%s\"", filename);
-    exit(1);
+	return(FALSE);
 }
 
 /*

@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 4.25 2001/03/20 18:38:00 bert Exp $
+/* $Id: collision.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,13 +47,14 @@
 #include "netserver.h"
 #include "pack.h"
 #include "error.h"
+#include "portability.h"
 #include "objpos.h"
 
 char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 4.25 2001/03/20 18:38:00 bert Exp $";
+    "@(#)$Id: collision.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 #if 0

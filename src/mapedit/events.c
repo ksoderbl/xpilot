@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: events.c,v 1.5 1998/05/03 06:55:01 dick Exp $
+ * $Id: events.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "main.h"

@@ -1,4 +1,4 @@
-/* $Id: talkmacros.c,v 4.6 2001/03/20 18:37:58 bert Exp $
+/* $Id: talkmacros.c,v 5.1 2001/04/22 09:07:42 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -74,7 +74,7 @@ int		Talk_macro(char *str);
 static char *Talk_macro_fields_info (char *buf, int *n_fields)
 {
     int			end_found = 0, level = 0;
-    
+
     *n_fields = 0;
     while (!end_found)
     {
@@ -106,14 +106,15 @@ static char *Talk_macro_fields_info (char *buf, int *n_fields)
     return buf;
 }
 
-/* Returns a string pointer to the wanted_field 
+
+/* Returns a string pointer to the wanted_field
  * This pointer must be freed after using it
  */
 static char *Talk_macro_get_field (char *buf, int wanted_field)
 {
     int  finished = 0, level = 0, field = 0, len;
     char *field_ptr, *start_ptr = NULL, *end_ptr = NULL;
-    
+
     while (!finished)
     {
 	switch (*buf)
@@ -158,7 +159,7 @@ static char *Talk_macro_get_field (char *buf, int wanted_field)
 	    break;
 	}
 	buf++;
-	
+
     }
     len = end_ptr - start_ptr;
     if ((field_ptr = (char *) malloc (len + 1)) == NULL) {
@@ -170,31 +171,41 @@ static char *Talk_macro_get_field (char *buf, int wanted_field)
     return field_ptr;
 }
 
+
 static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 {
-    FILE *fp;
-    char c;
-    long fsize;
-    int i, n_fields;
-    char *tmpptr, *tmpptr1, *tmpptr2, *tmpptr3 = 0, *nextpos, *filename;
-    other_t *player=NULL;
+    FILE	*fp;
+    char	c;
+    long	fsize;
+    int		i;
+    int		done = 0;
+    int		n_fields;
+    char	*tmpptr;
+    char	*tmpptr1;
+    char	*tmpptr2;
+    char	*tmpptr3 = 0;
+    char	*nextpos;
+    char	*filename;
+    other_t	*player = NULL;
 
-    
-    while ((c = *inbuf++) != '\0')
+
+    while (!done && (c = *inbuf++) != '\0')
     {
 	if (pos >= max - 2)
 	{
 	    if (outbuf == final_str) /* parsing to the talk buffer */
 	    {
 		outbuf[pos] = '\0';
-		if ( Net_talk(outbuf) == -1 ) {
+		if (Net_talk(outbuf) == -1) {
                     return -1;
 		}
 		pos = 0;
 	    }
-	    else
-		goto done;	/* XXX remove goto please. */
+	    else {
+		break;
+	    }
 	}
+
 	if (player != NULL) {
 	    switch (c)
 	    {
@@ -222,8 +233,10 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 	} else {
 	    switch (c) {
 	    case TALK_FAST_SPECIAL_TALK_CHAR:
-		if ((c = *inbuf++) == '\0')
-		    goto done;	/* XXX remove goto please. */
+		if ((c = *inbuf++) == '\0') {
+		    done = 1;
+		    break;
+		}
 		switch (c) {
 		case '=':  /* String comparison */
 		    nextpos = Talk_macro_fields_info (inbuf, &n_fields);
@@ -310,12 +323,12 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 			break;
 		    }
 		    free (filename);
-		    
+
 		    /* Get filesize */
 		    fseek (fp, 0L, SEEK_END);
 		    fsize = ftell (fp);
 		    rewind (fp);
-		    
+
 		    if ((tmpptr = (char *)malloc(fsize+1)) == NULL) {
 			fclose (fp);
 			break;
@@ -328,8 +341,11 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 		    break;
 		case 'h':
 		    tmpptr = getenv ("HOME");
-		    while (*tmpptr != '\0' && pos < max - 2)
-		      outbuf[pos++] = *tmpptr++;
+		    if (tmpptr != NULL) {
+			while (*tmpptr != '\0' && pos < max - 2) {
+			    outbuf[pos++] = *tmpptr++;
+			}
+		    }
 		    break;
 		case 'r':
 		    nextpos = Talk_macro_fields_info (inbuf, &n_fields);
@@ -343,7 +359,7 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 		    }
 		    inbuf = nextpos;
 		    pos = Talk_macro_parse_mesg (outbuf, tmpptr, pos, max);
-		    free (tmpptr); 
+		    free (tmpptr);
 		    break;
 		case 'n':
 		    outbuf[pos] = '\0';
@@ -357,12 +373,14 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
                     if ( !snooping ) {
                         if ((player = Other_by_id(lock_id)) == NULL) {
                           pos = 0;
-                          goto done;	/* XXX remove goto please. */
+                          done = 1;
+			  break;
                         }
                     } else {
                         if ((player = Other_by_id(eyesId)) == NULL) {
                           pos = 0;
-                          goto done;	/* XXX remove goto please. */
+                          done = 1;
+			  break;
                         }
 		    }
                     break;
@@ -380,6 +398,7 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 		default:
 		    break;
 		} /* case TALK_FAST_SPECIAL_TALK_CHAR: switch (c) */
+		break;
 	    case '\n':
 		break;
 	    default:
@@ -389,12 +408,14 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 	}
     }
 
-    done:
     outbuf[pos] = '\0';
+
     return pos;
 }
 
-int Talk_macro(char *str) {
+
+int Talk_macro(char *str)
+{
     /* Comment: sizeof str === MAX_CHARS */
     if (str == NULL) {
 	return 1;
@@ -405,3 +426,5 @@ int Talk_macro(char *str) {
     }
     return 0;
 }
+
+

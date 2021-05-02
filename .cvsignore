@@ -3,3 +3,5 @@ My.config
 README
 xmkmf
 xxpilots
+*.ncb
+*.opt

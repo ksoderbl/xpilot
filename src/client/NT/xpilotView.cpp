@@ -1,4 +1,4 @@
-/* $Id: xpilotView.cpp,v 4.3 2001/03/11 22:37:39 bert Exp $
+/* $Id: xpilotView.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -27,7 +27,7 @@
 *																			*
 *  XPilot.exe uses the standard MFC doc/view model in an SDI format.		*
 *  The view (and this file) are the primary interface into the XPilot code.	*
-*  $Id: xpilotView.cpp,v 4.3 2001/03/11 22:37:39 bert Exp $					*
+*  $Id: xpilotView.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $					*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -96,7 +96,7 @@ CXpilotView::CXpilotView()
 #endif
 }
 
-#ifdef	_DEBUG
+#ifdef	_XPMEM
 extern	"C" void	xpmemShutdown();
 #endif
 
@@ -105,7 +105,7 @@ CXpilotView::~CXpilotView()
 //	Client_cleanup();
 	WinXShutdown();
 	CView::~CView();
-#if defined(_DEBUG)
+#if defined(_XPMEM)
 	xpmemShutdown();
 #endif
 }

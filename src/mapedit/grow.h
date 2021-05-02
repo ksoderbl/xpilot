@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: grow.h,v 1.2 1998/04/22 15:44:11 bert Exp $
+ * $Id: grow.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 

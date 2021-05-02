@@ -1,4 +1,4 @@
-/* $Id: winXKey.h,v 4.3 2001/02/19 23:36:45 bert Exp $
+/* $Id: winXKey.h,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file contains X11 style kb definitions for Winodoze.				*
 *  These all come from Xutil.h												*
 *																			*
-*  $Id: winXKey.h,v 4.3 2001/02/19 23:36:45 bert Exp $							*
+*  $Id: winXKey.h,v 5.0 2001/04/07 20:00:59 dik Exp $							*
 \***************************************************************************/
 #ifndef	_WINXKEY_H_
 #define	_WINXKEY_H_

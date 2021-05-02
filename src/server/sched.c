@@ -1,4 +1,4 @@
-/* $Id: sched.c,v 4.11 2001/03/20 18:47:20 bert Exp $
+/* $Id: sched.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -144,7 +144,7 @@ static void catch_timer_counts(int signum)
     static unsigned int		timer_count = 0;
 
     timer_count += FPS;
-    if (timer_count >= timerResolution) {
+    if (timer_count >= (unsigned)timerResolution) {
 	timer_count -= timerResolution;
 	timer_ticks++;
     }

@@ -28,7 +28,7 @@
 			Also commented out other prototype declarations
 			for strcpy, strncpy, strcat and getenv.
 
-	$Id: msub.c,v 4.3 1999/10/04 19:56:03 bert Exp $
+	$Id: msub.c,v 5.0 2001/04/07 20:00:57 dik Exp $
 */
 
 #include	<unistd.h>

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.c,v 1.7 2000/05/20 14:46:17 bert Exp $
+ * $Id: main.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "main.h"

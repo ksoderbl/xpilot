@@ -1,4 +1,4 @@
-/* $Id: shot.c,v 4.13 2001/03/25 17:24:51 bert Exp $
+/* $Id: shot.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -51,7 +51,7 @@ char shot_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shot.c,v 4.13 2001/03/25 17:24:51 bert Exp $";
+    "@(#)$Id: shot.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25

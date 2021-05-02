@@ -1,4 +1,4 @@
-/* $Id: guimap.c,v 4.14 2001/03/20 18:37:57 bert Exp $
+/* $Id: guimap.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -244,7 +244,9 @@ void Gui_paint_cannon(int x, int y, int type)
 
 void Gui_paint_fuel(int x, int y, long fuel)
 {
-    if (!blockBitmaps) {
+	int fuel_images = Block_bitmap_images(BM_FUEL);
+
+    if (!blockBitmaps || !fuel_images) {
 #define FUEL_BORDER 2
 	int			size;
 
@@ -306,7 +308,6 @@ void Gui_paint_fuel(int x, int y, long fuel)
     else {
 #define BITMAP_FUEL_BORDER 3
 
-        int fuel_images = Block_bitmap_images(BM_FUEL);
 	int size;
 	/* x + x * y will give a pseudo random number, 
 	so different fuelcells will not be displayed with the same image-frame.*/

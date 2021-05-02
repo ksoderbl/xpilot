@@ -1,4 +1,4 @@
-This is the README file for XPilot 4.3.1.
+This is the README file for XPilot 4.3.2.
 
 Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
@@ -69,4 +69,4 @@ discuss your potential contributions to the source code, please see the
 URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
 information.
 
-$Id: README.txt,v 4.46 2001/04/01 10:30:08 bert Exp $
+$Id: README.txt.msub,v 5.0 2001/04/07 20:00:56 dik Exp $

@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.16 2001/03/11 22:29:56 bert Exp $ */
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:58 dik Exp $ */
 
 TOPDIR=../..
 COMMON = ../common/

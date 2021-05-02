@@ -1,4 +1,4 @@
-/* $Id: object.h,v 4.11 2001/03/25 21:31:31 bert Exp $
+/* $Id: object.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:14:53 bert Exp $ */
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:57 dik Exp $ */
 
 #include "Local.config"
 

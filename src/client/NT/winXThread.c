@@ -1,4 +1,4 @@
-/* $Id: winXThread.c,v 4.2 2001/02/19 23:36:43 bert Exp $
+/* $Id: winXThread.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  XPilot specific:															*
 *  This module is an attempt at running the BitBlt in another thread.		*
 *																			*
-*  $Id: winXThread.c,v 4.2 2001/02/19 23:36:43 bert Exp $					*
+*  $Id: winXThread.c,v 5.0 2001/04/07 20:00:59 dik Exp $					*
 \***************************************************************************/
 
 #include "../../common/NT/winX.h"

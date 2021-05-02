@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.h,v 1.5 2000/05/20 14:46:17 bert Exp $
+ * $Id: main.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 <X11/Xlib.h>

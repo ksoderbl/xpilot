@@ -1,4 +1,4 @@
-/* $Id: shipshape.c,v 1.7 2001/03/20 18:37:59 bert Exp $
+/* $Id: shipshape.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -49,7 +49,7 @@ char shipshape_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shipshape.c,v 1.7 2001/03/20 18:37:59 bert Exp $";
+    "@(#)$Id: shipshape.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
 #endif
 
 

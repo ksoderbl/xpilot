@@ -1,4 +1,4 @@
-/* $Id: about.c,v 4.6 2001/03/20 18:37:57 bert Exp $
+/* $Id: about.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,6 +36,7 @@
 #ifdef _WINDOWS
 # include "NT/winX.h"
 # include "NT/winXXPilot.h"
+# include "NT/winClient.h"
 #endif
 
 #include "version.h"
@@ -55,7 +56,7 @@ char about_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: about.c,v 4.6 2001/03/20 18:37:57 bert Exp $";
+    "@(#)$Id: about.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -465,6 +466,7 @@ int About_callback(int widget_desc, void *data, const char **str)
     return 0;
 }
 
+/*****************************************************************************/
 	   int		keys_viewer = NO_WIDGET;
 static bool		keys_created = false;
 
@@ -495,6 +497,7 @@ int Keys_callback(int widget_desc, void *data, const char **unused)
 	    }
 	    if ((end - buf) + (maxkeylen + strlen(help) + 4) >= bufsize) {
 		bufsize += 4096;
+		xpprintf("realloc: %d\n", bufsize);
 		if (!(buf = (char *)realloc(buf, bufsize))) {
 		    error("No memory for key list");
 		    return 0;

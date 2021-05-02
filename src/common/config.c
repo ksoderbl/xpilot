@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.10 2001/04/01 13:50:06 bert Exp $
+/* $Id: config.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -158,7 +158,7 @@ char config_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: config.c,v 1.10 2001/04/01 13:50:06 bert Exp $";
+    "@(#)$Id: config.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
 #endif
 
 

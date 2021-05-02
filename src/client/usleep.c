@@ -30,7 +30,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 4.2 2001/03/20 18:37:58 bert Exp $";
+    "@(#)$Id: usleep.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 int micro_delay(unsigned usec);

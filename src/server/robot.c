@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 4.11 2001/03/20 18:38:00 bert Exp $
+/* $Id: robot.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

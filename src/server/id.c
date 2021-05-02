@@ -1,4 +1,4 @@
-/* $Id: id.c,v 4.3 2001/03/20 18:38:00 bert Exp $
+/* $Id: id.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -45,7 +45,7 @@ char id_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: id.c,v 4.3 2001/03/20 18:38:00 bert Exp $";
+    "@(#)$Id: id.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 static int		ID_queue[NUM_IDS];

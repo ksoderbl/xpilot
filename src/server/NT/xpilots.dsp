@@ -1,10 +1,10 @@
-# Microsoft Developer Studio Project File - Name="xpilots" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="XPilotServer" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=xpilots - Win32 Release
+CFG=XPilotServer - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,23 +13,23 @@ CFG=xpilots - Win32 Release
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "xpilots.mak" CFG="xpilots - Win32 Release"
+!MESSAGE NMAKE /f "xpilots.mak" CFG="XPilotServer - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "xpilots - Win32 Release" (based on "Win32 (x86) Application")
-!MESSAGE "xpilots - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "XPilotServer - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "XPilotServer - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
-CPP=cl.exe
+CPP=xicl6.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "xpilots - Win32 Release"
+!IF  "$(CFG)" == "XPilotServer - Win32 Release"
 
 # PROP BASE Use_MFC 6
 # PROP BASE Use_Debug_Libraries 0
@@ -51,12 +51,12 @@ RSC=rc.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=link.exe
+LINK32=xilink6.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 /nologo /subsystem:windows /machine:I386 /out:".\Release\XPilot-server.exe"
+# ADD LINK32 /nologo /subsystem:windows /machine:I386 /out:".\Release\XPilotServer.exe"
 # SUBTRACT LINK32 /debug /nodefaultlib
 
-!ELSEIF  "$(CFG)" == "xpilots - Win32 Debug"
+!ELSEIF  "$(CFG)" == "XPilotServer - Win32 Debug"
 
 # PROP BASE Use_MFC 6
 # PROP BASE Use_Debug_Libraries 1
@@ -67,6 +67,7 @@ LINK32=link.exe
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir ".\Debug"
 # PROP Intermediate_Dir ".\Debug"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /c
 # ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\common" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_XPILOTNTSERVER_" /D "_AFXDLL" /D "_MBCS" /FR /FD /c
@@ -78,7 +79,7 @@ LINK32=link.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=link.exe
+LINK32=xilink6.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386
 # ADD LINK32 /nologo /subsystem:windows /debug /machine:I386
 
@@ -86,18 +87,17 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "xpilots - Win32 Release"
-# Name "xpilots - Win32 Debug"
+# Name "XPilotServer - Win32 Release"
+# Name "XPilotServer - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
+# Begin Group "server"
+
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\cannon.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\checknames.c
 # End Source File
 # Begin Source File
 
@@ -113,31 +113,11 @@ SOURCE=..\command.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\config.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\ConfigDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\contact.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\commonproto.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\error.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\event.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\ExitXpilots.cpp
 # End Source File
 # Begin Source File
 
@@ -157,15 +137,7 @@ SOURCE=..\map.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\math.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\metaserver.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\net.c
 # End Source File
 # Begin Source File
 
@@ -186,18 +158,6 @@ SOURCE=..\play.c
 # Begin Source File
 
 SOURCE=..\player.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\portability.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\randommt.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\ReallyShutdown.cpp
 # End Source File
 # Begin Source File
 
@@ -229,19 +189,7 @@ SOURCE=..\ship.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\shipshape.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\shot.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\socklib.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\strdup.c
 # End Source File
 # Begin Source File
 
@@ -253,15 +201,27 @@ SOURCE=..\walls.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\NT\winNet.c
+SOURCE=..\wildmap.c
+# End Source File
+# End Group
+# Begin Group "serverNT"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\ConfigDlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ExitXpilots.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ReallyShutdown.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\winSvrThread.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\wsockerrs.c
 # End Source File
 # Begin Source File
 
@@ -276,9 +236,74 @@ SOURCE=.\xpilots.rc
 SOURCE=.\xpilotsDlg.cpp
 # End Source File
 # End Group
+# Begin Group "common"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\common\checknames.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\config.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\error.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\math.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\net.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\portability.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\randommt.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\shipshape.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\socklib.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\strdup.c
+# End Source File
+# End Group
+# Begin Group "commonNT"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\common\NT\winNet.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\wsockerrs.c
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=..\..\common\commonproto.h
+# End Source File
+# End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
+# Begin Source File
+
+SOURCE=..\..\common\bit.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\cannon.h
@@ -286,6 +311,10 @@ SOURCE=..\cannon.h
 # Begin Source File
 
 SOURCE=..\..\common\checknames.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\click.h
 # End Source File
 # Begin Source File
 
@@ -297,11 +326,39 @@ SOURCE=.\ConfigDlg.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\common\const.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\defaults.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\draw.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\common\error.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\ExitXpilots.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\global.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\item.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\keys.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\map.h
 # End Source File
 # Begin Source File
 
@@ -317,11 +374,23 @@ SOURCE=..\netserver.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\object.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\objpos.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\common\pack.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\common\portability.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\proto.h
 # End Source File
 # Begin Source File
 
@@ -337,6 +406,10 @@ SOURCE=..\robot.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\common\rules.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\saudio.h
 # End Source File
 # Begin Source File
@@ -345,7 +418,15 @@ SOURCE=..\sched.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\score.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\server.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\setup.h
 # End Source File
 # Begin Source File
 
@@ -357,7 +438,15 @@ SOURCE=.\StdAfx.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\common\version.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\walls.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\client\NT\winClient.h
 # End Source File
 # Begin Source File
 

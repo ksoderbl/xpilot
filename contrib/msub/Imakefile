@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.1 1998/07/21 09:31:40 bert Exp $ */
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:57 dik Exp $ */
 
 /* need config to compile msub.c. */
 #include "Local.config"

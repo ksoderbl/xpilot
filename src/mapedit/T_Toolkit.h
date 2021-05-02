@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: T_Toolkit.h,v 1.3 1998/04/23 20:08:32 bert Exp $
+ * $Id: T_Toolkit.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 <X11/Xlib.h>

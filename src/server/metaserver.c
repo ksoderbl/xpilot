@@ -1,4 +1,4 @@
-/* $Id: metaserver.c,v 4.12 2001/03/20 18:38:00 bert Exp $
+/* $Id: metaserver.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -68,7 +68,7 @@ char metaserver_version[] = VERSION;
 
 #ifndef	lint
 char sourceid[] =
-    "@(#)$Id: metaserver.c,v 4.12 2001/03/20 18:38:00 bert Exp $";
+    "@(#)$Id: metaserver.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 struct MetaServer {

@@ -1,4 +1,4 @@
-/* $Id: socklib.c,v 4.22 2001/03/20 18:47:20 bert Exp $
+/* $Id: socklib.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -99,7 +99,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 4.22 2001/03/20 18:47:20 bert Exp $";
+    "@(#)$Id: socklib.c,v 5.1 2001/04/16 15:41:39 bertg Exp $";
 #endif
 
 
@@ -116,27 +116,27 @@ static struct hostent *sock_get_host_by_name(const char *name);
 static struct hostent *sock_get_host_by_addr(const char *addr, int len, int type);
 
 
-static void sock_flags_add(sock_t *sock, int bits)
+static void sock_flags_add(sock_t *sock, unsigned bits)
 {
     sock->flags |= bits;
 }
 
-static void sock_flags_set(sock_t *sock, int bits)
+static void sock_flags_set(sock_t *sock, unsigned bits)
 {
     sock->flags = bits;
 }
 
-static void sock_flags_remove(sock_t *sock, int bits)
+static void sock_flags_remove(sock_t *sock, unsigned bits)
 {
     sock->flags &= ~bits;
 }
 
-static int sock_flags_test_all(sock_t *sock, int bits)
+static int sock_flags_test_all(sock_t *sock, unsigned bits)
 {
-    return (sock->flags & bits) == bits;
+    return (sock->flags & bits) == (unsigned)bits;
 }
 
-static int sock_flags_test_any(sock_t *sock, int bits)
+static int sock_flags_test_any(sock_t *sock, unsigned bits)
 {
     return (sock->flags & bits) != 0;
 }

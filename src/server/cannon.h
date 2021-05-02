@@ -1,4 +1,4 @@
-/* $Id: cannon.h,v 1.3 2001/03/16 22:42:58 bert Exp $
+/* $Id: cannon.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

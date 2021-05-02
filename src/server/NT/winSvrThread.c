@@ -1,4 +1,4 @@
-/* $Id: winSvrThread.c,v 4.7 2001/03/11 22:37:39 bert Exp $
+/* $Id: winSvrThread.c,v 5.0 2001/04/07 20:01:01 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.c - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.c,v 4.7 2001/03/11 22:37:39 bert Exp $					*
+*  $Id: winSvrThread.c,v 5.0 2001/04/07 20:01:01 dik Exp $					*
 \***************************************************************************/
 
 /* Entry point for Windows Server Thread */

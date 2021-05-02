@@ -23,7 +23,7 @@
 #  1997:
 #       William Docter          <wad2@lehigh.edu>
 # 
-# $Id: Makefile.dist,v 1.3 1998/04/22 15:49:25 bert Exp $
+# $Id: Makefile.dist,v 5.0 2001/04/07 20:01:00 dik Exp $
 #
 
 CC            = gcc

@@ -1,7 +1,7 @@
 
 XPilot README.sounds
 
-    #($Id: README.sounds,v 4.1 2001/04/01 13:54:42 bert Exp $)#
+    #($Id: README.sounds,v 5.0 2001/04/07 20:00:57 dik Exp $)#
 
 XPilot currently has rplay, NCD, DEC AudioFile and HP Aserver sound support.  
 See the Local.config in the toplevel directory or the Makefile.std in the

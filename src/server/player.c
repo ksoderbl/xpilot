@@ -1,4 +1,4 @@
-/* $Id: player.c,v 4.18 2001/03/25 17:24:51 bert Exp $
+/* $Id: player.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -50,7 +50,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 4.18 2001/03/25 17:24:51 bert Exp $";
+    "@(#)$Id: player.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 extern int Rate(int winner, int loser);

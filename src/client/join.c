@@ -1,4 +1,4 @@
-/* $Id: join.c,v 4.6 2001/03/20 18:47:19 bert Exp $
+/* $Id: join.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

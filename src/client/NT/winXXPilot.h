@@ -1,4 +1,4 @@
-/* $Id: winXXPilot.h,v 4.2 2001/02/19 23:36:43 bert Exp $
+/* $Id: winXXPilot.h,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -27,7 +27,7 @@
 *																			*
 *  This file contains the private winX definitions for the XPilot client	*
 *																			*
-*  $Id: winXXPilot.h,v 4.2 2001/02/19 23:36:43 bert Exp $							*
+*  $Id: winXXPilot.h,v 5.0 2001/04/07 20:00:59 dik Exp $							*
 \***************************************************************************/
 #ifndef	_WINXPILOT_H_
 #define	_WINXPILOT_H_

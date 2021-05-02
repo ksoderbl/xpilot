@@ -1,4 +1,4 @@
-$Id: INSTALL.txt,v 4.3 2000/09/06 13:12:19 bert Exp $
+$Id: INSTALL.txt,v 5.1 2001/04/16 15:41:38 bertg Exp $
 
 Following are the installation instructions for the 
 UNIX version of XPilot.  For the Windows version
@@ -8,15 +8,20 @@ To compile XPilot, you'll need at least:
 
     An ANSI C compiler
 
-    X11     (any revision from R4 up to R6 works OK)
+    X11     (any revision from R4 up to R6 is fine)
 
 Also note that XPilot isn't gentle with the X server,
 so a fast machine (with a graphics accelerator that
 does line drawing in hardware), in a fast network
 is the ideal situation.
 
+NEW STYLE INSTALLATION
 
-INSTALLATION
+The doc subdirectory contains an RPM spec file which you can use
+to build an XPilot RPM file.  The doc subdirectory also contains
+a patch with preferred settings for Local.config under Linux.
+
+OLD STYLE INSTALLATION
 
 The complete installation just requires three steps -- geez, how easy
 can it be? :)

@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 4.34 2001/03/28 16:33:20 bert Exp $
+/* $Id: xinit.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -91,7 +91,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.34 2001/03/28 16:33:20 bert Exp $";
+    "@(#)$Id: xinit.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */

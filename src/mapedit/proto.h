@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: proto.h,v 1.4 1998/10/06 14:52:19 bert Exp $
+ * $Id: proto.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 /*

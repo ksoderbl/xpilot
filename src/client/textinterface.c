@@ -1,4 +1,4 @@
-/* $Id: textinterface.c,v 4.16 2001/03/20 18:37:58 bert Exp $
+/* $Id: textinterface.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -62,7 +62,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: textinterface.c,v 4.16 2001/03/20 18:37:58 bert Exp $";
+    "@(#)$Id: textinterface.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 
@@ -132,7 +132,7 @@ static bool Get_contact_message(sockbuf_t *sbuf,
 	    if (len == 0) {
 		continue;
 	    }
-	    error("sock_receive_any, contact message");
+	    xpprintf("sock_receive_any, contact message");
 	    /* exit(1);  no good since meta gui. */
 	    return false;
 	}

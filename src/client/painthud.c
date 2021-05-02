@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 4.26 2001/03/28 16:33:20 bert Exp $
+/* $Id: painthud.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

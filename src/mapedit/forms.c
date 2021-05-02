@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: forms.c,v 1.4 2000/03/11 20:25:58 bert Exp $
+ * $Id: forms.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "main.h"

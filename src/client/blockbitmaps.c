@@ -1,4 +1,4 @@
-/* $Id: blockbitmaps.c,v 1.13 2001/03/27 12:50:32 bert Exp $
+/* $Id: blockbitmaps.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -200,7 +200,9 @@ int Block_bitmaps_create(void)
 void PaintBitmap(Drawable d, int type, int x, int y, int width, int height,
 		 int number)
 {
-    if (xp_pixmaps[type].bitmaps[number].scale_height != height) {
+    if (!xp_pixmaps[type].bitmaps)
+		return;
+	if (xp_pixmaps[type].bitmaps[number].scale_height != height) {
 	Block_bitmap_create(dpy, d, &xp_pixmaps[type], number, width, height);
 	scaled_bitmaps++;
     }

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: default_colors.h,v 1.3 2000/03/11 20:25:58 bert Exp $
+ * $Id: default_colors.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 #define COLOR_BACKGROUND "black"
 #define COLOR_FOREGROUND  "gray"

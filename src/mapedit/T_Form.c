@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: T_Form.c,v 1.5 1998/04/23 19:44:05 bert Exp $
+ * $Id: T_Form.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "T_Toolkit.h"

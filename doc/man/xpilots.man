@@ -4,7 +4,7 @@
 .\"
 .TH XPILOTS 6 "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.3.1: Apr 1, 2001
+.ds ]W XPilot 4.3.2: Apr 30, 2001
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -56,7 +56,7 @@ or the equivalent
 .B -map blackhole.map
 is passed as command line arguments, the server will try to locate a file
 called \fBblackhole.map\fP in the current directory, or in a predefined
-directory (default is /root/cvs/xpilot/lib/maps/).
+directory (default is /usr/local/games/lib/xpilot/maps/).
 
 .TP 15
 .B -help 
@@ -279,10 +279,10 @@ for details see the provided LICENSE file.
 
 .PD 0
 .TP 40
-.B /root/cvs/xpilot/lib/maps/
+.B /usr/local/games/lib/xpilot/maps/
 Miscellaneous maps.
 .TP 40
-.B /root/cvs/xpilot/lib/log
+.B /usr/local/games/lib/xpilot/log
 Log file.
 .PD
 

@@ -1,4 +1,4 @@
-/* $Id: query.c,v 4.6 2001/03/25 17:24:50 bert Exp $
+/* $Id: query.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -69,7 +69,7 @@ char query_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: query.c,v 4.6 2001/03/25 17:24:50 bert Exp $";
+    "@(#)$Id: query.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 #if defined(LINUX0) || defined(VMS) || defined(_WINDOWS)

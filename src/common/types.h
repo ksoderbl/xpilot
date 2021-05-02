@@ -1,4 +1,4 @@
-/* $Id: types.h,v 4.6 2001/03/25 21:31:31 bert Exp $
+/* $Id: types.h,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

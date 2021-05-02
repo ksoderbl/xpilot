@@ -1,4 +1,4 @@
-/* $Id: cmw.c,v 4.3 2001/03/27 13:55:36 bert Exp $
+/* $Id: cmw.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 4.23 2001/03/28 16:33:20 bert Exp $
+/* $Id: configure.c,v 5.1 2001/04/22 10:19:51 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1445,14 +1445,71 @@ static void Config_save_bool(FILE *fp, const char *resource, int value)
     Config_save_resource(fp, resource, buf);
 }
 
+
+/*
+ * Find a key in keyDefs[].
+ * On success set output pointer to index into keyDefs[] and return TRUE.
+ * On failure return FALSE.
+ */
+static int Config_find_key(keys_t key, int start, int end, int *key_index)
+{
+    int			i;
+
+    for (i = start; i < end; i++) {
+	if (keyDefs[i].key == key) {
+	    *key_index = i;
+	    return TRUE;
+	}
+    }
+
+    return FALSE;
+}
+
+static void Config_save_keys(FILE *fp)
+{
+    int			i, j;
+    KeySym		ks;
+    keys_t		key;
+    const char		*str,
+			*res;
+    char		buf[512];
+
+    buf[0] = '\0';
+    for (i = 0; i < maxKeyDefs; i++) {
+	ks = keyDefs[i].keysym;
+	key = keyDefs[i].key;
+
+	/* try and see if we have already saved this key. */
+	if (Config_find_key(key, 0, i, &j) == TRUE) {
+	    /* yes, saved this one before.  skip it now. */
+	    continue;
+	}
+
+	if ((str = XKeysymToString(ks)) == NULL) {
+	    continue;
+	}
+
+	if ((res = Get_keyResourceString(key)) != NULL) {
+	    strcpy(buf, str);
+	    /* find all other keysyms which map to the same key. */
+	    j = i;
+	    while (Config_find_key(key, j + 1, maxKeyDefs, &j) == TRUE) {
+		ks = keyDefs[j].keysym;
+		if ((str = XKeysymToString(ks)) != NULL) {
+		    strcat(buf, " ");
+		    strcat(buf, str);
+		}
+	    }
+	    Config_save_resource(fp, res, buf);
+	}
+    }
+}
+
+
 static int Config_save(int widget_desc, void *button_str, const char **strptr)
 {
     int			i;
-    KeySym		ks;
-    keys_t		key, prev_key;
     FILE		*fp = NULL;
-    const char		*str,
-			*res;
 #ifdef VMS
     static char	base[] = "DECW$USER_DEFAULTS:xpilot.dat";
 #elif defined(_WINDOWS)
@@ -1562,24 +1619,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_float(fp, "altScaleFactor", scaleFactor_s);
 #endif
     /* don't save this one: Config_save_int(fp, "maxFPS", maxFPS); */
-    buf[0] = '\0';
-    for (i = 0, prev_key = KEY_DUMMY; i < maxKeyDefs; i++, prev_key = key) {
-	ks = keyDefs[i].keysym;
-	key = keyDefs[i].key;
-	if ((str = XKeysymToString(ks)) == NULL) {
-	    continue;
-	}
-	if (key != prev_key && buf[0] != '\0') {
-	    if ((res = Get_keyResourceString(prev_key)) != NULL) {
-		Config_save_resource(fp, res, buf);
-	    }
-	    buf[0] = '\0';
-	}
-	if (buf[0] != '\0') {
-	    strcat(buf, " ");
-	}
-	strcat(buf, str);
-    }
+    Config_save_keys(fp);
     for (i = 0; i < NUM_MODBANKS; i++) {
 	sprintf(buf, "modifierBank%d", i + 1);
 	Config_save_resource(fp, buf, modBankStr[i]);

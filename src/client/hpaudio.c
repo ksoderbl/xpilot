@@ -1,4 +1,4 @@
-/* $Id: hpaudio.c,v 4.3 2001/03/20 18:37:57 bert Exp $
+/* $Id: hpaudio.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

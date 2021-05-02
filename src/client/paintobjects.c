@@ -1,4 +1,4 @@
-/* $Id: paintobjects.c,v 4.35 2001/03/31 12:21:01 bert Exp $
+/* $Id: paintobjects.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *

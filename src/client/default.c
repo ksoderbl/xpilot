@@ -1,4 +1,4 @@
-/* $Id: default.c,v 4.38 2001/03/28 16:33:20 bert Exp $
+/* $Id: default.c,v 5.2 2001/04/22 12:17:24 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -62,8 +62,9 @@
 #include "types.h"
 #include "protoclient.h"
 #include "audio.h"
-#include "talk.h"
 #include "commonproto.h"
+#include "portability.h"
+#include "talk.h"
 
 #ifdef VMS
 # include "strcasecmp.h"
@@ -82,7 +83,7 @@ char *talk_fast_temp_buf_big;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.38 2001/03/28 16:33:20 bert Exp $";
+    "@(#)$Id: default.c,v 5.2 2001/04/22 12:17:24 bertg Exp $";
 #endif
 
 #ifdef VMS
@@ -124,7 +125,21 @@ char  frameBuffer[MAX_CHARS]; /* frame buffer */
 #endif
 
 #ifdef _WINDOWS
-const char*	winHelpFile;
+	const char*	winHelpFile;
+	#ifdef	_DEBUG
+	#define	WINDOWSDEBUGPATH(__x)						\
+		{												\
+			char* p = texturePath;						\
+			texturePath = malloc(strlen(p) + 13);		\
+			strcpy(texturePath, "..\\..\\..\\..\\");	\
+			strcat(texturePath, p);						\
+			free(p);									\
+		}
+	#else
+	#define	WINDOWSDEBUGPATH(__x)
+	#endif
+#else
+#define	WINDOWSDEBUGPATH(__x)
 #endif
 
 #if DEVELOPMENT
@@ -2921,6 +2936,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Record_init(resValue);
     Get_resource(rDB, "texturePath", resValue, sizeof resValue);
     texturePath = xp_strdup(resValue);
+	WINDOWSDEBUGPATH(texturePath);
     Get_resource(rDB, "wallTextureFile", resValue, sizeof resValue);
     wallTextureFile = xp_strdup(resValue);
     Get_resource(rDB, "decorTextureFile", resValue, sizeof resValue);

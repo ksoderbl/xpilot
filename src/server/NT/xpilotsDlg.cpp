@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.cpp,v 4.5 2001/03/11 22:37:39 bert Exp $
+/* $Id: xpilotsDlg.cpp,v 5.0 2001/04/07 20:01:01 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.cpp - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.cpp,v 4.5 2001/03/11 22:37:39 bert Exp $				*
+*  $Id: xpilotsDlg.cpp,v 5.0 2001/04/07 20:01:01 dik Exp $				*
 \***************************************************************************/
 
 #include "stdafx.h"

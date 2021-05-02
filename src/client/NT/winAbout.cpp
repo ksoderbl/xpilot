@@ -1,4 +1,4 @@
-/* $Id: winAbout.cpp,v 4.2 2001/02/19 23:36:43 bert Exp $
+/* $Id: winAbout.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -26,7 +26,7 @@
 *  winAbout.cpp - XPilot.exe credits box									*
 *																			*
 *  This file contains the Windows about dialog and scrolling credits box.	*
-*  $Id: winAbout.cpp,v 4.2 2001/02/19 23:36:43 bert Exp $						*
+*  $Id: winAbout.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $						*
 \***************************************************************************/
 
 #include "stdafx.h"

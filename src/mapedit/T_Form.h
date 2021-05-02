@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: T_Form.h,v 1.2 1998/04/22 15:43:50 bert Exp $
+ * $Id: T_Form.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #define                  INACTIVE          0

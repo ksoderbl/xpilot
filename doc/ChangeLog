@@ -3,6 +3,19 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.3.2 compared to release 4.3.1.
+
+There is now a Visual C++ XPilot.dsp in the project root directory to
+allow easier building of Windows code.
+
+Nasty shots now use the shot_size variable.
+
+Since at least version 4.2.1 there was a bug in saving keys to the XPilot
+client config file.  This has now been fixed.
+
+Paul Alexander Drees submitted an updated robots file.
+
+===============================================================================
 This is a summary of changes of release 4.3.1 compared to release 4.3.0.
 
 Some .mak files in the NT subdirectories were removed because it was too
@@ -4140,6 +4153,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.54 2001/04/01 13:56:17 bert Exp $
+==== $Id: ChangeLog,v 5.3 2001/04/22 12:16:23 bertg Exp $
 ===============================================================================
 

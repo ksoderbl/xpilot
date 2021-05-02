@@ -1,4 +1,4 @@
-/* $Id: buttons.h,v 4.1 1998/04/16 17:41:14 bert Exp $
+/* $Id: buttons.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
  *

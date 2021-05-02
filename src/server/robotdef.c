@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 4.19 2001/03/20 18:38:00 bert Exp $
+/* $Id: robotdef.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -53,10 +53,11 @@
 #include "pack.h"
 #include "robot.h"
 #include "error.h"
+#include "portability.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: robotdef.c,v 4.19 2001/03/20 18:38:00 bert Exp $";
+    "@(#)$Id: robotdef.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
 #endif
 
 #define WITHIN(NOW,THEN,DIFF) (NOW<=THEN && (THEN-NOW)<DIFF)

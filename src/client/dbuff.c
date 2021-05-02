@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 4.10 2001/03/20 14:02:48 bert Exp $
+/* $Id: dbuff.c,v 5.0 2001/04/07 20:00:58 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -46,7 +46,7 @@ char dbuff_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 4.10 2001/03/20 14:02:48 bert Exp $";
+    "@(#)$Id: dbuff.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
 #endif
 
 

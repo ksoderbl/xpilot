@@ -1,4 +1,4 @@
-/* $Id: winXXPilot.c,v 4.2 2001/02/19 23:36:43 bert Exp $
+/* $Id: winXXPilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is mostly Win32 translations of the X calls that xpilot uses.	*
 *  Anything starting with WinX is a special wedge function that i needed	*
 *																			*
-*  $Id: winXXPilot.c,v 4.2 2001/02/19 23:36:43 bert Exp $						*
+*  $Id: winXXPilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $						*
 \***************************************************************************/
 #include "winXXPilot.h"
 #include "../winX_.h"

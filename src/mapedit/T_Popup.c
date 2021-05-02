@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: T_Popup.c,v 1.3 1998/04/23 19:44:06 bert Exp $
+ * $Id: T_Popup.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "T_Toolkit.h"

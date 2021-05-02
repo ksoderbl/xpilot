@@ -1,4 +1,4 @@
-/* $Id: guiobjects.c,v 4.12 2001/03/31 12:21:01 bert Exp $
+/* $Id: guiobjects.c,v 5.3 2001/04/16 15:41:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -295,9 +295,9 @@ void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
 }
 
 
-static void Gui_paint_nastyshot(int color, int x, int y)
+static void Gui_paint_nastyshot(int color, int x, int y, int size)
 {
-    int z = teamshot_size/2;
+	int z = size;
 
     if (rfrac() < 0.5f) {
 	Segment_add(color, 
@@ -323,7 +323,7 @@ void Gui_paint_fastshot(int color, int x, int y)
         int z = shot_size/2;
 
 	if (showNastyShots) {
-	    Gui_paint_nastyshot(color, x, y);
+	    Gui_paint_nastyshot(color, x, y, z);
 	} else {
 	    Rectangle_add(color,
 			  x - z,
@@ -341,7 +341,7 @@ void Gui_paint_fastshot(int color, int x, int y)
 void Gui_paint_teamshot(int color, int x, int y)
 {
     if (!blockBitmaps) {
-	Gui_paint_nastyshot(color, x, y);
+	Gui_paint_nastyshot(color, x, y, shot_size/2);
     }
     else {
 	int s_size = (teamshot_size > 8) ? 8 : shot_size ;
@@ -696,8 +696,9 @@ void Gui_paint_shields_deflectors(int x, int y, int radius, int shield,
     int		scolor = -1;
     int		ecolor = -1;
 
-    IFWINDOWS(Trace("shield=%d deflector=%d eshield=%d\n",
+/*    IFWINDOWS(Trace("shield=%d deflector=%d eshield=%d\n",
 	shield, deflector, eshield);)
+*/
     if (shield) 
 	scolor = ship_color;
     if (deflector)

@@ -1,4 +1,4 @@
-$Id: xmkmf-patch,v 4.1 1999/10/17 01:01:54 svenske Exp $
+$Id: xmkmf-patch,v 5.0 2001/04/07 20:00:57 dik Exp $
 
 This patch adds functionality to xmkmf to specify additional defines.  It
 can be used to specify your own config file to override the values

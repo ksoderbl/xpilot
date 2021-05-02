@@ -1,4 +1,4 @@
-/* $Id: wintalk.c,v 1.2 2001/02/19 23:36:43 bert Exp $
+/* $Id: wintalk.c,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,7 +42,7 @@ char talk_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: wintalk.c,v 1.2 2001/02/19 23:36:43 bert Exp $";
+    "@(#)$Id: wintalk.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
 #endif
 
 

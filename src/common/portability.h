@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 4.7 2001/03/20 18:47:20 bert Exp $
+/* $Id: portability.h,v 5.0 2001/04/07 20:00:59 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,6 +34,8 @@
 
 #define	strncasecmp(__a, __b, __c)	strnicmp(__a, __b, __c)
 
+/* there are tons of "conversion from 'double ' to 'int '", stop warning us */
+#pragma warning (disable : 4244)
 
 #endif /* _WINDOWS */
 
