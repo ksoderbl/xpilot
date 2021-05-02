@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 4.8 1998/08/29 19:49:54 bert Exp $
+/* $Id: contact.c,v 4.10 2000/03/24 08:53:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -61,7 +61,7 @@ char contact_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: contact.c,v 4.8 1998/08/29 19:49:54 bert Exp $";
+    "@(#)$Id: contact.c,v 4.10 2000/03/24 08:53:56 bert Exp $";
 #endif
 
 /*
@@ -74,7 +74,6 @@ int			NumPseudoPlayers = 0;
 static int		contactSocket;
 static sockbuf_t	ibuf;
 static char		msg[MSG_LEN];
-extern int		game_lock;
 extern time_t		gameOverTime;
 extern time_t		serverTime;
 extern int		login_in_progress;
@@ -736,7 +735,9 @@ static int Enter_player(char *real, char *nick, char *disp, int team,
     /*
      * Is the game full?
      */
-    if (NumPlayers - NumPseudoPlayers + login_in_progress + NumQueuedPlayers >= World.NumBases) {
+    if (NumPlayers - NumPseudoPlayers + login_in_progress + NumQueuedPlayers
+	>= World.NumBases) {
+
 	if (NumQueuedPlayers > 0) {
 	    return E_GAME_FULL;
 	}
@@ -745,7 +746,9 @@ static int Enter_player(char *real, char *nick, char *disp, int team,
 		return E_GAME_FULL;
 	    }
 	}
-	if (NumPlayers - NumPseudoPlayers + login_in_progress + NumQueuedPlayers >= World.NumBases) {
+	if (NumPlayers - NumPseudoPlayers + login_in_progress + NumQueuedPlayers
+	    >= World.NumBases) {
+
 	    return E_GAME_FULL;
 	}
     }
@@ -758,7 +761,7 @@ static int Enter_player(char *real, char *nick, char *disp, int team,
      * Maybe don't have enough room for player on that team?
      */
     if (BIT(World.rules->mode, TEAM_PLAY)) {
-	if (team < 0 || team >= MAX_TEAMS
+	if ((team < 0 || team >= MAX_TEAMS)
 	    || (team == robotTeam && reserveRobotTeam)) {
 	    if (!teamAssign) {
 		if (team == robotTeam && reserveRobotTeam) {
@@ -1058,6 +1061,85 @@ static int Queue_player(char *real, char *nick, char *disp, int team,
     return SUCCESS;
 }
 
+
+/*
+ * Move a player higher up in the list of waiting players.
+ */
+int Queue_advance_player(char *name, char *msg)
+{
+    struct queued_player	*qp;
+    struct queued_player	*prev, *first = NULL;
+
+    if (strlen(name) >= MAX_NAME_LEN) {
+	strcpy(msg, "Name too long.");
+	return -1;
+    }
+
+    for (prev = NULL, qp = qp_list; qp != NULL; prev = qp, qp = qp->next) {
+
+	if (!strcasecmp(qp->nick_name, name)) {
+	    if (!prev) {
+		strcpy(msg, "Already first.");
+	    }
+	    else if (qp->login_port != -1) {
+		strcpy(msg, "Already entering game.");
+	    }
+	    else {
+		/* Remove "qp" from list. */
+		prev->next = qp->next;
+
+		/* Now test if others are entering game. */
+		if (first) {
+		    /* Yes, so move "qp" after last entering player. */
+		    qp->next = first->next;
+		    first->next = qp;
+		}
+		else {
+		    /* No, so move "qp" to top of list. */
+		    qp->next = qp_list;
+		    qp_list = qp;
+		}
+		strcpy(msg, "Done.");
+	    }
+	    return 0;
+	}
+	else if (qp->login_port != -1) {
+	    first = qp;
+	}
+    }
+
+    sprintf(msg, "Player \"%s\" not in queue.", name);
+
+    return 0;
+}
+
+
+int Queue_show_list(char *msg)
+{
+    int				len, count;
+    struct queued_player	*qp = qp_list;
+
+    if (!qp) {
+	strcpy(msg, "The queue is empty.");
+	return 0;
+    }
+
+    strcpy(msg, "Queue: ");
+    len = strlen(msg);
+    count = 1;
+    do {
+	sprintf(msg + len, "%d. %s  ", count++, qp->nick_name);
+	len += strlen(msg + len);
+	qp = qp->next;
+    } while (qp != NULL && len + 32 < MSG_LEN);
+
+    /* strip last 2 spaces. */
+    msg[len - 2] = '\0';
+
+    return 0;
+}
+
+
 /*
  * Returns true if <name> has owner status of this server.
  */
@@ -1065,7 +1147,7 @@ static bool Owner(char request, char *real_name, char *host_addr,
 		  int host_port, int pass)
 {
     if (pass || request == CREDENTIALS_pack) {
-	if (!strcmp(real_name, Server.name)) {
+	if (!strcmp(real_name, Server.owner)) {
 	    if (!strcmp(host_addr, "127.0.0.1")) {
 		return true;
 	    }

@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 4.22 1999/11/07 11:57:30 bert Exp $
+/* $Id: cmdline.c,v 4.25 2000/03/23 20:51:38 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -45,7 +45,7 @@ char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 4.22 1999/11/07 11:57:30 bert Exp $";
+    "@(#)$Id: cmdline.c,v 4.25 2000/03/23 20:51:38 bert Exp $";
 #endif
 
 DFLOAT		Gravity;		/* Power of gravity */
@@ -170,8 +170,8 @@ DFLOAT		dropItemOnKillProb;	/* Probability for players items to */
 DFLOAT		detonateItemOnKillProb;	/* Probaility for remaining items to */
 					/* detonate when player is killed */
 DFLOAT		destroyItemInCollisionProb;
-DFLOAT           rogueHeatProb;          /* prob. that unclaimed rocketpack */
-DFLOAT           rogueMineProb;          /* or minepack will "activate" */
+DFLOAT		rogueHeatProb;          /* prob. that unclaimed rocketpack */
+DFLOAT		rogueMineProb;          /* or minepack will "activate" */
 DFLOAT		itemProbMult;
 DFLOAT		cannonItemProbMult;
 DFLOAT		maxItemDensity;
@@ -219,20 +219,22 @@ DFLOAT		friction;		/* friction only affects ships */
 DFLOAT		checkpointRadius;      	/* in blocks */
 int		raceLaps;		/* how many laps per race */
 bool		lockOtherTeam;		/* lock ply from other teams when dead? */
-bool		loseItemDestroys; 	/* destroy or drop when player */
-					/* uses loseItem */
+bool		loseItemDestroys; 	/* destroy item on loseItem? */
+bool		useWreckage;		/* destroyed ships leave wreckage? */
 
 int		maxOffensiveItems;	/* how many offensive and defensive */
 int		maxDefensiveItems;	/* items can player carry */
 
 int		roundDelay;		/* delay before start of each round */
 int		maxRoundTime;		/* max. duration of each round */
+int		roundsToPlay;		/* # of rounds to play. */
+int		roundsPlayed;		/* # of rounds played sofar. */
 
 bool		anaColDet;		/* use Analytical Collision Detection?  */
-
 bool		pLockServer;		/* Is server swappable out of memory?  */
-
-bool		ignore20MaxFPS;		/* ignore client maxFPS request if it is 20 */
+bool		ignore20MaxFPS;		/* ignore client maxFPS request if 20 */
+int		timerResolution;	/* OS timer resolution (times/sec) */
+char		*password;		/* password for operator status */
 
 extern char	conf_default_map_string[];	/* from common/config.c */
 extern char	conf_robotfile_string[];	/* from common/config.c */
@@ -2475,6 +2477,16 @@ static optionDesc options[] = {
 	MAP(NULL)
     },
     {
+	"useWreckage",
+	"useWreckage",
+	"true",
+	&useWreckage,
+	valBool,
+	tuner_dummy,
+	"Do destroyed ships leave wreckage?\n",
+	MAP(NULL)
+    },
+    {
 	"maxOffensiveItems",
 	"maxOffensiveItems",
 	"100",
@@ -2515,6 +2527,16 @@ static optionDesc options[] = {
 	MAP(NULL)
     },
     {
+	"roundsToPlay",
+	"roundsToPlay",
+	"0",
+	&roundsToPlay,
+	valInt,
+	tuner_dummy,
+	"The number of rounds to play.  Unlimited if 0.\n",
+	MAP(NULL)
+    },
+    {
 	"analyticalCollisionDetection",
 	"ACD",
 	"true",
@@ -2537,6 +2559,28 @@ static optionDesc options[] = {
 	tuner_plock,
 	"Whether the server is prevented from being swapped out of memory.\n",
 	MAP("General")
+    },
+    {
+	"timerResolution",
+	"timerResolution",
+	"0",
+	&timerResolution,
+	valInt,
+	tuner_none,
+	"If set to nonzero xpilots will requests signals from the OS at\n"
+	"1/timerResolution second intervals.  The server will then compute\n"
+	"a new frame FPS times out of every timerResolution signals.\n",
+	MAP(NULL)
+    },
+    {
+	"password",
+	"password",
+	NULL,
+	&password,
+	valString,
+	tuner_dummy,
+	"The password needed to obtain operator privileges.\n",
+	MAP(NULL)
     },
 
 };

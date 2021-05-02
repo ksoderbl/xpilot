@@ -11,7 +11,7 @@ source code, and the LICENSE file.
 Installation instructions are in the INSTALL file.
 
 NT and Win95 users should examine the contrib/NT subdirectory and read
-the README.txt which is there.
+the README.txt which is in there.
 
 VMS users should examine the contrib/VMS subdirectory and read the
 README.VMS which is in there.
@@ -36,7 +36,7 @@ XPilot for Windows info on WWW: http://www.buckosoft.com/xpilot/
 
 XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
 
-XPilot FTP archive: ftp.xpilot.org:/pub/
+XPilot FTP archive: ftp://ftp.xpilot.org/pub/
 
 XPilot newsgroup: rec.games.computer.xpilot
 
@@ -45,9 +45,10 @@ CONTRIBUTED SOFTWARE
 
 Check out the contrib directory subdirectory for some extra nifty programs.
 Especially TkXpInterface is a very convenient program for starting the
-xpilots and xpilot programs.  Don't forget to get xmapedit from
-ftp.xpilot.org in the directory /pub/contrib.  It allows you to create and
-modify XPilot maps.  Look in the same place for more XPilot contributed tools.
+xpilots and xpilot programs.
+
+Also try the mapeditor which is included in this XPilot distribution.  
+It is a nifty graphical editor with which you can design a new XPilot world.
 
 
 REPORTING BUGS
@@ -56,7 +57,7 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 
         xpilot@xpilot.org
 
-Remember to include the version of XPilot, your platform, the symptoms
-and, if you have one, a fix when reporting bugs.
+Remember to include the version of XPilot, your platform and the symptoms
+in as much detail as possible.
 
-$Id: README.txt.msub,v 4.1 1998/05/01 07:47:44 bert Exp $
+$Id: README.txt.msub,v 4.3 2000/03/24 11:17:48 bert Exp $

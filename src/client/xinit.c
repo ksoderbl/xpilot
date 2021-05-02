@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 4.23 2000/03/12 11:07:54 bert Exp $
+/* $Id: xinit.c,v 4.26 2000/03/24 12:47:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -89,7 +89,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.23 2000/03/12 11:07:54 bert Exp $";
+    "@(#)$Id: xinit.c,v 4.26 2000/03/24 12:47:01 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -131,7 +131,7 @@ static message_t	*MsgBlock_pending = NULL;
  * NB!  Is dependent on the order of the items in item.h!
  */
 static struct {
-    char*	data;
+    unsigned char*	data;
     const char*		keysText;
 } itemBitmapData[NUM_ITEMS] = {
     {
@@ -472,8 +472,8 @@ int Init_top(void)
 	    shieldDrawMode = 1;
 	}
     }
-
 #endif
+
     if (hudColor >= maxColors || hudColor <= 0) {
 	hudColor = BLUE;
     }
@@ -610,11 +610,12 @@ int Init_top(void)
     /*
      * Create item bitmaps
      */
-    for (i=0; i<NUM_ITEMS; i++)
+    for (i = 0; i < NUM_ITEMS; i++) {
 	itemBitmaps[i]
 	    = XCreateBitmapFromData(dpy, top,
 				    (char *)itemBitmapData[i].data,
 				    ITEM_SIZE, ITEM_SIZE);
+    }
 
     /*
      * Creates and initializes the graphic contexts.
@@ -684,8 +685,9 @@ int Init_top(void)
 	      BlackPixel(dpy, DefaultScreen(dpy)),
 	      GXcopy, AllPlanes);
 
-    if (dbuf_state->type == COLOR_SWITCH)
+    if (dbuf_state->type == COLOR_SWITCH) {
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
+    }
 
 #endif
 
@@ -702,6 +704,7 @@ int Init_top(void)
     return 0;
 }
 
+
 /*
  * Creates the playing windows.
  * Returns 0 on success, -1 on error.
@@ -713,7 +716,7 @@ int Init_playing_windows(void)
     Pixmap			pix;
     GC				cursorGC;
 #else
-	int				i;
+    int				i;
 #endif
 
     if (!top) {
@@ -727,10 +730,11 @@ int Init_playing_windows(void)
     draw_width = top_width - (256 + 2);
     draw_height = top_height;
 #ifdef  _WINDOWS
-    /* poor code.  WinX needs to know beforehand if its dealing with draw
-       because it might want to create 2 bitmaps for it.  Since i know draw
-       is the first window created (after top), i can cheat it.
-    */
+    /*
+     * What follows is poor code.  WinX needs to know beforehand if its
+     * dealing with draw because it might want to create 2 bitmaps for it.
+     * Since i know draw is the first window created (after top), i can cheat it.
+     */
     draw = 1;
 #endif
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
@@ -758,16 +762,17 @@ int Init_playing_windows(void)
     messageGC = WinXCreateWinDC(msgWindow);
     motdGC = WinXCreateWinDC(top);
 
-	for (i=0; i<MAX_COLORS; i++)
-		colors[i].pixel = i;
-	players_exposed = 1;
-	/* p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth); */
-	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+    for (i = 0; i < MAX_COLORS; i++) {
+	colors[i].pixel = i;
+    }
+    players_exposed = 1;
+    /* p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth); */
+    s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
     /*
      * Create item bitmaps AFTER the windows
      */
-	WinXCreateItemBitmaps();
-	/* create the fonts AFTER the windows */
+    WinXCreateItemBitmaps();
+    /* create the fonts AFTER the windows */
     gameFont
 	= Set_font(dpy, gc, gameFontName, "gameFont");
     messageFont
@@ -783,8 +788,6 @@ int Init_playing_windows(void)
     buttonGC = WinXCreateWinDC(buttonWindow);
     buttonFont
 	= Set_font(dpy, buttonGC, buttonFontName, "buttonFont");
-
-
 #endif
 
     /* Create buttons */
@@ -855,7 +858,7 @@ int Init_playing_windows(void)
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
-     * (This could be in dbuff_init completely IMHO, -- Metalite)
+     * (This could be in dbuff_init_buffer completely IMHO, -- Metalite)
      */
     switch (dbuf_state->type) {
 
@@ -868,20 +871,21 @@ int Init_playing_windows(void)
     case MULTIBUFFER:
 	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
 	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
-	dbuff_init(dbuf_state);
+	dbuff_init_buffer(dbuf_state);
 	break;
 
     case COLOR_SWITCH:
 	s_radar = radar;
-	p_radar = s_radar;
+	p_radar = radar;
 	p_draw = draw;
 	Paint_sliding_radar();
 	break;
     }
 
     XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
-    if (kdpy)
+    if (kdpy) {
 	XAutoRepeatOff(kdpy);
+    }
 
     /*
      * Define a blank cursor for use with pointer control

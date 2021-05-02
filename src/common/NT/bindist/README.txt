@@ -1,6 +1,6 @@
-$Id: README.txt,v 1.32 2000/03/13 19:09:52 bert Exp $
+$Id: README.txt.msub,v 1.1 1998/04/17 04:19:48 dick Exp $
 
-This is the README for XPilot.exe and XPilots.exe  4.2.0-NT13.
+This is the README for XPilot.exe and XPilots.exe  4.2.1-NT13.
 
 Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 

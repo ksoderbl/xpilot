@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 4.35 2000/03/12 14:20:04 bert Exp $
+/* $Id: netclient.c,v 4.36 2000/03/20 10:01:58 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -2544,6 +2544,7 @@ int Send_display(void)
     if (width_wanted == view_width &&
 	height_wanted == view_height &&
 	debris_colors == num_spark_colors &&
+	spark_rand == old_spark_rand &&
 	last_loops != 0) {
 	return 0;
     }
@@ -2553,6 +2554,9 @@ int Send_display(void)
 		      num_spark_colors, spark_rand) == -1) {
 	return -1;
     }
+
+    old_spark_rand = spark_rand;
+
     return 0;
 }
 

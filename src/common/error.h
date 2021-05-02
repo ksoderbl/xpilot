@@ -1,4 +1,4 @@
-/* $Id: error.h,v 4.1 2000/03/12 11:13:53 bert Exp $
+/* $Id: error.h,v 4.2 2000/03/24 09:45:07 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -14,9 +14,6 @@
 /*
  * Prototypes and include files.
  */
-#ifdef VAX
-#include <perror.h>
-#endif
 #include <errno.h>
 #include <stdio.h>
 

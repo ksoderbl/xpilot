@@ -1,4 +1,4 @@
-/* $Id: xp-replay.c,v 4.4 1999/11/07 09:39:11 bert Exp $
+/* $Id: xp-replay.c,v 4.5 2000/03/24 12:47:02 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
  *
@@ -343,7 +343,7 @@ static void saveStartToEndPPM(void *);
 static void saveStartToEndXPR(void *);
 
 static struct button_init {
-    char *data;
+    unsigned char *data;
     char colour;
     int width;
     int height;
@@ -1369,7 +1369,7 @@ static Atom		ProtocolAtom;
 static Atom		KillAtom;
 
 static Pixmap		itemBitmaps[NUM_ITEMS];         /* Bitmaps for the items */
-static char		*itemData[NUM_ITEMS] = {
+static unsigned char	*itemData[NUM_ITEMS] = {
     itemEnergyPack_bits,
     itemWideangleShot_bits,
     itemRearShot_bits,

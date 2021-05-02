@@ -1,4 +1,4 @@
-/* $Id: ship.c,v 4.6 2000/02/21 20:23:44 bert Exp $
+/* $Id: ship.c,v 4.7 2000/03/22 17:59:33 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -48,7 +48,7 @@ char ship_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: ship.c,v 4.6 2000/02/21 20:23:44 bert Exp $";
+    "@(#)$Id: ship.c,v 4.7 2000/03/22 17:59:33 bert Exp $";
 #endif
 
 
@@ -512,6 +512,9 @@ void Make_wreckage(
     modifiers		mods;
     DFLOAT		mass, sum_mass = 0.0;
 
+    if (!useWreckage) {
+	return;
+    }
     if (BIT(World.rules->mode, WRAP_PLAY)) {
 	if (x < 0) x += World.width;
 	else if (x >= World.width) x -= World.width;

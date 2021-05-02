@@ -1,4 +1,4 @@
-/* $Id: shot.c,v 4.7 1999/11/10 21:06:36 bert Exp $
+/* $Id: shot.c,v 4.9 2000/03/24 14:21:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -44,12 +44,13 @@
 #include "cannon.h"
 #include "objpos.h"
 #include "netserver.h"
+#include "error.h"
 
 char shot_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shot.c,v 4.7 1999/11/10 21:06:36 bert Exp $";
+    "@(#)$Id: shot.c,v 4.9 2000/03/24 14:21:52 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -79,10 +80,15 @@ static object *objArray;
 
 void Alloc_shots(int number)
 {
-    object		*x = (object *)malloc(number * sizeof(object));
+    object		*x;
     int			i;
 
-    memset(x, 0, number * sizeof(object));
+    x = (object *) calloc(number, sizeof(object));
+    if (!x) {
+	error("Not enough memory for shots.");
+	exit(1);
+    }
+
     objArray = x;
     for (i = 0; i < number; i++) {
 	x->owner = -1;

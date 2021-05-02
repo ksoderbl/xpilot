@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.5 2000/03/12 11:13:53 bert Exp $
+/* $Id: config.c,v 1.6 2000/03/21 10:37:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -149,12 +149,22 @@
 #    define ZCAT_FORMAT "gzip -d -c < %s"
 #endif
 
+/*
+ * Please don't change this one.
+ */
+#ifndef CONTACTADDRESS
+#    define CONTACTADDRESS	"xpilot@xpilot.org"
+#endif
+
+
 char config_version[] = VERSION;
+
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: config.c,v 1.5 2000/03/12 11:13:53 bert Exp $";
+    "@(#)$Id: config.c,v 1.6 2000/03/21 10:37:22 bert Exp $";
 #endif
+
 
 char *Conf_libdir(void)
 {
@@ -233,6 +243,13 @@ char *Conf_soundfile(void)
 char *Conf_localguru(void)
 {
     static char conf[] = LOCALGURU;
+
+    return conf;
+}
+
+char *Conf_contactaddress(void)
+{
+    static char conf[] = CONTACTADDRESS;
 
     return conf;
 }

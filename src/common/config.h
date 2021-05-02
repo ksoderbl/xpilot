@@ -1,4 +1,4 @@
-/* $Id: config.h,v 4.4 1999/11/07 12:24:30 bert Exp $
+/* $Id: config.h,v 4.5 2000/03/21 10:37:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -104,6 +104,7 @@ char *Conf_texturedir(void);
 char *Conf_sounddir(void);
 char *Conf_soundfile(void);
 char *Conf_localguru(void);
+char *Conf_contactaddress(void);
 char *Conf_robotfile(void);
 char *Conf_zcat_ext(void);
 char *Conf_zcat_format(void);

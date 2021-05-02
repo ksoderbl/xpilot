@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 4.10 1999/10/15 22:47:54 svenske Exp $
+/* $Id: proto.h,v 4.11 2000/03/23 17:06:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -202,6 +202,11 @@ void Cannon_aim(int ind, int weapon, int *target, int *dir);
 void Cannon_fire(int ind, int weapon, int target, int dir);
 
 /*
+ * Prototypes for command.c
+ */
+void Handle_player_command(player *pl, char *cmd);
+
+/*
  * Prototypes for player.c
  */
 void Pick_startpos(int ind);
@@ -214,6 +219,7 @@ int Init_player(int ind, wireobj *ship);
 void Alloc_players(int number);
 void Free_players(void);
 void Update_score_table(void);
+void Reset_all_players(void);
 void Check_team_members(int);
 void Check_team_treasures(int);
 void Compute_game_status(void);
@@ -269,6 +275,8 @@ void Contact_cleanup(void);
 int Contact_init(void);
 void Contact(int fd, void *arg);
 void Queue_loop(void);
+int Queue_advance_player(char *name, char *msg);
+int Queue_show_list(char *msg);
 void Set_deny_hosts(void);
 
 /*

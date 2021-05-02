@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 4.9 2000/03/12 11:45:53 bert Exp $
+/* $Id: paint.h,v 4.11 2000/03/21 09:54:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -37,6 +37,136 @@
 /* need other_t */
 #include "client.h"
 #endif
+
+#define MAX_COLORS		16	/* Max. switched colors ever */
+#define MAX_COLOR_LEN		32	/* Max. length of a color name */
+
+#define MAX_MSGS		15	/* Max. messages displayed ever */
+
+#define NUM_DASHES		2
+#define NUM_CDASHES		2
+#define DASHES_LENGTH		12
+
+#define HUD_SIZE		90	/* Size/2 of HUD lines */
+#define HUD_OFFSET		20	/* Hud line offset */
+#define FUEL_GAUGE_OFFSET	6
+#define HUD_FUEL_GAUGE_SIZE	(2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
+
+typedef struct {
+    char		txt[MSG_LEN];
+    short		len;
+    short		pixelLen;
+    int			life;
+} message_t;
+
+/* which index a message actually has (consider SHOW_REVERSE_SCROLL) */
+#define TALK_MSG_SCREENPOS(_total,_pos) \
+    (BIT(instruments, SHOW_REVERSE_SCROLL)?(_total)-(_pos):(_pos))
+
+/* how to draw a selection */
+#define DRAW_EMPHASIZED		BLUE
+
+/*
+ * Global objects.
+ */
+
+extern char	dashes[NUM_DASHES];
+extern char	cdashes[NUM_CDASHES];
+
+/* The fonts used in the game */
+extern XFontStruct* gameFont;
+extern XFontStruct* messageFont;
+extern XFontStruct* scoreListFont;
+extern XFontStruct* buttonFont;
+extern XFontStruct* textFont;
+extern XFontStruct* talkFont;
+extern XFontStruct* motdFont;
+
+/* The name of the fonts used in the game */
+extern char gameFontName[FONT_LEN];
+extern char messageFontName[FONT_LEN];
+extern char scoreListFontName[FONT_LEN];
+extern char buttonFontName[FONT_LEN];
+extern char textFontName[FONT_LEN];
+extern char talkFontName[FONT_LEN];
+extern char motdFontName[FONT_LEN];
+
+extern Display	*dpy;			/* Display of player (pointer) */
+extern Display	*kdpy;			/* Keyboard display */
+extern short	about_page;		/* Which page is the player on? */
+extern u_short	team;			/* What team is the player on? */
+extern bool	players_exposed;	/* Is score window exposed? */
+extern int	radar_exposures;	/* Is radar window exposed? */
+
+					/* windows has 2 sets of item bitmaps */
+#define	ITEM_HUD	0		/* one color for the HUD */
+#define	ITEM_PLAYFIELD	1		/* and one color for the playfield */
+#ifdef	_WINDOWS
+extern Pixmap	itemBitmaps[][2];
+#else
+extern Pixmap	itemBitmaps[];
+#endif
+
+extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
+extern GC	motdGC;
+extern XGCValues gcv;
+extern Window	top, draw, keyboard, radar, players;
+#ifdef	_WINDOWS				/* see paint.c for details */
+extern Window	textWindow, msgWindow, buttonWindow;
+#endif
+extern Pixmap	p_draw, p_radar, s_radar;
+extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
+extern Window	about_w, about_close_b, about_next_b, about_prev_b, talk_w;
+extern XColor	colors[MAX_COLORS];		/* Colors */
+extern Colormap	colormap;		/* Private colormap */
+extern int	maxColors;		/* Max. number of colors to use */
+extern int	hudColor;		/* Color index for HUD drawing */
+extern int	hudLockColor;           /* Color index for lock on HUD drawing */
+extern int	wallColor;		/* Color index for wall drawing */
+extern int	wallRadarColor;		/* Color index for walls on radar */
+extern int	targetRadarColor;	/* Color index for targets on radar */
+extern int	decorColor;		/* Color index for decoration drawing */
+extern int	decorRadarColor;	/* Color index for decorations on radar */
+extern bool	gotFocus;
+extern bool	talk_mapped;
+extern short	view_width, view_height;	/* Visible area from server */
+extern int	real_view_width;	/* Width of map area displayed. */
+extern int	real_view_height;	/* Height of map area displayed. */
+extern int	view_x_offset;		/* Offset of view_width */
+extern int	view_y_offset;		/* Offset of view_height */
+extern u_byte	debris_colors;		/* Number of debris intensities */
+extern DFLOAT	charsPerTick;		/* Output speed of messages */
+extern bool	markingLights;		/* Marking lights on ships */
+extern int	titleFlip;		/* Do special titlebar flipping? */
+extern int	shieldDrawMode;		/* How to draw players shield */
+extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
+extern char	*texturePath;		/* Path list of texture directories */
+extern char	*wallTextureFile;	/* Filename of wall texture */
+extern char	*decorTextureFile;	/* Filename of decor texture */
+extern char	*ballTextureFile;	/* Filename of ball texture */
+
+extern int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
+		(Display *disp, Drawable d, GC gc,
+		 int x, int y, unsigned width, unsigned height);
+
+extern int	maxKeyDefs;
+extern long	loops;
+extern int	maxMessages;
+extern bool	selectionAndHistory;
+
+#ifdef	WINDOWSCALING
+extern DFLOAT	scaleFactor;		/* scale the draw (main playfield) window */
+extern DFLOAT	scaleFactor_s;
+extern short	scaleArray[];
+extern void	Init_scale_array(void);
+#define	WINSCALE(__n)	((__n) >= 0 ? scaleArray[(__n)] : -scaleArray[-(__n)])
+#else
+#define	WINSCALE(__n)	(__n)
+#endif
+
+/*
+ * Prototypes from the paint*.c files.
+ */
 
 void Add_message(char *message);
 int Handle_start(long server_loops);
@@ -101,132 +231,5 @@ void Paint_recording(void);
 void Paint_frame(void);
 int Handle_time_left(long sec);
 void Game_over_action(u_byte stat);
-
-#define MAX_COLORS		16	/* Max. color switched colors ever */
-
-#define MAX_MSGS		15	/* Max. messages displayed ever */
-
-#define NUM_DASHES	    2
-#define NUM_CDASHES	    2
-#define DASHES_LENGTH	    12
-
-#define HUD_SIZE	    90		    /* Size/2 of HUD lines */
-#define HUD_OFFSET	    20		    /* Hud line offset */
-#define FUEL_GAUGE_OFFSET   6
-#define HUD_FUEL_GAUGE_SIZE (2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
-
-typedef struct {
-    char		txt[MSG_LEN];
-    short		len;
-    short		pixelLen;
-    int			life;
-} message_t;
-
-/* which index a message actually has (consider SHOW_REVERSE_SCROLL) */
-#define TALK_MSG_SCREENPOS(_total,_pos) \
-    (BIT(instruments, SHOW_REVERSE_SCROLL)?(_total)-(_pos):(_pos))
-
-/* how to draw a selection */
-#define DRAW_EMPHASIZED                BLUE
-
-/*
- * Global objects.
- */
-
-extern char		dashes[NUM_DASHES], cdashes[NUM_CDASHES];
-
-/* The fonts used in the game */
-extern XFontStruct* gameFont;
-extern XFontStruct* messageFont;
-extern XFontStruct* scoreListFont;
-extern XFontStruct* buttonFont;
-extern XFontStruct* textFont;
-extern XFontStruct* talkFont;
-extern XFontStruct* motdFont;
-
-/* The name of the fonts used in the game */
-extern char gameFontName[FONT_LEN];
-extern char messageFontName[FONT_LEN];
-extern char scoreListFontName[FONT_LEN];
-extern char buttonFontName[FONT_LEN];
-extern char textFontName[FONT_LEN];
-extern char talkFontName[FONT_LEN];
-extern char motdFontName[FONT_LEN];
-
-extern Display	*dpy;			/* Display of player (pointer) */
-extern Display	*kdpy;			/* Keyboard display */
-extern short	about_page;		/* Which page is the player on? */
-extern u_short	team;			/* What team is the player on? */
-extern bool	players_exposed;	/* Is score window exposed? */
-extern int	radar_exposures;	/* Is radar window exposed? */
-
-#define MAX_COLOR_LEN		32
-
-								/* windows has 2 sets of item bitmaps */
-#define	ITEM_HUD		0		/* one color for the HUD */
-#define	ITEM_PLAYFIELD	1		/* and one color for the playfield */
-#ifdef	_WINDOWS
-extern Pixmap	itemBitmaps[][2];
-#else
-extern Pixmap	itemBitmaps[];
-#endif
-
-extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
-extern GC	motdGC;
-extern XGCValues gcv;
-extern Window	top, draw, keyboard, radar, players;
-#ifdef	_WINDOWS				/* see paint.c for details */
-extern Window	textWindow, msgWindow, buttonWindow;
-#endif
-extern Pixmap	p_draw, p_radar, s_radar;
-extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-extern Window	about_w, about_close_b, about_next_b, about_prev_b, talk_w;
-extern XColor	colors[MAX_COLORS];		/* Colors */
-extern Colormap	colormap;		/* Private colormap */
-extern int	maxColors;		/* Max. number of colors to use */
-extern int	hudColor;		/* Color index for HUD drawing */
-extern int	hudLockColor;           /* Color index for lock on HUD drawing */
-extern int	wallColor;		/* Color index for wall drawing */
-extern int	wallRadarColor;		/* Color index for walls on radar */
-extern int	targetRadarColor;	/* Color index for targets on radar */
-extern int	decorColor;		/* Color index for decoration drawing */
-extern int	decorRadarColor;	/* Color index for decorations on radar */
-extern bool	gotFocus;
-extern bool	talk_mapped;
-extern short	view_width, view_height;	/* Visible area from server */
-extern int	real_view_width;	/* Width of map area displayed. */
-extern int	real_view_height;	/* Height of map area displayed. */
-extern int	view_x_offset;		/* Offset of view_width */
-extern int	view_y_offset;		/* Offset of view_height */
-extern u_byte	debris_colors;		/* Number of debris intensities */
-extern u_byte	spark_rand;		/* Sparkling effect */
-extern DFLOAT	charsPerTick;		/* Output speed of messages */
-extern bool	markingLights;		/* Marking lights on ships */
-extern int	titleFlip;		/* Do special titlebar flipping? */
-extern int	shieldDrawMode;		/* How to draw players shield */
-extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
-extern char	*texturePath;		/* Path list of texture directories */
-extern char	*wallTextureFile;	/* Filename of wall texture */
-extern char	*decorTextureFile;	/* Filename of decor texture */
-extern char	*ballTextureFile;	/* Filename of ball texture */
-
-extern int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
-		(Display *disp, Drawable d, GC gc,
-		 int x, int y, unsigned width, unsigned height);
-
-extern int	maxKeyDefs;
-extern long	loops;
-extern int	maxMessages;
-extern bool	selectionAndHistory;
-
-#ifdef	WINDOWSCALING
-extern DFLOAT	scaleFactor;		/* scale the draw (main playfield) window */
-extern DFLOAT	scaleFactor_s;
-extern short	scaleArray[];
-extern void	Init_scale_array(void);
-#define	WINSCALE(__n)	((__n) >= 0 ? scaleArray[(__n)] : -scaleArray[-(__n)])
-#else
-#define	WINSCALE(__n)	(__n)
-#endif
 
 #endif

@@ -1,6 +1,7 @@
-/* $Id: Imakefile,v 4.12 2000/03/11 19:18:03 bert Exp $ */
+/* $Id: Imakefile,v 4.13 2000/03/23 09:27:52 bert Exp $ */
 
 TOPDIR=../..
+COMMON = ../common/
 
 #include "Local.config"
 
@@ -89,7 +90,7 @@ DEFINES = \
        $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
        $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
        $(DEFS_OTHER) $(DEFS_DEBUG)
-INCLUDES = $(AUDIOINC) -I../common/ -I../../lib/
+INCLUDES = $(AUDIOINC) -I$(COMMON) -I../../lib/
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = \
@@ -115,7 +116,7 @@ OBJS = \
 	xevent.o xinit.o xpilot.o xpmread.o \
 	$(AUDIOOBJ)
 
-DEPLIBS = ../common/libxpcommon.a $(DEPXLIB)
+DEPLIBS = $(COMMON)libxpcommon.a $(DEPXLIB)
 
 #if !defined(sgiCCoptions)		/* A hack that should mack everyone */
 					/* that doesn't have XLIBONLY. */
@@ -133,6 +134,5 @@ X_LIB = $(XLIBONLY)
 
 PROGRAMS = xpilot
 
-ProgramTarget(xpilot,../common/libxpcommon.a $(AUDIOLIB),$(X_LIB) $(MATHLIB) $(EXTRALIB))
-COMMON = ../common/
+ProgramTarget(xpilot,$(COMMON)libxpcommon.a $(AUDIOLIB),$(X_LIB) $(MATHLIB) $(EXTRALIB))
 CtagFiles(*.[ch] $(COMMON)*.[ch])

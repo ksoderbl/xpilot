@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 4.14 1999/11/10 21:05:03 bert Exp $
+/* $Id: robotdef.c,v 4.16 2000/03/24 14:13:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: robotdef.c,v 4.14 1999/11/10 21:05:03 bert Exp $";
+    "@(#)$Id: robotdef.c,v 4.16 2000/03/24 14:13:51 bert Exp $";
 #endif
 
 #define WITHIN(NOW,THEN,DIFF) (NOW<=THEN && (THEN-NOW)<DIFF)
@@ -1078,8 +1078,14 @@ static bool Check_robot_target(int ind,
     delta_dir = MOD2(item_dir - travel_dir, RES);
     if (delta_dir >= RES/4 && delta_dir <= 3*RES/4) {
 
-	if (new_mode == RM_HARVEST || (new_mode == RM_NAVIGATE && (clear_path || dist > 8 * BLOCK_SZ))) {	/* reverse direction of travel */
-	    item_dir = MOD2(travel_dir + (delta_dir > RES / 2 ? -5 * RES / 8 : 5 * RES / 8), RES);
+	if (new_mode == RM_HARVEST ||
+	    (new_mode == RM_NAVIGATE &&
+		(clear_path || dist > 8 * BLOCK_SZ))) {
+	    /* reverse direction of travel */
+	    item_dir = MOD2(travel_dir + (delta_dir > RES / 2
+					    ? -5 * RES / 8
+					    : 5 * RES / 8),
+			    RES);
 	}
 	pl->turnspeed = MAX_PLAYER_TURNSPEED;
 	slowing = true;
@@ -1141,20 +1147,32 @@ static bool Check_robot_target(int ind,
 	if (pl->velocity > my_data->robot_normal_speed)
 	    CLR_BIT(pl->status, THRUSTING);
 
-    } else if ((new_mode != RM_ATTACK && new_mode != RM_NAVIGATE) || item_dist < 8*BLOCK_SZ || (new_mode == RM_NAVIGATE && delta_dir > 3 * RES / 8 && delta_dir < 5 * RES / 8)) {
+    } else if ((new_mode != RM_ATTACK
+		&& new_mode != RM_NAVIGATE)
+	    || item_dist < 8*BLOCK_SZ
+	    || (new_mode == RM_NAVIGATE
+		&& delta_dir > 3 * RES / 8
+		&& delta_dir < 5 * RES / 8)) {
 
 	if (pl->velocity < 2*my_data->robot_normal_speed)
 	    SET_BIT(pl->status, THRUSTING);
 	if (pl->velocity > 3*my_data->robot_normal_speed)
 	    CLR_BIT(pl->status, THRUSTING);
 
-    } else if (new_mode == RM_ATTACK || (new_mode == RM_NAVIGATE && (dist < 12 * BLOCK_SZ || (delta_dir > RES / 8 && delta_dir < 7 * RES / 8)))) {
+    } else if (new_mode == RM_ATTACK
+	    || (new_mode == RM_NAVIGATE
+		&& (dist < 12 * BLOCK_SZ
+		    || (delta_dir > RES / 8
+			&& delta_dir < 7 * RES / 8)))) {
 
 	if (pl->velocity < my_data->robot_attack_speed / 2)
 	    SET_BIT(pl->status, THRUSTING);
 	if (pl->velocity > my_data->robot_attack_speed)
 	    CLR_BIT(pl->status, THRUSTING);
-    } else if (clear_path && (delta_dir < RES / 8 || delta_dir > 7 * RES / 8) && item_dist > 18 * BLOCK_SZ) {
+    } else if (clear_path
+	    && (delta_dir < RES / 8
+		|| delta_dir > 7 * RES / 8)
+	    && item_dist > 18 * BLOCK_SZ) {
 	if (pl->velocity < my_data->robot_max_speed - my_data->robot_normal_speed)
 	    SET_BIT(pl->status, THRUSTING);
 	if (pl->velocity > my_data->robot_max_speed)
@@ -1166,9 +1184,11 @@ static bool Check_robot_target(int ind,
 	    CLR_BIT(pl->status, THRUSTING);
     }
 
-    if (new_mode == RM_ATTACK || (BIT(World.rules->mode, TIMING) &&
-				  new_mode == RM_NAVIGATE)) {
-	if (pl->item[ITEM_ECM] > 0 && item_dist < ECM_DISTANCE / 4) {
+    if (new_mode == RM_ATTACK
+	|| (BIT(World.rules->mode, TIMING)
+	    && new_mode == RM_NAVIGATE)) {
+	if (pl->item[ITEM_ECM] > 0
+	    && item_dist < ECM_DISTANCE / 4) {
 	    Fire_ecm(ind);
 	}
 	else if (pl->item[ITEM_TRANSPORTER] > 0
@@ -1296,7 +1316,8 @@ static bool Check_robot_target(int ind,
 		Fire_shot(ind, OBJ_SMART_SHOT, pl->dir);
 		my_data->last_fired_missile=my_data->robot_count;
 	    } else {
-		if ((new_mode == RM_ATTACK && clear_path) || (my_data->robot_count % 50) == 0) {
+		if ((new_mode == RM_ATTACK && clear_path)
+		    || (my_data->robot_count % 50) == 0) {
 		    Choose_weapon_modifier(pl, OBJ_SHOT);
 		    Fire_normal_shots(ind);
 		}
@@ -1306,7 +1327,7 @@ static bool Check_robot_target(int ind,
 	 * if ((my_data->robot_count % 32) == 0)
 	 */
 	else if ((my_data->robot_count % 32) < pl->item[ITEM_MINE]
-		  && !WITHIN(my_data->robot_count,my_data->last_dropped_mine,10)) {
+		  && !WITHIN(my_data->robot_count, my_data->last_dropped_mine, 10)) {
 	    if (pl->fuel.sum > pl->fuel.l3) {
 		Choose_weapon_modifier(pl, OBJ_MINE);
 		Place_mine(ind);
@@ -1651,16 +1672,21 @@ static bool Ball_handler(int ind)
 			RM_NAVIGATE));
 	}
     } else {
-	int ball_dist, closest_ball_dist = closest_nt_dist, closest_ball = -1;
-	for (i=0; i<NumObjs; i++) {
-	    if (Obj[i]->type == OBJ_BALL
-		&& ((Obj[i]->id == -1 && Obj[i]->owner != -1)
-		    || Players[GetInd[Obj[i]->id]]->team != pl->team)) {
-		ball_dist = (int)LENGTH(pl->pos.x - Obj[i]->pos.x,
-								pl->pos.y - Obj[i]->pos.y);
-		if (ball_dist < closest_ball_dist) {
-		    closest_ball_dist = ball_dist;
-		    closest_ball = i;
+	int	ball_dist;
+	int	closest_ball_dist = closest_nt_dist;
+	int	closest_ball = -1;
+
+	for (i = 0; i < NumObjs; i++) {
+	    if (Obj[i]->type == OBJ_BALL) {
+		if ((Obj[i]->id == -1)
+		    ? (Obj[i]->owner != -1)
+		    : (Players[GetInd[Obj[i]->id]]->team != pl->team)) {
+		    ball_dist = (int)LENGTH(pl->pos.x - Obj[i]->pos.x,
+					    pl->pos.y - Obj[i]->pos.y);
+		    if (ball_dist < closest_ball_dist) {
+			closest_ball_dist = ball_dist;
+			closest_ball = i;
+		    }
 		}
 	    }
 	}

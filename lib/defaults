@@ -34,3 +34,6 @@ allowModifiers:         yes
 
 # Set the frames per second
 framesPerSecond:	14
+
+#
+password:	not

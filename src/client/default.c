@@ -1,4 +1,4 @@
-/* $Id: default.c,v 4.19 1999/11/07 11:57:30 bert Exp $
+/* $Id: default.c,v 4.20 2000/03/21 09:49:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -78,7 +78,7 @@ char *talk_fast_temp_buf_big;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.19 1999/11/07 11:57:30 bert Exp $";
+    "@(#)$Id: default.c,v 4.20 2000/03/21 09:49:56 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -2147,14 +2147,14 @@ static int Find_resource(XrmDatabase db, const char *resource,
 {
     int			i;
 #ifndef	_WINDOWS
-	int		len;
+    int			len;
     char		str_name[80],
 			str_class[80],
 			*str_type[10];
     XrmValue		rmValue;
+    unsigned		hash = String_hash(resource);
 
-   unsigned		hash = String_hash(resource);
-   for (i = 0;;) {
+    for (i = 0;;) {
 	if (hash == options[i].hash && !strcmp(resource, options[i].name)) {
 	    *index = i;
 	    break;
@@ -2181,36 +2181,39 @@ static int Find_resource(XrmDatabase db, const char *resource,
     }
     strncpy(result, options[*index].fallback, size);
     result[size - 1] = '\0';
+
     return 0;
+
 #else	/* _WINDOWS */
-	unsigned		hash = String_hash(resource);
-	for (i = 0;;)
-	{
-		if (!strcmp(resource, options[i].name)) 
-		{
-			*index = i;
-			break;
-		}
-		if (++i >= NELEM(options)) 
-		{
-			errno = 0;
-			error("BUG: Can't find option \"%s\"", resource);
-			exit(1);
-		}
-    }
-	GetWindowsProfileString("Settings", resource, options[*index].fallback, result, size);
-#if 0
-	GetPrivateProfileString("Settings", resource, "", result, size, 
-		Get_xpilotini_file(1));
-	if (result[0] == '\0')
-	{
-		GetPrivateProfileString("Settings", resource, "", result, size, 
-			Get_xpilotini_file(2));
-		if (result[0] == '\0')
-		strncpy(result, options[*index].fallback, size);
+
+    unsigned		hash = String_hash(resource);
+
+    for (i = 0;;) {
+	if (!strcmp(resource, options[i].name)) {
+	    *index = i;
+	    break;
 	}
+	if (++i >= NELEM(options)) {
+	    errno = 0;
+	    error("BUG: Can't find option \"%s\"", resource);
+	    exit(1);
+	}
+    }
+    GetWindowsProfileString("Settings", resource, options[*index].fallback, result, size);
+
+#if 0
+    GetPrivateProfileString("Settings", resource, "", result, size, 
+			    Get_xpilotini_file(1));
+    if (result[0] == '\0') {
+	GetPrivateProfileString("Settings", resource, "", result, size, 
+				Get_xpilotini_file(2));
+	if (result[0] == '\0') {
+	    strncpy(result, options[*index].fallback, size);
+	}
+    }
 #endif
-	return(1);
+
+    return 1;
 #endif
 }
 
@@ -2910,10 +2913,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     }
     LIMIT(scaleFactor, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
     Get_float_resource(rDB, "altScaleFactor", &scaleFactor_s);
-    if (scaleFactor == 0.0) {
-        scaleFactor = 2.0;
+    if (scaleFactor_s == 0.0) {
+        scaleFactor_s = 2.0;
     }
-    LIMIT(scaleFactor, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
+    LIMIT(scaleFactor_s, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
 #endif
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
@@ -2925,10 +2928,13 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_string_resource(rDB, "frameBuffer", frameBuffer, sizeof frameBuffer);
 #endif
 
+/* Erase mode and multibuffer mode can now be combined! */
+#if 0
     /* mutually exclusive options */
     if (useErase) {
 	multibuffer = false;
     }
+#endif
 
     /*
      * Key bindings

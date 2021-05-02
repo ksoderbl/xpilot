@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 4.5 2000/03/12 11:45:52 bert Exp $
+/* $Id: paint.c,v 4.8 2000/03/20 15:18:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -129,7 +129,6 @@ int	real_view_height;	/* Height of map area displayed. */
 int	view_x_offset;		/* Offset of view_width wrt. real_view_width */
 int	view_y_offset;		/* Offset of view_height wrt. real_view_height */
 
-u_byte	spark_rand;		/* Sparkling effect */
 int	titleFlip;		/* Do special title bar flipping? */
 int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
 char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
@@ -283,7 +282,7 @@ void Paint_frame(void)
 		      0, 0, 256, RadarHeight, 0, 0);
 #else
 	    WinXBltPixToWin(p_radar, radar, 
-			  0, 0, 256, RadarHeight, 0, 0);
+			    0, 0, 256, RadarHeight, 0, 0);
 #endif
 	} else {
 	    int x, y, w, h;
@@ -319,6 +318,7 @@ void Paint_frame(void)
     else if (radar_exposures > 2) {
 	Paint_world_radar();
     }
+
 #ifndef _WINDOWS
     if (dbuf_state->type == PIXMAP_COPY) {
 	XCopyArea(dpy, p_draw, draw, gc,
@@ -339,16 +339,14 @@ void Paint_frame(void)
 	    Erase_end();
 	}
 	else {
-	    /* DBE's XdbeBackground switch option is probably faster than
-	       XFillRectangle */
-#ifdef DBE
-	    if (dbuf_state->type != MULTIBUFFER) {
-#endif
-		SET_FG(colors[BLACK].pixel);
+	    /*
+	     * DBE's XdbeBackground switch option is
+	     * probably faster than XFillRectangle.
+	     */
 #ifndef	_WINDOWS
+	    if (dbuf_state->multibuffer_type != MULTIBUFFER_DBE) {
+		SET_FG(colors[BLACK].pixel);
 		XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
-#endif
-#ifdef DBE
 	    }
 #endif
 	}

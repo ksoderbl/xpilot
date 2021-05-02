@@ -1,4 +1,4 @@
-/* $Id: metaserver.c,v 4.7 1999/10/17 12:48:09 bert Exp $
+/* $Id: metaserver.c,v 4.8 2000/03/23 17:06:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -64,7 +64,7 @@ char metaserver_version[] = VERSION;
 
 #ifndef	lint
 char sourceid[] =
-    "@(#)$Id: metaserver.c,v 4.7 1999/10/17 12:48:09 bert Exp $";
+    "@(#)$Id: metaserver.c,v 4.8 2000/03/23 17:06:52 bert Exp $";
 #endif
 
 struct MetaServer {
@@ -87,7 +87,6 @@ static char	msg[MSG_LEN];
 
 extern int	NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
 extern int	login_in_progress;
-extern int	game_lock;
 extern time_t	serverTime;
 
 void Meta_send(char *mesg, int len)

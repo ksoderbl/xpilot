@@ -1,4 +1,4 @@
-/* $Id: client.h,v 4.10 2000/03/11 19:56:56 bert Exp $
+/* $Id: client.h,v 4.11 2000/03/20 10:01:58 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -240,6 +240,8 @@ extern int	shot_size;		/* size of shot */
 extern int	teamshot_size;		/* size of team shot */
 extern bool	showNastyShots;		/* show original flavor shots or the new "nasty shots" */
 extern long	control_count;		/* Display control for how long? */
+extern u_byte	spark_rand;		/* Sparkling effect */
+extern u_byte	old_spark_rand;		/* previous value of spark_rand */
 
 extern long	fuelSum;		/* Sum of fuel in all tanks */
 extern long	fuelMax;		/* How much fuel can you take? */

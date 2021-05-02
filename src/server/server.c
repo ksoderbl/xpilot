@@ -1,4 +1,4 @@
-/* $Id: server.c,v 4.13 2000/03/12 12:11:11 bert Exp $
+/* $Id: server.c,v 4.17 2000/03/24 14:13:18 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -75,7 +75,7 @@ char server_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 4.13 2000/03/12 12:11:11 bert Exp $";
+    "@(#)$Id: server.c,v 4.17 2000/03/24 14:13:18 bert Exp $";
 #endif
 
 /*
@@ -87,12 +87,14 @@ int			NumPulses = 0;
 int			NumEcms = 0;
 int			NumTransporters = 0;
 player			**Players;
+int			obj_1;
 object			*Obj[MAX_TOTAL_SHOTS];
 pulse_t			*Pulses[MAX_TOTAL_PULSES];
 ecm_t			*Ecms[MAX_TOTAL_ECMS];
 trans_t			*Transporters[MAX_TOTAL_TRANSPORTERS];
+int			GetInd_1;
 int			GetInd[NUM_IDS+1];
-server			Server;
+server_t		Server;
 int			ShutdownServer = -1;
 int			ShutdownDelay = 1000;
 char			ShutdownReason[MAX_CHARS];
@@ -117,6 +119,8 @@ static void Handle_signal(int sig_no);
 
 int main(int argc, char **argv)
 {
+    int			timer_tick_rate;
+
 
     /*
      * Make output always linebuffered.  By default pipes
@@ -173,7 +177,7 @@ int main(int argc, char **argv)
      */
     GetLocalHostName(Server.host, sizeof Server.host, (reportToMetaServer != 0));
 
-    Get_login_name(Server.name, sizeof Server.name);
+    Get_login_name(Server.owner, sizeof Server.owner);
 
     /*
      * Log, if enabled.
@@ -209,11 +213,17 @@ int main(int argc, char **argv)
     xpprintf("%s Server runs at %d frames per second\n", showtime(), framesPerSecond);
 #endif
 
+    if (timerResolution > 0) {
+	timer_tick_rate = timerResolution;
+    }
+    else {
+	timer_tick_rate = FPS;
+    }
 #ifdef	_WINDOWS
     /* Windows returns here, we let the worker thread call sched() */
-    install_timer_tick(ServerThreadTimerProc, FPS);
+    install_timer_tick(ServerThreadTimerProc, timer_tick_rate);
 #else
-    install_timer_tick(Main_loop, FPS);
+    install_timer_tick(Main_loop, timer_tick_rate);
 
     sched();
     xpprintf("sched returned!?");
@@ -507,7 +517,7 @@ void Server_info(char *str, unsigned max_size)
     }
     for (i=0; i<NumPlayers; i++) {
 	pl = Players[i];
-	if (BIT(pl->mode, LIMITED_LIVES)) {
+	if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	    ratio = (DFLOAT) pl->score;
 	} else {
 	    ratio = (DFLOAT) pl->score / (pl->life + 1);
@@ -608,7 +618,7 @@ void Log_game(const char *heading)
 
     sprintf(str,"%-50.50s\t%10.10s@%-15.15s\tWorld: %-25.25s\t%10.10s\n",
 	    timenow,
-	    Server.name,
+	    Server.owner,
 	    Server.host,
 	    World.name,
 	    heading);

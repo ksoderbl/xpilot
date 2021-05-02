@@ -182,6 +182,10 @@ int main(int argc, char *argv[])
 	xpprintf("to \"%s\"\n", conpar->real_name);
     }
 
+#ifdef _WINDOWS
+    conpar->disp_name[0] = '\0';
+#endif
+
     /*
      * --- Check commandline arguments and resource files ---
      */

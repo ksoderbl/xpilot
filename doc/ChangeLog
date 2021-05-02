@@ -3,6 +3,68 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.2.1 compared to release 4.2.0.
+
+The server option -armorHits was inadvertently mentioned in the ChangeLog
+for version 4.2.0.  It was removed from 4.2.0 before the public release.
+
+Clients with -maxColors set to less than 8 would not remove the high bit
+from the size element of a radar packet.  When the -maxColors was set to 4
+and if the client was connected to a new modified server then this bug
+caused teammates not to be visible on the radar.
+
+The server now sets the high bit of the size element of a radar packet
+when the player to be shown is a teammate.  The server only does this
+for clients which have a version of 4.2.1 or higher.
+
+Clients who have the -maxColors option to 8 or higher can now show
+teammates in green on the radar when playing on a 4.2.1 server.
+
+Changing the sparkProb setting in the client while playing would
+not always succeed.  This should be improved now.
+
+Support for displaying more than 16 colors has been added for
+clients who do not play in colorSwitching mode.  This feature
+notably will be useful for clients which have been configured
+to run in multibuffer or doublebuffer mode.
+
+Erase mode now also works in multibuffer and doublebuffer mode.
+
+The -altScaleFactor client option now works even if not configured.
+
+The carriage returns in a few client source files have been removed.
+
+Some features of the DeathCup 2000 server are now standard in XPilot.
+These include:
+    - The useWreckage option to turn off the wreckage that
+      destroyed ships leave.  The default value is on.
+    - The roundsToPlay option can be used to specify the number of
+      rounds to play.  By default this is set to 0, meaning no limit.
+    - The timerResolution option can be used to specify the operating
+      system specific timer resolution.  Setting this option to the
+      correct value can improve the accuracy at which the server
+      transmits frame updates to the clients.
+    - The password option can be used to set the password which is
+      needed to obtain operator privileges while playing.
+    - Using talk messages starting with a slash players can now
+      interact with the server.  The /help command lists the
+      available commands.  Some of these require operator
+      privileges which can be obtained by giving the correct
+      password to the /password command.
+
+When sending frame updates to the clients the server now first packs
+information about ships before shots.  It used to be the reserved.
+On some servers with lots of items this could cause ship information
+not to be included because the frame update packet was already full
+with item data.
+
+On maps with robots and balls the server could crash at startup
+when -idleRun was also set as soon as a robot would be searching
+for the nearest ball.  This caused a server crash on Solaris,
+but not on Linux.
+
+===============================================================================
+
 This is a summary of changes of release 4.2.0 compared to release 4.1.0.
 
 Sven Mascheck submitted two bugfixes.  One is a problem with locking on
@@ -297,8 +359,6 @@ Guido Koopman submitted a patch for a new armor item:
       The idea is to bridge the gap between un- and shielded games.
     - Three new options: initialArmor, maxArmor and itemArmorProb.
       With defaults of 0, 10 and 1e-9.
-    - One new option: armorHits. The number of hits one armor item can take.
-      The default is 1.
 
 Only check for robot leaving when it is not transported to its homebase.
 This leaves the shots from a dead robot in the game a bit after it dies.
@@ -353,8 +413,7 @@ edge should be accounted for.
 
 Claus Leth Gregersen fixed portability problems for Windows and
 submitted several patches to improve the way the graphics drawing
-code is organized.  He also submitted code which improves the
-graphics look of items.
+code is organized.
 
 ===============================================================================
 
@@ -3911,6 +3970,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.33 2000/03/11 20:15:41 bert Exp $
+==== $Id: ChangeLog,v 4.36 2000/03/24 14:17:15 bert Exp $
 ===============================================================================
 

@@ -1,4 +1,4 @@
-/* $Id: guiobjects.c,v 4.3 2000/03/12 11:44:43 bert Exp $
+/* $Id: guiobjects.c,v 4.4 2000/03/14 17:47:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *

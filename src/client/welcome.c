@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 4.30 2000/03/12 14:52:46 bert Exp $
+/* $Id: welcome.c,v 4.31 2000/03/24 12:47:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -61,7 +61,7 @@ char welcome_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: welcome.c,v 4.30 2000/03/12 14:52:46 bert Exp $";
+    "@(#)$Id: welcome.c,v 4.31 2000/03/24 12:47:01 bert Exp $";
 #endif
 
 
@@ -962,8 +962,10 @@ static int Get_meta_data(void)
 		    /* we've read n new bytes. */
 		    md[i].end += n;
 		    /* process data for as far as we have lines ending in '\n'. */
-		    while ((newline = memchr(md[i].ptr, '\n',
-					     md[i].end - md[i].ptr)) != NULL) {
+		    while ((newline = (char *) memchr(md[i].ptr, '\n',
+						      md[i].end - md[i].ptr))
+			      != NULL) {
+
 			*newline = '\0';
 			if (newline > md[i].ptr && newline[-1] == '\r') {
 			    newline[-1] = '\0';

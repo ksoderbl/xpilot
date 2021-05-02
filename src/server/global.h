@@ -1,4 +1,4 @@
-/* $Id: global.h,v 4.10 1999/10/10 18:44:49 bert Exp $
+/* $Id: global.h,v 4.14 2000/03/24 08:55:15 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -42,15 +42,16 @@
 #define	STR80	(80)
 
 typedef struct {
-    char name[STR80];
-    char host[STR80];
-} server;
+    char	owner[STR80];
+    char	host[STR80];
+} server_t;
 
 /*
  * Global data.
  */
 #ifdef SERVER
-#define FPS			framesPerSecond
+#define FPS		framesPerSecond
+
 extern player		**Players;
 extern object		*Obj[];
 extern pulse_t		*Pulses[];
@@ -73,7 +74,7 @@ extern int		robotLeaveScore, robotLeaveRatio;
 extern int		robotTeam;
 extern bool		restrictRobots, reserveRobotTeam;
 extern World_map	World;
-extern server		Server;
+extern server_t		Server;
 extern DFLOAT		ShotsMass, ShipMass, ShotsSpeed, Gravity;
 extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
@@ -222,6 +223,7 @@ extern DFLOAT		itemConcentratorProb;
 extern DFLOAT		gameDuration;
 extern bool		allowViewing;
 extern time_t		gameOverTime;
+extern int		game_lock;
 
 extern char	       	*scoreTableFileName;
 
@@ -234,17 +236,20 @@ extern int		maxOffensiveItems;
 extern int		maxDefensiveItems;
 
 extern bool		anaColDet;
-
 extern bool		pLockServer;
+extern int		timerResolution;
 
 extern int		roundDelay;
 extern int		rdelay;
 extern int		rdelaySend;
 extern int		maxRoundTime;
 extern int		roundtime;
+extern int		roundsToPlay;
+extern int		roundsPlayed;
 
 extern bool		useWreckage;
 extern bool		ignore20MaxFPS;
+extern char		*password;
 
 #endif
 

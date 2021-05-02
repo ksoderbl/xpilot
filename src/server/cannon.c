@@ -1,4 +1,4 @@
-/* $Id: cannon.c,v 1.10 1999/11/07 16:55:47 bert Exp $
+/* $Id: cannon.c,v 1.11 2000/03/22 21:21:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,7 +53,7 @@ char cannon_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cannon.c,v 1.10 1999/11/07 16:55:47 bert Exp $";
+    "@(#)$Id: cannon.c,v 1.11 2000/03/22 21:21:56 bert Exp $";
 #endif
 
 #ifdef	SOUND
@@ -211,15 +211,18 @@ int Cannon_select_weapon(int ind)
 }
 
 /* determines in which direction to fire.
-   mode 0 fires straight ahead; mode 1 in a random direction. mode 2 aims at
-   the current position of the closest player, then limits that to the sector
-   in front of the cannon, then adds a small error. mode 3 calculates where
-   the player will be when the shot reaches her, checks if that position is
-   within limits and selects the player who will be closest in this way.
+   mode 0 fires straight ahead.
+   mode 1 in a random direction.
+   mode 2 aims at the current position of the closest player,
+          then limits that to the sector in front of the cannon,
+          then adds a small error.
+   mode 3 calculates where the player will be when the shot reaches her,
+          checks if that position is within limits and selects the player
+          who will be closest in this way.
    the targeted player is also returned (for all modes).
-   mode 0 always fires if it sees a player; modes 1 and 2 only fire if a
-   player is within range of the selected weapon; mode 3 only fire if a player
-   will be in range when the shot is expected to hit.
+   mode 0 always fires if it sees a player.
+   modes 1 and 2 only fire if a player is within range of the selected weapon.
+   mode 3 only fire if a player will be in range when the shot is expected to hit.
  */
 void Cannon_aim(int ind, int weapon, int *target, int *dir)
 {

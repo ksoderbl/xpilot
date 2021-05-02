@@ -1,4 +1,4 @@
-/* $Id: event.c,v 4.13 1999/09/23 14:32:40 svenske Exp $
+/* $Id: event.c,v 4.14 2000/03/22 21:29:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -47,7 +47,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 4.13 1999/09/23 14:32:40 svenske Exp $";
+    "@(#)$Id: event.c,v 4.14 2000/03/22 21:29:53 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}
@@ -251,7 +251,7 @@ void Pause_player(int ind, int onoff)
 
 	    CLR_BIT(pl->status, PAUSE);
 	    updateScores = true;
-	    if (BIT(pl->mode, LIMITED_LIVES)) {
+	    if (BIT(World.rules->mode, LIMITED_LIVES)) {
 		for (i = 0; i < NumPlayers; i++) {
 		    /* If a non-team member has lost a life,
 		     * then it's too late to join. */
@@ -272,7 +272,7 @@ void Pause_player(int ind, int onoff)
 		pl->mychar = ' ';
 		Go_home(ind);
 		SET_BIT(pl->status, PLAYING);
-		if (BIT(pl->mode, LIMITED_LIVES)) {
+		if (BIT(World.rules->mode, LIMITED_LIVES)) {
 		    pl->life = World.rules->lives;
 		}
 	    }

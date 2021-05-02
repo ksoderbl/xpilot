@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 4.23 2000/03/12 11:50:04 bert Exp $
+/* $Id: xevent.c,v 4.24 2000/03/24 12:36:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -390,6 +390,7 @@ bool Key_press_swap_settings(keys_t key)
 
 bool Key_press_swap_scalefactor(keys_t key)
 {
+#ifdef WINDOWSCALING
     DFLOAT tmp;
     tmp = scaleFactor;
     scaleFactor = scaleFactor_s;
@@ -397,6 +398,8 @@ bool Key_press_swap_scalefactor(keys_t key)
 
     Init_scale_array();
     Scale_dashes();
+#endif
+
     return false;
 }
 

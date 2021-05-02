@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 4.24 1999/11/11 20:08:21 bert Exp $
+/* $Id: netserver.c,v 4.28 2000/03/24 09:53:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1010,7 +1010,7 @@ static int Handle_login(int ind)
     strcpy(pl->name, connp->nick);
     strcpy(pl->realname, connp->real);
     strcpy(pl->hostname, connp->host);
-    pl->isowner = (!strcmp(pl->realname, Server.name) &&
+    pl->isowner = (!strcmp(pl->realname, Server.owner) &&
 		   !strcmp(connp->addr, "127.0.0.1"));
     if (connp->team != TEAM_NOT_SET) {
 	pl->team = connp->team;
@@ -1888,6 +1888,10 @@ int Send_radar(int ind, int x, int y, int size)
 {
     connection_t *connp = &Conn[ind];
 
+    /* Only since 4.2.1 can clients correctly handle teammates in green. */
+    if (connp->version < 0x4210) {
+	size &= ~0x80;
+    }
     return Packet_printf(&connp->w, "%c%hd%hd%c", PKT_RADAR, x, y, size);
 }
 
@@ -2563,18 +2567,30 @@ static void Handle_talk(int ind, char *str)
 	}
     }
     else if (strcasecmp(str, "god") == 0) {
-	FILE *fp = fopen(Conf_logfile(), "a");
-	if (fp) {
-	    fprintf(fp,
-		    "%s[%s]{%s@%s(%s)|%s}:\n"
-		    "\t%s\n",
-		    showtime(),
-		    pl->name,
-		    pl->realname, connp->host, connp->addr, connp->dpy,
-		    cp);
-	    fclose(fp);
-	    sprintf(msg + strlen(msg), ":[%s]", "GOD");
-	    Set_player_message(pl, msg);
+	/*
+	* Only log the message if logfile already exists.
+	*
+	* XXX Ideally we would like to do a stat(2) and
+	* check if the log file size is still acceptable.
+	* However we postpone this until after the public
+	* release of the current beta.
+	*/
+	char *logfilename = Conf_logfile();
+
+	if (access(logfilename, 4) == 0) {
+	    FILE *fp = fopen(Conf_logfile(), "a");
+	    if (fp) {
+		fprintf(fp,
+			"%s[%s]{%s@%s(%s)|%s}:\n"
+			"\t%s\n",
+			showtime(),
+			pl->name,
+			pl->realname, connp->host, connp->addr, connp->dpy,
+			cp);
+		fclose(fp);
+		sprintf(msg + strlen(msg), ":[%s]", "GOD");
+		Set_player_message(pl, msg);
+	    }
 	}
     }
     else {						/* Player message */
@@ -2638,7 +2654,12 @@ static int Receive_talk(int ind)
 	    return n;
 	}
 	connp->talk_sequence_num = seq;
-	Handle_talk (ind, str);
+	if (*str == '/') {
+	    Handle_player_command(Players[GetInd[connp->id]], str + 1);
+	}
+	else {
+	    Handle_talk(ind, str);
+	}
     }
     return 1;
 }

@@ -1,4 +1,4 @@
-/* $Id: xeventhandlers.c,v 4.3 2000/03/11 19:18:04 bert Exp $
+/* $Id: xeventhandlers.c,v 4.4 2000/03/24 12:47:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -182,7 +182,8 @@ static void Selection_send(const XSelectionRequestEvent *rq)
     } 
     else if (rq->target == XA_STRING) {
 	XChangeProperty(dpy, rq->requestor, rq->property,
-	    rq->target, 8, PropModeReplace, selection.txt, selection.len);
+			rq->target, 8, PropModeReplace,
+			(unsigned char *) selection.txt, selection.len);
 	ev.xselection.property = rq->property;
     }
     XSendEvent(dpy, rq->requestor, False, 0, &ev);

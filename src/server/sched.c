@@ -1,4 +1,4 @@
-/* $Id: sched.c,v 4.5 1999/01/14 09:07:12 dick Exp $
+/* $Id: sched.c,v 4.7 2000/03/24 10:52:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -121,24 +121,32 @@ void allow_timer(void)
 #endif
 }
 
+
 /*
  * Catch SIGALRM.
+ * Simple timer ticker.
  */
-static void catch_timer(int signum)
+static void catch_timer_ticks(int signum)
 {
-#ifdef OS2DEBUG
-    static int counter = 0;
-
-    /*  Should get one dot per second for 14 FPS  */
-    if( (++counter) > 13 )
-    {
-	counter = 0;
-    	printf( "." );
-	fflush( stdout );
-    }
-#endif
     timer_ticks++;
 }
+
+
+/*
+ * Catch SIGALRM.
+ * Use timerResolution to increment timer_ticks.
+ */
+static void catch_timer_counts(int signum)
+{
+    static unsigned int		timer_count = 0;
+
+    timer_count += FPS;
+    if (timer_count >= timerResolution) {
+	timer_count -= timerResolution;
+	timer_ticks++;
+    }
+}
+
 
 #ifdef _OS2_
 /*
@@ -227,6 +235,7 @@ void timerThread( void *arg )
 
 #endif
 
+
 /*
  * Setup the handling of the SIGALRM signal
  * and setup the real-time interval timer.
@@ -248,7 +257,9 @@ static void setup_timer(void)
     /*
      * Install a signal handler for the alarm signal.
      */
-    act.sa_handler = catch_timer;
+    act.sa_handler = (timerResolution > 0)
+		    ? (catch_timer_counts)
+		    : (catch_timer_ticks);
     act.sa_flags = 0;
     sigemptyset(&act.sa_mask);
     sigaddset(&act.sa_mask, SIGALRM);
@@ -297,10 +308,10 @@ static void setup_timer(void)
     ticks_till_second = timer_freq;
 #else
 /*
-	UINT cr = SetTimer(NULL, 0, 1000/timer_freq, timer_handler);
-	UINT cr = SetTimer(NULL, 0, 20, (TIMERPROC)ServerThreadTimerProc);
-	if (!cr)
-		error("Can't create timer");
+    UINT cr = SetTimer(NULL, 0, 1000/timer_freq, timer_handler);
+    UINT cr = SetTimer(NULL, 0, 20, (TIMERPROC)ServerThreadTimerProc);
+    if (!cr)
+	error("Can't create timer");
 */
 #endif
     /*
@@ -320,13 +331,17 @@ void install_timer_tick(void (*func)(void), int freq)
     setup_timer();
 } 
 #else
-void install_timer_tick(void (__stdcall *func)(void *,unsigned int ,unsigned int ,unsigned long ), int freq)
+
+typedef void (__stdcall *windows_timer_t)(void *, unsigned int, unsigned int, unsigned long);
+
+void install_timer_tick(windows_timer_t func, int freq)
 {
     timer_handler = (TIMERPROC)func;
     timer_freq = freq;
     setup_timer();
 }
 #endif
+
 
 /*
  * Linked list of timeout callbacks.

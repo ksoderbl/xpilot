@@ -1,4 +1,4 @@
-/* $Id: client.c,v 4.17 2000/03/11 19:18:04 bert Exp $
+/* $Id: client.c,v 4.18 2000/03/20 10:01:58 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -104,6 +104,8 @@ int	shot_size;		/* size of shot */
 int	teamshot_size;		/* size of team shot */
 bool	showNastyShots = false;		/* show original flavor shots or the new "nasty shots" */
 long	control_count;		/* Display control for how long? */
+u_byte	spark_rand;		/* Sparkling effect */
+u_byte	old_spark_rand;		/* previous value of spark_rand */
 
 long	fuelSum;			/* Sum of fuel in all tanks */
 long	fuelMax;			/* How much fuel can you take? */
@@ -1437,8 +1439,9 @@ int Client_init(char *server, unsigned server_version)
     Init_scale_array();
 #endif
 
-    if ( Init_wreckage() == -1 )
+    if ( Init_wreckage() == -1 ) {
 	return -1;
+    }
 
     strncpy(servername, server, sizeof(servername) - 1);
 
@@ -1477,7 +1480,8 @@ int Client_fps_request(void)
 
 int Client_power(void)
 {
-    int i;
+    int		i;
+
     if (Send_power(power) == -1
 	|| Send_power_s(power_s) == -1
 	|| Send_turnspeed(turnspeed) == -1
@@ -1488,9 +1492,11 @@ int Client_power(void)
 	|| Startup_server_motd() == -1) {
 	return -1;
     }
-    for (i = 0; i < NUM_MODBANKS; i++)
-	if (Send_modifier_bank(i) == -1)
+    for (i = 0; i < NUM_MODBANKS; i++) {
+	if (Send_modifier_bank(i) == -1) {
 	    return -1;
+	}
+    }
 
     return 0;
 }
@@ -1504,18 +1510,18 @@ int Client_start(void)
 
 void Client_cleanup(void)
 {
-	int		i;
+    int		i;
 
     Quit();
     Free_selectionAndHistory();
     if (max_others > 0) {
-		for (i=0; i<num_others; i++)
-		{
-			other_t* other = &Others[i];
-			Free_ship_shape(other->ship);
-		}
-		free(Others);
-		num_others = max_others = 0;
+	for (i = 0; i < num_others; i++) {
+	    other_t* other = &Others[i];
+	    Free_ship_shape(other->ship);
+	}
+	free(Others);
+	num_others = 0;
+	max_others = 0;
     }
     Map_cleanup();
 }
@@ -1525,7 +1531,7 @@ int Client_fd(void)
 #ifndef	_WINDOWS
     return ConnectionNumber(dpy);
 #else
-	return(0);
+    return 0;
 #endif
 }
 
@@ -1534,7 +1540,7 @@ int Client_input(int new_input)
 #ifndef	_WINDOWS
     return xevent(new_input);
 #else
-	return(0);
+    return 0;
 #endif
 }
 void Client_flush(void)

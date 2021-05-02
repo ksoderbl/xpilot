@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 4.12 1999/11/06 17:37:52 bert Exp $
+/* $Id: paintdata.c,v 4.13 2000/03/19 20:18:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -45,6 +45,7 @@
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
+#include "dbuff.h"
 
 char paintdata_version[] = VERSION;
 
@@ -140,13 +141,16 @@ void Erase_do_end(void)
 	error("BUG: Erase_do_end while damaged");
 	return;
     }
-
-    if (erp == &erase[0]) {
-	erp = &erase[1];
-    } else {
-	erp = &erase[0];
+#ifndef _WINDOWS
+    /* BG fix 2000-03-19 use same erase buffer if not color switching. */
+    if (dbuf_state->type == COLOR_SWITCH) {
+	if (erp == &erase[0]) {
+	    erp = &erase[1];
+	} else {
+	    erp = &erase[0];
+	}
     }
-
+#endif
     SET_FG(colors[BLACK].pixel);
 
     if (erp->num_rect != 0) {

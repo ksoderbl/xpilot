@@ -1,4 +1,4 @@
-/* $Id: guimap.c,v 4.4 2000/03/11 19:18:04 bert Exp $
+/* $Id: guimap.c,v 4.5 2000/03/24 12:47:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -55,10 +55,10 @@ char guimap_version[] = VERSION;
 #define X(co)  ((int) ((co) - world.x))
 #define Y(co)  ((int) (world.y + view_height - (co)))
 
-int	wallColor;		/* Color index for wall drawing */
-int	decorColor;		/* Color index for decoration drawing */
-char	*wallTextureFile;	/* Filename of wall texture */
-char	*decorTextureFile;	/* Filename of decor texture */
+extern int	wallColor;		/* Color index for wall drawing */
+extern int	decorColor;		/* Color index for decoration drawing */
+extern char	*wallTextureFile;	/* Filename of wall texture */
+extern char	*decorTextureFile;	/* Filename of decor texture */
 
 extern setup_t		*Setup;
 

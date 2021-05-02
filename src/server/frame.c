@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 4.15 2000/03/07 20:54:24 bert Exp $
+/* $Id: frame.c,v 4.18 2000/03/23 17:06:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -54,7 +54,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 4.15 2000/03/07 20:54:24 bert Exp $";
+    "@(#)$Id: frame.c,v 4.18 2000/03/23 17:06:52 bert Exp $";
 #endif
 
 
@@ -954,7 +954,11 @@ static void Frame_radar(int conn, int ind)
 		&& frame_loops % 5 >= 3) {
 		continue;
 	    }
-	    Frame_radar_buffer_add((int)x, (int)y, 3);
+	    s = 3;
+	    if (TEAM(i, ind)) {
+		s |= 0x80;
+	    }
+	    Frame_radar_buffer_add((int)x, (int)y, s);
 	}
     }
 }
@@ -1094,8 +1098,8 @@ void Frame_update(void)
 		continue;
 	    }
 	    Frame_map(conn, ind);
-	    Frame_shots(conn, ind);
 	    Frame_ships(conn, ind);
+	    Frame_shots(conn, ind);
 	    Frame_radar_buffer_reset();
 	    Frame_radar(conn, ind);
 	    Frame_radar_buffer_send(conn);
@@ -1154,15 +1158,17 @@ void Set_player_message(player *pl, const char *message)
 	errno = 0;
 	error("Max message len exceed (%d,%s)", i, message);
 #endif
-	strncpy(tmp, message, MSG_LEN - 1);
+	memcpy(tmp, message, MSG_LEN - 1);
 	tmp[MSG_LEN - 1] = '\0';
 	msg = tmp;
     } else {
 	msg = message;
     }
-    if (pl->conn != NOT_CONNECTED)
+    if (pl->conn != NOT_CONNECTED) {
 	Send_message(pl->conn, msg);
-    else if (IS_ROBOT_PTR(pl))
+    }
+    else if (IS_ROBOT_PTR(pl)) {
 	Robot_message(GetInd[pl->id], msg);
+    }
 }
 

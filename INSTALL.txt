@@ -1,26 +1,19 @@
-$Id: INSTALL.txt,v 4.0 1998/03/18 15:11:01 bert Exp $
-
-See contrib/NT/README.txt for instructions
+$Id: INSTALL.txt,v 4.1 2000/03/24 10:52:35 bert Exp $
 
 Following are the installation instructions for the 
 UNIX version of XPilot.  For the Windows version
 see contrib/NT/README.txt for instructions.
 
-To compile XPilot, you'll need at least
+To compile XPilot, you'll need at least:
 
 An ANSI C compiler
-        gcc with gcc-includes installed should work just fine,
-        though many default compilers (like Sun's) are NOT
-        ANSI C compliant so check and double check that the
-        compiler you plan to use is ANSI C compliant.
-        About 95% of all the problems reported is because
-        users are not using an ANSI C compliant compiler!)
 
 X11     (any revision from R4 up to R6 works OK)
 
-Also note that XPilot isn't gentle with the X server, so a fast machine
-(with a graphics accelerator that does line drawing in hardware),
-in a fast network is the ideal situation.
+Also note that XPilot isn't gentle with the X server,
+so a fast machine (with a graphics accelerator that
+does line drawing in hardware), in a fast network
+is the ideal situation.
 
 
 INSTALLATION
@@ -30,11 +23,11 @@ can it be? :)
 
 1. Edit configuration files:
 
-   If you don't have Imake, you'll have to manage with the Makefile.std
-   in the src directory; just cd to src, copy Makefile.std to Makefile,
-   and edit config.h.
+   If you don't have Imake, you'll have to manage with
+   the Makefile.std in the src directory; just cd to src,
+   copy Makefile.std to Makefile, and edit common/config.h.
 
-   If you have Imake, you must first
+   If you do have Imake, you must first
 
         edit Local.config
 

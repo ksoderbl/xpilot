@@ -1,4 +1,4 @@
-/* $Id: player.c,v 4.12 1999/10/16 13:12:25 bert Exp $
+/* $Id: player.c,v 4.15 2000/03/24 14:14:58 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -49,7 +49,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 4.12 1999/10/16 13:12:25 bert Exp $";
+    "@(#)$Id: player.c,v 4.15 2000/03/24 14:14:58 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -132,22 +132,24 @@ void Pick_startpos(int ind)
     } else {
 	pl->home_base = BIT(World.rules->mode, TIMING) ?
 			World.baseorder[i].base_idx : i;
-		if (ind < NumPlayers) {
-		    for (i = 0; i < NumPlayers; i++) {
-			if (Players[i]->conn != NOT_CONNECTED) {
-			    Send_base(Players[i]->conn,
-				      pl->id,
-				      pl->home_base);
-			}
-		    }
-		    if (BIT(pl->status, PLAYING) == 0) {
-			pl->count = RECOVERY_DELAY;
-	    } else if (BIT(pl->status, PAUSE|GAME_OVER)) {
-			Go_home(ind);
-		    }
+	if (ind < NumPlayers) {
+	    for (i = 0; i < NumPlayers; i++) {
+		if (Players[i]->conn != NOT_CONNECTED) {
+		    Send_base(Players[i]->conn,
+			      pl->id,
+			      pl->home_base);
 		}
 	    }
+	    if (BIT(pl->status, PLAYING) == 0) {
+		pl->count = RECOVERY_DELAY;
+	    }
+	    else if (BIT(pl->status, PAUSE|GAME_OVER)) {
+		Go_home(ind);
+	    }
 	}
+    }
+}
+
 
 void Go_home(int ind)
 {
@@ -184,7 +186,7 @@ void Go_home(int ind)
     }
 
     pl->dir = dir;
-	pl->float_dir = dir;
+    pl->float_dir = dir;
     Player_position_init_pixels(pl,
 				(x + 0.5) * BLOCK_SZ + vx,
 				(y + 0.5) * BLOCK_SZ + vy);
@@ -423,7 +425,6 @@ int Init_player(int ind, wireobj *ship)
     pl->damaged 	= 0;
     pl->stunned		= 0;
 
-    pl->mode		= World.rules->mode;
     pl->status		= PLAYING | GRAVITY | DEF_BITS;
     pl->have		= DEF_HAVE;
     pl->used		= DEF_USED;
@@ -459,7 +460,7 @@ int Init_player(int ind, wireobj *ship)
      * If limited lives and if nobody has lost a life yet, you may enter
      * now, otherwise you will have to wait 'til everyone gets GAME OVER.
      */
-    if (BIT(pl->mode, LIMITED_LIVES)) {
+    if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    /* If a non-team member has lost a life,
 	     * then it's too late to join. */
@@ -500,6 +501,7 @@ int Init_player(int ind, wireobj *ship)
     pl->frame_last_busy	= frame_loops;
 
     pl->isowner = 0;
+    pl->isoperator = 0;
 
     return pl->id;
 }
@@ -516,21 +518,25 @@ void Alloc_players(int number)
 
 
     /* Allocate space for pointers */
-    Players = (player **)malloc(number * sizeof(player *));
-	memset(Players, 0, number * sizeof(player *));
+    Players = (player **) calloc(number + 1, sizeof(player *));
 
     /* Allocate space for all entries, all player structs */
-	i = number * sizeof(player);
-    p = playerArray = (player *)malloc(i);
-	memset(p, 0, i);
+    p = playerArray = (player *) calloc(number, sizeof(player));
 
     /* Allocate space for all visibility arrays, n arrays of n entries */
-	i = number * number * sizeof(struct _visibility);
-    t = visibilityArray = (struct _visibility *)
-	malloc(i);
-	memset(t, 0, i);
+    t = visibilityArray =
+	(struct _visibility *) calloc(number * number,
+				      sizeof(struct _visibility));
 
-    for (i=0; i<number; i++) {
+    if (!Players || !playerArray || !visibilityArray) {
+	error("Not enough memory for Players.");
+	exit(1);
+    }
+
+    /* Players[-1] should evaluate to NULL. */
+    Players++;
+
+    for (i = 0; i < number; i++) {
 	Players[i] = p++;
 	Players[i]->visibility = t;
 	/* Advance to next block/array */
@@ -542,9 +548,14 @@ void Alloc_players(int number)
 
 void Free_players(void)
 {
-    free(Players);
-    free(playerArray);
-    free(visibilityArray);
+    if (Players) {
+	--Players;
+	free(Players);
+	Players = NULL;
+
+	free(playerArray);
+	free(visibilityArray);
+    }
 }
 
 
@@ -594,7 +605,7 @@ void Update_score_table(void)
 }
 
 
-static void Reset_all_players(void)
+void Reset_all_players(void)
 {
     player		*pl;
     int			i, j;
@@ -702,7 +713,8 @@ static void Reset_all_players(void)
     if (roundDelay) {
 	/* Hold your horses! The next round will start in a few moments. */
 	rdelay = roundDelay * FPS;
-	rdelaySend = rdelay+FPS;	/* send him an extra seconds worth to be sure he gets the 0 */
+	/* Send him an extra seconds worth to be sure he gets the 0. */
+	rdelaySend = rdelay+FPS;
 	roundtime = -1;
 	sprintf(msg, "Delaying %d seconds until start of next %s.",
 		roundDelay, (BIT(World.rules->mode, TIMING)? "race" : "round"));
@@ -713,6 +725,7 @@ static void Reset_all_players(void)
 
     Update_score_table();
 }
+
 
 void Check_team_members(int team)
 {
@@ -885,6 +898,26 @@ static void Give_individual_bonus(int ind, int average_score)
 	  "[Winner]");
 }
 
+
+static void Count_rounds(void)
+{
+    char		msg[MSG_LEN];
+
+    if (!roundsToPlay) {
+	return;
+    }
+
+    ++roundsPlayed;
+
+    sprintf(msg, " < Round %d out of %d completed. >",
+	    roundsPlayed, roundsToPlay);
+    Set_message(msg);
+    if (roundsPlayed >= roundsToPlay) {
+	Game_Over();
+    }
+}
+
+
 void Team_game_over(int winning_team, const char *reason)
 {
     int			i, j;
@@ -949,6 +982,8 @@ void Team_game_over(int winning_team, const char *reason)
     }
 
     Reset_all_players();
+
+    Count_rounds();
 
     free(best_players);
 }
@@ -1147,6 +1182,8 @@ void Race_game_over(void)
     }
 
     Reset_all_players();
+
+    Count_rounds();
 }
 
 
@@ -1821,7 +1858,7 @@ void Player_death_reset(int ind)
      *-BD have different robots in your team every round.
      */
 
-    if (BIT(pl->mode, LIMITED_LIVES)) { 
+    if (BIT(World.rules->mode, LIMITED_LIVES)) { 
 	pl->life--;
 	if (pl->life == -1) {
 	    if (IS_ROBOT_PTR(pl)) {

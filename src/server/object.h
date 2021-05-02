@@ -1,4 +1,4 @@
-/* $Id: object.h,v 4.5 1999/10/10 18:44:50 bert Exp $
+/* $Id: object.h,v 4.7 2000/03/23 17:06:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -318,7 +318,6 @@ struct player {
     DFLOAT	oldturnvel;		/* Last velocity of turn (right) */
 #endif
     DFLOAT	turnacc;		/* Current acceleration of turn */
-    long	mode;			/* Player mode, currently */
     long	score;			/* Current score of player */
     long	prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
@@ -420,6 +419,7 @@ struct player {
     int		player_count;		/* Player's current frame count */
 
     int		isowner;		/* If player started this server. */
+    int		isoperator;		/* If player has operator privileges. */
 
 #ifdef __cplusplus
 		player() {}
