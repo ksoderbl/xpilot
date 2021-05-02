@@ -7,3 +7,4 @@ tags
 log
 .depend
 nohup.out
+gmon.out

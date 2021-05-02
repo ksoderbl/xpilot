@@ -1,4 +1,4 @@
-/* $Id: winSvrThread.c,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: winSvrThread.c,v 5.3 2001/05/28 00:17:36 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.c - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.c,v 5.0 2001/04/07 20:01:01 dik Exp $					*
+*  $Id: winSvrThread.c,v 5.3 2001/05/28 00:17:36 dik Exp $					*
 \***************************************************************************/
 
 /* Entry point for Windows Server Thread */
@@ -107,6 +107,7 @@ UINT ServerThreadProc(LPVOID pParam)
 		zargv = (char **) malloc((zargc + 1) *sizeof(char*));
 		for (i=0; i<zargc; i++)
 		{
+			// xpprintf("i=%d strlen'%s' = %d\n", i, pServerInfo->argv[i], strlen(pServerInfo->argv[i]));
 			zargv[i] = malloc(strlen(pServerInfo->argv[i])+1);
 			strcpy(zargv[i], pServerInfo->argv[i]);
 		}
@@ -131,7 +132,11 @@ UINT ServerThreadProc(LPVOID pParam)
 		// Reset event to indicate "not done", that is, game is in progress.
 		ResetEvent(pServerInfo->m_hEventGameTerminated);
 		if (!main(zargc, zargv))
+		{
+			SendMessage(pServerInfo->m_hwndNotifyProgress, WM_SERVERKILLED, 0, (LPARAM)framesPerSecond);
+			SetEvent(pServerInfo->m_hEventServerThreadKilled);
 			return(0);
+		}
 		SendMessage(pServerInfo->m_hwndNotifyProgress, WM_STARTTIMER, 0, (LPARAM)framesPerSecond);
 
 	    sched_running = 1;
@@ -230,7 +235,10 @@ void xpprintfW(const char *fmt, ...)
 	   instead of PostMessage (which justs puts it in the queue).
 	   I guess i should have a nice dynamic array
 	*/
-	SendMessage(pServerInfo->m_hwndNotifyProgress, WM_MSGAVAILABLE, susing, (LPARAM)s);
+	if (pServerInfo)
+		SendMessage(pServerInfo->m_hwndNotifyProgress, WM_MSGAVAILABLE, susing, (LPARAM)s);
+	else
+		printf(s);	// no Window?  try stdout (probably won't go anywhere)
 	
     va_end(ap);
 

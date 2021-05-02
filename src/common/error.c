@@ -1,4 +1,4 @@
-/* $Id: error.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: error.c,v 5.5 2001/05/27 17:15:04 bertg Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -8,10 +8,6 @@
  * Windows mods and memory leak detection by Dick Balaska <dick@xpilot.org>.
  */
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: error.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,6 +22,7 @@ static char sourceid[] =
 #		include "NT/winX.h"
 #		include "../client/NT/winClient.h"
 #	endif
+	static void Win_show_error(char *errmsg);
 #endif
 
 #include "version.h"
@@ -33,6 +30,18 @@ static char sourceid[] =
 #include "const.h"
 #include "error.h"
 #include "portability.h"
+#include "commonproto.h"
+
+
+#undef HAVE_STDARG
+#undef HAVE_VARARG
+#ifndef _WINDOWS
+# if (defined(__STDC__) && !defined(__sun__) || defined(__cplusplus))
+#  define HAVE_STDARG 1
+# else
+#  define HAVE_VARARG 1
+# endif
+#endif
 
 
 char error_version[] = VERSION;
@@ -49,11 +58,25 @@ char error_version[] = VERSION;
 
 
 /*
- * Global data.
+ * File local static data.
  */
-#define	MAX_PROG_LENGTH	256
+#define	MAX_PROG_LENGTH	32
 static char		progname[MAX_PROG_LENGTH];
 
+
+
+static const char* prog_basename(const char *prog)
+{
+#ifndef _WINDOWS
+    char *p;
+
+    p = strrchr(prog, '/');
+
+    return (p != NULL) ? (p + 1) : prog;
+#else
+    return "xpilot";
+#endif
+}
 
 
 /*
@@ -61,87 +84,107 @@ static char		progname[MAX_PROG_LENGTH];
  */
 void init_error(const char *prog)
 {
-#ifndef _WINDOWS
-#ifdef VMS
-    char *p = strrchr(prog, ']');
-#else
-    char *p = strrchr(prog, '/');
-#endif
+    const char *p = prog_basename(prog);   /* Beautify arv[0] */
 
-    strncpy(progname, p ? p+1 : prog, MAX_PROG_LENGTH);   /* Beautify arv[0] */
-#else
-	strcpy(progname, "xpilot");
-#endif
+    strlcpy(progname, p, MAX_PROG_LENGTH);
 }
 
 
 
-#if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus) || defined (_WINDOWS)
+#if HAVE_STDARG
 /*
  * Ok, let's do it the ANSI C way.
  */
 void error(const char *fmt, ...)
 {
-    va_list	 ap;			/* Argument pointer */
-    int		 e = errno;		/* Store errno */
-#ifdef _WINDOWS
-	char	s[512];
-#endif
-#ifdef VMS
-    if (e == EVMSERR)
-	e = 0/*__gnu_vaxc_errno__*/;
-#endif
+    va_list	 ap;
+    int		 e = errno;
 
     va_start(ap, fmt);
 
-    if (progname[0] != '\0')
+    if (progname[0] != '\0') {
 	fprintf(stderr, "%s: ", progname);
+    }
 
-#ifdef _WINDOWS
-    vsprintf(s, fmt, ap);
-#else
     vfprintf(stderr, fmt, ap);
-#endif
 
-    if (e != 0)
-	fprintf(stderr, " (%s)", strerror(e));
-
-
-#ifdef _WINDOWS
-	IFWINDOWS( Trace("Error: %s\n", s); )
-/*	inerror = TRUE; */
-	{
-#		ifdef	_XPILOTNTSERVER_
-		/* putting up a message box on the server is a bad thing.
-		   It kinda halts the server, which is a bad thing to do for
-		   the simple info messages (nick in use) that call this routine
-		*/
-		xpprintf("%s %s\n", showtime(), s);
-#		else
- 		if (MessageBox(NULL, s, "Error", MB_OKCANCEL | MB_TASKMODAL) == IDCANCEL)
-		{
-#			ifdef	_XPMON_
-				xpmemShutdown();
-#			endif
-			ExitProcess(1);
-		}
-#		endif
-	}
-#else
+    if (e != 0) {
+	fprintf(stderr, ": (%s)", strerror(e));
+    }
     fprintf(stderr, "\n");
-#endif
+
     va_end(ap);
 }
 
-#else
+void warn(const char *fmt, ...)
+{
+    int		len;
+    va_list	ap;
 
+    va_start(ap, fmt);
+
+    if (progname[0] != '\0') {
+	fprintf(stderr, "%s: ", progname);
+    }
+
+    vfprintf(stderr, fmt, ap);
+
+    len = strlen(fmt);
+    if (len == 0 || fmt[len - 1] != '\n') {
+	fprintf(stderr, "\n");
+    }
+
+    va_end(ap);
+}
+
+void fatal(const char *fmt, ...)
+{
+    va_list	 ap;
+
+    va_start(ap, fmt);
+
+    if (progname[0] != '\0') {
+	fprintf(stderr, "%s: ", progname);
+    }
+
+    vfprintf(stderr, fmt, ap);
+
+    fprintf(stderr, "\n");
+
+    va_end(ap);
+
+    exit(1);
+}
+
+void dumpcore(const char *fmt, ...)
+{
+    va_list	 ap;
+
+    va_start(ap, fmt);
+
+    if (progname[0] != '\0') {
+	fprintf(stderr, "%s: ", progname);
+    }
+
+    vfprintf(stderr, fmt, ap);
+
+    fprintf(stderr, "\n");
+
+    va_end(ap);
+
+    abort();
+}
+
+#endif
+
+
+#if HAVE_VARARG
 /*
  * Hm, we'd better stick to the K&R way.
  */
 void
     error(va_alist)
-va_dcl		/* Note that the format argument cannot be separately	*
-		 * declared because of the definition of varargs.	*/
+va_dcl
 {
     va_list	 args;
     int		 e = errno;		/* Store errno */
@@ -166,5 +209,159 @@ va_dcl		/* Note that the format argument cannot be separately	*
     va_end(args);
 }
 
+void
+    warn(va_alist)
+va_dcl
+{
+    va_list	 args;
+    char	*fmt;
+
+
+    va_start(args);
+
+    if (progname[0] != '\0')
+	fprintf(stderr, "%s: ", progname);
+
+    fmt = va_arg(args, char *);
+    (void) vfprintf(stderr, fmt, args);
+
+    fprintf(stderr, "\n");
+
+    va_end(args);
+}
+
+void
+    fatal(va_alist)
+va_dcl
+{
+    va_list	 args;
+    char	*fmt;
+
+
+    va_start(args);
+
+    if (progname[0] != '\0')
+	fprintf(stderr, "%s: ", progname);
+
+    fmt = va_arg(args, char *);
+    (void) vfprintf(stderr, fmt, args);
+
+    fprintf(stderr, "\n");
+
+    va_end(args);
+
+    exit(1);
+}
+
+void
+    dumpcore(va_alist)
+va_dcl
+{
+    va_list	 args;
+    char	*fmt;
+
+
+    va_start(args);
+
+    if (progname[0] != '\0')
+	fprintf(stderr, "%s: ", progname);
+
+    fmt = va_arg(args, char *);
+    (void) vfprintf(stderr, fmt, args);
+
+    fprintf(stderr, "\n");
+
+    va_end(args);
+
+    abort();
+}
+
 #endif
 
+
+#ifdef _WINDOWS
+static void Win_show_error(char *s)
+{
+    IFWINDOWS( Trace("Error: %s\n", s); )
+/*  inerror = TRUE; */
+    {
+#       ifdef   _XPILOTNTSERVER_
+	/* putting up a message box on the server is a bad thing.
+	   It kinda halts the server, which is a bad thing to do for
+	   the simple info messages (nick in use) that call this routine
+	*/
+	xpprintf("%s %s\n", showtime(), s);
+#       else
+	if (MessageBox(NULL, s, "Error", MB_OKCANCEL | MB_TASKMODAL) == IDCANCEL)
+	{
+#           ifdef   _XPMON_
+		xpmemShutdown();
+#           endif
+	    ExitProcess(1);
+	}
+#       endif
+    }
+}
+
+
+void error(const char *fmt, ...)
+{
+    va_list	ap;
+    char	s[512];
+
+    va_start(ap, fmt);
+
+    vsprintf(s, fmt, ap);
+
+    Win_show_error(s);
+
+    va_end(ap);
+}
+
+void warn(const char *fmt, ...)
+{
+    va_list	ap;
+    char	s[512];
+
+    va_start(ap, fmt);
+
+    vsprintf(s, fmt, ap);
+
+    Win_show_error(s);
+
+    va_end(ap);
+}
+
+void fatal(const char *fmt, ...)
+{
+    va_list	ap;
+    char	s[512];
+
+    va_start(ap, fmt);
+
+    vsprintf(s, fmt, ap);
+
+    Win_show_error(s);
+
+    va_end(ap);
+
+    exit(1);
+}
+
+void dumpcore(const char *fmt, ...)
+{
+    va_list	ap;
+    char	s[512];
+
+    va_start(ap, fmt);
+
+    vsprintf(s, fmt, ap);
+
+    Win_show_error(s);
+
+    va_end(ap);
+
+    exit(1);
+}
+
+#endif

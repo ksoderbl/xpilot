@@ -1,4 +1,4 @@
-/* $Id: socklib.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
+/* $Id: socklib.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -85,6 +85,7 @@
 /* Socklib Includes And Definitions */
 #include "version.h"
 #include "socklib.h"
+#include "commonproto.h"
 
 /* Debug macro */
 #ifdef DEBUG
@@ -97,10 +98,6 @@
 # define timerclear(tvp)   ((tvp)->tv_sec = (tvp)->tv_usec = 0)
 #endif
 
-#ifndef lint
-static char sourceid[] =
-    "@(#)$Id: socklib.c,v 5.1 2001/04/16 15:41:39 bertg Exp $";
-#endif
 
 
 #define SOCK_GETHOST_TIMEOUT	6
@@ -493,7 +490,7 @@ char * sock_get_last_addr(sock_t *sock)
 	if (sock_alloc_hostname(sock)) {
 	    return str;
 	}
-	strcpy(sock->hostname, str);
+	strlcpy(sock->hostname, str, SOCK_HOSTNAME_LENGTH);
 	return sock->hostname;
     }
 
@@ -521,7 +518,7 @@ char * sock_get_last_name(sock_t *sock)
 	if (sock_alloc_hostname(sock)) {
 	    return str;
 	}
-	strcpy(sock->hostname, str);
+	strlcpy(sock->hostname, str, SOCK_HOSTNAME_LENGTH);
 	return sock->hostname;
     }
 
@@ -632,8 +629,7 @@ void sock_get_local_hostname(char *name, unsigned size,
     if ((he = sock_get_host_by_name(name)) == NULL) {
 	return;
     }
-    strncpy(name, he->h_name, size);
-    name[size - 1] = '\0';
+    strlcpy(name, he->h_name, size);
 
     /*
      * If there are no dots in the name then we don't have the FQDN,
@@ -647,8 +643,7 @@ void sock_get_local_hostname(char *name, unsigned size,
 	memcpy((void *)&in, he->h_addr_list[0], sizeof(in));
 	if ((he = sock_get_host_by_addr((char *)&in, sizeof(in), AF_INET)) != NULL
 	    && strchr(he->h_name, '.') != NULL) {
-	    strncpy(name, he->h_name, size);
-	    name[size - 1] = '\0';
+	    strlcpy(name, he->h_name, size);
 	}
 	else {
 	    /* Let's try to find the domain from /etc/resolv.conf. */
@@ -690,8 +685,8 @@ void sock_get_local_hostname(char *name, unsigned size,
     dot = name;
     while ((dot = strchr(dot, '.')) != NULL) {
 	if (xpilot_len + strlen(dot) < sizeof(xpilot_hostname)) {
-	    strcpy(xpilot_hostname, xpilot);
-	    strcat(xpilot_hostname, dot);
+	    strlcpy(xpilot_hostname, xpilot, SOCK_HOSTNAME_LENGTH);
+	    strlcat(xpilot_hostname, dot, SOCK_HOSTNAME_LENGTH);
 	    /*
 	     * If there is a CNAME the h_name must be identical to the
 	     * FQDN we guessed above.  It is hard to know our IP to know
@@ -705,7 +700,7 @@ void sock_get_local_hostname(char *name, unsigned size,
 	++dot;
     }
     if (xpilot_he != NULL) {
-	strncpy(name, xpilot_hostname, size);
+	strlcpy(name, xpilot_hostname, size);
     }
 
 #endif

@@ -1,4 +1,4 @@
-/* $Id: winX.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: winX.h,v 5.1 2001/05/01 10:00:42 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is the public interface to the Winodoze -> X11 translator.		*
 *  Any function that has a unix man page belongs in this file.				*
 *																			*
-*  $Id: winX.h,v 5.0 2001/04/07 20:00:59 dik Exp $							*
+*  $Id: winX.h,v 5.1 2001/05/01 10:00:42 bertg Exp $							*
 \***************************************************************************/
 #ifndef	_WINX_H_
 #define	_WINX_H_
@@ -574,6 +574,11 @@ extern	XCheckMaskEvent(Display* d, long event_mask, XEvent* event_return);
 #define	DefaultScreen(_dpy)		(0)
 
 int		DefaultDepth(Display* d, int screen);
+
+#define ConnectionNumber(_dpy)		(0)
+
+extern XFlush(Display *display);
+extern XSync(Display *display, Bool discard);
 
 #ifdef	__cplusplus
 };

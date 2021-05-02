@@ -1,4 +1,4 @@
-/* $Id: client.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: client.h,v 5.3 2001/05/17 13:31:08 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -37,7 +37,7 @@
 
 
 #ifndef DRAW_H
-/* need wireobj */
+/* need shipobj */
 #include "draw.h"
 #endif
 #ifndef ITEM_H
@@ -116,7 +116,7 @@ typedef struct {
     short	war_id;
     short	name_width;	/* In pixels */
     short	name_len;	/* In bytes */
-    wireobj	*ship;
+    shipobj	*ship;
     char	name[MAX_CHARS];
     char	real[MAX_CHARS];
     char	host[MAX_CHARS];
@@ -192,6 +192,7 @@ typedef struct {
         int     y2;
     } draw;
     char	*txt;   /* allocated when needed */
+    int		txt_size;	/* size of txt buffer */
     int		len;
     /* when a message `jumps' from talk window to the player messages: */
     bool	keep_emphasizing;
@@ -315,7 +316,7 @@ int Handle_base(int id, int ind);
 int Check_pos_by_index(int ind, int *xp, int *yp);
 int Check_index_by_pos(int x, int y);
 other_t *Other_by_id(int id);
-wireobj *Ship_by_id(int id);
+shipobj *Ship_by_id(int id);
 int Handle_leave(int id);
 int Handle_player(int id, int team, int mychar, char *player_name,
 		  char *real_name, char *host_name, char *shape);
@@ -347,9 +348,9 @@ void Set_auto_shield(int onoff);
 void Key_event(XEvent *event);
 #endif
 #ifndef _WINDOWS
-int xevent(int);
+int x_event(int);
 #else
-int xevent(XEvent event);
+int win_xevent(XEvent event);
 void MarkPlayersForRedraw(void);
 #endif
 

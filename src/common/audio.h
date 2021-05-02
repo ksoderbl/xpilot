@@ -1,4 +1,4 @@
-/* $Id: audio.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: audio.h,v 5.3 2001/06/02 21:02:00 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -111,6 +111,8 @@ enum {
     EMERGENCY_SHIELD_ON_SOUND,
     EMERGENCY_SHIELD_OFF_SOUND,
     CANNON_EXPLOSION_SOUND,
+    ASTEROID_HIT_SOUND,
+    ASTEROID_BREAK_SOUND,
     MAX_SOUNDS
 };
 
@@ -199,12 +201,18 @@ static char    *soundNames[] =
     "emergency_shield_on",
     "emergency_shield_off",
     "cannon_explosion",
+    "asteroid_hit",
+    "asteroid_break",
 };
 
 #endif						/* _CAUDIO_C_ */
 
 extern	void audioInit(char* display);
-extern	void audioCleanup();
+extern	void audioCleanup(void);
 extern	int	Handle_audio(int type, int volume);
+
+extern	int	audioDeviceInit(char *display);
+extern	void	audioDeviceEvents(void);
+extern	void	audioDevicePlay(char *filename, int type, int volume, void **private);
 
 #endif						/* _audio_h */

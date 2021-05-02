@@ -1,4 +1,4 @@
-/* $Id: xp-replay.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: xp-replay.c,v 5.1 2001/04/24 13:51:06 bertg Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
  *
@@ -34,7 +34,7 @@
 ** implied warranty.
  */
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <unistd.h>
 #endif
 
@@ -51,9 +51,6 @@
 #ifndef _WINDOWS
 # ifndef __hpux
 #  include <sys/time.h>
-# endif
-# ifdef VMS
-#  include <socket.h>
 # endif
 # ifdef _AIX
 #  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
@@ -3433,9 +3430,7 @@ int main(int argc, char **argv)
 	    verbose = 1;
 	}
 	else if (!strcmp(argv[argi], "-compress")) {
-#ifndef VMS
 	    compress = 1;
-#endif
 	}
 	else if (!strcmp(argv[argi], "-scale")) {
 	    if (++argi == argc || sscanf(argv[argi], "%lf", &scale) != 1) {

@@ -1,4 +1,4 @@
-/* $Id: const.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: const.h,v 5.3 2001/05/24 11:23:23 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -45,9 +45,6 @@
 #	if defined(__sun__)
 #           include <values.h>	/* MAXFLOAT for suns */
 #	endif
-#	ifdef VMS
-#	    include <float.h>
-#	endif
 #   endif
 #   if !defined(FLT_MAX)
 #	if defined(MAXFLOAT)
@@ -66,9 +63,6 @@
 #endif
 
 /* Not everyone has LINE_MAX either, *sigh* */
-#ifdef VMS
-#   undef LINE_MAX
-#endif
 #ifndef LINE_MAX
 #   define LINE_MAX 2048
 #endif
@@ -215,6 +209,7 @@ extern DFLOAT		tbl_cos[];
 
 #define	RECOVERY_DELAY		(FPS*3)
 
+#define NO_ID			(-1)
 #define NUM_IDS			256
 #define EXPIRED_MINE_ID		4096   /* assume no player has this id */
 #define MAX_PSEUDO_PLAYERS      16
@@ -271,10 +266,8 @@ extern DFLOAT		tbl_cos[];
 #define AFTER_BURN_FUEL(f,n)    \
  (((f)*((MAX_AFTERBURNER+1)+(n)*(ALT_FUEL_FACT-1)))/(MAX_AFTERBURNER+1.0))
 
-#ifdef	TURN_THRUST
-#  define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
-#  define TURN_SPARKS(tf)         (5+((tf)>>((FUEL_SCALE_BITS)-6)))
-#endif
+#define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
+#define TURN_SPARKS(tf)         (5+((tf)>>((FUEL_SCALE_BITS)-6)))
 
 #define THRUST_MASS             0.7
 

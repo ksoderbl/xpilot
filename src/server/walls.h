@@ -1,4 +1,4 @@
-/* $Id: walls.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: walls.h,v 5.3 2001/05/27 16:37:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -30,8 +30,6 @@
 #endif
 
 extern char walls_version[];
-extern long KILLING_SHOTS;
-int Rate(int winner, int looser);
 
 /*
  * Wall collision detection and bouncing.
@@ -115,5 +113,7 @@ struct move_parameters {
     unsigned long	obj_target_mask;	/* object target hit? */
     unsigned long	obj_treasure_mask;	/* objects treasure crash? */
 };
+
+void Move_segment(move_state_t *ms);
 
 #endif

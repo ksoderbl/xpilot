@@ -35,11 +35,29 @@ allowModifiers:         yes
 # Set the frames per second
 framesPerSecond:	14
 
-#
-password:	not
+# set this to a unique word and chmod 600 this file:
+# password: \override:  XXX
 
+# For Internet games we allow remote clients to bounce softly.
 maxUnshieldedWallBounceSpeed:		180
 maxShieldedWallBounceSpeed:		180
 maxUnshieldedPlayerWallBounceAngle:	180
 maxShieldedPlayerWallBounceAngle:	180
+
+# Define settings for private play.  In maps use "expand: PrivateSettings".
+define: PrivateSettings \override: \multiline: EndPrivateSettings
+idleRun:                no
+noQuit:                 no
+reportToMetaServer:     no
+searchDomainForXPilot:  no
+contactPort:            15000
+serverHost:             localhost
+EndPrivateSettings
+
+# Settings for public Internet play.  In maps do "expand: PublicSettings".
+define: PublicSettings \override: \multiline: EndPublicSettings
+idleRun:                yes
+noQuit:                 yes
+reportToMetaServer:     yes
+EndPublicSettings
 

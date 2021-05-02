@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paint.h,v 5.3 2001/06/02 21:00:55 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,6 +25,8 @@
 #ifndef PAINT_H
 #define PAINT_H
 
+
+/* includes begin */
 #ifndef TYPES_H
 /* need u_byte */
 #include "types.h"
@@ -33,7 +35,10 @@
 /* need other_t */
 #include "client.h"
 #endif
+/* includes end */
 
+
+/* constants begin */
 #define MAX_COLORS		16	/* Max. switched colors ever */
 #define MAX_COLOR_LEN		32	/* Max. length of a color name */
 
@@ -47,13 +52,24 @@
 #define HUD_OFFSET		20	/* Hud line offset */
 #define FUEL_GAUGE_OFFSET	6
 #define HUD_FUEL_GAUGE_SIZE	(2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
+/* constants end */
 
+
+/* macros begin */
+#define X(co)	((int) ((co) - world.x))
+#define Y(co)	((int) (world.y + ext_view_height - (co)))
+/* macros end */
+
+
+/* typedefs begin */
 typedef struct {
     char		txt[MSG_LEN];
     short		len;
     short		pixelLen;
     int			life;
 } message_t;
+/* typedefs end */
+
 
 /* which index a message actually has (consider SHOW_REVERSE_SCROLL) */
 #define TALK_MSG_SCREENPOS(_total,_pos) \
@@ -110,10 +126,17 @@ extern Window	top, draw, keyboard, radar, players;
 #ifdef _WINDOWS				/* see paint.c for details */
 extern Window	textWindow, msgWindow, buttonWindow;
 #endif
-extern Pixmap	p_draw, p_radar, s_radar;
-extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-extern Window	about_w, about_close_b, about_next_b, about_prev_b, talk_w;
-extern XColor	colors[MAX_COLORS];		/* Colors */
+extern Pixmap	p_draw;			/* Drawing area pixmap */
+extern Pixmap	p_radar;		/* Radar drawing pixmap */
+extern Pixmap	s_radar;		/* Second radar drawing pixmap */
+extern long	dpl_1[2];		/* Used by radar hack */
+extern long	dpl_2[2];		/* Used by radar hack */
+extern Window	about_w;		/* The About window */
+extern Window	about_close_b;		/* About close button */
+extern Window	about_next_b;		/* About next page button */
+extern Window	about_prev_b;		/* About prev page button */
+extern Window	talk_w;			/* Talk window */
+extern XColor	colors[MAX_COLORS];	/* Colors */
 extern Colormap	colormap;		/* Private colormap */
 extern int	maxColors;		/* Max. number of colors to use */
 extern int	hudColor;		/* Color index for HUD drawing */
@@ -124,13 +147,14 @@ extern int	targetRadarColor;	/* Color index for targets on radar */
 extern int	decorColor;		/* Color index for decoration drawing */
 extern int	decorRadarColor;	/* Color index for decorations on radar */
 extern int	oldMessagesColor;	/* Color index for old message strings */
-extern bool	gotFocus;
-extern bool	talk_mapped;
-extern short	view_width, view_height;	/* Visible area from server */
-extern int	real_view_width;	/* Width of map area displayed. */
-extern int	real_view_height;	/* Height of map area displayed. */
-extern int	view_x_offset;		/* Offset of view_width */
-extern int	view_y_offset;		/* Offset of view_height */
+extern bool	gotFocus;		/* Do we have the mouse pointer */
+extern bool	talk_mapped;		/* Is talk window visible */
+extern short	ext_view_width;		/* Width of extended visible area */
+extern short	ext_view_height;	/* Height of extended visible area */
+extern int	active_view_width;	/* Width of active map area displayed. */
+extern int	active_view_height;	/* Height of active map area displayed. */
+extern int	ext_view_x_offset;	/* Offset of ext_view_width */
+extern int	ext_view_y_offset;	/* Offset of ext_view_height */
 extern u_byte	debris_colors;		/* Number of debris intensities */
 extern DFLOAT	charsPerTick;		/* Output speed of messages */
 extern bool	markingLights;		/* Marking lights on ships */
@@ -194,6 +218,7 @@ int Handle_item(int x, int y, int type);
 int Handle_fastshot(int type, u_byte *p, int n);
 int Handle_debris(int type, u_byte *p, int n);
 int Handle_wreckage(int x, int y, int wrecktype, int size, int rotation);
+int Handle_asteroid(int x, int y, int type, int size, int rotation);
 int Handle_ecm(int x, int y, int size);
 int Handle_trans(int x1, int y1, int x2, int y2);
 int Handle_paused(int x, int y, int count);
@@ -224,6 +249,7 @@ void Paint_meters(void);
 void Paint_HUD(void);
 int  Get_message(int* pos, char * message, int req_length, int key );
 void Paint_messages(void);
+void Add_pending_messages(void);
 void Paint_recording(void);
 void Paint_frame(void);
 int Handle_time_left(long sec);

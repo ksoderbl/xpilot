@@ -3,6 +3,16 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@xpilot.org.
 
+Release 4.4 credits:
+
+	Paul Alexander Drees		Lots of small new features.
+	Guido Koopman			Balls in non-team-mode, asteroids.
+	Ben Jackson			Bugfix.
+	Paul Forman			Disallow stationary mines.
+	Jarrod Miller			Mapeditor updates
+	Austin Donnelly			OSF/1 portability.
+	Ben Armstrong			Documentation.
+
 Release 4.3 credits:
 
 	Claus Leth Gregersen		Several patches, graphics look.
@@ -22,7 +32,7 @@ Release 4.2 credits:
 	Jonny Svärling, Adam Lorentzon	Talk macros.
 	Teemu Elias Hirsimäki		xp-replay fix.
 	Guido Koopman			Armor item.
-	Sven Mascheck			Joined the maintenance team.
+	Sven Mascheck			Talk cut and paste.
 
 Release 4.1 credits:
 

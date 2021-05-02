@@ -1,4 +1,4 @@
-/* $Id: config.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: config.c,v 5.5 2001/05/27 14:27:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -53,12 +53,9 @@
 #endif
 
 #ifndef LIBDIR
-#    ifdef VMS
-#        define LIBPREFIX	"lib_disk:[lib.xgames.xpilot341.lib"
-#        define LIBDIR		LIBPREFIX "]"
-#    elif defined(_WINDOWS)
+#    if defined(_WINDOWS)
 #        define LIBDIR		"lib/"
-#	 else
+#    else
 #        define LIBDIR		"/usr/local/games/lib/xpilot/"
 #    endif
 #endif
@@ -99,34 +96,20 @@
 #    endif
 #endif
 #ifndef MAPDIR
-#    ifdef VMS
-#        define MAPDIR		LIBPREFIX ".maps]"
-#    else
-#        define MAPDIR		LIBDIR "maps/"
-#    endif
+#    define MAPDIR		LIBDIR "maps/"
 #endif
 #ifndef SHIP_FILE
-#    ifdef VMS
-#        define SHIP_FILE       LIBDIR "tkxpi.shp"
-#    elif defined(_WINDOWS)
+#    if defined(_WINDOWS)
 #	 define SHIP_FILE	"XPilot.shp"
 #    else
 #        define SHIP_FILE       ""
 #    endif
 #endif
 #ifndef TEXTUREDIR
-#    ifdef VMS
-#        define TEXTUREDIR	LIBPREFIX ".textures]"
-#    else
-#        define TEXTUREDIR	LIBDIR "textures/"
-#    endif
+#    define TEXTUREDIR	LIBDIR "textures/"
 #endif
 #ifndef	SOUNDDIR
-#    ifdef VMS
-#        define SOUNDDIR	LIBPREFIX ".sound]"
-#    else
-#        define SOUNDDIR	LIBDIR "sound/"
-#    endif
+#    define SOUNDDIR	LIBDIR "sound/"
 #endif
 
 #ifndef SOUNDFILE
@@ -156,10 +139,6 @@
 char config_version[] = VERSION;
 
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: config.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
-#endif
 
 
 char *Conf_libdir(void)
@@ -183,8 +162,7 @@ char *Conf_mapdir(void)
     return conf;
 }
 
-/* needed by server/cmdline.c */
-char conf_default_map_string[] = DEFAULT_MAP;
+static char conf_default_map_string[] = DEFAULT_MAP;
 
 char *Conf_default_map(void)
 {
@@ -194,8 +172,15 @@ char *Conf_default_map(void)
 char *Conf_servermotdfile(void)
 {
     static char conf[] = SERVERMOTDFILE;
+    static char env[] = "XPILOTSERVERMOTD";
+    char *filename;
 
-    return conf;
+    filename = getenv(env);
+    if (filename == NULL) {
+	filename = conf;
+    }
+
+    return filename;
 }
 
 char *Conf_localmotdfile(void)
@@ -250,8 +235,7 @@ char *Conf_contactaddress(void)
     return conf;
 }
 
-/* needed by server/cmdline.c */
-char conf_robotfile_string[] = ROBOTFILE;
+static char conf_robotfile_string[] = ROBOTFILE;
 
 char *Conf_robotfile(void)
 {

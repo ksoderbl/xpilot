@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: portability.h,v 5.2 2001/05/01 10:02:37 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -69,14 +69,6 @@ extern int sigprocmask(int how, const sigset_t *set, sigset_t *oset);
 
 #endif
 
-#ifdef VMS
-/* blabla */
-#endif
-
-#ifdef SUNCMW
-#include "cmw.h"
-#endif /* SUNCMW */
-
 /*
  * In Windows, just exiting won't tell the user the reason.
  * So, try to gracefully shutdown just the server thread
@@ -103,6 +95,14 @@ extern	int ServerKilled;
 #define IFNWINDOWS(x)
 #endif
 
+
+#ifdef _WINDOWS
+#define PATHNAME_SEP    '\\'
+#else
+#define PATHNAME_SEP    '/'
+#endif
+
+
 /*
  * Prototypes for OS function wrappers in portability.c.
  */
@@ -117,6 +117,6 @@ extern void move_memory(void *dst, void *src, size_t len);
 /*
  * Prototypes for testing if we are running under a certain OS.
  */
-extern int is_this_windows();
+extern int is_this_windows(void);
 
 #endif /* PORTABILITY_H_INCLUDED */

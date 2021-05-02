@@ -1,4 +1,4 @@
-/* $Id: client.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: client.c,v 5.5 2001/06/02 21:00:09 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -56,6 +56,7 @@
 #include "protoclient.h"
 #include "portability.h"
 #include "talk.h"
+#include "commonproto.h"
 
 char client_version[] = VERSION;
 
@@ -984,7 +985,7 @@ other_t *Other_by_id(int id)
     return NULL;
 }
 
-wireobj *Ship_by_id(int id)
+shipobj *Ship_by_id(int id)
 {
     other_t		*other;
 
@@ -1084,12 +1085,9 @@ int Handle_player(int id, int player_team, int mychar, char *player_name,
     other->mychar = mychar;
     other->war_id = -1;
     other->name_width = 0;
-    strncpy(other->name, player_name, sizeof(other->name));
-    other->name[sizeof(other->name) - 1] = '\0';
-    strncpy(other->real, real_name, sizeof(other->real));
-    other->real[sizeof(other->real) - 1] = '\0';
-    strncpy(other->host, host_name, sizeof(other->host));
-    other->host[sizeof(other->host) - 1] = '\0';
+    strlcpy(other->name, player_name, sizeof(other->name));
+    strlcpy(other->real, real_name, sizeof(other->real));
+    strlcpy(other->host, host_name, sizeof(other->host));
     scoresChanged = 1;
     other->ship = Convert_shape_str(shape);
     Calculate_shield_radius(other->ship);
@@ -1158,9 +1156,10 @@ int Handle_score(int id, int score, int life, int mychar)
     other_t		*other;
 
     if ((other = Other_by_id(id)) == NULL) {
-	errno = 0;
 #ifndef _WINDOWS
-	error("Can't update score for non-existing player %d,%d,%d", id, score, life);
+	errno = 0;
+	error("Can't update score for non-existing player %d,%d,%d",
+	      id, score, life);
 #endif
 	return 0;
     }
@@ -1382,9 +1381,9 @@ void Client_score_table(void)
     }
 
     free(order);
-#ifdef _WINDOWS
-	MarkPlayersForRedraw();
-#endif
+
+    IFWINDOWS( MarkPlayersForRedraw(); )
+
     scoresChanged = 0;
 }
 
@@ -1433,8 +1432,6 @@ static void Free_selectionAndHistory(void)
 
 int Client_init(char *server, unsigned server_version)
 {
-    extern void Make_table(void);
-
     version = server_version;
 
     Make_table();
@@ -1446,7 +1443,11 @@ int Client_init(char *server, unsigned server_version)
 	return -1;
     }
 
-    strncpy(servername, server, sizeof(servername) - 1);
+    if (Init_asteroids() == -1) {
+	return -1;
+    }
+
+    strlcpy(servername, server, sizeof(servername));
 
     return 0;
 }
@@ -1531,33 +1532,25 @@ void Client_cleanup(void)
 
 int Client_fd(void)
 {
-#ifndef _WINDOWS
     return ConnectionNumber(dpy);
-#else
-    return 0;
-#endif
 }
 
 int Client_input(int new_input)
 {
 #ifndef _WINDOWS
-    return xevent(new_input);
+    return x_event(new_input);
 #else
     return 0;
 #endif
 }
 void Client_flush(void)
 {
-#ifndef _WINDOWS
     XFlush(dpy);
-#endif
 }
 
 void Client_sync(void)
 {
-#ifndef _WINDOWS
     XSync(dpy, False);
-#endif
 }
 
 int Client_wrap_mode(void)

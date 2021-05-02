@@ -1,4 +1,4 @@
-/* $Id: strdup.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: strdup.c,v 5.3 2001/05/27 12:27:20 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,15 +25,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "error.h"
 #include "commonproto.h"
 
 char *xp_strdup(const char *old_string)
 {
     char	*new_string;
+    size_t	string_length;
 
-    new_string = (char *)malloc(strlen(old_string) + 1);
+    string_length = strlen(old_string);
+    new_string = (char *)malloc(string_length + 1);
     if (new_string) {
-	strcpy(new_string, old_string);
+	memcpy(new_string, old_string, string_length + 1);
+    }
+
+    return new_string;
+}
+
+char *xp_safe_strdup(const char *old_string)
+{
+    char	*new_string;
+
+    new_string = xp_strdup(old_string);
+    if (new_string == NULL) {
+	fatal("Not enough memory.");
     }
 
     return new_string;

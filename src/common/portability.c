@@ -1,4 +1,4 @@
-/* $Id: portability.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: portability.c,v 5.2 2001/05/07 15:23:28 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -30,13 +30,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <unistd.h>
 # include <pwd.h>
-#endif
-
-#ifdef VMS
-# include "username.h"
 #endif
 
 #ifdef PLOCKSERVER
@@ -55,9 +51,11 @@
 #include "version.h"
 #include "config.h"
 #include "portability.h"
+#include "commonproto.h"
 
 
 char portability_version[] = VERSION;
+
 
 int Get_process_id(void)
 {
@@ -68,22 +66,20 @@ int Get_process_id(void)
 #endif
 }
 
+
 void Get_login_name(char *buf, int size)
 {
 #if defined(_WINDOWS)
     long nsize = size;
     GetUserName(buf, &nsize);
     buf[size - 1] = '\0';
-#elif defined(VMS)
-    getusername(buf);
-    buf[size - 1] = '\0';
 #else
     /* Unix */
     struct passwd *pwent = getpwuid(geteuid());
-    strncpy(buf, pwent->pw_name, size);
-    buf[size - 1] = '\0';
+    strlcpy(buf, pwent->pw_name, size);
 #endif
 }
+
 
 #ifdef sony_news
 int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
@@ -113,7 +109,7 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 
 void move_memory(void *dst, void *src, size_t len)
 {
-#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
+#if defined(__hpux) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
         memmove(dst, src, len);
 #else
         bcopy(src, dst, len);

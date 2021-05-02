@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paintdata.c,v 5.4 2001/05/25 00:22:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -51,6 +51,7 @@
 #include "xinit.h"
 #include "protoclient.h"
 #include "dbuff.h"
+#include "commonproto.h"
 
 char paintdata_version[] = VERSION;
 
@@ -94,6 +95,8 @@ vdecor_t	*vdecor_ptr;
 int		 num_vdecor, max_vdecor;
 wreckage_t	*wreckage_ptr;
 int		 num_wreckage, max_wreckage;
+asteroid_t	*asteroid_ptr;
+int		 num_asteroids, max_asteroids;
 
 long		time_left = -1;
 long		start_loops, end_loops;
@@ -495,20 +498,20 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
 	packet_size = newPacketSize;
     }
 
-    world.x = pos.x - (view_width / 2);
-    world.y = pos.y - (view_height / 2);
+    world.x = pos.x - (ext_view_width / 2);
+    world.y = pos.y - (ext_view_height / 2);
     realWorld = world;
     if (BIT(Setup->mode, WRAP_PLAY)) {
-	if (world.x < 0 && world.x + view_width < Setup->width) {
+	if (world.x < 0 && world.x + ext_view_width < Setup->width) {
 	    world.x += Setup->width;
 	}
-	else if (world.x > 0 && world.x + view_width >= Setup->width) {
+	else if (world.x > 0 && world.x + ext_view_width >= Setup->width) {
 	    realWorld.x -= Setup->width;
 	}
-	if (world.y < 0 && world.y + view_height < Setup->height) {
+	if (world.y < 0 && world.y + ext_view_height < Setup->height) {
 	    world.y += Setup->height;
 	}
-	else if (world.y > 0 && world.y + view_height >= Setup->height) {
+	else if (world.y > 0 && world.y + ext_view_height >= Setup->height) {
 	    realWorld.y -= Setup->height;
 	}
     }
@@ -530,8 +533,7 @@ int Handle_damaged(int dam)
 
 int Handle_modifiers(char *m)
 {
-    strncpy(mods, m, MAX_CHARS);
-    mods[MAX_CHARS-1] = '\0';
+    strlcpy(mods, m, MAX_CHARS);
     return 0;
 }
 
@@ -661,9 +663,12 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshiel
      * while self could be NULL here.
      */
     if (!selfVisible && ((x == pos.x && y == pos.y) || (self && id == self->id))) {
+	int radarx, radary;
         eyesId = id;
 	selfVisible = (self && (id == self->id));
-	return Handle_radar(x, y, 3);
+	radarx = (int)((double)(x * RadarWidth) / Setup->width + 0.5);
+	radary = (int)((double)(y * RadarHeight) / Setup->height + 0.5);
+	return Handle_radar(radarx, radary, 3);
     }
 
     return 0;
@@ -747,6 +752,19 @@ int Handle_wreckage(int x, int y, int wrecktype, int size, int rotation)
     t.size = size;
     t.rotation = rotation;
     STORE(wreckage_t, wreckage_ptr, num_wreckage, max_wreckage, t);
+    return 0;
+}
+
+int Handle_asteroid(int x, int y, int type, int size, int rotation)
+{
+    asteroid_t	t;
+
+    t.x = x;
+    t.y = y;
+    t.type = type;
+    t.size = size;
+    t.rotation = rotation;
+    STORE(asteroid_t, asteroid_ptr, num_asteroids, max_asteroids, t);
     return 0;
 }
 
@@ -961,6 +979,11 @@ void paintdataCleanup(void)
 	max_wreckage = 0;
 	free(wreckage_ptr);
 	wreckage_ptr = 0;
+    }
+    if (max_asteroids > 0 && asteroid_ptr) {
+	max_asteroids = 0;
+	free(asteroid_ptr);
+	asteroid_ptr = 0;
     }
 }
 

@@ -1,4 +1,4 @@
-/* $Id: command.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: command.c,v 5.5 2001/05/26 22:29:57 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,15 +43,12 @@
 #include "proto.h"
 #include "error.h"
 #include "netserver.h"
+#include "commonproto.h"
 
 
 char command_version[] = VERSION;
 
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: command.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 
 static int Get_player_index_by_name(char *name)
@@ -128,6 +125,7 @@ static int Cmd_set(char *arg, player *pl, int oper, char *msg);
 static int Cmd_kick(char *arg, player *pl, int oper, char *msg);
 static int Cmd_queue(char *arg, player *pl, int oper, char *msg);
 static int Cmd_advance(char *arg, player *pl, int oper, char *msg);
+static int Cmd_get(char *arg, player *pl, int oper, char *msg);
 
 
 typedef struct {
@@ -147,6 +145,13 @@ static Command_info commands[] = {
 	"Move the player to the front of the queue.  (operator)",
 	1,
 	Cmd_advance
+    },
+    {
+	"get",
+	"g",
+	"/get <option>.  Gets a server option.",
+	0,
+	Cmd_get
     },
     {
 	"help",
@@ -233,7 +238,9 @@ void Handle_player_command(player *pl, char *cmd)
     char		msg[MSG_LEN];
 
     if (!cmd || !*cmd) {
-	strcpy(msg, "No command given.  Type /help for help.  [*Server reply*]");
+	strlcpy(msg,
+		"No command given.  Type /help for help.  [*Server reply*]",
+		sizeof(msg));
 	Set_player_message(pl, msg);
 	return;
     }
@@ -267,19 +274,23 @@ void Handle_player_command(player *pl, char *cmd)
 
     case CMD_RESULT_ERROR:
 	if (msg[0] == '\0') {
-	    strcpy(msg, "Error.");
+	    strcpy(msg, "ErrOr.");
 	}
 	break;
 
     case CMD_RESULT_NOT_OPERATOR:
 	if (msg[0] == '\0') {
-	    strcpy(msg, "You need operator status to use this command.");
+	    strlcpy(msg,
+		    "You need operator status to use this command.",
+		    sizeof(msg));
 	}
 	break;
 
     case CMD_RESULT_NO_NAME:
 	if (msg[0] == '\0') {
-	    strcpy(msg, "You must give a player name as an argument.");
+	    strlcpy(msg,
+		    "You must give a player name as an argument.",
+		    sizeof(msg));
 	}
 	break;
 
@@ -384,7 +395,7 @@ static int Cmd_team(char *arg, player *pl, int oper, char *msg)
 
     sprintf(msg, "%s has swapped to team %d.", pl->name, team);
     Set_message(msg);
-    if (BIT(pl->have, OBJ_BALL)) {
+    if (BIT(pl->have, HAS_BALL)) {
 	Detach_ball(GetInd[pl->id], -1);
     }
     World.teams[pl->team].NumMembers--;
@@ -471,8 +482,11 @@ static int Cmd_help(char *arg, player *pl, int oper, char *msg)
     int			i;
 
     if (!*arg) {
+/*
 	strcpy(msg, "Commands: "
 		    "advance "
+		    "addr "
+		    "get "
 		    "help "
 		    "kick "
 		    "lock "
@@ -484,6 +498,12 @@ static int Cmd_help(char *arg, player *pl, int oper, char *msg)
 		    "team "
 		    "version "
 	      );
+*/
+	strcpy(msg, "Commands: ");
+	for(i = 0; i < NELEM(commands); i++) {
+	    strcat(msg, commands[i].name);
+	    strcat(msg, " ");
+	}
     }
     else {
 	for (i = 0; i < NELEM(commands); i++) {
@@ -625,10 +645,13 @@ static int Cmd_set(char *arg, player *pl, int oper, char *msg)
 	if (!strcasecmp(option, "password"))
 	    sprintf(msg, "Operation successful.");
 	else {
+	    char value[MAX_CHARS];
+	    Get_option_value(option, value);
 	    sprintf(msg, " < Option %s set to %s by %s. >",
 		    option, value, pl->name);
 	    Set_message(msg);
 	    strcpy(msg, "");
+	    
 	    return CMD_RESULT_SUCCESS;
 	}
     }
@@ -680,5 +703,79 @@ static int Cmd_pause(char *arg, player *pl, int oper, char *msg)
 
     return CMD_RESULT_ERROR;
 }
+
+static int Cmd_get(char *arg, player *pl, int oper, char *msg)
+{
+    char *value;
+    int i;
+
+    if (!arg || !*arg) {
+	strcpy(msg, "Usage: /get option.");
+	return CMD_RESULT_ERROR;
+    }
+
+    if (!strcasecmp(arg, "password") ||
+	!strcasecmp(arg, "mapData")) {
+	strcpy(msg, "Cannot retrieve that option.");
+	return CMD_RESULT_ERROR;
+    }
+    if (!(value = malloc(MAX_CHARS))) {
+	strcpy(msg, "Out of memory.");
+	return CMD_RESULT_ERROR;
+    }
+
+    i = Get_option_value(arg, value);
+
+    switch (i) {
+    case 1:
+	sprintf(msg, "The value of %s is %s.", arg, value);
+	free(value);
+	return CMD_RESULT_SUCCESS;
+    case -2:
+	sprintf(msg, "No option named %s.", arg);
+	break;
+    default:
+	strcpy(msg, "Generic error.");
+	break;
+    }
+
+    free(value);
+
+    return CMD_RESULT_ERROR;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

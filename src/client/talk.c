@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: talk.c,v 5.3 2001/06/02 21:01:15 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -46,13 +46,10 @@
 #include "protoclient.h"
 #include "keys.h"
 #include "bit.h"
+#include "commonproto.h"
 
 char talk_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: talk.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 /* avoid trouble with Atoms and 64 bit archs */
 typedef CARD32  Atom32;
@@ -214,7 +211,7 @@ void Talk_map_window(bool map)
  * thus selection.talk.state == SEL_SELECTED indicates that it
  * should not be drawn emphasized
  */
-void Talk_refresh(void)
+static void Talk_refresh(void)
 {
     int len;
 
@@ -246,7 +243,7 @@ void Talk_refresh(void)
 /*
  * add a line to the history.
  */
-void Add_msg_to_history(char *message)
+static void Add_msg_to_history(char *message)
 {
     char *tmp;
     char **msg_set;
@@ -267,7 +264,7 @@ void Add_msg_to_history(char *message)
     }
     msg_set[0] = tmp; /* memory recycling */
 
-    strcpy(msg_set[0], message);
+    strlcpy(msg_set[0], message, MAX_CHARS);
     history_pos = 0;
 
     return;
@@ -287,7 +284,7 @@ void Add_msg_to_history(char *message)
  * (thus save_talk not as parameter here)
  *
  */
-char *Get_msg_from_history(int* pos, char *message, keys_t direction)
+static char *Get_msg_from_history(int* pos, char *message, keys_t direction)
 {
     int i;
     char **msg_set;
@@ -374,7 +371,7 @@ void Print_messages_to_stdout(void)
  * substitutes this text, means: delete the text before inserting the
  * new character and place the character at this `gap'.
  */
-void Talk_delete_emphasized_text(void)
+static void Talk_delete_emphasized_text(void)
 {
 
     int		oldlen, newlen;
@@ -387,7 +384,7 @@ void Talk_delete_emphasized_text(void)
 
     Talk_cursor(false);
 
-    strcpy(new_str, talk_str);
+    strlcpy(new_str, talk_str, MAX_CHARS);
     oldlen = strlen(talk_str);
     newlen = oldlen;
 
@@ -429,7 +426,7 @@ void Talk_delete_emphasized_text(void)
     }
     Talk_cursor(true);
 
-    strcpy(talk_str, new_str);
+    strlcpy(talk_str, new_str, MAX_CHARS);
 }
 
 int Talk_do_event(XEvent *event)
@@ -556,7 +553,7 @@ int Talk_do_event(XEvent *event)
 						    key);
 		    if (tmp && strlen(tmp) > 0) {
 			/* we got smthng from the history */
-			/*strcpy(talk_str, tmp);
+			/*strlcpy(talk_str, tmp, MAX_CHARS);
 			str_len = strlen(talk_str); */
 			Talk_paste(tmp, strlen(tmp), true);
 		    } else {
@@ -712,7 +709,7 @@ int Talk_do_event(XEvent *event)
 	     */
 	    Talk_cursor(false);
 
-	    strcpy(new_str, talk_str);
+	    strlcpy(new_str, talk_str, MAX_CHARS);
 	    oldlen = strlen(talk_str);
 	    newlen = oldlen;
 
@@ -766,8 +763,9 @@ int Talk_do_event(XEvent *event)
 				    || talk_cursor.point >= newlen) {
 				    talk_cursor.point -= CRS_HOP;
 				}
-				strcpy(&new_str[talk_cursor.point],
-				       &talk_str[talk_cursor.point + CRS_HOP]);
+				strlcpy(&new_str[talk_cursor.point],
+				       &talk_str[talk_cursor.point + CRS_HOP],
+				       MAX_CHARS - talk_cursor.point);
 			    } else {
 				int old_talk_cursor_point = talk_cursor.point;
 				newlen -= talk_cursor.point;
@@ -775,8 +773,9 @@ int Talk_do_event(XEvent *event)
 				    || talk_cursor.point >= newlen) {
 				    talk_cursor.point = 0;
 				}
-				strcpy(&new_str[0],
-				       &talk_str[old_talk_cursor_point]);
+				strlcpy(&new_str[0],
+				       &talk_str[old_talk_cursor_point],
+				       MAX_CHARS);
 			    }
 			} else {
 			    /*
@@ -789,8 +788,9 @@ int Talk_do_event(XEvent *event)
 				    talk_cursor.point--;
 				}
 				talk_crs_repeat_count++;
-				strcpy(&new_str[talk_cursor.point],
-				       &talk_str[talk_cursor.point + 1]);
+				strlcpy(&new_str[talk_cursor.point],
+				       &talk_str[talk_cursor.point + 1],
+				       MAX_CHARS - talk_cursor.point);
 			    }
 			}
 		    } else {
@@ -803,8 +803,9 @@ int Talk_do_event(XEvent *event)
 				talk_cursor.point--;
 			    }
 			}
-			strcpy(&new_str[talk_cursor.point],
-			       &talk_str[talk_cursor.point + 1]);
+			strlcpy(&new_str[talk_cursor.point],
+			        &talk_str[talk_cursor.point + 1],
+			        MAX_CHARS);
 		    }
 		}
 	    }
@@ -835,7 +836,7 @@ int Talk_do_event(XEvent *event)
 	    }
 	    Talk_cursor(cursor_visible);
 
-	    strcpy(talk_str, new_str);
+	    strlcpy(talk_str, new_str, MAX_CHARS);
 
 	    break;
 
@@ -861,9 +862,10 @@ int Talk_do_event(XEvent *event)
 	    /*
 	     * Enter new text.
 	     */
-	    strcpy(new_str, talk_str);
-	    strcpy(&new_str[talk_cursor.point + 1],
-		   &talk_str[talk_cursor.point]);
+	    strlcpy(new_str, talk_str, MAX_CHARS);
+	    strlcpy(&new_str[talk_cursor.point + 1],
+		    &talk_str[talk_cursor.point],
+		    MAX_CHARS - (talk_cursor.point + 1));
 	    new_str[talk_cursor.point] = ch;
 	    newlen = oldlen + 1;
 
@@ -891,7 +893,7 @@ int Talk_do_event(XEvent *event)
 	    talk_cursor.point++;
 	    Talk_cursor(cursor_visible);
 
-	    strcpy(talk_str, new_str);
+	    strlcpy(talk_str, new_str, MAX_CHARS);
 
 	    break;
 	}
@@ -945,7 +947,7 @@ int Talk_paste(char *data, int data_len, bool overwrite)
 	str_len = 0;
     } else {
 	str_len = strlen(talk_str);
-	strcpy(talk_backup, talk_str);
+	strlcpy(talk_backup, talk_str, sizeof(talk_backup));
     }
     accept_len = (max_width / char_width) - str_len + 1;
     if (accept_len + str_len > max_len)
@@ -991,10 +993,12 @@ int Talk_paste(char *data, int data_len, bool overwrite)
 	new_len = accept_len;
     } else {
 	/* paste: insert/append */
-	strcpy(tmp_str, talk_backup);
-	strcpy(&tmp_str[talk_cursor.point], paste_buf);
-	strcpy(&tmp_str[talk_cursor.point + accept_len],
-	       &talk_backup[talk_cursor.point]);
+	strlcpy(tmp_str, talk_backup, sizeof(tmp_str));
+	strlcpy(&tmp_str[talk_cursor.point], paste_buf,
+		sizeof(tmp_str) - talk_cursor.point);
+	strlcpy(&tmp_str[talk_cursor.point + accept_len],
+	        &talk_backup[talk_cursor.point],
+	        sizeof(tmp_str) - (talk_cursor.point + accept_len));
 	new_len = str_len + accept_len;
     }
 
@@ -1035,7 +1039,7 @@ int Talk_paste(char *data, int data_len, bool overwrite)
 		    &tmp_str[talk_cursor.point],
 		    new_len - talk_cursor.point);
     }
-    strcpy(talk_str, tmp_str);
+    strlcpy(talk_str, tmp_str, sizeof(talk_str));
 
     cursor_visible = talk_cursor.visible;
     Talk_cursor(false);
@@ -1123,14 +1127,14 @@ int Talk_place_cursor(XButtonEvent* xbutton, bool pending)
     return cursor_pos;
 }
 
-void Clear_talk_selection(void)
+static void Clear_talk_selection(void)
 {
     selection.talk.x1 = selection.talk.x2 = 0;
     selection.talk.state = SEL_NONE;
     selection.talk.incl_nl = false;
 }
 
-void Clear_draw_selection(void)
+static void Clear_draw_selection(void)
 {
     selection.draw.x1 = selection.draw.x2
 	= selection.draw.y1 = selection.draw.y2 = 0;
@@ -1163,9 +1167,11 @@ void Clear_selection(void)
     }
     Clear_draw_selection();
     Clear_talk_selection();
-    if (selection.txt)
+    if (selection.txt) {
 	free(selection.txt);
+    }
     selection.txt = NULL;
+    selection.txt_size = 0;
     selection.len = 0;
 
 }
@@ -1221,8 +1227,9 @@ void Talk_window_cut(XButtonEvent* xbutton)
 	 * A real cut has been made
 	 */
 	Clear_draw_selection();
-	if ((selection.txt = (char *)malloc(MAX_MSGS * MSG_LEN * sizeof(char)))
-		== NULL) {
+	selection.txt_size = MAX_MSGS * MSG_LEN;
+	selection.txt = (char *)malloc(selection.txt_size);
+	if (selection.txt == NULL) {
 	    error("No memory for Selection");
 	    return;
         }
@@ -1246,7 +1253,7 @@ void Talk_window_cut(XButtonEvent* xbutton)
 	    strcat(tmp, "\n");
 	    selection.talk.incl_nl = false;
 	}
-	strcpy(selection.txt, tmp);
+	strlcpy(selection.txt, tmp, selection.txt_size);
 	selection.len = strlen(tmp);
 	XStoreBytes(dpy, selection.txt, selection.len);
 
@@ -1521,8 +1528,9 @@ void Talk_cut_from_messages(XButtonEvent* xbutton)
 	/*
 	 * set the globals
 	 */
-	if ((selection.txt = (char *)malloc(MAX_MSGS * MSG_LEN * sizeof(char)))
-		== NULL) {
+	selection.txt_size = MAX_MSGS * MSG_LEN;
+	selection.txt = (char *)malloc(selection.txt_size);
+	if (selection.txt == NULL) {
 	    error("No memory for Selection");
 	    return;
         }
@@ -1541,42 +1549,42 @@ void Talk_cut_from_messages(XButtonEvent* xbutton)
 	}
 
 	/* fetch the first line */
-	strcpy(cut_str, TalkMsg[current_line]->txt);
+	strlcpy(cut_str, TalkMsg[current_line]->txt, sizeof(cut_str));
 	cut_str_len = TalkMsg[current_line]->len;
 	current_line += next;
 
 	if (selection.draw.y1 == selection.draw.y2) {
 	/* ...it's the only line */
 	    strncpy(selection.txt, &cut_str[selection.draw.x1],
-			selection.draw.x2 - selection.draw.x1 + 1);
+		    selection.draw.x2 - selection.draw.x1 + 1);
 	    selection.txt[selection.draw.x2 - selection.draw.x1 + 1] = '\0';
 	    cut_str[0] = '\0';
 	    if (c2.x_off == 1) {
-		strcat(selection.txt, "\n");
+		strlcat(selection.txt, "\n", selection.txt_size);
 	    }
 	} else {
 	    /* ...several lines */
 	    strncpy(selection.txt, &cut_str[selection.draw.x1],
-			cut_str_len - selection.draw.x1);
+		    cut_str_len - selection.draw.x1);
 	    selection.txt[cut_str_len - selection.draw.x1] = '\0';
-	    strcat(selection.txt, "\n");
+	    strlcat(selection.txt, "\n", selection.txt_size);
 
 	    /* whole lines themselves only if there are >= 3 lines */
 	    for (i = selection.draw.y1 + 1; i < selection.draw.y2; i++) {
-		strcpy(cut_str, TalkMsg[current_line]->txt);
+		strlcpy(cut_str, TalkMsg[current_line]->txt, sizeof(cut_str));
 		cut_str_len = TalkMsg[current_line]->len;
 		current_line += next;
-		strcat(selection.txt, cut_str);
-		strcat(selection.txt, "\n");
+		strlcat(selection.txt, cut_str, selection.txt_size);
+		strlcat(selection.txt, "\n", selection.txt_size);
 	    }
 
 	    /* the last line */
-	    strcpy(cut_str, TalkMsg[current_line]->txt);
+	    strlcpy(cut_str, TalkMsg[current_line]->txt, sizeof(cut_str));
 	    cut_str_len = TalkMsg[current_line]->len;
 	    current_line += next;
 	    strncat(selection.txt, cut_str, selection.draw.x2 + 1);
 	    if (c2.x_off == 1) {
-		strcat(selection.txt, "\n");
+		strlcat(selection.txt, "\n", selection.txt_size);
 	    }
 	} /* more than one line */
 
@@ -1589,7 +1597,7 @@ void Talk_cut_from_messages(XButtonEvent* xbutton)
 	 * draw the selection emphasized from now on
 	 */
 	XSetSelectionOwner(dpy, XA_PRIMARY, draw, CurrentTime);
-	XStoreBytes(dpy, selection.txt, strlen(selection.txt));
+	XStoreBytes(dpy, selection.txt, selection.len);
 	selection.draw.state = SEL_EMPHASIZED;
 	selection.talk.state = SEL_SELECTED;
 	Talk_refresh();

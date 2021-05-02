@@ -1,4 +1,4 @@
-/* $Id: server.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: server.c,v 5.12 2001/06/03 17:28:44 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -74,9 +74,7 @@
 char server_version[] = VERSION;
 
 #ifndef	lint
-static char versionid[] = "@(#)$" TITLE " $";
-static char sourceid[] =
-    "@(#)$Id: server.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
+char xpilots_versionid[] = "@(#)$" TITLE " $";
 #endif
 
 /*
@@ -90,6 +88,7 @@ int			NumTransporters = 0;
 player			**Players;
 int			obj_1;
 object			*Obj[MAX_TOTAL_SHOTS];
+int			obj_2;
 pulse_t			*Pulses[MAX_TOTAL_PULSES];
 ecm_t			*Ecms[MAX_TOTAL_ECMS];
 trans_t			*Transporters[MAX_TOTAL_TRANSPORTERS];
@@ -139,19 +138,15 @@ int main(int argc, char **argv)
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
 
-#ifdef SUNCMW
-    cmw_priv_init();
-#endif /* SUNCMW */
     init_error(argv[0]);
     srand(time((time_t *)0) * Get_process_id());
     seedMT(time((time_t *)0) * Get_process_id());
     Check_server_versions();
-    if (!Parser(argc, argv))
-#ifndef _WINDOWS
-		exit(0);
-#else
-		return(0);
-#endif
+
+    if (Parser(argc, argv) == FALSE) {
+	exit(1);
+    }
+
     plock_server(pLockServer);           /* Lock the server into memory */
     Make_table();			/* Make trigonometric tables */
     Compute_gravity();
@@ -167,12 +162,7 @@ int main(int argc, char **argv)
 
     Robot_init();
 
-    if (BIT(World.rules->mode, TEAM_PLAY)) {
-	int i;
-	for (i=0; i < World.NumTreasures; i++)
-	    if (World.treasures[i].team != TEAM_NOT_SET)
-		Make_treasure_ball(i);
-    }
+    Treasure_init();
 
     /*
      * Get server's official name.
@@ -185,7 +175,7 @@ int main(int argc, char **argv)
 	    return 1;
 	}
 	serverAddr = xp_strdup(addr);
-	strncpy(Server.host, serverHost, sizeof(Server.host) - 1);
+	strlcpy(Server.host, serverHost, sizeof(Server.host));
     } else {
 	sock_get_local_hostname(Server.host, sizeof Server.host,
 				(reportToMetaServer != 0 &&
@@ -199,7 +189,8 @@ int main(int argc, char **argv)
      */
     Log_game("START");
 
-    Contact_init();
+    if (!Contact_init())
+		return(FALSE);
 
     Meta_init();
 
@@ -313,7 +304,7 @@ void Main_loop(void)
 /*
  *  Last function, exit with grace.
  */
-void End_game(void)
+int End_game(void)
 {
     player		*pl;
     char		msg[MSG_LEN];
@@ -344,11 +335,13 @@ void End_game(void)
     Free_shots();
     Free_map();
     Free_cells();
+    Free_options();
     Log_game("END");			    /* Log end */
 
 #ifndef _WINDOWS
     exit (0);
 #endif
+	return(FALSE);                  /* return FALSE so windows bubbles out of the main loop */
 }
 
 /*
@@ -483,6 +476,8 @@ int Pick_team(int pick_for_type)
 
 /*
  * Return status for server
+ *
+ * TODO
 */
 void Server_info(char *str, unsigned max_size)
 {
@@ -555,9 +550,9 @@ void Server_info(char *str, unsigned max_size)
     }
     for (i=0; i<NumPlayers; i++) {
 	pl = order[i];
-	strcpy(name, pl->name);
+	strlcpy(name, pl->name, MAX_CHARS);
 	if (IS_ROBOT_PTR(pl)) {
-	    if ((k = Robot_war_on_player(GetInd[pl->id])) != -1) {
+	    if ((k = Robot_war_on_player(GetInd[pl->id])) != NO_ID) {
 		sprintf(name + strlen(name), " (%s)", Players[GetInd[k]]->name);
 		if (strlen(name) >= 19) {
 		    strcpy(&name[17], ")");
@@ -566,8 +561,8 @@ void Server_info(char *str, unsigned max_size)
 	}
 	sprintf(lblstr, "%c%c %-19s%03d%6d",
 		(pl == best) ? '*' : pl->mychar,
-		(pl->team == TEAM_NOT_SET) ? ' ' : pl->team+'0',
-		name, pl->life, (int)pl->score);
+		(pl->team == TEAM_NOT_SET) ? ' ' : (pl->team + '0'),
+		name, (int)pl->life, (int)pl->score);
 	sprintf(msg, "%2d... %-36s%s@%s\n",
 		i+1, lblstr, pl->realname,
 		IS_HUMAN_PTR(pl)
@@ -742,66 +737,95 @@ void Game_Over(void)
  * compiled for the same version.  Too often bugs have been reported
  * for incorrectly compiled programs.
  */
+extern char asteroid_version[];
+extern char cannon_version[];
+extern char cell_version[];
+extern char checknames_version[];
+extern char cmdline_version[];
+extern char collision_version[];
+extern char command_version[];
+extern char config_version[];
+extern char contact_version[];
+extern char error_version[];
+extern char event_version[];
+extern char fileparser_version[];
+extern char frame_version[];
+extern char id_version[];
+extern char item_version[];
+extern char laser_version[];
+extern char map_version[];
+extern char math_version[];
+extern char metaserver_version[];
+extern char net_version[];
+extern char netserver_version[];
+extern char objpos_version[];
+extern char option_version[];
+extern char parser_version[];
+extern char play_version[];
+extern char player_version[];
+extern char portability_version[];
+extern char robot_version[];
+extern char robotdef_version[];
+extern char rules_version[];
+extern char saudio_version[];
+extern char sched_version[];
+extern char score_version[];
+extern char server_version[];
+extern char ship_version[];
+extern char shipshape_version[];
+extern char shot_version[];
+extern char socklib_version[];
+extern char update_version[];
+extern char walls_version[];
+extern char wildmap_version[];
+
 static void Check_server_versions(void)
 {
-    extern char		cannon_version[],
-			cmdline_version[],
-			collision_version[],
-			error_version[],
-			event_version[],
-			frame_version[],
-			id_version[],
-			item_version[],
-			map_version[],
-			math_version[],
-			metaserver_version[],
-			net_version[],
-			netserver_version[],
-			option_version[],
-			play_version[],
-			player_version[],
-			portability_version[],
-			robot_version[],
-			rules_version[],
-			saudio_version[],
-			server_version[],
-			socklib_version[],
-			sched_version[],
-			ship_version[],
-			shot_version[],
-			update_version[],
-			walls_version[];
     static struct file_version {
 	char		filename[16];
 	char		*versionstr;
     } file_versions[] = {
+	{ "asteroid", asteroid_version },
 	{ "cannon", cannon_version },
+	{ "cell", cell_version },
+	{ "checknames", checknames_version },
 	{ "cmdline", cmdline_version },
 	{ "collision", collision_version },
+	{ "command", command_version },
+	{ "config", config_version },
+	{ "contact", contact_version },
 	{ "error", error_version },
 	{ "event", event_version },
+	{ "fileparser", fileparser_version },
 	{ "frame", frame_version },
 	{ "id", id_version },
 	{ "item", item_version },
+	{ "laser", laser_version },
 	{ "map", map_version },
 	{ "math", math_version },
 	{ "metaserver", metaserver_version },
 	{ "net", net_version },
 	{ "netserver", netserver_version },
+	{ "objpos", objpos_version },
 	{ "option", option_version },
+	{ "parser", parser_version },
 	{ "play", play_version },
 	{ "player", player_version },
 	{ "portability", portability_version },
 	{ "robot", robot_version },
+	{ "robotdef", robotdef_version },
 	{ "rules", rules_version },
 	{ "saudio", saudio_version },
-	{ "server", server_version },
-	{ "socklib", socklib_version },
 	{ "sched", sched_version },
+	{ "score", score_version },
+	{ "server", server_version },
 	{ "ship", ship_version },
+	{ "shipshape", shipshape_version },
 	{ "shot", shot_version },
+	{ "socklib", socklib_version },
 	{ "update", update_version },
 	{ "walls", walls_version },
+	{ "wildmap", wildmap_version },
     };
     int			i;
     int			oops = 0;

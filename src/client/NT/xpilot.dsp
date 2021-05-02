@@ -26,7 +26,7 @@ CFG=XPilot - Win32 Release
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
-CPP=xicl6.exe
+CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
@@ -41,6 +41,7 @@ RSC=rc.exe
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir ".\Release"
 # PROP Intermediate_Dir ".\Release"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /c
 # ADD CPP /nologo /MD /W3 /GX /I "..\..\common" /I "..\..\common\NT" /D "NDEBUG" /D "_MBCS" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "X_SOUND" /D "WINDOWSCALING" /D PAINT_FREE=0 /FR /FD /c
@@ -52,7 +53,7 @@ RSC=rc.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=xilink6.exe
+LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
 # ADD LINK32 winmm.lib /nologo /subsystem:windows /map /machine:I386
 
@@ -79,7 +80,7 @@ LINK32=xilink6.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=xilink6.exe
+LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386
 # ADD LINK32 winmm.lib /nologo /subsystem:windows /debug /machine:I386
 # SUBTRACT LINK32 /map
@@ -95,6 +96,7 @@ LINK32=xilink6.exe
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir ".\XPilot__"
 # PROP Intermediate_Dir ".\XPilot__"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /Zd /O2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "x_BETAEXPIRE" /FR /c
 # SUBTRACT BASE CPP /YX /Yc /Yu
@@ -107,7 +109,7 @@ LINK32=xilink6.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=xilink6.exe
+LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /map /machine:I386 /out:"Release/XPilotNT.exe"
 # ADD LINK32 winmm.lib /nologo /subsystem:windows /map /machine:I386 /out:".\Release\XPilot.exe"
 
@@ -298,6 +300,10 @@ SOURCE=.\winBitmap.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\winConfig.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\winXThread.c
 # End Source File
 # Begin Source File
@@ -364,6 +370,14 @@ SOURCE=..\..\common\socklib.c
 
 SOURCE=..\..\common\strdup.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\common\strlcpy.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\xpmemory.c
+# End Source File
 # End Group
 # Begin Group "commonNT"
 
@@ -393,17 +407,104 @@ SOURCE=..\..\common\NT\winXKey.c
 SOURCE=..\..\common\NT\wsockerrs.c
 # End Source File
 # End Group
+# Begin Group "items"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\items\itemAfterburner.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemArmor.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemAutopilot.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemCloakingDevice.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemDeflector.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemEcm.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemEmergencyShield.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemEmergencyThrust.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemEnergyPack.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemHyperJump.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemLaser.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemMinePack.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemMirror.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemPhasingDevice.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemRearShot.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemRocketPack.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemSensorPack.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemTank.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemTractorBeam.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemTransporter.xbm
+# End Source File
+# Begin Source File
+
+SOURCE=..\items\itemWideangleShot.xbm
+# End Source File
+# End Group
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
+# Begin Group "client.h"
+
+# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=.\BSString.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\checknames.h
+SOURCE=..\blockbitmaps.h
 # End Source File
 # Begin Source File
 
@@ -411,19 +512,27 @@ SOURCE=..\client.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\commonproto.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\config.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\configure.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\error.h
+SOURCE=..\connectparam.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\datagram.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\dbuff.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\default.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\gfx2d.h
 # End Source File
 # Begin Source File
 
@@ -439,11 +548,7 @@ SOURCE=..\guiobjects.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\MainFrm.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\net.h
+SOURCE=..\icon.h
 # End Source File
 # Begin Source File
 
@@ -459,15 +564,51 @@ SOURCE=..\paintdata.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\portability.h
+SOURCE=..\protoclient.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\record.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\talk.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\texture.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\widget.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\xeventhandlers.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\xinit.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\xpmread.h
+# End Source File
+# End Group
+# Begin Group "clientNT.h"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\BSString.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\MainFrm.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\resource.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\socklib.h
 # End Source File
 # Begin Source File
 
@@ -480,14 +621,6 @@ SOURCE=.\stdafx.h
 # Begin Source File
 
 SOURCE=.\TalkWindow.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\texture.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\widget.h
 # End Source File
 # Begin Source File
 
@@ -507,15 +640,7 @@ SOURCE=.\winClient.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\common\NT\winNet.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\winX.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\common\NT\winXKey.h
+SOURCE=.\winConfig.h
 # End Source File
 # Begin Source File
 
@@ -524,14 +649,6 @@ SOURCE=.\winXThread.h
 # Begin Source File
 
 SOURCE=.\winXXPilot.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\xeventhandlers.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\xinit.h
 # End Source File
 # Begin Source File
 
@@ -545,6 +662,95 @@ SOURCE=.\XPilotNT.h
 
 SOURCE=.\xpilotView.h
 # End Source File
+# End Group
+# Begin Group "common.h"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\common\audio.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\bit.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\checknames.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\commonproto.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\const.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\draw.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\error.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\item.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\keys.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\net.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\pack.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\portability.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\rules.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\setup.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\socklib.h
+# End Source File
+# End Group
+# Begin Group "commonNT.h"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\common\NT\winNet.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\winX.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\winX_.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\winXKey.h
+# End Source File
+# End Group
 # End Group
 # Begin Group "Resource Files"
 
@@ -572,6 +778,30 @@ SOURCE=.\res\xpilot.rc2
 # Begin Source File
 
 SOURCE=..\..\server\NT\res\xpilots.ico
+# End Source File
+# End Group
+# Begin Group "bindist"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\common\NT\bindist\makeDistribution
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\bindist\README.txt.msub
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\bindist\READMEbin.txt.msub
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\bindist\ServerMOTD.txt.msub
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\common\NT\bindist\XPilot.nsi
 # End Source File
 # End Group
 # Begin Source File

@@ -5,3 +5,4 @@ xmkmf
 xxpilots
 *.ncb
 *.opt
+gmon.out

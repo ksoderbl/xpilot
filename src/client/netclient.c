@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: netclient.c,v 5.8 2001/06/04 20:32:51 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -31,7 +31,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <unistd.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
@@ -74,6 +74,7 @@
 #include "protoclient.h"
 #include "portability.h"
 #include "talk.h"
+#include "commonproto.h"
 
 #ifdef	SOUND
 # include "audio.h"
@@ -163,6 +164,7 @@ static void Receive_init(void)
     receive_tbl[PKT_CANNON]	= Receive_cannon;
     receive_tbl[PKT_TARGET]	= Receive_target;
     receive_tbl[PKT_RADAR]	= Receive_radar;
+    receive_tbl[PKT_FASTRADAR]	= Receive_fastradar;
     receive_tbl[PKT_RELIABLE]	= Receive_reliable;
     receive_tbl[PKT_QUIT]	= Receive_quit;
     receive_tbl[PKT_MODIFIERS]  = Receive_modifiers;
@@ -173,6 +175,7 @@ static void Receive_init(void)
     receive_tbl[PKT_ROUNDDELAY] = Receive_rounddelay;
     receive_tbl[PKT_LOSEITEM]	= Receive_loseitem;
     receive_tbl[PKT_WRECKAGE]	= Receive_wreckage;
+    receive_tbl[PKT_ASTEROID]	= Receive_asteroid;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	receive_tbl[PKT_DEBRIS + i] = Receive_debris;
     }
@@ -1411,22 +1414,22 @@ static void Check_view_dimensions(void)
     srv_height = height_wanted;
     LIMIT(srv_height, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
     LIMIT(srv_width, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
-    if (view_width != srv_width ||
-	view_height != srv_height) {
+    if (ext_view_width != srv_width ||
+	ext_view_height != srv_height) {
 	Send_display();
     }
 
-    real_view_width = view_width;
-    real_view_height = view_height;
-    view_x_offset = 0;
-    view_y_offset = 0;
-    if (width_wanted > view_width) {
-	view_width = width_wanted;
-	view_x_offset = (width_wanted - real_view_width) / 2;
+    active_view_width = ext_view_width;
+    active_view_height = ext_view_height;
+    ext_view_x_offset = 0;
+    ext_view_y_offset = 0;
+    if (width_wanted > ext_view_width) {
+	ext_view_width = width_wanted;
+	ext_view_x_offset = (width_wanted - active_view_width) / 2;
     }
-    if (height_wanted > view_height) {
-	view_height = height_wanted;
-	view_y_offset = (height_wanted - real_view_height) / 2;
+    if (height_wanted > ext_view_height) {
+	ext_view_height = height_wanted;
+	ext_view_y_offset = (height_wanted - active_view_height) / 2;
     }
 }
   
@@ -1528,7 +1531,7 @@ int Receive_self(void)
 		     "%c%c"
 		     ,
 		     &currentTank, &fuelSum, &fuelMax,
-		     &view_width, &view_height, &debris_colors,
+		     &ext_view_width, &ext_view_height, &debris_colors,
 		     &stat, &autopilotLight
 		     );
     if (n <= 0) {
@@ -1903,6 +1906,26 @@ int Receive_wreckage(void)	/* since 3.8.0 */
     return 1;
 }
 
+int Receive_asteroid(void)	/* since 4.4.0 */
+{
+    int			n;
+    short		x, y;
+    u_byte		ch, type_size, type, size, rot;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c%c", &ch, &x, &y,
+			  &type_size, &rot)) <= 0) {
+	return n;
+    }
+
+    type = ((type_size >> 4) & 0x0F);
+    size = (type_size & 0x0F);
+
+    if ((n = Handle_asteroid(x, y, type, size, rot)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
 int Receive_ecm(void)
 {
     int			n;
@@ -1959,10 +1982,48 @@ int Receive_radar(void)
 	return n;
     }
 
+    x = (int)((double)(x * 256) / Setup->width + 0.5);
+    y = (int)((double)(y * RadarHeight) / Setup->height + 0.5);
+
     if ((n = Handle_radar(x, y, size)) == -1) {
-		    return -1;
+	return -1;
     }
     return 1;
+}
+
+int Receive_fastradar(void)
+{
+    int			n, i, r = 1;
+    int			x, y, size;
+    unsigned char	*ptr;
+
+    rbuf.ptr++;	/* skip PKT_FASTRADAR packet id */
+
+    if (rbuf.ptr - rbuf.buf >= rbuf.len) {
+	return 0;
+    }
+    n = (*rbuf.ptr++ & 0xFF);
+    if (rbuf.ptr - rbuf.buf + (n * 3) > rbuf.len) {
+	return 0;
+    }
+    ptr = (unsigned char *) rbuf.ptr;
+    for (i = 0; i < n; i++) {
+	x = *ptr++;
+	y = *ptr++;
+	y |= (*ptr & 0xC0) << 2;
+	size = (*ptr & 0x07);
+	if (*ptr & 0x20) {
+	    size |= 0x80;
+	}
+	ptr++;
+	r = Handle_radar(x, y, size);
+	if (r == -1) {
+	    break;
+	}
+    }
+    rbuf.ptr += n * 3;
+
+    return (r == -1) ? -1 : 1;
 }
 
 int Receive_damaged(void)
@@ -2376,7 +2437,7 @@ int Send_keyboard(u_byte *keyboard_vector)
 
 int Send_shape(char *str)
 {
-    wireobj		*w;
+    shipobj		*w;
     char		buf[MSG_LEN], ext[MSG_LEN];
 
     w = Convert_shape_str(str);
@@ -2463,7 +2524,7 @@ int Receive_quit(void)
 	error("Can't read quit packet");
     } else {
 	if (Packet_scanf(sbuf, "%s", reason) <= 0) {
-	    strcpy(reason, "unknown reason");
+	    strlcpy(reason, "unknown reason", MAX_CHARS);
 	}
 	errno = 0;
 	error("Got quit packet: \"%s\"", reason);
@@ -2507,7 +2568,7 @@ int Receive_talk_ack(void)
 
 int Net_talk(char *str)
 {
-    strncpy(talk_str, str, sizeof talk_str - 1);
+    strlcpy(talk_str, str, sizeof talk_str);
     talk_pending = ++talk_sequence_num;
     talk_last_send = last_loops - TALK_RETRY;
     return 0;
@@ -2544,8 +2605,8 @@ int Send_display(void)
     LIMIT(width_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
     LIMIT(height_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
 
-    if (width_wanted == view_width &&
-	height_wanted == view_height &&
+    if (width_wanted == ext_view_width &&
+	height_wanted == ext_view_height &&
 	debris_colors == num_spark_colors &&
 	spark_rand == old_spark_rand &&
 	last_loops != 0) {
@@ -2553,8 +2614,8 @@ int Send_display(void)
     }
 
     if (simulating) {
-	view_width = width_wanted;
-	view_height = height_wanted;
+	ext_view_width = width_wanted;
+	ext_view_height = height_wanted;
 	Check_view_dimensions();
     }
     else if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,

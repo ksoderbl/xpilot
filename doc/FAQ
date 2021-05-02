@@ -99,7 +99,7 @@ frame rate of the XPilot server.
 XPilot is copyrighted by Bjoern Stabell, Ken Ronny Schouten, Bert Gijsbers
 and Dick Balaska.  Many people around the world have contributed a plethora
 of ideas and source code or helped in other ways to have XPilot run on a
-diverse set of UNIX computers and VMS.  See the CREDITS file for more details.
+diverse set of UNIX computers.  See the CREDITS file for more details.
 
 The XPilot home page on World-Wide Web is:
     <URL:http://www.xpilot.org/>

@@ -1,4 +1,4 @@
-/* $Id: ConfigDlg.h,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: ConfigDlg.h,v 5.2 2001/05/07 13:09:41 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -29,6 +29,10 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // CConfigDlg dialog
+#ifndef	_CONFIGDLG_H_
+#define	_CONFIGDLG_H_
+
+#include "UrlWidget.h"
 
 class CConfigDlg : public CDialog
 {
@@ -39,6 +43,8 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CConfigDlg)
 	enum { IDD = IDD_CONFIG_DLG };
+	UrlWidget	m_staticUrl2;
+	UrlWidget	m_staticUrl;
 	CString	m_commandline;
 	//}}AFX_DATA
 
@@ -57,7 +63,18 @@ protected:
 	//{{AFX_MSG(CConfigDlg)
 	afx_msg void OnLoadMap();
 	afx_msg void OnSetoptions();
+	afx_msg void OnStaticUrl();
+	afx_msg void OnStaticUrl2();
+	virtual BOOL OnInitDialog();
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg void OnChoosemap();
+	afx_msg void OnDestroy();
 	//}}AFX_MSG
 
 	DECLARE_MESSAGE_MAP()
+
+private:
+	CFont	urlFont;
 };
+
+#endif

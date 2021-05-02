@@ -1,4 +1,4 @@
-/* $Id: cannon.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: cannon.c,v 5.7 2001/05/28 15:54:49 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <errno.h>
 #include <math.h>
 #include <limits.h>
 
@@ -40,22 +39,13 @@
 #include "const.h"
 #include "global.h"
 #include "proto.h"
-#include "score.h"
-#include "saudio.h"
 #include "bit.h"
-#include "error.h"
 #include "objpos.h"
-#include "walls.h"
 #include "cannon.h"
-#include "netserver.h"
-#include "commonproto.h"
+#include "saudio.h"
 
 char cannon_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: cannon.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 #ifdef	SOUND
 #define IFSOUND(__x)	__x
@@ -104,7 +94,7 @@ void Cannon_add_item(int ind, int item, int amount)
 void Cannon_throw_items(int ind)
 {
     cannon_t	*c = World.cannon + ind;
-    int		i;
+    int		i, dir;
 
     for (i = 0; i < NUM_ITEMS; i++) {
 	if (i == ITEM_FUEL)
@@ -116,7 +106,7 @@ void Cannon_throw_items(int ind)
 					    - World.items[i].min_per_pack));
 	    LIMIT(amount, 0, c->item[i]);
 	    if (rfrac() < (dropItemOnKillProb * CANNON_DROP_ITEM_PROB)
-		&& NumObjs <= MAX_TOTAL_SHOTS) {
+		&& NumObjs < MAX_TOTAL_SHOTS) {
 		int velocity = (int)(rfrac() * 6);
 		object *obj;
 
@@ -125,16 +115,15 @@ void Cannon_throw_items(int ind)
 		obj->info = i;
 		obj->color = RED;
 		obj->status = GRAVITY;
-		obj->dir = (int)(c->dir
+		dir = (int)(c->dir
 			   - (CANNON_SPREAD * 0.5)
 			   + (rfrac() * CANNON_SPREAD));
-		obj->dir = MOD2(obj->dir, RES);
-		obj->id = -1;
+		dir = MOD2(dir, RES);
+		obj->id = NO_ID;
 		obj->team = TEAM_NOT_SET;
-		obj->owner = -1;
 		Object_position_init_pixels(obj, c->pix_pos.x, c->pix_pos.y);
-		obj->vel.x = tcos(obj->dir) * velocity;
-		obj->vel.y = tsin(obj->dir) * velocity;
+		obj->vel.x = tcos(dir) * velocity;
+		obj->vel.y = tsin(dir) * velocity;
 		obj->acc.x = 0;
 		obj->acc.y = 0;
 		obj->mass = 10;
@@ -143,6 +132,7 @@ void Cannon_throw_items(int ind)
 		obj->pl_range = ITEM_SIZE / 2;
 		obj->pl_radius = ITEM_SIZE / 2;
 		World.items[i].num++;
+		Cell_add_object(obj);
 	    }
 	    c->item[i] -= amount;
 	}
@@ -294,11 +284,11 @@ void Cannon_aim(int ind, int weapon, int *target, int *dir)
 	    || (BIT(World.rules->mode, TEAM_PLAY)
 		&& pl->team == c->team)
 	    || (!pl->forceVisible
-		&& BIT(pl->used, OBJ_CLOAKING_DEVICE)
+		&& BIT(pl->used, HAS_CLOAKING_DEVICE)
 		&& (int)(rfrac() * (pl->item[ITEM_CLOAK] + 1))
 		   > (int)(rfrac() * (c->item[ITEM_SENSOR] + 1)))
 	    || (cannonSmartness > 2
-		&& BIT(pl->used, OBJ_PHASING_DEVICE)))
+		&& BIT(pl->used, HAS_PHASING_DEVICE)))
 	    continue;
 
 	switch (cannonSmartness) {
@@ -501,7 +491,7 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 	    Make_debris(
 		/* pos */	cpx, cpy,
 		/* vel */	0, 0,
-		/* id */	-1,
+		/* id */	NO_ID,
 		/* team */	c->team,
 		/* type */	OBJ_SPARK,
 		/* mass */	THRUST_MASS,
@@ -518,7 +508,7 @@ void Cannon_fire(int ind, int weapon, int target, int dir)
 	    Make_debris(
 		/* pos */	cpx, cpy,
 		/* vel */	0, 0,
-		/* id */	-1,
+		/* id */	NO_ID,
 		/* team */	c->team,
 		/* type */	OBJ_SPARK,
 		/* mass */	THRUST_MASS,

@@ -1,4 +1,4 @@
-/* $Id: guiobjects.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: guiobjects.h,v 5.2 2001/06/02 21:00:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,6 +34,8 @@ void Gui_paint_spark(int color, int x, int y);
 
 void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size);
 
+void Gui_paint_asteroid(int x, int y, int type, int rot, int size);
+
 void Gui_paint_fastshot(int color, int x, int y);
 void Gui_paint_teamshot(int color, int x, int y);
 
@@ -56,10 +58,10 @@ void Gui_paint_connector(int x0, int y0, int x1, int y1, int tractor);
 
 void Gui_paint_transporter(int x0, int y0, int x1, int y1);
 
-void Gui_paint_all_connectors_begin();
+void Gui_paint_all_connectors_begin(void);
 
-void Gui_paint_ships_begin();
-void Gui_paint_ships_end();
+void Gui_paint_ships_begin(void);
+void Gui_paint_ships_end(void);
 
 void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased, int shield, int deflector, int eshield);
 

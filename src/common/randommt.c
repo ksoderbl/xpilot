@@ -49,8 +49,15 @@
 **	Indentation.
 **	No typedefs in external interface.
 **
-** $Id: randommt.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+** $Id: randommt.c,v 5.1 2001/06/02 21:02:19 bertg Exp $
 */
+
+
+/* Our exported interface: */
+void seedMT(unsigned int seed);
+unsigned int reloadMT(void);
+unsigned int randomMT(void);
+
 
 /*
 ** uint32 must be an unsigned integer type capable of holding at least 32

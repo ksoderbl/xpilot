@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: walls.c,v 5.15 2001/06/02 21:03:31 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -26,7 +26,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include <time.h>
 #include <math.h>
 #include <limits.h>
 
@@ -40,12 +39,9 @@
 #include "const.h"
 #include "global.h"
 #include "proto.h"
-#include "map.h"
 #include "score.h"
 #include "saudio.h"
 #include "item.h"
-#include "netserver.h"
-#include "pack.h"
 #include "error.h"
 #include "walls.h"
 #include "click.h"
@@ -75,6 +71,7 @@ static char msg[MSG_LEN];
  * to the nearest wall.  Measured in blocks times 2.
  */
 static unsigned char **walldist;
+
 
 /*
  * Allocate memory for the two dimensional "walldist" array.
@@ -119,7 +116,7 @@ static void Walldist_dump(void)
     sprintf(name, "walldist.ppm");
     fp = fopen(name, "w");
     if (!fp) {
-	error(name);
+	error("%s", name);
 	return;
     }
     line = (unsigned char *)malloc(3 * World.x);
@@ -277,6 +274,14 @@ void Walls_init(void)
     Walldist_init();
 }
 
+void Treasure_init(void)
+{
+    int i;
+    for (i = 0; i < World.NumTreasures; i++) {
+	Make_treasure_ball(i);
+    }
+}
+
 void Move_init(void)
 {
     mp.click_width = PIXEL_TO_CLICK(World.width);
@@ -318,9 +323,13 @@ void Move_init(void)
     if (ballsWallBounce) {
 	SET_BIT(mp.obj_bounce_mask, OBJ_BALL);
     }
+    if (asteroidsWallBounce) {
+	SET_BIT(mp.obj_bounce_mask, OBJ_ASTEROID);
+    }
 
     mp.obj_cannon_mask = (KILLING_SHOTS) | OBJ_MINE | OBJ_SHOT | OBJ_PULSE |
-			OBJ_SMART_SHOT | OBJ_TORPEDO | OBJ_HEAT_SHOT;
+			OBJ_SMART_SHOT | OBJ_TORPEDO | OBJ_HEAT_SHOT |
+			OBJ_ASTEROID;
     if (cannonsUseItems)
 	mp.obj_cannon_mask |= OBJ_ITEM;
     mp.obj_target_mask = mp.obj_cannon_mask | OBJ_BALL | OBJ_SPARK;
@@ -491,7 +500,7 @@ static void Bounce_wall(move_state_t *ms, move_bounce_t bounce)
  *  - whether the point bounced, in which case no pixels will have been
  *    traversed, only a change in direction. (ms->bounce, ms->vel, ms->todo)
  */
-static void Move_segment(move_state_t *ms)
+void Move_segment(move_state_t *ms)
 {
     int			i;
     int			block_type;	/* type of block we're going through */
@@ -509,6 +518,7 @@ static void Move_segment(move_state_t *ms)
     clpos		mid;		/* the mean of (offset+off2)/2 */
     const move_info_t	*const mi = ms->mip;	/* alias */
     int			hole;		/* which wormhole */
+    ballobject		*ball;
 
     /*
      * Fill in default return values.
@@ -961,7 +971,8 @@ static void Move_segment(move_state_t *ms)
 		    return;
 		}
 
-		if (ms->treasure == mi->obj->treasure) {
+		ball = BALL_PTR(mi->obj);
+		if (ms->treasure == ball->treasure) {
 		    /*
 		     * Ball has been replaced back in the hoop from whence
 		     * it came.  If the player is on the same team as the
@@ -972,18 +983,20 @@ static void Move_segment(move_state_t *ms)
 		    player	*pl = NULL;
 		    treasure_t	*tt = &World.treasures[ms->treasure];
 
-		    if (mi->obj->owner != -1)
-			pl = Players[GetInd[mi->obj->owner]];
+		    if (ball->owner != NO_ID)
+			pl = Players[GetInd[ball->owner]];
 
-		    if (!pl || (pl->team !=
-				World.treasures[mi->obj->treasure].team)) {
-			mi->obj->life = LONG_MAX;
+		    if (!BIT(World.rules->mode, TEAM_PLAY)
+			|| !pl
+			|| (pl->team !=
+			    World.treasures[ball->treasure].team)) {
+			ball->life = LONG_MAX;
 			ms->crash = NotACrash;
 			break;
 		    }
 
-		    mi->obj->life = 0;
-		    SET_BIT(mi->obj->status, (NOEXPLOSION|RECREATE));
+		    ball->life = 0;
+		    SET_BIT(ball->status, (NOEXPLOSION|RECREATE));
 
 		    SCORE(GetInd[pl->id], 5,
 			  tt->pos.x, tt->pos.y, "Treasure: ");
@@ -992,24 +1005,30 @@ static void Move_segment(move_state_t *ms)
 		    Set_message(msg);
 		    break;
 		}
-		if (mi->obj->owner == -1) {
-		    mi->obj->life = 0;
+		if (ball->owner == NO_ID) {
+		    ball->life = 0;
 		    return;
 		}
-		if (World.treasures[ms->treasure].team ==
-			Players[GetInd[mi->obj->owner]]->team) {
+		if (BIT(World.rules->mode, TEAM_PLAY)
+		    && World.treasures[ms->treasure].team ==
+		       Players[GetInd[ball->owner]]->team) {
 		    /*
 		     * Ball has been brought back to home treasure.
 		     * The team should be punished.
 		     */
 		    sprintf(msg," < The ball was loose for %ld frames >",
-			    LONG_MAX - mi->obj->life);
+			    LONG_MAX - ball->life);
 		    Set_message(msg);
-		    if (Punish_team(GetInd[mi->obj->owner],
-				    mi->obj->treasure, ms->treasure))
-			CLR_BIT(mi->obj->status, RECREATE);
+		    if (captureTheFlag
+			&& !World.treasures[ms->treasure].have
+			&& !World.treasures[ms->treasure].empty) {
+			strcpy(msg, "Your treasure must be safe before you can cash an opponent's!");
+			Set_player_message(Players[GetInd[ball->owner]], msg);
+		    } else if (Punish_team(GetInd[ball->owner],
+				    ball->treasure, ms->treasure))
+			CLR_BIT(ball->status, RECREATE);
 		}
-		mi->obj->life = 0;
+		ball->life = 0;
 		return;
 	    }
 	}
@@ -1038,8 +1057,9 @@ static void Move_segment(move_state_t *ms)
 			team = mi->pl->team;
 		    }
 		    else if (BIT(mi->obj->type, OBJ_BALL)) {
-			if (mi->obj->owner != -1) {
-			    team = Players[GetInd[mi->obj->owner]]->team;
+			ballobject *ball = BALL_PTR(mi->obj);
+			if (ball->owner != NO_ID) {
+			    team = Players[GetInd[ball->owner]]->team;
 			} else {
 			    team = TEAM_NOT_SET;
 			}
@@ -1534,7 +1554,7 @@ static void Cannon_dies(move_state_t *ms)
     int			killer = -1;
     player		*pl = NULL;
 
-    cannon->dead_time = CANNON_DEAD_TIME;
+    cannon->dead_time = cannonDeadTime;
     cannon->conn_mask = 0;
     World.block[cannon->blk_pos.x][cannon->blk_pos.y] = SPACE;
     Cannon_throw_items(ms->cannon);
@@ -1543,7 +1563,7 @@ static void Cannon_dies(move_state_t *ms)
     Make_debris(
 	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ 0.0, 0.0,
-	/* owner id       */ -1,
+	/* owner id       */ NO_ID,
 	/* owner team	  */ cannon->team,
 	/* kind           */ OBJ_DEBRIS,
 	/* mass           */ 4.5,
@@ -1558,7 +1578,7 @@ static void Cannon_dies(move_state_t *ms)
     Make_wreckage(
 	/* pos.x, pos.y   */ x, y,
 	/* vel.x, vel.y   */ 0.0, 0.0,
-	/* owner id       */ -1,
+	/* owner id       */ NO_ID,
 	/* owner team	  */ cannon->team,
 	/* min,max mass   */ 3.5, 23,
 	/* total mass     */ 28,
@@ -1571,12 +1591,12 @@ static void Cannon_dies(move_state_t *ms)
 	);
 
     if (!ms->mip->pl) {
-	if (ms->mip->obj->id != -1) {
+	if (ms->mip->obj->id != NO_ID) {
 	    killer = GetInd[ms->mip->obj->id];
 	    pl = Players[killer];
 	}
-    } else if (BIT(ms->mip->pl->used, OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)
-	       == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+    } else if (BIT(ms->mip->pl->used, HAS_SHIELD|HAS_EMERGENCY_SHIELD)
+	       == (HAS_SHIELD|HAS_EMERGENCY_SHIELD)) {
 	pl = ms->mip->pl;
 	killer = GetInd[pl->id];
     }
@@ -1673,7 +1693,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     targ->update_mask = (unsigned) -1;
     targ->damage = TARGET_DAMAGE;
-    targ->dead_time = TARGET_DEAD_TIME;
+    targ->dead_time = targetDeadTime;
 
     /*
      * Destroy target.
@@ -1686,7 +1706,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     Make_debris(
 	/* pos.x, pos.y   */ (x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ,
 	/* vel.x, vel.y   */ 0.0, 0.0,
-	/* owner id       */ -1,
+	/* owner id       */ NO_ID,
 	/* owner team	  */ targ->team,
 	/* kind           */ OBJ_DEBRIS,
 	/* mass           */ 4.5,
@@ -1868,9 +1888,8 @@ static void Object_crash(move_state_t *ms)
     }
 }
 
-void Move_object(int ind)
+void Move_object(object *obj)
 {
-    object		*obj = Obj[ind];
     int			nothing_done = 0;
     int			dist;
     move_info_t		mi;
@@ -1888,6 +1907,7 @@ void Move_object(int ind)
 	    x = WRAP_XCLICK(x);
 	    y = WRAP_YCLICK(y);
 	    Object_position_set_clicks(obj, (int)(x), (int)(y));
+	    Cell_add_object(obj);
 	    return;
 	}
     }
@@ -1901,8 +1921,8 @@ void Move_object(int ind)
     mi.target_crashes = BIT(mp.obj_target_mask, obj->type);
     mi.treasure_crashes = BIT(mp.obj_treasure_mask, obj->type);
     mi.wormhole_warps = true;
-    if (BIT(obj->type, OBJ_BALL) && obj->id != -1) {
-	mi.phased = BIT(Players[GetInd[obj->id]]->used, OBJ_PHASING_DEVICE);
+    if (BIT(obj->type, OBJ_BALL) && obj->id != NO_ID) {
+	mi.phased = BIT(Players[GetInd[obj->id]]->used, HAS_PHASING_DEVICE);
     } else {
 	mi.phased = 0;
     }
@@ -1912,7 +1932,7 @@ void Move_object(int ind)
     ms.vel = obj->vel;
     ms.todo.x = FLOAT_TO_CLICK(ms.vel.x);
     ms.todo.y = FLOAT_TO_CLICK(ms.vel.y);
-    ms.dir = obj->dir;
+    ms.dir = obj->missile_dir;
     ms.mip = &mi;
 
     for (;;) {
@@ -1978,13 +1998,14 @@ void Move_object(int ind)
     }
     Object_position_set_clicks(obj, ms.pos.x, ms.pos.y);
     obj->vel = ms.vel;
-    obj->dir = ms.dir;
+    obj->missile_dir = ms.dir;
     if (ms.crash) {
 	Object_crash(&ms);
     }
-    if (pos_update && anaColDet) {
+    if (pos_update) {
 	Object_position_remember(obj);
     }
+    Cell_add_object(obj);
 }
 
 static void Player_crash(move_state_t *ms, int pt, bool turning)
@@ -2047,8 +2068,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	break;
 
     case CrashCannon:
-	if (BIT(pl->used, OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)
-	    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+	if (BIT(pl->used, HAS_SHIELD|HAS_EMERGENCY_SHIELD)
+	    != (HAS_SHIELD|HAS_EMERGENCY_SHIELD)) {
 	    howfmt = "%s smashed%s against a cannon";
 	    hudmsg = "[Cannon]";
 	    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNON_SOUND);
@@ -2083,7 +2104,7 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	/* get a list of who pushed me */
 	for (i = 0; i < MAX_RECORDED_SHOVES; i++) {
 	    shove_t *shove = &pl->shove_record[i];
-	    if (shove->pusher_id == -1) {
+	    if (shove->pusher_id == NO_ID) {
 		continue;
 	    }
 	    if (shove->time < frame_loops - 20) {
@@ -2139,6 +2160,10 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		      OBJ_X_IN_BLOCKS(pl),
 		      OBJ_Y_IN_BLOCKS(pl),
 		      pl->name);
+		if (i >= num_pushers - 1) {
+		    pusher->kills++;
+		}
+
 	    }
 	    sc = (int)floor(Rate(average_pusher_score, pl->score)
 		       * shoveKillScoreMult);
@@ -2146,8 +2171,13 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		  OBJ_X_IN_BLOCKS(pl),
 		  OBJ_Y_IN_BLOCKS(pl),
 		  "[Shove]");
+
 	    strcpy(msg_ptr, ".");
 	    Set_message(msg);
+
+	    /* Robots will declare war on anyone who shoves them. */
+	    i = (int)(rfrac() * num_pushers);
+	    Robot_war(ind, GetInd[pushers[i]->id]);
 	}
     }
 
@@ -2171,6 +2201,7 @@ void Move_player(int ind)
     int			crash;
     int			bounce;
     int			moves_made = 0;
+    int			cor_res;
     clpos		pos;
     clvec		todo;
     clvec		done;
@@ -2179,6 +2210,8 @@ void Move_player(int ind)
     ivec		sign;		/* sign (-1 or 1) of direction */
     ipos		block;		/* block index */
     bool		pos_update = false;
+    DFLOAT		fric;
+    DFLOAT		oldvx, oldvy;
 
 
     if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING) {
@@ -2196,8 +2229,21 @@ void Move_player(int ind)
 	return;
     }
 
-    pl->vel.x *= (1.0f - friction);
-    pl->vel.y *= (1.0f - friction);
+/* Figure out which friction to use. */
+    switch (World.block[pl->pos.bx][pl->pos.by]) {
+    case FRICTION:
+	fric = blockFriction;
+	break;
+    default:
+	fric = friction;
+	break;
+    }
+
+    cor_res = MOD2(coriolis * RES / 360, RES);
+    oldvx = pl->vel.x;
+    oldvy = pl->vel.y;
+    pl->vel.x = (1.0f - fric) * (oldvx * tcos(cor_res) + oldvy * tsin(cor_res));
+    pl->vel.y = (1.0f - fric) * (oldvy * tcos(cor_res) - oldvx * tsin(cor_res));
 
     Player_position_remember(pl);
 
@@ -2224,7 +2270,7 @@ void Move_player(int ind)
     mi.treasure_crashes = true;
     mi.target_crashes = true;
     mi.wormhole_warps = true;
-    mi.phased = BIT(pl->used, OBJ_PHASING_DEVICE);
+    mi.phased = BIT(pl->used, HAS_PHASING_DEVICE);
 
     vel = pl->vel;
     todo.x = FLOAT_TO_CLICK(vel.x);
@@ -2344,15 +2390,15 @@ void Move_player(int ind)
 		int	delta_dir,
 			abs_delta_dir,
 			wall_dir;
-		DFLOAT	max_speed = BIT(pl->used, OBJ_SHIELD)
+		DFLOAT	max_speed = BIT(pl->used, HAS_SHIELD)
 				    ? maxShieldedWallBounceSpeed
 				    : maxUnshieldedWallBounceSpeed;
-		int	max_angle = BIT(pl->used, OBJ_SHIELD)
+		int	max_angle = BIT(pl->used, HAS_SHIELD)
 				    ? mp.max_shielded_angle
 				    : mp.max_unshielded_angle;
 
-		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
-		    == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+		if (BIT(pl->used, (HAS_SHIELD|HAS_EMERGENCY_SHIELD))
+		    == (HAS_SHIELD|HAS_EMERGENCY_SHIELD)) {
 		    if (max_speed < 100) {
 			max_speed = 100;
 		    }
@@ -2415,8 +2461,8 @@ void Move_player(int ind)
 		 * Clumsy touches (head first) with wall are more costly.
 		 */
 		cost = (cost * (RES/2 + abs_delta_dir)) / RES;
-		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
-		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+		if (BIT(pl->used, (HAS_SHIELD|HAS_EMERGENCY_SHIELD))
+		    != (HAS_SHIELD|HAS_EMERGENCY_SHIELD)) {
 		    Add_fuel(&pl->fuel, (long)(-((cost << FUEL_SCALE_BITS)
 					  * wallBounceFuelDrainMult)));
 		    Item_damage(ind, wallBounceDestroyItemProb);
@@ -2506,7 +2552,7 @@ void Move_player(int ind)
     if (ms[worst].crash) {
 	Player_crash(&ms[worst], worst, false);
     }
-    if (pos_update && anaColDet) {
+    if (pos_update) {
 	Player_position_remember(pl);
     }
 }
@@ -2549,7 +2595,7 @@ void Turn_player(int ind)
     mi.treasure_crashes = true;
     mi.target_crashes = true;
     mi.wormhole_warps = false;
-    mi.phased = BIT(pl->used, OBJ_PHASING_DEVICE);
+    mi.phased = BIT(pl->used, HAS_PHASING_DEVICE);
 
     if (new_dir > pl->dir) {
 	sign = (new_dir - pl->dir <= RES + pl->dir - new_dir) ? 1 : -1;
@@ -2665,3 +2711,4 @@ void Turn_player(int ind)
     }
 
 }
+

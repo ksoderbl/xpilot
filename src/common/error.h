@@ -1,4 +1,4 @@
-/* $Id: error.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: error.h,v 5.3 2001/05/30 18:34:15 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,23 +28,27 @@
  *
  * Modified by Bjoern Stabell <bjoern@xpilot.org>.
  * Dick Balaska <dick@xpilot.org> added the memory/leak checking.
+ * Bert Gijsbers <bert@xpilot.org> added warn, fatal, coredump.
  */
 
 #ifndef	ERROR_H
 #define	ERROR_H
 
-#ifndef _WINDOWS
-# if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
+# if (defined(__STDC__) && !defined(__sun__) || defined(__cplusplus) || defined(_WINDOWS))
 #  include <stdarg.h>
+    extern void warn(const char *fmt, ...);
     extern void error(const char *fmt, ...);
+    extern void fatal(const char *fmt, ...);
+    extern void dumpcore(const char *fmt, ...);
 # else
 #  include <varargs.h>
+    extern void warn();
     extern void error();
+    extern void fatal();
+    extern void dumpcore();
 # endif
-#endif
 
 #ifdef _WINDOWS
-    extern void error();
 # ifdef	_DEBUG
 #  define	Trace _Trace
 # else

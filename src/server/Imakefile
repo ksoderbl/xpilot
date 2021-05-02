@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 5.0 2001/04/07 20:01:00 dik Exp $ */
+/* $Id: Imakefile,v 5.5 2001/05/26 22:29:57 bertg Exp $ */
 
 TOP=../..
 COMMON = ../common/
@@ -7,9 +7,6 @@ COMMON = ../common/
 
 #ifdef Log
 DEFS_LOG = -DLOG
-#endif
-#ifdef TurnThrust
-DEFS_TURN_THRUST = -DTURN_THRUST
 #endif
 #ifdef Silent
 DEFS_SILENT = -DSILENT
@@ -35,24 +32,36 @@ DEFS_DEBUG = -DDEVELOPMENT
  *
  */
 DEFINES = \
-       $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
+       $(DEFS_LOG) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
        $(DEFS_PLOCKSERVER) $(DEFS_OTHER) $(DEFS_DEBUG)
 INCLUDES = $(AUDIOINC) -I$(COMMON) -I../lib/
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = \
-	cannon.c cmdline.c collision.c command.c contact.c \
-	event.c frame.c id.c item.c \
-	map.c metaserver.c netserver.c objpos.c option.c play.c player.c \
-	robot.c robotdef.c rules.c saudio.c sched.c server.c ship.c shot.c \
+	asteroid.c cannon.c cell.c cmdline.c \
+	collision.c command.c contact.c \
+	event.c fileparser.c frame.c \
+	id.c item.c laser.c \
+	map.c metaserver.c netserver.c \
+	objpos.c option.c \
+	parser.c play.c player.c \
+	robot.c robotdef.c rules.c \
+	saudio.c sched.c score.c \
+	server.c ship.c shot.c \
 	update.c walls.c wildmap.c
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = \
-	cannon.o cmdline.o collision.o command.o contact.o \
-	event.o frame.o id.o item.o \
-	map.o metaserver.o netserver.o objpos.o option.o play.o player.o \
-	robot.o robotdef.o rules.o saudio.o sched.o server.o ship.o shot.o \
+	asteroid.o cannon.o cell.o cmdline.o \
+	collision.o command.o contact.o \
+	event.o fileparser.o frame.o \
+	id.o item.o laser.o \
+	map.o metaserver.o netserver.o \
+	objpos.o option.o \
+	parser.o play.o player.o \
+	robot.o robotdef.o rules.o \
+	saudio.o sched.o score.o \
+	server.o ship.o shot.o \
 	update.o walls.o wildmap.o
 
 DEPLIBS = $(COMMON)libxpcommon.a 

@@ -1,4 +1,4 @@
-/* $Id: wildmap.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: wildmap.c,v 5.7 2001/06/03 17:28:50 bertg Exp $
  *
  * Wildmap, a random map generator for XPilot.  Copyright (C) 1993-2001 by
  *
@@ -129,12 +129,12 @@ static void Default_map(void)
     map.seed = (unsigned)Get_process_id() ^ (unsigned)time(NULL);
     map.seed_ratio = 0.16;
     map.fill_ratio = 0.20;
-    map.num_bases = 16;
+    map.num_bases = 26;
     map.num_teams = 3;
     map.cannon_ratio = 0.0020;
     map.fuel_ratio   = 0.0006;
     map.grav_ratio   = 0.0006;
-    map.worm_ratio   = 0.0002;
+    map.worm_ratio   = 0.0004;
 }
 
 static void Option_map(int argc, char **argv)
@@ -164,7 +164,7 @@ static void Option_map(int argc, char **argv)
 			j,
 			intval;
     unsigned		unsval;
-    char		*opt,
+    char		*opt = NULL,
 			*arg = NULL;
     double		dblval;
 
@@ -1194,17 +1194,8 @@ static void Border_map(void)
     map.data[map.datasize] = '\0';
 }
 
-#undef NELEM
-#include "const.h"
-#include "error.h"
-#ifdef _WINDOWS
-/* i don't know why but it won't compile without these */
-#define SERVER
-#include "global.h"
-#endif
-#include "map.h"
-
-static void Dump_map(World_map *world, char **data)
+static void Dump_map(char *name, char *author, char **data,
+		     int *width_ptr, int *height_ptr)
 {
 #if 0
     printf("mapWidth:	%d\n", map.width);
@@ -1217,8 +1208,10 @@ static void Dump_map(World_map *world, char **data)
 #endif
 
     *data = map.data;
-    sprintf(world->name, "Wild Map %u", map.seed);
-    sprintf(world->author, "The Wild Map Generator 1.1");
+    *width_ptr = map.width;
+    *height_ptr = map.height;
+    sprintf(name, "Wild Map %u", map.seed);
+    sprintf(author, "The Wild Map Generator 1.1");
 }
 
 static void Picture_map(void)
@@ -1236,12 +1229,12 @@ static void Picture_map(void)
     sprintf(name, "wildmap.ppm");
     fp = fopen(name, "w");
     if (!fp) {
-	error(name);
+	perror(name);
 	return;
     }
     line = (unsigned char *)malloc(3 * map.width);
     if (!line) {
-	error("No memory for wildmap dump");
+	perror("No memory for wildmap dump");
 	fclose(fp);
 	return;
     }
@@ -1325,14 +1318,10 @@ static void Picture_map(void)
 #endif
 }
 
-int Wildmap(World_map *world, char **data)
+static int wildmain(int argc, char **argv)
 {
     Default_map();
-    Option_map(1, NULL);
-
-    map.width = world->x;
-    map.height = world->y;
-
+    Option_map(argc, argv);
     Alloc_map();
     Generate_map();
     Connect_map();
@@ -1340,9 +1329,55 @@ int Wildmap(World_map *world, char **data)
     Smooth_map();
     Decorate_map();
     Border_map();
-    Dump_map(world, data);
-    Picture_map();
- 
+
     return 0;
+}
+
+
+#define SERVER
+#undef NELEM
+#include "version.h"
+#include "const.h"
+#include "object.h"
+#include "proto.h"
+
+
+char wildmap_version[] = VERSION;
+
+
+int Wildmap(
+	int width,
+	int height,
+	char *name,
+	char *author,
+	char **data,
+	int *width_ptr,
+	int *height_ptr)
+{
+    char	arg0[20];
+    char	arg1[20];
+    char	arg2[20];
+    char	arg3[20];
+    char	arg4[20];
+    char	*args[6];
+    int		result;
+
+    sprintf(arg0, "%s", "xpilots.wildmap");
+    sprintf(arg1, "%s", "-mapWidth");
+    sprintf(arg2, "%d", width);
+    sprintf(arg3, "%s", "-mapHeight");
+    sprintf(arg4, "%d", height);
+    args[0] = arg0;
+    args[1] = arg1;
+    args[2] = arg2;
+    args[3] = arg3;
+    args[4] = arg4;
+    args[5] = NULL;
+
+    result = wildmain(5, args);
+    Dump_map(name, author, data, width_ptr, height_ptr);
+    Picture_map();
+
+    return result;
 }
 

@@ -1,4 +1,4 @@
-/* $Id: math.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: math.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -37,10 +37,6 @@
 
 char math_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: math.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
-#endif
 
 
 DFLOAT		tbl_sin[TABLE_SIZE];

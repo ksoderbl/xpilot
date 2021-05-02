@@ -1,4 +1,4 @@
-/* $Id: play.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: play.c,v 5.6 2001/05/24 11:26:56 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,12 +44,6 @@
 
 char play_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: play.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
-
-extern int Rate(int winner, int looser);
 
 int Punish_team(int ind, int t_destroyed, int t_target)
 {
@@ -214,7 +208,6 @@ void Make_debris(
 	debris->color = color;
 	debris->id = id;
 	debris->team = team;
-	debris->owner = -1;
 	Object_position_init_pixels(debris, x, y);
 	dir = MOD2(min_dir + (int)(rfrac() * (max_dir - min_dir)), RES);
 	dirplus = MOD2(dir + 1, RES);
@@ -226,7 +219,6 @@ void Make_debris(
 	debris->vel.y = vely + dy * speed;
 	debris->acc.x = 0;
 	debris->acc.y = 0;
-	debris->dir = dir;
 	debris->mass = mass;
 	debris->type = type;
 	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);
@@ -235,11 +227,11 @@ void Make_debris(
 	}
 	debris->life = life;
 	debris->fuselife = life;
-	debris->spread_left = 0;
 	debris->pl_range = radius;
 	debris->pl_radius = radius;
 	debris->status = status;
 	debris->mods = mods;
+	Cell_add_object(debris);
     }
 }
 

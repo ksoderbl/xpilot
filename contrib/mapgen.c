@@ -21,11 +21,11 @@
  * Thanks and enjoy!
  */
 
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
-#include <stdlib.h>
-#include <strings.h>
 
 	/* gets the character at x,y from map */
 #define POS(x,y) *(map+x+((y)*xsize))

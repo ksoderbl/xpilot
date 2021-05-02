@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: welcome.c,v 5.4 2001/06/02 21:01:27 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -67,10 +67,6 @@
 
 char welcome_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: welcome.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 
 /*
@@ -95,6 +91,8 @@ static char sourceid[] =
  * which is listed by the meta servers.
  */
 #define SI_DATA(it)		((server_info_t *)LI_DATA(it))
+
+#ifndef _WINDOWS
 
 /*
  * All the fields for a server in one line of meta output.
@@ -231,7 +229,7 @@ static void Not_enough_memory(void)
 /*
  * Process only exposure events.
  */
-static void Welcome_process_exposure_events()
+static void Welcome_process_exposure_events(void)
 {
     XEvent			event;
 
@@ -425,8 +423,8 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	}
 	for (i = 0; i < n; i++) {
 	    localnet_conpars[i] = *conpar;
-	    strcpy(localnet_conpars[i].server_name, name_ptrs[i]);
-	    strcpy(localnet_conpars[i].server_addr, addr_ptrs[i]);
+	    strlcpy(localnet_conpars[i].server_name, name_ptrs[i], MAX_HOST_LEN);
+	    strlcpy(localnet_conpars[i].server_addr, addr_ptrs[i], MAX_HOST_LEN);
 	    button_width = max_width + 20;
 	    button_height = textFont->ascent + textFont->descent + 10;
 	    button_x = 20;
@@ -855,13 +853,13 @@ static void Meta_dns_lookup(void)
 	    Welcome_create_label(1, buf);
 	    addr = sock_get_addr_by_name(metas[i].name);
 	    if (addr) {
-		strcpy(metas[i].addr, addr);
+		strlcpy(metas[i].addr, addr, sizeof(metas[i].addr));
 	    }
 	}
     }
 }
 
-static void Ping_servers()
+static void Ping_servers(void)
 {
     static int		serial;		/* mark pings to identify stale reply */
     const int		interval = 1000 / 14;	/* assumes we can do 14fps of pings */
@@ -1220,27 +1218,6 @@ static int Get_meta_data(void)
     return server_count;
 }
 
-/*
- * Copy a string up to a maximum number of bytes.
- * Similar to strncpy, but always terminates,
- * and writes only one zero byte.
- */
-static char *string_max_copy(char *arg_dst, const char *arg_src, size_t n)
-{
-    char		*dst = arg_dst;
-    const char		*src = arg_src;
-    size_t		i;
-
-    if (n > 0) {
-	for (i = 1; i < n && *src != '\0'; i++) {
-	    *dst++ = *src++;
-	}
-	/* always terminate */
-	*dst = '\0';
-    }
-
-    return arg_dst;
-}
 
 /*
  * User wants to join a server.
@@ -1255,8 +1232,8 @@ static int Internet_server_join_cb(int widget, void *user_data, const char **tex
 
     /* structure copy */
     *conpar = *global_conpar;
-    string_max_copy(conpar->server_name, sip->hostname, sizeof(conpar->server_name));
-    string_max_copy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
+    strlcpy(conpar->server_name, sip->hostname, sizeof(conpar->server_name));
+    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
     conpar->contact_port = sip->port;
     result = Contact_servers(1, &server_addr_ptr, 1, 0, 0, NULL,
 			     0, NULL,
@@ -1330,8 +1307,8 @@ static int Internet_server_show_cb(int widget, void *user_data, const char **tex
 
     /* structure copy */
     *conpar = *global_conpar;
-    string_max_copy(conpar->server_name, sip->hostname, sizeof(conpar->server_name));
-    string_max_copy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
+    strlcpy(conpar->server_name, sip->hostname, sizeof(conpar->server_name));
+    strlcpy(conpar->server_addr, sip->ip_str, sizeof(conpar->server_addr));
     conpar->contact_port = sip->port;
     /* structure copy */
     *global_conpar = *conpar;
@@ -2158,3 +2135,11 @@ int Welcome_screen(Connect_param_t *conpar)
     return result;
 }
 
+#else
+
+int Welcome_screen(Connect_param_t *conpar)
+{
+    return 0;
+}
+
+#endif

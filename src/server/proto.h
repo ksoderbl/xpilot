@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: proto.h,v 5.23 2001/06/05 08:30:10 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,18 +25,21 @@
 #ifndef	PROTO_H
 #define	PROTO_H
 
-#ifdef VMS
-#include "strcasecmp.h"
-#endif
+/*
+ * Prototypes for cell.c
+ */
+void Free_cells(void);
+void Alloc_cells(void);
+void Cell_init_object(object *obj);
+void Cell_add_object(object *obj);
+void Cell_remove_object(object *obj);
+void Cell_get_objects(int x, int y, int r, int max, object ***list, int *count);
 
 /*
  * Prototypes for collision.c
  */
-void Free_cells(void);
-void Alloc_cells(void);
 void Check_collision(void);
 int wormXY(int x, int y);
-void SCORE(int, int, int, int, const char *);
 int IsOffensiveItem(enum Item i);
 int IsDefensiveItem(enum Item i);
 int CountOffensiveItems(player *pl);
@@ -53,8 +56,9 @@ void release_ID(int id);
  * Prototypes for walls.c
  */
 void Walls_init(void);
+void Treasure_init(void);
 void Move_init(void);
-void Move_object(int ind);
+void Move_object(object *obj);
 void Move_player(int ind);
 void Turn_player(int ind);
 
@@ -70,11 +74,20 @@ bool team_dead(int team);
  * Prototypes for map.c
  */
 void Free_map(void);
-int Grok_map(void);
+bool Grok_map(void);
 void Find_base_direction(void);
 void Compute_gravity(void);
 DFLOAT Wrap_findDir(DFLOAT dx, DFLOAT dy);
 DFLOAT Wrap_length(DFLOAT dx, DFLOAT dy);
+
+int Wildmap(
+	int width,
+	int height,
+	char *name,
+	char *author,
+	char **data,
+	int *width_ptr,
+	int *height_ptr);
 
 /*
  * Prototypes for math.c
@@ -91,20 +104,21 @@ void Make_table(void);
 /*
  * Prototypes for cmdline.c
  */
-int Parse_list(int *index, char *buf);
-int Parser(int argc, char **argv);
-int Tune_option(char *opt, char *val);
+void tuner_none(void);
+void tuner_dummy(void);
+bool Init_options(void);
+void Free_options(void);
+
 
 /*
  * Prototypes for play.c
  */
 void Thrust(int ind);
-#ifdef TURN_FUEL
 void Turn_thrust(int ind,int num_sparks);
-#endif
 void Recoil(object *ship, object *shot);
 void Record_shove(player *pl, player *pusher, long time);
 void Delta_mv(object *ship, object *obj);
+void Delta_mv_elastic(object *obj1, object *obj2);
 void Obj_repel(object *obj1, object *obj2, int repel_dist);
 void Item_damage(int ind, DFLOAT prob);
 void Alloc_shots(int number);
@@ -186,6 +200,17 @@ void Detonate_items(int ind);
 void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind);
 void remove_temp_wormhole(int ind);
 
+
+/*
+ * Prototypes for asteroid.c
+ */
+void Break_asteroid(int ind);
+void Asteroid_update(void);
+#ifdef LIST_H_INCLUDED
+list_t Asteroid_get_list(void);
+#endif
+
+
 /*
  * Prototypes for cannon.c
  */
@@ -211,7 +236,7 @@ void Compute_sensor_range(player *);
 void Player_add_tank(int ind, long tank_fuel);
 void Player_remove_tank(int ind, int which_tank);
 void Player_hit_armor(int ind);
-int Init_player(int ind, wireobj *ship);
+int Init_player(int ind, shipobj *ship);
 void Alloc_players(int number);
 void Free_players(void);
 void Update_score_table(void);
@@ -250,12 +275,14 @@ void Tune_item_packs(void);
 void Set_initial_resources(void);
 void Set_world_items(void);
 void Set_world_rules(void);
+void Set_world_asteroids(void);
 void Set_misc_item_limits(void);
+void Tune_asteroid_prob(void);
 
 /*
  * Prototypes for server.c
  */
-void End_game(void);
+int End_game(void);
 int Pick_team(int pick_for_type);
 void Server_info(char *str, unsigned max_size);
 void Log_game(const char *heading);
@@ -269,7 +296,7 @@ void Main_loop(void);
  * Prototypes for contact.c
  */
 void Contact_cleanup(void);
-void Contact_init(void);
+int Contact_init(void);
 void Contact(int fd, void *arg);
 void Queue_loop(void);
 int Queue_advance_player(char *name, char *msg);
@@ -305,10 +332,28 @@ void Phasing(int ind, int on);
 /*
  * Prototypes for option.c
  */
-void addOption(const char *name, const char *value, int override, void *def);
-char *getOption(const char *name);
+void Options_parse(void);
+bool Convert_string_to_int(const char *value_str, int *int_ptr);
+bool Convert_string_to_float(const char *value_str, DFLOAT *float_ptr);
+bool Convert_string_to_bool(const char *value_str, bool *bool_ptr);
+
+/*
+ * Prototypes for parser.c
+ */
+int Parser_list_option(int *index, char *buf);
+bool Parser(int argc, char **argv);
+int Tune_option(char *name, char *val);
+int Get_option_value(const char *name, char *value);
+
+/*
+ * Prototypes for fileparser.c
+ */
 bool parseDefaultsFile(const char *filename);
 bool parseMapFile(const char *filename);
-void parseOptions(void);
+
+/*
+ * Prototypes for laser.c
+ */
+void Laser_pulse_collision(void);
 
 #endif

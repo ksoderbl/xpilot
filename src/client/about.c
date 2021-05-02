@@ -1,4 +1,4 @@
-/* $Id: about.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: about.c,v 5.2 2001/06/02 21:00:02 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -54,10 +54,6 @@
 
 char about_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: about.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 /* How far away objects should be placed from each other etc... */
 #define BORDER			10
@@ -482,7 +478,6 @@ int Keys_callback(int widget_desc, void *data, const char **unused)
 	int		i,
 			len,
 			maxkeylen = 0;
-	extern char* Get_keyHelpString(keys_t key);
 
 	for (i = 0; i < maxKeyDefs; i++) {
 	    if ((str = XKeysymToString(keyDefs[i].keysym)) != NULL

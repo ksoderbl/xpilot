@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: robot.c,v 5.13 2001/06/05 15:54:54 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -53,15 +53,12 @@
 #include "robot.h"
 #include "error.h"
 #include "server.h"
+#include "commonproto.h"
 
 #define DEFAULT_ROBOT_TYPE	"default"
 
 char robot_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
-#endif
 
 /*
  * Array of different robots.
@@ -499,8 +496,7 @@ void Parse_robot_file(void)
 			while (isspace(*ptr)) {
 			    ptr++;
 			}
-			strncpy(dst, ptr, size);
-			dst[size - 1] = '\0';
+			strlcpy(dst, ptr, size);
 			ptr = &dst[strlen(dst)];
 			while (--ptr >= dst && isspace(*ptr)) {
 			    *ptr = '\0';
@@ -653,6 +649,7 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"Enough's enough!  It's only room enough for one of us %s here. [%s]",
 	"I'm sorry %s, but you must... DIE!!!!! [%s]",
 	"Jihad!  Die %s!  Die! [%s]",
+	"%s will be assimilated [%s]",
     };
 
     static int		next_msg = -1;
@@ -766,14 +763,14 @@ static void Robot_create(void)
 
     Init_player(NumPlayers, (allowShipShapes)
 			    ? Parse_shape_str(rob->shape)
-			    : (wireobj *)NULL);
+			    : (shipobj *)NULL);
     robot = Players[NumPlayers];
     SET_BIT(robot->type_ext, OBJ_EXT_ROBOT);
     robot->robot_data_ptr = new_data;
 
-    strcpy(robot->name, rob->name);
-    strcpy(robot->realname, "robot");
-    strcpy(robot->hostname, "xpilot.org");
+    strlcpy(robot->name, rob->name, MAX_CHARS);
+    strlcpy(robot->realname, robotRealName, MAX_CHARS);
+    strlcpy(robot->hostname, robotHostName, MAX_CHARS);
 
     robot->color = WHITE;
     robot->turnspeed = MAX_PLAYER_TURNSPEED;
@@ -820,16 +817,18 @@ static void Robot_create(void)
     Robot_talks(ROBOT_TALK_ENTER, robot->name, "");
 
 #ifndef	SILENT
-    xpprintf("%s %s (%d, %s) starts at startpos %d.\n",
+    if (logRobots)
+	xpprintf("%s %s (%d, %s) starts at startpos %d.\n",
 	   showtime(), robot->name, NumPlayers, robot->realname, robot->home_base);
 #endif
 
-    if (rdelay > 0 || NumPlayers == 1) {
-	rdelay = roundDelay * FPS;
-	rdelaySend = rdelay + FPS;	/* send him an extra second of 0's */
+    if (round_delay > 0 || NumPlayers == 1) {
+	round_delay = roundDelaySeconds * FPS;
+	round_delay_send = round_delay + FPS;  /* delay him an extra second */
 	roundtime = -1;
 	sprintf(msg, "Player entered. Delaying %d seconds until next %s.",
-		roundDelay, (BIT(World.rules->mode, TIMING)? "race" : "round"));
+		roundDelaySeconds,
+		(BIT(World.rules->mode, TIMING)? "race" : "round"));
 	Set_message(msg);
     }
 
@@ -951,7 +950,7 @@ void Robot_war(int ind, int killer)
 	if (Robot_war_on_player(killer) == pl->id)
 	    for (i = 0; i < NumPlayers; i++) {
 		if (Players[i]->conn != NOT_CONNECTED) {
-		    Send_war(Players[i]->conn, kp->id, -1);
+		    Send_war(Players[i]->conn, kp->id, NO_ID);
 		}
 	    }
 	Robot_set_war(killer, -1);
@@ -1047,6 +1046,22 @@ static int Robot_check_leave(int ind)
     return FALSE;
 }
 
+
+/*
+ * On each round we call the robot type round ticker.
+ */
+static void Robot_round_tick(void)
+{
+    int			i;
+
+    if (NumRobots > 0) {
+	for (i = 0; i < num_robot_types; i++) {
+	    (*robot_types[i].round_tick)();
+	}
+    }
+}
+
+
 /*
  * Update tanks here.
  */
@@ -1067,11 +1082,15 @@ void Robot_update(void)
     player		*pl;
     int			i;
     static int		new_robot_delay;
+    int			num_playing_ships;
+    int			num_any_ships;
 
-
-    if ((NumPlayers - NumPseudoPlayers < maxRobots
+    num_any_ships = NumPlayers + login_in_progress;
+    num_playing_ships = num_any_ships - NumPseudoPlayers;
+    if ((num_playing_ships < maxRobots
 	 || NumRobots < minRobots)
-	&& NumPlayers - NumPseudoPlayers - login_in_progress < World.NumBases
+	&& num_playing_ships < World.NumBases
+	&& num_any_ships < NUM_IDS
 	&& NumRobots < MAX_ROBOTS
 	&& !(BIT(World.rules->mode, TEAM_PLAY)
 	     && restrictRobots
@@ -1082,14 +1101,23 @@ void Robot_update(void)
 	    Robot_create();
 	    new_robot_delay = 0;
 	}
-    } else if ((NumPlayers - NumPseudoPlayers > World.NumBases
-		|| (NumPlayers - NumPseudoPlayers > maxRobots
-		    && NumRobots > minRobots))
-	       && NumRobots > 0) {
-	Robot_delete(-1, false);
     }
-    if (NumRobots <= 0)
+    else {
+	new_robot_delay = 0;
+	if (NumRobots > 0) {
+	    if ((num_playing_ships > World.NumBases)
+		|| (num_any_ships > NUM_IDS)
+		|| (num_playing_ships > maxRobots && NumRobots > minRobots)) {
+		Robot_delete(-1, false);
+	    }
+	}
+    }
+
+    if (NumRobots <= 0 && NumPseudoPlayers <= 0) {
 	return;
+    }
+
+    Robot_round_tick();
 
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
@@ -1119,8 +1147,9 @@ void Robot_update(void)
 	    continue;
 	}
 
-	if (rdelay > 0)
+	if (round_delay > 0) {
 	    continue;
+	}
 
 	/*
 	 * Let the robot code control this robot.

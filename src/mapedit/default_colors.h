@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: default_colors.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: default_colors.h,v 5.1 2001/05/19 23:08:37 millerjl Exp $
  */
 #define COLOR_BACKGROUND "black"
 #define COLOR_FOREGROUND  "gray"
@@ -33,7 +33,7 @@
 #define COLOR_WALL      "blue"
 #define COLOR_DECOR     "green"
 #define COLOR_FUEL      "red"
-#define COLOR_TREASURE  "white"
+#define COLOR_TREASURE  "red"
 #define COLOR_TARGET    "red"
 #define COLOR_ITEM_CONC "red"
 
@@ -43,3 +43,4 @@
 
 #define COLOR_BASE      "white"
 #define COLOR_CANNON    "white"
+#define COLOR_FRICTION  "magenta"

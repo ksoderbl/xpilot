@@ -1,4 +1,4 @@
-/* $Id: guiobjects.c,v 5.3 2001/04/16 15:41:39 bertg Exp $
+/* $Id: guiobjects.c,v 5.11 2001/06/10 17:36:58 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -56,26 +56,22 @@
 #include "texture.h"
 #include "paint.h"
 #include "paintdata.h"
+#include "paintmacros.h"
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
 #include "portability.h"
 #include "blockbitmaps.h"
+#include "wreckshape.h"
+#include "astershape.h"
+#include "guiobjects.h"
 
 
 char guiobjects_version[] = VERSION;
 
 
-#define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (world.y + view_height - (co)))
-
-#define NUM_WRECKAGE_SHAPES	3
-#define NUM_WRECKAGE_POINTS	12
-
-
 extern setup_t		*Setup;
 
-extern position *wreckageShapes[NUM_WRECKAGE_SHAPES][NUM_WRECKAGE_POINTS];
 
 extern XGCValues	gcv;
 
@@ -197,7 +193,7 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 	    { 0, -2 }
 	};
 
-    #ifdef WINDOWSCALING
+#    ifdef WINDOWSCALING
 	if (lastScaleFactor != scaleFactor) {
 	    int			i;
 	    lastScaleFactor = scaleFactor;
@@ -206,12 +202,12 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 		mine_points[i].y = WINSCALE(world_mine_points[i].y);
 	    }
 	}
-    #else
+#    else
 	if (!lastScaleFactor) {
 	    lastScaleFactor = 1;
 	    memcpy(mine_points, world_mine_points, sizeof(world_mine_points));
 	}
-    #endif
+#    endif
 
 	x = X(x);
 	y = Y(y);
@@ -272,15 +268,9 @@ void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
     int color, cnt, tx, ty;
     static XPoint points[NUM_WRECKAGE_POINTS+2];
 
-    color = (deadly) ? WHITE: RED;
-
-
     for (cnt = 0; cnt < NUM_WRECKAGE_POINTS; cnt++) {
-	tx = (int)wreckageShapes[wtype][cnt][rot].x;
-	ty = (int)wreckageShapes[wtype][cnt][rot].y;
-	
-	tx = tx * size / 256;
-	ty = ty * size / 256;
+	tx = (int)(wreckageShapes[wtype][cnt][rot].x * size) >> 8;
+	ty = (int)(wreckageShapes[wtype][cnt][rot].y * size) >> 8;
 
 	points[cnt].x = WINSCALE(X(x + tx));
 	points[cnt].y = WINSCALE(Y(y + ty));
@@ -288,7 +278,30 @@ void Gui_paint_wreck(int x, int y, bool deadly, int wtype, int rot, int size)
     }
     points[cnt++] = points[0];
 
+    color = (deadly) ? WHITE: RED;
     SET_FG(colors[color].pixel);
+    rd.drawLines(dpy, p_draw, gc, points, cnt, 0);
+    Erase_points(0, points, cnt);
+
+}
+
+
+void Gui_paint_asteroid(int x, int y, int type, int rot, int size)
+{
+    int cnt, tx, ty;
+    static XPoint points[NUM_ASTEROID_POINTS+2];
+
+    for (cnt = 0; cnt < NUM_ASTEROID_POINTS; cnt++) {
+	tx = (int)(asteroidShapes[type][cnt][rot].x * size * 1.4);
+	ty = (int)(asteroidShapes[type][cnt][rot].y * size * 1.4);
+
+	points[cnt].x = WINSCALE(X(x + tx));
+	points[cnt].y = WINSCALE(Y(y + ty));
+
+    }
+    points[cnt++] = points[0];
+
+    SET_FG(colors[WHITE].pixel);
     rd.drawLines(dpy, p_draw, gc, points, cnt, 0);
     Erase_points(0, points, cnt);
 
@@ -582,7 +595,7 @@ void Gui_paint_ships_end()
 }
 
 
-void Gui_paint_rounddelay(int x, int y)
+static void Gui_paint_rounddelay(int x, int y)
 {
     char s[12];
     int	 t, text_width;
@@ -599,7 +612,7 @@ void Gui_paint_rounddelay(int x, int y)
 
 
 /*  Here starts the paint functions for ships  (MM) */
-void Gui_paint_ship_name(int x , int y, other_t *other)
+static void Gui_paint_ship_name(int x , int y, other_t *other)
 {
     FIND_NAME_WIDTH(other);
     SET_FG(colors[WHITE].pixel);
@@ -614,7 +627,7 @@ void Gui_paint_ship_name(int x , int y, other_t *other)
 }
 
 
-int Gui_calculate_ship_color(int id, other_t *other)
+static int Gui_calculate_ship_color(int id, other_t *other)
 {
     int ship_color = WHITE;
 
@@ -644,7 +657,7 @@ int Gui_calculate_ship_color(int id, other_t *other)
 }
 
 
-void Gui_paint_marking_lights(int id, int x, int y, wireobj *ship, int dir)
+static void Gui_paint_marking_lights(int id, int x, int y, shipobj *ship, int dir)
 {
     int lcnt;
 
@@ -687,7 +700,7 @@ void Gui_paint_marking_lights(int id, int x, int y, wireobj *ship, int dir)
 }
 
 
-void Gui_paint_shields_deflectors(int x, int y, int radius, int shield,
+static void Gui_paint_shields_deflectors(int x, int y, int radius, int shield,
 				  int deflector, int eshield, int ship_color)
 {
     int		e_radius = radius + 4;
@@ -738,28 +751,28 @@ void Gui_paint_shields_deflectors(int x, int y, int radius, int shield,
     }
 }
 
-void Set_drawstyle_dashed();
+static void Set_drawstyle_dashed(int ship_color, int cloak);
 
-void Gui_paint_ship_cloaked(int ship_color, XPoint *points, int point_count)
+static void Gui_paint_ship_cloaked(int ship_color, XPoint *points, int point_count)
 {
     Set_drawstyle_dashed(ship_color, 1);
     rd.drawLines(dpy, p_draw, gc, points, point_count, 0);
     Erase_points(1, points, point_count);
 }
 
-void Gui_paint_ship_phased(int ship_color, XPoint *points, int point_count)
+static void Gui_paint_ship_phased(int ship_color, XPoint *points, int point_count)
 {
     Gui_paint_ship_cloaked(ship_color, points, point_count);
 }
 
-void generic_paint_ship(int x, int y, int ang, int ship)
+static void generic_paint_ship(int x, int y, int ang, int ship)
 {
     PaintBitmap(p_draw, ship, WINSCALE(X(x) - 16), WINSCALE(Y(y) - 16),
 		WINSCALE(32), WINSCALE(32), ang);
 }
 
 
-void Gui_paint_ship_uncloaked(int id, XPoint *points,
+static void Gui_paint_ship_uncloaked(int id, XPoint *points,
 			      int ship_color, int point_count)
 {
     if (gcv.line_style != LineSolid) {
@@ -783,7 +796,7 @@ void Gui_paint_ship_uncloaked(int id, XPoint *points,
 }
 
 
-void Set_drawstyle_dashed(int ship_color, int cloak)
+static void Set_drawstyle_dashed(int ship_color, int cloak)
 {
     int mask;
     if (gcv.line_style != LineOnOffDash) {
@@ -802,12 +815,22 @@ void Set_drawstyle_dashed(int ship_color, int cloak)
 }
 
 
-int set_shipshape(int x, int y, int dir, wireobj *ship, XPoint *points)
+static int set_shipshape(int world_x, int world_y,
+		  int dir, shipobj *ship, XPoint *points)
 {
-    int cnt;
+    int			cnt;
+    register position	*ship_point_pos;
+    register XPoint	*xpts = points;
+    int			window_x;
+    int			window_y;
+
     for (cnt = 0; cnt < ship->num_points; cnt++) {
-	points[cnt].x = WINSCALE(X(x + ship->pts[cnt][dir].x));
-	points[cnt].y = WINSCALE(Y(y + ship->pts[cnt][dir].y));
+	ship_point_pos = &(ship->pts[cnt][dir]);
+	window_x = X(world_x + ship_point_pos->x);
+	window_y = Y(world_y + ship_point_pos->y);
+	xpts->x = WINSCALE(window_x);
+	xpts->y = WINSCALE(window_y);
+	xpts++;
     }
     points[cnt++] = points[0];
 
@@ -820,7 +843,7 @@ void Gui_paint_ship(int x, int y, int dir, int id, int cloak, int phased,
 {
     int			cnt, ship_color;
     other_t		*other;
-    wireobj		*ship;
+    shipobj		*ship;
     XPoint		points[64];
     int			ship_shape;
 

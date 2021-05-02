@@ -1,4 +1,4 @@
-/* $Id: texture.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: texture.c,v 5.1 2001/04/24 13:51:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -31,10 +31,6 @@
 #ifndef _WINDOWS
 # include <unistd.h>
 # include <X11/Xlib.h>
-#endif
-
-#ifdef VMS
-# include <unixio.h>
 #endif
 
 #ifdef _WINDOWS

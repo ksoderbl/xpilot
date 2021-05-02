@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: contact.c,v 5.6 2001/06/10 17:36:58 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,10 +65,6 @@
 
 char contact_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: contact.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 /*
  * Global variables
@@ -102,7 +98,7 @@ void Contact_cleanup(void)
     sock_close(&contactSocket);
 }
 
-void Contact_init(void)
+int Contact_init(void)
 {
     int		status;
 
@@ -112,20 +108,22 @@ void Contact_init(void)
     if ((status = sock_open_udp(&contactSocket, serverAddr,
 			        contactPort)) == -1) {
 	error("Could not create Dgram contactSocket");
-	End_game();
+	error("Perhaps %s is already running?", APPNAME);
+	return(End_game());
     }
     sock_set_timeout(&contactSocket, 0, 0);
     if (sock_set_non_blocking(&contactSocket, 1) == -1) {
 	error("Can't make contact socket non-blocking");
-	End_game();
+	return(End_game());
     }
     if (Sockbuf_init(&ibuf, &contactSocket, SERVER_SEND_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for contact buffer");
-	End_game();
-    }
+	return(End_game());
+   }
 
     install_input(Contact, contactSocket.fd, (void *) &contactSocket);
+	return(TRUE);
 }
 
 /*
@@ -140,7 +138,7 @@ static int Kick_robot_players(int team)
     if (team == TEAM_NOT_SET) {
 	if (BIT(World.rules->mode, TEAM_PLAY) && reserveRobotTeam) {
 	    /* kick robot with lowest score from any team but robotTeam */
-	    int low_score = LONG_MAX;
+	    int low_score = INT_MAX;
 	    int low_i = -1;
 	    int i;
 	    for (i = 0; i < NumPlayers; i++) {
@@ -164,7 +162,7 @@ static int Kick_robot_players(int team)
     } else {
 	if (World.teams[team].NumRobots > 0) {
 	    /* kick robot with lowest score from this team */
-	    int low_score = LONG_MAX;
+	    int low_score = INT_MAX;
 	    int low_i = -1;
 	    int i;
 	    for (i = 0; i < NumPlayers; i++) {
@@ -294,7 +292,6 @@ void Contact(int fd, void *arg)
 			bytes,
 			delay,
 			login_port,
-			max_robots,
     			qpos,
 			status;
     char		reply_to;
@@ -328,7 +325,7 @@ void Contact(int fd, void *arg)
     }
     ibuf.len = bytes;
 
-    strcpy(host_addr, sock_get_last_addr(&contactSocket));
+    strlcpy(host_addr, sock_get_last_addr(&contactSocket), sizeof(host_addr));
     if (Check_address(host_addr)) {
 	return;
     }
@@ -652,7 +649,7 @@ void Contact(int fd, void *arg)
 	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
 
 	    for (change = false, full = false; !full && !bad; ) {
-		switch (Parse_list(&i, str)) {
+		switch (Parser_list_option(&i, str)) {
 		case -1:
 		    bad = true;
 		    break;
@@ -688,12 +685,16 @@ void Contact(int fd, void *arg)
 	/*
 	 * Set the maximum of robots wanted in the server
 	 */
+	int max_robots;
 	if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
 	    || max_robots < 0) {
 	    status = E_INVAL;
 	}
 	else {
 	    maxRobots = max_robots;
+	    if (maxRobots < minRobots) {
+		minRobots = maxRobots;
+	    }
 	    while (maxRobots < NumRobots) {
 		Robot_delete(-1, true);
 	    }
@@ -1040,11 +1041,11 @@ static int Queue_player(char *real, char *nick, char *disp, int team,
 	return E_SOCKET;
     }
     ++*qpos;
-    strcpy(qp->real_name, real);
-    strcpy(qp->nick_name, nick);
-    strcpy(qp->disp_name, disp);
-    strcpy(qp->host_name, host);
-    strcpy(qp->host_addr, addr);
+    strlcpy(qp->real_name, real, MAX_CHARS);
+    strlcpy(qp->nick_name, nick, MAX_CHARS);
+    strlcpy(qp->disp_name, disp, MAX_CHARS);
+    strlcpy(qp->host_name, host, MAX_CHARS);
+    strlcpy(qp->host_addr, addr, MAX_CHARS);
     qp->port = port;
     qp->team = team;
     qp->version = version;

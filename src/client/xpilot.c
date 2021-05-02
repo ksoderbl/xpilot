@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: xpilot.c,v 5.7 2001/06/03 17:21:49 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -55,28 +55,18 @@
 #include "net.h"
 #include "connectparam.h"
 #include "protoclient.h"
-#ifdef SUNCMW
-# include "cmw.h"
-#endif /* SUNCMW */
 #include "portability.h"
 #include "checknames.h"
+#include "commonproto.h"
 
 char xpilot_version[] = VERSION;
 
 #ifndef	lint
-static char versionid[] = "@(#)$" TITLE " $";
-static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
-#endif
-
-#define MAX_LINE	256	/* should not be smaller than MSG_LEN */
-
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN	64
+char xpilot_versionid[] = "@(#)$" TITLE " $";
 #endif
 
 
-char			hostname[MAXHOSTNAMELEN];
+char			hostname[SOCK_HOSTNAME_LENGTH];
 
 char			**Argv;
 int			Argc;
@@ -136,17 +126,9 @@ int main(int argc, char *argv[])
     /*
      * --- Miscellaneous initialization ---
      */
-#ifdef SUNCMW
-    cmw_priv_init();
-#endif /* CMW */
-
     init_error(argv[0]);
 
-#ifdef _WINDOWS
-    srand( (unsigned)time( NULL ) );
-#else
-    srand( (unsigned)time((time_t *)0) * getpid());
-#endif
+    srand( (unsigned)time((time_t *)0) ^ Get_process_id());
 
     Check_client_versions();
 
@@ -160,7 +142,7 @@ int main(int argc, char *argv[])
 
     cp = getenv("XPILOTHOST");
     if (cp) {
-	strncpy(hostname, cp, sizeof(hostname) - 1);
+	strlcpy(hostname, cp, sizeof(hostname));
     }
     else {
         sock_get_local_hostname(hostname, sizeof hostname, 0);
@@ -173,7 +155,7 @@ int main(int argc, char *argv[])
 
     cp = getenv("XPILOTUSER");
     if (cp) {
-	strncpy(conpar->real_name, cp, sizeof(conpar->real_name) - 1);
+	strlcpy(conpar->real_name, cp, sizeof(conpar->real_name));
     }
     else {
 	Get_login_name(conpar->real_name, sizeof(conpar->real_name) - 1);
@@ -184,9 +166,7 @@ int main(int argc, char *argv[])
 	xpprintf("to \"%s\"\n", conpar->real_name);
     }
 
-#ifdef _WINDOWS
-    conpar->disp_name[0] = '\0';
-#endif
+    IFWINDOWS( conpar->disp_name[0] = '\0'; )
 
     /*
      * --- Check commandline arguments and resource files ---
@@ -196,7 +176,7 @@ int main(int argc, char *argv[])
 		  &text, &list_servers,
 		  &auto_connect, &noLocalMotd,
 		  conpar->nick_name, conpar->disp_name,
-		  shutdown_reason);
+		  hostname, shutdown_reason);
     if (Check_nick_name(conpar->nick_name) == NAME_ERROR) {
 	xpprintf("fixing nick from \"%s\" ", conpar->nick_name);
 	Fix_nick_name(conpar->nick_name);
@@ -217,30 +197,9 @@ int main(int argc, char *argv[])
     if (!noLocalMotd)
 	printfile(Conf_localmotdfile());
 
-#ifdef	LIMIT_ACCESS
-    /*
-     * If sysadm's have complained alot, check for free machines before
-     * letting the user play.  If room is crowded, don't let him play.
-     */
-    if (!list_servers && Is_allowed(conpar->disp_name) == false)
-	exit (-1);
-#endif
-#ifdef SIMULATING_ONLY
-Simulate_init();
-Simulate_frames();
-exit(0);
-#endif
+    Simulate();
 
-#if 0 || _WINDOWS
-    if (list_servers)
-	printf("LISTING AVAILABLE SERVERS:\n");
-    result = Contact_servers(argc - 1, &argv[1],
-			     auto_connect, list_servers,
-			     auto_shutdown, shutdown_reason,
-			     0, 0, 0, 0,
-			     conpar);
-#else
-    if (text || auto_connect || argv[1]) {
+    if (text || auto_connect || argv[1] || is_this_windows()) {
 	if (list_servers)
 	    printf("LISTING AVAILABLE SERVERS:\n");
 
@@ -251,9 +210,8 @@ exit(0);
 				 conpar);
     }
     else {
-	result = Welcome_screen(conpar);
+	IFNWINDOWS(result = Welcome_screen(conpar);)
     }
-#endif
 
     if (result == 1) {
 	return Join(conpar->server_addr, conpar->server_name, conpar->login_port,
@@ -263,64 +221,83 @@ exit(0);
     return 1;
 }
 
+
 /*
  * Verify that all source files making up this program have been
  * compiled for the same version.  Too often bugs have been reported
  * for incorrectly compiled programs.
  */
+extern char about_version[];
+#ifdef SOUND
+extern char audio_version[];
+#endif
+extern char blockbitmaps_version[];
+extern char caudio_version[];
+extern char checknames_version[];
+extern char client_version[];
+extern char colors_version[];
+extern char config_version[];
+extern char configure_version[];
+extern char datagram_version[];
+extern char dbuff_version[];
+extern char default_version[];
+extern char error_version[];
+extern char gfx2d_version[];
+extern char guimap_version[];
+extern char guiobjects_version[];
+extern char join_version[];
+extern char math_version[];
+extern char net_version[];
+extern char netclient_version[];
+extern char paint_version[];
+extern char paintdata_version[];
+extern char painthud_version[];
+extern char paintmap_version[];
+extern char paintobjects_version[];
+extern char paintradar_version[];
+extern char portability_version[];
+extern char query_version[];
+extern char record_version[];
+extern char shipshape_version[];
+extern char socklib_version[];
+extern char talk_version[];
+extern char talkmacros_version[];
+extern char textinterface_version[];
+extern char texture_version[];
+extern char welcome_version[];
+extern char widget_version[];
+extern char xevent_version[];
+extern char xeventhandlers_version[];
+extern char xinit_version[];
+extern char xpilot_version[];
+extern char xpmread_version[];
+
+
 static void Check_client_versions(void)
 {
 #ifndef _WINDOWS	/* gotta put this back in before source released */
-#ifdef SOUND
-    extern char		audio_version[];
-#endif
-    extern char		about_version[],
-			caudio_version[],
-			checknames_version[],
-			client_version[],
-			colors_version[],
-			configure_version[],
-			dbuff_version[],
-			default_version[],
-			error_version[],
-			join_version[],
-			math_version[],
-			net_version[],
-			netclient_version[],
-			paint_version[],
-			paintdata_version[],
-			painthud_version[],
-			paintmap_version[],
-			paintobjects_version[],
-			paintradar_version[],
-			portability_version[],
-			query_version[],
-			record_version[],
-			shipshape_version[],
-			socklib_version[],
-			talk_version[],
-			texture_version[],
-			widget_version[],
-			xevent_version[],
-			xinit_version[],
-			xpilot_version[],
-			xpmread_version[];
     static struct file_version {
 	char		filename[16];
 	char		*versionstr;
     } file_versions[] = {
 	{ "about", about_version },
 #ifdef SOUND
-	{ "*audio", audio_version },
+	{ "audio", audio_version },
 #endif
+	{ "blockbitmaps", blockbitmaps_version },
 	{ "caudio", caudio_version },
 	{ "checknames", checknames_version },
 	{ "client", client_version },
 	{ "colors", colors_version },
+	{ "config", config_version },
 	{ "configure", configure_version },
+	{ "datagram", datagram_version },
 	{ "dbuff", dbuff_version },
 	{ "default", default_version },
 	{ "error", error_version },
+	{ "gfx2d", gfx2d_version },
+	{ "guimap", guimap_version },
+	{ "guiobjects", guiobjects_version },
 	{ "join", join_version },
 	{ "math", math_version },
 	{ "net", net_version },
@@ -337,9 +314,13 @@ static void Check_client_versions(void)
 	{ "shipshape", shipshape_version },
 	{ "socklib", socklib_version },
 	{ "talk", talk_version },
+	{ "talkmacros", talkmacros_version },
+	{ "textinterface", textinterface_version },
 	{ "texture", texture_version },
+	{ "welcome", welcome_version },
 	{ "widget", widget_version },
 	{ "xevent", xevent_version },
+	{ "xeventhandlers", xeventhandlers_version },
 	{ "xinit", xinit_version },
 	{ "xpilot", xpilot_version },
 	{ "xpmread", xpmread_version },
@@ -364,3 +345,4 @@ static void Check_client_versions(void)
     }
 #endif
 }
+

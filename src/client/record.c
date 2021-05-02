@@ -1,4 +1,4 @@
-/* $Id: record.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: record.c,v 5.3 2001/06/02 21:01:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,6 +52,7 @@
 #include "recordfmt.h"
 #include "xpmread.h"
 #include "commonproto.h"
+#include "xinit.h"
 
 char record_version[] = VERSION;
 
@@ -89,6 +90,9 @@ static void Dummy_newFrame(void) {}
 static void Dummy_endFrame(void) {}
 static void Dummy_paintItemSymbol(unsigned char type, Drawable drawable,
 				  GC mygc, int x, int y, int color) {}
+
+extern char	hostname[];
+
 
 /*
  * Miscellaneous recording functions.
@@ -152,7 +156,6 @@ static void RWriteString(char *str)
  */
 static void RWriteHeader(void)
 {
-    extern char			hostname[];
     time_t			t;
     char			buf[256];
     char			*ptr;
@@ -179,7 +182,7 @@ static void RWriteHeader(void)
     RWriteString(servername);
     RWriteByte(FPS);
     time(&t);
-    strcpy(buf, ctime(&t));
+    strlcpy(buf, ctime(&t), sizeof(buf));
     if ((ptr = strchr(buf, '\n')) != NULL) {
 	*ptr = '\0';
     }
@@ -196,8 +199,8 @@ static void RWriteHeader(void)
     RWriteString(gameFontName);
     RWriteString(messageFontName);
 
-    RWriteUShort(view_width);
-    RWriteUShort(view_height);
+    RWriteUShort(draw_width);
+    RWriteUShort(draw_height);
 
     record_dashes = dashes;
     record_num_dashes = NUM_DASHES;
@@ -483,8 +486,8 @@ static void RNewFrame(void)
     recording = True;
 
     putc(RC_NEWFRAME, recordFP);
-    RWriteUShort(view_width);
-    RWriteUShort(view_height);
+    RWriteUShort(draw_width);
+    RWriteUShort(draw_height);
 }
 
 static void REndFrame(void)

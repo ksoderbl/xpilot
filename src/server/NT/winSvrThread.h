@@ -1,4 +1,4 @@
-/* $Id: winSvrThread.h,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: winSvrThread.h,v 5.1 2001/05/07 11:42:17 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.h - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.h,v 5.0 2001/04/07 20:01:01 dik Exp $					*
+*  $Id: winSvrThread.h,v 5.1 2001/05/07 11:42:17 dik Exp $					*
 \***************************************************************************/
 #ifndef	_WINSVRTHREAD_H_
 #define	_WINSVRTHREAD_H_
@@ -49,6 +49,7 @@ struct CServerThreadInfo
 #define	WM_MSGAVAILABLE		(WM_APP+1)
 #define	WM_UPDATESCORES		(WM_APP+2)
 #define	WM_STARTTIMER		(WM_APP+3)
+#define	WM_SERVERKILLED		(WM_APP+4)
 
 
 // Controlling function for the worker thread.

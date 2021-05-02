@@ -27,8 +27,10 @@
 	04 Oct 1999	Bert Gijsbers   bert@xpilot.org
 			Also commented out other prototype declarations
 			for strcpy, strncpy, strcat and getenv.
+	19 May 2001	Bert Gijsbers   bert@xpilot.org
+			Protoized functions.
 
-	$Id: msub.c,v 5.0 2001/04/07 20:00:57 dik Exp $
+	$Id: msub.c,v 5.1 2001/05/19 11:12:23 bertg Exp $
 */
 
 #include	<unistd.h>
@@ -63,18 +65,18 @@ struct Var
 };
 
 
-static void	ReadMake ();
-static int	CheckAssignment ();
-static Var	*AddVar ();
-static Var	*FindVar ();
-static Var	*FindVarUsingEnv ();
-static int	FindVarRef ();
-static int	FindEndVarRef ();
-static void	Expand ();
-static void	Substitute ();
-static char	*Malloc();
-static char	*NewString();
-static void	Panic ();
+static void	ReadMake (FILE *f);
+static int	CheckAssignment (char *s, int source);
+static Var	*AddVar (char *var, char *value, int source);
+static Var	*FindVar (char *var);
+static Var	*FindVarUsingEnv (char *var);
+static int	FindVarRef (char *s, int nRefSeqs, char **initRef, char **termRef);
+static int	FindEndVarRef (char *s, int idx, char *term);
+static void	Expand (Var *vp);
+static void	Substitute (FILE *f);
+static char	*Malloc(int size);
+static char	*NewString(char *s);
+static void	Panic (char *s);
 
 
 static char	*usage = "Usage: msub [ +Rstr -Rstr] [ -f makefile ] file";
@@ -112,9 +114,7 @@ static int	precEnvVar = 1;
 
 
 int
-main (argc, argv)
-int	argc;
-char	**argv;
+main (int argc, char **argv)
 {
 FILE	*f;
 Var	*vp;
@@ -301,8 +301,7 @@ int	toggle = 0;
  */
 
 static void
-ReadMake (f)
-FILE	*f;
+ReadMake (FILE *f)
 {
 struct stat	st;
 size_t	mfSize;
@@ -367,9 +366,7 @@ char	*mfBuf;		/* makefile buffer */
  */
 
 static int
-CheckAssignment (s, source)
-char	*s;
-int	source;
+CheckAssignment (char *s, int source)
 {
 char	name[bufSiz], *np;
 int	len;
@@ -399,8 +396,7 @@ int	len;
 
 
 static Var *
-FindVar (var)
-char	*var;
+FindVar (char *var)
 {
 Var	*vp;
 
@@ -423,8 +419,7 @@ Var	*vp;
  */
 
 static Var *
-FindVarUsingEnv (var)
-char	*var;
+FindVarUsingEnv (char *var)
 {
 Var	*vp;
 char	*val;
@@ -444,9 +439,7 @@ char	*val;
 }
 
 static Var *
-AddVar (var, value, source)
-char	*var, *value;
-int	source;
+AddVar (char *var, char *value, int source)
 {
 Var	*vp;
 
@@ -482,11 +475,7 @@ Var	*vp;
 */
 
 static int
-FindVarRef (s, nRefSeqs, initRef, termRef)
-char	*s;
-int	nRefSeqs;
-char	*initRef[];
-char	*termRef[];
+FindVarRef (char *s, int nRefSeqs, char **initRef, char **termRef)
 {
 char	*p;
 int	len, i;
@@ -513,10 +502,7 @@ int	len, i;
 
 
 static int
-FindEndVarRef (s, idx, term)
-char	*s;
-int	idx;
-char	*term;
+FindEndVarRef (char *s, int idx, char *term)
 {
 char	*p = s + idx;	/* point to first char past reference initiator */
 int	len = strlen (term);
@@ -546,8 +532,7 @@ int	len = strlen (term);
 */
 
 static void
-Expand (vp)
-Var	*vp;
+Expand (Var *vp)
 {
 Var	*vp2;
 char	buf[bufSiz * 4], *p;
@@ -584,8 +569,7 @@ char	buf[bufSiz * 4], *p;
 */
 
 static void
-Substitute (f)
-FILE	*f;
+Substitute (FILE *f)
 {
 Var	*vp;
 char	buf[bufSiz * 4], name[bufSiz], *p;
@@ -612,8 +596,7 @@ char	buf[bufSiz * 4], name[bufSiz], *p;
 */
 
 static char
-*Malloc (size)
-int	size;
+*Malloc (int size)
 {
 char	*p;
 
@@ -629,16 +612,14 @@ char	*p;
 */
 
 static char
-*NewString (s)
-char	*s;
+*NewString (char *s)
 {
 	return (strcpy (Malloc (strlen (s) + 1), s));
 }
 
 
 static void
-Panic (s)
-char	*s;
+Panic (char *s)
 {
 	(void) fprintf (stderr, "msub: %s\n", s);
 	exit (1);

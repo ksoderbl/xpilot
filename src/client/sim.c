@@ -1,4 +1,4 @@
-/* $Id: sim.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
+/* $Id: sim.c,v 5.4 2001/06/02 21:01:08 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -21,6 +21,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+int simulating;
+
+#ifdef SIMULATING_ONLY
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -56,10 +60,7 @@
 #include "pack.h"
 #include "protoclient.h"
 #include "portability.h"
-
-int simulating = 0;
-
-#ifdef SIMULATING_ONLY
+#include "commonproto.h"
 
 DFLOAT findDir(DFLOAT x, DFLOAT y);
 
@@ -93,7 +94,7 @@ Rpos_Update(rpos_t *rp, int loops) {
  * This should be a nice random map generator and it should go in common
  * and the server should use it.
  */
-static int Random_map()
+static int Random_map(void)
 {
 	int i;
 	unsigned char *data;
@@ -121,7 +122,7 @@ static int Random_map()
 
 #include "simbloods.h"
 
-static int Fake_setup()
+static int Fake_setup(void)
 {
 	const int x = 100, y = 100;
 
@@ -136,8 +137,9 @@ static int Fake_setup()
 	Setup->width = x * BLOCK_SZ;
 	Setup->height = y * BLOCK_SZ;
 	Setup->frames_per_second = 12; /* unused? */
-	strcpy(Setup->name, "Simulated Map");
-	strcpy(Setup->author, "Ben Jackson <ben@ben.com>");
+	strlcpy(Setup->name, "Simulated Map", sizeof(Setup->name));
+	strlcpy(Setup->author, "Ben Jackson <ben@ben.com>",
+		sizeof(Setup->author));
 #if RANDOM_MAP
 	Random_map();
 #else
@@ -150,7 +152,7 @@ static int Fake_setup()
 
 static rpos_t fake_ships[N_FAKE_SHIPS];
 
-static void Fake_others()
+static void Fake_others(void)
 {
 	extern char name[];
 	char fakename[15];
@@ -168,7 +170,7 @@ static void Fake_others()
 			}
 			*p = '\0';
 		} else {
-			strcpy(fakename, name);
+			strlcpy(fakename, name, sizeof(fakename));
 		}
 
 		Handle_player(i, i > 3 ? 4 : 2, ' ', fakename,
@@ -176,7 +178,7 @@ static void Fake_others()
 	}
 }
 
-int Simulate_init()
+static int Simulate_init(void)
 {
 	simulating = 1;
 	Client_init("simulator", MY_VERSION);
@@ -190,12 +192,12 @@ int Simulate_init()
 
 static alarmed = 0;
 
-static int zot()
+static int zot(void)
 {
 	alarmed = 1;
 }
 
-int Simulate_frames()
+static int Simulate_frames(void)
 {
 	const int duration = 2;
 	u_byte newitems[NUM_ITEMS];
@@ -247,4 +249,22 @@ int Simulate_frames()
 		++i;
 	}
 }
+
+void Simulate(void)
+{
+    simulating = 1;
+    Simulate_init();
+    Simulate_frames();
+    exit(0);
+}
+
+#else
+
+void Simulate(void);
+
+void Simulate(void)
+{
+    simulating = 0;
+}
+
 #endif /* SIMULATING_ONLY */

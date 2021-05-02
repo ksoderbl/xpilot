@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: painthud.c,v 5.4 2001/05/19 16:47:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,15 +52,14 @@
 #include "texture.h"
 #include "paint.h"
 #include "paintdata.h"
+#include "paintmacros.h"
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
 #include "blockbitmaps.h"
+#include "commonproto.h"
 
 char painthud_version[] = VERSION;
-
-#define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (world.y + view_height - (co)))
 
 
 extern setup_t		*Setup;
@@ -109,7 +108,7 @@ static void Paint_meter(int xoff, int y, const char *title, int val, int max)
 	x = xoff;
         xstr = WINSCALE(x + METER_WIDTH) + BORDER;
     } else {
-	x = view_width - (METER_WIDTH - xoff);
+	x = ext_view_width - (METER_WIDTH - xoff);
         xstr = WINSCALE(x) - (BORDER + XTextWidth(gameFont, title, strlen(title)));
     }
     if (!blockBitmaps) {
@@ -154,14 +153,14 @@ static int wrap(int *xp, int *yp)
 {
     int			x = *xp, y = *yp;
 
-    if (x < world.x || x > world.x + view_width) {
-	if (x < realWorld.x || x > realWorld.x + view_width) {
+    if (x < world.x || x > world.x + ext_view_width) {
+	if (x < realWorld.x || x > realWorld.x + ext_view_width) {
 	    return 0;
 	}
 	*xp += world.x - realWorld.x;
     }
-    if (y < world.y || y > world.y + view_height) {
-	if (y < realWorld.y || y > realWorld.y + view_height) {
+    if (y < world.y || y > world.y + ext_view_height) {
+	if (y < realWorld.y || y > realWorld.y + ext_view_height) {
 	    return 0;
 	}
 	*yp += world.y - realWorld.y;
@@ -183,7 +182,7 @@ void Paint_score_objects(void)
 		if (wrap(&x, &y)) {
 		    SET_FG(colors[hudColor].pixel);
 		    x = WINSCALE(X(x)) - sobj->msg_width / 2,
-		    y = WINSCALE(Y(y)) - gameFont->ascent / 2,
+		    y = WINSCALE(Y(y)) + gameFont->ascent / 2,
 		    rd.drawString(dpy, p_draw, gc,
 				x, y,
 				sobj->msg,
@@ -223,29 +222,29 @@ void Paint_meters(void)
 	Paint_meter(-10, 120, "Drop", packet_drop, FPS);
 
     if (thrusttime >= 0 && thrusttimemax > 0)
-	Paint_meter((view_width-300)/2 -32, 2*view_height/3,
+	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3,
 		    "Thrust Left",
 		    (thrusttime >= thrusttimemax ? thrusttimemax : thrusttime),
 		    thrusttimemax);
 
     if (shieldtime >= 0 && shieldtimemax > 0)
-	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 20,
+	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3 + 20,
 		    "Shields Left",
 		    (shieldtime >= shieldtimemax ? shieldtimemax : shieldtime),
 		    shieldtimemax);
 
     if (phasingtime >= 0 && phasingtimemax > 0)
-	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 40,
+	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3 + 40,
 		    "Phasing left",
 		    (phasingtime >= phasingtimemax ? phasingtimemax : phasingtime),
 		    phasingtimemax);
 
     if (destruct > 0)
-	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 60,
+	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3 + 60,
 		   "Self destructing", destruct, 150);
 
     if (shutdown_count >= 0)
-	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 80,
+	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3 + 80,
 		   "SHUTDOWN", shutdown_count, shutdown_delay);
 }
 
@@ -257,7 +256,7 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
     int		i, dir = 96;
     int		hudShipColor = hudColor;
     other_t	*target;
-    wireobj	*ship;
+    shipobj	*ship;
     char	str[50];
     static int	warningCount;
     static int	mapdiag = 0;
@@ -397,10 +396,10 @@ void Paint_HUD(void)
 	&& selfVisible != 0
 	&& (vel.x != 0 || vel.y != 0)) {
 	Segment_add(hudColor,
-		    view_width / 2,
-		    view_height / 2,
-		    (int)(view_width / 2 - ptr_move_fact*vel.x),
-		    (int)(view_height / 2 + ptr_move_fact*vel.y));
+		    ext_view_width / 2,
+		    ext_view_height / 2,
+		    (int)(ext_view_width / 2 - ptr_move_fact*vel.x),
+		    (int)(ext_view_height / 2 + ptr_move_fact*vel.y));
     }
 
     if (!BIT(instruments, SHOW_HUD_INSTRUMENTS)) {
@@ -412,8 +411,8 @@ void Paint_HUD(void)
      */
     SET_FG(colors[hudColor].pixel);
 
-    hud_pos_x = (int)(view_width / 2 - hud_move_fact*vel.x);
-    hud_pos_y = (int)(view_height / 2 + hud_move_fact*vel.y);
+    hud_pos_x = (int)(ext_view_width / 2 - hud_move_fact*vel.x);
+    hud_pos_y = (int)(ext_view_height / 2 + hud_move_fact*vel.y);
 
     /* HUD frame */
     gcv.line_style = LineOnOffDash;
@@ -708,7 +707,7 @@ void Paint_messages(void)
 	charsPerTick = (float)charsPerSecond / FPS;
 
     top_y = BORDER + messageFont->ascent;
-    bot_y = WINSCALE(view_height) - messageFont->descent - BORDER;
+    bot_y = WINSCALE(ext_view_height) - messageFont->descent - BORDER;
 
     /* get number of player messages */
     if (selectionAndHistory) {
@@ -992,7 +991,7 @@ void Add_message(char *message)
     msg_set[0] = tmp;
 
     msg_set[0]->life = MSG_DURATION;
-    strcpy(msg_set[0]->txt, message);
+    strlcpy(msg_set[0]->txt, message, MSG_LEN);
     msg_set[0]->len = len;
 
 #ifndef _WINDOWS
@@ -1030,7 +1029,10 @@ void Add_message(char *message)
 #endif
 
 #ifdef DEVELOPMENT
-    /* anti-censor hack */
+    /* Anti-censor hack restores original 4 letter words.
+     * XPilot is not assumed to be a game for children
+     * who are still under parental guidance.
+     */
     for (i = 0; i < len - 3; i++) {
 	static char censor_text[] = "@&$*";
 	static char rough_text[][5] = { "fuck", "shit", "damn" };
@@ -1040,7 +1042,7 @@ void Add_message(char *message)
 	    if (++rough_index >= 3) {
 		rough_index = 0;
 	    }
-	    strncpy(&msg_set[0]->txt[i], rough_text[rough_index], 4);
+	    memcpy(&msg_set[0]->txt[i], rough_text[rough_index], 4);
 	}
     }
 #endif
@@ -1117,7 +1119,7 @@ void Paint_recording(void)
     sprintf(buf, "REC %d.%d", mb, ck);
     len = strlen(buf);
     w = XTextWidth(gameFont, buf, len);
-    x = WINSCALE(view_width) - 10 - w;
+    x = WINSCALE(ext_view_width) - 10 - w;
     y = 10 + gameFont->ascent;
     XDrawString(dpy, p_draw, gc, x, y, buf, len);
     Erase_rectangle( x - 1, WINSCALE(10),

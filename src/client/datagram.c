@@ -1,4 +1,4 @@
-/* $Id: datagram.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: datagram.c,v 5.2 2001/06/03 17:21:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,10 +47,8 @@
 #include "datagram.h"
 #include "portability.h"
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: datagram.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
+
+char datagram_version[] = VERSION;
 
 
 int			dgram_one_socket = 0;

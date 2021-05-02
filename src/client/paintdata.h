@@ -1,4 +1,4 @@
-/* $Id: paintdata.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paintdata.h,v 5.1 2001/05/14 13:07:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -133,6 +133,11 @@ typedef struct {
     u_byte		wrecktype, size, rotation;
 } wreckage_t;
 
+typedef struct {
+    short		x, y;
+    u_byte		type, size, rotation;
+} asteroid_t;
+
 extern refuel_t		*refuel_ptr;
 extern int		 num_refuel, max_refuel;
 extern connector_t	*connector_ptr;
@@ -173,6 +178,8 @@ extern vdecor_t		*vdecor_ptr;
 extern int		 num_vdecor, max_vdecor;
 extern wreckage_t	*wreckage_ptr;
 extern int		 num_wreckage, max_wreckage;
+extern asteroid_t	*asteroid_ptr;
+extern int		 num_asteroids, max_asteroids;
 
 extern long		start_loops, end_loops;
 extern long		time_left;

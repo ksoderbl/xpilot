@@ -1,4 +1,4 @@
-/* $Id: connectparam.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: connectparam.h,v 5.1 2001/06/02 21:00:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,6 +44,11 @@ typedef struct Connect_param {
     unsigned		server_version;
     int			team;
 } Connect_param_t;
+
+
+#ifdef PROTOCLIENT_H
+#error "protoclient.h was included before connectparam.h"
+#endif
 
 #endif
 

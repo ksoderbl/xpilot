@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: file.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: file.c,v 5.3 2001/06/07 01:29:46 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -118,6 +118,32 @@ int SavePrompt(HandlerInfo info)
 /***************************************************************************/
 int SaveOk(HandlerInfo info)
 {
+   int len;
+
+   len = strlen(filepromptname);
+
+   if(len > 3)
+   {
+       if(strcmp(&filepromptname[len-3], ".xp"))
+       {
+           if(len > 4)
+           {
+               if(strcmp(&filepromptname[len-4], ".map"))
+               {
+                   strcat(filepromptname, ".xp");
+               }
+           }
+           else
+           {
+               strcat(filepromptname, ".xp");
+           }
+       }
+   }
+   else
+   {
+       strcat(filepromptname, ".xp");
+   }
+
    SaveMap(filepromptname);
    T_PopupClose(info.form->window);
    map.changed = 0;
@@ -319,7 +345,7 @@ int LoadMap(char *file)
    map.maxRobots[0] = map.worldLives[0] = (char) NULL;
    map.view_zoom = DEFAULT_MAP_ZOOM;
    map.changed = map.edgeWrap = map.edgeBounce = map.teamPlay = 0;
-   map.onePlayerOnly = map.timing = 0;
+   map.timing = 0;
    map.limitedVisibility = map.allowShields = 0;
    for ( i=0; i<MAX_MAP_SIZE; i++) 
       for ( j=0; j<MAX_MAP_SIZE; j++)

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: expose.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: expose.c,v 5.1 2001/05/19 23:08:37 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -51,11 +51,11 @@ segment_t         mapicon_seg[34] = {
    { 2, 0, {0.00,0.00,0.00,0.00,0.00}, {0.00,0.00,0.00,0.00,0.00} }, /* 13:@ MAP_WORM_BOTH */
    { 2, 5, {0.10,0.70,0.30,0.70,0.70}, {0.10,0.70,0.70,0.70,0.30} }, /* 14:) MAP_WORM_ */
    { 2, 5, {0.70,0.10,0.30,0.10,0.10}, {0.70,0.10,0.10,0.10,0.30} }, /* 15:( MAP_WORM_ */
-   { 2, 0, {0.00,0.00,0.00,0.00,0.00}, {0.00,0.00,0.00,0.00,0.00} }, /* 16:* MAP_TREASURE*/
+   { 2, 4, {0.05,0.05,0.95,0.95,0.00}, {0.50,0.95,0.95,0.50,0.00} }, /* 16:* MAP_TREASURE*/
    { 2, 3, {0.60,0.50,0.60,0.00,0.00}, {0.05,0.15,0.30,0.00,0.00} }, /* 17:< */
    { 2, 3, {0.40,0.50,0.40,0.00,0.00}, {0.05,0.15,0.30,0.00,0.00} }, /* 18:> */
    { 2, 5, {0.05,0.95,0.95,0.05,0.05}, {0.05,0.05,0.95,0.95,0.05} }, /* 19:! MAP_TARGET */
- 
+
    { 1, 0, {0.00,0.00,0.00,0.00,0.00}, {0.00,0.00,0.00,0.00,0.00} }, /* 20:  MAP_SPACE */
 
    { 3, 5, {0.00,1.00,1.00,0.00,0.00}, {1.00,1.00,0.00,0.00,1.00} }, /* 21:b MAP_DECORATION */
@@ -70,12 +70,16 @@ segment_t         mapicon_seg[34] = {
    { 2, 5, {0.99,0.01,0.50,0.01,0.50}, {0.50,0.50,0.75,0.50,0.25} }, /* 29:j CURRENT LEFT*/
    { 2, 5, {0.01,0.99,0.50,0.99,0.50}, {0.50,0.50,0.75,0.50,0.25} }, /* 30:k CURRENT RIGHT*/
    { 2, 5, {0.50,0.50,0.75,0.50,0.25}, {0.01,0.99,0.50,0.99,0.50} }, /* 31:m CURRENT DOWN*/
-
-   { 0, 5, {0.25,0.75,0.75,0.25,0.25}, {0.75,0.75,0.25,0.25,0.75} }, /* 32:! TARGET (DETAIL)*/
-   { 0, 5, {0.25,0.75,0.50,0.25,0.75}, {0.25,0.75,0.50,0.75,0.25} }, /* 33:! TARGET (DETAIL)*/
+   { 2, 4, {0.05,0.05,0.95,0.95,0.00}, {0.50,0.95,0.95,0.50,0.00} }, /* 32:^ MAP_EMPTY_TREASURE*/
+   { 0, 5, {0.00,1.00,1.00,0.00,0.00}, {1.00,1.00,0.00,0.00,1.00} }, /* 33:z MAP_FRICTION */
 };
- 
-int mapicon_ptr[90] =        {20, 19,  0,  5, 26,  /* ascii char -32 */
+
+segment_t       mapicondet_seg[2] = {
+   { 0, 5, {0.25,0.75,0.75,0.25,0.25}, {0.75,0.75,0.25,0.25,0.75} }, /* 0:! TARGET (DETAIL)*/
+   { 0, 5, {0.25,0.75,0.50,0.25,0.75}, {0.25,0.75,0.50,0.75,0.25} }, /* 1:! TARGET (DETAIL)*/
+};
+
+int mapicon_ptr[91] =        {20, 19,  0,  5, 26,  /* ascii char -32 */
                               27,  0,  0, 15, 14,
                               16, 11,  0, 12,  0,
                                0, 10, 10, 10, 10,
@@ -87,21 +91,22 @@ int mapicon_ptr[90] =        {20, 19,  0,  5, 26,  /* ascii char -32 */
                               20, 20, 20, 20, 20,
                               20, 20, 20, 20, 20,
                               20, 20, 20, 20,  0,
-                               0,  0,  0, 10,  0,
+                               0,  0, 32, 10,  0,
                                3, 21,  8,  6,  0,
                                9, 24, 25, 28, 29,
                               30,  0, 31,  0,  0,
                                0,  1,  7,  4, 22,
-                               0,  0,  2,  0, 23 };
+                               0,  0,  2,  0, 23,
+                               33};
  
 char iconmenu[36] = { ' ',
 MAP_FILLED      , MAP_REC_RD    , MAP_REC_LD    , MAP_REC_RU      , MAP_REC_LU     ,
 MAP_DEC_FLD     , MAP_DEC_RD    , MAP_DEC_LD    , MAP_DEC_RU      , MAP_DEC_LU     ,
 MAP_FUEL        , MAP_CAN_LEFT  , MAP_CAN_RIGHT , MAP_CAN_UP      , MAP_CAN_DOWN   ,
-MAP_TARGET      , MAP_TREASURE  , MAP_ITEM_CONC , MAP_GRAV_ACWISE , MAP_GRAV_CWISE ,
+MAP_TARGET      , MAP_TREASURE  , MAP_EMPTY_TREASURE , MAP_GRAV_ACWISE , MAP_GRAV_CWISE ,
 MAP_WORM_NORMAL , MAP_WORM_IN   , MAP_WORM_OUT  , MAP_GRAV_POS    , MAP_GRAV_NEG   ,
 MAP_CRNT_UP     , MAP_CRNT_LT   , MAP_CRNT_RT   , MAP_CRNT_DN     , MAP_SPACE      ,
-MAP_BASE        , MAP_BASE_ORNT , MAP_SPACE     , MAP_SPACE       , MAP_SPACE    
+MAP_BASE        , MAP_BASE_ORNT , MAP_ITEM_CONC , MAP_FRICTION       , MAP_SPACE
 };
  
  
@@ -312,7 +317,7 @@ void DrawMapPic(Window win, int x, int y, int picnum, int zoom)
    } else if ((picnum >=13) && (picnum<=15)) {/* +/- gravity and wormholes */
       XDrawLines(display, win, Wormhole_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
-   } else if (picnum ==16) {/* Treasure */
+   } else if ((picnum ==16) || (picnum ==32)) {/* Treasure or Empty treasure*/
       XDrawLines(display, win, Treasure_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
    } else if ((picnum >=17) && (picnum<=18)) {/* clockwise and anti clockwise gravity */
@@ -321,20 +326,20 @@ void DrawMapPic(Window win, int x, int y, int picnum, int zoom)
    } else if (picnum ==19) {/* Target */
       XDrawLines(display, win, Target_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
-      picnum=32;
+      picnum=0;
       for (i=0;i<mapicon_seg[picnum].num_points; i++) {
-         points[i].x = mapicon_seg[picnum].x[i] * zoom + x + xo;
-         points[i].y = mapicon_seg[picnum].y[i] * zoom + y + yo;
+         points[i].x = mapicondet_seg[picnum].x[i] * zoom + x + xo;
+         points[i].y = mapicondet_seg[picnum].y[i] * zoom + y + yo;
       }
       XDrawLines(display, win, Target_GC, points,
-           mapicon_seg[picnum].num_points, CoordModeOrigin);
-      picnum=33;
-      for (i=0;i<mapicon_seg[picnum].num_points; i++) {
-         points[i].x = mapicon_seg[picnum].x[i] * zoom + x + xo;
-         points[i].y = mapicon_seg[picnum].y[i] * zoom + y + yo;
+           mapicondet_seg[picnum].num_points, CoordModeOrigin);
+      picnum=1;
+      for (i=0;i<mapicondet_seg[picnum].num_points; i++) {
+         points[i].x = mapicondet_seg[picnum].x[i] * zoom + x + xo;
+         points[i].y = mapicondet_seg[picnum].y[i] * zoom + y + yo;
       }
       XDrawLines(display, win, Target_GC, points,
-           mapicon_seg[picnum].num_points, CoordModeOrigin);
+           mapicondet_seg[picnum].num_points, CoordModeOrigin);
      return;
    } else if (picnum ==20) {/* Space */
       return;
@@ -349,8 +354,13 @@ void DrawMapPic(Window win, int x, int y, int picnum, int zoom)
      XDrawLines(display, win, Item_Conc_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
       return;
-   } else if ((picnum >=28) && (picnum <= 31)) {/* Decorations */
+   } else if ((picnum >=28) && (picnum <= 31)) {/* Currents */
      XDrawLines(display, win, Current_GC, points,
+           mapicon_seg[picnum].num_points, CoordModeOrigin);
+      return;
+   }
+   else if (picnum == 33) {/* Friction */
+     XDrawLines(display, win, Friction_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
       return;
    }
@@ -364,12 +374,15 @@ void DrawMapPic(Window win, int x, int y, int picnum, int zoom)
    } else if ((picnum >= 13) && (picnum <= 15)) { /* Wormhole */
       XDrawArc(display,win,Wormhole_GC,(int)(x+(zoom-arc)/2),
            (int)(y+(zoom-arc)/2), arc,arc,0,23040);
-      XDrawArc(display,win,Gravity_GC,(int)(x+.15*zoom),(int)(y+.15*zoom),
+      XDrawArc(display,win,Wormhole_GC,(int)(x+.15*zoom),(int)(y+.15*zoom),
            (int)(.4*zoom),(int)(.4*zoom),0,23040);
       return;
-   } else if (picnum == 16) {/* Treasure */
-      XDrawArc(display,win,Treasure_GC,(int)(x+.15*zoom),(int)(y+.15*zoom),
-           (int)(.7*zoom),(int)(.7*zoom),0,23040);
+   } else if ((picnum == 16) || (picnum == 32)) {/* Treasure or empty treasure*/
+      XDrawArc(display,win,Treasure_GC,(int)(x+.05*zoom),(int)(y+.05*zoom),
+           (int)(.9*zoom),(int)(1*zoom),0,11520);
+      if (picnum == 16)
+        XDrawArc(display,win,White_GC,(int)(x+.15*zoom),(int)(y+.4*zoom),
+           (int)(.5*zoom),(int)(.5*zoom),0,23040);
       return;
    } else if (picnum == 17) {/* Gravity */
       XDrawArc(display,win,Gravity_GC,(int)(x+.15*zoom), (int)(y+.15*zoom),
@@ -446,7 +459,7 @@ void DrawSmallMap(void)
    case 15:
      XDrawPoint(display,smlmap_pixmap,Wormhole_GC,j+smlmap_x,i+smlmap_y);
                break;
-   case 16:
+   case 16: case 32:
      XDrawPoint(display,smlmap_pixmap,Treasure_GC,j+smlmap_x,i+smlmap_y);
                break;
    case 17:
@@ -474,6 +487,9 @@ void DrawSmallMap(void)
    case 30:
    case 31:
      XDrawPoint(display,smlmap_pixmap,Current_GC,j+smlmap_x,i+smlmap_y);
+     break;
+   case 33:
+     XDrawPoint(display,smlmap_pixmap,Friction_GC,j+smlmap_x,i+smlmap_y);
      break;
    }
 #endif
@@ -547,7 +563,7 @@ void UpdateSmallMap(int x,int y)
                XDrawPoint(display,mapwin,Wormhole_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
-            case 16:
+            case 16: case 32:
                XDrawPoint(display,mapwin,Treasure_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
@@ -582,6 +598,10 @@ void UpdateSmallMap(int x,int y)
             case 30:
             case 31:
                XDrawPoint(display,mapwin,Current_GC,i+smlmap_x,j+smlmap_y +
+                    TOOLSHEIGHT-TOOLSWIDTH);
+               break;
+            case 33:
+               XDrawPoint(display,mapwin,Friction_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
            default:
@@ -634,7 +654,7 @@ void UpdateSmallMap(int x,int y)
                XDrawPoint(display,mapwin,Wormhole_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
-            case 16:
+            case 16: case 32:
                XDrawPoint(display,mapwin,Treasure_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
@@ -665,6 +685,10 @@ void UpdateSmallMap(int x,int y)
             case 30:
             case 31:
                XDrawPoint(display,mapwin,Current_GC,i+smlmap_x,j+smlmap_y +
+                    TOOLSHEIGHT-TOOLSWIDTH);
+               break;
+            case 33:
+               XDrawPoint(display,mapwin,Friction_GC,i+smlmap_x,j+smlmap_y +
                     TOOLSHEIGHT-TOOLSWIDTH);
                break;
             default:

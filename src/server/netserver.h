@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: netserver.h,v 5.6 2001/05/25 00:22:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,10 +65,6 @@
 #define MAX_RETRANSMIT		(FPS + 1)
 #define DEFAULT_RETRANSMIT	(FPS / 2)
 
-#if defined(VMS) && !defined(MAXHOSTNAMELEN)
-#define MAXHOSTNAMELEN 64
-#endif
-
 
 /*
  * All the connection state info.
@@ -95,7 +91,7 @@ typedef struct {
     int			setup;			/* amount of setup done */
     int			my_port;		/* server port for this player */
     int			his_port;		/* client port for this player */
-    int			id;			/* index into GetInd[] or -1 */
+    int			id;			/* index into GetInd[] or NO_ID */
     int			team;			/* team of player */
     unsigned		version;		/* XPilot version of client */
     long		last_key_change;	/* last keyboard change */
@@ -109,7 +105,7 @@ typedef struct {
     char		*real;			/* real login name of player */
     char		*nick;			/* nickname of player */
     char		*dpy;			/* display of player */
-    wireobj		*ship;			/* ship shape of player */
+    shipobj		*ship;			/* ship shape of player */
     char		*addr;			/* address of players host */
     char		*host;			/* hostname of players host */
 } connection_t;
@@ -118,7 +114,7 @@ static int Compress_map(unsigned char *map, int size);
 static int Init_setup(void);
 static int Handle_listening(int ind);
 static int Handle_setup(int ind);
-static int Handle_login(int ind);
+static int Handle_login(int ind, char *errmsg, int errsize);
 static void Handle_input(int fd, void *arg);
 
 
@@ -179,6 +175,7 @@ int Send_phasingtime(int ind, int count, int max);
 int Send_rounddelay(int ind, int count, int max);
 int Send_debris(int ind, int type, unsigned char *p, int n);
 int Send_wreckage(int ind, int x, int y, u_byte wrtype, u_byte size, u_byte rot);
+int Send_asteroid(int ind, int x, int y, u_byte type, u_byte size, u_byte rot);
 int Send_fastshot(int ind, int type, unsigned char *p, int n);
 int Send_missile(int ind, int x, int y, int len, int dir);
 int Send_ball(int ind, int x, int y, int id);
@@ -194,6 +191,7 @@ int Send_refuel(int ind, int x0, int y0, int x1, int y1);
 int Send_connector(int ind, int x0, int y0, int x1, int y1, int tractor);
 int Send_laser(int ind, int color, int x, int y, int len, int dir);
 int Send_radar(int ind, int x, int y, int size);
+int Send_fastradar(int ind, unsigned char *buf, int n);
 int Send_damaged(int ind, int damaged);
 int Send_message(int ind, const char *msg);
 int Send_loseitem(int lose_item_index, int ind);
@@ -206,6 +204,7 @@ int Send_trans(int ind, int x1, int y1, int x2, int y2);
 void Get_display_parameters(int ind, int *width, int *height,
 			    int *debris_colors, int *spark_rand);
 int Get_player_id(int);
+int Get_conn_version(int ind);
 int Send_shape(int ind, int shape);
 #endif
 

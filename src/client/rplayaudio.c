@@ -1,4 +1,4 @@
-/* $Id: rplayaudio.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: rplayaudio.c,v 5.3 2001/05/12 18:08:41 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <netdb.h>
 # include <sys/param.h>
 #endif
@@ -51,7 +51,7 @@ int audioDeviceInit(char *display)
 {
     char host[MAXHOSTNAMELEN], *p;
 
-    strcpy(host, display);
+    strlcpy(host, display, sizeof(host));
 
     if (p = strrchr(host, ':'))
 	*p = 0;
@@ -88,6 +88,6 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
     rplay(fd, *p);
 }
 
-void audioDeviceEvents()
+void audioDeviceEvents(void)
 {
 }

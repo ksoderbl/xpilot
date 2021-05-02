@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: rules.c,v 5.6 2001/05/31 20:52:35 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,10 +42,6 @@
 
 char rules_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: rules.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 #define MAX_FUEL                10000
 #define MAX_WIDEANGLE           99
@@ -71,13 +67,13 @@ long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULS
 long	DEF_BITS = 0;
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE|WARPING|WARPED);
 long	DEF_HAVE =
-	(OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR
-	|OBJ_SHOT|OBJ_LASER);
-long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
+	(HAS_SHIELD|HAS_COMPASS|HAS_REFUEL|HAS_REPAIR|HAS_CONNECTOR
+	|HAS_SHOT|HAS_LASER);
+long	DEF_USED = (HAS_SHIELD|HAS_COMPASS);
 long	USED_KILL =
-	(OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_SHOT|OBJ_LASER|OBJ_ARMOR
-	|OBJ_TRACTOR_BEAM|OBJ_CLOAKING_DEVICE|OBJ_PHASING_DEVICE
-	|OBJ_DEFLECTOR|OBJ_MIRROR|OBJ_EMERGENCY_SHIELD|OBJ_EMERGENCY_THRUST);
+	(HAS_REFUEL|HAS_REPAIR|HAS_CONNECTOR|HAS_SHOT|HAS_LASER|HAS_ARMOR
+	|HAS_TRACTOR_BEAM|HAS_CLOAKING_DEVICE|HAS_PHASING_DEVICE
+	|HAS_DEFLECTOR|HAS_MIRROR|HAS_EMERGENCY_SHIELD|HAS_EMERGENCY_THRUST);
 
 
 
@@ -158,6 +154,28 @@ void Tune_item_probs(void)
     }
 }
 
+void Tune_asteroid_prob(void)
+{
+    DFLOAT	max = maxAsteroidDensity * World.x * World.y;
+
+    if (World.asteroids.prob > 0) {
+	World.asteroids.chance = (int)(1.0
+			/ (World.asteroids.prob * World.x * World.y * FPS));
+	World.asteroids.chance = MAX(World.asteroids.chance, 1);
+    } else {
+	World.asteroids.chance = 0;
+    }
+    if (max > 0) {
+	if (max < 1) {
+	    World.asteroids.max = 1;
+	} else {
+	    World.asteroids.max = (int)max;
+	}
+    } else {
+	World.asteroids.max = 0;
+    }
+    /* superfluous asteroids are handled by Asteroid_update() */
+}
 
 /*
  * Postprocess a change command for the number of items per pack.
@@ -222,34 +240,34 @@ void Set_initial_resources(void)
     }
 
     CLR_BIT(DEF_HAVE,
-	OBJ_CLOAKING_DEVICE |
-	OBJ_EMERGENCY_THRUST |
-	OBJ_EMERGENCY_SHIELD |
-	OBJ_PHASING_DEVICE |
-	OBJ_TRACTOR_BEAM |
-	OBJ_AUTOPILOT |
-	OBJ_DEFLECTOR |
-	OBJ_MIRROR |
-	OBJ_ARMOR);
+	HAS_CLOAKING_DEVICE |
+	HAS_EMERGENCY_THRUST |
+	HAS_EMERGENCY_SHIELD |
+	HAS_PHASING_DEVICE |
+	HAS_TRACTOR_BEAM |
+	HAS_AUTOPILOT |
+	HAS_DEFLECTOR |
+	HAS_MIRROR |
+	HAS_ARMOR);
 
     if (World.items[ITEM_CLOAK].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_CLOAKING_DEVICE);
+	SET_BIT(DEF_HAVE, HAS_CLOAKING_DEVICE);
     if (World.items[ITEM_EMERGENCY_THRUST].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_EMERGENCY_THRUST);
+	SET_BIT(DEF_HAVE, HAS_EMERGENCY_THRUST);
     if (World.items[ITEM_EMERGENCY_SHIELD].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_EMERGENCY_SHIELD);
+	SET_BIT(DEF_HAVE, HAS_EMERGENCY_SHIELD);
     if (World.items[ITEM_PHASING].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_PHASING_DEVICE);
+	SET_BIT(DEF_HAVE, HAS_PHASING_DEVICE);
     if (World.items[ITEM_TRACTOR_BEAM].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_TRACTOR_BEAM);
+	SET_BIT(DEF_HAVE, HAS_TRACTOR_BEAM);
     if (World.items[ITEM_AUTOPILOT].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_AUTOPILOT);
+	SET_BIT(DEF_HAVE, HAS_AUTOPILOT);
     if (World.items[ITEM_DEFLECTOR].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_DEFLECTOR);
+	SET_BIT(DEF_HAVE, HAS_DEFLECTOR);
     if (World.items[ITEM_MIRROR].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_MIRROR);
+	SET_BIT(DEF_HAVE, HAS_MIRROR);
     if (World.items[ITEM_ARMOR].initial > 0)
-	SET_BIT(DEF_HAVE, OBJ_ARMOR);
+	SET_BIT(DEF_HAVE, HAS_ARMOR);
 }
 
 
@@ -258,6 +276,7 @@ void Set_misc_item_limits(void)
     LIMIT(dropItemOnKillProb, 0.0, 1.0);
     LIMIT(detonateItemOnKillProb, 0.0, 1.0);
     LIMIT(movingItemProb, 0.0, 1.0);
+    LIMIT(randomItemProb, 0.0, 1.0);
     LIMIT(destroyItemInCollisionProb, 0.0, 1.0);
 
     LIMIT(itemConcentratorRadius, 1, World.diagonal);
@@ -310,7 +329,6 @@ void Set_world_rules(void)
        | (limitedVisibility ? LIMITED_VISIBILITY : 0)
        | (limitedLives ? LIMITED_LIVES : 0)
        | (teamPlay ? TEAM_PLAY : 0)
-       | (onePlayerOnly ? ONE_PLAYER_ONLY : 0)
        | (timing ? TIMING : 0)
        | (allowNukes ? ALLOW_NUKES : 0)
        | (allowClusters ? ALLOW_CLUSTERS : 0)
@@ -324,8 +342,13 @@ void Set_world_rules(void)
 	CLR_BIT(KILLING_SHOTS,
 		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
-	CLR_BIT(DEF_HAVE, OBJ_SHIELD);
+	CLR_BIT(DEF_HAVE, HAS_SHIELD);
 
     DEF_USED &= DEF_HAVE;
 }
 
+void Set_world_asteroids(void)
+{
+    World.asteroids.num = 0;
+    Tune_asteroid_prob();
+}

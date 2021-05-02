@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: xinit.c,v 5.3 2001/06/02 21:01:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -89,10 +89,6 @@
 
 char xinit_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: xinit.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 /* How far away objects should be placed from each other etc... */
 #define BORDER			10
@@ -357,17 +353,18 @@ static void Init_spark_colors(void)
  * Initialize miscellaneous window hints and properties.
  */
 #ifndef _WINDOWS
+extern char		**Argv;
+extern int		Argc;
+extern char		myClass[];
+
 static void Init_disp_prop(Display *d, Window win,
 			   int w, int h, int x, int y,
 			   int flags)
 {
-    extern char		**Argv;
-    extern int		Argc;
     XClassHint		xclh;
     XWMHints		xwmh;
     XSizeHints		xsh;
     char		msg[256];
-    extern char		myClass[];
 
     xwmh.flags	   = InputHint|StateHint|IconPixmapHint;
     xwmh.input	   = True;
@@ -565,7 +562,8 @@ int Init_top(void)
      * Create toplevel window (we need this first so that we can create GCs)
      */
     mask = 0;
-    sattr.background_pixel = colors[WHITE].pixel;
+    /*old debug: sattr.background_pixel = colors[WHITE].pixel;*/
+    sattr.background_pixel = colors[BLACK].pixel;
     mask |= CWBackPixel;
     sattr.border_pixel = colors[WHITE].pixel;
     mask |= CWBorderPixel;

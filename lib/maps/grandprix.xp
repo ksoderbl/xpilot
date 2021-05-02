@@ -8,11 +8,8 @@
 
 rogueHeatProb:				1.0
 rogueMineProb:				1.0
-reportToMetaServer:			yes
 allowShipShapes:			yes
 maxRobots:				0
-noQuit:					true
-idleRun:				yes
 framesPerSecond:			13
 objectWallBounceLifeFactor:		1.0
 maxShieldedPlayerWallBounceAngle:	160

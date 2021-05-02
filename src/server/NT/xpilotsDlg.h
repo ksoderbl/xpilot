@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.h,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: xpilotsDlg.h,v 5.1 2001/05/07 11:42:17 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.h - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.h,v 5.0 2001/04/07 20:01:01 dik Exp $					*
+*  $Id: xpilotsDlg.h,v 5.1 2001/05/07 11:42:17 dik Exp $					*
 \***************************************************************************/
 
 /////////////////////////////////////////////////////////////////////////////
@@ -86,6 +86,7 @@ protected:
 	afx_msg LONG OnMsgAvailable(UINT which, LONG s);
 	afx_msg LONG OnUpdateScores(UINT unused, LONG unused1);
 	afx_msg LONG OnStartTimer(UINT unused, LONG fps);
+	afx_msg LONG OnServerKilled(UINT, LONG);
 	afx_msg	LONG OnGetHostName(UINT unused, LONG unused1);
 	DECLARE_MESSAGE_MAP()
 };

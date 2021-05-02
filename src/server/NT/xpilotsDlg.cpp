@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.cpp,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: xpilotsDlg.cpp,v 5.1 2001/05/07 11:42:17 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.cpp - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.cpp,v 5.0 2001/04/07 20:01:01 dik Exp $				*
+*  $Id: xpilotsDlg.cpp,v 5.1 2001/05/07 11:42:17 dik Exp $				*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -166,6 +166,7 @@ BEGIN_MESSAGE_MAP(CXpilotsDlg, CDialog)
 	ON_MESSAGE(WM_MSGAVAILABLE, OnMsgAvailable)
 	ON_MESSAGE(WM_UPDATESCORES, OnUpdateScores)
 	ON_MESSAGE(WM_STARTTIMER, OnStartTimer)
+	ON_MESSAGE(WM_SERVERKILLED, OnServerKilled)
 	ON_MESSAGE(WM_GETHOSTNAME, OnGetHostName)
 END_MESSAGE_MAP()
 
@@ -510,6 +511,14 @@ afx_msg LRESULT CXpilotsDlg::OnGetHostName(WPARAM wParam, LPARAM lParam)
 afx_msg LONG CXpilotsDlg::OnStartTimer(UINT unused, LONG fps)
 {
 	gTimer= ::SetTimer(NULL, 0, 1000/fps, (TIMERPROC)ServerThreadTimerProc);
+	return(0);
+}
+
+afx_msg LONG CXpilotsDlg::OnServerKilled(UINT, LONG)
+{
+	m_start_server.SetWindowText("&Start Server");
+	m_start_server.EnableWindow(FALSE);				/* can't restart yet... */
+	server_running = FALSE;
 	return(0);
 }
 

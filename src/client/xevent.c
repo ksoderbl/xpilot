@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: xevent.c,v 5.2 2001/06/02 21:01:34 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -64,6 +64,7 @@
 #include "talk.h"
 #include "configure.h"
 #include "xeventhandlers.h"
+#include "xevent.h"
 
 char xevent_version[] = VERSION;
 
@@ -792,7 +793,7 @@ ipos	mouse;		/* position of mouse pointer. */
 int	movement;	/* horizontal mouse movement. */
 
 
-void xevent_pointer()
+void xevent_pointer(void)
 { 
 #ifndef _WINDOWS
     XEvent		event;
@@ -842,9 +843,9 @@ void xevent_pointer()
 }
 
 #ifndef _WINDOWS
-int xevent(int new_input)
+int x_event(int new_input)
 #else
-int xevent(XEvent event)
+int win_xevent(XEvent event)
 #endif
 {
     int			queued = 0;

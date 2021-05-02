@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 5.0 2001/04/07 20:00:57 dik Exp $ */
+/* $Id: Imakefile,v 5.1 2001/05/19 11:05:42 bertg Exp $ */
 
 /* need config to compile msub.c. */
 #include "Local.config"
@@ -22,7 +22,8 @@ InstallMultipleDest(install.msub,msub,$(BINDIR))
 DependTarget ()
 
 test:: msub
-	msub -f test.makefile testfile
+	./msub -f test.makefile testfile
 
 regression:: msub
-	msub -f test.makefile testfile | diff test.out -
+	./msub -f test.makefile testfile | diff test.out -
+

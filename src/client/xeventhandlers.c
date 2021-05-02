@@ -1,4 +1,4 @@
-/* $Id: xeventhandlers.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: xeventhandlers.c,v 5.2 2001/06/03 17:21:34 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -63,6 +63,11 @@
 #include "paintdata.h"
 #include "talk.h"
 #include "configure.h"
+#include "xeventhandlers.h"
+
+
+char xeventhandlers_version[] = VERSION;
+
 
 extern int	talk_key_repeat_count;  /* xevent.c */
 extern XEvent	talk_key_repeat_event;  /* xevent.c */
@@ -423,7 +428,6 @@ int ButtonRelease_event(XEvent *event)
 	return 0;
     }
     if (Widget_event(event) != 0) {
-	extern int quitting;
 	if (quitting == true) {
 	    quitting = false;
 	    printf("Quit\n");

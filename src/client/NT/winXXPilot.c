@@ -1,4 +1,4 @@
-/* $Id: winXXPilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: winXXPilot.c,v 5.1 2001/04/24 20:40:18 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is mostly Win32 translations of the X calls that xpilot uses.	*
 *  Anything starting with WinX is a special wedge function that i needed	*
 *																			*
-*  $Id: winXXPilot.c,v 5.0 2001/04/07 20:00:59 dik Exp $						*
+*  $Id: winXXPilot.c,v 5.1 2001/04/24 20:40:18 bertg Exp $						*
 \***************************************************************************/
 #include "winXXPilot.h"
 #include "../winX_.h"
@@ -318,7 +318,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x_root	= pt.x;
 			button->y_root	= pt.y;
 			button->button	= Button1;
-			xevent(event);
+			win_xevent(event);
 		}
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
@@ -337,7 +337,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x		= LOWORD(lParam);
 			button->y		= HIWORD(lParam);
 			button->button	= Button1;
-			if (xevent(event) == -1)
+			if (win_xevent(event) == -1)
 			{
 				WinXExit();
 			}
@@ -365,7 +365,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x_root	= pt.x;
 			button->y_root	= pt.y;
 			button->button	= Button2;
-			xevent(event);
+			win_xevent(event);
 		}
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
@@ -384,7 +384,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x		= LOWORD(lParam);
 			button->y		= HIWORD(lParam);
 			button->button	= Button2;
-			if (xevent(event) == -1)
+			if (win_xevent(event) == -1)
 			{
 				WinXExit();
 			}
@@ -412,7 +412,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x_root	= pt.x;
 			button->y_root	= pt.y;
 			button->button	= Button3;
-			xevent(event);
+			win_xevent(event);
 		}
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
@@ -431,7 +431,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			button->x		= LOWORD(lParam);
 			button->y		= HIWORD(lParam);
 			button->button	= Button3;
-			if (xevent(event) == -1)
+			if (win_xevent(event) == -1)
 			{
 				WinXExit();
 			}
@@ -457,7 +457,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			{
 				Trace("LeaveNotify %d %s:%d\n", xidno, xid[xidno].any.file, xid[xidno].any.line);
 				enter->window = i;
-				xevent(event);
+				win_xevent(event);
 				xid[i].hwnd.mouseover = FALSE;
 			}
 		}
@@ -470,7 +470,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			me->y = HIWORD(lParam);
 //			if (me->x != draw_width/2 && me->y != draw_height/2)
 			{
-				xevent(event);
+				win_xevent(event);
 //				SetCursorPos(draw_width/2, draw_height/2);
 			}
 		//	return(0);
@@ -482,7 +482,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 				Trace("EnterNotify %d %s:%d\n", xidno, xid[xidno].any.file, xid[xidno].any.line);
 				enter->type			= EnterNotify;
 				enter->window		= xidno;
-				xevent(event);
+				win_xevent(event);
 			}
 			xid[xidno].hwnd.mouseover = TRUE;
 		}
@@ -545,7 +545,7 @@ LRESULT	CALLBACK	WinXwindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 							expose->height	= rect.bottom-rect.top;
 							expose->count	= 0;
 							Trace("Expose %d %s:%d\n", xidno, xid[xidno].any.file, xid[xidno].any.line);
-							xevent(event);
+							win_xevent(event);
 						}
 						if (bHasPal)
 						{
@@ -609,7 +609,7 @@ LRESULT CALLBACK MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 	me->window = draw;
 	me->x = ((MOUSEHOOKSTRUCT*)lParam)->pt.x;
 	me->y = ((MOUSEHOOKSTRUCT*)lParam)->pt.y;
-	xevent(event);
+	win_xevent(event);
 
 	return(1);
 

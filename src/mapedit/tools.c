@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: tools.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: tools.c,v 5.2 2001/06/01 21:45:28 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -609,7 +609,7 @@ int NewMap(HandlerInfo info)
    map.data[i][j] = ' ';
    map.view_zoom = DEFAULT_MAP_ZOOM;
    map.changed = map.edgeWrap = map.edgeBounce = map.teamPlay = 0;
-   map.onePlayerOnly = map.timing = map.allowPlayerCrashes = map.allowPlayerKilling = 0;
+   map.timing = map.allowPlayerCrashes = map.allowPlayerKilling = 0;
    map.limitedVisibility = map.allowShields = 0;
    ResetMap();
    ClearUndo();
@@ -672,7 +672,119 @@ int OpenPreferencesPopup(HandlerInfo info)
    XMapWindow(display,prefwin);
    return 0;
 }
+/***************************************************************************/
+/* OpenMapInfoPopup                                                        */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenMapInfoPopup()
+{
+   Window *temp;
 
+   switch (prefssheet){
+   case 0: temp = &mapinfo;
+   break;
+   case 1: temp = &robots;
+   break;
+   case 2: temp = &visibility;
+   break;
+   case 3: temp = &cannons;
+   break;
+   case 4: temp = &rounds;
+   break;
+   case 5: temp = &inititems;
+   break;
+   case 6: temp = &maxitems;
+   break;
+   case 7: temp = &probs;
+   break;
+   case 8: temp = &scoring;
+   break;
+   }
+
+   XMapWindow(display, mapinfo);
+   return 0;
+}
+/***************************************************************************/
+/* OpenRobotsPopup                                                         */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenRobotsPopup()
+{
+   XMapWindow(display, robots);
+   return 0;
+}
+/***************************************************************************/
+/* OpenVisibilityPopup                                                     */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenVisibilityPopup()
+{
+   XMapWindow(display, visibility);
+   return 0;
+}
+/***************************************************************************/
+/* OpenCannonsPopup                                                        */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenCannonsPopup()
+{
+   XMapWindow(display, cannons);
+   return 0;
+}
+/***************************************************************************/
+/* OpenRoundsPopup                                                         */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenRoundsPopup()
+{
+   XMapWindow(display, rounds);
+   return 0;
+}
+/***************************************************************************/
+/* OpenInitItemsPopup                                                      */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenInitItemsPopup()
+{
+   XMapWindow(display, inititems);
+   return 0;
+}
+/***************************************************************************/
+/* OpenMaxItemsPopup                                                       */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenMaxItemsPopup()
+{
+   XMapWindow(display, maxitems);
+   return 0;
+}
+/***************************************************************************/
+/* OpenProbsPopup                                                          */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenProbsPopup()
+{
+   XMapWindow(display, probs);
+   return 0;
+}
+/***************************************************************************/
+/* OpenScoringPopup                                                        */
+/* Arguments :                                                             */
+/* Purpose :                                                               */
+/***************************************************************************/
+int OpenScoringPopup()
+{
+   XMapWindow(display, scoring);
+   return 0;
+}
 /***************************************************************************/
 /* ValidateCoordHandler                                                    */
 /* Arguments :                                                             */

@@ -1,4 +1,4 @@
-/* $Id: hpaudio.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: hpaudio.c,v 5.1 2001/05/12 18:07:26 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -154,7 +154,7 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
     play_bucket = *bucket_ptr;
 }
 
-void audioDeviceEvents()
+void audioDeviceEvents(void)
 {
     long		status;
     static int		pending;

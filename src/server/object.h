@@ -1,4 +1,4 @@
-/* $Id: object.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: object.h,v 5.17 2001/05/24 11:26:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,7 +34,7 @@
 #include "bit.h"
 #endif
 #ifndef DRAW_H
-/* need wireobj */
+/* need shipobj */
 #include "draw.h"
 #endif
 #ifndef ITEM_H
@@ -52,53 +52,64 @@
 
 /*
  * Different types of objects, including player.
- * Robots and tanks are players but have an additional bit.
+ * Robots and tanks are players but have an additional type_ext field.
  * Smart missile, heatseeker and torpedoe can be merged into missile.
  * ECM doesn't really need an object type.
- * Lasers and pulses can be merged.
  */
 #define OBJ_PLAYER		(1U<<0)
 #define OBJ_DEBRIS		(1U<<1)
 #define OBJ_SPARK		(1U<<2)
-#define OBJ_EMERGENCY_THRUST	(1U<<3)
-#define OBJ_AUTOPILOT		(1U<<4)
-#define OBJ_TRACTOR_BEAM	(1U<<5)
-#define OBJ_LASER		(1U<<6)
-#define OBJ_BALL		(1U<<7)
-#define OBJ_SHOT		(1U<<8)
-#define OBJ_SMART_SHOT		(1U<<9)
-#define OBJ_CLOAKING_DEVICE	(1U<<10)
-#define OBJ_SHIELD		(1U<<11)
-#define OBJ_REFUEL		(1U<<12)
-#define OBJ_REPAIR		(1U<<13)
-#define OBJ_COMPASS		(1U<<14)
-#define OBJ_MINE		(1U<<15)
-#define OBJ_ECM			(1U<<16)
-#define OBJ_TORPEDO		(1U<<17)
-#define OBJ_HEAT_SHOT		(1U<<18)
-#define OBJ_AFTERBURNER		(1U<<19)
-#define OBJ_CONNECTOR		(1U<<20)
-#define OBJ_PULSE		(1U<<21)
-#define OBJ_EMERGENCY_SHIELD	(1U<<22)
-#define OBJ_DEFLECTOR		(1U<<23)
-#define OBJ_PHASING_DEVICE	(1U<<24)
-#define OBJ_ITEM		(1U<<25)
-#define OBJ_WRECKAGE		(1U<<26)
-#define OBJ_MIRROR		(1U<<27)
-#define OBJ_ARMOR		(1U<<28)
+#define OBJ_BALL		(1U<<3)
+#define OBJ_SHOT		(1U<<4)
+#define OBJ_SMART_SHOT		(1U<<5)
+#define OBJ_MINE		(1U<<6)
+#define OBJ_TORPEDO		(1U<<7)
+#define OBJ_HEAT_SHOT		(1U<<8)
+#define OBJ_PULSE		(1U<<9)
+#define OBJ_ITEM		(1U<<10)
+#define OBJ_WRECKAGE		(1U<<11)
+#define OBJ_ASTEROID		(1U<<12)
+
 
 /*
  * Some object types are overloaded.
+ * These bits are set in the player->type_ext field.
  */
 #define OBJ_EXT_TANK		(1U<<1)
 #define OBJ_EXT_ROBOT		(1U<<2)
 
+/* macro's to query the type of player. */
 #define IS_TANK_IND(ind)	IS_TANK_PTR(Players[ind])
 #define IS_ROBOT_IND(ind)	IS_ROBOT_PTR(Players[ind])
 #define IS_HUMAN_IND(ind)	IS_HUMAN_PTR(Players[ind])
 #define IS_TANK_PTR(pl)		(BIT((pl)->type_ext,OBJ_EXT_TANK)==OBJ_EXT_TANK)
 #define IS_ROBOT_PTR(pl)	(BIT((pl)->type_ext,OBJ_EXT_ROBOT)==OBJ_EXT_ROBOT)
 #define IS_HUMAN_PTR(pl)	(!BIT((pl)->type_ext,OBJ_EXT_TANK|OBJ_EXT_ROBOT))
+
+
+/*
+ * Different types of attributes a player can have.
+ * These are the bits of the player->have and player->used fields.
+ */
+#define HAS_EMERGENCY_THRUST	(1U<<30)
+#define HAS_AUTOPILOT		(1U<<29)
+#define HAS_TRACTOR_BEAM	(1U<<28)
+#define HAS_LASER		(1U<<27)
+#define HAS_CLOAKING_DEVICE	(1U<<26)
+#define HAS_SHIELD		(1U<<25)
+#define HAS_REFUEL		(1U<<24)
+#define HAS_REPAIR		(1U<<23)
+#define HAS_COMPASS		(1U<<22)
+#define HAS_AFTERBURNER		(1U<<21)
+#define HAS_CONNECTOR		(1U<<20)
+#define HAS_EMERGENCY_SHIELD	(1U<<19)
+#define HAS_DEFLECTOR		(1U<<18)
+#define HAS_PHASING_DEVICE	(1U<<17)
+#define HAS_MIRROR		(1U<<16)
+#define HAS_ARMOR		(1U<<15)
+#define HAS_SHOT		(1U<<4)
+#define HAS_BALL		(1U<<3)
+
 
 /*
  * Weapons modifiers.
@@ -111,7 +122,7 @@ typedef struct {
     unsigned int	spread	:2;	/* Z# modifier */
     unsigned int	power	:2;	/* B# modifier */
     unsigned int	laser	:2;	/* LS LB modifier */
-    unsigned int	spare	:2;	/* spare */
+    unsigned int	spare	:2;	/* padding for alignment */
 } modifiers;
 
 #define CLEAR_MODS(mods)	memset(&(mods), 0, sizeof(modifiers))
@@ -160,48 +171,217 @@ struct _objposition {
 #define OBJ_X_IN_BLOCKS(obj)	((obj)->pos.bx)
 #define OBJ_Y_IN_BLOCKS(obj)	((obj)->pos.by)
 
+
+/*
+ * Node within a Cell list.
+ */
+typedef struct _cell_node cell_node;
+struct _cell_node {
+    cell_node		*next;
+    cell_node		*prev;
+};
+
+
+#define OBJECT_BASE	\
+    short		id;		/* For shots => id of player */	\
+    unsigned short	team;		/* Team of player or cannon */	\
+    objposition		pos;		/* World coordinates */		\
+    ipos		prevpos;	/* previous position */		\
+    vector		vel;		/* speed in x,y */		\
+    vector		acc;		/* acceleration in x,y */	\
+    DFLOAT		mass;		/* mass in unigrams */		\
+    long		life;		/* No of ticks left to live */	\
+    long		status;		/* gravity, etc. */		\
+    int			type;		/* one bit of OBJ_XXX */	\
+    int			count;		/* Misc timings */		\
+    modifiers		mods;		/* Modifiers to this object */	\
+    u_byte		color;		/* Color of object */		\
+    u_byte		missile_dir;	/* missile direction */	\
+/* up to here all object types are the same as all player types. */
+
+#define OBJECT_EXTEND	\
+    cell_node		cell;		/* node in cell linked list */	\
+    long		info;		/* Miscellaneous info */	\
+    long		fuselife;	/* fuse duration ticks */	\
+    int			pl_range;	/* distance for collision */	\
+    int			pl_radius;	/* distance for hit */		\
+/* up to here all object types are the same. */
+
+
+/*
+ * Generic object
+ */
 typedef struct _object object;
 struct _object {
-    u_byte		color;		/* Color of object */
-    u_byte		dir;		/* Direction of acceleration */
-    int			id;		/* For shots => id of player */
-    unsigned short	team;		/* Team of player or cannon */
-    objposition		pos;		/* World coordinates */
-    ipos		prevpos;	/* Object's previous position... */
-    vector		vel;
-    vector		acc;
-    DFLOAT		max_speed;
-    DFLOAT		mass;
-    int			type;
-    long		info;		/* Miscellaneous info */
-    long		life;		/* No of ticks left to live */
-    int			count;		/* Misc timings */
-    long		status;
-    modifiers		mods;		/* Modifiers to this object */
 
-    /* up to here all object types (including players!) should be the same. */
+    OBJECT_BASE
 
-    DFLOAT		turnspeed;	/* for missiles only */
-    long		fuselife;	/* Ticks left when considered fused */
+    OBJECT_EXTEND
 
-    object		*cell_list;	/* linked list for cell lookup */
+#ifdef __cplusplus
+			_object() {}
+#endif
+
+#define OBJ_IND(ind)	(Obj[(ind)])
+#define OBJ_PTR(ptr)	((object *)(ptr))
+};
+
+
+/*
+ * Mine object
+ */
+typedef struct _mineobject mineobject;
+struct _mineobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
 
     int 		owner;		/* Who's object is this ? */
-					/* (spare for id)*/
-    int			treasure;	/* Which treasure does ball belong */
-    int			new_info;	/* smart re-lock id after confusion */
-    DFLOAT		length;		/* Distance between ball and player */
     DFLOAT		ecm_range;	/* Range from last ecm center */
     int			spread_left;	/* how much spread time left */
-    int			pl_range;	/* distance to player for collision. */
-    int			pl_radius;	/* distance to player for hit. */
+
+#ifdef __cplusplus
+			_mineobject() {}
+#endif
+
+#define MINE_IND(ind)	((mineobject *)Obj[(ind)])
+#define MINE_PTR(ptr)	((mineobject *)(ptr))
+};
+
+
+#define MISSILE_EXTEND		\
+    DFLOAT		max_speed;	/* speed limitation */		\
+    DFLOAT		turnspeed;	/* how fast to turn */
+/* up to here all missiles types are the same. */
+
+/*
+ * Generic missile object
+ */
+typedef struct _missileobject missileobject;
+struct _missileobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
+
+    MISSILE_EXTEND
+
+#ifdef __cplusplus
+			_missileobject() {}
+#endif
+
+#define MISSILE_IND(ind)	((missileobject *)Obj[(ind)])
+#define MISSILE_PTR(ptr)	((missileobject *)(ptr))
+};
+
+
+/*
+ * Smart missile is a generic missile with extras.
+ */
+typedef struct _smartobject smartobject;
+struct _smartobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
+
+    MISSILE_EXTEND
+
+    int			new_info;	/* smart re-lock id */
+    DFLOAT		ecm_range;	/* Range from last ecm center */
+
+#ifdef __cplusplus
+			_smartobject() {}
+#endif
+
+#define SMART_IND(ind)	((smartobject *)Obj[(ind)])
+#define SMART_PTR(ptr)	((smartobject *)(ptr))
+};
+
+
+/*
+ * Torpedo is a generic missile with extras
+ */
+typedef struct _torpobject torpobject;
+struct _torpobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
+
+    MISSILE_EXTEND
+
+    int			spread_left;	/* how much spread time left */
+
+#ifdef __cplusplus
+			_torpobject() {}
+#endif
+
+#define TORP_IND(ind)	((torpobject *)Obj[(ind)])
+#define TORP_PTR(ptr)	((torpobject *)(ptr))
+};
+
+
+/*
+ * The ball object.
+ */
+typedef struct _ballobject ballobject;
+struct _ballobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
+
+    int 		owner;		/* Who's object is this ? */
+    int			treasure;	/* treasure for ball */	
+    DFLOAT		length;		/* distance ball to player */
+
+#ifdef __cplusplus
+			_ballobject() {}
+#endif
+
+#define BALL_IND(ind)	((ballobject *)Obj[(ind)])
+#define BALL_PTR(obj)	((ballobject *)(obj))
+};
+
+
+/*
+ * Object with a wireframe representation.
+ */
+typedef struct _wireobject wireobject;
+struct _wireobject {
+
+    OBJECT_BASE
+
+    OBJECT_EXTEND
+
+    DFLOAT		turnspeed;	/* how fast to turn */
 
     u_byte		size;		/* Size of object (wreckage) */
     u_byte		rotation;	/* Rotation direction */
 
 #ifdef __cplusplus
-			_object() {}
+			_wireobject() {}
 #endif
+
+#define WIRE_IND(ind)	((wireobject *)Obj[(ind)])
+#define WIRE_PTR(obj)	((wireobject *)(obj))
+};
+
+
+/*
+ * Any object type should be part of this union.
+ */
+typedef union _anyobject anyobject;
+union _anyobject {
+    object		obj;
+    ballobject		ball;
+    mineobject		mine;
+    missileobject	missile;
+    smartobject		smart;
+    torpobject		torp;
+    wireobject		wireobj;
 };
 
 
@@ -278,22 +458,8 @@ struct robot_data;
  */
 typedef struct player player;
 struct player {
-    u_byte	color;			/* Color of object */
-    u_byte	dir;			/* Direction of acceleration */
-    int		id;			/* Unique id of object */
-    unsigned short	team;		/* What team is the player on? */
-    objposition	pos;			/* World coordinates */
-    ipos	prevpos;		/* Previous position... */
-    vector	vel;			/* Velocity of object */
-    vector	acc;			/* Acceleration constant */
-    DFLOAT	max_speed;		/* Maximum speed of object */
-    DFLOAT	mass;			/* Mass of object (incl. cargo) */
-    int		type;			/* Type of object */
-    long	info;			/* Miscellaneous info */
-    int		life;			/* Zero is dead. One is alive */
-    int		count;			/* Miscellaneous timings */
-    long	status;			/** Status, currently **/
-    modifiers	mods;			/* Modifiers in effect */
+
+    OBJECT_BASE
 
     /* up to here the player type should be the same as an object. */
 
@@ -314,14 +480,12 @@ struct player {
     DFLOAT	float_dir;		/* Direction, in float var */
     DFLOAT	turnresistance;		/* How much is lost in % */
     DFLOAT	turnvel;		/* Current velocity of turn (right) */
-#ifdef TURN_FUEL
     DFLOAT	oldturnvel;		/* Last velocity of turn (right) */
-#endif
     DFLOAT	turnacc;		/* Current acceleration of turn */
     long	score;			/* Current score of player */
     long	prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
-    wireobj	*ship;			/* wire model of ship shape */
+    shipobj	*ship;			/* wire model of ship shape */
     DFLOAT	power;			/* Force of thrust */
     DFLOAT	power_s;		/* Saved power fiks */
     DFLOAT	turnspeed_s;		/* Saved turnspeed */
@@ -375,14 +539,15 @@ struct player {
     } lock;
     int		lockbank[LOCKBANK_MAX]; /* Saved player locks */
 
+    u_byte	dir;			/* Direction of acceleration */
+    u_byte	unused1;		/* padding for alignment */
     char	mychar;			/* Special char for player */
     char	prev_mychar;		/* Special char for player */
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
     char	hostname[MAX_CHARS];	/* Hostname of client player uses */
-    unsigned short	pseudo_team;	/* Which team is used for my tanks */
-					/* (detaching!) */
-    object	*ball;
+    unsigned short	pseudo_team;	/* Which team for detaching tanks */
+    ballobject	*ball;
 
     /*
      * Pointer to robot private data (dynamically allocated).

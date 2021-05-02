@@ -1,4 +1,4 @@
-/* $Id: widget.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: widget.h,v 5.1 2001/05/13 12:14:48 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -123,7 +123,7 @@ typedef struct widget_string {
     const char			*str;		/* Current input string */
 } widget_string_t;
 
-typedef struct view_line {
+typedef struct viewer_line {
     const char			*txt;
     int				len;
     int				txt_width;

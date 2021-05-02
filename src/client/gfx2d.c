@@ -1,4 +1,4 @@
-/* $Id: gfx2d.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
+/* $Id: gfx2d.c,v 5.5 2001/06/03 17:21:19 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,6 +44,10 @@
 #include "error.h"
 #include "const.h"
 #include "portability.h"
+#include "commonproto.h"
+
+
+char gfx2d_version[] = VERSION;
 
 
 #ifndef PATH_MAX
@@ -104,14 +108,8 @@ int Picture_init(xp_picture_t *picture, int height, int width, int images)
 /*
  * Find full path for a picture filename.
  */
-static int Picture_find_path(const char *filename, char *path)
+static int Picture_find_path(const char *filename, char *path, size_t path_size)
 {
-#ifdef _WINDOWS
-#define PATHNAME_SEP	'\\'
-#else
-#define PATHNAME_SEP	'/'
-#endif
-
     char		*dir, *colon;
     int			len;
 
@@ -124,7 +122,7 @@ static int Picture_find_path(const char *filename, char *path)
      * without using the texturePath.
      */
     if (access(filename, 4) == 0) {
-	strcpy(path, filename);
+	strlcpy(path, filename, path_size);
 	return TRUE;
     }
 
@@ -142,12 +140,12 @@ static int Picture_find_path(const char *filename, char *path)
 		len = colon - dir;
 		colon++;
 	    }
-	    if (len > 0 && len + strlen(filename) + 1 < PATH_MAX) {
+	    if (len > 0 && len + strlen(filename) + 1 < path_size) {
 		memcpy(path, dir, len);
 		if (path[len - 1] != PATHNAME_SEP) {
 		    path[len++] = PATHNAME_SEP;
 		}
-		strcpy(&path[len], filename);
+		strlcpy(&path[len], filename, path_size - len);
 		if (access(path, 4) == 0) {
 		    return TRUE;
 		}
@@ -230,7 +228,7 @@ int Picture_load(xp_picture_t *picture, const char *filename)
     char		path[PATH_MAX + 1];
 
 
-    if (!Picture_find_path(filename, path)) {
+    if (!Picture_find_path(filename, path, sizeof(path))) {
 	error("Cannot find picture file \"%s\"", filename);
 	return -1;
     }
@@ -352,8 +350,11 @@ RGB_COLOR Picture_get_pixel(const xp_picture_t *picture, int image,
     Purpose: Find the color value of the 1x1 pixel with upperleft corner x,y.
     Note that x and y is doubles.
 */
-RGB_COLOR Picture_get_pixel_avg(const xp_picture_t *picture, int image, 
-				double x, double y)
+static RGB_COLOR Picture_get_pixel_avg(
+	const xp_picture_t	*picture,
+	int			image, 
+	double			x,
+	double			y)
 {    
     int		r_x, r_y;
     double	frac_x, frac_y;

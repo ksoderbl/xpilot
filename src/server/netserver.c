@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: netserver.c,v 5.17 2001/06/08 19:40:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -101,9 +101,7 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifndef VMS
-#  include <sys/param.h>
-# endif
+# include <sys/param.h>
 # ifdef _AIX
 #  ifndef _BSD_INCLUDES
 #   define _BSD_INCLUDES
@@ -145,6 +143,7 @@
 #include "checknames.h"
 #include "server.h"
 #include "commonproto.h"
+#include "asteroid.h"
 
 char netserver_version[] = VERSION;
 
@@ -262,6 +261,12 @@ static int Init_setup(void)
 	    case ITEM_CONCENTRATOR:
 		if (!itemConcentratorVisible)
 		    type = SETUP_SPACE;
+		break;
+	    case FRICTION:
+		if (!blockFrictionVisible)
+		    type = SETUP_SPACE;
+		else
+		    type = SETUP_DECOR_FILLED;
 		break;
 	    default:
 		break;
@@ -396,10 +401,8 @@ static int Init_setup(void)
     Setup->mode = World.rules->mode;
     Setup->x = World.x;
     Setup->y = World.y;
-    strncpy(Setup->name, World.name, sizeof(Setup->name) - 1);
-    Setup->name[sizeof(Setup->name) - 1] = '\0';
-    strncpy(Setup->author, World.author, sizeof(Setup->author) - 1);
-    Setup->author[sizeof(Setup->author) - 1] = '\0';
+    strlcpy(Setup->name, World.name, sizeof(Setup->name));
+    strlcpy(Setup->author, World.author, sizeof(Setup->author));
 
     return 0;
 }
@@ -559,9 +562,8 @@ void Destroy_connection(int ind, const char *reason)
     sock = &connp->w.sock;
     remove_input(sock->fd);
 
-    strncpy(&pkt[1], reason, sizeof(pkt) - 2);
-    pkt[sizeof(pkt) - 1] = '\0';
     pkt[0] = PKT_QUIT;
+    strlcpy(&pkt[1], reason, sizeof(pkt) - 1);
     len = strlen(pkt) + 1;
     if (sock_write(sock, pkt, len) != len) {
 	sock_get_error(sock);
@@ -579,9 +581,9 @@ void Destroy_connection(int ind, const char *reason)
 
     Conn_set_state(connp, CONN_FREE, CONN_FREE);
 
-    if (connp->id != -1) {
+    if (connp->id != NO_ID) {
 	id = connp->id;
-	connp->id = -1;
+	connp->id = NO_ID;
 	Players[GetInd[id]]->conn = NOT_CONNECTED;
 	Delete_player(GetInd[id]);
     }
@@ -744,7 +746,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
     connp->version = version;
     connp->start = main_loops;
     connp->magic = randomMT() + my_port + sock.fd + team + main_loops;
-    connp->id = -1;
+    connp->id = NO_ID;
     connp->timeout = LISTEN_TIMEOUT;
     connp->last_key_change = 0;
     connp->reliable_offset = 0;
@@ -954,7 +956,7 @@ static int Handle_setup(int ind)
  * and if this succeeds update the player information
  * to all connected players.
  */
-static int Handle_login(int ind)
+static int Handle_login(int ind, char *errmsg, int errsize)
 {
     connection_t	*connp = &Conn[ind];
     player		*pl;
@@ -965,7 +967,8 @@ static int Handle_login(int ind)
 
     if (NumPlayers - NumPseudoPlayers >= World.NumBases) {
 	errno = 0;
-	error("Not enough bases for players");
+	strlcpy(errmsg, "Not enough bases for players", errsize);
+	error("%s", errmsg);
 	return -1;
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
@@ -989,7 +992,8 @@ static int Handle_login(int ind)
 	    if (connp->team == TEAM_NOT_SET ||
 		(connp->team == robotTeam && reserveRobotTeam)) {
 		errno = 0;
-		error("Can't pick team");
+		strlcpy(errmsg, "Can't pick team", errsize);
+		error("%s", errmsg);
 		return -1;
 	    }
 	}
@@ -1000,16 +1004,18 @@ static int Handle_login(int ind)
 	if (strcasecmp(Players[i]->name, connp->nick) == 0) {
 	    errno = 0;
 	    error("Name already in use %s", connp->nick);
+	    strlcpy(errmsg, "Name already in use", errsize);
 	    return -1;
 	}
     }
-    if (!Init_player(NumPlayers, connp->ship)) {
+    if (Init_player(NumPlayers, connp->ship) <= 0) {
+	strlcpy(errmsg, "Init_player failed: no free ID", errsize);
 	return -1;
     }
     pl = Players[NumPlayers];
-    strcpy(pl->name, connp->nick);
-    strcpy(pl->realname, connp->real);
-    strcpy(pl->hostname, connp->host);
+    strlcpy(pl->name, connp->nick, MAX_CHARS);
+    strlcpy(pl->realname, connp->real, MAX_CHARS);
+    strlcpy(pl->hostname, connp->host, MAX_CHARS);
     pl->isowner = (!strcmp(pl->realname, Server.owner) &&
 		   !strcmp(connp->addr, "127.0.0.1"));
     if (connp->team != TEAM_NOT_SET) {
@@ -1032,7 +1038,8 @@ static int Handle_login(int ind)
     Conn_set_state(connp, CONN_READY, CONN_PLAYING);
 
     if (Send_reply(ind, PKT_PLAY, PKT_SUCCESS) <= 0) {
-	error("Cannot send play reply");
+	strlcpy(errmsg, "Cannot send play reply", errsize);
+	error("%s", errmsg);
 	return -1;
     }
 
@@ -1072,7 +1079,7 @@ static int Handle_login(int ind)
 	 * And tell him about the relationships others have with eachother.
 	 */
 	else if (IS_ROBOT_IND(i)) {
-	    if ((war_on_id = Robot_war_on_player(i)) != -1) {
+	    if ((war_on_id = Robot_war_on_player(i)) != NO_ID) {
 		Send_war(pl->conn, Players[i]->id, war_on_id);
 	    }
 	}
@@ -1089,6 +1096,25 @@ static int Handle_login(int ind)
 		pl->name, pl->realname, World.name, World.author);
     }
     Set_message(msg);
+
+    if (connp->version < MY_VERSION) {
+	const char sender[] = "[*Server notice*]";
+	sprintf(msg, "Server runs version %s. %s", VERSION, sender);
+	Set_player_message(pl, msg);
+	if (connp->version < 0x4401) {
+	    sprintf(msg,
+		    "Your client does not support the fast radar packet. %s",
+		   sender);
+	    Set_player_message(pl, msg);
+	}
+	if (connp->version < 0x4400 && maxAsteroidDensity > 0) {
+	    sprintf(msg,
+		    "Your client will see the %d asteroids as balls. %s",
+		    (int)World.asteroids.max,
+		    sender);
+	    Set_player_message(pl, msg);
+	}
+    }
 
     conn_bit = (1 << ind);
     for (i = 0; i < World.NumCannons; i++) {
@@ -1133,22 +1159,22 @@ static int Handle_login(int ind)
 
     if (resetOnHuman > 0
 	&& (NumPlayers - NumPseudoPlayers - NumRobots) <= resetOnHuman
-	&& !rdelay) {
+	&& !round_delay) {
 	if (BIT(World.rules->mode, TIMING)) {
 	    Race_game_over();
 	} else if (BIT(World.rules->mode, TEAM_PLAY)) {
 	    Team_game_over(-1, "");
-	} else {
+	} else if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	    Individual_game_over(-1);
 	}
     }
 
     /* if the next round is delayed, delay it again */
-    if (rdelay > 0 || NumPlayers == 1) {
-	rdelay = roundDelay * FPS;
+    if (round_delay > 0 || NumPlayers == 1) {
+	round_delay = roundDelaySeconds * FPS;
 	roundtime = -1;
 	sprintf(msg, "Player entered. Delaying %d seconds until next %s.",
-		roundDelay, (BIT(World.rules->mode, TIMING) ?
+		roundDelaySeconds, (BIT(World.rules->mode, TIMING) ?
 			     "race" : "round"));
 	Set_message(msg);
     }
@@ -1767,6 +1793,20 @@ int Send_wreckage(int ind, int x, int y, u_byte wrtype, u_byte size, u_byte rot)
 			 x, y, wrtype, size, rot);
 }
 
+int Send_asteroid(int ind, int x, int y, u_byte type, u_byte size, u_byte rot)
+{
+    u_byte	type_size;
+
+    if (Conn[ind].version < 0x4400) {
+	return Send_ecm(ind, x, y, 2 * (int) ASTEROID_RADIUS(size));
+    }
+
+    type_size = ((type & 0x0F) << 4) | (size & 0x0F);
+
+    return Packet_printf(&Conn[ind].w, "%c%hd%hd%c%c", PKT_ASTEROID,
+		         x, y, type_size, rot);
+}
+
 int Send_fastshot(int ind, int type, unsigned char *p, int n)
 {
     int			avail;
@@ -1902,6 +1942,32 @@ int Send_radar(int ind, int x, int y, int size)
     return Packet_printf(&connp->w, "%c%hd%hd%c", PKT_RADAR, x, y, size);
 }
 
+int Send_fastradar(int ind, unsigned char *buf, int n)
+{
+    int			avail;
+    sockbuf_t		*w = &Conn[ind].w;
+
+    if ((n & 0xFF) != n) {
+	errno = 0;
+	error("Bad number of fastradar %d", n);
+	return 0;
+    }
+    avail = w->size - w->len - SOCKBUF_WRITE_SPARE - 3;
+    if (n * 3 >= avail) {
+	if (avail > 3) {
+	    n = (avail - 2) / 3;
+	} else {
+	    return 0;
+	}
+    }
+    w->buf[w->len++] = PKT_FASTRADAR;
+    w->buf[w->len++] = (unsigned char)(n & 0xFF);
+    memcpy(&w->buf[w->len], buf, n * 3);
+    w->len += n * 3;
+
+    return (2 + (n * 3));
+}
+
 int Send_damaged(int ind, int damaged)
 {
     return Packet_printf(&Conn[ind].w, "%c%c", PKT_DAMAGED, damaged);
@@ -1986,7 +2052,6 @@ int Send_end_of_frame(int ind)
 {
     connection_t	*connp = &Conn[ind];
     int			n;
-    extern int		last_packet_of_frame;
 
     last_packet_of_frame = 1;
     n = Packet_printf(&connp->w, "%c%ld", PKT_END, frame_loops);
@@ -2076,6 +2141,7 @@ static int Receive_play(int ind)
     connection_t	*connp = &Conn[ind];
     unsigned char	ch;
     int			n;
+    char		errmsg[MAX_CHARS];
 
     if ((n = Packet_scanf(&connp->r, "%c", &ch)) != 1) {
 	errno = 0;
@@ -2106,8 +2172,9 @@ static int Receive_play(int ind)
 	return 0;
     }
     Sockbuf_clear(&connp->w);
-    if (Handle_login(ind) == -1) {
-	Destroy_connection(ind, "login failed");
+    strlcpy(errmsg, "login failed", sizeof(errmsg));
+    if (Handle_login(ind, errmsg, sizeof(errmsg)) == -1) {
+	Destroy_connection(ind, errmsg);
 	return -1;
     }
 
@@ -2132,7 +2199,7 @@ static int Receive_power(int ind)
     }
     power = (DFLOAT) tmp / 256.0F;
     pl = Players[GetInd[connp->id]];
-    autopilot = BIT(pl->used, OBJ_AUTOPILOT);
+    autopilot = BIT(pl->used, HAS_AUTOPILOT);
     /* old client are going to send autopilot-mangled data, ignore it */
     if (autopilot && pl->version < 0x4200)
 	return 1;
@@ -2805,6 +2872,13 @@ int Get_player_id(int ind)
     return connp->id;
 }
 
+int Get_conn_version(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+
+    return connp->version;
+}
+
 static int Receive_shape(int ind)
 {
     connection_t	*connp = &Conn[ind];
@@ -2891,7 +2965,7 @@ int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)
 
 	motd_loops = main_loops;
 
-	if ((fd = open(Conf_servermotdfile(), O_RDONLY)) == -1) {
+	if ((fd = open(motdFileName, O_RDONLY)) == -1) {
 	    motd_size = 0;
 	    return -1;
 	}
@@ -3006,7 +3080,7 @@ static int Receive_pointer_move(int ind)
     if (BIT(pl->status, HOVERPAUSE))
 	return 1;
 
-    if (BIT(pl->used, OBJ_AUTOPILOT))
+    if (BIT(pl->used, HAS_AUTOPILOT))
 	Autopilot(GetInd[connp->id], 0);
     turnspeed = movement * pl->turnspeed / MAX_PLAYER_TURNSPEED;
     if (turnspeed < 0) {
@@ -3048,7 +3122,7 @@ static int Receive_fps_request(int ind)
 	}
 	return n;
     }
-    if (connp->id != -1) {
+    if (connp->id != NO_ID) {
 	pl = Players[GetInd[connp->id]];
 	pl->player_fps = fps;
 	if (fps > FPS) pl->player_fps = FPS;
@@ -3080,7 +3154,7 @@ static int Receive_audio_request(int ind)
 	}
 	return n;
     }
-    if (connp->id != -1) {
+    if (connp->id != NO_ID) {
 	pl = Players[GetInd[connp->id]];
 	sound_player_onoff(pl, onoff);
     }

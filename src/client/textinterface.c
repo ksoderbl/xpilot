@@ -1,4 +1,4 @@
-/* $Id: textinterface.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: textinterface.c,v 5.6 2001/06/03 17:21:26 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -30,7 +30,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <unistd.h>
 # include <sys/param.h>
 # include <netdb.h>
@@ -53,20 +53,18 @@
 #include "error.h"
 #include "socklib.h"
 #include "net.h"
-#include "protoclient.h"
 #include "datagram.h"
 #include "portability.h"
 #include "checknames.h"
 #include "connectparam.h"
+#include "protoclient.h"
+#include "commonproto.h"
 
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: textinterface.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
+char textinterface_version[] = VERSION;
 
 
-#define MAX_LINE	256	/* should not be smaller than MSG_LEN */
+#define MAX_LINE	MSG_LEN	/* should not be smaller than MSG_LEN */
 
 
 extern int		dgram_one_socket;	/* from datagram.c */
@@ -132,7 +130,7 @@ static bool Get_contact_message(sockbuf_t *sbuf,
 	    if (len == 0) {
 		continue;
 	    }
-	    xpprintf("sock_receive_any, contact message");
+	    xpprintf("Error from sock_receive_any, contact message failed.\n");
 	    /* exit(1);  no good since meta gui. */
 	    return false;
 	}
@@ -141,7 +139,8 @@ static bool Get_contact_message(sockbuf_t *sbuf,
 	/*
 	 * Get server's host and port.
 	 */
-	strcpy(conpar->server_addr, sock_get_last_addr(&sbuf->sock));
+	strlcpy(conpar->server_addr, sock_get_last_addr(&sbuf->sock),
+		sizeof(conpar->server_addr));
 	conpar->server_port = sock_get_last_port(&sbuf->sock);
 	/*
 	 * If the name of the server to contact is the same as its
@@ -149,11 +148,11 @@ static bool Get_contact_message(sockbuf_t *sbuf,
 	 * Doing a reverse lookup may result in a long and annoying delay.
 	 */
 	if (!strcmp(conpar->server_addr, contact_server)) {
-	    strcpy(conpar->server_name, conpar->server_addr);
+	    strlcpy(conpar->server_name, conpar->server_addr,
+		    sizeof(conpar->server_name));
 	} else {
-	    strncpy(conpar->server_name, sock_get_last_name(&sbuf->sock),
-		    sizeof(conpar->server_name) - 1);
-	    conpar->server_name[sizeof(conpar->server_name) - 1] = '\0';
+	    strlcpy(conpar->server_name, sock_get_last_name(&sbuf->sock),
+		    sizeof(conpar->server_name));
 	}
 
 	if (Packet_scanf(sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0) {
@@ -272,7 +271,8 @@ static bool Process_commands(sockbuf_t *ibuf,
 			     Connect_param_t *conpar)
 {
     int			i, len, retries, delay, max_robots, success;
-    char		c, status, reply_to, str[MAX_LINE];
+    char		c, status, reply_to;
+    char		linebuf[MAX_LINE];
     unsigned short	port, qpos;
     int			has_credentials = 0;
     int			cmd_credentials = 0;
@@ -305,12 +305,12 @@ static bool Process_commands(sockbuf_t *ibuf,
 	else if (!auto_connect) {
 	    printf("*** Server on %s. Enter command> ", conpar->server_name);
 
-	    getline(str, MAX_LINE-1, stdin);
+	    getline(linebuf, MAX_LINE-1, stdin);
 	    if (feof(stdin)) {
 		puts("");
 		c = 'Q';
 	    } else {
-		c = str[0];
+		c = linebuf[0];
 		if (c == '\0')
 		    c = 'J';
 	    }
@@ -322,7 +322,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 		c = 'D';
 	    else
 		c = 'J';
-	    str[0] = str[1] = '\0';
+	    linebuf[0] = linebuf[1] = '\0';
 	}
 
 	/*
@@ -385,23 +385,23 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    case 'K':
 		printf("Enter name of victim: ");
 		fflush(stdout);
-		if (!getline(str, MAX_LINE-1, stdin)) {
+		if (!getline(linebuf, MAX_LINE-1, stdin)) {
 		    printf("Nothing changed.\n");
 		    continue;
 		}
-		str[MAX_NAME_LEN - 1] = '\0';
-		Packet_printf(ibuf, "%c%ld%s", KICK_PLAYER_pack, key, str);
+		linebuf[MAX_NAME_LEN - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%s", KICK_PLAYER_pack, key, linebuf);
 		break;
 
 	    case 'R':
 		printf("Enter maximum number of robots: ");
 		fflush(stdout);
-		if (!getline(str, MAX_LINE-1, stdin)) {
+		if (!getline(linebuf, MAX_LINE-1, stdin)) {
 		    printf("Nothing changed.\n");
 		    continue;
 		}
-		if (sscanf(str, "%d", &max_robots) <= 0 || max_robots < 0) {
-		    printf("Invalid number of robots \"%s\".\n", str);
+		if (sscanf(linebuf, "%d", &max_robots) <= 0 || max_robots < 0) {
+		    printf("Invalid number of robots \"%s\".\n", linebuf);
 		    continue;
 		}
 		Packet_printf(ibuf, "%c%ld%d", MAX_ROBOT_pack, key, max_robots);
@@ -410,12 +410,12 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    case 'M':				/* Send a message to server. */
 		printf("Enter message: ");
 		fflush(stdout);
-		if (!getline(str, MAX_LINE-1, stdin) || !str[0]) {
+		if (!getline(linebuf, MAX_LINE-1, stdin) || !linebuf[0]) {
 		    printf("No message sent.\n");
 		    continue;
 		}
-		str[MAX_CHARS - 1] = '\0';
-		Packet_printf(ibuf, "%c%ld%s", MESSAGE_pack, key, str);
+		linebuf[MAX_CHARS - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%s", MESSAGE_pack, key, linebuf);
 		break;
 
 	    case 'L':				/* Lock the game. */
@@ -425,44 +425,44 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    case 'D':				/* Shutdown */
 		if (!auto_shutdown) {
 		    printf("Enter delay in seconds or return for cancel: ");
-		    getline(str, MAX_LINE-1, stdin);
+		    getline(linebuf, MAX_LINE-1, stdin);
 		    /*
 		     * No argument = cancel shutdown = arg_int=0
 		     */
-		    if (sscanf(str, "%d", &delay) <= 0) {
+		    if (sscanf(linebuf, "%d", &delay) <= 0) {
 			delay = 0;
 		    } else
 			if (delay <= 0)
 			    delay = 1;
 
 		    printf("Enter reason: ");
-		    getline(str, MAX_LINE-1, stdin);
+		    getline(linebuf, MAX_LINE-1, stdin);
 		} else {
-		    strcpy(str, shutdown_reason);
+		    strlcpy(linebuf, shutdown_reason, sizeof(linebuf));
 		    delay = 60;
 		}
-		str[MAX_CHARS - 1] = '\0';
-		Packet_printf(ibuf, "%c%ld%d%s", SHUTDOWN_pack, key, delay, str);
+		linebuf[MAX_CHARS - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%d%s", SHUTDOWN_pack, key, delay, linebuf);
 		break;
 
 	    case 'O':				/* Tune an option. */
 		printf("Enter option: ");
 		fflush(stdout);
-		if (!getline(str, MAX_LINE-1, stdin)
-		    || (len=strlen(str)) == 0) {
+		if (!getline(linebuf, MAX_LINE-1, stdin)
+		    || (len=strlen(linebuf)) == 0) {
 		    printf("Nothing changed.\n");
 		    continue;
 		}
-		printf("Enter new value for %s: ", str);
+		printf("Enter new value for %s: ", linebuf);
 		fflush(stdout);
-		strcat(str, ":"); len++;
-		if (!getline(&str[len], MAX_LINE-1-len, stdin)
-		    || str[len] == '\0') {
+		strcat(linebuf, ":"); len++;
+		if (!getline(&linebuf[len], MAX_LINE-1-len, stdin)
+		    || linebuf[len] == '\0') {
 		    printf("Nothing changed.\n");
 		    continue;
 		}
-		printf("option \"%s\"\n", str); fflush(stdout);
-		Packet_printf(ibuf, "%c%ld%S", OPTION_TUNE_pack, key, str);
+		printf("option \"%s\"\n", linebuf); fflush(stdout);
+		Packet_printf(ibuf, "%c%ld%S", OPTION_TUNE_pack, key, linebuf);
 		break;
 
 		/*
@@ -470,19 +470,19 @@ static bool Process_commands(sockbuf_t *ibuf,
 		 */
 
 	    case 'J':				/* Trying to enter game. */
-		if (str[1] == '0') {
+		if (linebuf[1] == '0') {
 		    printf("Team '0' is reserved for robots.");
 		    conpar->team = TEAM_NOT_SET;
 		}
-		else if (str[1] > '0' && str[1] <= '9') {
-		    conpar->team = str[1] - '0';
+		else if (linebuf[1] > '0' && linebuf[1] <= '9') {
+		    conpar->team = linebuf[1] - '0';
 		    printf("Joining team %d\n", conpar->team);
 		}
-		else if (str[1] == '-') {
+		else if (linebuf[1] == '-') {
 		    conpar->team = TEAM_NOT_SET;
 		    printf("Team set to unspecified\n");
 		}
-		else if (str[1] != '\0') {
+		else if (linebuf[1] != '\0') {
 		    conpar->team = TEAM_NOT_SET;
 		}
 		if (conpar->server_version < 0x3430) {
@@ -516,14 +516,14 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    case 'T':				/* Set team. */
 		printf("Enter team: ");
 		fflush(stdout);
-		if (!getline(str, MAX_LINE-1, stdin)
-		    || (len = strlen(str)) == 0) {
+		if (!getline(linebuf, MAX_LINE-1, stdin)
+		    || (len = strlen(linebuf)) == 0) {
 		    printf("Nothing changed.\n");
 		}
 		else {
 		    int newteam;
-		    if (sscanf(str, " %d", &newteam) != 1) {
-			printf("Invalid team specification: %s.\n", str);
+		    if (sscanf(linebuf, " %d", &newteam) != 1) {
+			printf("Invalid team specification: %s.\n", linebuf);
 		    }
 		    else if (newteam >= 0 && newteam <= 9) {
 			conpar->team = newteam;
@@ -598,8 +598,8 @@ static bool Process_commands(sockbuf_t *ibuf,
 		switch (reply_to & 0xFF) {
 
 		case OPTION_LIST_pack:
-		    while (Packet_scanf(ibuf, "%S", str) > 0) {
-			printf("%s\n", str);
+		    while (Packet_scanf(ibuf, "%S", linebuf) > 0) {
+			printf("%s\n", linebuf);
 		    }
 		    break;
 
@@ -850,10 +850,14 @@ int Contact_servers(int count, char **servers,
 		if (list_servers == 2) {
 		    if (count < find_max) {
 			if (server_names) {
-			    strcpy(server_names[count], conpar->server_name);
+			    strlcpy(server_names[count],
+				    conpar->server_name,
+				    MAX_HOST_LEN);
 			}
 			if (server_addresses) {
-			    strcpy(server_addresses[count], conpar->server_addr);
+			    strlcpy(server_addresses[count],
+				    conpar->server_addr,
+				    MAX_HOST_LEN);
 			}
 			count++;
 		    }

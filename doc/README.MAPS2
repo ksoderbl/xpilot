@@ -1,4 +1,4 @@
-There's an utility in the contrib directory called mapmapper which
+There's a utility in the contrib directory called mapmapper which
 converts old style maps (1.x) to new style maps (2.x).
 
 The new map format is as follows:
@@ -58,7 +58,21 @@ The new map format is as follows:
 				-itemConcentratorRadius.  An item concentrator
 				is drawn on screen as three rotating triangles.
 
+	z			Friction block.  Ships in this kind of block
+				have friction acting on them equal to
+				blockFriction, not friction.  The option
+				blockFrictionVisible determines whether
+				or not players see the friction block as
+				decor or not at all.
+
+	^			Empty Treasure.  Belongs to the team with
+				closest base.  An empty treasure behaves
+				like a regular treasure, except that it
+				does not own a ball.
+
 	any other char		Empty block
+
+	elnopuv~`&=[]{}|:;"',.?/ are free for future expansion.
 
 In case you are wondering if all the characters for map symbols have any
 special meaning, they are not abbreviations, but if you take a look at

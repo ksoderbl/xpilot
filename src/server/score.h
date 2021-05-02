@@ -1,4 +1,4 @@
-/* $Id: score.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: score.h,v 5.2 2001/05/18 13:49:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,8 +47,31 @@
 
 #define CANNON_SCORE	    	-1436
 #define WALL_SCORE	    	2000
+#define ASTEROID_SCORE		-9116
 
 #define RATE_SIZE	    	20
 #define RATE_RANGE	    	1024
+
+/* score.c */
+
+void SCORE(int ind, int points, int x, int y, const char *msg);
+int Rate(int winner, int loser);
+
+/*
+ * Cause `winner' to get `winner_score' points added with message
+ * `winner_msg', and similarly with the `loser' and equivalent
+ * variables.
+ *
+ * In general the winner_score should be positive, and the loser_score
+ * negative, but this need not be true.
+ *
+ * If the winner and loser players are on the same team, the scores are
+ * made negative, since you shouldn't gain points by killing team members,
+ * or being killed by a team member (it is both players faults).
+ *
+ * BD 28-4-98: Same for killing your own tank.
+ */
+void Score_players(int winner, int winner_score, char *winner_msg,
+		   int loser, int loser_score, char *loser_msg);
 
 #endif

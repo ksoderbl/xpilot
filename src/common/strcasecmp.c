@@ -1,4 +1,4 @@
-/* $Id: strcasecmp.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: strcasecmp.c,v 5.2 2001/06/02 21:02:25 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -26,10 +26,11 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: strcasecmp.c,v 5.0 2001/04/07 20:00:59 dik Exp $";
-#endif
+
+/* prototypes to shut up strict compiler. */
+int strcasecmp(const char *str1, const char *str2);
+int strncasecmp(const char *str1, const char *str2, size_t n);
+
 
 /*
  * By Ian Malcom Brown.

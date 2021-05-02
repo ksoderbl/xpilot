@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: help.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: help.c,v 5.1 2001/05/20 19:16:39 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -31,7 +31,7 @@
 Window                   helpwin;
 int                      helppage=0, helpsel, helpscreens=3;
 
-char                     *iconlabel[33] = {
+char                     *iconlabel[35] = {
    "Space"   , 
    "Block"   , "Block" , "Block" , "Block" , "Block", 
    "Decor"   , "Decor" , "Decor" , "Decor" , "Decor",
@@ -43,10 +43,10 @@ char                     *iconlabel[33] = {
    "Positive Gravity" , "Negative Gravity",
    "Current" , "Current" , "Current" , "Current" ,
    "Base" , "Base Facing" ,
-   "Empty (space)"
+   "Empty (space)", "Empty Treasure", "Friction"
    };
 
-char                     iconhelp[33] = {
+char                     iconhelp[35] = {
 ' ',
 MAP_FILLED   , MAP_REC_RD   , MAP_REC_LD   , MAP_REC_RU   , MAP_REC_LU   ,
 MAP_DEC_FLD  , MAP_DEC_RD , MAP_DEC_LD , MAP_DEC_RU , MAP_DEC_LU ,
@@ -58,7 +58,7 @@ MAP_WORM_NORMAL , MAP_WORM_IN , MAP_WORM_OUT,
 MAP_GRAV_POS , MAP_GRAV_NEG,
 MAP_CRNT_UP , MAP_CRNT_LT , MAP_CRNT_RT , MAP_CRNT_DN,
 MAP_BASE , MAP_BASE_ORNT ,
-MAP_SPACE
+MAP_SPACE, MAP_EMPTY_TREASURE, MAP_FRICTION
 };
 
 
@@ -217,23 +217,23 @@ void DrawHelpWin(void)
                        mapicon_ptr[iconmenu[sel]-32],w-7);
             }
          }
-         for (i=0;i<32;i++) {
-            j = i/11;
+         for (i=0;i<34;i++) {
+            j = i/12;
             DrawMapPic(helpwin,(int) 10+j*((HELP_WIDTH-30)/3),
-                 (int)(30+(HELP_WIDTH*.17/5+10)*(i-j*11))+(HELP_WIDTH*.5/5*4),
+                 (int)(30+(HELP_WIDTH*.17/5+10)*(i-j*12))+(HELP_WIDTH*.5/5*4),
                  mapicon_ptr[iconhelp[i+1]-32], w-7);
             T_DrawString(helpwin,20+j*((HELP_WIDTH-30)/3)+w,
-                 (int)(25+(HELP_WIDTH*.17/5+10)*(i-j*11))+(HELP_WIDTH*.5/5*4),
+                 (int)(25+(HELP_WIDTH*.17/5+10)*(i-j*12))+(HELP_WIDTH*.5/5*4),
                  (int)((HELP_WIDTH-20)/3),w,BKGR,iconlabel[i+1],JUSTIFY_LEFT,
                  CROP_RIGHT,-1);
          }
-         T_DrawText(helpwin, (int)(HELP_WIDTH*.3+20), (int)(10+HELP_WIDTH*.03), 
+         T_DrawText(helpwin, (int)(HELP_WIDTH*.3+20), (int)(10+HELP_WIDTH*.03),
               (int)(HELP_WIDTH*.7-20), (int)(HELP_WIDTH*.3/5*4), BKGR,
               "Select a map icon to draw with from the buttons at the top of the tool panel. The selected icon will also be used in the line and fill modes.\n\nThe map icon buttons may be turned off to draw empty spaces or the second mouse button can be used.");
-         T_DrawText(helpwin, 10, (int)(130+(HELP_WIDTH*.3/5*4+
-              (HELP_WIDTH*.3/5+10)*7) ), HELP_WIDTH-20,
+         T_DrawText(helpwin, 10, (int)(150+(HELP_WIDTH*.3/5*4+
+              (HELP_WIDTH*.3/5+10)*7)), HELP_WIDTH-20,
               (int)(HELP_HEIGHT-(30+(HELP_WIDTH*.3/5*11))), BKGR,
-              "You can draw numbered bases and checkpoints by entering 0 through 9 and a through z on the keyboard while the pointer is in the map region.");
+              "You can draw numbered bases and checkpoints by entering 0 through 9 and A through Z on the keyboard while the pointer is in the map region.");
          break;
 
       case 1:
@@ -299,7 +299,7 @@ void DrawHelpWin(void)
               "The Neg. button reverses the filled blocks and spaces.");
          T_DrawText(helpwin,10,300+3*HELP_BTN_HEIGHT, HELP_WIDTH-20,
               100, BKGR,
-              "Please send any bugs, patches, enhancements or comments to Aaron Averill at:\n\naverila@oes.orst.edu");
+              "XP-Mapedit was originally written by Aaron Averill\nPlease send any bugs, patches, enhancements or comments to the current maintainers at:\n\nmapedit@xpilot.org");
    }
          
 }

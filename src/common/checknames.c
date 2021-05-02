@@ -1,4 +1,4 @@
-/* $Id: checknames.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: checknames.c,v 5.1 2001/05/07 15:23:28 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -38,6 +38,7 @@
 #include "error.h"
 #include "pack.h"
 #include "checknames.h"
+#include "commonproto.h"
 
 char checknames_version[] = VERSION;
 
@@ -65,7 +66,7 @@ void Fix_real_name(char *name)
 
     name[MAX_NAME_LEN - 1] = '\0';
     if (!*name) {
-	strcpy(name, "X");
+	strlcpy(name, "X", sizeof(name));
 	return;
     }
     str = (unsigned char *) name;
@@ -170,7 +171,7 @@ void Fix_host_name(char *name)
     name[MAX_HOST_LEN - 1] = '\0';
     str = (unsigned char *) name;
     if (!is_alpha_numeric(*str)) {
-	strcpy(name, "xxx.xxx");
+	strlcpy(name, "xxx.xxx", sizeof(name));
 	return;
     }
     for (; *str; str++) {

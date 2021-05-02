@@ -1,4 +1,4 @@
-/* $Id: net.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: net.h,v 5.2 2001/06/02 21:02:14 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,12 +34,7 @@
 #define MAX_SOCKBUF_SIZE	(50*1024)
 
 #define SERVER_RECV_SIZE	MIN_SOCKBUF_SIZE
-#if defined(LINUX0)
-/* bwahg, linux tcp/ip still has silly limitations in 0.99.15 */
-#define SERVER_SEND_SIZE	(3*512 + 3*128)
-#else
 #define SERVER_SEND_SIZE	(4*1024)
-#endif
 
 #define CLIENT_SEND_SIZE	SERVER_RECV_SIZE
 #define CLIENT_RECV_SIZE	SERVER_SEND_SIZE
@@ -76,6 +71,8 @@ typedef struct {
     char	*ptr;		/* current position in buffer (reading) */
     int		state;		/* read/write/locked/error status flags */
 } sockbuf_t;
+
+extern int last_packet_of_frame;
 
 int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, int size, int state);
 int Sockbuf_cleanup(sockbuf_t *sbuf);

@@ -44,6 +44,7 @@
 #define IDC_SLIDER_MINES                1021
 #define IDC_BUTTON1                     1022
 #define IDC_SLIDER_NUKECLUSTERDAMAGE    1022
+#define IDC_CHOOSEMAP                   1022
 #define IDC_BUTTON2                     1023
 #define IDC_SLIDER_MOVINGITEMPROB       1023
 #define IDC_EDIT_FPS                    1024
@@ -74,7 +75,9 @@
 #define IDC_SLIDER_ITEMECMPROB          1042
 #define IDC_SLIDER_ITEMMINEPROB         1043
 #define IDC_SLIDER_ITEMMISSILEPROB      1044
+#define IDC_STATIC_URL                  1044
 #define IDC_SLIDER_ITEMCLOAKPROB        1045
+#define IDC_STATIC_URL2                 1045
 #define IDC_SLIDER_ITEMSENSORPROB       1046
 #define IDC_CHECK_NUKECLUSTERDAMAGE     1047
 #define IDC_CHECK_MOVINGITEMPROB        1048
@@ -119,7 +122,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        145
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1042
+#define _APS_NEXT_CONTROL_VALUE         1045
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

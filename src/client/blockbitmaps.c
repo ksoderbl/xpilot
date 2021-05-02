@@ -1,4 +1,4 @@
-/* $Id: blockbitmaps.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
+/* $Id: blockbitmaps.c,v 5.3 2001/06/03 17:21:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -39,9 +39,14 @@
 #include "blockbitmaps.h"
 #include "gfx2d.h"
 
+#include "version.h"
 #include "error.h"
 #include "const.h"
 #include "paint.h"
+#include "portability.h"
+
+
+char blockbitmaps_version[] = VERSION;
 
 
 int scaled_bitmaps = 0;
@@ -144,9 +149,8 @@ int Block_bitmaps_create(void)
     block_bitmaps_loaded = 1;
 
     for (i = 0 ; i < NUM_BITMAPS; i++) {
-#ifdef _WINDOWS	
-	Progress("Loading image: %s", xp_pixmaps[i].filename); 
-#endif
+	IFWINDOWS( Progress("Loading image: %s", xp_pixmaps[i].filename); )
+
 	images = (xp_pixmaps[i].rotations > 0 ) ? 
 			    xp_pixmaps[i].rotations : 
 			    -xp_pixmaps[i].rotations;

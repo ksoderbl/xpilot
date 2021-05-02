@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 5.1 2001/04/22 12:24:21 bertg Exp $
+# $Id: Makefile.std,v 5.18 2001/06/03 13:33:23 bertg Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
@@ -25,7 +25,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.3.2
+VERSION=4.4.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -41,19 +41,6 @@ CC = gcc
 CFLAGS = $(DEFS) $(INCS) -O -I/usr/local/X11/include
 MLIB = -lm
 XLIB = -L/usr/local/X11/lib -lX11
-
-#
-# Flags for Apollo's running Domain/OS 10.4 and using Apollo's C compiler 6.9.
-# Note that you MUST specify `-W0,-natural' to the Apollo C compiler.
-# Boy, how that cost me a LOT of trouble to discover (Bert Gijsbers).
-# Apollo's don't need any of the normal system libraries as they are shared :)
-#
-APOLLO_CC = cc
-APOLLO_CFLAGS = $(DEFS) $(INCS) -D_APOLLO_SOURCE -D_MATH_BUILTINS -W0,-natural -A cpu,mathlib
-APOLLO_OPT = -O
-APOLLO_DEBUG = -g
-APOLLO_MLIB =
-APOLLO_XLIB =
 
 #
 # Flags for HP-UX using the native HP compiler.
@@ -76,23 +63,12 @@ HPPA_MLIB = -lM
 #   SUN_CFLAGS = $(DEFS) $(INCS) -DSVR4 -I/usr/openwin/include
 #   SUN_MLIB = -lm -lsocket -lnsl -lkrb
 #
-
 SUN_CC = gcc
 SUN_CFLAGS = $(DEFS) $(INCS)
 SUN_OPT = -O
 SUN_DEBUG = -g
 SUN_MLIB = -lm
 SUN_XLIB = -lX11
-
-#
-# Flags for Sun CMW with GCC.
-#
-SUNCMW_CC = gcc
-SUNCMW_CFLAGS = $(DEFS) -DSUNCMW $(INCS) -I/usr/openwin/include -I/apps/include
-SUNCMW_OPT = -O2
-SUNCMW_DEBUG = -g
-SUNCMW_MLIB = -lm -lcmw
-SUNCMW_XLIB = -L/usr/openwin/lib -lX11
 
 SOLARIS_CC = gcc
 #SOLARIS_CFLAGS = $(DEFS) $(INCS)
@@ -124,10 +100,6 @@ AIX_XLIB = -lX11
 
 #
 # Flags for Linux.
-# Linux versions up to 0.99pl9 should define LINUX0 when compiling
-# as there are some network deficiences which are reportedly solved
-# in 0.99pl10.  Defining LINUX0 makes it impossible for a Linux client
-# to join a non-LINUX0 server due to different (smaller) packet sizes.
 # Flags for compiling by GNU C++ are provided also.
 #
 LINUX_CC = gcc
@@ -184,28 +156,22 @@ ULTRIX_XLIB = -lX11-mit
 #
 #  LIMIT_ACCESS    - extremely local, cannot be used without modification.
 #  LOG             - try to log every server start
-#  TURN_THRUST     - makes turning drain fuel and gives you a nice spark...
 #  SILENT          - makes the server real silent.
 #  SOUND           - for sound support (requires rplay 3.0 or NCDaudio)
 #  SERVER_SOUND    - for sound support in the server only, not in the client.
-#  ERASE=1         - use a different, possible faster, frame
-#                    drawing technique which is not perfect yet.
-#                    It needs more work by a volunteer.
 #  SPARC_CMAP_HACK - try the alternate colormap swapping code
 #                    that talks directly to the sparc hardware.
-#                    Only makes sense together with -DERASE=1.
 #                    WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
 #                    CAUTION: dangerous if you don't know
 #                    what it does and how it works.
-#                    It needs more work by a volunteer.
 #  JOYSTICK        - joystick support for Linux 1.0, needs joystick-0.7.
 #  PLOCKSERVER     - Use the plock(2) system call to lock the xpilots
-#                    server into memory, i.e. to inhibit paging/swapping.
+#                    server into memory to inhibit paging/swapping.
 #                    This probably only makes sense in conjunction with
 #                    raising the priority of the server a little, which is
 #                    equivalent to reducing the nice value a few points.
 #                    Note that both require special system privileges.
-#                    Sofar this feature has only been tested on HP-UX.
+#                    Sofar this feature has only been tested on HP-UX and Linux.
 #  DBE             - To enable support for the X doublebuffer extension.
 #                    This needs an extra -lXext somewhere.
 #  MBX             - To enable support for the X multibuffer extension.
@@ -218,6 +184,7 @@ ULTRIX_XLIB = -lX11-mit
 #                        (HELPFILE, MOTDFILE, LOGFILE, MAPDIR and TEXTUREDIR)
 #                        This should be set the same as LIBDIR above!
 #
+DEFS = -DSERVER_SOUND	# -DDBE
 
 INCS = $(AUDIOINC) -I../common -I../client -I../../lib
 
@@ -252,11 +219,19 @@ INCS = $(AUDIOINC) -I../common -I../client -I../../lib
 #
 # Common library libxpcommon.a
 #
-OBJS0 = checknames.o config.o cmw.o error.o list.o math.o net.o \
-	portability.o randommt.o shipshape.o socklib.o strcasecmp.o strdup.o
+OBJS0 = checknames.o config.o error.o \
+	list.o math.o net.o \
+	portability.o randommt.o \
+	shipshape.o socklib.o \
+	strcasecmp.o strdup.o strlcpy.o \
+	xpmemory.o
 
-SRCS0 = checknames.c config.c cmw.c error.c list.c math.c net.c \
-	portability.c randommt.c shipshape.c socklib.c strcasecmp.c strdup.c
+SRCS0 = checknames.c config.c error.c \
+	list.c math.c net.c \
+	portability.c randommt.c \
+	shipshape.c socklib.c \
+	strcasecmp.c strdup.c strlcpy.c \
+	xpmemory.c
 
 #
 # Client program xpilot
@@ -287,15 +262,27 @@ SRCS1 = about.c blockbitmaps.c \
 #
 # Server program xpilots
 #
-OBJS2 = cannon.o cmdline.o collision.o command.o contact.o \
-	event.o frame.o id.o item.o \
-	map.o metaserver.o netserver.o objpos.o option.o play.o player.o \
-	robot.o  robotdef.o rules.o saudio.o sched.o server.o ship.o shot.o \
+OBJS2 = asteroid.o cannon.o cell.o cmdline.o \
+	collision.o command.o contact.o \
+	event.o fileparser.o frame.o \
+	id.o item.o laser.o \
+	map.o metaserver.o netserver.o \
+	objpos.o option.o \
+	parser.o play.o player.o \
+	robot.o  robotdef.o rules.o \
+	saudio.o sched.o score.o \
+	server.o ship.o shot.o \
 	update.o walls.o wildmap.o
-SRCS2 = cannon.c cmdline.c collision.c command.c contact.c \
-	event.c frame.c id.c item.c \
-	map.c metaserver.c netserver.c objpos.c option.c play.c player.c \
-	robot.c  robotdef.c rules.c saudio.c sched.c server.c ship.c shot.c \
+SRCS2 = asteroid.c cannon.c cell.c cmdline.c \
+	collision.c command.c contact.c \
+	event.c fileparser.c frame.c \
+	id.c item.c laser.c \
+	map.c metaserver.c netserver.c \
+	objpos.c option.c \
+	parser.c play.c player.c \
+	robot.c  robotdef.c rules.c \
+	saudio.c sched.c score.c \
+	server.c ship.c shot.c \
 	update.c walls.c wildmap.c
 
 #
@@ -326,7 +313,7 @@ TARGETS=make-common make-client make-server make-replay
 
 all:
 	@echo "Please specify your system.  Choose one of:"
-	@echo "    apollo/hppa/solaris/sun/suncmw/aix/linux/sonynews/sgi/ultrix/os2"
+	@echo "    apollo/hppa/solaris/sun/aix/linux/sonynews/sgi/ultrix/os2"
 
 targets: $(TARGETS)
 
@@ -410,14 +397,6 @@ solaris-debug:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
 		"CC=$(SOLARIS_CC)" "CFLAGS=$(SOLARIS_CFLAGS) $(SOLARIS_DEBUG)" "MLIB=$(SOLARIS_MLIB)" "XLIB=$(SOLARIS_XLIB)"
 
-suncmw:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_OPT)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
-
-suncmw-debug:
-	@$(MAKE) -f Makefile.std $(TARGETS) \
-		"CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_DEBUG)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
-
 aix:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
 		"CC=$(AIX_CC)" "CFLAGS=$(AIX_CFLAGS) $(AIX_OPT)" "MLIB=$(AIX_MLIB)" "XLIB=$(AIX_XLIB)"
@@ -485,7 +464,7 @@ $(MSUB): $(MSUB).c
 	$(CC) $(CFLAGS) $(MSUB).c -o $(MSUB)
 
 install:
-	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews or install-suncmw"
+	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews"
 
 install-binaries:
 	if [ ! -d $(INSTALLDIR)/. ]; then mkdir -p $(INSTALLDIR); fi
@@ -515,33 +494,6 @@ install-hppa: hppa install-binaries install-libdir
 install-sun: sun install-binaries install-libdir
 
 install-solaris: solaris install-binaries install-libdir
-
-install-suncmw: sun
-	cp client/xpilot $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv a=all $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f=file_dac_read      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+file_dac_write     $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+file_downgrade_il  $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+file_mac_read      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+file_mac_write     $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+file_upgrade_il    $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+net_allowaccess    $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+net_boot           $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+net_broadcast      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+net_mac_override   $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv f+win_admin          $(INSTALLDIR)/xpilot-$(VERSION).suncmw
-	chpriv a=all $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f=file_dac_read      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+file_dac_write     $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+file_downgrade_il  $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+file_mac_read      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+file_mac_write     $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+file_upgrade_il    $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+net_allowaccess    $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+net_boot           $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+net_broadcast      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
-	chpriv f+net_mac_override   $(INSTALLDIR)/xpilots-$(VERSION).suncmw
 
 install-sonynews: sonynews install-binaries install-libdir
 
@@ -586,36 +538,39 @@ depend-replay:
 
 # DO NOT DELETE
 checknames.o: checknames.c version.h config.h const.h types.h error.h \
- pack.h checknames.h
+ pack.h checknames.h commonproto.h
 config.o: config.c version.h config.h
-cmw.o: cmw.c
 error.o: error.c version.h config.h const.h types.h error.h \
- portability.h
+ portability.h commonproto.h
 list.o: list.c list.h
 math.o: math.c version.h config.h const.h types.h error.h \
  commonproto.h
 net.o: net.c version.h config.h const.h types.h error.h net.h \
  socklib.h packet.h bit.h
-portability.o: portability.c version.h config.h portability.h
+portability.o: portability.c version.h config.h portability.h \
+ commonproto.h types.h
 randommt.o: randommt.c
 shipshape.o: shipshape.c version.h config.h const.h types.h draw.h \
  error.h
-socklib.o: socklib.c version.h socklib.h
+socklib.o: socklib.c version.h socklib.h commonproto.h types.h
 strcasecmp.o: strcasecmp.c
-strdup.o: strdup.c commonproto.h types.h
+strdup.o: strdup.c error.h commonproto.h types.h
+strlcpy.o: strlcpy.c commonproto.h types.h
+xpmemory.o: xpmemory.c error.h commonproto.h types.h
 about.o: about.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/keys.h paint.h client.h \
  ../common/draw.h ../common/item.h xinit.h widget.h configure.h \
  ../common/error.h netclient.h dbuff.h protoclient.h
 blockbitmaps.o: blockbitmaps.c blockbitmaps.h gfx2d.h \
  ../common/error.h ../common/const.h ../common/types.h paint.h \
- client.h ../common/draw.h ../common/item.h paintdata.h
+ client.h ../common/draw.h ../common/item.h ../common/portability.h \
+ paintdata.h
 caudio.o: caudio.c ../common/version.h
 client.o: client.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/setup.h \
  ../common/error.h ../common/rules.h ../common/bit.h netclient.h \
  paint.h client.h ../common/draw.h ../common/item.h xinit.h \
- protoclient.h ../common/portability.h talk.h
+ protoclient.h ../common/portability.h talk.h ../common/commonproto.h
 colors.o: colors.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h xinit.h ../common/error.h dbuff.h protoclient.h
@@ -634,22 +589,24 @@ default.o: default.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h ../common/pack.h ../common/bit.h ../common/keys.h \
  netclient.h xinit.h ../common/error.h protoclient.h ../common/audio.h \
- talk.h ../common/commonproto.h
+ ../common/commonproto.h ../common/portability.h talk.h default.h \
+ ../common/checknames.h
 gfx2d.o: gfx2d.c ../common/version.h ../common/config.h gfx2d.h \
  ../common/error.h ../common/const.h ../common/types.h \
- ../common/portability.h
+ ../common/portability.h ../common/commonproto.h
 gfx3d.o: gfx3d.c gfx3d.h ../common/const.h ../common/types.h
 guimap.o: guimap.c gfx2d.h ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h texture.h \
  paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- record.h xinit.h protoclient.h blockbitmaps.h
+ paintmacros.h record.h xinit.h protoclient.h blockbitmaps.h guimap.h
 guiobjects.o: guiobjects.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h texture.h \
  paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- record.h xinit.h protoclient.h ../common/portability.h blockbitmaps.h \
- gfx2d.h
+ paintmacros.h record.h xinit.h protoclient.h ../common/portability.h \
+ blockbitmaps.h gfx2d.h ../common/wreckshape.h ../common/astershape.h \
+ guiobjects.h
 join.o: join.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h client.h \
  ../common/draw.h ../common/item.h netclient.h protoclient.h \
@@ -658,34 +615,37 @@ netclient.o: netclient.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/net.h \
  ../common/socklib.h netclient.h ../common/setup.h ../common/packet.h \
  ../common/bit.h paint.h client.h ../common/draw.h ../common/item.h \
- xinit.h ../common/pack.h protoclient.h ../common/portability.h talk.h
+ xinit.h ../common/pack.h protoclient.h ../common/portability.h talk.h \
+ ../common/commonproto.h
 paint.o: paint.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h dbuff.h \
  texture.h paint.h client.h ../common/draw.h ../common/item.h \
  paintdata.h record.h xinit.h blockbitmaps.h gfx2d.h \
- ../common/portability.h
+ ../common/portability.h ../common/commonproto.h
 paintdata.o: paintdata.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  client.h ../common/draw.h ../common/item.h ../common/setup.h \
  ../common/rules.h paint.h paintdata.h record.h xinit.h protoclient.h \
- dbuff.h
+ dbuff.h ../common/commonproto.h
 painthud.o: painthud.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h texture.h \
  paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- record.h xinit.h protoclient.h blockbitmaps.h gfx2d.h
+ paintmacros.h record.h xinit.h protoclient.h blockbitmaps.h gfx2d.h \
+ ../common/commonproto.h
 paintmap.o: paintmap.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h texture.h \
  paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- record.h xinit.h protoclient.h guimap.h
+ paintmacros.h record.h xinit.h protoclient.h guimap.h
 paintobjects.o: paintobjects.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h texture.h \
  paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- record.h xinit.h protoclient.h ../common/portability.h guiobjects.h \
- gfx3d.h blockbitmaps.h gfx2d.h
+ paintmacros.h record.h xinit.h protoclient.h ../common/portability.h \
+ guiobjects.h gfx3d.h blockbitmaps.h gfx2d.h ../common/wreckshape.h \
+ ../common/astershape.h
 paintradar.o: paintradar.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/keys.h ../common/rules.h ../common/setup.h paint.h client.h \
@@ -695,17 +655,13 @@ query.o: query.c ../common/version.h ../common/config.h \
 record.o: record.c ../common/version.h ../common/config.h \
  ../common/error.h ../common/const.h ../common/types.h client.h \
  ../common/draw.h ../common/item.h paint.h ../common/setup.h record.h \
- recordfmt.h xpmread.h ../common/commonproto.h
-sim.o: sim.c ../common/version.h ../common/config.h ../common/const.h \
- ../common/types.h ../common/setup.h ../common/error.h \
- ../common/rules.h ../common/bit.h netclient.h paint.h client.h \
- ../common/draw.h ../common/item.h xinit.h ../common/pack.h \
- protoclient.h ../common/portability.h
+ recordfmt.h xpmread.h ../common/commonproto.h xinit.h
+sim.o: sim.c
 syslimit.o: syslimit.c
 talk.o: talk.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h xinit.h ../common/error.h netclient.h protoclient.h \
- ../common/keys.h ../common/bit.h
+ ../common/keys.h ../common/bit.h ../common/commonproto.h
 talkmacros.o: talkmacros.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h client.h ../common/draw.h \
  ../common/item.h netclient.h ../common/setup.h ../common/bit.h \
@@ -714,8 +670,9 @@ talkmacros.o: talkmacros.c ../common/version.h ../common/config.h \
 textinterface.o: textinterface.c ../common/version.h \
  ../common/config.h ../common/const.h ../common/types.h \
  ../common/pack.h ../common/bit.h ../common/error.h \
- ../common/socklib.h ../common/net.h protoclient.h datagram.h \
- ../common/portability.h ../common/checknames.h connectparam.h
+ ../common/socklib.h ../common/net.h datagram.h \
+ ../common/portability.h ../common/checknames.h connectparam.h \
+ protoclient.h ../common/commonproto.h
 texture.o: texture.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h xinit.h ../common/error.h xpmread.h texture.h \
@@ -737,13 +694,13 @@ xeventhandlers.o: xeventhandlers.c ../common/version.h \
  client.h ../common/draw.h ../common/item.h xinit.h ../common/keys.h \
  ../common/packet.h ../common/bit.h ../common/setup.h netclient.h \
  widget.h ../common/error.h record.h ../common/portability.h \
- paintdata.h talk.h configure.h
+ paintdata.h talk.h configure.h xeventhandlers.h
 xevent.o: xevent.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h xinit.h ../common/keys.h ../common/packet.h \
  ../common/bit.h ../common/setup.h netclient.h widget.h \
  ../common/error.h record.h ../common/portability.h paintdata.h talk.h \
- configure.h xeventhandlers.h
+ configure.h xeventhandlers.h xevent.h
 xinit.o: xinit.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/keys.h icon.h paint.h \
  client.h ../common/draw.h ../common/item.h xinit.h widget.h \
@@ -761,31 +718,41 @@ xinit.o: xinit.c ../common/version.h ../common/config.h \
 xpilot.o: xpilot.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h ../common/pack.h ../common/bit.h \
  ../common/error.h ../common/socklib.h ../common/net.h connectparam.h \
- protoclient.h ../common/portability.h ../common/checknames.h
+ protoclient.h ../common/portability.h ../common/checknames.h \
+ ../common/commonproto.h
 xpmread.o: xpmread.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
  ../common/item.h xinit.h ../common/error.h ../common/commonproto.h \
  xpmread.h
+asteroid.o: asteroid.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h ../common/list.h global.h \
+ object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h proto.h saudio.h \
+ objpos.h asteroid.h
 cannon.o: cannon.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h proto.h score.h saudio.h \
- ../common/error.h objpos.h walls.h cannon.h netserver.h \
- ../common/commonproto.h
+ click.h map.h ../common/rules.h proto.h objpos.h cannon.h saudio.h
+cell.o: cell.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h ../common/error.h
 cmdline.o: cmdline.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h \
- ../common/portability.h ../common/commonproto.h
+ ../common/portability.h ../common/checknames.h \
+ ../common/commonproto.h
 collision.o: collision.c ../common/version.h ../common/config.h \
- ../common/const.h ../common/types.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
- ../common/pack.h ../common/error.h objpos.h
+ ../common/const.h ../common/types.h ../common/list.h global.h \
+ object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h proto.h score.h \
+ saudio.h netserver.h ../common/pack.h ../common/error.h \
+ ../common/portability.h objpos.h asteroid.h
 command.o: command.c ../common/version.h ../common/const.h \
  ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
  ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
- proto.h ../common/error.h netserver.h
+ proto.h ../common/error.h netserver.h ../common/commonproto.h
 contact.o: contact.c ../common/version.h ../common/config.h \
  ../common/types.h ../common/const.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -797,6 +764,11 @@ event.o: event.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h
+fileparser.o: fileparser.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h \
+ ../common/commonproto.h
 frame.o: frame.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -811,15 +783,22 @@ item.o: item.c ../common/version.h ../common/config.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h saudio.h score.h netserver.h \
  ../common/error.h objpos.h
+laser.o: laser.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h ../common/list.h global.h \
+ object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h proto.h score.h \
+ saudio.h ../common/error.h ../common/portability.h objpos.h \
+ asteroid.h
 map.o: map.c ../common/version.h ../common/config.h ../common/const.h \
  ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
  ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
- proto.h ../common/error.h
+ proto.h ../common/error.h ../common/commonproto.h
 metaserver.o: metaserver.c ../common/config.h ../common/version.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h ../common/socklib.h \
- ../common/pack.h metaserver.h saudio.h ../common/error.h netserver.h
+ ../common/pack.h metaserver.h saudio.h ../common/error.h netserver.h \
+ ../common/commonproto.h
 netserver.o: netserver.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -836,6 +815,12 @@ option.o: option.c ../common/version.h ../common/config.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h \
  ../common/commonproto.h
+parser.o: parser.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h defaults.h ../common/error.h \
+ ../common/portability.h ../common/checknames.h \
+ ../common/commonproto.h
 play.o: play.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -849,12 +834,14 @@ robot.o: robot.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
- ../common/pack.h robot.h ../common/error.h server.h
+ ../common/pack.h robot.h ../common/error.h server.h \
+ ../common/commonproto.h
 robotdef.o: robotdef.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
- ../common/pack.h robot.h ../common/error.h
+ ../common/pack.h robot.h ../common/error.h ../common/portability.h \
+ ../common/commonproto.h
 rules.o: rules.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -868,6 +855,10 @@ sched.o: sched.c ../common/version.h ../common/config.h \
  global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
  ../common/item.h click.h map.h ../common/rules.h \
  ../common/portability.h
+score.o: score.c ../common/version.h ../common/config.h \
+ ../common/const.h ../common/types.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h netserver.h
 server.o: server.c ../common/version.h ../common/config.h \
  ../common/types.h ../common/const.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
@@ -888,15 +879,15 @@ update.o: update.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h proto.h score.h saudio.h objpos.h \
- cannon.h
+ cannon.h asteroid.h
 walls.o: walls.c ../common/version.h ../common/config.h \
  ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
- ../common/pack.h ../common/error.h walls.h objpos.h
+ click.h map.h ../common/rules.h proto.h score.h saudio.h \
+ ../common/error.h walls.h objpos.h
 wildmap.o: wildmap.c ../common/portability.h ../common/const.h \
- ../common/types.h ../common/error.h map.h ../common/rules.h \
- ../common/item.h
+ ../common/types.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h proto.h
 xp-replay.o: xp-replay.c ../client/recordfmt.h ../common/item.h \
  buttons.h xp-replay.h ../client/items/itemRocketPack.xbm \
  ../client/items/itemCloakingDevice.xbm \

@@ -1,4 +1,4 @@
-/* $Id: map.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: map.h,v 5.3 2001/06/05 16:57:11 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,6 +65,7 @@
 #define DOWN_GRAV		24
 #define RIGHT_GRAV		25
 #define LEFT_GRAV		26
+#define FRICTION		27
 #define BASE_ATTRACTOR		127
 
 #define SPACE_BIT		(1 << SPACE)
@@ -94,6 +95,7 @@
 #define DOWN_GRAV_BIT           (1 << DOWN_GRAV)
 #define RIGHT_GRAV_BIT          (1 << RIGHT_GRAV)
 #define LEFT_GRAV_BIT           (1 << LEFT_GRAV)
+#define FRICTION_BIT		(1 << FRICTION)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)
@@ -152,6 +154,13 @@ typedef struct {
     int		limit;		/* max number of elements per player/cannon. */
 } item_t;
 
+typedef struct {
+    DFLOAT	prob;		/* Probability [0..1] for asteroid to appear */
+    int		max;		/* Max on world at a given time */
+    int		num;		/* Number active right now */
+    int		chance;		/* Chance [0..127] for asteroid to appear */
+} asteroid_t;
+
 typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;
 
 typedef struct {
@@ -165,9 +174,10 @@ typedef struct {
 
 typedef struct {
     ipos		pos;
-    bool		have;		/* true if this treasure has ball in it */
-    unsigned short	team;		/* team of this treasure */
-    int 		destroyed;	/* number of times this treasure destroyed */
+    bool		have;	/* true if this treasure has ball in it */
+    unsigned short	team;	/* team of this treasure */
+    int 		destroyed;	/* how often this treasure destroyed */
+    bool		empty;	/* true if this treasure never had a ball in it */
 } treasure_t;
 
 typedef struct {
@@ -185,6 +195,7 @@ typedef struct {
     int		NumRobots;		/* Number of robot players */
     int		NumBases;		/* Number of bases owned */
     int		NumTreasures;		/* Number of treasures owned */
+    int		NumEmptyTreasures;	/* Number of empty treasures owned */
     int		TreasuresDestroyed;	/* Number of destroyed treasures */
     int		TreasuresLeft;		/* Number of treasures left */
 } team_t;
@@ -212,6 +223,8 @@ typedef struct {
 
     item_t		items[NUM_ITEMS];
 
+    asteroid_t		asteroids;
+
     team_t		teams[MAX_TEAMS];
 
     int			NumTeamBases;      /* How many 'different' teams are allowed */
@@ -234,7 +247,6 @@ typedef struct {
     target_t		*targets;
     int			NumItemConcentrators;
     item_concentrator_t	*itemConcentrators;
-    long		nextEvent;
 } World_map;
 
 #endif

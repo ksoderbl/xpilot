@@ -1,4 +1,4 @@
-/* $Id: Splash.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: Splash.cpp,v 5.1 2001/05/27 20:40:46 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is the standard splash component from MSDEV enhanced to allow	*
 *  displaying progress messages in the lower left corner.					*
 *																			*
-*  $Id: Splash.cpp,v 5.0 2001/04/07 20:00:59 dik Exp $							*
+*  $Id: Splash.cpp,v 5.1 2001/05/27 20:40:46 dik Exp $							*
 \***************************************************************************/
 // CG: This file was added by the Splash Screen component.
 
@@ -248,6 +248,6 @@ void CSplashWnd::ShowMessage(const CString& cs)
 	c_pSplashWnd->ReleaseDC(dc);
 
 #ifdef	_DEBUG
-	Sleep(1000);
+//	Sleep(1000);
 #endif
 }

@@ -1,4 +1,4 @@
-/* $Id: debugaudio.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: debugaudio.c,v 5.1 2001/05/12 18:07:19 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -54,7 +54,7 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
 	    filename, type, volume, private);
 }
 
-void audioDeviceEvents()
+void audioDeviceEvents(void)
 {
     /* printf("debug audio: events\n"); */
 }

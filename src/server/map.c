@@ -1,4 +1,4 @@
-/* $Id: map.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: map.c,v 5.11 2001/06/05 16:57:11 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,15 +47,12 @@
 #include "map.h"
 #include "bit.h"
 #include "error.h"
+#include "commonproto.h"
 
 char map_version[] = VERSION;
 
 #define GRAV_RANGE  10
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: map.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 
 /*
@@ -215,7 +212,27 @@ static void Alloc_map(void)
 }
 
 
-static void Map_error(int line_num)
+static void Map_extra_error(int line_num)
+{
+#ifndef SILENT
+    static int prev_line_num, error_count;
+    const int max_error = 5;
+
+    if (line_num > prev_line_num) {
+	prev_line_num = line_num;
+	if (++error_count <= max_error) {
+	    xpprintf("Map file contains extranous characters on line %d\n",
+		     line_num);
+	}
+	else if (error_count - max_error == 1) {
+	    xpprintf("And so on...\n");
+	}
+    }
+#endif
+}
+
+
+static void Map_missing_error(int line_num)
 {
 #ifndef SILENT
     static int prev_line_num, error_count;
@@ -234,16 +251,18 @@ static void Map_error(int line_num)
 }
 
 
-int Grok_map(void)
+bool Grok_map(void)
 {
     int i, x, y, c;
     char *s;
 
     Init_map();
 
-    if (mapWidth > MAX_MAP_SIZE || mapHeight > MAX_MAP_SIZE) {
+    if (mapWidth <= 0 || mapWidth > MAX_MAP_SIZE ||
+	mapHeight <= 0 || mapHeight > MAX_MAP_SIZE) {
 	errno = 0;
-	error("mapWidth or mapHeight exceeds map size limit %d", MAX_MAP_SIZE);
+	error("mapWidth or mapHeight exceeds map size limit [1, %d]",
+		MAX_MAP_SIZE);
 	free(mapData);
 	mapData = NULL;
     } else {
@@ -258,10 +277,8 @@ int Grok_map(void)
     World.width = World.x * BLOCK_SZ;
     World.height = World.y * BLOCK_SZ;
     World.hypotenuse = (int) LENGTH(World.width, World.height);
-    strncpy(World.name, mapName, sizeof(World.name) - 1);
-    World.name[sizeof(World.name) - 1] = '\0';
-    strncpy(World.author, mapAuthor, sizeof(World.author) - 1);
-    World.author[sizeof(World.author) - 1] = '\0';
+    strlcpy(World.name, mapName, sizeof(World.name));
+    strlcpy(World.author, mapAuthor, sizeof(World.author));
 
     if (!mapData) {
 	errno = 0;
@@ -279,6 +296,7 @@ int Grok_map(void)
 
     Set_world_rules();
     Set_world_items();
+    Set_world_asteroids();
 
     if (BIT(World.rules->mode, TEAM_PLAY|TIMING) == (TEAM_PLAY|TIMING)) {
 	error("Cannot teamplay while in race mode -- ignoring teamplay");
@@ -306,7 +324,7 @@ int Grok_map(void)
 	    if (c == '\0' || c == EOF) {
 		if (x < World.x) {
 		    /* not enough map data on this line */
-		    Map_error(World.y - y);
+		    Map_missing_error(World.y - y);
 		    c = ' ';
 		} else {
 		    c = '\n';
@@ -314,7 +332,7 @@ int Grok_map(void)
 	    } else {
 		if (c == '\n' && x < World.x) {
 		    /* not enough map data on this line */
-		    Map_error(World.y - y);
+		    Map_missing_error(World.y - y);
 		    c = ' ';
 		} else {
 		    s++;
@@ -324,9 +342,10 @@ int Grok_map(void)
 	if (x >= World.x || c == '\n') {
 	    y--; x = -1;
 	    if (c != '\n') {			/* Get rest of line */
-		error("Map file contains extranous characters");
-		while (c != '\n' && c != EOF)	/* from file. */
-		    fputc(c = *s++, stderr);
+		Map_extra_error(World.y - y);
+		while (c != '\n' && c != EOF) {
+		    c = *s++;
+		}
 	    }
 	    continue;
 	}
@@ -339,10 +358,8 @@ int Grok_map(void)
 	    World.NumCannons++;
 	    break;
 	case '*':
-	    if (BIT(World.rules->mode, TEAM_PLAY))
-		World.NumTreasures++;
-	    else
-		World.block[x][y] = ' ';
+	case '^':
+	    World.NumTreasures++;
 	    break;
 	case '#':
 	    World.NumFuels++;
@@ -451,19 +468,27 @@ int Grok_map(void)
     } else {
 	error("WARNING: map has no bases!");
     }
-    World.NumCannons = 0;		/* Now reset all counters since */
-    World.NumFuels = 0;			/* we will recount everything */
-    World.NumGravs = 0;			/* (and reuse these counters) */
-    World.NumWormholes = 0;		/* while inserting the objects */
-    World.NumTreasures = 0;		/* into structures. */
+
+    /*
+     * Now reset all counters since we will recount everything
+     * and reuse these counters while inserting the objects
+     * into structures.
+     */
+    World.NumCannons = 0;
+    World.NumFuels = 0;
+    World.NumGravs = 0;
+    World.NumWormholes = 0;
+    World.NumTreasures = 0;
     World.NumTargets = 0;
     World.NumBases = 0;
     World.NumItemConcentrators = 0;
-    for (i=0; i<MAX_TEAMS; i++) {
+
+    for (i = 0; i < MAX_TEAMS; i++) {
 	World.teams[i].NumMembers = 0;
 	World.teams[i].NumRobots = 0;
 	World.teams[i].NumBases = 0;
 	World.teams[i].NumTreasures = 0;
+	World.teams[i].NumEmptyTreasures = 0;
 	World.teams[i].TreasuresDestroyed = 0;
 	World.teams[i].TreasuresLeft = 0;
     }
@@ -588,12 +613,14 @@ int Grok_map(void)
 		    break;
 
 		case '*':
+		case '^':
 		    line[y] = TREASURE;
 		    itemID[y] = World.NumTreasures;
 		    World.treasures[World.NumTreasures].pos.x = x;
 		    World.treasures[World.NumTreasures].pos.y = y;
 		    World.treasures[World.NumTreasures].have = false;
 		    World.treasures[World.NumTreasures].destroyed = 0;
+		    World.treasures[World.NumTreasures].empty = (c == '^');
 		    /*
 		     * Determining which team it belongs to is done later,
 		     * in Find_closest_team().
@@ -768,6 +795,10 @@ int Grok_map(void)
 		    }
 		    break;
 
+		case 'z':
+		    line[y] = FRICTION;
+		    break;
+
 		case 'b':
 		    line[y] = DECOR_FILLED;
 		    break;
@@ -800,7 +831,7 @@ int Grok_map(void)
 	    int i;
 
 	    xpprintf("Inconsistent use of wormholes, removing them.\n");
-	    for (i=0; i<World.NumWormholes; i++)
+	    for (i = 0; i < World.NumWormholes; i++)
 		{
 			World.block
 				[World.wormHoles[i].pos.x]
@@ -829,12 +860,10 @@ int Grok_map(void)
 
 	/*
 	 * Determine which team a treasure belongs to.
-	 * NOTE: Should check so that all teams have one, and only one,
-	 * treasure.
 	 */
 	if (BIT(World.rules->mode, TEAM_PLAY)) {
 	    unsigned short team = TEAM_NOT_SET;
-	    for (i=0; i<World.NumTreasures; i++) {
+	    for (i = 0; i < World.NumTreasures; i++) {
 		team = Find_closest_team(World.treasures[i].pos.x,
 					 World.treasures[i].pos.y);
 		World.treasures[i].team = team;
@@ -842,10 +871,14 @@ int Grok_map(void)
 		    error("Couldn't find a matching team for the treasure.");
 		} else {
 		    World.teams[team].NumTreasures++;
-		    World.teams[team].TreasuresLeft++;
+		    if (!World.treasures[i].empty) {
+			World.teams[team].TreasuresLeft++;
+		    } else {
+			World.teams[team].NumEmptyTreasures++;
+		    }
 		}
 	    }
-	    for (i=0; i<World.NumTargets; i++) {
+	    for (i = 0; i < World.NumTargets; i++) {
 		team = Find_closest_team(World.targets[i].pos.x,
 					 World.targets[i].pos.y);
 		if (team == TEAM_NOT_SET) {
@@ -854,7 +887,7 @@ int Grok_map(void)
 		World.targets[i].team = team;
 	    }
 	    if (teamCannons) {
-		for (i=0; i<World.NumCannons; i++) {
+		for (i = 0; i < World.NumCannons; i++) {
 		    team = Find_closest_team(World.cannon[i].blk_pos.x,
 					     World.cannon[i].blk_pos.y);
 		    if (team == TEAM_NOT_SET) {
@@ -864,7 +897,7 @@ int Grok_map(void)
 		}
 	    }
 	    if (teamFuel) {
-		for (i=0; i<World.NumFuels; i++) {
+		for (i = 0; i < World.NumFuels; i++) {
 		    team = Find_closest_team(World.fuel[i].blk_pos.x,
 					     World.fuel[i].blk_pos.y);
 		    if (team == TEAM_NOT_SET) {
@@ -903,11 +936,20 @@ int Grok_map(void)
  */
 static void Generate_random_map(void)
 {
-    extern int Wildmap(World_map *world, char **data);
+    int		width, height;
 
     edgeWrap = TRUE;
+    width = World.x;
+    height = World.y;
 
-    Wildmap(&World, &mapData);
+    Wildmap(width, height, World.name, World.author, &mapData, &width, &height);
+
+    World.x = width;
+    World.y = height;
+    World.diagonal = (int) LENGTH(World.x, World.y);
+    World.width = World.x * BLOCK_SZ;
+    World.height = World.y * BLOCK_SZ;
+    World.hypotenuse = (int) LENGTH(World.width, World.height);
 }
 
 
@@ -922,7 +964,7 @@ void Find_base_direction(void)
 {
     int	i;
 
-    for (i=0; i<World.NumBases; i++) {
+    for (i = 0; i < World.NumBases; i++) {
 	int	x = World.base[i].pos.x,
 		y = World.base[i].pos.y,
 		dir,
@@ -1006,7 +1048,7 @@ static unsigned short Find_closest_team(int posx, int posy)
     int i;
     DFLOAT closest = FLT_MAX, l;
 
-    for (i=0; i<World.NumBases; i++) {
+    for (i = 0; i < World.NumBases; i++) {
 	if (World.base[i].team == TEAM_NOT_SET)
 	    continue;
 

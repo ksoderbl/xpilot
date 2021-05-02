@@ -1,4 +1,4 @@
-/* $Id: event.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: event.c,v 5.4 2001/06/02 21:02:42 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -45,10 +45,6 @@
 
 char event_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: event.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}
 
@@ -66,18 +62,18 @@ static void Refuel(int ind)
     DFLOAT l, dist = 1e9;
 
 
-    if (!BIT(pl->have, OBJ_REFUEL))
+    if (!BIT(pl->have, HAS_REFUEL))
 	return;
 
-    CLR_BIT(pl->used, OBJ_REFUEL);
+    CLR_BIT(pl->used, HAS_REFUEL);
     for (i=0; i<World.NumFuels; i++) {
 	if (World.block[World.fuel[i].blk_pos.x]
 		       [World.fuel[i].blk_pos.y] == FUEL) {
 	    l = Wrap_length(pl->pos.x - World.fuel[i].pix_pos.x,
 			    pl->pos.y - World.fuel[i].pix_pos.y);
-	    if (BIT(pl->used, OBJ_REFUEL) == 0
+	    if (BIT(pl->used, HAS_REFUEL) == 0
 		|| l < dist) {
-		SET_BIT(pl->used, OBJ_REFUEL);
+		SET_BIT(pl->used, HAS_REFUEL);
 		pl->fs = i;
 		dist = l;
 	    }
@@ -94,18 +90,18 @@ static void Repair(int ind)
     DFLOAT x, y;
     target_t *targ = World.targets;
 
-    if (!BIT(pl->have, OBJ_REPAIR))
+    if (!BIT(pl->have, HAS_REPAIR))
 	return;
 
-    CLR_BIT(pl->used, OBJ_REPAIR);
+    CLR_BIT(pl->used, HAS_REPAIR);
     for (i = 0; i < World.NumTargets; i++, targ++) {
 	if (targ->team == pl->team
 	    && targ->dead_time <= 0) {
 	    x = targ->pos.x*BLOCK_SZ + BLOCK_SZ/2;
 	    y = targ->pos.y*BLOCK_SZ + BLOCK_SZ/2;
 	    l = Wrap_length(pl->pos.x - x, pl->pos.y - y);
-	    if (BIT(pl->used, OBJ_REPAIR) == 0 || l < dist) {
-		SET_BIT(pl->used, OBJ_REPAIR);
+	    if (BIT(pl->used, HAS_REPAIR) == 0 || l < dist) {
+		SET_BIT(pl->used, HAS_REPAIR);
 		pl->repair_target = i;
 		dist = l;
 	    }
@@ -131,7 +127,7 @@ bool team_dead(int team)
 /*
  * Return true if a lock is allowed.
  */
-bool Player_lock_allowed(int ind, int lock)
+static bool Player_lock_allowed(int ind, int lock)
 {
     player		*pl = Players[ind];
 
@@ -242,7 +238,7 @@ void Pause_player(int ind, int onoff)
 	SET_BIT(pl->status, PAUSE);
 	pl->mychar = 'P';
 	updateScores = true;
-	if (BIT(pl->have, OBJ_BALL))
+	if (BIT(pl->have, HAS_BALL))
 	    Detach_ball(ind, -1);
     }
     else if (onoff == 0 && BIT(pl->status, PAUSE)) { /* Turn pause mode off */
@@ -318,7 +314,7 @@ int Handle_keyboard(int ind)
 	/*
 	 * Allow these functions before a round has started.
 	 */
-	if (rdelay > 0 && pressed) {
+	if (round_delay > 0 && pressed) {
 	    switch (key) {
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
@@ -403,7 +399,7 @@ int Handle_keyboard(int ind)
 	}
 
 	/* allow these functions while you're phased */
-	if (BIT(pl->used, OBJ_PHASING_DEVICE) && pressed) {
+	if (BIT(pl->used, HAS_PHASING_DEVICE) && pressed) {
 	    switch (key) {
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
@@ -508,10 +504,10 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_TOGGLE_COMPASS:
-		if (!BIT(pl->have, OBJ_COMPASS))
+		if (!BIT(pl->have, HAS_COMPASS))
 		    break;
-		TOGGLE_BIT(pl->used, OBJ_COMPASS);
-		if (BIT(pl->used, OBJ_COMPASS) == 0) {
+		TOGGLE_BIT(pl->used, HAS_COMPASS);
+		if (BIT(pl->used, HAS_COMPASS) == 0) {
 		    break;
 		}
 		/*
@@ -584,9 +580,9 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_SHIELD:
-		if (BIT(pl->have, OBJ_SHIELD)) {
-		    SET_BIT(pl->used, OBJ_SHIELD);
-		    CLR_BIT(pl->used, OBJ_LASER);	/* don't remove! */
+		if (BIT(pl->have, HAS_SHIELD)) {
+		    SET_BIT(pl->used, HAS_SHIELD);
+		    CLR_BIT(pl->used, HAS_LASER);	/* don't remove! */
 		}
 		break;
 
@@ -595,9 +591,9 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_FIRE_SHOT:
-		if (!BIT(pl->used, OBJ_SHIELD|OBJ_SHOT)
-		    && BIT(pl->have, OBJ_SHOT)) {
-		    SET_BIT(pl->used, OBJ_SHOT);
+		if (!BIT(pl->used, HAS_SHIELD|HAS_SHOT)
+		    && BIT(pl->have, HAS_SHOT)) {
+		    SET_BIT(pl->used, HAS_SHOT);
 		    Fire_normal_shots(ind);
 		}
 		break;
@@ -618,8 +614,8 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_FIRE_LASER:
-		if (pl->item[ITEM_LASER] > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
-		    SET_BIT(pl->used, OBJ_LASER);
+		if (pl->item[ITEM_LASER] > 0 && BIT(pl->used, HAS_SHIELD) == 0) {
+		    SET_BIT(pl->used, HAS_LASER);
 		}
 		break;
 
@@ -743,18 +739,18 @@ int Handle_keyboard(int ind)
 	    }
 
 	    case KEY_TOGGLE_AUTOPILOT:
-		if (BIT(pl->have, OBJ_AUTOPILOT))
-		    Autopilot(ind, !BIT(pl->used, OBJ_AUTOPILOT));
+		if (BIT(pl->have, HAS_AUTOPILOT))
+		    Autopilot(ind, !BIT(pl->used, HAS_AUTOPILOT));
 		break;
 
 	    case KEY_EMERGENCY_THRUST:
-		if (BIT(pl->have, OBJ_EMERGENCY_THRUST))
-		    Emergency_thrust(ind,!BIT(pl->used, OBJ_EMERGENCY_THRUST));
+		if (BIT(pl->have, HAS_EMERGENCY_THRUST))
+		    Emergency_thrust(ind,!BIT(pl->used, HAS_EMERGENCY_THRUST));
 		break;
 
 	    case KEY_EMERGENCY_SHIELD:
-		if (BIT(pl->have, OBJ_EMERGENCY_SHIELD))
-		    Emergency_shield(ind,!BIT(pl->used, OBJ_EMERGENCY_SHIELD));
+		if (BIT(pl->have, HAS_EMERGENCY_SHIELD))
+		    Emergency_shield(ind,!BIT(pl->used, HAS_EMERGENCY_SHIELD));
 		break;
 
 	    case KEY_DROP_MINE:
@@ -771,7 +767,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_TURN_LEFT:
 	    case KEY_TURN_RIGHT:
-		if (BIT(pl->used, OBJ_AUTOPILOT))
+		if (BIT(pl->used, HAS_AUTOPILOT))
 		    Autopilot(ind, 0);
 		pl->turnacc = 0;
 		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
@@ -823,7 +819,7 @@ int Handle_keyboard(int ind)
 		    if (BIT(pl->status, HOVERPAUSE))
 			break;
 
-		    if (BIT(pl->used, OBJ_AUTOPILOT))
+		    if (BIT(pl->used, HAS_AUTOPILOT))
 			Autopilot(ind, 0);
 
 		    /* toggle pause mode */
@@ -847,16 +843,16 @@ int Handle_keyboard(int ind)
 			CLR_BIT(pl->status, SELF_DESTRUCT);
 			SET_BIT(pl->status, HOVERPAUSE);
 
-			if (BIT(pl->used, OBJ_EMERGENCY_THRUST))
+			if (BIT(pl->used, HAS_EMERGENCY_THRUST))
 			    Emergency_thrust(ind, 0);
 
-			if (BIT(pl->used, OBJ_EMERGENCY_SHIELD))
+			if (BIT(pl->used, HAS_EMERGENCY_SHIELD))
 			    Emergency_shield(ind, 0);
 
-			if (!BIT(pl->used, OBJ_AUTOPILOT))
+			if (!BIT(pl->used, HAS_AUTOPILOT))
 			    Autopilot(ind, 1);
 
-			if (BIT(pl->used, OBJ_PHASING_DEVICE))
+			if (BIT(pl->used, HAS_PHASING_DEVICE))
 			    Phasing(ind, 0);
 
 			/*
@@ -866,13 +862,13 @@ int Handle_keyboard(int ind)
 			 * cloaking).
 			 */
 			pl->used &= ~USED_KILL;
-			if (BIT(pl->have, OBJ_SHIELD))
-			    SET_BIT(pl->used, OBJ_SHIELD);
+			if (BIT(pl->have, HAS_SHIELD))
+			    SET_BIT(pl->used, HAS_SHIELD);
 		    } else if (pl->count <= 0) {
 			Autopilot(ind, 0);
 			CLR_BIT(pl->status, HOVERPAUSE);
-			if (!BIT(pl->have, OBJ_SHIELD)) {
-			    CLR_BIT(pl->used, OBJ_SHIELD);
+			if (!BIT(pl->have, HAS_SHIELD)) {
+			    CLR_BIT(pl->used, HAS_SHIELD);
 			}
 		    }
 		    break;
@@ -881,7 +877,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_SWAP_SETTINGS:
 		if (   BIT(pl->status, HOVERPAUSE)
-		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    || BIT(pl->used, HAS_AUTOPILOT))
 		    break;
 		if (pl->turnacc == 0.0) {
 		    SWAP(pl->power, pl->power_s);
@@ -899,27 +895,27 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_CONNECTOR:
-		if (BIT(pl->have, OBJ_CONNECTOR))
-		    SET_BIT(pl->used, OBJ_CONNECTOR);
+		if (BIT(pl->have, HAS_CONNECTOR))
+		    SET_BIT(pl->used, HAS_CONNECTOR);
 		break;
 
 	    case KEY_PRESSOR_BEAM:
-		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
+		if (BIT(pl->have, HAS_TRACTOR_BEAM)) {
 		    pl->tractor_is_pressor = true;
-		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		    SET_BIT(pl->used, HAS_TRACTOR_BEAM);
 		}
 		break;
 
 	    case KEY_TRACTOR_BEAM:
-		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
+		if (BIT(pl->have, HAS_TRACTOR_BEAM)) {
 		    pl->tractor_is_pressor = false;
-		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		    SET_BIT(pl->used, HAS_TRACTOR_BEAM);
 		}
 		break;
 
 	    case KEY_INCREASE_POWER:
 		if (   BIT(pl->status, HOVERPAUSE)
-		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    || BIT(pl->used, HAS_AUTOPILOT))
 		    break;
 		pl->power *= 1.10;
 		pl->power = MIN(pl->power, MAX_PLAYER_POWER);
@@ -927,7 +923,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_DECREASE_POWER:
 		if (   BIT(pl->status, HOVERPAUSE)
-		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    || BIT(pl->used, HAS_AUTOPILOT))
 		    break;
 		pl->power *= 0.90;
 		pl->power = MAX(pl->power, MIN_PLAYER_POWER);
@@ -935,7 +931,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_INCREASE_TURNSPEED:
 		if (   BIT(pl->status, HOVERPAUSE)
-		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    || BIT(pl->used, HAS_AUTOPILOT))
 		    break;
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 1.05;
@@ -944,7 +940,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_DECREASE_TURNSPEED:
 		if (   BIT(pl->status, HOVERPAUSE)
-		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    || BIT(pl->used, HAS_AUTOPILOT))
 		    break;
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 0.95;
@@ -952,7 +948,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_THRUST:
-		if (BIT(pl->used, OBJ_AUTOPILOT))
+		if (BIT(pl->used, HAS_AUTOPILOT))
 		    Autopilot(ind, 0);
 		SET_BIT(pl->status, THRUSTING);
 		break;
@@ -961,7 +957,7 @@ int Handle_keyboard(int ind)
 		if (pl->item[ITEM_CLOAK] > 0) {
 		    sound_play_player(pl, CLOAK_SOUND);
 		    pl->updateVisibility = 1;
-		    TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
+		    TOGGLE_BIT(pl->used, HAS_CLOAKING_DEVICE);
 		}
 		break;
 
@@ -975,7 +971,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_DEFLECTOR:
 		if (pl->item[ITEM_DEFLECTOR] > 0) {
-		    TOGGLE_BIT(pl->used, OBJ_DEFLECTOR);
+		    TOGGLE_BIT(pl->used, HAS_DEFLECTOR);
 		    sound_play_player(pl, DEFLECTOR_SOUND);
 		}
 		break;
@@ -989,8 +985,8 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_PHASING:
-		if (BIT(pl->have, OBJ_PHASING_DEVICE)) {
-		    Phasing(ind, !BIT(pl->used, OBJ_PHASING_DEVICE));
+		if (BIT(pl->have, HAS_PHASING_DEVICE)) {
+		    Phasing(ind, !BIT(pl->used, HAS_PHASING_DEVICE));
 		}
 		break;
 
@@ -1022,7 +1018,7 @@ int Handle_keyboard(int ind)
 	    switch (key) {
 	    case KEY_TURN_LEFT:
 	    case KEY_TURN_RIGHT:
-		if (BIT(pl->used, OBJ_AUTOPILOT))
+		if (BIT(pl->used, HAS_AUTOPILOT))
 		    Autopilot(ind, 0);
 		pl->turnacc = 0;
 		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
@@ -1034,25 +1030,25 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_REFUEL:
-		CLR_BIT(pl->used, OBJ_REFUEL);
+		CLR_BIT(pl->used, HAS_REFUEL);
 		break;
 
 	    case KEY_REPAIR:
-		CLR_BIT(pl->used, OBJ_REPAIR);
+		CLR_BIT(pl->used, HAS_REPAIR);
 		break;
 
 	    case KEY_CONNECTOR:
-		CLR_BIT(pl->used, OBJ_CONNECTOR);
+		CLR_BIT(pl->used, HAS_CONNECTOR);
 		break;
 
 	    case KEY_TRACTOR_BEAM:
 	    case KEY_PRESSOR_BEAM:
-		CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		CLR_BIT(pl->used, HAS_TRACTOR_BEAM);
 		break;
 
 	    case KEY_SHIELD:
-		if (BIT(pl->used, OBJ_SHIELD) && rdelay == 0) {
-		    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER);
+		if (BIT(pl->used, HAS_SHIELD) && round_delay == 0) {
+		    CLR_BIT(pl->used, HAS_SHIELD|HAS_LASER);
 		    /*
 		     * Insert the default fireRepeatRate between lowering
 		     * shields and firing in order to prevent macros
@@ -1063,15 +1059,15 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_FIRE_SHOT:
-		CLR_BIT(pl->used, OBJ_SHOT);
+		CLR_BIT(pl->used, HAS_SHOT);
 		break;
 
 	    case KEY_FIRE_LASER:
-		CLR_BIT(pl->used, OBJ_LASER);
+		CLR_BIT(pl->used, HAS_LASER);
 		break;
 
 	    case KEY_THRUST:
-		if (BIT(pl->used, OBJ_AUTOPILOT))
+		if (BIT(pl->used, HAS_AUTOPILOT))
 		    Autopilot(ind, 0);
 		CLR_BIT(pl->status, THRUSTING);
 		break;

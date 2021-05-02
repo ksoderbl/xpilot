@@ -1,4 +1,4 @@
-/* $Id: metaserver.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: metaserver.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -55,10 +55,9 @@
 #include "saudio.h"
 #include "error.h"
 #include "netserver.h"
+#include "commonproto.h"
 
-#ifdef VMS
-#define META_VERSION	VERSION "-VMS"
-#elif defined(_WINDOWS)
+#if defined(_WINDOWS)
 #define	META_VERSION	TITLE
 #else
 #define META_VERSION	VERSION
@@ -66,10 +65,6 @@
 
 char metaserver_version[] = VERSION;
 
-#ifndef	lint
-char sourceid[] =
-    "@(#)$Id: metaserver.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 struct MetaServer {
     char		name[64];
@@ -144,9 +139,8 @@ void Meta_init(void)
     for (i = 0; i < NELEM(meta_servers); i++) {
 	addr = sock_get_addr_by_name(meta_servers[i].name);
 	if (addr) {
-	    strncpy(meta_servers[i].addr, addr,
+	    strlcpy(meta_servers[i].addr, addr,
 		    sizeof(meta_servers[i].addr));
-	    meta_servers[i].addr[sizeof(meta_servers[i].addr) - 1] = '\0';
 	}
 #ifndef SILENT
 	if (addr) {
@@ -235,10 +229,13 @@ void Meta_update(int change)
 	    }
 	}
 	/* strip trailing comma. */
-	if (j) { freebases[j-1] = '\0'; }
+	if (j) {
+	    freebases[j-1] = '\0';
+	}
     }
     else {
-	sprintf(freebases, "=%d", World.NumBases - num_active_players - login_in_progress);
+	sprintf(freebases, "=%d",
+		World.NumBases - num_active_players - login_in_progress);
     }
 
     sprintf(string,
@@ -284,12 +281,8 @@ void Meta_update(int change)
 	}
     }
 
-    strcat(string,"\nadd status ");
-    if (strlen(string) + strlen(status) >= sizeof(string)) {
-	/* Prevent array overflow */
-	strcpy(&status[sizeof(string) - (strlen(string) + 2)], "\n");
-    }
-    strcat(string, status);
+    strlcat(string,"\nadd status ", sizeof(string));
+    strlcat(string, status, sizeof(string));
 
     Meta_send(string, strlen(string) + 1);
 }

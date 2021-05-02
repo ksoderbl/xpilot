@@ -1,4 +1,4 @@
-/* $Id: sched.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: sched.c,v 5.5 2001/06/03 15:02:53 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -183,7 +183,7 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosGetInfoBlocks( &ptib, &ppib ) )
 	{
-		error( "Error getting process information.  rc = %d", rc );
+		error("Error getting process information.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -195,14 +195,14 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosSetPriority(  PRTYS_THREAD, PRTYC_TIMECRITICAL, 0L, 0L ) )
 	{
-		error( "Error setting timer thread priority.  rc = %d", rc );
+		error("Error setting timer thread priority.  rc = %d", rc );
 		exit(1);
 	}
 
 	/*  Create the event semaphore that will be posted by the timer.  */
 	if( rc = DosCreateEventSem( NULL, &hev, DC_SEM_SHARED, FALSE ) )
 	{
-		error( "DosCreateEventSem - error creating timer semaphore.  rc = %d", rc );
+		error("DosCreateEventSem - error creating timer semaphore.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -211,7 +211,7 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosStartTimer( 1000/timer_freq, (HSEM)hev, &htimer ) )
 	{
-		error( "DosStartTimer - error starting timer.  rc = %d", rc );
+		error("DosStartTimer - error starting timer.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -300,7 +300,7 @@ static void setup_timer(void)
      */
 
     if( _beginthread( timerThread, NULL, 8192L, NULL ) == -1 ) {
-	error( "_beginthread - error starting timer thread" );
+	error("_beginthread - error starting timer thread");
 	exit( 1 );
     }
 
@@ -470,14 +470,15 @@ static void timeout_chime(void)
 #define NUM_SELECT_FD		((int)sizeof(int) * 8)
 #else
 /*
-	Windoze:
-	The first call to socket() returns 560ish.  Successive calls keep bumping
-	up the SOCKET returned until about 880 when it wraps back to 8.
-	(It seems to increment by 8 with each connect - but that's not important)
-	I can't find a manifest constant to tell me what the upper limit will be *sigh*
+    Windoze:
+    The first call to socket() returns 560ish.  Successive calls keep bumping
+    up the SOCKET returned until about 880 when it wraps back to 8.
+    (It seems to increment by 8 with each connect - but that's not important)
+    I can't find a manifest constant to tell me what the upper limit will be
+    *sigh*
 
-	--- Now, the Windoze gurus tell me that SOCKET is an opaque data type.  So i need
-	to make a lookup array for the lookup array :(
+    --- Now, the Windoze gurus tell me that SOCKET is an opaque data type.
+    So i need to make a lookup array for the lookup array :(
 */
 #define	NUM_SELECT_FD		2000
 #endif
@@ -517,9 +518,7 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
 	    input_handlers[i].arg = 0;
 	}
     }
-#ifdef _WINDOWS
-	xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);
-#endif
+	/* IFWINDOWS(xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);) */
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
 	error("install illegal input handler fd %d (%d)", fd, min_fd);
 	ServerExit();
@@ -561,15 +560,30 @@ void remove_input(int fd)
     }
 }
 
-#ifdef VMS
-extern int NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
-extern int login_in_progress;
-#endif
-
 void stop_sched(void)
 {
     sched_running = 0;
 }
+
+
+extern int End_game(void);
+
+
+static void sched_select_error(void)
+{
+#ifndef _WINDOWS
+    error("sched select error");
+#else
+    char	msg[MSG_LEN];
+
+    sprintf(msg, "sched select error e=%d (%s)",
+	    errno, _GetWSockErrText(errno));
+    error("%s", msg);
+#endif
+
+    End_game();
+}
+
 
 /*
  * I/O + timer dispatcher.
@@ -589,8 +603,12 @@ void sched(void)
     sched_running = 1;
 
     while (sched_running) {
-#endif
-#if defined(VMS) || defined(_WINDOWS)
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+#else
+
 	if (NumPlayers > NumRobots + NumPseudoPlayers
 	    || login_in_progress != 0
 	    || NumQueuedPlayers > 0) {
@@ -606,19 +624,19 @@ void sched(void)
 	    tv.tv_sec = 0;
 	    tv.tv_usec = 500000;
 	}
-#else
-	tv.tv_sec = 0;
-	tv.tv_usec = 0;
+
 #endif
 
 	if (io_todo == 0 && timers_used < timer_ticks) {
 	    io_todo = 1 + (timer_ticks - timers_used);
 	    tvp = &tv;
+
 #ifndef _WINDOWS
 	    if (timer_handler) {
 		(*timer_handler)();
 	    }
 #endif
+
 	    do {
 		++timers_used;
 		if (--ticks_till_second <= 0) {
@@ -634,14 +652,7 @@ void sched(void)
 	    n = select(max_fd + 1, &readmask, 0, 0, tvp);
 	    if (n <= 0) {
 		if (n == -1 && errno != EINTR) {
-#ifndef _WINDOWS
-		    error("sched select error");
-#else
-			char	s[80];
-			sprintf(s, "sched select error n=%d e=%d (%s)", n, errno, _GetWSockErrText(errno));
-			error(s);
-#endif
-		    exit(1);
+		    sched_select_error();
 		}
 		io_todo = 0;
 	    }
@@ -660,11 +671,9 @@ void sched(void)
 		    io_todo--;
 		}
 	    }
-#ifndef VMS
 	    if (io_todo == 0) {
 		tvp = NULL;
 	    }
-#endif
 	}
 #ifndef _WINDOWS
     }

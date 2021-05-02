@@ -1,4 +1,4 @@
-/* $Id: query.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: query.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -29,7 +29,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-#if !defined(_WINDOWS) && !defined(VMS)
+#if !defined(_WINDOWS)
 # include <unistd.h>
 # include <sys/param.h>
 # include <sys/socket.h>
@@ -43,20 +43,12 @@
 # ifndef __hpux
 #  include <sys/time.h>
 # endif
-# ifndef LINUX0
-#  include <net/if.h>
-# endif
+# include <net/if.h>
 #endif
 
 #ifdef _WINDOWS
 # include "NT/winClient.h"
 # include "NT/winNet.h"
-#endif
-
-#ifdef VMS
-# include <socket.h>
-# include <in.h>
-# include <inet.h>
 #endif
 
 #include "version.h"
@@ -67,12 +59,8 @@
 
 char query_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: query.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
-#if defined(LINUX0) || defined(VMS) || defined(_WINDOWS)
+#if defined(_WINDOWS)
 # ifndef QUERY_FUDGED
 #  define QUERY_FUDGED
 # endif
@@ -222,12 +210,6 @@ static int Query_fudged(sock_t *sock, int port, char *msg, int msglen)
  * on one of the other interfaces in order to reduce the chance that
  * we get multiple responses from the same server.
  */
-
-/* KOERBER */
-#ifdef VMS
-#include "pack.h"
-static int		contact_port = SERVER_PORT;
-#endif
 
 int Query_all(sock_t *sock, int port, char *msg, int msglen)
 {

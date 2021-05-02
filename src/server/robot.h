@@ -1,4 +1,4 @@
-/* $Id: robot.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: robot.h,v 5.2 2001/05/25 12:28:01 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,7 +52,10 @@
  *       It is called once at startup to initialise a structure with
  *       function pointers to the robot type action routines.
  *
- *    2) The initialization function to enable robot type
+ *    2) The next round function, which is called only once per round
+ *       to allow the robot type adjust type generic parameters.
+ *
+ *    3) The initialization function to enable robot type
  *       specific adjustments and possible memory allocation
  *       of private data structures for one specific robot instance.
  *       This function will be called with an extra string argument.
@@ -63,10 +66,10 @@
  *       is empty the robot type initialization code will
  *       have to provide suitable default configuration values.
  *
- *    3) The go home function which is called whenever the robot
+ *    4) The go home function which is called whenever the robot
  *       is placed at its homebase.
  *
- *    4) The playing function which gets called each loop.
+ *    5) The playing function which gets called each loop.
  *       The programming challenge here is to implement
  *       different characters per robot, while at the
  *       same time not calculating `everything' every
@@ -74,22 +77,22 @@
  *       the robot some long term goals which are only
  *       recalculated once every couple of seconds or so.
  *
- *    5) The war function which is called when the robot declares war.
+ *    6) The war function which is called when the robot declares war.
  *       This function takes an extra killer argument, which is
  *       the player id of the player the robot has declared war against.
- *       If this id equals -1 then the routine should reset the war state.
+ *       If this id equals NO_ID then the routine should reset the war state.
  *
- *    6) The war_on_player function returns the id of the player
+ *    7) The war_on_player function returns the id of the player
  *       who the robot is in a state of war with.
  *       If the robot is not in war with another player
- *       then this function should return -1.
+ *       then this function should return NO_ID.
  *
- *    7) The message function can accept any possible commands to the robot.
+ *    8) The message function can accept any possible commands to the robot.
  *       The suggestion here is that if you plan to let the robot type
  *       be controllable by messages that you give feedback to all
  *       of the players what commands the robot has accepted.
  *
- *    8) The cleanup function should free any allocated resources
+ *    9) The cleanup function should free any allocated resources
  *       for this specific robot instance.
  *
  * The recommended practice is to define your new robot types
@@ -99,6 +102,7 @@
  */
 typedef struct {
     const char		*name;
+    void		(*round_tick)(void);
     void		(*create)(int ind, char *str);
     void		(*go_home)(int ind);
     void		(*play)(int ind);

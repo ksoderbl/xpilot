@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: draw.h,v 5.3 2001/06/02 21:02:09 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -33,8 +33,7 @@
 /*
  * Abstract (non-display system specific) drawing definitions.
  *
- * This file should not contain any X window stuff as VMS
- * does not accept this in the server.  Rightly so. :-)
+ * This file should not contain any X window stuff.
  */
 
 /*
@@ -113,20 +112,22 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
     int		num_m_rack;		/* Number of missile racks */
     position	*m_rack[MAX_RACK_PTS];
     int		shield_radius;		/* Radius of shield used by client. */
-#ifdef	_NAMEDSHIPS
-	char*	name;
-	char*	author;
-#endif
-} wireobj;
 
-extern wireobj *Default_ship(void);
-extern void Free_ship_shape(wireobj *w);
-extern wireobj *Parse_shape_str(char *str);
-extern wireobj *Convert_shape_str(char *str);
-extern void Calculate_shield_radius(wireobj *w);
+#ifdef	_NAMEDSHIPS
+    char*	name;
+    char*	author;
+#endif
+} shipobj;
+
+extern shipobj *Default_ship(void);
+extern void Free_ship_shape(shipobj *w);
+extern shipobj *Parse_shape_str(char *str);
+extern shipobj *Convert_shape_str(char *str);
+extern void Calculate_shield_radius(shipobj *w);
 extern int Validate_shape_str(char *str);
-extern void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
+extern void Convert_ship_2_string(shipobj *w, char *buf, char *ext,
 				  unsigned shape_version);
+void Rotate_point(position pt[RES]);
 
 extern DFLOAT rfrac(void);
 

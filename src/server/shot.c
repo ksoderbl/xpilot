@@ -1,4 +1,4 @@
-/* $Id: shot.c,v 5.0 2001/04/07 20:01:00 dik Exp $
+/* $Id: shot.c,v 5.21 2001/05/31 20:52:35 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -49,10 +49,6 @@
 
 char shot_version[] = VERSION;
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: shot.c,v 5.0 2001/04/07 20:01:00 dik Exp $";
-#endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
 #define MISSILE_POWER_TURNSPEED_FACT	0.75
@@ -63,12 +59,6 @@ static char sourceid[] =
 #define MINI_MINE_SPREAD_SPEED		8
 #define MINI_MISSILE_SPREAD_ANGLE	45
 
-#if 0
-extern unsigned SPACE_BLOCKS;
-
-extern int Rate(int winner, int loser);
-#endif
-
 #define CONFUSED_UPDATE_GRANULARITY	10
 #define CONFUSED_TIME			3
 
@@ -77,14 +67,14 @@ extern int Rate(int winner, int loser);
  * Functions for shots.
  */
 
-static object *objArray;
+static anyobject *objArray;
 
 void Alloc_shots(int number)
 {
-    object		*x;
+    anyobject		*x;
     int			i;
 
-    x = (object *) calloc(number, sizeof(object));
+    x = (anyobject *) calloc(number, sizeof(anyobject));
     if (!x) {
 	error("Not enough memory for shots.");
 	exit(1);
@@ -92,8 +82,10 @@ void Alloc_shots(int number)
 
     objArray = x;
     for (i = 0; i < number; i++) {
-	x->owner = -1;
-	Obj[i] = x++;
+	Obj[i] = &(x->obj);
+	MINE_PTR(Obj[i])->owner = NO_ID;
+	Cell_init_object(Obj[i]);
+	x++;
     }
 }
 
@@ -112,8 +104,14 @@ void Place_mine(int ind)
     player *pl = Players[ind];
 
     if (pl->item[ITEM_MINE] <= 0
-	|| (BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE) && !shieldedMining))
+	|| (BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE) && !shieldedMining)) {
 	return;
+    }
+
+    if (minMineSpeed > 0) {
+	Place_moving_mine(ind);
+	return;
+    }
 
     Place_general_mine(ind, pl->team, 0,
 		       pl->pos.x, pl->pos.y, 0.0, 0.0, pl->mods);
@@ -122,17 +120,34 @@ void Place_mine(int ind)
 
 void Place_moving_mine(int ind)
 {
-    player *pl = Players[ind];
+    player	*pl = Players[ind];
+    DFLOAT	vx = pl->vel.x;
+    DFLOAT	vy = pl->vel.y;
 
     if (pl->item[ITEM_MINE] <= 0
-	|| (BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE) && !shieldedMining))
+	|| (BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE) && !shieldedMining)) {
 	return;
+    }
+
+    if (minMineSpeed > 0) {
+	if (pl->velocity < minMineSpeed) {
+	    if (pl->velocity >= 1) {
+		vx *= (minMineSpeed / pl->velocity);
+		vy *= (minMineSpeed / pl->velocity);
+	    }
+	    else {
+		vx = minMineSpeed * tcos(pl->dir);
+		vy = minMineSpeed * tsin(pl->dir);
+	    }
+	}
+    }
 
     Place_general_mine(ind, pl->team, GRAVITY,
-		       pl->pos.x, pl->pos.y, pl->vel.x, pl->vel.y, pl->mods);
+		       pl->pos.x, pl->pos.y, vx, vy, pl->mods);
 }
 
-void Place_general_mine(int ind, unsigned short team, long status, DFLOAT x, DFLOAT y,
+void Place_general_mine(int ind, unsigned short team, long status,
+			DFLOAT x, DFLOAT y,
 			DFLOAT vx, DFLOAT vy, modifiers mods)
 {
     char		msg[MSG_LEN];
@@ -239,17 +254,16 @@ void Place_general_mine(int ind, unsigned short team, long status, DFLOAT x, DFL
     SET_BIT(status, OWNERIMMUNE);
 
     for (i = 0; i < minis; i++) {
-	object *mine = Obj[NumObjs++];
+	mineobject *mine = MINE_PTR(Obj[NumObjs]);
 
 	mine->type = OBJ_MINE;
 	mine->color = BLUE;
 	mine->info = mineFuseTime;
 	mine->status = status;
-	mine->dir = 0;
-	mine->id = (pl ? pl->id : -1);
+	mine->id = (pl ? pl->id : NO_ID);
 	mine->team = team;
 	mine->owner = mine->id;
-	Object_position_init_pixels(mine, x, y);
+	Object_position_init_pixels(OBJ_PTR(mine), x, y);
 	if (minis > 1) {
 	    int		space = RES/minis;
 	    int		dir;
@@ -287,6 +301,8 @@ void Place_general_mine(int ind, unsigned short team, long status, DFLOAT x, DFL
 	mine->mods = mods;
 	mine->pl_range = (int)(MINE_RANGE / minis);
 	mine->pl_radius = MINE_RADIUS;
+	Cell_add_object((object *) mine);
+	NumObjs++;
     }
 }
 
@@ -306,7 +322,7 @@ void Detonate_mines(int ind)
     DFLOAT		dist;
     DFLOAT		min_dist = World.hypotenuse + 1;
 
-    if (BIT(pl->used, OBJ_PHASING_DEVICE))
+    if (BIT(pl->used, HAS_PHASING_DEVICE))
 	return;
 
     for (i = 0; i < NumObjs; i++) {
@@ -335,11 +351,13 @@ void Detonate_mines(int ind)
 
 void Make_treasure_ball(int treasure)
 {
-    object *ball;
+    ballobject *ball;
     treasure_t *t = &(World.treasures[treasure]);
-   DFLOAT	x = (t->pos.x + 0.5) * BLOCK_SZ,
+    DFLOAT	x = (t->pos.x + 0.5) * BLOCK_SZ,
 		y = (t->pos.y * BLOCK_SZ) + 10;
 
+    if (t->empty)
+	return;
     if (t->have) {
 	xpprintf ("%s Failed Make_treasure_ball(treasure=%d):\n", showtime(), treasure);
 	xpprintf ("\ttreasure: destroyed = %d, team = %d, have = %d\n",
@@ -348,18 +366,18 @@ void Make_treasure_ball(int treasure)
     }
     t->have = true;
 
-    ball = Obj[NumObjs];
+    ball = BALL_IND(NumObjs);
 
-    ball->length = BALL_STRING_LENGTH;
+    ball->length = ballConnectorLength;
     ball->life = LONG_MAX;
-    ball->mass = 50;
+    ball->mass = ballMass;
     ball->vel.x = 0;	  	/* make the ball stuck a little */
     ball->vel.y = 0;		/* longer to the ground */
     ball->acc.x = 0;
     ball->acc.y = 0;
-    ball->dir = 0;
-    Object_position_init_pixels(ball, x, y);
-    ball->id = ball->owner = -1;
+    Object_position_init_pixels(OBJ_PTR(ball), x, y);
+    ball->id = NO_ID;
+    ball->owner = NO_ID;
     ball->team = t->team;
     ball->type = OBJ_BALL;
     ball->color = WHITE;
@@ -369,6 +387,7 @@ void Make_treasure_ball(int treasure)
     CLEAR_MODS(ball->mods);
     ball->status = RECREATE;
     ball->treasure = treasure;
+    Cell_add_object((object *) ball);
     NumObjs++;
 }
 
@@ -438,7 +457,7 @@ void Fire_main_shot(int ind, int type, int dir)
     DFLOAT x,
 	  y;
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     x = pl->pos.x + pl->ship->m_gun[pl->dir].x;
@@ -452,7 +471,7 @@ void Fire_shot(int ind, int type, int dir)
 {
     player *pl = Players[ind];
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     Fire_general_shot(ind, pl->team, 0, pl->pos.x, pl->pos.y,
@@ -465,7 +484,7 @@ void Fire_left_shot(int ind, int type, int dir, int gun)
     DFLOAT x,
 	  y;
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     x = pl->pos.x + pl->ship->l_gun[gun][pl->dir].x;
@@ -482,7 +501,7 @@ void Fire_right_shot(int ind, int type, int dir, int gun)
     DFLOAT x,
 	  y;
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     x = pl->pos.x + pl->ship->r_gun[gun][pl->dir].x;
@@ -499,7 +518,7 @@ void Fire_left_rshot(int ind, int type, int dir, int gun)
     DFLOAT x,
 	  y;
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     x = pl->pos.x + pl->ship->l_rgun[gun][pl->dir].x;
@@ -516,7 +535,7 @@ void Fire_right_rshot(int ind, int type, int dir, int gun)
     DFLOAT x,
 	  y;
 
-    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD|OBJ_PHASING_DEVICE))
+    if (pl->shots >= pl->shot_max || BIT(pl->used, HAS_SHIELD|HAS_PHASING_DEVICE))
 	return;
 
     x = pl->pos.x + pl->ship->r_rgun[gun][pl->dir].x;
@@ -949,20 +968,22 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
     }
 
     for (r = 0, i = 0; i < minis; i++, r++) {
-	object *shot = Obj[NumObjs++];
+	object *shot = Obj[NumObjs];
 
 	shot->life 	= life / minis;
 	shot->fuselife	= shot->life - fuse;
 	shot->mass	= mass / minis;
-	shot->max_speed = max_speed;
-	shot->turnspeed = turnspeed;
 	shot->count 	= 0;
 	shot->info 	= lock;
 	shot->type	= type;
-	shot->id	= (pl ? pl->id : -1);
+	shot->id	= (pl ? pl->id : NO_ID);
 	shot->team	= team;
-	shot->owner	= -1;
 	shot->color	= (pl ? pl->color : WHITE);
+
+	if (BIT(shot->type, OBJ_TORPEDO | OBJ_HEAT_SHOT | OBJ_SMART_SHOT)) {
+	    MISSILE_PTR(shot)->turnspeed = turnspeed;
+	    MISSILE_PTR(shot)->max_speed = max_speed;
+	}
 
 	shotpos.x	= x;
 	shotpos.y	= y;
@@ -986,7 +1007,6 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 	shotpos.y = WRAP_YPIXEL(shotpos.y);
 	if (shotpos.x < 0 || shotpos.x >= World.width
 	    || shotpos.y < 0 || shotpos.y >= World.height) {
-	    NumObjs--;
 	    continue;
 	}
 	Object_position_init_pixels(shot, shotpos.x, shotpos.y);
@@ -1028,7 +1048,7 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 	     * FIX: torpedoes should have the same speed
 	     *      regardless of minification.
 	     */
-	    shot->spread_left = MINI_TORPEDO_SPREAD_TIME;
+	    TORP_PTR(shot)->spread_left = MINI_TORPEDO_SPREAD_TIME;
 	    shot->acc.x = -mv.x / MINI_TORPEDO_SPREAD_TIME;
 	    shot->acc.y = -mv.y / MINI_TORPEDO_SPREAD_TIME;
 	    ldir = dir;
@@ -1044,11 +1064,13 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 	shot->vel.x 	= mv.x + (pl ? pl->vel.x : 0.0) + tcos(ldir) * speed;
 	shot->vel.y 	= mv.y + (pl ? pl->vel.y : 0.0) + tsin(ldir) * speed;
 	shot->status	= status;
-	shot->dir	= ldir;
+	shot->missile_dir	= ldir;
 	shot->mods  	= mods;
 	shot->pl_range  = pl_range;
 	shot->pl_radius = pl_radius;
+	Cell_add_object(shot);
 	fired++;
+	NumObjs++;
     }
 
     /*
@@ -1130,6 +1152,7 @@ void Fire_normal_shots(int ind)
 void Delete_shot(int ind)
 {
     object		*shot = Obj[ind];	/* Used when swapping places */
+    ballobject		*ball;
     player		*pl;
     int			addMine = 0;
     int			addHeat = 0;
@@ -1149,55 +1172,53 @@ void Delete_shot(int ind)
     case OBJ_WRECKAGE:
 	break;
 
+    case OBJ_ASTEROID:
+	Break_asteroid(ind);
+	break;
+
     case OBJ_BALL:
-	if (shot->id != -1)
-	    Detach_ball(GetInd[shot->id], ind);
+	ball = BALL_PTR(shot);
+	if (ball->id != NO_ID)
+	    Detach_ball(GetInd[ball->id], ind);
 	else {
 	    /*
 	     * Maybe some player is still busy trying to connect to this ball.
 	     */
 	    for (i = 0; i < NumPlayers; i++) {
-		if (Players[i]->ball == shot) {
+		if (Players[i]->ball == ball) {
 		    Players[i]->ball = NULL;
 		}
 	    }
 	}
-	if (shot->owner == -1) {
+	if (ball->owner == NO_ID) {
 	    /*
 	     * If the ball has never been owned, the only way it could
 	     * have been destroyed is by being knocked out of the goal.
 	     * Therefore we force the ball to be recreated.
 	     */
-	    World.treasures[shot->treasure].have = false;
-	    SET_BIT(shot->status, RECREATE);
+	    World.treasures[ball->treasure].have = false;
+	    SET_BIT(ball->status, RECREATE);
 	}
-	if (BIT(shot->status, RECREATE)) {
+	if (BIT(ball->status, RECREATE)) {
 	    addBall = 1;
-	    if (BIT(shot->status, NOEXPLOSION))
+	    if (BIT(ball->status, NOEXPLOSION))
 		break;
-	    sound_play_sensors(shot->pos.x, shot->pos.y, EXPLODE_BALL_SOUND);
-	    if (!anaColDet){
-		Make_debris(
-		    /* pos.x, pos.y   */ shot->prevpos.x, shot->prevpos.y,
-		    /* vel.x, vel.y   */ shot->vel.x, shot->vel.y,
-		    /* owner id       */ shot->id,
-		    /* owner team	  */ shot->team,
-		    /* kind           */ OBJ_DEBRIS,
-		    /* mass           */ DEBRIS_MASS,
-		    /* status         */ GRAVITY,
-		    /* color          */ RED,
-		    /* radius         */ 8,
-		    /* min,max debris */ 75, 150,
-		    /* min,max dir    */ 0, RES-1,
-		    /* min,max speed  */ 20, 95,
-		    /* min,max life   */ 10, 2*(FPS+15)
-		    );
-	    } else {
-		Make_debris(
-		    shot->prevpos.x, shot->prevpos.y, shot->vel.x, shot->vel.y,
-		    shot->id, shot->team, OBJ_DEBRIS, DEBRIS_MASS, GRAVITY,
-		    RED, 8, 10, 20, 0, RES-1, 10, 50, 10, 2*(FPS+15));
-	    }
+	    sound_play_sensors(ball->pos.x, ball->pos.y, EXPLODE_BALL_SOUND);
+	    Make_debris(
+		/* pos.x, pos.y   */ ball->prevpos.x, ball->prevpos.y,
+		/* vel.x, vel.y   */ ball->vel.x, ball->vel.y,
+		/* owner id       */ ball->id,
+		/* owner team     */ ball->team,
+		/* kind           */ OBJ_DEBRIS,
+		/* mass           */ DEBRIS_MASS,
+		/* status         */ GRAVITY,
+		/* color          */ RED,
+		/* radius         */ 8,
+		/* min,max debris */ 10, 20,
+		/* min,max dir    */ 0, RES-1,
+		/* min,max speed  */ 10, 50,
+		/* min,max life   */ 10, 2*(FPS+15)
+		);
 
 	}
 	break;
@@ -1219,19 +1240,18 @@ void Delete_shot(int ind)
 	    status |= FROMCANNON;
 	}
 
-	if (BIT(shot->type, OBJ_MINE)) {
+	if (BIT(shot->mods.nuclear, NUCLEAR)) {
+	    sound_play_all(NUKE_EXPLOSION_SOUND);
+	}
+	else if (BIT(shot->type, OBJ_MINE)) {
 	    sound_play_sensors(shot->pos.x, shot->pos.y, MINE_EXPLOSION_SOUND);
 	} else {
 	    sound_play_sensors(shot->pos.x, shot->pos.y, OBJECT_EXPLOSION_SOUND);
 	}
 
-	if (BIT(shot->mods.nuclear, NUCLEAR)) {
-	    sound_play_all(NUKE_EXPLOSION_SOUND);
-	}
-
 	if (BIT(shot->mods.warhead, CLUSTER)) {
 	    type = OBJ_SHOT;
-	    if (shot->id != -1) {
+	    if (shot->id != NO_ID) {
 		player *pl = Players[GetInd[shot->id]];
 		color = pl->color;
 		mass = pl->shot_mass;
@@ -1272,12 +1292,14 @@ void Delete_shot(int ind)
 	}
 
 	if (BIT(shot->mods.nuclear, NUCLEAR)) {
+	    DFLOAT nuke_factor;
 	    if (shot->type == OBJ_MINE) {
-		intensity = (int)(intensity * (NUKE_MINE_EXPL_MULT * shot->mass / MINE_MASS));
+		nuke_factor = NUKE_MINE_EXPL_MULT * shot->mass / MINE_MASS;
 	    } else {
-		intensity = (int)(intensity * (NUKE_SMART_EXPL_MULT * shot->mass / MISSILE_MASS));
+		nuke_factor = NUKE_SMART_EXPL_MULT * shot->mass / MISSILE_MASS;
 	    }
-	    intensity = (int)(intensity * (shot->mods.mini + 1) / SHOT_MULT(shot));
+	    nuke_factor = (nuke_factor * (shot->mods.mini + 1)) / SHOT_MULT(shot);
+	    intensity = (int)(intensity * nuke_factor);
 	}
 
 	if (BIT(shot->mods.warhead, IMPLOSION)) {
@@ -1315,15 +1337,14 @@ void Delete_shot(int ind)
 	break;
 
     case OBJ_SHOT:
-	if (shot->id == -1
+	if (shot->id == NO_ID
 	    || BIT(shot->status, FROMCANNON)
-	    || BIT(shot->mods.warhead, CLUSTER))
+	    || BIT(shot->mods.warhead, CLUSTER)) {
 	    break;
+	}
 	pl = Players[GetInd[shot->id]];
-	if (shot->type == OBJ_SHOT) {
-	    if (--pl->shots <= 0) {
-		pl->shots = 0;
-	    }
+	if (--pl->shots <= 0) {
+	    pl->shots = 0;
 	}
 	break;
 
@@ -1360,10 +1381,19 @@ void Delete_shot(int ind)
 	break;
 
     default:
-	xpprintf("%s Delete_shot(): Unkown shot type %d.\n", showtime(), shot->type);
+	xpprintf("%s Delete_shot(): Unkown shot type %d.\n",
+		 showtime(), shot->type);
+	printf("%s Delete_shot(): Unkown shot type %d.\n",
+		 showtime(), shot->type);
 	break;
     }
 
+    Cell_remove_object(shot);
+    shot->life = 0;
+    shot->type = 0;
+    shot->mass = 0;
+
+    /* This should be the only place in the code which decrements NumObjs. */
     Obj[ind] = Obj[--NumObjs];
     Obj[NumObjs] = shot;
 
@@ -1382,17 +1412,21 @@ void Delete_shot(int ind)
 	    mods.power = (int)(rfrac() * (MODS_POWER_MAX + 1));
 	}
 	if (addMine) {
-	    Place_general_mine (-1, TEAM_NOT_SET, ((rfrac() < 0.5f) ? GRAVITY : 0),
-				shot->pos.x, shot->pos.y, 0.0, 0.0, mods);
+	    long gravity_status = ((rfrac() < 0.5f) ? GRAVITY : 0);
+	    Place_general_mine(-1, TEAM_NOT_SET, gravity_status,
+			       shot->pos.x, shot->pos.y,
+			       0.0, 0.0, mods);
 	}
 	else if (addHeat) {
-	    Fire_general_shot (-1, TEAM_NOT_SET, 0, shot->pos.x, shot->pos.y,
-			       OBJ_HEAT_SHOT, (int)(rfrac() * RES), 1.0f,
-			       mods, -1);
+	    Fire_general_shot(-1, TEAM_NOT_SET, 0,
+			      shot->pos.x, shot->pos.y,
+			      OBJ_HEAT_SHOT, (int)(rfrac() * RES), 1.0f,
+			      mods, -1);
 	}
     }
     else if (addBall) {
-	Make_treasure_ball(shot->treasure);
+	ball = BALL_PTR(shot);
+	Make_treasure_ball(ball->treasure);
     }
 }
 
@@ -1404,7 +1438,7 @@ void Fire_laser(int ind)
     if (pl->item[ITEM_LASER] > pl->num_pulses
 	&& pl->velocity < PULSE_SPEED - PULSE_SAMPLE_DISTANCE) {
 	if (pl->fuel.sum <= -ED_LASER) {
-	    CLR_BIT(pl->used, OBJ_LASER);
+	    CLR_BIT(pl->used, HAS_LASER);
 	} else {
 	    x = pl->pos.x + pl->ship->m_gun[pl->dir].x + pl->vel.x;
 	    y = pl->pos.y + pl->ship->m_gun[pl->dir].y + pl->vel.y;
@@ -1441,7 +1475,7 @@ void Fire_general_laser(int ind, unsigned short team, DFLOAT x, DFLOAT y,
     }
 
     pulse = Pulses[NumPulses];
-    pulse->id = (pl ? pl->id : -1);
+    pulse->id = (pl ? pl->id : NO_ID);
     pulse->team = team;
     pulse->dir = dir;
     pulse->len = PULSE_LENGTH;
@@ -1470,18 +1504,18 @@ void Move_ball(int ind)
      * It can be enabled by adding -DORIGINAL_BALL to the compilation flags.
      */
 
-    object		*ball = Obj[ind];
+    ballobject		*ball = BALL_IND(ind);
     player		*pl = Players[ GetInd[ball->id] ];
     vector		F;
     const DFLOAT		k = 10.0,
 			a = 0.01,
 			l = Wrap_length(pl->pos.x - ball->pos.x,
 					pl->pos.y - ball->pos.y),
-			c = k * (1.0 - BALL_STRING_LENGTH / l)
+			c = k * (1.0 - ballConnectorLength / l)
 			    - a * ABS(ball->length - l) * (ball->length - l);
 
-    if (l > BALL_STRING_LENGTH * 1.25
-	|| l < BALL_STRING_LENGTH * 0.75) {
+    if (l > ballConnectorLength * (1.00 + maxBallConnectorRatio)
+	|| l < ballConnectorLength * (1.00 - maxBallConnectorRatio)) {
 	Detach_ball(GetInd[ball->id], ind);
 	return;
     }
@@ -1544,12 +1578,13 @@ void Move_ball(int ind)
      * from 0.25 to 0.30.  Not sure if that helps enough, or too much.
      */
 
-    object		*ball = Obj[ind];
+    ballobject		*ball = BALL_IND(ind);
     player		*pl = Players[ GetInd[ball->id] ];
     vector		D;
-    DFLOAT		length, force, ratio, accell, cosine, pl_damping, ball_damping;
-    const DFLOAT		k = 1500.0, b = 2.0;
-    const DFLOAT		max_spring_ratio = 0.30;
+    DFLOAT		length, force, ratio, accell, cosine;
+    DFLOAT		pl_damping, ball_damping;
+    /* const DFLOAT		k = 1500.0, b = 2.0; */
+    /* const DFLOAT		max_spring_ratio = 0.30; */
 
     /* compute the normalized vector between the ball and the player */
     D.x = WRAP_DX(pl->pos.x - ball->pos.x);
@@ -1563,13 +1598,13 @@ void Move_ball(int ind)
 	D.x = D.y = 0.0;
 
     /* compute the ratio for the spring action */
-    ratio = (BALL_STRING_LENGTH - length) / (DFLOAT) BALL_STRING_LENGTH;
+    ratio = (ballConnectorLength - length) / ballConnectorLength;
 
     /* compute force by spring for this length */
-    force = k * ratio;
+    force = ballConnectorSpringConstant * ratio;
 
     /* if the tether is too long or too short, release it */
-    if (ABS(ratio) > max_spring_ratio) {
+    if (ABS(ratio) > maxBallConnectorRatio) {
 	Detach_ball(GetInd[ball->id], ind);
 	return;
     }
@@ -1577,11 +1612,11 @@ void Move_ball(int ind)
 
     /* compute damping for player */
     cosine = (pl->vel.x * D.x) + (pl->vel.y * D.y);
-    pl_damping = -b * cosine;
+    pl_damping = -ballConnectorDamping * cosine;
 
     /* compute damping for ball */
     cosine = (ball->vel.x * -D.x) + (ball->vel.y * -D.y);
-    ball_damping = -b * cosine;
+    ball_damping = -ballConnectorDamping * cosine;
 
     /* compute accelleration for player, assume t = 1 */
     accell = (force + pl_damping + ball_damping) / pl->mass;
@@ -1599,28 +1634,29 @@ void Move_ball(int ind)
 
 void Move_smart_shot(int ind)
 {
-    object	*shot = Obj[ind];
-    player	*pl;
-    int		angle, theta;
-    DFLOAT	range = 0.0;
-    DFLOAT	acc;
-    DFLOAT	x_dif = 0.0;
-    DFLOAT	y_dif = 0.0;
-    DFLOAT	shot_speed;
+    missileobject	*shot = MISSILE_IND(ind);
+    player		*pl;
+    int			angle, theta;
+    DFLOAT		range = 0.0;
+    DFLOAT		acc;
+    DFLOAT		x_dif = 0.0;
+    DFLOAT		y_dif = 0.0;
+    DFLOAT		shot_speed;
 
     if (shot->type == OBJ_TORPEDO) {
-	if (BIT(shot->mods.nuclear, NUCLEAR)) {
-	    acc = (shot->info++ < NUKE_SPEED_TIME) ? NUKE_ACC : 0.0;
+	torpobject *torp = TORP_PTR(shot);
+	if (BIT(torp->mods.nuclear, NUCLEAR)) {
+	    acc = (torp->info++ < NUKE_SPEED_TIME) ? NUKE_ACC : 0.0;
 	} else {
-	    acc = (shot->info++ < TORPEDO_SPEED_TIME) ? TORPEDO_ACC : 0.0;
+	    acc = (torp->info++ < TORPEDO_SPEED_TIME) ? TORPEDO_ACC : 0.0;
 	}
-	acc *= (1 + (shot->mods.power * MISSILE_POWER_SPEED_FACT));
-	if (shot->spread_left-- <= 0) {
-	    shot->acc.x = 0;
-	    shot->acc.y = 0;
+	acc *= (1 + (torp->mods.power * MISSILE_POWER_SPEED_FACT));
+	if (torp->spread_left-- <= 0) {
+	    torp->acc.x = 0;
+	    torp->acc.y = 0;
 	}
-	shot->vel.x += acc * tcos(shot->dir);
-	shot->vel.y += acc * tsin(shot->dir);
+	torp->vel.x += acc * tcos(torp->missile_dir);
+	torp->vel.y += acc * tsin(torp->missile_dir);
 	return;
     }
 
@@ -1680,7 +1716,7 @@ void Move_smart_shot(int ind)
 		     */
 		    l *= MAX_AFTERBURNER + 1 - p->item[ITEM_AFTERBURNER];
 		    l /= MAX_AFTERBURNER + 1;
-		    if (BIT(p->have, OBJ_AFTERBURNER))
+		    if (BIT(p->have, HAS_AFTERBURNER))
 			l *= 16 - p->item[ITEM_AFTERBURNER];
 		    if (l < range) {
 			shot->info = Players[i]->id;
@@ -1703,20 +1739,22 @@ void Move_smart_shot(int ind)
 	x_dif = (int)(rfrac() * 4 * shot->count);
 	y_dif = (int)(rfrac() * 4 * shot->count);
 
-    } else {
+    }
+    else if (shot->type == OBJ_SMART_SHOT) {
+	smartobject *smart = SMART_PTR(shot);
 
-	if (BIT(shot->status, CONFUSED)
+	if (BIT(smart->status, CONFUSED)
 	    && (!(frame_loops % CONFUSED_UPDATE_GRANULARITY)
-		|| shot->count == CONFUSED_TIME)) {
+		|| smart->count == CONFUSED_TIME)) {
 
-	    if (shot->count) {
-		shot->info = Players[(int)(rfrac() * NumPlayers)]->id;
-		shot->count--;
+	    if (smart->count) {
+		smart->info = Players[(int)(rfrac() * NumPlayers)]->id;
+		smart->count--;
 	    } else {
-		CLR_BIT(shot->status, CONFUSED);
+		CLR_BIT(smart->status, CONFUSED);
 
 		/* range is percentage from center to periphery of ecm burst */
-		range = (ECM_DISTANCE - shot->ecm_range) / ECM_DISTANCE;
+		range = (ECM_DISTANCE - smart->ecm_range) / ECM_DISTANCE;
 		range *= 100.0;
 
 		/*
@@ -1725,11 +1763,16 @@ void Move_smart_shot(int ind)
 		 *  50		75
 		 *   0		50
 		 */
-		if ((int)(rfrac() * 100) <= ((int)(range/2)+50))
-		    shot->info = shot->new_info;
+		if ((int)(rfrac() * 100) <= ((int)(range/2)+50)) {
+		    smart->info = smart->new_info;
+		}
 	    }
 	}
 	pl = Players[GetInd[shot->info]];
+    }
+    else {
+	/*NOTREACHED*/
+	return;
     }
 
     /*
@@ -1790,7 +1833,7 @@ void Move_smart_shot(int ind)
 	    }
 	}
 
-	i = ((int)(shot->dir * 8 / RES)&7) + 8;
+	i = ((int)(shot->missile_dir * 8 / RES)&7) + 8;
 	xi = OBJ_X_IN_BLOCKS(shot);
 	yi = OBJ_Y_IN_BLOCKS(shot);
 
@@ -1854,41 +1897,47 @@ void Move_smart_shot(int ind)
 	angle += RES;
     angle %= RES;
 
-    if (angle < shot->dir)
+    if (angle < shot->missile_dir)
 	angle += RES;
-    angle = angle - shot->dir - RES/2;
+    angle = angle - shot->missile_dir - RES/2;
 
-    if (angle < 0)
-	shot->dir += (u_byte)(((-angle < shot->turnspeed) ? -angle : shot->turnspeed));
-    else
-	shot->dir -= (u_byte)(((angle < shot->turnspeed) ? angle : shot->turnspeed));
+    if (angle < 0) {
+	shot->missile_dir += (u_byte)(((-angle < shot->turnspeed)
+					? -angle
+					: shot->turnspeed));
+    }
+    else {
+	shot->missile_dir -= (u_byte)(((angle < shot->turnspeed)
+					? angle
+					: shot->turnspeed));
+    }
 
-    shot->dir = MOD2(shot->dir, RES); /* NOTE!!!! */
+    shot->missile_dir = MOD2(shot->missile_dir, RES); /* NOTE!!!! */
 
     if (shot_speed < shot->max_speed)
 	shot_speed += acc;
 
     /*  shot->velocity = MIN(shot->velocity, shot->max_speed);  */
 
-    shot->vel.x = tcos(shot->dir) * shot_speed;
-    shot->vel.y = tsin(shot->dir) * shot_speed;
+    shot->vel.x = tcos(shot->missile_dir) * shot_speed;
+    shot->vel.y = tsin(shot->missile_dir) * shot_speed;
 }
 
 void Move_mine(int ind)
 {
-    object	*shot = Obj[ind];
+    mineobject	*mine = MINE_IND(ind);
 
-    if (BIT(shot->status, CONFUSED) && --shot->count <= 0)
-	CLR_BIT(shot->status, CONFUSED);
+    if (BIT(mine->status, CONFUSED) && --mine->count <= 0)
+	CLR_BIT(mine->status, CONFUSED);
 
-    if (BIT(shot->status, OWNERIMMUNE) && shot->info) {
-	if (--shot->info <= 0)
-	    CLR_BIT(shot->status, OWNERIMMUNE);
+    if (BIT(mine->status, OWNERIMMUNE) && mine->info) {
+	if (--mine->info <= 0)
+	    CLR_BIT(mine->status, OWNERIMMUNE);
     }
 
-    if (shot->mods.mini && shot->spread_left-- <= 0) {
-	shot->acc.x = 0;
-	shot->acc.y = 0;
+    if (mine->mods.mini && mine->spread_left-- <= 0) {
+	mine->acc.x = 0;
+	mine->acc.y = 0;
     }
 }
 

@@ -1,4 +1,4 @@
-/* $Id: list.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: list.c,v 5.1 2001/05/14 19:28:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -116,7 +116,7 @@ int List_empty(list_t list)
     return (list->size == 0);
 }
 
-/* erase element at list position. */
+/* erase element at list position and return next position */
 list_iter_t List_erase(list_t list, list_iter_t pos)
 {
     list_iter_t next, prev;
@@ -205,7 +205,7 @@ list_iter_t List_push_back(list_t list, void *data)
  * Note that this is very slow because it traverses the entire list
  * searching for an element.
  */
-list_iter_t	List_find(list_t list, void *data)
+list_iter_t List_find(list_t list, void *data)
 {
     return List_find_range(List_begin(list), List_end(list), data);
 }
@@ -214,7 +214,7 @@ list_iter_t	List_find(list_t list, void *data)
  * Find an element in a range of elements (excluding last) and return
  * an iterator pointing to it.  Note that this is a very slow operation.
  */
-list_iter_t	List_find_range(list_iter_t first, list_iter_t last, void *data)
+list_iter_t List_find_range(list_iter_t first, list_iter_t last, void *data)
 {
     list_iter_t		pos = first;
 
@@ -226,11 +226,11 @@ list_iter_t	List_find_range(list_iter_t first, list_iter_t last, void *data)
 }
 
 /*
- * Remove all element from the list which are equal to data.
+ * Remove all elements from the list which are equal to data.
  * Note that this is very slow because it traverses the entire list.
  * The return value is the number of successful removals.
  */
-int		List_remove(list_t list, void *data)
+int List_remove(list_t list, void *data)
 {
     list_iter_t		pos = List_begin(list);
     list_iter_t		end = List_end(list);

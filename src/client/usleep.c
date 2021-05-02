@@ -28,10 +28,6 @@
 
 #include "types.h"
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: usleep.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 int micro_delay(unsigned usec);
 
@@ -40,17 +36,10 @@ int micro_delay(unsigned usec)
 #if 0 /* SYSV */
     poll((struct poll *) 0, (size_t) 0, usec / 1000);	/* ms RES */
 #endif
-#ifdef VMS
-    float timeout;
-
-    timeout = usec/1000000.0;
-    LIB$WAIT(&timeout);
-#else
     struct timeval timeout;
     timeout.tv_usec = usec % (unsigned long) 1000000;
     timeout.tv_sec = usec / (unsigned long) 1000000;
     (void) select(0, NULL, NULL, NULL, &timeout);
-#endif
 
     return 0;
 }

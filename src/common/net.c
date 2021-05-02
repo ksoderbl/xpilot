@@ -1,4 +1,4 @@
-/* $Id: net.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: net.c,v 5.2 2001/05/07 11:38:56 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,7 +44,6 @@
 #endif
 
 #ifdef _WINDOWS
-# include "../client/NT/winClient.h"
 # include "NT/winNet.h"
 # undef	va_start		/* there are bad versions in windows.h's "stdarg.h" */
 # undef	va_end
@@ -139,7 +138,7 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
 	sbuf->len = 0;
 	sbuf->ptr = sbuf->buf;
     } else {
-#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
+#if defined(__hpux) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
 	memmove(sbuf->buf, sbuf->buf + len, sbuf->len - len);
 #else
 	bcopy(sbuf->buf + len, sbuf->buf, sbuf->len - len);

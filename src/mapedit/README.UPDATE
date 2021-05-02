@@ -1,4 +1,41 @@
 *********************************************************************
+Changes to xmapedit V4.2.1a to bring it up to V4.4.0a
+
+Completely reworked options dialog to make it useable.
+
+Added 28 new options
+minMineSpeed, defaultShipShape, tankShipShape, selfImmunity,
+turnThrust, tankScoreDecrement, robotRealName, robotHostName,
+tankRealName, tankHostName, coriolis, blockFriction, blockFrictionVisible,
+captureTheFlag, randomItemProb, targetDeadTime, cannonDeadTime,
+ballConnectorLength, maxBallConnectorRatio, ballConnectorDamping,
+ballConnectorSpringConstant, ballMass, asteroidsWallBounce,
+asteroidCollisionMayKill, asteroidsOnRadar, asteroidScoring,
+asteroidProb, maxAsteroidDensity
+
+Added new block type: empty treasure (character: ^)
+Added new block type: friction (character: z)
+
+Patch from Jarno to clean up command line options.
+Commandline now works as xp-mapedit [options] [mapfile]
+[mapfile] is the map you wish to edit. Leaving it blank will start a new map
+[options] can be
+  -font <string>
+    Use this font instead of the default
+  -display <string>
+    Display mapeditor on this display instead of the current
+  -help
+    Output this help
+
+Jarno submitted another patch to apply ".xp" when saving,
+if the user neglects to.
+
+Removed onePlayerOnly and analyticalCollisionDetection as these were removed from
+the server.
+
+
+Daedlaes (jarrod@xpilot.org) June 1, 2001
+*********************************************************************
 Changes to xmapedit V4.2.0c to bring it up to V4.2.1a
 
 Added new server options that came in with Xpilot 4.2.1:
@@ -104,4 +141,5 @@ Changes to xmapedit V1.00 to bring it up to V3.5.1b
 
   Robert Templeman, Jul 5, 1996.
 *********************************************************************
-$Id: README.UPDATE,v 5.0 2001/04/07 20:01:00 dik Exp $
+$Id: README.UPDATE,v 5.3 2001/06/01 21:46:08 millerjl Exp $
+

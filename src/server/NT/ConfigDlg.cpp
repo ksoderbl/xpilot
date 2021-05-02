@@ -1,4 +1,4 @@
-/* $Id: ConfigDlg.cpp,v 5.0 2001/04/07 20:01:01 dik Exp $
+/* $Id: ConfigDlg.cpp,v 5.2 2001/05/07 13:09:41 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,6 +28,8 @@
 \***************************************************************************/
 
 #include "stdafx.h"
+#include <afxdlgs.h>
+
 #include "xpilots.h"
 #include "ConfigDlg.h"
 //#include "ConfigDialog.h"
@@ -56,6 +58,8 @@ void CConfigDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CConfigDlg)
+	DDX_Control(pDX, IDC_STATIC_URL2, m_staticUrl2);
+	DDX_Control(pDX, IDC_STATIC_URL, m_staticUrl);
 	DDX_Text(pDX, IDC_COMMANDLINE, m_commandline);
 	//}}AFX_DATA_MAP
 }
@@ -64,11 +68,36 @@ BEGIN_MESSAGE_MAP(CConfigDlg, CDialog)
 	//{{AFX_MSG_MAP(CConfigDlg)
 	ON_BN_CLICKED(IDC_LOAD_MAP, OnLoadMap)
 	ON_BN_CLICKED(IDC_SETOPTIONS, OnSetoptions)
+	ON_BN_CLICKED(IDC_STATIC_URL, OnStaticUrl)
+	ON_BN_CLICKED(IDC_STATIC_URL2, OnStaticUrl2)
+	ON_WM_CTLCOLOR()
+	ON_BN_CLICKED(IDC_CHOOSEMAP, OnChoosemap)
+	ON_WM_DESTROY()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
 // CConfigDlg message handlers
+
+BOOL CConfigDlg::OnInitDialog() 
+{
+	CDialog::OnInitDialog();
+	
+	// TODO: Add extra initialization here
+	urlFont.CreateFont(14, 0, 0, 0, FW_NORMAL, FALSE, TRUE, FALSE, ANSI_CHARSET, 
+		OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_SWISS, 
+		NULL);
+	m_staticUrl.SetFont(&urlFont);
+	m_staticUrl2.SetFont(&urlFont);
+	return TRUE;  // return TRUE unless you set the focus to a control
+	              // EXCEPTION: OCX Property Pages should return FALSE
+}
+
+void CConfigDlg::OnDestroy() 
+{
+	CDialog::OnDestroy();
+	DeleteObject(urlFont);
+}
 
 void CConfigDlg::OnLoadMap() 
 {
@@ -89,3 +118,49 @@ void CConfigDlg::OnSetoptions()
 	}
 #endif
 }
+
+void CConfigDlg::OnStaticUrl() 
+{
+	CString	cs = "doc/ServerOpts.txt";
+	ShellExecute(NULL, "open", cs, NULL, NULL, SW_SHOWDEFAULT);	
+}
+
+void CConfigDlg::OnStaticUrl2() 
+{
+	CString	cs = "http://www.j-a-r-n-o.nl/xpilotserver.html";
+	ShellExecute(NULL, "open", cs, NULL, NULL, SW_SHOWDEFAULT);	
+}
+
+
+HBRUSH CConfigDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor) 
+{
+	HBRUSH hbr = CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
+	
+	// TODO: Change any attributes of the DC here
+	if (nCtlColor == CTLCOLOR_STATIC && pWnd->GetDlgCtrlID() == IDC_STATIC_URL)
+		pDC->SetTextColor(RGB(0,0,255));
+	if (nCtlColor == CTLCOLOR_STATIC && pWnd->GetDlgCtrlID() == IDC_STATIC_URL2)
+		pDC->SetTextColor(RGB(0,0,255));
+	return hbr;
+}
+
+void CConfigDlg::OnChoosemap() 
+{
+	static char BASED_CODE szFilter[] = "XPilot Files (*.xp)|*.xp";
+	char	dir[MAX_PATH+1];
+
+	CFileDialog	fc(TRUE, ".xp", NULL, NULL, szFilter, this);
+	GetCurrentDirectory(MAX_PATH, dir);
+	if (SetCurrentDirectory("lib/maps"))
+		GetCurrentDirectory(MAX_PATH, dir);
+	fc.m_ofn.lpstrInitialDir = dir;
+	if (fc.DoModal() == IDOK)
+	{
+		if (m_commandline.GetLength())
+			m_commandline += " ";
+		m_commandline += "-map ";
+		m_commandline += fc.GetFileName();
+		UpdateData(FALSE);
+	}
+}
+

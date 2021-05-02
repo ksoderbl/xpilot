@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paint.c,v 5.3 2001/06/02 21:00:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -62,6 +62,7 @@
 #include "blockbitmaps.h"
 #include "portability.h"
 #include "client.h"
+#include "commonproto.h"
 
 char paint_version[] = VERSION;
 
@@ -128,12 +129,12 @@ Colormap	colormap;	/* Private colormap */
 int	maxColors;		/* Max. number of colors to use */
 bool	gotFocus;
 bool	players_exposed;
-short	view_width;		/* Width of visible area according to server */
-short	view_height;		/* Height of visible area according to server */
-int	real_view_width;	/* Width of map area displayed. */
-int	real_view_height;	/* Height of map area displayed. */
-int	view_x_offset;		/* Offset of view_width wrt. real_view_width */
-int	view_y_offset;		/* Offset of view_height wrt. real_view_height */
+short	ext_view_width;		/* Width of extended visible area */
+short	ext_view_height;	/* Height of extended visible area */
+int	active_view_width;	/* Width of active map area displayed. */
+int	active_view_height;	/* Height of active map area displayed. */
+int	ext_view_x_offset;	/* Offset ext_view_width */
+int	ext_view_y_offset;	/* Offset ext_view_height */
 
 int	titleFlip;		/* Do special title bar flipping? */
 int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
@@ -339,7 +340,7 @@ void Paint_frame(void)
 #ifndef _WINDOWS
     if (dbuf_state->type == PIXMAP_COPY) {
 	XCopyArea(dpy, p_draw, draw, gc,
-		  0, 0, view_width, view_height, 0, 0);
+		  0, 0, ext_view_width, ext_view_height, 0, 0);
     }
 
     dbuff_switch(dbuf_state);
@@ -396,7 +397,7 @@ void Paint_frame(void)
 #define SCORE_BORDER		6
 
 
-void Paint_score_background(int thisLine)
+static void Paint_score_background(int thisLine)
 {
     if (!blockBitmaps) {
 	XClearWindow(dpy, players);
@@ -437,21 +438,22 @@ void Paint_score_start(void)
     thisLine = SCORE_BORDER + scoreListFont->ascent;
 
     if (showRealName) {
-	strcpy(headingStr, "NICK=USER@HOST");
+	strlcpy(headingStr, "NICK=USER@HOST", sizeof(headingStr));
     } else {
-	strcpy(headingStr, "  ");
+	strlcpy(headingStr, "  ", sizeof(headingStr));
 	if (BIT(Setup->mode, TIMING)) {
 	    if (version >= 0x3261) {
 		strcat(headingStr, "LAP ");
 	    }
 	}
 	else if (BIT(Setup->mode, TEAM_PLAY)) {
-	    strcpy(headingStr, " TM ");
+	    strlcpy(headingStr, " TM ", sizeof(headingStr));
 	}
 	strcat(headingStr, "SCORE ");
-	if (BIT(Setup->mode, LIMITED_LIVES))
-	    strcat(headingStr, "LIFE");
-	strcat(headingStr, " NAME");
+	if (BIT(Setup->mode, LIMITED_LIVES)) {
+	    strlcat(headingStr, "LIFE", sizeof(headingStr));
+	}
+	strlcat(headingStr, " NAME", sizeof(headingStr));
     }
     Paint_score_background(thisLine);
 

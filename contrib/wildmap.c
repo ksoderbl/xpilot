@@ -1,4 +1,5 @@
-/*
+/* $Id: wildmap.c,v 5.2 2001/05/28 17:47:16 bertg Exp $
+ *
  * Wildmap, a random map generator for XPilot.  Copyright (C) 1993-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
@@ -20,12 +21,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <limits.h>
 #include <time.h>
 #include <string.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
+
+
 
 #define NELEM(a)	(sizeof(a) / sizeof(a[0]))
 
@@ -122,12 +129,12 @@ static void Default_map(void)
     map.seed = (unsigned)getpid() ^ (unsigned)time(NULL) * (unsigned)getppid();
     map.seed_ratio = 0.16;
     map.fill_ratio = 0.20;
-    map.num_bases = 16;
+    map.num_bases = 26;
     map.num_teams = 3;
     map.cannon_ratio = 0.0020;
     map.fuel_ratio   = 0.0006;
     map.grav_ratio   = 0.0006;
-    map.worm_ratio   = 0.0002;
+    map.worm_ratio   = 0.0004;
 }
 
 static void Option_map(int argc, char **argv)
@@ -1146,12 +1153,8 @@ static void Decorate_map(void)
     free(home);
 }
 
-static void Print_map(void)
+static void Border_map(void)
 {
-    /*
-     * Output the map in XPilot 2.0 map format.
-     */
-
     int			i;
     char		*left, *middle, *right;
 
@@ -1189,11 +1192,15 @@ static void Print_map(void)
 	right += map.linewidth;
     }
     map.data[map.datasize] = '\0';
+}
+
+static void Dump_map(void)
+{
 
     printf("mapWidth:	%d\n", map.width);
     printf("mapHeight:	%d\n", map.height);
     printf("mapName:	Wild Map %u\n", map.seed);
-    printf("mapAuthor:	The Wild Map Generator 1.1\n");
+    printf("mapAuthor:	The Wild Map Generator 1.2\n");
     printf("edgeWrap:	True\n");
     printf("mapData:	\\multiline: EndOfMapData\n");
     printf("%sEndOfMapData\n", map.data);
@@ -1217,7 +1224,7 @@ static void Picture_map(void)
 	perror(name);
 	return;
     }
-    line = (unsigned char *)malloc(3 * map.linewidth);
+    line = (unsigned char *)malloc(3 * map.width);
     if (!line) {
 	perror("No memory for wildmap dump");
 	fclose(fp);
@@ -1228,7 +1235,7 @@ static void Picture_map(void)
     fprintf(fp, "%d\n", 255);
     for (y = 0; y < map.height; y++) {
 	for (x = 0; x < map.width; x++) {
-	    switch (map.data[x + y * map.linewidth]) {
+	    switch (map.data[x + map.linewidth * y]) {
 	    case BLOCK_SPACE:
 		line[x * 3 + 0] = 0;
 		line[x * 3 + 1] = 0;
@@ -1318,8 +1325,10 @@ int main(int argc, char **argv)
     Partition_map();
     Smooth_map();
     Decorate_map();
+    Border_map();
     Picture_map();
-    Print_map();
+    Dump_map();
+    Dealloc_map();
  
     return 0;
 }

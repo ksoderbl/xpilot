@@ -1,4 +1,4 @@
-/* $Id: protoclient.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: protoclient.h,v 5.4 2001/05/14 13:07:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -24,10 +24,6 @@
 
 #ifndef	PROTOCLIENT_H
 #define	PROTOCLIENT_H
-
-#ifdef VMS
-#include "strcasecmp.h"
-#endif
 
 /*
  * about.c
@@ -59,7 +55,8 @@ void Colors_debug(void);
 extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 			  int *my_team, int *text, int *list,
 			  int *join, int *noLocalMotd,
-			  char *nickName, char *dispName, char *shut_msg);
+			  char *nickName, char *dispName, char *hostName,
+			  char *shut_msg);
 extern void defaultCleanup(void);				/* memory cleanup */
 
 #ifndef _WINDOWS
@@ -94,6 +91,7 @@ extern void paintdataCleanup(void);		/* memory cleanup */
  * paintobjects.c
  */
 extern int Init_wreckage(void);
+extern int Init_asteroids(void);
 
 
 /*
@@ -112,6 +110,11 @@ extern bool		Is_allowed(char *);
  */
 extern void Record_cleanup(void);
 extern void Record_init(char *filename);
+
+/*
+ * sim.c
+ */
+extern void Simulate(void);
 
 /*
  * textinterface.c

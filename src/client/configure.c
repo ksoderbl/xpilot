@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 5.1 2001/04/22 10:19:51 bertg Exp $
+/* $Id: configure.c,v 5.5 2001/05/07 15:23:27 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -69,14 +69,11 @@
 # include <X11/Xutil.h>
 #endif
 
-#ifdef VMS
-# include "strcasecmp.h"
-#endif
-
 #ifdef _WINDOWS
 # include "NT/winX.h"
 # include "NT/winClient.h"
 # include "NT/winXXPilot.h"
+# include "NT/winConfig.h"
 #endif
 
 #include "version.h"
@@ -1110,6 +1107,7 @@ static int Config_create_scaleFactor(int widget_desc, int *height)
 			       MIN_SCALEFACTOR, MAX_SCALEFACTOR,
 			       Config_update_scaleFactor, NULL);
 }
+
 static int Config_create_altScaleFactor(int widget_desc, int *height)
 {
     return Config_create_float(widget_desc, height,
@@ -1407,19 +1405,18 @@ static void Xpilotrc_use(char *line)
 }
 #endif
 
+
+#ifndef _WINDOWS
 static void Config_save_resource(FILE *fp, const char *resource, char *value)
 {
-#ifndef _WINDOWS
     char		buf[256];
 
     sprintf(buf, "xpilot.%s:\t\t%s\n", resource, value);
     Xpilotrc_use(buf);
     fprintf(fp, "%s", buf);
-#else
-    WritePrivateProfileString("Settings", resource, value, Get_xpilotini_file(1));
+}
 #endif
 
-}
 
 static void Config_save_float(FILE *fp, const char *resource, DFLOAT value)
 {
@@ -1490,7 +1487,7 @@ static void Config_save_keys(FILE *fp)
 	}
 
 	if ((res = Get_keyResourceString(key)) != NULL) {
-	    strcpy(buf, str);
+	    strlcpy(buf, str, sizeof(buf));
 	    /* find all other keysyms which map to the same key. */
 	    j = i;
 	    while (Config_find_key(key, j + 1, maxKeyDefs, &j) == TRUE) {
@@ -1510,46 +1507,34 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 {
     int			i;
     FILE		*fp = NULL;
-#ifdef VMS
-    static char	base[] = "DECW$USER_DEFAULTS:xpilot.dat";
-#elif defined(_WINDOWS)
-    static char	base[] = "XPilot.ini";
-#endif
-    char		buf[512],
-			oldfile[PATH_MAX + 1],
+    char		buf[512];
+#ifndef _WINDOWS	/* Windows does no file handling on its own. */
+	char	oldfile[PATH_MAX + 1],
 			newfile[PATH_MAX + 1];
 
     *strptr = "Saving...";
     Widget_draw(widget_desc);
     Client_flush();
 
-#ifndef _WINDOWS	/* Windows does no file handling on its own.  fp=undefined */
-#ifndef VMS
     Get_xpilotrc_file(oldfile, sizeof(oldfile));
     if (oldfile[0] == '\0') {
 	Config_save_failed("Can't find .xpilotrc file", strptr);
 	return 1;
     }
-#else
-    sprintf(oldfile, "%s", base);
-    sprintf(newfile, "%s", base);
-#endif
     if ((fp = fopen(oldfile, "r")) != NULL) {
 	while (fgets(buf, sizeof buf, fp)) {
-	    buf[sizeof buf - 1] = '\0';
 	    Xpilotrc_add(buf);
 	}
 	fclose(fp);
     }
-#ifndef VMS
     sprintf(newfile, "%s.new", oldfile);
     unlink(newfile);
-#endif
     if ((fp = fopen(newfile, "w")) == NULL) {
 	Config_save_failed("Can't open file to save to.", strptr);
 	return 1;
     }
-#endif		/* _WINDOWS */
+#endif
+
     Config_save_resource(fp, "name", name);
     Config_save_float(fp, "power", power);
     Config_save_float(fp, "turnSpeed", turnspeed);
@@ -1618,17 +1603,20 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_float(fp, "scaleFactor", scaleFactor);
     Config_save_float(fp, "altScaleFactor", scaleFactor_s);
 #endif
-    /* don't save this one: Config_save_int(fp, "maxFPS", maxFPS); */
+    /* don't save maxFPS */
+
     Config_save_keys(fp);
+
     for (i = 0; i < NUM_MODBANKS; i++) {
 	sprintf(buf, "modifierBank%d", i + 1);
 	Config_save_resource(fp, buf, modBankStr[i]);
     }
+
+    IFWINDOWS( Config_save_window_positions(); )
+
 #ifndef _WINDOWS
     Xpilotrc_end(fp);
     fclose(fp);
-#endif
-#ifndef VMS
     sprintf(newfile, "%s.bak", oldfile);
     rename(oldfile, newfile);
     unlink(oldfile);
@@ -1636,31 +1624,6 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     rename(newfile, oldfile);
 #endif
 
-#ifdef _WINDOWS
-    /* save our window's position */
-    {
-	WINDOWPLACEMENT	wp;
-	Window w;
-	RECT rect;
-	char	s[50];
-	w = WinXGetParent(top);
-	WinXGetWindowRect(w, &rect);
-	WinXGetWindowPlacement(w, &wp);
-	if (wp.showCmd != SW_SHOWMINIMIZED)
-	{
-	    extern	const char* s_WindowMet;
-	    extern	const char* s_L;
-	    extern	const char* s_T;
-	    extern	const char* s_R;
-	    extern	const char* s_B;
-	    itoa(rect.left, s, 10);
-	    WritePrivateProfileString(s_WindowMet, s_L, itoa(rect.left, s, 10), Get_xpilotini_file(1));
-	    WritePrivateProfileString(s_WindowMet, s_T, itoa(rect.top, s, 10), Get_xpilotini_file(1));
-	    WritePrivateProfileString(s_WindowMet, s_R, itoa(rect.right, s, 10), Get_xpilotini_file(1));
-	    WritePrivateProfileString(s_WindowMet, s_B, itoa(rect.bottom, s, 10), Get_xpilotini_file(1));
-	}
-    }
-#endif
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy(config_save_confirm_desc);
 	config_save_confirm_desc = NO_WIDGET;

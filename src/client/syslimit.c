@@ -1,4 +1,4 @@
-/* $Id: syslimit.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: syslimit.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,10 +41,6 @@
 #define WC_L		"/bin/wc -l "
 #define RWHO		"/usr/bin/rwho -a "
 
-#ifndef	lint
-static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 5.0 2001/04/07 20:00:58 dik Exp $";
-#endif
 
 
 

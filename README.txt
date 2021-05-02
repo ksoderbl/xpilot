@@ -1,4 +1,4 @@
-This is the README file for XPilot 4.3.2.
+This is the README file for XPilot 4.4.0.
 
 Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
@@ -12,9 +12,6 @@ Installation instructions are in the INSTALL.txt file.
 
 NT and Win95 users should examine the src/common/NT/bindist subdirectory
 and read the README.txt which is in there.
-
-VMS users should examine the contrib/VMS subdirectory and read the
-README.VMS which is in there.
 
 The documentation for XPilot is far from complete.  The map format is
 only explained in doc/README.MAPS and doc/README.MAPS2, not in the server
@@ -69,4 +66,4 @@ discuss your potential contributions to the source code, please see the
 URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
 information.
 
-$Id: README.txt.msub,v 5.0 2001/04/07 20:00:56 dik Exp $
+$Id: README.txt,v 5.13 2001/06/12 10:33:30 bertg Exp $

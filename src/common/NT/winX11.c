@@ -1,4 +1,4 @@
-/* $Id: winX11.c,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: winX11.c,v 5.2 2001/05/04 08:41:07 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -883,5 +883,11 @@ XDefineCursor(Display* d, Window w, Cursor c)
 int	DefaultDepth(Display* d, int screen)
 {
 	return(8);		// assume 256 colors (bad assumption but OK for now)
+}
+
+/*****************************************************************************/
+int XSync(Display *display, Bool discard)
+{
+	return 0;
 }
 

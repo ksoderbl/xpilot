@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: defaults.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: defaults.h,v 5.3 2001/05/20 19:16:39 millerjl Exp $
  */
 
 /* defaults
@@ -44,18 +44,21 @@
 
 #define PREF_X                -1
 #define PREF_Y                -1
-#define PREF_WIDTH            1500 /*1024*/
-#define PREF_HEIGHT           860
+#define PREF_WIDTH            800 /*1024*/
+#define PREF_HEIGHT           350
+#define PREFSEL_WIDTH         200
+#define PREFSEL_HEIGHT        250
 #define PREF_BTN_WIDTH        60
 #define PREF_BTN_HEIGHT       18
 
 #define HELP_X                -1
 #define HELP_Y                -1
 #define HELP_WIDTH            500
-#define HELP_HEIGHT           600
+#define HELP_HEIGHT           625
 #define HELP_BTN_WIDTH        50
 #define HELP_BTN_HEIGHT       27
  
 #define TOOLSWIDTH            200
 #define TOOLSHEIGHT           720
+
 

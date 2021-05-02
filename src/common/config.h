@@ -1,4 +1,4 @@
-/* $Id: config.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: config.h,v 5.2 2001/05/07 22:44:05 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -51,7 +51,7 @@
  * ZCAT_EXT should define the proper compressed file extension.
  */
 
-#if defined(VMS) || defined(_WINDOWS)
+#if defined(_WINDOWS)
 #    ifdef COMPRESSED_MAPS
 	/*
 	 * Couldn't find a popen(), also compress and gzip don't exist.
@@ -89,6 +89,16 @@
 #	endif
 #else
 #	define	xpprintf	printf
+#endif
+
+/*
+ XPilot on Windows does lots of double to int conversions. So we have:
+warning C4244: 'initializing' : conversion from 'double ' to 'int ', possible loss of data
+a million times.  I used to fix each warning added by the Unix people, but
+this makes for harder to read code (and was tiring with each patch)
+*/
+#ifdef	_WINDOWS
+#pragma warning (disable : 4244 4761)
 #endif
 
 char *Conf_libdir(void);

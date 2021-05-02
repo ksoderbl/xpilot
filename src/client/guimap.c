@@ -1,4 +1,4 @@
-/* $Id: guimap.c,v 5.1 2001/04/16 15:41:39 bertg Exp $
+/* $Id: guimap.c,v 5.5 2001/06/10 17:36:58 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,17 +52,15 @@
 #include "texture.h"
 #include "paint.h"
 #include "paintdata.h"
+#include "paintmacros.h"
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
 #include "blockbitmaps.h"
+#include "guimap.h"
 
 
 char guimap_version[] = VERSION;
-
-
-#define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (world.y + view_height - (co)))
 
 
 /* XXX better include a header. */
@@ -242,7 +240,7 @@ void Gui_paint_cannon(int x, int y, int type)
 }
 
 
-void Gui_paint_fuel(int x, int y, long fuel)
+void Gui_paint_fuel(int x, int y, int fuel)
 {
 	int fuel_images = Block_bitmap_images(BM_FUEL);
 
@@ -973,7 +971,7 @@ void Gui_paint_setup_worm(int x, int y, int wormDrawCount)
 	    { 10, 0, 10 },
 	    { 10, 5, 10 }
 	};
-    #define _O	wormOffset[wormDrawCount]
+#define _O	wormOffset[wormDrawCount]
 
 	SET_FG(colors[RED].pixel);
 	Arc_add(RED, 
@@ -1157,16 +1155,18 @@ void Gui_paint_setup_treasure(int x, int y, int treasure, bool own)
 		X(x),
 		Y(y + BLOCK_SZ),
 		BLOCK_SZ, BLOCK_SZ, 0, 64*180);
-	s[1] = '\0'; s[0] = '0' + treasure;
-	size = XTextWidth(gameFont, s, 1);
-	rd.drawString(dpy, p_draw, gc,
-		      WINSCALE(X(x + BLOCK_SZ/2)) - size/2,
-		      WINSCALE(Y(y + 2*BALL_RADIUS)), s, 1);
-	Erase_rectangle(WINSCALE(X(x + BLOCK_SZ/2)) - size/2 - 1,
-			WINSCALE(Y(y + 2*BALL_RADIUS))
-			- gameFont->ascent - 1,
-			size + 2,
-			gameFont->ascent+ gameFont->descent+ 2);
+	if (BIT(Setup->mode, TEAM_PLAY)) {
+	    s[1] = '\0'; s[0] = '0' + treasure;
+	    size = XTextWidth(gameFont, s, 1);
+	    rd.drawString(dpy, p_draw, gc,
+			  WINSCALE(X(x + BLOCK_SZ/2)) - size/2,
+			  WINSCALE(Y(y + 2*BALL_RADIUS)), s, 1);
+	    Erase_rectangle(WINSCALE(X(x + BLOCK_SZ/2)) - size/2 - 1,
+			    WINSCALE(Y(y + 2*BALL_RADIUS))
+			      - gameFont->ascent - 1,
+			    size + 2,
+			    gameFont->ascent+ gameFont->descent+ 2);
+	}
     }
     else {
 	char    s[2];
@@ -1180,19 +1180,21 @@ void Gui_paint_setup_treasure(int x, int y, int treasure, bool own)
 	PaintBitmap(p_draw, type, WINSCALE(X(x)), WINSCALE(Y(y + BLOCK_SZ)),
 		    WINSCALE(BLOCK_SZ), WINSCALE(BLOCK_SZ), 0);
 
-	color = own ? BLUE : RED;
-        SET_FG(colors[color].pixel);
+	if (BIT(Setup->mode, TEAM_PLAY)) {
+	    color = own ? BLUE : RED;
+            SET_FG(colors[color].pixel);
 
-	s[1] = '\0'; s[0] = '0' + treasure;
-	size = XTextWidth(gameFont, s, 1);
-	rd.drawString(dpy, p_draw, gc,
-		      WINSCALE(X(x + BLOCK_SZ/2)) - size/2,
-		      WINSCALE(Y(y + BALL_RADIUS + 5)), s, 1);
-	Erase_rectangle(WINSCALE(X(x + BLOCK_SZ/2 )) - size/2 - 1,
-			WINSCALE(Y(y + BALL_RADIUS + 5))
-			- gameFont->ascent - 1,
-			size + 2,
-			gameFont->ascent+ gameFont->descent+ 2);
+	    s[1] = '\0'; s[0] = '0' + treasure;
+	    size = XTextWidth(gameFont, s, 1);
+	    rd.drawString(dpy, p_draw, gc,
+			  WINSCALE(X(x + BLOCK_SZ/2)) - size/2,
+			  WINSCALE(Y(y + BALL_RADIUS + 5)), s, 1);
+	    Erase_rectangle(WINSCALE(X(x + BLOCK_SZ/2 )) - size/2 - 1,
+			    WINSCALE(Y(y + BALL_RADIUS + 5))
+			      - gameFont->ascent - 1,
+			    size + 2,
+			    gameFont->ascent+ gameFont->descent+ 2);
+	}
 
     }
 }

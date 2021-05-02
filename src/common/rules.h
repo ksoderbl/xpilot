@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: rules.h,v 5.2 2001/05/31 20:53:22 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -33,7 +33,6 @@
 #define PLAYER_KILLINGS		(1<<2)
 #define LIMITED_LIVES		(1<<3)
 #define TIMING			(1<<4)
-#define ONE_PLAYER_ONLY		(1<<5)
 #define PLAYER_SHIELDING	(1<<6)
 #define LIMITED_VISIBILITY	(1<<7)
 #define TEAM_PLAY		(1<<8)
@@ -75,6 +74,7 @@
 #define COLLISIONSHOVE		(1L<<22)	/* Collision counts as shove */
 #define FINISH			(1L<<23)	/* Reached race finish */
 #define RACE_OVER		(1L<<24)	/* After finished and score. */
+#define RANDOM_ITEM		(1L<<25)	/* If an item shows up as random */
 
 typedef struct {
     int		lives;

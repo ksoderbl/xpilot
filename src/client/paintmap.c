@@ -1,4 +1,4 @@
-/* $Id: paintmap.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paintmap.c,v 5.2 2001/05/13 17:17:20 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -50,14 +50,14 @@
 #include "texture.h"
 #include "paint.h"
 #include "paintdata.h"
+#include "paintmacros.h"
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
 #include "guimap.h"
-char paintmap_version[] = VERSION;
 
-#define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (world.y + view_height - (co)))
+
+char paintmap_version[] = VERSION;
 
 
 int	wallColor;		/* Color index for wall drawing */
@@ -186,8 +186,8 @@ void Paint_world(void)
 
     xb = ((world.x < 0) ? (world.x - (BLOCK_SZ - 1)) : world.x) / BLOCK_SZ;
     yb = ((world.y < 0) ? (world.y - (BLOCK_SZ - 1)) : world.y) / BLOCK_SZ;
-    xe = (world.x + view_width) / BLOCK_SZ;
-    ye = (world.y + view_height) / BLOCK_SZ;
+    xe = (world.x + ext_view_width) / BLOCK_SZ;
+    ye = (world.y + ext_view_height) / BLOCK_SZ;
     if (!BIT(Setup->mode, WRAP_PLAY)) {
 	if (xb < 0)
 	    xb = 0;
@@ -200,13 +200,13 @@ void Paint_world(void)
 	if (world.x <= 0) {
 	    Gui_paint_border(0, 0, 0, Setup->height);
 	}
-	if (world.x + view_width >= Setup->width) {
+	if (world.x + ext_view_width >= Setup->width) {
 	    Gui_paint_border(Setup->width, 0, Setup->width, Setup->height);
 	}
 	if (world.y <= 0) {
 	    Gui_paint_border(0, 0, Setup->width, 0);
 	}
-	if (world.y + view_height >= Setup->height) {
+	if (world.y + ext_view_height >= Setup->height) {
 	    Gui_paint_border(0, Setup->height, Setup->width, Setup->height);
 	}
     }
@@ -214,10 +214,12 @@ void Paint_world(void)
     y = yb * BLOCK_SZ;
     yi = mod(yb, Setup->y);
     mapbase = Setup->map_data + yi;
-    Gui_paint_visible_border(world.x + view_width/2 - MAX_VIEW_SIZE/2, 
-			     world.y + view_height/2 - MAX_VIEW_SIZE/2,
-			     world.x + view_width/2 + MAX_VIEW_SIZE/2, 
-			     world.y + view_height/2 + MAX_VIEW_SIZE/2);
+    if (ext_view_width > MAX_VIEW_SIZE || ext_view_height > MAX_VIEW_SIZE) {
+	Gui_paint_visible_border(world.x + ext_view_width/2 - MAX_VIEW_SIZE/2, 
+				 world.y + ext_view_height/2 - MAX_VIEW_SIZE/2,
+				 world.x + ext_view_width/2 + MAX_VIEW_SIZE/2, 
+				 world.y + ext_view_height/2 + MAX_VIEW_SIZE/2);
+    }
 
     for (ryb = yb; ryb <= ye; ryb++, yi++, y += BLOCK_SZ, mapbase++) {
 

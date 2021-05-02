@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: proto.h,v 5.0 2001/04/07 20:01:00 dik Exp $
+ * $Id: proto.h,v 5.1 2001/05/19 23:08:37 millerjl Exp $
  */
 
 /*
@@ -70,6 +70,15 @@ int             NewMap(HandlerInfo info);
 int             ResizeWidth(HandlerInfo info);
 int             ResizeHeight(HandlerInfo info);
 int             OpenPreferencesPopup(HandlerInfo info);
+int             OpenMapInfoPopup(void);
+int             OpenRobotsPopup(void);
+int             OpenVisibilityPopup(void);
+int             OpenCannonsPopup(void);
+int             OpenRoundsPopup(void);
+int             OpenInitItemsPopup(void);
+int             OpenMaxItemsPopup(void);
+int             OpenProbsPopup(void);
+int             OpenScoringPopup(void);
 int             ValidateCoordHandler(HandlerInfo info);
 int             ShowHoles(HandlerInfo info);
 char            MapData(int x, int y);
@@ -117,3 +126,4 @@ int             GrowMapArea(HandlerInfo info);
 /* prototypes for forms.c */
 void            BuildMapwinForm(void);
 void            BuildPrefsForm(void);
+void            BuildPrefsSheet(int num);

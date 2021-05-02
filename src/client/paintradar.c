@@ -1,4 +1,4 @@
-/* $Id: paintradar.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: paintradar.c,v 5.1 2001/05/25 00:22:50 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -202,7 +202,7 @@ static void Paint_self_radar(float xf, float yf)
     }
 }
 
-static void Paint_objects_radar(float xf, float yf)
+static void Paint_objects_radar(void)
 {
     int			i, x, y, xw, yw;
 
@@ -220,8 +220,8 @@ static void Paint_objects_radar(float xf, float yf)
 	if (s <= 0) {
 	    s = 1;
 	}
-	x = (int)(radar_ptr[i].x * xf + 0.5) - s / 2 - slidingradar_x;
-	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1 - s / 2 - slidingradar_y;
+	x = radar_ptr[i].x - s / 2 - slidingradar_x;
+	y = RadarHeight - radar_ptr[i].y - 1 - s / 2 - slidingradar_y;
 	if (x <= 0) {
 	    x += 256;
 	}
@@ -287,7 +287,7 @@ void Paint_radar(void)
     Paint_checkpoint_radar(xf, yf);
 
     Paint_self_radar(xf, yf);
-    Paint_objects_radar(xf, yf);
+    Paint_objects_radar();
 }
 
 
