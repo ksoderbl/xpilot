@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.45 2002/03/05 22:49:32 bertg Exp $
+/* $Id: proto.h,v 5.46 2002/04/13 18:26:04 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -339,9 +339,11 @@ void Set_player_message(player *pl, const char *message);
  */
 void Update_radar_target(int);
 void Update_objects(void);
+void Autopilot(int ind, int on);
+void Cloak(int ind, int on);
+void Deflector(int ind, int on);
 void Emergency_thrust(int ind, int on);
 void Emergency_shield(int ind, int on);
-void Autopilot(int ind, int on);
 void Phasing(int ind, int on);
 
 /*

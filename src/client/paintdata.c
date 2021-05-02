@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 5.8 2002/01/30 21:29:39 bertg Exp $
+/* $Id: paintdata.c,v 5.9 2002/04/13 16:10:59 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -828,10 +828,6 @@ int Handle_radar(int x, int y, int size)
 int Handle_message(char *msg)
 {
     Add_message(msg);
-    if (messagesToStdout == 2 ||
-	(messagesToStdout == 1 && strlen(msg) && msg[strlen(msg)-1] == ']')) {
-	xpprintf("%s\n", msg);
-    }
     return 0;
 }
 

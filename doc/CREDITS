@@ -14,7 +14,8 @@ Release 4.5 credits:
 	Austin Donnelly			Auto-kick of paused players.
 	Paul Alexander Drees		Bugfixes, sensitive mines,
 					asteroid concentrators, lag meter.
-	Thorsten Kroeger		Messages to standard output.
+	Thorsten Kroeger		Messages to standard output,
+					server security fix.
 
 Release 4.4 credits:
 

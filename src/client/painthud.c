@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 5.10 2002/01/17 19:51:16 bertg Exp $
+/* $Id: painthud.c,v 5.11 2002/04/13 16:10:59 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1104,6 +1104,16 @@ void Add_message(char *message)
 #endif
 
     msg_set[0]->pixelLen = XTextWidth(messageFont, msg_set[0]->txt, msg_set[0]->len);
+
+    /* Print messages to standard output.
+     */
+    if (messagesToStdout == 2 ||
+	(messagesToStdout == 1 &&
+	 message[0] &&
+	 message[strlen(message)-1] == ']')) {
+
+	xpprintf("%s\n", message);
+    }
 }
 
 
@@ -1135,7 +1145,7 @@ void Delete_pending_messages(void)
 
 /*
  * after a pending cut has been completed,
- * add the (buffered) messages which were ocming in meanwhile.
+ * add the (buffered) messages which were coming in meanwhile.
  */
 void Add_pending_messages(void)
 {

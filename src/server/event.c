@@ -1,4 +1,4 @@
-/* $Id: event.c,v 5.11 2002/03/05 22:49:32 bertg Exp $
+/* $Id: event.c,v 5.12 2002/04/13 18:26:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -848,16 +848,16 @@ int Handle_keyboard(int ind)
 			SET_BIT(pl->status, HOVERPAUSE);
 
 			if (BIT(pl->used, HAS_EMERGENCY_THRUST))
-			    Emergency_thrust(ind, 0);
+			    Emergency_thrust(ind, false);
 
 			if (BIT(pl->used, HAS_EMERGENCY_SHIELD))
-			    Emergency_shield(ind, 0);
+			    Emergency_shield(ind, false);
 
 			if (!BIT(pl->used, HAS_AUTOPILOT))
-			    Autopilot(ind, 1);
+			    Autopilot(ind, true);
 
 			if (BIT(pl->used, HAS_PHASING_DEVICE))
-			    Phasing(ind, 0);
+			    Phasing(ind, false);
 
 			/*
 			 * Don't allow firing while paused. Similar
@@ -959,9 +959,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_CLOAK:
 		if (pl->item[ITEM_CLOAK] > 0) {
-		    sound_play_player(pl, CLOAK_SOUND);
-		    pl->updateVisibility = 1;
-		    TOGGLE_BIT(pl->used, HAS_CLOAKING_DEVICE);
+		    Cloak(ind, !BIT(pl->used, HAS_CLOAKING_DEVICE));
 		}
 		break;
 
@@ -975,8 +973,7 @@ int Handle_keyboard(int ind)
 
 	    case KEY_DEFLECTOR:
 		if (pl->item[ITEM_DEFLECTOR] > 0) {
-		    TOGGLE_BIT(pl->used, HAS_DEFLECTOR);
-		    sound_play_player(pl, DEFLECTOR_SOUND);
+		    Deflector(ind, !BIT(pl->used, HAS_DEFLECTOR));
 		}
 		break;
 

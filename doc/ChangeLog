@@ -3,6 +3,24 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.5.2 compared to release 4.5.1.
+
+The IP address of the primary meta server was changed because
+it was moved to a new machine.  Both the client and the server
+make use of this IP address if they can't do a name lookup.
+
+Due to the recently introduced version filtering by the metaservers
+it now can happen that the number of servers listed in the client
+welcome screen is rather small.  This is now improved by trying
+to read at least 30 servers from both metaservers.
+
+The -messagesToStdout client option now also prints internally generated
+messages.
+
+The +cloakedShield server option now also works in shield enabled maps.
+
+===============================================================================
+
 This is a summary of changes of release 4.5.1 compared to release 4.5.0.
 
 Zemyla submitted code to remove all items at the end-of-round reset.
@@ -33,6 +51,9 @@ Since v4.5.0, players were unable to collide with their team's unowned
 (thrown or lost) balls. This made it impossible to destroy them in case
 en enemy player threatened to grab them. Unowned balls are now excluded
 from team immunity checking.
+
+Thorsten Kroeger submitted a small patch which fixes a most serious
+security problem with the XPilot server.
 
 ===============================================================================
 
@@ -1720,6 +1741,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.69 2002/03/26 20:39:22 kimiko Exp $
+==== $Id: ChangeLog,v 5.72 2002/04/13 18:30:48 bertg Exp $
 ===============================================================================
 

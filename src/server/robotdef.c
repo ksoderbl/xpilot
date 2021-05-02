@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 5.29 2002/01/07 19:56:54 bertg Exp $
+/* $Id: robotdef.c,v 5.30 2002/04/13 18:26:04 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -2237,7 +2237,7 @@ static void Robot_default_play(int ind)
     CLR_BIT(pl->used, HAS_SHOT | HAS_SHIELD | HAS_CLOAKING_DEVICE | HAS_LASER);
     if (BIT(pl->have, HAS_EMERGENCY_SHIELD)
 	&& !BIT(pl->used, HAS_EMERGENCY_SHIELD)) {
-	Emergency_shield(ind, 1);
+	Emergency_shield(ind, true);
     }
     harvest_checked = false;
     evade_checked = false;
@@ -2257,8 +2257,9 @@ static void Robot_default_play(int ind)
 	Emergency_thrust(ind, 1);
     }
 
-    if (BIT(pl->have, HAS_DEFLECTOR) && !BIT(World.rules->mode, TIMING))
-	SET_BIT(pl->used, HAS_DEFLECTOR);
+    if (BIT(pl->have, HAS_DEFLECTOR) && !BIT(World.rules->mode, TIMING)) {
+	Deflector(ind, true);
+    }
 
     if (pl->fuel.sum <= (BIT(World.rules->mode, TIMING) ? 0 : pl->fuel.l1)) {
 	if (!BIT(pl->status, SELF_DESTRUCT)) {

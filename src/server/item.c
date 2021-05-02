@@ -1,4 +1,4 @@
-/* $Id: item.c,v 5.23 2001/12/11 12:45:13 bertg Exp $
+/* $Id: item.c,v 5.24 2002/04/13 18:26:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -561,7 +561,9 @@ void Do_deflector(int ind)
     long	dist, dx, dy;
 
     if (pl->fuel.sum < -ED_DEFLECTOR) {
-	CLR_BIT(pl->used, HAS_DEFLECTOR);
+	if (BIT(pl->used, HAS_DEFLECTOR)) {
+	    Deflector(ind, false);
+	}
 	return;
     }
     Add_fuel(&(pl->fuel), (long)ED_DEFLECTOR);
@@ -730,8 +732,7 @@ void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
 	what = "a cloaking device";
 	victim->updateVisibility = 1;
 	if (!victim->item[item]) {
-	    CLR_BIT(victim->used, HAS_CLOAKING_DEVICE);
-	    CLR_BIT(victim->have, HAS_CLOAKING_DEVICE);
+	    Cloak(target, false);
 	}
         break;
     case ITEM_WIDEANGLE:
@@ -766,8 +767,7 @@ void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
     case ITEM_DEFLECTOR:
 	what = "a deflector";
 	if (!victim->item[item]) {
-	    CLR_BIT(victim->used, HAS_DEFLECTOR);
-	    CLR_BIT(victim->have, HAS_DEFLECTOR);
+	    Deflector(target, false);
 	}
         break;
     case ITEM_HYPERJUMP:
@@ -796,7 +796,7 @@ void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
 	what = "an emergency shield";
 	if (!victim->item[item]) {
 	    if (BIT(victim->used, HAS_EMERGENCY_SHIELD))
-		Emergency_shield(target, 0);
+		Emergency_shield(target, false);
 	    CLR_BIT(victim->have, HAS_EMERGENCY_SHIELD);
 	    if (!BIT(DEF_HAVE, HAS_SHIELD)) {
 		CLR_BIT(victim->have, HAS_SHIELD);

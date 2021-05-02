@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 5.57 2002/03/26 20:32:04 kimiko Exp $
+/* $Id: collision.c,v 5.59 2002/04/13 18:26:03 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -983,7 +983,7 @@ static void Player_collides_with_item(int ind, object *obj)
 	 */
 	if (!BIT(old_have, HAS_SHIELD | HAS_EMERGENCY_SHIELD)
 	    && pl->item[ITEM_EMERGENCY_SHIELD] == 1) {
-	    Emergency_shield(ind, 1);
+	    Emergency_shield(ind, true);
 	}
 	break;
     case ITEM_TRACTOR_BEAM:

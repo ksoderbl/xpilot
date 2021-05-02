@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.27 2002/03/21 18:20:20 kimiko Exp $
+/* $Id: update.c,v 5.29 2002/04/13 18:26:04 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -145,6 +145,78 @@ void Phasing (int ind, int on)
 }
 
 /*
+ * Turn cloak on or off.
+ */
+void Cloak(int ind, int on)
+{
+    player	*pl = Players[ind];
+
+    if (on) {
+	if (!BIT(pl->used, HAS_CLOAKING_DEVICE) && pl->item[ITEM_CLOAK] > 0) {
+	    if (!cloakedShield) {
+		if (BIT(pl->used, HAS_EMERGENCY_SHIELD)) {
+		    Emergency_shield(ind, false);
+		}
+		if (BIT(pl->used, HAS_DEFLECTOR)) {
+		    Deflector(ind, false);
+		}
+		CLR_BIT(pl->used, HAS_SHIELD);
+		CLR_BIT(pl->have, HAS_SHIELD);
+	    }
+	    sound_play_player(pl, CLOAK_SOUND);
+	    pl->updateVisibility = 1;
+	    SET_BIT(pl->used, HAS_CLOAKING_DEVICE);
+	}
+    } else {
+	if (BIT(pl->used, HAS_CLOAKING_DEVICE)) {
+	    sound_play_player(pl, CLOAK_SOUND);
+	    pl->updateVisibility = 1;
+	    CLR_BIT(pl->used, HAS_CLOAKING_DEVICE);
+	}
+	if (!pl->item[ITEM_CLOAK]) {
+	    CLR_BIT(pl->have, HAS_CLOAKING_DEVICE);
+	}
+	if (!cloakedShield) {
+	    if (BIT(pl->have, HAS_EMERGENCY_SHIELD)) {
+		SET_BIT(pl->have, HAS_SHIELD);
+		Emergency_shield(ind, true);
+	    }
+	    if (BIT(DEF_HAVE, HAS_SHIELD) && !BIT(pl->have, HAS_SHIELD)) {
+		SET_BIT(pl->have, HAS_SHIELD);
+	    }
+	    if (BITV_ISSET(pl->last_keyv, KEY_SHIELD)) {
+		SET_BIT(pl->used, HAS_SHIELD);
+	    }
+	}
+    }
+}
+
+/*
+ * Turn deflector on or off.
+ */
+void Deflector(int ind, int on)
+{
+    player	*pl = Players[ind];
+
+    if (on) {
+	if (!BIT(pl->used, HAS_DEFLECTOR) && pl->item[ITEM_DEFLECTOR] > 0) {
+	    if (!cloakedShield || !BIT(pl->used, HAS_CLOAKING_DEVICE)) {
+		SET_BIT(pl->used, HAS_DEFLECTOR);
+		sound_play_player(pl, DEFLECTOR_SOUND);
+	    }
+	}
+    } else {
+	if (BIT(pl->used, HAS_DEFLECTOR)) {
+	    CLR_BIT(pl->used, HAS_DEFLECTOR);
+	    sound_play_player(pl, DEFLECTOR_SOUND);
+	}
+	if (!pl->item[ITEM_DEFLECTOR]) {
+	    CLR_BIT(pl->have, HAS_DEFLECTOR);
+	}
+    }
+}
+
+/*
  * Turn emergency thrust on or off.
  */
 void Emergency_thrust (int ind, int on)
@@ -183,15 +255,20 @@ void Emergency_shield (int ind, int on)
     const int	emergency_shield_time = 4 * FPS;	/* 8 -> 4 */
 
     if (on) {
-	if (pl->emergency_shield_left <= 0) {
-	    pl->emergency_shield_left = emergency_shield_time;
-	    pl->emergency_shield_max = emergency_shield_time;
-	    pl->item[ITEM_EMERGENCY_SHIELD]--;
-	}
-	SET_BIT(pl->have, HAS_SHIELD);
-	if (!BIT(pl->used, HAS_EMERGENCY_SHIELD)) {
-	    SET_BIT(pl->used, HAS_EMERGENCY_SHIELD);
-	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
+	if (BIT(pl->have, HAS_EMERGENCY_SHIELD)) {
+	    if (pl->emergency_shield_left <= 0) {
+		pl->emergency_shield_left = emergency_shield_time;
+		pl->emergency_shield_max = emergency_shield_time;
+		pl->item[ITEM_EMERGENCY_SHIELD]--;
+	    }
+	    if (cloakedShield || !BIT(pl->used, HAS_CLOAKING_DEVICE)) {
+		SET_BIT(pl->have, HAS_SHIELD);
+		if (!BIT(pl->used, HAS_EMERGENCY_SHIELD)) {
+		    SET_BIT(pl->used, HAS_EMERGENCY_SHIELD);
+		    sound_play_sensors(pl->pos.x, pl->pos.y,
+				       EMERGENCY_SHIELD_ON_SOUND);
+		}
+	    }
 	}
     } else {
 	if (pl->emergency_shield_left <= 0) {
@@ -204,7 +281,8 @@ void Emergency_shield (int ind, int on)
 	}
 	if (BIT(pl->used, HAS_EMERGENCY_SHIELD)) {
 	    CLR_BIT(pl->used, HAS_EMERGENCY_SHIELD);
-	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_OFF_SOUND);
+	    sound_play_sensors(pl->pos.x, pl->pos.y,
+			       EMERGENCY_SHIELD_OFF_SOUND);
 	}
     }
 }
@@ -713,13 +791,6 @@ void Update_objects(void)
 	if (round_delay > 0)
 	    continue;
 
-	if (!cloakedShield && BIT(pl->used, HAS_CLOAKING_DEVICE)) {
-	    CLR_BIT(pl->used, HAS_SHIELD|HAS_EMERGENCY_SHIELD|HAS_DEFLECTOR);
-	    if (!BIT(DEF_HAVE, HAS_SHIELD)) {
-		CLR_BIT(pl->have, HAS_SHIELD);
-	    }
-	}
-
 	if (pl->stunned > 0) {
 	    pl->stunned--;
 	    CLR_BIT(pl->used, HAS_SHIELD|HAS_LASER|HAS_SHOT);
@@ -756,9 +827,9 @@ void Update_objects(void)
 		&& BIT(pl->status, THRUSTING)
 		&& --pl->emergency_thrust_left <= 0) {
 		if (pl->item[ITEM_EMERGENCY_THRUST]) {
-		    Emergency_thrust(i, 1);
+		    Emergency_thrust(i, true);
 		} else {
-		    Emergency_thrust(i, 0);
+		    Emergency_thrust(i, false);
 		}
 	    }
 	}
@@ -768,9 +839,9 @@ void Update_objects(void)
 		&& BIT(pl->used, HAS_SHIELD)
 		&& --pl->emergency_shield_left <= 0) {
 		if (pl->item[ITEM_EMERGENCY_SHIELD]) {
-		    Emergency_shield(i, 1);
+		    Emergency_shield(i, true);
 		} else {
-		    Emergency_shield(i, 0);
+		    Emergency_shield(i, false);
 		}
 	    }
 	}

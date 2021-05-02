@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.27 2002/03/26 21:17:53 bertg Exp $
+/* $Id: player.c,v 5.28 2002/04/13 18:26:04 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -201,8 +201,9 @@ void Go_home(int ind)
 	    pl->shield_time = 2 * FPS;
 	    SET_BIT(pl->have, HAS_SHIELD);
 	}
-	if (BIT(pl->have, HAS_DEFLECTOR))
-	    SET_BIT(pl->used, HAS_DEFLECTOR);
+	if (BIT(pl->have, HAS_DEFLECTOR)) {
+	    Deflector(ind, true);
+	}
     }
     CLR_BIT(pl->status, THRUSTING);
     pl->updateVisibility = 1;

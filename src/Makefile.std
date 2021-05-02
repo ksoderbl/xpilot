@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 5.27 2002/04/09 11:11:52 bertg Exp $
+# $Id: Makefile.std,v 5.28 2002/04/11 20:04:58 bertg Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
@@ -25,7 +25,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.5.1
+VERSION=4.5.2
 
 # Change these for your site
 INSTALLDIR=/usr/local

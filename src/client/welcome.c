@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 5.5 2001/12/27 15:27:40 bertg Exp $
+/* $Id: welcome.c,v 5.7 2002/04/11 22:17:37 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -81,7 +81,7 @@ char welcome_version[] = VERSION;
 #define NUM_METAS		2
 #define META_HOST		"meta.xpilot.org"
 #define META_HOST_TWO		"meta2.xpilot.org"
-#define META_IP			"129.242.16.101"
+#define META_IP			"129.242.13.151"
 #define META_IP_TWO		"132.235.197.27"
 #define META_PROG_PORT		4401
 #define NUM_META_DATA_FIELDS	18
@@ -678,11 +678,9 @@ static int Add_server_info(server_info_t *sip)
 	return -1;
     }
 
-#if 0
     /* print for debugging */
-    printf("list size = %d after %08x, %d\n",
-	    List_size(server_list), sip->ip, sip->port);
-#endif
+    D(printf("list size = %d after %08x, %d\n",
+	    List_size(server_list), sip->ip, sip->port);)
 
     return 0;
 }
@@ -1053,7 +1051,8 @@ static int Get_meta_data(void)
     /* connect asynchronously. */
     Meta_connect(&connections, &max);
     if (!connections) {
-	Welcome_create_label(1, "Could not establish connections with any metaserver");
+	Welcome_create_label(1,
+		"Could not establish connections with any metaserver");
 	return -1;
     }
 
@@ -1085,22 +1084,22 @@ static int Get_meta_data(void)
      * Whenever a connection has succeeded we add another 5 seconds.
      * Whenever a read has succeeded we also add another 5 seconds.
      *
-     * Keep administration of the number of sockects in the connected state,
+     * Keep administration of the number of sockets in the connected state,
      * the readability state, or the meta-is-sending-data state.
      */
     for (start = time(&now) + 5; connections > 0 && now < start + 5; time(&now)) {
 	tv.tv_sec = start + 5 - now;
 	tv.tv_usec = 0;
-#if 0
-	printf("select for %ld (con %d, read %d, send %d) at %ld\n",
-	       tv.tv_sec, connections, readers, senders, time(0));
-#endif
+
+	D(printf("select for %ld (con %d, read %d, send %d) at %ld\n",
+	       tv.tv_sec, connections, readers, senders, time(0));)
+
 	rset_out = rset_in;
 	wset_out = wset_in;
 	descriptor_count = select(max + 1, &rset_out, &wset_out, NULL, &tv);
-#if 0
-	printf("select = %d at %ld\n", descriptor_count, time(0));
-#endif
+
+	D(printf("select = %d at %ld\n", descriptor_count, time(0));)
+
 	if (descriptor_count <= 0) {
 	    break;
 	}
@@ -1118,6 +1117,7 @@ static int Get_meta_data(void)
 		    sprintf(buf, "%d metaserver%s accepted a connection.",
 			    readers, (readers > 1) ? "s have" : " has");
 		    Welcome_create_label(1, buf);
+		    D(printf("%s\n", buf);)
 		}
 		time(&start);
 	    }
@@ -1130,7 +1130,8 @@ static int Get_meta_data(void)
 		bytes_read = read(metas[i].sock.fd, md[i].end, buffer_space);
 		if (bytes_read <= 0) {
 		    if (bytes_read == -1) {
-			error("Error while reading data from meta %d\n", i + 1);
+			error("Error while reading data from meta %d\n",
+			      i + 1);
 		    }
 		    FD_CLR(metas[i].sock.fd, &rset_in);
 		    close(metas[i].sock.fd);
@@ -1139,17 +1140,12 @@ static int Get_meta_data(void)
 		    --readers;
 		    if (metas[i].state == MetaReceiving) {
 			--senders;
-			if (senders == 0) {
+			if (senders == 0 &&
+			    server_list &&
+			    List_size(server_list) >= 30) {
 			    /*
 			     * Assume that this meta has sent us all there is
-			     * to know and close down all other connections.
 			     */
-			    for (i = 0; i < NUM_METAS; i++) {
-				if (metas[i].sock.fd != SOCK_FD_INVALID) {
-				    close(metas[i].sock.fd);
-				    metas[i].sock.fd = SOCK_FD_INVALID;
-				}
-			    }
 			    connections = 0;
 			}
 		    }
@@ -1161,7 +1157,9 @@ static int Get_meta_data(void)
 		    /* Received some bytes from this connection. */
 		    total_bytes_read += bytes_read;
 
-		    /* If this connection wasn't marked as receiving do so now. */
+		    /* If this connection wasn't marked
+		     * as receiving do so now.
+		     */
 		    if (metas[i].state != MetaReceiving) {
 			metas[i].state = MetaReceiving;
 			++senders;
@@ -1173,11 +1171,13 @@ static int Get_meta_data(void)
 			    ((senders == 1) ? "" : "s")
 			    );
 		    Welcome_create_label(1, buf);
+		    D(printf("%s\n", buf);)
 
 		    /* adjust buffer for newly read bytes. */
 		    md[i].end += bytes_read;
 
-		    /* process data for as far as we have lines ending in '\n'. */
+		    /* process data up to the last line ending in a '\n'.
+		     */
 		    while ((newline = (char *) memchr(md[i].ptr, '\n',
 						      md[i].end - md[i].ptr))
 			      != NULL) {
@@ -1203,12 +1203,20 @@ static int Get_meta_data(void)
 	}
     }
 
+    for (i = 0; i < NUM_METAS; i++) {
+	if (metas[i].sock.fd != SOCK_FD_INVALID) {
+	    close(metas[i].sock.fd);
+	    metas[i].sock.fd = SOCK_FD_INVALID;
+	}
+    }
+
     server_count = 0;
     if (server_list) {
 	server_count = List_size(server_list);
     }
     if (server_count > 0) {
-	sprintf(buf, "Received information about %d Internet servers", server_count);
+	sprintf(buf, "Received information about %d Internet servers",
+		server_count);
 	server_list_creation_time = time(NULL);
     } else {
 	sprintf(buf, "Could not contact any Internet Meta server");
