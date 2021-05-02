@@ -1,4 +1,4 @@
-/* $Id: map.c,v 1.13 1993/04/01 18:17:37 bjoerns Exp $
+/* $Id: map.c,v 1.15 1993/04/18 03:48:37 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -19,7 +19,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 1.13 1993/04/01 18:17:37 bjoerns Exp $";
+    "@(#)$Id: map.c,v 1.15 1993/04/18 03:48:37 bjoerns Exp $";
 #endif
 
 
@@ -96,8 +96,8 @@ void Print_map(void)			/* Debugging only. */
 
 void Init_map(void)
 {
-    World.x		= 300;
-    World.y		= 300;
+    World.x		= 256;
+    World.y		= 256;
     World.NumFuels	= 0;
     World.NumBases	= 0;
     World.NumGravs	= 0;
@@ -169,6 +169,25 @@ void Alloc_map(void)
 }
 
 
+static void Map_error(int line_num)
+{
+#ifndef SILENT
+    static int prev_line_num, error_count;
+    const int max_error = 5;
+
+    if (line_num > prev_line_num) {
+	prev_line_num = line_num;
+	if (++error_count <= max_error) {
+	    printf("Not enough map data on map data line %d\n", line_num);
+	}
+	else if (error_count - max_error == 1) {
+	    printf("And so on...\n");
+	}
+    }
+#endif
+}
+
+
 void Grok_map()
 {
     int i, x, y, c;
@@ -179,6 +198,10 @@ void Grok_map()
     
     World.x = mapWidth;
     World.y = mapHeight;
+    if (extraBorder) {
+	World.x += 2;
+	World.y += 2;
+    }
     strcpy(World.name, mapName);
     strcpy(World.author, mapAuthor);
     
@@ -190,20 +213,54 @@ void Grok_map()
     Set_world_rules();
 
     if (!mapData) {
+	error("Generating random map");
 	Generate_random_map();
     } else {
 	s = mapData;
-	while ((c = *s++) && (y >= 0)) {
+	while (y >= 0) {
 		
 	    x++;
 	    done_line = false;
 
+	    if (extraBorder && (x == 0 || x == World.x - 1
+		|| y == 0 || y == World.y - 1)) {
+		if (x >= World.x) {
+		    x = -1;
+		    y--;
+		    continue;
+		} else {
+		    /* make extra border of solid rock */
+		    c = 'x';
+		}
+	    }
+	    else {
+		c = *s;
+		if (c == '\0' || c == EOF) {
+		    if (x < World.x) {
+			/* not enough map data on this line */
+			Map_error(World.y - y);
+			c = ' ';
+		    } else {
+			c = '\n';
+		    }
+		} else {
+		    if (c == '\n' && x < World.x) {
+			/* not enough map data on this line */
+			Map_error(World.y - y);
+			c = ' ';
+		    } else {
+			s++;
+		    }
+		}
+	    }
 	    if (x >= World.x || c == '\n') {
-		x=-1; y--;
+		y--; x = -1;
 		done_line = true;
-		if (c != '\n')				/* Get rest of line */
+		if (c != '\n') {			/* Get rest of line */
+		    error("Map file contains extranous characters");
 		    while (c != '\n' && c != EOF)	/* from file. */
-			putchar(c = *s++);
+			fputc(c = *s++, stderr);
+		}
 	    }
 	    if (done_line)
 		continue;
@@ -561,7 +618,7 @@ void Grok_map()
 	   BIT(World.rules->mode, TEAM_PLAY) ? "on" : "off");
 #endif
 
-    D( Print_map(); )
+    D( Print_map() );
 }
 
 

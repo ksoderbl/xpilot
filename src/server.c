@@ -1,4 +1,4 @@
-/* $Id: server.c,v 1.12 1993/04/02 20:34:55 kenrsc Exp $
+/* $Id: server.c,v 1.14 1993/04/16 12:22:54 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -26,11 +26,12 @@
 #include "pack.h"
 #include "draw.h"
 #include "robot.h"
+#include "sound.h"
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 1.12 1993/04/02 20:34:55 kenrsc Exp $";
+    "@(#)$Id: server.c,v 1.14 1993/04/16 12:22:54 bjoerns Exp $";
 #endif
 
 
@@ -486,6 +487,8 @@ bool Check_new_players(void)
 	 */
 	if ((s->status = Init_window(NumPlayers)) == SUCCESS) {
 
+	    sound_player_init(Players[NumPlayers]);
+
 #ifndef	SILENT
 	    printf("%s (%d, %s) starts at startpos %d.\n",
 		   Players[NumPlayers]->name, NumPlayers+1,
@@ -508,6 +511,8 @@ bool Check_new_players(void)
 	    new_player = true;
 	    NoPlayersEnteredYet = false;
 	
+	    sound_play_all(START_SOUND);
+
 	    Set_message(msg);
 	    updateScores = true;
 	    

@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.8 1993/04/01 18:17:50 bjoerns Exp $
+/* $Id: proto.h,v 1.10 1993/04/18 03:48:41 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -60,15 +60,11 @@ extern void Get_defaults(int ind);
  * Prototypes for draw.c
  */
 extern char *scroll(char *string, int start, int length);
-extern void Draw_objects();
+extern void Draw_objects(void);
 extern void Draw_ships(int draw, int data);
 extern void Draw_shots(int draw, int data);
 extern void Draw_meters(int draw, int data);
-extern void Display_hud(int draw, int data);
-extern void Display_fuel_gauge(int draw, int data);
-extern void Display_velocity_gauge(int draw, int data);
-extern void Display_power_gauge(int draw, int data);
-extern void Display_compass(int draw, int data);
+extern void Draw_HUD(int draw, int data);
 extern void Draw_cannon(int draw, int data);
 extern void Draw_bases(int draw, int data);
 extern void Display_message(int draw, int ind);
@@ -92,7 +88,7 @@ extern void Key_event(int ind, XEvent *event);
 /*
  * Prototypes for map.c
  */
-extern void Optimize_map();
+extern void Optimize_map(void);
 extern void Print_map(void)			/* Debugging only. */;
 extern void Init_map(void);
 extern void Free_map(void);
@@ -110,6 +106,8 @@ extern void Make_ships(void);
 extern void Free_ships(void);
 extern void Compute_gravity(void);
 extern float findDir (float x, float y);
+extern float Wrap_findDir(float dx, float dy);
+extern float Wrap_length(float dx, float dy);
 
 /*
  * Prototypes for parser.c
@@ -175,7 +173,7 @@ extern void UpdateItemChances(int num_players);
  * Prototypes for server.c
  */
 extern int main(int argc, char *argv[]);
-extern void Main_Loop();
+extern void Main_Loop(void);
 extern void End_game(void);
 extern void Dump_pack(core_pack_t *p);
 extern bool Check_new_players(void);

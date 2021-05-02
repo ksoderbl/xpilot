@@ -1,4 +1,4 @@
-/* $Id: play.c,v 1.19 1993/04/01 18:17:46 bjoerns Exp $
+/* $Id: play.c,v 1.22 1993/04/18 16:46:22 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -15,10 +15,11 @@
 #include "draw.h"
 #include "score.h"
 #include "robot.h"
+#include "sound.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 1.19 1993/04/01 18:17:46 bjoerns Exp $";
+    "@(#)$Id: play.c,v 1.22 1993/04/18 16:46:22 kenrsc Exp $";
 #endif
 
 
@@ -36,9 +37,8 @@ void Thrust(int ind)
     const int spreadoffset = spread/2;
     float x, y;
 
-
     pl = Players[ind];
-
+    sound_play_sensors(pl->pos.x, pl->pos.y, THRUST_SOUND);
     num_sparks = (pl->power*0.3) + (rand()%3) + 2;
     alt_thrust = pl->after_burners
 	? AFTER_BURN_SPARKS(num_sparks-1, pl->after_burners) + 1
@@ -156,8 +156,8 @@ void Obj_repel(object *obj1, object *obj2, int repel_dist)
     float xd, yd, force, dm;
     int obj_theta;
  
-    xd = obj2->pos.x - obj1->pos.x;
-    yd = obj2->pos.y - obj1->pos.y;
+    xd = WRAP_DX(obj2->pos.x - obj1->pos.x);
+    yd = WRAP_DY(obj2->pos.y - obj1->pos.y);
     force = (repel_dist - LENGTH(xd, yd));
  
     if (force <= 0)
@@ -357,10 +357,9 @@ void Place_mine(int ind)
     object *mine;
     player *pl = Players[ind];
 
-
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
-
+    sound_play_sensors(pl->pos.x, pl->pos.y, DROP_MINE_SOUND);
     mine = Obj[NumObjs++];
     mine->type = OBJ_MINE;
     mine->color = BLUE;
@@ -385,7 +384,7 @@ void Place_moving_mine(int ind, float vx, float vy)
 
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
-
+    sound_play_sensors(pl->pos.x, pl->pos.y, DROP_MOVING_MINE_SOUND);
     mine = Obj[NumObjs++];
     mine->type = OBJ_MINE;
     mine->color = BLUE;
@@ -411,10 +410,8 @@ void Cannon_fire(int ind)
     const int spread = (RES*0.3);
     const int spreadoffset = (spread/2);
 
-
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
-
     shot = Obj[NumObjs++];
     dir = (rand()%(1+spread)) - spreadoffset - 1;	/* Tmp direction */
     speed = 9+(rand()%4);
@@ -429,6 +426,8 @@ void Cannon_fire(int ind)
     shot->mass = 0.4;
     shot->type = OBJ_CANNON_SHOT;
     shot->life = 25 + (rand()%20);
+
+    sound_play_sensors(shot->pos.x, shot->pos.y, CANNON_FIRE_SOUND);
 
     switch (World.cannon[ind].dir) {
     case DIR_UP:
@@ -519,7 +518,7 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
     case OBJ_SHOT:
 	if (pl->fuel.sum < -ED_SHOT)
 	    return;
-
+	sound_play_sensors(pl->pos.x, pl->pos.y, FIRE_SHOT_SOUND);
 	shot->life = pl->shot_life;
 	shot->mass = pl->shot_mass;
 	shot->max_speed = SPEED_LIMIT;
@@ -528,11 +527,25 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 	shot->vel.y = pl->vel.y + ((tsin(dir) * pl->shot_speed));
 	break;
 
+    case OBJ_NUKE:
+	if(pl->fuel.sum < -ED_SMART_SHOT || (pl->missiles <= NUKE_MIN_SMART))
+	  return;
+
+	shot->mass = MISSILE_MASS*pl->missiles*NUKE_MASS_MULT;
+	shot->life = MISSILE_LIFETIME;
+	Add_fuel(&(pl->fuel),ED_SMART_SHOT);
+	shot->vel.x = pl->vel.x + (tcos(dir) * pl->shot_speed);
+	shot->vel.y = pl->vel.y + (tsin(dir) * pl->shot_speed);
+	shot->info = 0;
+	shot->color = RED;
+	pl->missiles = 0;
+	break;
+
     case OBJ_TORPEDO:
          
 	if (pl->fuel.sum < -ED_SMART_SHOT || (pl->missiles <= 0))
 	    return;
-         
+	sound_play_sensors(pl->pos.x, pl->pos.y, FIRE_TORPEDO_SOUND);
 	shot->mass = MISSILE_MASS;
 	shot->life = MISSILE_LIFETIME;
 	Add_fuel(&(pl->fuel), ED_SMART_SHOT);
@@ -561,12 +574,14 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 		else
 		    lock = pl->lock.pl_id;
 #endif /* HEAT_LOCK */
+		sound_play_sensors(pl->pos.x, pl->pos.y, FIRE_HEAT_SHOT_SOUND);
 	    } else {
 		if (pl->lock.tagged == LOCK_NONE
 		    || ((pl->lock.distance > pl->sensor_range)
 			&& BIT(World.rules->mode, LIMITED_VISIBILITY))
 		    || !pl->visibility[GetInd[pl->lock.pl_id]].canSee)
 		    return;
+		sound_play_sensors(pl->pos.x, pl->pos.y, FIRE_SMART_SHOT_SOUND);
 		lock = pl->lock.pl_id;
 	    }
 	    shot->mass = MISSILE_MASS;
@@ -620,6 +635,7 @@ void Delete_shot(int ind)
     switch (shot->type) {
     case OBJ_MINE:
 	Explode_object(shot->prevpos.x, shot->prevpos.y, 0, RES, 500);
+	sound_play_sensors(shot->pos.x, shot->pos.y, MINE_EXPLOSION_SOUND);
     case OBJ_SPARK:
     case OBJ_CANNON_SHOT:
     case OBJ_CANNON_DEBRIS:
@@ -639,6 +655,12 @@ void Delete_shot(int ind)
 	}
 	break;
 	/* Shots related to a player. */
+
+    case OBJ_NUKE:
+	Explode_object(shot->prevpos.x, shot->prevpos.y,0,RES,
+		       (shot->mass/MISSILE_MASS*30*NUKE_EXPLOSION_MULT));
+	break;
+
     case OBJ_HEAT_SHOT:
     case OBJ_TORPEDO:
     case OBJ_SMART_SHOT:
@@ -781,11 +803,12 @@ void do_ecm(player *pl)
     int i;
     player *p;
 
+    sound_play_sensors(pl->pos.x, pl->pos.y, ECM_SOUND);
     for (i = 0; i < NumObjs; i++) {
 	shot = Obj[i];
 
 	if (shot->type == OBJ_SMART_SHOT &&
-	    LENGTH(pl->pos.x - shot->pos.x,
+	    Wrap_length(pl->pos.x - shot->pos.x,
 		   pl->pos.y - shot->pos.y) <= ECM_DISTANCE * ECM_MIS_FACT) {
 
 	    SET_BIT(shot->status, CONFUSED);
@@ -804,7 +827,8 @@ void do_ecm(player *pl)
 	p = Players[i];
 
 	if (p != pl && BIT(p->status, PLAYING) &&
-	    LENGTH(pl->pos.x-p->pos.x, pl->pos.y-p->pos.y) <= ECM_DISTANCE) {
+	    Wrap_length(pl->pos.x - p->pos.x,
+			pl->pos.y - p->pos.y) <= ECM_DISTANCE) {
 
 	    int c = rand() % ECM_DAMAGE_COUNT;
 	    p->forceVisible += c;
@@ -838,8 +862,8 @@ void Move_ball(int ind)
     player		*pl = Players[ GetInd[ball->id] ];
     vector		F;
     const float	k = 10.0, l0 = BALL_STRING_LENGTH, a = 0.01,
-    			l = LENGTH(pl->pos.x - ball->pos.x, 
-				   pl->pos.y - ball->pos.y),
+    			l = Wrap_length(pl->pos.x - ball->pos.x, 
+				        pl->pos.y - ball->pos.y),
     			c = k * (1.0 - l0 / l)
 			    - a * ABS(ball->length - l) * (ball->length - l);
 
@@ -875,6 +899,14 @@ void Move_smart_shot(int ind)
         return;
     }
     
+   if (shot->type==OBJ_NUKE) {
+        if (shot->info++<NUKE_SPEED_TIME) {
+            shot->vel.x += NUKE_ACC*tcos(shot->dir);
+            shot->vel.y += NUKE_ACC*tsin(shot->dir);
+        }
+        return;
+    }
+
     acc = SMART_SHOT_ACC;
 
     if (shot->type == OBJ_HEAT_SHOT) {
@@ -882,7 +914,7 @@ void Move_smart_shot(int ind)
         if (shot->info >= 0) {
             /* Get player and set min to distance */
             pl = Players[ GetInd[shot->info] ];
-            min = LENGTH(pl->pos.x - shot->pos.x,pl->pos.y - shot->pos.y);
+            min = Wrap_length(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y);
         } else {
 	    /* No player. Number of moves so that new target is searched */
             pl = 0;
@@ -918,7 +950,8 @@ void Move_smart_shot(int ind)
                     if (!BIT(p->status, THRUSTING))
                         continue;
 
-                    l = LENGTH(p->pos.x - shot->pos.x, p->pos.y - shot->pos.y);
+                    l = Wrap_length(p->pos.x - shot->pos.x,
+				    p->pos.y - shot->pos.y);
                     /*
 		     * After burners can be detected easier;
 		     * so scale the length:
@@ -969,13 +1002,13 @@ void Move_smart_shot(int ind)
     /*
      * Use a little look ahead to fly more exact
      */
-    min = LENGTH(pl->pos.x - shot->pos.x, pl->pos.y - shot->pos.y)
+    min = Wrap_length(pl->pos.x - shot->pos.x, pl->pos.y - shot->pos.y)
 	/ LENGTH(shot->vel.x,shot->vel.y);
     x_dif += pl->vel.x * min;
     y_dif += pl->vel.y * min;
 
-    theta = findDir(pl->pos.x + x_dif - (shot->pos.x),
-		    pl->pos.y + y_dif - (shot->pos.y));
+    theta = Wrap_findDir(pl->pos.x + x_dif - shot->pos.x,
+		         pl->pos.y + y_dif - shot->pos.y);
 
     {
 	float x, y, vx, vy;
@@ -992,9 +1025,17 @@ void Move_smart_shot(int ind)
 	x = shot->pos.x; y = shot->pos.y;
 	foundw = 0;
 
-	for(i=SMART_SHOT_LOOK_AH;
-	    xi = (x+=vx)/BLOCK_SZ, yi = (y+=vy)/BLOCK_SZ,
-	    xi>=0 && xi<World.x && yi>=0 && yi<World.y && i--;)
+	for (i = SMART_SHOT_LOOK_AH; i > 0; i--) {
+	    xi = (x += vx) / BLOCK_SZ;
+	    yi = (y += vy) / BLOCK_SZ;
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (xi < 0) xi += World.x;
+		else if (xi >= World.x) xi -= World.x;
+		if (yi < 0) yi += World.y;
+		else if (yi >= World.y) yi -= World.y;
+	    }
+	    if (xi < 0 || xi >= World.x || yi < 0 || yi >= World.y)
+		break;
 
 	    switch(World.block[xi][yi]) {
 	    case FUEL:
@@ -1005,7 +1046,7 @@ void Move_smart_shot(int ind)
 	    case REC_LD:
 	    case REC_RD:
 	    case CANNON:
-		if(LENGTH(pl->pos.x - shot->pos.x, pl->pos.y - shot->pos.y)
+		if(Wrap_length(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y)
 		   > (SMART_SHOT_LOOK_AH-i) * (BLOCK_SZ/BLOCK_PARTS)) {
 
 		    if(shot->velocity>SMART_SHOT_MIN_SPEED)
@@ -1014,6 +1055,7 @@ void Move_smart_shot(int ind)
 		foundw = 1;
 		goto found_wall;
 	    }
+	}
     found_wall:
 
 	i = ((int)(shot->dir * 8 / RES)&7) + 8;
@@ -1059,13 +1101,13 @@ void Move_smart_shot(int ind)
 
 	if (angle >= 0) {
 	    i = angle&7;
-	    theta = findDir((yi + sur[i].dy) * BLOCK_SZ
+	    theta = Wrap_findDir((yi + sur[i].dy) * BLOCK_SZ
 			    - (shot->pos.y + 2 * shot->vel.y),
 			    (xi + sur[i].dx) * BLOCK_SZ
 			    - (shot->pos.x - 2 * shot->vel.x));
 #ifdef SHOT_EXTRA_SLOWDOWN
-	    if (!foundw && LENGTH(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y)
-		> (SHOT_LOOK_AH-i) * BLOCK_SZ) {
+	    if (!foundw && Wrap_length(pl->pos.x-shot->pos.x,
+		    pl->pos.y-shot->pos.y) > (SHOT_LOOK_AH-i) * BLOCK_SZ) {
 		if (shot->velocity
 		    > (SMART_SHOT_MIN_SPEED + SMART_SHOT_MAX_SPEED)/2)
 		    shot->velocity -= SMART_SHOT_DECC+SMART_SHOT_ACC;
@@ -1213,6 +1255,8 @@ void Tank_handle_detach(player *pl)
     if (pl->fuel.num_tanks == 0 || NumPseudoPlayers == MAX_PSEUDO_PLAYERS)
 	return;
 
+    sound_play_sensors(pl->pos.x, pl->pos.y, TANK_DETACH_SOUND);
+
     /* If current tank is main, use another one */
     if ((ct=pl->fuel.current) == 0)
 	ct = pl->fuel.num_tanks;
@@ -1295,6 +1339,7 @@ void Explode_object(float x, float y,
     register int i;
     const int spreadoffset = (spread/2);
 
+    sound_play_sensors(x, y, OBJECT_EXPLOSION_SOUND);
     num_debris = (intensity/2) + (rand()%(1+intensity/2));
     for (i=0; i<num_debris && NumObjs<MAX_TOTAL_SHOTS; i++, NumObjs++) {
 	debris = Obj[NumObjs];
@@ -1325,8 +1370,8 @@ void Explode(int ind)
     object *debris;
     int i, dir, num_debris, speed;
 
-
     pl = Players[ind];
+    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EXPLOSION_SOUND);
     num_debris = 1+(pl->fuel.sum/(8.0*FUEL_SCALE_FACT))
                  +(rand()%((int)(1+pl->mass*4.0)));
     /*  shot_mass = pl->mass / num_debris;	Not used! */

@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 1.12 1993/04/01 18:17:51 bjoerns Exp $
+/* $Id: robot.c,v 1.16 1993/04/18 16:46:23 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,9 +22,9 @@ static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
 #endif
 
 
-#define EMPTY_SPACE(s)							      \
-    ((s) == SPACE || (s) == BASE || (s) == WORMHOLE || (s) == POS_GRAV ||     \
-     (s) == NEG_GRAV || (s) == CWISE_GRAV || (s) == ACWISE_GRAV)
+#define EMPTY_SPACE(s)	\
+    BIT(1 << (s), 1 << SPACE | 1 << BASE | 1 << WORMHOLE | 1 << POS_GRAV | \
+	1 << NEG_GRAV | 1 << CWISE_GRAV | 1 << ACWISE_GRAV)
 
 extern long KILLING_SHOTS;
 
@@ -246,6 +246,12 @@ static bool Check_robot_navigate(int ind, bool * num_evade)
 	    dx = (long)(pl->pos.x / BLOCK_SZ) + (i / 2) - 2;
 	    dy = (long)(pl->pos.y / BLOCK_SZ) + (j / 2) - 2;
 
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (dx < 0) dx += World.x;
+		else if (dx >= World.x) dx -= World.x;
+		if (dy < 0) dy += World.y;
+		else if (dy >= World.y) dy -= World.y;
+	    }
 	    if (dx < 0 || dx >= World.x || dy < 0 || dy >= World.y)
 		locn_block = FILLED;
 	    else
@@ -527,6 +533,12 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    dx = (px[i] + dist * tcos(travel_dir)) / BLOCK_SZ;
 	    dy = (py[i] + dist * tsin(travel_dir)) / BLOCK_SZ;
 
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (dx < 0) dx += World.x;
+		else if (dx >= World.x) dx -= World.x;
+		if (dy < 0) dy += World.y;
+		else if (dy >= World.y) dy -= World.y;
+	    }
 	    if (dx < 0 || dx >= World.x || dy < 0 || dy >= World.y) {
 		evade = true;
 		if (i == 1)
@@ -546,7 +558,7 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    }
 	    /* Watch out for strong gravity */
 	    gravity = &World.gravity[dx][dy];
-	    if (LENGTH(gravity->x, gravity->y) >= 1.0) {
+	    if (sqr(gravity->x) + sqr(gravity->y) >= 1.0) {
 		gravity_dir = findDir(gravity->x - pl->pos.x,
 				      gravity->y - pl->pos.y);
 
@@ -565,8 +577,8 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 
     if (mine_i >= 0) {
 	shot = Obj[mine_i];
-	aux_dir = findDir(shot->pos.x + shot->vel.x - pl->pos.x,
-			  shot->pos.y + shot->vel.y - pl->pos.y);
+	aux_dir = Wrap_findDir(shot->pos.x + shot->vel.x - pl->pos.x,
+			       shot->pos.y + shot->vel.y - pl->pos.y);
 	delta_dir = MOD2(aux_dir - travel_dir, RES);
 	if (delta_dir < RES / 4) {
 	    left_ok = false;
@@ -579,8 +591,8 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
     }
     if (ship_i >= 0) {
 	ship = Players[ship_i];
-	aux_dir = findDir(ship->pos.x - pl->pos.x + ship->vel.x * 2,
-			  ship->pos.y - pl->pos.y + ship->vel.y * 2);
+	aux_dir = Wrap_findDir(ship->pos.x - pl->pos.x + ship->vel.x * 2,
+			       ship->pos.y - pl->pos.y + ship->vel.y * 2);
 	delta_dir = MOD2(aux_dir - travel_dir, RES);
 	if (delta_dir < RES / 4) {
 	    left_ok = false;
@@ -607,6 +619,12 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    dx = (px[0] + dist * tcos(aux_dir)) / BLOCK_SZ;
 	    dy = (py[0] + dist * tsin(aux_dir)) / BLOCK_SZ;
 
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (dx < 0) dx += World.x;
+		else if (dx >= World.x) dx -= World.x;
+		if (dy < 0) dy += World.y;
+		else if (dy >= World.y) dy -= World.y;
+	    }
 	    if (dx < 0 || dx >= World.x || dy < 0 || dy >= World.y) {
 		left_ok = false;
 		continue;
@@ -618,7 +636,7 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    }
 	    /* watch out for strong gravity */
 	    gravity = &World.gravity[dx][dy];
-	    if (LENGTH(gravity->x, gravity->y) >= 1.0) {
+	    if (sqr(gravity->x) + sqr(gravity->y) >= 1.0) {
 		gravity_dir = findDir(gravity->x - pl->pos.x,
 				      gravity->y - pl->pos.y);
 		if (MOD2(gravity_dir - travel_dir, RES) <= RES / 4 ||
@@ -636,6 +654,12 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    dx = (px[0] + dist * tcos(aux_dir)) / BLOCK_SZ;
 	    dy = (py[0] + dist * tsin(aux_dir)) / BLOCK_SZ;
 
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (dx < 0) dx += World.x;
+		else if (dx >= World.x) dx -= World.x;
+		if (dy < 0) dy += World.y;
+		else if (dy >= World.y) dy -= World.y;
+	    }
 	    if (dx < 0 || dx >= World.x || dy < 0 || dy >= World.y) {
 		right_ok = false;
 		continue;
@@ -647,7 +671,7 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
 	    }
 	    /* watch out for strong gravity */
 	    gravity = &World.gravity[dx][dy];
-	    if (LENGTH(gravity->x, gravity->y) >= 1.0) {
+	    if (sqr(gravity->x) + sqr(gravity->y) >= 1.0) {
 		gravity_dir = findDir(gravity->x - pl->pos.x,
 				      gravity->y - pl->pos.y);
 		if (MOD2(gravity_dir - travel_dir, RES) <= RES / 4 ||
@@ -706,8 +730,8 @@ static bool Check_robot_target(int ind,
 
     pl = Players[ind];
 
-    dx = item_x - pl->pos.x;
-    dy = item_y - pl->pos.y;
+    dx = item_x - pl->pos.x, dx = WRAP_DX(dx);
+    dy = item_y - pl->pos.y, dy = WRAP_DY(dy);
 
     item_dist = LENGTH(dy, dx);
 
@@ -727,15 +751,18 @@ static bool Check_robot_target(int ind,
 	dx = (pl->pos.x + dist * tcos(item_dir)) / BLOCK_SZ;
 	dy = (pl->pos.y + dist * tsin(item_dir)) / BLOCK_SZ;
 
+	if (BIT(World.rules->mode, WRAP_PLAY)) {
+	    if (dx < 0) dx += World.x;
+	    else if (dx >= World.x) dx -= World.x;
+	    if (dy < 0) dy += World.y;
+	    else if (dy >= World.y) dy -= World.y;
+	}
 	if (dx < 0 || dx >= World.x || dy < 0 || dy >= World.y) {
 	    clear_path = false;
 	    continue;
 	}
 	locn_block = World.block[dx][dy];
-	if (locn_block != SPACE && locn_block != BASE && locn_block != CANNON
-	    && locn_block != POS_GRAV && locn_block != NEG_GRAV
-	    && locn_block != CWISE_GRAV && locn_block != ACWISE_GRAV) {
-
+	if (!EMPTY_SPACE(locn_block) && locn_block != CANNON) {
 	    clear_path = false;
 	    continue;
 	}
@@ -767,7 +794,7 @@ static bool Check_robot_target(int ind,
 	    pl->mines--;
 	    new_mode = rand() & 1 ? RM_EVADE_RIGHT : RM_EVADE_LEFT;
 	}
-    } else if (new_mode == RM_CANNON_KILL /*&& item_dist <= 0*/ ) {
+    } else if (new_mode == RM_CANNON_KILL && item_dist <= 0) {
 
 	/* too close, to move away */
 	pl->turnspeed = MAX_PLAYER_TURNSPEED;
@@ -832,7 +859,9 @@ static bool Check_robot_target(int ind,
 	if (pl->ecms > 0 && item_dist < ECM_DISTANCE / 2) {
 	    USE_ECM(pl);
 	} else if ((pl->robot_count % 10) == 0 && pl->missiles > 0) {
-
+	  if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & 1))
+	    Fire_shot(ind, OBJ_NUKE, pl->dir);
+	  else
 	    Fire_shot(ind,
 		      rand() & 1 ? OBJ_SMART_SHOT : OBJ_HEAT_SHOT,
 		      pl->dir);
@@ -845,7 +874,10 @@ static bool Check_robot_target(int ind,
 		       < 15+attack_level)) {
 
 	    if (pl->missiles > 0 && rand() & 63 == 0)
-		Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
+	      if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & 1))
+		Fire_shot(ind, OBJ_NUKE, pl->dir);
+	      else
+	      Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
 	    Fire_shot(ind, OBJ_SHOT, pl->dir);
 	    for (i = 0; i < pl->extra_shots; i++) {
 		Fire_shot(ind, OBJ_SHOT,
@@ -897,7 +929,6 @@ static bool Check_robot_hunt(int ind)
     int travel_dir;
     int delta_dir;
     int adj_dir;
-    long dx, dy;
     bool toofast, tooslow;
 
     pl = Players[ind];
@@ -910,9 +941,7 @@ static bool Check_robot_hunt(int ind)
 
     ship = Players[GetInd[pl->robot_lock_id]];
 
-    dx = ship->pos.x - pl->pos.x;
-    dy = ship->pos.y - pl->pos.y;
-    ship_dir = findDir(dx, dy);
+    ship_dir = Wrap_findDir(ship->pos.x - pl->pos.x, ship->pos.y - pl->pos.y);
 
     if (pl->velocity <= 0.2)
 	travel_dir = DIR_DOWN;
@@ -962,7 +991,7 @@ void Update_robots(void)
     player     *pl, *ship;
     object     *shot;
     float      distance, mine_dist, item_dist, ship_dist,
-    		enemy_dist, cannon_dist, fuel_dist;
+    		enemy_dist, cannon_dist, fuel_dist, fx, fy;
     int         i, j, mine_i, item_i, ship_i,
                 enemy_i, cannon_i, fuel_i;
     long        dx, dy;
@@ -1038,10 +1067,11 @@ void Update_robots(void)
 	    case OBJ_ECM:
 	    case OBJ_AFTER_BURNER:
 	    case OBJ_TANK:
-		dx = shot->pos.x - pl->pos.x;
-		dy = shot->pos.y - pl->pos.y;
-
-		if ((distance = LENGTH(dx, dy)) < item_dist) {
+		if ((dx = shot->pos.x - pl->pos.x, dx = WRAP_DX(dx),
+			ABS(dx)) < item_dist
+		    && (dy = shot->pos.y - pl->pos.y, dy = WRAP_DY(dy),
+			ABS(dy)) < item_dist
+		    && (distance = LENGTH(dx, dy)) < item_dist) {
 		    item_i = j;
 		    item_dist = distance;
 		}
@@ -1051,23 +1081,25 @@ void Update_robots(void)
 	    case OBJ_HEAT_SHOT:
 		shield_range += TORPEDO_RANGE;
 	    case OBJ_MINE:
-		dx = shot->pos.x - pl->pos.x;
-		dy = shot->pos.y - pl->pos.y;
-		distance = LENGTH(dx + shot->vel.x * ROB_LOOK_AH
-				  - pl->vel.x * ROB_LOOK_AH,
-				  dy + shot->vel.y * ROB_LOOK_AH
-				  - pl->vel.y * ROB_LOOK_AH);
-
-		{
-		    float      tdist;
-
-		    if ((tdist = LENGTH(dx, dy)) < distance)
-			distance = tdist;
-		}
-		if (distance < mine_dist) {
+		fx = shot->pos.x - pl->pos.x;
+		fy = shot->pos.y - pl->pos.y;
+		if ((dx = fx, dx = WRAP_DX(dx), ABS(dx)) < mine_dist 
+		    && (dy = fy, dy = WRAP_DY(dy), ABS(dy)) < mine_dist 
+		    && (distance = LENGTH(dx, dy)) < mine_dist) {
 		    mine_i = j;
 		    mine_dist = distance;
 		}
+		if ((dx = fx + (shot->vel.x - pl->vel.x) * ROB_LOOK_AH,
+			dx = WRAP_DX(dx), ABS(dx)) < mine_dist
+		    && (dy = fy + (shot->vel.y - pl->vel.y) * ROB_LOOK_AH,
+			dy = WRAP_DY(dy), ABS(dy)) < mine_dist
+		    && (distance = LENGTH(dx, dy)) < mine_dist) {
+		    mine_i = j;
+		    mine_dist = distance;
+		}
+		break;
+            case OBJ_NUKE:
+		shield_range += NUKE_RANGE;
 		break;
 	    case OBJ_TORPEDO:
 		shield_range += TORPEDO_RANGE;
@@ -1075,9 +1107,11 @@ void Update_robots(void)
 	    }
 
 	    if (BIT(shot->type, KILLING_SHOTS)
-		&& ABS(shot->pos.x - pl->pos.x) < shield_range
-		&& ABS(shot->pos.y - pl->pos.y) < shield_range
-		&& shot->id != pl->id
+		&& (dx = shot->pos.x - pl->pos.x, dx = WRAP_DX(dx),
+		    ABS(dx)) < shield_range
+		&& (dy = shot->pos.y - pl->pos.y, dy = WRAP_DY(dy),
+		    ABS(dy)) < shield_range
+		&& sqr(dx) + sqr(dy) <= sqr(shield_range)
 		&& (shot->type == OBJ_CANNON_SHOT
 		/*  || shot->id == -1
 		    || Players[GetInd[shot->id]]->score > 50	*/
@@ -1103,7 +1137,7 @@ void Update_robots(void)
 	enemy_dist = (pl->fuel.sum >= pl->fuel.l3
 		      ? VISIBILITY_DISTANCE * 2 : VISIBILITY_DISTANCE);
 
-	if (pl->fuel.sum < pl->fuel.l1 || BIT(pl->used, OBJ_SHIELD))
+	if (BIT(pl->used, OBJ_SHIELD))
 	    ship_dist = 0;
 
 	for (j = 0; j < NumPlayers; j++) {
@@ -1111,11 +1145,10 @@ void Update_robots(void)
 	    if (j == i || !BIT(ship->status, PLAYING))
 		continue;
 
-	    dx = ship->pos.x - pl->pos.x;
-	    dy = ship->pos.y - pl->pos.y;
+	    dx = ship->pos.x - pl->pos.x, dx = WRAP_DX(dx);
+	    dy = ship->pos.y - pl->pos.y, dy = WRAP_DY(dy);
 
-	    if (ABS(dx) < ship_dist && ABS(dy) < ship_dist
-		&& (distance = LENGTH(dx, dy)) < ship_dist) {
+	    if ((distance = LENGTH(dx, dy)) < ship_dist) {
 
 		ship_i = j;
 		ship_dist = distance;
@@ -1124,14 +1157,14 @@ void Update_robots(void)
 	    if (pl->robot_lock == LOCK_PLAYER) {
 		/* ignore all players unless target */
 		if (pl->robot_lock_id == ship->id
-		    && (distance = LENGTH(dx,dy)) < enemy_dist) {
+		    && distance < enemy_dist) {
 
 		    enemy_i = j;
 		    enemy_dist = distance;
 		}
 	    } else {
 		if (ship->robot_mode == RM_NOT_ROBOT
-		    && (distance = LENGTH(dx,dy)) < enemy_dist) {
+		    && distance < enemy_dist) {
 		    enemy_i    = j;
 		    enemy_dist = distance;
 		}
@@ -1173,8 +1206,7 @@ void Update_robots(void)
 		    pl->lock.tagged = LOCK_PLAYER;
 		    pl->lock.pos.x = ship->pos.x;
 		    pl->lock.pos.y = ship->pos.y;
-		    pl->lock.distance = LENGTH(pl->pos.x - ship->pos.x,
-					       pl->pos.y - ship->pos.y);
+		    pl->lock.distance = enemy_dist;
 		    pl->sensor_range = VISIBILITY_DISTANCE;
 		}
 	    }
@@ -1226,11 +1258,11 @@ void Update_robots(void)
 	    if (World.cannon[j].dead_time > 0)
 		continue;
 
-	    dx = World.cannon[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2 - pl->pos.x;
-	    dy = World.cannon[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2 - pl->pos.y;
-
-	    if (ABS(dx) < cannon_dist && ABS(dy) < cannon_dist &&
-		(distance = LENGTH(dx, dy)) < cannon_dist) {
+	    if ((dx = World.cannon[j].pos.x*BLOCK_SZ + BLOCK_SZ/2 - pl->pos.x,
+		    dx = WRAP_DX(dx), ABS(dx)) < cannon_dist
+		&& (dy = World.cannon[j].pos.y*BLOCK_SZ+BLOCK_SZ/2-pl->pos.y,
+		    dy = WRAP_DY(dy), ABS(dy)) < cannon_dist
+		&& (distance = LENGTH(dx, dy)) < cannon_dist) {
 		cannon_i = j;
 		cannon_dist = distance;
 	    }
@@ -1242,11 +1274,11 @@ void Update_robots(void)
 		|| pl->fuel.sum >= MAX_PLAYER_FUEL - 200 * FUEL_SCALE_FACT)
 		continue;
 
-	    dx = World.fuel[j].pos.x - pl->pos.x;
-	    dy = World.fuel[j].pos.y - pl->pos.y;
-
-	    if (ABS(dx) < fuel_dist && ABS(dy) < fuel_dist &&
-		(distance = LENGTH(dx, dy)) < fuel_dist) {
+	    if ((dx = World.fuel[j].pos.x - pl->pos.x,
+		    dx = WRAP_DX(dx), ABS(dx)) < fuel_dist
+		&& (dy = World.fuel[j].pos.y - pl->pos.y,
+		    dy = WRAP_DY(dy), ABS(dy)) < fuel_dist
+		&& (distance = LENGTH(dx, dy)) < fuel_dist) {
 		fuel_i = j;
 		fuel_dist = distance;
 	    }

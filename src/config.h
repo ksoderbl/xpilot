@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.2 1993/03/24 23:34:10 bjoerns Exp $
+/* $Id: config.h,v 1.4 1993/04/18 03:48:31 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -19,13 +19,20 @@
  * Configure these, that's what they're here for.
  */
 #ifndef LOCALGURU
-#    define LOCALGURU		"rkl@csc.liv.ac.uk"
+#    define LOCALGURU		"xpilot@cs.uit.no"
+#endif
+
+#ifndef	DEFAULT_MAP
+#  define DEFAULT_MAP		"globe.map"
 #endif
 
 #ifndef LIBDIR
 #    define LIBDIR		"/usr/local/games/lib/xpilot/"
 #endif
 
+#ifndef DEFAULTS_FILE_NAME
+#    define DEFAULTS_FILE_NAME	LIBDIR "defaults"
+#endif
 #ifndef MOTDFILE
 #    define MOTDFILE		LIBDIR "motd"
 #endif
@@ -34,6 +41,9 @@
 #endif
 #ifndef MAPDIR
 #    define MAPDIR		LIBDIR "maps/"
+#endif
+#ifndef SOUNDFILE
+#    define SOUNDFILE		LIBDIR "sounds"
 #endif
 
 /*
@@ -57,7 +67,7 @@
 #endif
 
 /*
- *  If COMPRESSED_MAPS is defined, the server will attempt to uncompress
+ * If COMPRESSED_MAPS is defined, the server will attempt to uncompress
  * maps on the fly (but only if neccessary). ZCAT_FORMAT should produce
  * a command that will unpack the given .Z file to stdout (for use in popen).
  */
@@ -66,10 +76,6 @@
 
 #ifndef ZCAT_FORMAT
 #    define ZCAT_FORMAT "zcat < %s"
-#endif
-
-#ifndef DEFAULTS_FILE_NAME
-#    define DEFAULTS_FILE_NAME	LIBDIR "server-defaults"
 #endif
 
 /*

@@ -1,4 +1,4 @@
-/* $Id: math.c,v 1.5 1993/04/01 18:17:42 bjoerns Exp $
+/* $Id: math.c,v 1.6 1993/04/14 16:50:00 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -16,7 +16,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 1.5 1993/04/01 18:17:42 bjoerns Exp $";
+    "@(#)$Id: math.c,v 1.6 1993/04/14 16:50:00 bjoerns Exp $";
 #endif
 
 float  	tbl_sin[TABLE_SIZE];
@@ -47,6 +47,22 @@ float findDir(float x, float y)
     if (angle < 0)
 	angle++;
     return angle * RES;
+}
+
+
+float Wrap_findDir(float dx, float dy)
+{
+    dx = WRAP_DX(dx);
+    dy = WRAP_DY(dy);
+    return findDir(dx, dy);
+}
+
+
+float Wrap_length(float dx, float dy)
+{
+    dx = WRAP_DX(dx);
+    dy = WRAP_DY(dy);
+    return LENGTH(dx, dy);
 }
 
 
@@ -95,7 +111,8 @@ void Free_ships(void)
 void Compute_gravity(void)
 {
     int xi, yi, g, gx, gy;
-    float theta, dist, dx, dy;
+    int first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi, wrap;
+    float theta, dist2, dx, dy;
 
 
     for (xi=0; xi<World.x; xi++) {
@@ -107,18 +124,38 @@ void Compute_gravity(void)
 	}
     }
 
+    wrap = (BIT(World.rules->mode, WRAP_PLAY) != 0);
+
     for (g=0; g<World.NumGravs; g++) {
 	gx = World.grav[g].pos.x;
 	gy = World.grav[g].pos.y;
 
-	for (xi = (gx>GRAV_RANGE) ? gx-GRAV_RANGE : 0;
-	     (xi<gx+GRAV_RANGE) && (xi<World.x);
-	     xi++) {
-	    vector *line = World.gravity[xi];
+	if (gx - GRAV_RANGE >= 0 || wrap) {
+	    first_xi = gx - GRAV_RANGE;
+	} else {
+	    first_xi = 0;
+	}
+	if (gx + GRAV_RANGE < World.x || wrap) {
+	    last_xi = gx + GRAV_RANGE;
+	} else {
+	    last_xi = World.x - 1;
+	}
+	if (gy - GRAV_RANGE >= 0 || wrap) {
+	    first_yi = gy - GRAV_RANGE;
+	} else {
+	    first_yi = 0;
+	}
+	if (gy + GRAV_RANGE < World.y || wrap) {
+	    last_yi = gy + GRAV_RANGE;
+	} else {
+	    last_yi = World.y - 1;
+	}
+	for (xi = first_xi; xi <= last_xi; xi++) {
+	    vector *line = World.gravity[mod_xi = mod(xi, World.x)];
 
-	    for (yi = (gy>GRAV_RANGE) ? gy-GRAV_RANGE : 0;
-		 (yi<gy+GRAV_RANGE) && (yi<World.y);
-		 yi++) {
+	    for (yi = first_yi; yi <= last_yi; yi++) {
+
+		mod_yi = (wrap) ? mod(yi, World.y) : yi;
 
 		dx = gx - xi;
 		dy = gy - yi;
@@ -126,7 +163,6 @@ void Compute_gravity(void)
 		if ((dy == 0) && (dx == 0))	/* In a grav? */
 		    continue;
 
-		dist = LENGTH(dx, dy);
 		if (dx != 0.0) {
 		    theta = atan2(dy, dx);
 		} else
@@ -139,8 +175,9 @@ void Compute_gravity(void)
 		    || World.block[gx][gy] == ACWISE_GRAV)
 		    theta += PI/2.0;
 
-		line[yi].x += cos(theta) * World.grav[g].force / sqr(dist);
-		line[yi].y += sin(theta) * World.grav[g].force / sqr(dist);
+		dist2 = sqr(dx) + sqr(dy);
+		line[mod_yi].x += cos(theta) * World.grav[g].force / dist2;
+		line[mod_yi].y += sin(theta) * World.grav[g].force / dist2;
 	    }
         }
     }

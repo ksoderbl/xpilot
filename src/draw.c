@@ -1,4 +1,4 @@
-/* $Id: draw.c,v 1.16 1993/04/01 18:17:29 bjoerns Exp $
+/* $Id: draw.c,v 1.20 1993/04/18 16:46:17 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -22,12 +22,14 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: draw.c,v 1.16 1993/04/01 18:17:29 bjoerns Exp $";
+    "@(#)$Id: draw.c,v 1.20 1993/04/18 16:46:17 kenrsc Exp $";
 #endif
 
 
 #define X(i, co)  ((int) (((co) - xadj) - Players[i]->world.x))
 #define Y(i, co)  ((int) (FULL-(((co) - yadj) - Players[i]->world.y)))
+#define X2(i, co) ((int) (((co) - xadj2) - Players[i]->world.x))
+#define Y2(i, co) ((int) (FULL-(((co) - yadj2) - Players[i]->world.y)))
 
 #define Draw_meter(_p, x, y, title, val, max)				\
 {									\
@@ -144,7 +146,7 @@ void Draw_objects()
 	
 	if (!Players[i]->damaged) {
 	    gcv.dash_offset = 0;
-	    Display_hud(j, i);
+	    Draw_HUD(j, i);
 	    Draw_world(j, i);
 	    Draw_shots(j, i);
 	    gcv.dash_offset = DASHES_LENGTH-(loops%DASHES_LENGTH);
@@ -236,13 +238,13 @@ void Draw_ships(int draw, int data)
     player *pl_i;
     unsigned long mask = 0;
     int flag;
-    float xadj, yadj;
+    float xadj, yadj, xadj2, yadj2;
     
     for(i=0; i<NumPlayers; i++) {
 	pl_i = Players[i];
 	if (BIT(pl_i->status, PLAYING|PAUSE)
 	    && (!BIT(pl_i->status, GAME_OVER))
-	    && (flag = inview (pl, pl_i->pos.x, pl_i->pos.y))) {
+	    && (flag = inview(pl, pl_i->pos.x, pl_i->pos.y))) {
 
 	    if (flag & 2)
 		xadj = -World.x * BLOCK_SZ;
@@ -323,10 +325,21 @@ void Draw_ships(int draw, int data)
 		if (BIT(pl_i->used, OBJ_CLOAKING_DEVICE))
 		    XDrawLines(dr->disp, dr->p_draw, dr->gc, points, 4, 0);
 		
-		if (BIT(pl_i->used, OBJ_REFUEL)) {
+		if (BIT(pl_i->used, OBJ_REFUEL)
+		    && (flag = inview(pl, World.fuel[pl_i->fs].pos.x,
+			World.fuel[pl_i->fs].pos.y))) {
+
+		    if (flag & 2)
+			xadj2 = -World.x * BLOCK_SZ;
+		    else
+			xadj2 = 0;
+		    if (flag & 4)
+			yadj2 = -World.y * BLOCK_SZ;
+		    else
+			yadj2 = 0;
 		    XDrawLine(dr->disp, dr->p_draw, dr->gc,
-			      X(data, World.fuel[pl_i->fs].pos.x),
-			      Y(data, World.fuel[pl_i->fs].pos.y),
+			      X2(data, World.fuel[pl_i->fs].pos.x),
+			      Y2(data, World.fuel[pl_i->fs].pos.y),
 			      X(data, pl_i->pos.x),
 			      Y(data, pl_i->pos.y));
 		}
@@ -338,10 +351,21 @@ void Draw_ships(int draw, int data)
 			     34, 34, 0, 64 * 360);
 	     
 		/* Draw dotted line while picking up ball */
-		if (pl_i->ball != NULL) {
+		if (pl_i->ball != NULL
+		    && (flag = inview(pl, pl_i->ball->pos.x,
+			pl_i->ball->pos.y))) {
+
+		    if (flag & 2)
+			xadj2 = -World.x * BLOCK_SZ;
+		    else
+			xadj2 = 0;
+		    if (flag & 4)
+			yadj2 = -World.y * BLOCK_SZ;
+		    else
+			yadj2 = 0;
 		    XDrawLine(dr->disp, dr->p_draw, dr->gc,
-			      X(data, pl_i->ball->pos.x), 
-			      Y(data, pl_i->ball->pos.y), 
+			      X2(data, pl_i->ball->pos.x), 
+			      Y2(data, pl_i->ball->pos.y), 
 			      X(data, pl_i->pos.x),
 			      Y(data, pl_i->pos.y));  
 		}
@@ -351,7 +375,7 @@ void Draw_ships(int draw, int data)
 	    XChangeGC(dr->disp, dr->gc, GCLineStyle, &gcv);
 	    
 	    if (!BIT(pl_i->used, OBJ_CLOAKING_DEVICE)
-		&& ((i == data) || pl->visibility[i].canSee)) {
+		&& (i == data || pl->visibility[i].canSee)) {
 		if (pl->lock.tagged==LOCK_PLAYER && GetInd[pl->lock.pl_id]==i)
 		    XFillPolygon(dr->disp, dr->p_draw, dr->gc, points, 4,
 				 Convex, CoordModeOrigin);
@@ -368,21 +392,26 @@ void Draw_shots(int draw, int data)
 {
 #define xadj 0
 #define yadj 0
-    int i, x, y;
+    int i, x, y, x2, y2;
     char str[2];
     player *pl = Players[data];
     player *dr = Players[draw];
     object *shot;
     int flag;
+
 #define BATCH			/**/
 #ifdef BATCH
 #define BATCH_MALLOC  16
-    int lastcolor,size;
-    static XRectangle*rectangles[NUM_COLORS],*past_rect[NUM_COLORS];
-    XRectangle*cur_rect[NUM_COLORS],*rectangle;
-    for(i=NUM_COLORS;i--;cur_rect[i]=rectangles[i]);
+    int			lastcolor, size;
+    static XRectangle	*rectangles[NUM_COLORS],
+    			*past_rect[NUM_COLORS];
+    XRectangle		*cur_rect[NUM_COLORS],
+    			*rectangle;
+
+    for (i=NUM_COLORS; i--; cur_rect[i]=rectangles[i])
+	;
 #endif
-    
+
     for(i=0; i<NumObjs; i++) {
 	shot = Obj[i];
 	
@@ -463,6 +492,7 @@ void Draw_shots(int draw, int data)
 		break;
 
 	    case OBJ_TORPEDO:
+            case OBJ_NUKE:
 	    case OBJ_SMART_SHOT:
 	    case OBJ_HEAT_SHOT:
 		XSetLineAttributes(dr->disp, dr->gc, 4,
@@ -479,15 +509,22 @@ void Draw_shots(int draw, int data)
 
 	    case OBJ_BALL:
 		XDrawArc(dr->disp, dr->p_draw, dr->gc,
-			 X(data,shot->pos.x) - 10,
-			 Y(data,shot->pos.y) - 10,
-			 20, 20, 0, 64*360);
-		if (shot->id != -1)
-		    XDrawLine(dr->disp, dr->p_draw, dr->gc,
-			      X(data, shot->pos.x),
-			      Y(data, shot->pos.y),
-			      X(data, Players[ GetInd[shot->id] ]->pos.x),
-			      Y(data, Players[ GetInd[shot->id] ]->pos.y));
+			 x - 10, y - 10, 20, 20, 0, 64*360);
+		if (shot->id != -1) {
+		    const float px = Players[ GetInd[shot->id] ]->pos.x;
+		    const float py = Players[ GetInd[shot->id] ]->pos.y;
+		    if ((flag = inview(pl, px, py)) != 0) {
+			if (flag & 2)
+			    x2 = X(data, px + World.x * BLOCK_SZ);
+			else
+			    x2 = X(data, px);
+			if (flag & 4)
+			    y2 = Y(data, py + World.y * BLOCK_SZ);
+			else
+			    y2 = Y(data, py);
+			XDrawLine(dr->disp, dr->p_draw, dr->gc, x, y, x2, y2);
+		    }
+		}
 		break;
 
 	    case OBJ_MINE:
@@ -558,11 +595,11 @@ void Draw_shots(int draw, int data)
 	}
     }
 #ifdef BATCH
-    for(i=NUM_COLORS; i--; )
-	if(rectangles[i]) {
+    for (i=NUM_COLORS; i--; )
+	if (rectangles[i]) {
 	    XSetForeground(dr->disp, dr->gc, dr->colors[i].pixel);
-	    XDrawRectangles(dr->disp, dr->p_draw, dr->gc, rectangles[i],
-			    cur_rect[i]-rectangles[i]);
+	    XDrawRectangles(dr->disp, dr->p_draw, dr->gc,
+			    rectangles[i], cur_rect[i]-rectangles[i]);
 	}
 #endif
 #undef xadj
@@ -595,7 +632,7 @@ void Draw_meters(int draw, int data)
 
 
 
-void Display_hud(int draw, int data)
+void Draw_HUD(int draw, int data)
 {
     player *dr=Players[draw], *pl=Players[data];
     player *target=Players[GetInd[dr->lock.pl_id]];
@@ -745,8 +782,8 @@ void Display_hud(int draw, int data)
      */
     switch (pl->lock.tagged) {
     case LOCK_PLAYER:
-	dx = target->pos.x - pl->pos.x;
-	dy = target->pos.y - pl->pos.y;
+	dx = WRAP_DX(target->pos.x - pl->pos.x);
+	dy = WRAP_DY(target->pos.y - pl->pos.y);
 	size = strlen(target->name);
 	XDrawString(dr->disp, dr->p_draw, dr->gc,
 		    hud_pos_x-target->name_length/2,
@@ -821,32 +858,48 @@ void Display_hud(int draw, int data)
 		   hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET
 		   + HUD_FUEL_GAUGE_SIZE - size,
 		   HUD_OFFSET - (2*FUEL_GAUGE_OFFSET), size);
-    
-    XSetFillStyle(dr->disp, dr->gc, FillSolid);		/* Reset fill style */
 }
 
 
-#define xadj 0
-#define yadj 0
 void Draw_bases(int draw, int data)
 {
+    const int	team_length = 12,
+    		right_team_length = team_length - 7,
+    		up_x = 1, up_y = -12,
+    		down_x = 1, down_y = BLOCK_SZ + 2,
+    		left_x = BLOCK_SZ + 2, left_y = BLOCK_SZ/2 - 5,
+    		right_x = -8, right_y = BLOCK_SZ/2 - 5;
     player *pl = Players[data];
     player *dr = Players[draw];
-    int i;
-    float x, y;
+    int i, j, flag;
+    float x, y, xadj, yadj;
+    char s[2];
+
 
     XSetForeground(dr->disp, dr->gc, dr->colors[WHITE].pixel);
     for (i=0; i<World.NumBases; i++) {
 	x = World.base[i].pos.x * BLOCK_SZ;
 	y = World.base[i].pos.y * BLOCK_SZ;
-	if (!inview(dr, x, y))
+	if (!(flag = inview(pl, x, y)))
 	    continue;
 
-	if (World.base[i].team != TEAM_NOT_SET) {
-	    char s[2];
-	    s[1] = '\0'; s[0] = '0' + World.base[i].team;
-	    XDrawString(dr->disp, dr->p_draw, dr->gc,
-			X(data, x), Y(data, y), s, 1);
+	if (flag & 2)
+	    xadj = -World.x * BLOCK_SZ;
+	else
+	    xadj = 0;
+	if (flag & 4)
+	    yadj = -World.y * BLOCK_SZ;
+	else
+	    yadj = 0;
+
+	for (j=0; j<NumPlayers && Players[j]->home_base != i; j++)
+	    ;
+
+	if (World.base[i].team == TEAM_NOT_SET) {
+	    s[0]='\0';
+	} else {
+	    s[0] = '0' + World.base[i].team;
+	    s[1] = '\0';
 	}
 
 	switch (World.base[i].dir) {
@@ -854,21 +907,75 @@ void Draw_bases(int draw, int data)
 	    XDrawLine(dr->disp, dr->p_draw, dr->gc,
 		      X(data, x), Y(data, y-1),
 		      X(data, x+BLOCK_SZ), Y(data, y-1));
+	    if (s[0]) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x+up_x),
+			    Y(data, y+up_y),
+			    s, 1);
+	    }
+	    if (j < NumPlayers) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + up_x + (s[0] ? team_length : 0)),
+			    Y(data, y + up_y),
+			    Players[j]->name,
+			    strlen(Players[j]->name));
+	    }
 	    break;
 	case DIR_DOWN:
 	    XDrawLine(dr->disp, dr->p_draw, dr->gc,
 		      X(data, x), Y(data, y+BLOCK_SZ+1),
 		      X(data, x+BLOCK_SZ), Y(data, y+BLOCK_SZ+1));
+	    if (s[0]) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + down_x),
+			    Y(data, y + down_y),
+			    s, 1);
+	    }
+	    if (j < NumPlayers) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + down_x + (s[0] ? team_length : 0)),
+			    Y(data, y + down_y),
+			    Players[j]->name,
+			    strlen(Players[j]->name));
+	    }
 	    break;
 	case DIR_LEFT:
 	    XDrawLine(dr->disp, dr->p_draw, dr->gc,
 		      X(data, x+BLOCK_SZ+1), Y(data, y+BLOCK_SZ),
 		      X(data, x+BLOCK_SZ+1), Y(data, y));
+	    if (s[0]) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + left_x),
+			    Y(data, y + left_y),
+			    s, 1);
+	    }
+	    if (j < NumPlayers) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + left_x + (s[0] ? team_length : 0)),
+			    Y(data, y + left_y),
+			    Players[j]->name,
+			    strlen(Players[j]->name));
+	    }
 	    break;
 	case DIR_RIGHT:
 	    XDrawLine(dr->disp, dr->p_draw, dr->gc,
 		      X(data, x-1), Y(data, y+BLOCK_SZ),
 		      X(data, x-1), Y(data, y));
+	    if (s[0]) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data, x + right_x),
+			    Y(data, y + right_y),
+			    s, 1);
+	    }
+	    if (j < NumPlayers) {
+		XDrawString(dr->disp, dr->p_draw, dr->gc,
+			    X(data,
+			      x + right_x - ((s[0] ? right_team_length : 0)
+					     + Players[j]->name_length)),
+			    Y(data, y + right_y),
+			    Players[j]->name,
+			    strlen(Players[j]->name));
+	    }
 	    break;
 	default:
 	    error("Wrong direction of base.");
@@ -876,8 +983,6 @@ void Draw_bases(int draw, int data)
 	}
     }
 }
-#undef xadj
-#undef yadj
 
 
 void Draw_cannon(int draw, int data)
@@ -1036,10 +1141,9 @@ void Draw_radar(int draw, int data)
 
 	for (i = 0; i < NumObjs; i++) {
 	    shot = Obj[i];
-	    if ((shot->type == OBJ_SMART_SHOT
-		 || shot->type == OBJ_TORPEDO
-		 || shot->type == OBJ_HEAT_SHOT) 
-		&& LENGTH(pl->pos.x - shot->pos.x,
+	    if (BIT(shot->type, (OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_NUKE
+				 |OBJ_HEAT_SHOT))
+		&& Wrap_length(pl->pos.x - shot->pos.x,
 			  pl->pos.y - shot->pos.y) <= pl->sensor_range) {
 
 		p->x = 256 * (shot->pos.x / (World.x * BLOCK_SZ));
@@ -1056,40 +1160,40 @@ void Draw_radar(int draw, int data)
 	free(rects);
     }
 #endif
+    XSetForeground(dr->disp, dr->gcr, dr->colors[WHITE].pixel);
+
     for(i=0; i<NumPlayers; i++) {
 	if (BIT(Players[i]->status, PLAYING) &&
 	    !BIT(Players[i]->status, GAME_OVER)) {
+	    int	x, y;
 	    
+	    x = 256 * Players[i]->pos.x / (World.x * BLOCK_SZ);
+	    y = RadarHeight - RadarHeight * (Players[i]->pos.y
+					     / (World.y * BLOCK_SZ));
+
 	    if ((BIT(World.rules->mode, LIMITED_VISIBILITY)
-		 && (LENGTH(pl->pos.x-Players[i]->pos.x,
+		 && (Wrap_length(pl->pos.x - Players[i]->pos.x,
 			    pl->pos.y-Players[i]->pos.y) > pl->sensor_range))
 		|| (!pl->visibility[i].canSee && i!=data))
 		continue;
 	    
 	    if (data == i) {					/* You */
+		if (loops%16 >= 13)
+		    continue;
+
+		XDrawLine(dr->disp, dr->p_radar, dr->gcr,
+			  x, y, x + 8 * tcos(pl->dir), y - 8 * tsin(pl->dir));
+
+	    } else if (GetInd[pl->lock.pl_id] == i
+		       && BIT(pl->used, OBJ_COMPASS)
+		       && pl->lock.tagged == LOCK_PLAYER) {	/* Tagged */
 		
-		if (loops%10 >= 8)
-		    XSetForeground(dr->disp, dr->gcr, dr->colors[BLACK].pixel);
-		else
-		    XSetForeground(dr->disp, dr->gcr, dr->colors[WHITE].pixel);
-		
-	    } else if ((GetInd[pl->lock.pl_id]==i) &&
-		       BIT(pl->used, OBJ_COMPASS) &&
-		       (pl->lock.tagged==LOCK_PLAYER)) {	/* Tagged */
-		
-		if (loops%4 >= 3)
-		    XSetForeground(dr->disp, dr->gcr, dr->colors[BLACK].pixel);
-		else
-		    XSetForeground(dr->disp, dr->gcr, dr->colors[WHITE].pixel);
-	    } else
-		XSetForeground(dr->disp, dr->gcr, dr->colors[WHITE].pixel);
+		if (loops%5 >= 3)
+		    continue;
+	    }
 	    
-	    XDrawRectangle(dr->disp, dr->p_radar, dr->gcr,
-			   (int)(256*Players[i]->pos.x / (World.x*BLOCK_SZ)),
-			   (int)(RadarHeight
-				 - (RadarHeight*(Players[i]->pos.y/
-						  (World.y*BLOCK_SZ)))),
-			   2, 2);
+	    XFillRectangle(dr->disp, dr->p_radar, dr->gcr,
+			   x-1, y-1, 3, 3);
 	}
     }
 }
@@ -1137,7 +1241,8 @@ void Display_time(int draw, int data)
 	sprintf(string,
 		"Best time by %s : %-5.2f    Best round by %s: %-5.2f",
 		run_name, best_run/100.0, lap_name, best_lap/100.0);
-	XDrawString(dr->disp, dr->p_draw, dr->gc, 10, 70, string, strlen(string));
+	XDrawString(dr->disp, dr->p_draw, dr->gc,
+		    10, 70, string, strlen(string));
     }
 }
 
@@ -1280,8 +1385,8 @@ void Draw_world(int draw, int data)
 		
 	    case FUEL:
 		for(i=0; i<World.NumFuels; i++) {
-		    if (((int) (World.fuel[i].pos.x/BLOCK_SZ) == xi) &&
-			((int) (World.fuel[i].pos.y/BLOCK_SZ) == yi)) {
+		    if (((int)(World.fuel[i].pos.x/BLOCK_SZ) == xi)
+			&& ((int)(World.fuel[i].pos.y/BLOCK_SZ) == yi)) {
 			XDrawRectangle(dr->disp, dr->p_draw, dr->gc,
 				       X(data, x), Y(data, y+BLOCK_SZ),
 				       BLOCK_SZ, BLOCK_SZ);

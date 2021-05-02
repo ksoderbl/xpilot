@@ -1,16 +1,4 @@
-Hi priority:
-------------
-- Fix limited lives
+$Id: TODO,v 1.7 1993/04/16 12:21:29 bjoerns Exp $
 
-Medium priority:
-----------------
-- The collision detection is a mess, WallCollide() should call Landing()
-  if the object is a player.
-- Wrap-around doesn't work correctly.
+Client-serverize the game in C++.
 
-Low priority:
-----------------
-- Give special items weight (done?)
-- Use mouse for navigation
-- Graphical help window (should be cleaned up)
-- Radar should draw real blocks, not just pixels

@@ -1,4 +1,4 @@
-/* $Id: map.h,v 1.11 1993/04/01 18:17:39 bjoerns Exp $
+/* $Id: map.h,v 1.13 1993/04/18 03:48:38 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -14,15 +14,6 @@
 #include "types.h"
 #include "rules.h"
 #include "const.h"
-
-/*
- * Default map name, set to your own favourite.
- * If set to a nonexisting map ("N/A" for instance),
- * we will generate a random map.
- */
-#ifndef	DEFAULT_MAP
-#  define DEFAULT_MAP		"labyrinth.map"
-#endif
 
 #define SPACE			0
 #define BASE			1
@@ -42,10 +33,6 @@
 #define ACWISE_GRAV		23
 #define WORMHOLE		24
 #define TREASURE		25
-
-#ifndef MAP_DIR
-#  define MAP_DIR		(LIBDIR "maps/")
-#endif
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)

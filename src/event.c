@@ -1,4 +1,4 @@
-/* $Id: event.c,v 1.11 1993/04/01 18:17:32 bjoerns Exp $
+/* $Id: event.c,v 1.15 1993/04/18 17:11:01 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -19,10 +19,11 @@
 #include "global.h"
 #include "score.h"
 #include "map.h"
+#include "sound.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 1.11 1993/04/01 18:17:32 bjoerns Exp $";
+    "@(#)$Id: event.c,v 1.15 1993/04/18 17:11:01 bjoerns Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -48,8 +49,8 @@ void Refuel(int ind)
 	return;
 
     for (i=0; i<World.NumFuels; i++) {
-	l=LENGTH(pl->pos.x-World.fuel[i].pos.x, 
-		 pl->pos.y-World.fuel[i].pos.y);
+	l = Wrap_length(pl->pos.x - World.fuel[i].pos.x, 
+			pl->pos.y - World.fuel[i].pos.y);
 	if (min_dist > l) {
 	    min_dist = l;
 	    min = i;
@@ -57,6 +58,7 @@ void Refuel(int ind)
     }
 
     if (min >= 0) {
+	sound_play_player(pl, REFUEL_SOUND);
 	SET_BIT(pl->used, OBJ_REFUEL);
 	pl->fs = min;
     }
@@ -148,7 +150,7 @@ void Key_event(int ind, XEvent *event)
 		i = GetInd[pl->lock.pl_id];
 		if (NumPlayers > 1)
 		    do {
-			if (key==KEY_LOCK_PREV)
+			if (key == KEY_LOCK_PREV)
 			    i--;
 			else
 			    i++;
@@ -163,28 +165,30 @@ void Key_event(int ind, XEvent *event)
 		for (i=0; i<NumPlayers; i++) {
 		    if (TEAM(ind, i) || !BIT(Players[i]->status, PLAYING))
 			continue;
-		    l=LENGTH(Players[i]->pos.x - pl->pos.x,
-			     Players[i]->pos.y - pl->pos.y);
-		    if (BIT(Players[i]->status, PLAYING) && l<min && i!=ind) {
-			min=l;
-			min_ind=i;
+		    l = Wrap_length(Players[i]->pos.x - pl->pos.x,
+				    Players[i]->pos.y - pl->pos.y);
+		    if (l < min && i != ind) {
+			min = l;
+			min_ind = i;
 		    }
 		}
 		if (min < FLT_MAX) {
-		    pl->lock.pl_id=Players[min_ind]->id;
+		    pl->lock.pl_id = Players[min_ind]->id;
 		    pl->lock.tagged = LOCK_PLAYER;
 		} else
 		    pl->lock.tagged = LOCK_NONE;
 		break;
 
 	    case KEY_CHANGE_HOME:
-		xi = (int)pl->pos.x/BLOCK_SZ;
-		yi = (int)pl->pos.y/BLOCK_SZ;
+		xi = (int)pl->pos.x / BLOCK_SZ;
+		yi = (int)pl->pos.y / BLOCK_SZ;
 		if (World.block[xi][yi] == BASE) {
 		    msg[0] = '\0';
 		    for (i=0; i<World.NumBases; i++) {
-			if ((World.base[i].pos.x == xi) &&
-			    (World.base[i].pos.y == yi) && (i != pl->home_base)) {
+			if (World.base[i].pos.x == xi
+			    && World.base[i].pos.y == yi
+			    && i != pl->home_base) {
+
 			    if (World.base[i].team != TEAM_NOT_SET
 				&& World.base[i].team != pl->team)
 				break;
@@ -202,7 +206,10 @@ void Key_event(int ind, XEvent *event)
 				    pl->name, Players[i]->name);
 			}
 		    if (msg[0])
+		    {
+			sound_play_all(CHANGE_HOME_SOUND);
 			Set_message(msg);
+		    }
 		}
 		break;
 
@@ -233,7 +240,8 @@ void Key_event(int ind, XEvent *event)
 		for (i=0; i<pl->rear_shots; i++) {
 		    Fire_shot(ind, OBJ_SHOT,
 			      MOD2(pl->dir + RES/2
-				   + (pl->rear_shots-1 - 2*i)*SHOTS_ANGLE/2, RES));
+				   + (pl->rear_shots-1 - 2*i) * SHOTS_ANGLE/2,
+				   RES));
 		}
 		break;
 
@@ -252,6 +260,15 @@ void Key_event(int ind, XEvent *event)
 		if (pl->missiles > 0)
 		    Fire_shot(ind, OBJ_TORPEDO, pl->dir);
 
+		break;
+
+            case KEY_FIRE_NUKE:
+		if (BIT(World.rules->mode, ALLOW_NUKES)
+		    && pl->missiles > NUKE_MIN_SMART) {
+		    Fire_shot(ind, OBJ_NUKE, pl->dir);
+		    sprintf(msg, "%s has launched a nuke!", pl->name);
+		    Set_message(msg);
+		}
 		break;
 
 	    case KEY_DROP_MINE:
@@ -380,6 +397,7 @@ void Key_event(int ind, XEvent *event)
 	    case KEY_CLOAK:
 		if (pl->cloaks > 0)
 		    {
+			sound_play_player(pl, CLOAK_SOUND);
 			pl->updateVisibility = 1;
 			TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
 		    }

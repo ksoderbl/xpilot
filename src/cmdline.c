@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 1.12 1993/04/01 18:17:22 bjoerns Exp $
+/* $Id: cmdline.c,v 1.17 1993/04/18 17:10:59 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -18,7 +18,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 1.12 1993/04/01 18:17:22 bjoerns Exp $";
+    "@(#)$Id: cmdline.c,v 1.17 1993/04/18 17:10:59 bjoerns Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -55,6 +55,7 @@ bool		onePlayerOnly;		/* Can there be multiple players? */
 bool		timing;			/* Is this a race? */
 bool		edgeWrap;		/* Do objects wrap when they cross
 					   the edge of the Universe? */
+bool		extraBorder;		/* Give map an extra border? */
 ipos		gravityPoint;		/* Where does gravity originate? */
 float		gravityAngle;		/* If gravity is along a uniform line,
 					   at what angle is that line? */
@@ -81,6 +82,7 @@ float		itemWideangleProb;
 float		itemRearshotProb;
 float		itemAfterburnerProb;
 float		maxItemDensity;
+bool		allowNukes;
 
 static optionDesc options[] = {
   { "help", "help", "Print out this message", "0", NULL, valInt },
@@ -135,6 +137,8 @@ static optionDesc options[] = {
 	"no", &onePlayerOnly, valBool },
   { "timing", "timing", "Race mode", "no", &timing, valBool },
   { "edgeWrap", "edgeWrap", "Wrap around edges", "no", &edgeWrap, valBool },
+  { "extraBorder", "extraBorder", "Give map an extra border of solid rock",
+	  "no", &extraBorder, valBool },
   { "gravityPoint", "gravityPoint", "?????", "0,0", &gravityPoint, valIPos },
   { "gravityAngle", "gravityAngle", "?????", "0", &gravityAngle, valReal },
   { "gravityPointSource", "gravityPointSource", "?????",
@@ -149,6 +153,8 @@ static optionDesc options[] = {
   { "framesPerSecond", "FPS", 
 	"Number of frames per second the server should strive for",
 	"18", &framesPerSecond, valInt },
+  { "allowNukes", "nukes", "Should nukes be allowed",
+	"False", &allowNukes, valBool },
   { "movingItemProb", "movingItemProb",
 	"Probability for an item to appear as moving",
 	"0.2", &movingItemProb, valReal },
@@ -187,7 +193,7 @@ static optionDesc options[] = {
 	"0", &itemAfterburnerProb, valReal },
   { "maxItemDensity", "maxItemDensity",
 	"Maximum density [0.0-1.0] for items (max items per block)",
-	"0.001", &maxItemDensity, valReal },
+	"0.00012", &maxItemDensity, valReal },
 };
   
 
@@ -239,8 +245,8 @@ void Parser(int argc, char *argv[])
 			    addOption(options[j].name, "false", 0, NULL);
 		    } else {
 			if (i + 1 == argc)
-			    printf("Option %s needs an argument!\n",
-				   options[j].commandLineOption);
+			    error("Option '%s' needs an argument",
+				  options[j].commandLineOption);
 			else
 			    addOption(options[j].name,
 				      argv[++i], 1, (void *)0);
@@ -250,22 +256,20 @@ void Parser(int argc, char *argv[])
 	    }
 	    continue;
 	}
-	error("Unkown option \"%s\".\n", argv[i]);
+	error("Unknown option '%s'", argv[i]);
     }
     
     if (!(fname = getOption("mapData"))) {
 	if (!(fname = getOption("mapFileName"))) {
 #ifndef SILENT
-	    printf("Map not specified, trying to open " DEFAULT_MAP ".\n");
+	    printf("Map not specified, trying to open " DEFAULT_MAP "\n");
 #endif
-	    parseDefaultsFile(DEFAULT_MAP);
-
+	    if (!parseDefaultsFile(DEFAULT_MAP)) {
+		error("Unable to read " DEFAULT_MAP);
+	    }
 	} else {
 	    if (!parseDefaultsFile(fname)) {
-#ifndef SILENT
-		printf("Unable to read %s, trying to open " DEFAULT_MAP ".\n",
-		       fname);
-#endif
+		error("Unable to read %s, trying to open " DEFAULT_MAP, fname);
 		parseDefaultsFile(DEFAULT_MAP);
 	    }
 	}

@@ -1,3 +1,8 @@
+There's an utility in the contrib directory called mapmapper which
+converts old style maps (1.x) to new style maps (2.x).
+
+The new map format is as follows:
+
 	SYMBOL			MEANING
 
 	x			Completely filled block
@@ -15,6 +20,7 @@
 
 	_			Neutral base
 	0..9			Base belonging to team n
+	*			Treasure (belongs to team with closest base)
 
 	+, -			Positive/repelling and negative/attracting grav
 	>, <			Clockwise and anti-clockwise grav

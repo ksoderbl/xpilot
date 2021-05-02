@@ -6,20 +6,21 @@
  /   /  /         /    /       /    /     /
 /     / /         /    //////   ////      /
 
-////////  V e r s i o n   1 . 2  ////////////
+////////  V e r s i o n   2 . 0  ////////////
 
 
 
 COPYRIGHT & DISCLAIMER STUFF:
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-Copyright (C) 1991-92 by Bjoern Stabell and Ken Ronny Schouten.
+Copyright (C) 1991-93 by Bjoern Stabell and Ken Ronny Schouten.
                          University of Tromsoe, Norway.
                          Email: bjoerns@staff.cs.uit.no,
                                 kenrsc@stud.cs.uit.no
 
-Please see the LICENSE file for further details, in addition you may not
-distribute this project without this file (README) included.
+Please see the LICENSE file for further details.  You may not
+distribute this project without this file (README) and the
+LICENSE file included.
 
 
 
@@ -28,7 +29,7 @@ REQUIREMENTS:
 
 XPilot require the following resources:
 
-    - An ANSI compiler  (GCC with no options should work just fine)
+    - An ANSI compiler  (gcc with gcc-includes installed should work just fine)
     - X11               (only R4 and R5 tested)
 
 Also note that XPilot generates heavy netload and isn't gentle with the X
@@ -39,18 +40,34 @@ server, so a fast machine in a fast network is the ideal situation.
 INSTALLATION:
 \\\\\\\\\\\\\
 
-*   Cd to the src directory.
-
-*   Edit the config.h and Imakefile files to suit your environment.  If you
-    don't have Imake, you may have to hack a bit on Makefile.std.
+*   In the src directory, edit the config.h and Imakefile files to suit
+    your environment.  If you don't have Imake, you may have to hack a
+    bit on Makefile.std.
 
 *   If you have Imake, issue the following command:
 
         xmkmf -a
 
-*   Now make:
+    If it fails (xmkmf doesn't understand the -a flag), do
+
+        xmkmf
+        make Makefiles
+        make includes
+        make depend
+
+*   Now compile:
 
         make
+
+    If you get lots of parse errors, then verify that you're using an
+    ANSI compiler.
+
+    If you're compiling with gcc and get conflicting types for `abort'
+    and `exit', check that your include files has prototypes and if not,
+    that you have installed gcc-includes.  You should always install
+    gcc-includes if your system include files doesn't have prototypes.
+    (As a temporary hack, you may remove #include <stdlib.h> from all
+    the files.)
 
 *   Copy the maps to a suitable place (as specified in the config.h file).
     On our system we have the LIBDIR set to /user/local/games/lib/xpilot.
@@ -68,6 +85,9 @@ INSTALLATION:
     Also note that the `motd' isn't included, you should make one yourself
     if you feel the need for it.
 
+*   If you want to use sound (rplay needed), copy the src/lib/sounds file
+    to LIBDIR+"sounds".
+
 *   Copy the manual pages to a suitable place.  If you don't know where to
     put them, don't bother.  You may still read them with the following
     command:
@@ -80,10 +100,12 @@ MISCELLANEOUS INFORMATION:
 \\\\\\\\\\\\\\\\\\\\\\\\\\
 
 Please refer to the manuals in the man6 directory for further reading.  If
-you're completely stuck, or just want to chat :), e-mail me at:
+you're completely stuck, found a bug or just want to chat :), e-mail us at:
 
-        bjoerns@staff.cs.uit.no or xpilot-request@cs.uit.no
+        xpilot@cs.uit.no
 
-Questions and bug-reports should be sent to xpilot-request@cs.uit.no.
-Also, there is a mailing list for XPilot - please send an email to
+Remember to include the version of XPilot, your platform, the symptoms
+and a fix (if you have one) when reporting bugs.
+
+There is a mailing list for XPilot - please send an email to
 xpilot-request@cs.uit.no with subject 'info' if you want to know more.

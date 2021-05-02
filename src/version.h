@@ -1,4 +1,4 @@
-/* $Id: version.h,v 1.7 1993/03/25 20:58:58 bjoerns Exp $
+/* $Id: version.h,v 1.10 1993/04/22 16:56:31 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -15,8 +15,8 @@
  * Update these
  */
 #define MAJOR		"2"
-#define MINOR		"0alpha"
-#define	PATCHLEVEL	"5"
+#define MINOR		"0beta"
+#define	PATCHLEVEL	"2"
 
 /*
  * Don't change these
@@ -28,7 +28,7 @@
 #if defined(hpux)
 #    pragma COPYRIGHT		"Bjørn Stabell & Ken Ronny Schouten"
 #    pragma COPYRIGHT_DATE	"1992, 1993"
-#    pragma VERSIONID		TITLE " --- $Id: version.h,v 1.7 1993/03/25 20:58:58 bjoerns Exp $"
+#    pragma VERSIONID		TITLE " --- $Id: version.h,v 1.10 1993/04/22 16:56:31 bjoerns Exp $"
 #endif
 
 #endif

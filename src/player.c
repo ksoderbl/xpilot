@@ -1,4 +1,4 @@
-/* $Id: player.c,v 1.18 1993/04/02 20:34:53 kenrsc Exp $
+/* $Id: player.c,v 1.19 1993/04/16 12:22:53 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -16,7 +16,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 1.18 1993/04/02 20:34:53 kenrsc Exp $";
+    "@(#)$Id: player.c,v 1.19 1993/04/16 12:22:53 bjoerns Exp $";
 #endif
 
 
@@ -218,6 +218,7 @@ void Init_player(int ind)
 
     pl->id		= Id;
     GetInd[Id]		= ind;
+    pl->rplay_fd	= -1;
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 1.3 1993/03/24 22:22:30 bjoerns Exp $
+/* $Id: pack.h,v 1.4 1993/04/22 16:13:48 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -11,7 +11,7 @@
 #ifndef	PACK_H
 #define	PACK_H
 
-#include "lib/socklib.h"
+#include "socklib.h"
 #include "const.h"
 #include "types.h"
 

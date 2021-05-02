@@ -1,4 +1,4 @@
-/* $Id: option.c,v 1.3 1993/04/01 18:17:45 bjoerns Exp $
+/* $Id: option.c,v 1.5 1993/04/18 14:53:19 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -413,41 +413,55 @@ static int parseOldMapFile(FILE *ifile)
  */
 bool parseDefaultsFile(char *filename)
 {
-    FILE       *ifile;
+    FILE       *ifile = NULL;
     int         ich;
-    char       *ifname;
+    char       *ifname = NULL;
 
     FileName = filename;
     LineNumber = 1;
 
-    ifile = fopen(filename, "r");
+    ifile = fopen(filename, "r");			/* "FILE" */
 
     if (ifile == NULL) {
 	ifname = malloc(strlen(filename) + strlen(MAPDIR) + 5);
 	FileName = ifname;
-	sprintf(ifname, "%s.map", filename);
+	strcat(ifname, ".map");				/* "FILE.map" */
 	ifile = fopen(ifname, "r");
 
 	if (ifile == NULL) {
-	    sprintf(ifname, "%s/%s", MAPDIR, filename);
+	    sprintf(ifname, "%s%s", MAPDIR, filename);	/* "MAPDIR/FILE" */
+	    FileName = ifname;
 	    ifile = fopen(ifname, "r");
 
 	    if (ifile == NULL) {
-		free(ifname);
-		return 0;
+		strcat(ifname, ".map");			/* "MAPDIR/FILE.map" */
+		FileName = ifname;
+		ifile = fopen(ifname, "r");
+
+		if (ifile == NULL) {
+		    free(ifname);
+		    return 0;
+		}
 	    }
 	}
-	free(ifname);
     }
     ich = getc(ifile);
     if (ich != EOF)
 	ungetc(ich, ifile);
-    if (isascii(ich) && isdigit(ich)) {
-	parseOldMapFile(ifile);
+    if (isdigit(ich)) {
+	errno = 0;
+	error("%s is in old (v1.x) format, please convert it with mapmapper",
+	      ifname);
+	free(ifname);
+	fclose(ifile);
+	return 0;
     } else {
 	while (!feof(ifile))
 	    parseLine(ifile);
     }
+
+    if (ifname) free(ifname);
+    if (ifile) fclose(ifile);
     return 1;
 }
 
@@ -532,3 +546,7 @@ void parseOptions(void)
 	    }
 	}
 }
+
+
+
+

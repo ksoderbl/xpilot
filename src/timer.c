@@ -1,4 +1,4 @@
-/* $Id: timer.c,v 1.3 1993/03/23 17:54:14 bjoerns Exp $
+/* $Id: timer.c,v 1.5 1993/04/16 12:22:56 bjoerns Exp $
  *
  *	This file is part of the XPilot project.
  *	Copylefts are explained in the LICENSE file.
@@ -6,8 +6,12 @@
  *	Thanks to Bert Gijsbers for this piece of code.
  */
 
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <signal.h>
+#include <stdlib.h>
+
 
 extern int  framesPerSecond;
 int         error(const char *, ...);
@@ -173,13 +177,13 @@ void Loop_delay(void)
 	error("bug SIGALRM %ld >= %ld\n", timers_used, timer_count);
 	timers_used = timer_count = framesPerSecond;
     }
-    else if (++timers_used + framesPerSecond <= timer_count) {
+    else if (++timers_used + 2 < timer_count) {
 	/*
 	 * The host, network or X servers can't keep up with our rate.
 	 * This also happens if a new player is logging in.
 	 * Adjust, but allow an overload if it is of short duration.
 	 */
-	timers_used = timer_count - (framesPerSecond + 1) / 2;
+	timers_used = timer_count - 2;
     }
 }
 #endif

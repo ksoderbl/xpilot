@@ -1,4 +1,4 @@
-/* $Id: global.h,v 1.8 1993/04/01 18:17:35 bjoerns Exp $
+/* $Id: global.h,v 1.10 1993/04/18 17:11:02 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <errno.h>
 #include <setjmp.h>
 #include <X11/Xlib.h>
 #include <X11/Intrinsic.h>
@@ -87,6 +88,7 @@ extern bool		teamPlay;
 extern bool		onePlayerOnly;
 extern bool		timing;
 extern bool		edgeWrap;
+extern bool		extraBorder;
 extern ipos		gravityPoint;
 extern float		gravityAngle;
 extern bool		gravityPointSource;
@@ -95,6 +97,7 @@ extern bool		gravityAnticlockwise;
 extern int		MovingItemsRand;
 extern int 		ThrowItemOnKillRand;
 extern bool		updateScores;
+extern bool 		allowNukes;
 extern float 		dropItemOnKillProb;
 extern float 		movingItemProb;
 extern float 		itemEnergyPackProb;

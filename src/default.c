@@ -1,4 +1,4 @@
-/* $Id: default.c,v 1.5 1993/04/01 18:17:27 bjoerns Exp $
+/* $Id: default.c,v 1.6 1993/04/18 16:46:16 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -15,7 +15,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 1.5 1993/04/01 18:17:27 bjoerns Exp $";
+    "@(#)$Id: default.c,v 1.6 1993/04/18 16:46:16 kenrsc Exp $";
 #endif
 
 
@@ -55,6 +55,7 @@ void Get_defaults(int ind)
 	"keyFireMissile",	KEY_FIRE_MISSILE,
         "keyFireTorpedo",       KEY_FIRE_TORPEDO,
         "keyFireHeat",          KEY_FIRE_HEAT,
+	"keyFireNuke",          KEY_FIRE_NUKE,
 	"keyDropMine",		KEY_DROP_MINE,
 	"keyDetachMine",	KEY_DETACH_MINE,
 	"keyTurnLeft",		KEY_TURN_LEFT,
@@ -97,6 +98,7 @@ void Get_defaults(int ind)
  	XK_bracketleft,		KEY_ECM,
         XK_quoteright,          KEY_FIRE_TORPEDO,
         XK_semicolon,           KEY_FIRE_HEAT,
+	XK_n,                   KEY_FIRE_NUKE,
 	XK_Tab,			KEY_DROP_MINE,
  	XK_bracketright,	KEY_DETACH_MINE,
 	XK_a,			KEY_TURN_LEFT,

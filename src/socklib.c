@@ -14,8 +14,16 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 1.2 1993/03/24 03:24:56 bjoerns Exp $
+ * RCS:      $Id: socklib.c,v 1.1 1993/04/22 10:21:32 bjoerns Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 1.1  1993/04/22  10:21:32  bjoerns
+ * Moved socklib from lib to src.
+ *
+ * Revision 1.3  1993/04/14  16:50:41  bjoerns
+ * Applied two patches from Bert, one was really big and fixed all known
+ * wrap-around problems, and added some timing and robot optimisations.
+ * Also fixed other small bugs.
+ *
  * Revision 1.2  1993/03/24  03:24:56  bjoerns
  * Patch by Bert, mainly casting to right type.
  *
@@ -470,8 +478,7 @@ int	fd;
     timeout.tv_usec = sl_timeout_us;
     readfds = (1 << fd);
 
-    (void) select(fd + 1, (fd_set *)&readfds, (fd_set *)&writefds,
-	(fd_set *)&exceptfds, &timeout);
+    (void) select(fd + 1, &readfds, &writefds, &exceptfds, &timeout);
     
     if (readfds & (1 << fd))
 	return (1);
@@ -1164,3 +1171,28 @@ DgramLastport()
 {
     return (ntohs((int)sl_dgram_lastaddr.sin_port));
 } /* Dgram_Lastaddr */
+
+
+#if defined(__sun__)
+/*
+ * There seems to be a strange bug in inet_ntoa() on
+ * some Suns running a particular version of SunOS causing a
+ * segmentation violation.  This version of inet_ntoa() seems
+ * to be a workaround for it.
+ * Eventually we need to come up with something better.
+ */
+char *inet_ntoa (struct in_addr in)
+{
+	unsigned long addr = ntohl (in.s_addr);
+	static char ascii[16];
+
+	sprintf (ascii, "%d.%d.%d.%d",
+		addr >> 24 & 0xFF,
+		addr >> 16 & 0xFF,
+		addr >> 8 & 0xFF,
+		addr & 0xFF);
+
+	return ascii;
+}
+#endif
+

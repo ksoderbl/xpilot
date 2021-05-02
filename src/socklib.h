@@ -14,8 +14,11 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/lib/socklib.h,v 1.1 1993/03/09 14:33:27 kenrsc Exp $
+ * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/socklib.h,v 1.1 1993/04/22 10:21:33 bjoerns Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 1.1  1993/04/22  10:21:33  bjoerns
+ * Moved socklib from lib to src.
+ *
  * Revision 1.1  1993/03/09  14:33:27  kenrsc
  * Hopefully we won't have a corrupted CVS directory anymore.
  *

@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 1.9 1993/04/01 18:17:53 bjoerns Exp $
+/* $Id: rules.c,v 1.11 1993/04/18 17:11:04 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -14,12 +14,13 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 1.9 1993/04/01 18:17:53 bjoerns Exp $";
+    "@(#)$Id: rules.c,v 1.11 1993/04/18 17:11:04 bjoerns Exp $";
 #endif
 
 
 long	KILLING_SHOTS =
-          (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
+          (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
+	   |OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_NUKE);
 long	DEF_BITS = (ID_MODE|VELOCITY_GAUGE|FUEL_GAUGE|POWER_GAUGE);
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
 long	DEF_HAVE =
@@ -68,13 +69,14 @@ void Set_world_rules(void)
 	   | (teamPlay ? TEAM_PLAY : 0)
 	   | (onePlayerOnly ? ONE_PLAYER_ONLY : 0)
 	   | (timing ? TIMING : 0)
+	   | (allowNukes ? ALLOW_NUKES : 0)
 	   | (edgeWrap ? WRAP_PLAY : 0));
 	rules.lives = worldLives;
 	World.rules = &rules;
 
     if (!BIT(World.rules->mode, PLAYER_KILLINGS))
 	CLR_BIT(KILLING_SHOTS,
-		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
+		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_NUKE);
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
 	CLR_BIT(DEF_HAVE, OBJ_SHIELD);
 

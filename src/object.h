@@ -1,4 +1,4 @@
-/* $Id: object.h,v 1.9 1993/04/01 18:17:43 bjoerns Exp $
+/* $Id: object.h,v 1.11 1993/04/18 16:46:20 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -16,34 +16,34 @@
 #include "dbuff.h"
 
 
-#define OBJ_PLAYER		(1L<<0)		/* Types of objects */
-#define OBJ_DEBRIS		(1L<<1)
-#define OBJ_SPARK		(1L<<2)
-#define OBJ_BALL_PACK		(1L<<6)
-#define OBJ_BALL		(1L<<7)
-#define OBJ_SHOT		(1L<<8)		/* Misc. objects */
-#define OBJ_SMART_SHOT		(1L<<9)
-#define OBJ_SMART_SHOT_PACK	(1L<<10)
-#define OBJ_CLOAKING_DEVICE	(1L<<11)
-#define OBJ_ENERGY_PACK		(1L<<12)
-#define OBJ_WIDEANGLE_SHOT	(1L<<13)
-#define OBJ_TRAINER		(1L<<14)
-#define OBJ_SHIELD		(1L<<15)
-#define OBJ_REFUEL		(1L<<16)
-#define OBJ_COMPASS		(1L<<17)
-#define OBJ_REAR_SHOT		(1L<<18)
-#define OBJ_MINE		(1L<<19)
-#define OBJ_MINE_PACK		(1L<<20)
-#define OBJ_SENSOR_PACK		(1L<<21)
-#define OBJ_TANK		(1L<<22)
-#define OBJ_ECM			(1L<<23)
-#define OBJ_TORPEDO		(1L<<24)
-#define OBJ_HEAT_SHOT		(1L<<25)
-#define OBJ_AFTER_BURNER	(1L<<26)
-#define OBJ_CONNECTOR		(1L<<26)
-#define OBJ_CANNON_DEBRIS	(1L<<30)	/* Cannon objects */
-#define OBJ_CANNON_SHOT		(1L<<31)
-
+#define OBJ_PLAYER		(1UL<<0)		/* Types of objects */
+#define OBJ_DEBRIS		(1UL<<1)
+#define OBJ_SPARK		(1UL<<2)
+#define OBJ_NUKE                (1L<<3)
+#define OBJ_BALL_PACK		(1UL<<6)
+#define OBJ_BALL		(1UL<<7)
+#define OBJ_SHOT		(1UL<<8)		/* Misc. objects */
+#define OBJ_SMART_SHOT		(1UL<<9)
+#define OBJ_SMART_SHOT_PACK	(1UL<<10)
+#define OBJ_CLOAKING_DEVICE	(1UL<<11)
+#define OBJ_ENERGY_PACK		(1UL<<12)
+#define OBJ_WIDEANGLE_SHOT	(1UL<<13)
+#define OBJ_TRAINER		(1UL<<14)
+#define OBJ_SHIELD		(1UL<<15)
+#define OBJ_REFUEL		(1UL<<16)
+#define OBJ_COMPASS		(1UL<<17)
+#define OBJ_REAR_SHOT		(1UL<<18)
+#define OBJ_MINE		(1UL<<19)
+#define OBJ_MINE_PACK		(1UL<<20)
+#define OBJ_SENSOR_PACK		(1UL<<21)
+#define OBJ_TANK		(1UL<<22)
+#define OBJ_ECM			(1UL<<23)
+#define OBJ_TORPEDO		(1UL<<24)
+#define OBJ_HEAT_SHOT		(1UL<<25)
+#define OBJ_AFTER_BURNER	(1UL<<26)
+#define OBJ_CONNECTOR		(1UL<<26)
+#define OBJ_CANNON_DEBRIS	(1UL<<30)	/* Cannon objects */
+#define OBJ_CANNON_SHOT		(1UL<<31)
 
 /*
  * Possible player status bits
@@ -118,6 +118,7 @@ typedef enum {
     KEY_FIRE_SHOT,
     KEY_FIRE_MISSILE,
     KEY_FIRE_TORPEDO,
+    KEY_FIRE_NUKE,
     KEY_FIRE_HEAT,
     KEY_DROP_MINE,
     KEY_DETACH_MINE,
@@ -337,6 +338,8 @@ typedef struct {
 	KeySym	keysym;			/* Keysym-to-action array */
 	keys_t	key;
     } keyDefs[MAX_KEY_DEFS];
+
+    int	rplay_fd;			/* rplay UDP socket fd */
 } player;
 
 #endif

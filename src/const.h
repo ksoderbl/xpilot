@@ -1,4 +1,4 @@
-/* $Id: const.h,v 1.7 1993/04/01 18:17:26 bjoerns Exp $
+/* $Id: const.h,v 1.11 1993/04/18 16:46:15 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -12,15 +12,14 @@
 #define	LIMITS_H
 
 #include <limits.h>
+#include <math.h>
 
 /*
  * FLT_MAX and RAND_MAX is ANSI C standard, but some systems (BSD) use
  * MAXFLOAT and INT_MAX instead.
  */
 #ifndef	FLT_MAX
-#   ifdef apollo
-#       include <math.h>	/* MAXFLOAT for apollo */
-#   else
+#   if defined(__sun__)
 #       include <values.h>	/* MAXFLOAT for suns */
 #   endif
 #   define  FLT_MAX	MAXFLOAT
@@ -31,9 +30,9 @@
 
 /* Not everyone has PI (or M_PI defined). */
 #ifndef	M_PI
-#define PI		3.14159265358979323846
+#   define PI		3.14159265358979323846
 #else
-#define	PI		M_PI
+#   define	PI		M_PI
 #endif
 
 #define RES		        128
@@ -48,12 +47,35 @@
 
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
 #ifndef MAX
-#define MIN(x, y)		( (x)>(y) ? (y) : (x) )
-#define MAX(x, y)		( (x)>(y) ? (x) : (y) )
+#   define MIN(x, y)		( (x)>(y) ? (y) : (x) )
+#   define MAX(x, y)		( (x)>(y) ? (x) : (y) )
 #endif
 #define sqr(x)			( (x)*(x) )
-#define LENGTH(x, y)		( sqrt(sqr(x) + sqr(y)) )
+#define LENGTH(x, y)		( sqrt( (double) (sqr(x) + sqr(y)) ) )
 #define LIMIT(val, lo, hi)	( val = val>hi ? hi : (val<lo ? lo : val) )
+
+/*
+ * Two macros for edge wrap of differences in position.
+ * If the absolute value of a difference is bigger than
+ * half the map size then it is wrapped.
+ */
+#define WRAP_DX(dx)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((dx) < - (World.x * BLOCK_SZ >> 1) \
+		? (dx) + World.x * BLOCK_SZ \
+		: ((dx) > (World.x * BLOCK_SZ >> 1) \
+		    ? (dx) - World.x * BLOCK_SZ \
+		    : (dx))) \
+	    : (dx))
+
+#define WRAP_DY(dy)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((dy) < - (World.y * BLOCK_SZ >> 1) \
+		? (dy) + World.y * BLOCK_SZ \
+		: ((dy) > (World.y * BLOCK_SZ >> 1) \
+		    ? (dy) - World.y * BLOCK_SZ \
+		    : (dy))) \
+	    : (dy))
 
 #ifndef MOD2
 #  define MOD2(x, m)		( (x) & ((m) - 1) )
@@ -165,6 +187,14 @@
 #define TORPEDO_SPEED_TIME      (2*FPS)
 #define TORPEDO_ACC             (SMART_SHOT_MAX_SPEED/TORPEDO_SPEED_TIME)
 #define TORPEDO_RANGE           (MINE_RANGE*0.45)
+
+#define NUKE_SPEED_TIME		(2*FPS)
+#define NUKE_ACC		(5*SMART_SHOT_MAX_SPEED/TORPEDO_SPEED_TIME)
+#define NUKE_RANGE		(MINE_RANGE*1.5)
+#define NUKE_MIN_SMART		7
+#define NUKE_MASS_MULT		1
+#define NUKE_EXPLOSION_MULT	20
+
 #define HEAT_RANGE              (VISIBILITY_DISTANCE/2)
 #define HEAT_SPEED_FACT         1.7
 #define HEAT_CLOSE_TIMEOUT      (2*FPS)

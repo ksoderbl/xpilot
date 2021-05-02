@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 1.19 1993/04/02 20:34:52 kenrsc Exp $
+/* $Id: collision.c,v 1.23 1993/04/22 10:21:29 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -14,15 +14,17 @@
 #include "map.h"
 #include "score.h"
 #include "robot.h"
+#include "sound.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 1.19 1993/04/02 20:34:52 kenrsc Exp $";
+    "@(#)$Id: collision.c,v 1.23 1993/04/22 10:21:29 bjoerns Exp $";
 #endif
 
 #define in_range(o1, o2, r)	\
     (ABS((o1)->intpos.x-(o2)->intpos.x)<(r) && \
      ABS((o1)->intpos.y-(o2)->intpos.y)<(r)) \
+    /* this in_range() macro still needs an edgewrap modification */
 
 
 extern long KILLING_SHOTS;
@@ -151,7 +153,7 @@ static void PlayerCollision(void)
     /* Player - player, checkpoint, treasure, object and wall */
     for (i=0; i<NumPlayers; i++) {
 	pl = Players[i];
-	if (!BIT(pl->status, PLAYING) || BIT(pl->status, GAME_OVER))
+	if (BIT(pl->status, PLAYING|GAME_OVER) != PLAYING)
 	    continue;
 
 	if (pl->pos.x < 0 || pl->pos.y < 0
@@ -167,10 +169,10 @@ static void PlayerCollision(void)
 	/* Player - player */
 	if (BIT(World.rules->mode, CRASH_WITH_PLAYER)) {
 	    for (j=i+1; j<NumPlayers; j++)
-		if (BIT(Players[j]->status, PLAYING)
-		    && !BIT(Players[j]->status, GAME_OVER)
+		if (BIT(Players[j]->status, PLAYING|GAME_OVER) == PLAYING
 		    && in_range((object *)pl, (object *)Players[j],
 				2*SHIP_SZ-6)) {
+		    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_PLAYER_SOUND);
 		    if (!TEAM(i, j) && !PSEUDO_TEAM(i,j)) {
 			Add_fuel(&(pl->fuel), ED_PL_CRASH);
 			Add_fuel(&(Players[j]->fuel), ED_PL_CRASH);
@@ -227,7 +229,7 @@ static void PlayerCollision(void)
 
 	/* Player checkpoint */
 	if (BIT(World.rules->mode, TIMING))
-	    if (LENGTH(pl->pos.x - World.check[pl->check].x*BLOCK_SZ,
+	    if (Wrap_length(pl->pos.x - World.check[pl->check].x*BLOCK_SZ,
 		       pl->pos.y - World.check[pl->check].y*BLOCK_SZ) < 200) {
 
 		if (pl->check == 0) {
@@ -252,9 +254,9 @@ static void PlayerCollision(void)
 	    pl->ball = NULL;
 	} else {
 	    if (pl->ball != NULL) {
-		if ((LENGTH(pl->pos.x - pl->ball->pos.x,
-			    pl->pos.y - pl->ball->pos.y) 
-		     > BALL_STRING_LENGTH)) {
+		if (Wrap_length(pl->pos.x - pl->ball->pos.x,
+				pl->pos.y - pl->ball->pos.y) 
+		     > BALL_STRING_LENGTH) {
 		    pl->ball->id = pl->id;
 		    pl->ball->owner = pl->id;
 		    pl->ball->status = GRAVITY;
@@ -266,9 +268,9 @@ static void PlayerCollision(void)
 	    } else if (!BIT(pl->have, OBJ_BALL)) {
 		for (j=0 ; j < NumObjs; j++) {
 		    if (BIT(Obj[j]->type, OBJ_BALL) && Obj[j]->id == -1) {
-			if (((LENGTH(pl->pos.x - Obj[j]->pos.x, 
-				     pl->pos.y - Obj[j]->pos.y) 
-			      < BALL_STRING_LENGTH))) {
+			if (Wrap_length(pl->pos.x - Obj[j]->pos.x, 
+					pl->pos.y - Obj[j]->pos.y) 
+			      < BALL_STRING_LENGTH) {
 			    pl->ball = Obj[j];
 			    break;
 			}
@@ -281,10 +283,23 @@ static void PlayerCollision(void)
 
 	/* Player - wall */
 	if (!(BIT(pl->used, OBJ_TRAINER) || BIT(pl->status, KILLED))) {
-	    for(j=0; j<3 && !BIT(pl->status, KILLED) &&
-		!BIT(pl->status, WARPING); j++) {
-		x = (int)((pl->pos.x + ships[pl->dir].pts[j].x) / BLOCK_SZ);
-		y = (int)((pl->pos.y + ships[pl->dir].pts[j].y) / BLOCK_SZ);
+	    for(j=0; j<3 && !BIT(pl->status, KILLED|WARPING); j++) {
+		float tx = pl->pos.x + ships[pl->dir].pts[j].x;
+		float ty = pl->pos.y + ships[pl->dir].pts[j].y;
+		if (BIT(World.rules->mode, WRAP_PLAY)) {
+		    if (tx < 0)
+			tx += World.x * BLOCK_SZ;
+		    if (tx >= World.x * BLOCK_SZ)
+			tx -= World.x * BLOCK_SZ;
+		    if (ty < 0)
+			ty += World.y * BLOCK_SZ;
+		    if (ty >= World.y * BLOCK_SZ)
+			ty -= World.y * BLOCK_SZ;
+		}
+		xd = (int) tx;
+		yd = (int) ty;
+		x = (int)(tx / BLOCK_SZ);
+		y = (int)(ty / BLOCK_SZ);
 		if (x < 0 || x >= World.x || y < 0 || y >= World.y) {
 #ifdef FOO
 		    sprintf(msg, "%s left the known universe.", pl->name);
@@ -327,12 +342,7 @@ static void PlayerCollision(void)
 			}
 			break;
 		    case REC_LU:
-			if ((((int)(pl->pos.x
-				    +ships[pl->dir].pts[j].x))
-			     % BLOCK_SZ)
-			    <= (((int)(pl->pos.y
-				       +ships[pl->dir].pts[j].y))
-				% BLOCK_SZ)) {
+			if (xd % BLOCK_SZ <= yd % BLOCK_SZ) {
 			    if (!Landing(i, j, 7*RES/8)) {
 				SET_BIT(pl->status, KILLED);
 				SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -340,11 +350,7 @@ static void PlayerCollision(void)
 			}
 			break;
 		    case REC_RU:
-			if ((((int)(pl->pos.x
-				    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
-			    >= BLOCK_SZ - (((int)(pl->pos.y
-						  +ships[pl->dir].pts[j].y))
-					   % BLOCK_SZ)) {
+			if (xd % BLOCK_SZ >= BLOCK_SZ - (yd % BLOCK_SZ)) {
 			    if (!Landing(i, j, 5*RES/8)) {
 				SET_BIT(pl->status, KILLED);
 				SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -352,11 +358,7 @@ static void PlayerCollision(void)
 			}
 			break;
 		    case REC_LD:
-			if ((((int)(pl->pos.x
-				    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
-			    <= BLOCK_SZ - (((int)(pl->pos.y
-						  +ships[pl->dir].pts[j].y))
-					   % BLOCK_SZ)) {
+			if (xd % BLOCK_SZ <= BLOCK_SZ - (yd % BLOCK_SZ)) {
 			    if (!Landing(i, j, RES/8)) {
 				SET_BIT(pl->status, KILLED);
 				SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -364,11 +366,7 @@ static void PlayerCollision(void)
 			}
 			break;
 		    case REC_RD:
-			if ((((int)(pl->pos.x
-				    +ships[pl->dir].pts[j].x)) % BLOCK_SZ)
-			    >= (((int)(pl->pos.y
-				       +ships[pl->dir].pts[j].y))
-				% BLOCK_SZ)) {
+			if (xd % BLOCK_SZ >= yd % BLOCK_SZ) {
 			    if (!Landing(i, j, 3*RES/8)) {
 				SET_BIT(pl->status, KILLED);
 				SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -376,9 +374,6 @@ static void PlayerCollision(void)
 			}
 			break;
 		    case CANNON:
-			xd = pl->pos.x + ships[pl->dir].pts[j].x;
-			yd = pl->pos.y + ships[pl->dir].pts[j].y;
-
 			for(t = 0;
 			    World.cannon[t].pos.x != x
 			    || World.cannon[t].pos.y != y;
@@ -397,6 +392,7 @@ static void PlayerCollision(void)
 				&& xd%BLOCK_SZ > 2*BLOCK_SZ/3)) {
 
 			    SET_BIT(pl->status, KILLED);
+			    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNON_SOUND);
 			    sprintf(msg, "%s crashed with a cannon.",
 				    pl->name);
 			    SCORE(i, -Rate(WALL_RATING, pl->score));
@@ -417,7 +413,7 @@ static void PlayerCollision(void)
 		    case WORMHOLE:
 			{
 			    int hole = wormXY(x, y);
-
+			    sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 			    if (World.wormHoles[hole].type != WORM_OUT) {
 				SET_BIT(pl->status, WARPING);
 				pl->wormHoleHit = hole;
@@ -473,13 +469,20 @@ static void PlayerObjectCollision(int i)
 	if (obj->life <= 0)
 	    continue;
 
-	if (BIT(obj->type, OBJ_TORPEDO|OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_MINE))
+	if (BIT(obj->type, OBJ_TORPEDO|OBJ_SMART_SHOT
+		|OBJ_HEAT_SHOT|OBJ_MINE|OBJ_NUKE))
 	    switch (obj->type) {
 	    case OBJ_TORPEDO:
 		if (pl->id == obj->id && obj->info < 8)
 		    continue;
 		else
 		    range = SHIP_SZ + TORPEDO_RANGE;
+		break;
+            case OBJ_NUKE:
+		if (pl->id==Obj[j]->id && Obj[j]->info<8)
+		  continue;
+		else 
+		  range=SHIP_SZ+NUKE_RANGE;
 		break;
 	    case OBJ_SMART_SHOT:
 	    case OBJ_HEAT_SHOT:
@@ -516,6 +519,7 @@ static void PlayerObjectCollision(int i)
 	switch (obj->type) {
 	case OBJ_WIDEANGLE_SHOT:
 	    pl->extra_shots++;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, WIDEANGLE_SHOT_PICKUP_SOUND);
 	    break;
 	case OBJ_BALL_PACK:
 	    if (!BIT(pl->have, OBJ_BALL)) {
@@ -526,34 +530,42 @@ static void PlayerObjectCollision(int i)
 	    break;
 	case OBJ_ECM:
 	    pl->ecms++;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, ECM_PICKUP_SOUND);
 	    break;
 	case OBJ_SENSOR_PACK:
 	    pl->sensors++;
 	    pl->updateVisibility = 1;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, SENSOR_PACK_PICKUP_SOUND);
 	    break;
 	case OBJ_AFTER_BURNER:
 	    SET_BIT(pl->have, OBJ_AFTER_BURNER);
 	    if (++pl->after_burners > MAX_AFTER_BURNER)
 		pl->after_burners = MAX_AFTER_BURNER;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, AFTER_BURNER_PICKUP_SOUND);
 	    break;
 	case OBJ_REAR_SHOT:
 	    SET_BIT(pl->have, OBJ_REAR_SHOT);
 	    pl->rear_shots++;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, REAR_SHOT_PICKUP_SOUND);
 	    break;
 	case OBJ_SMART_SHOT_PACK:
 	    pl->missiles += 4;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, SMART_SHOT_PACK_PICKUP_SOUND);
 	    break;
 	case OBJ_CLOAKING_DEVICE:
 	    SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
 	    pl->cloaks++;
 	    pl->updateVisibility = 1;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, CLOAKING_DEVICE_PICKUP_SOUND);
 	    break;
 	case OBJ_ENERGY_PACK:
 	    Add_fuel(&(pl->fuel), ENERGY_PACK_FUEL);
 	    pl->fuel.count = FUEL_NOTIFY;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, ENERGY_PACK_PICKUP_SOUND);
 	    break;
 	case OBJ_MINE_PACK:
 	    pl->mines += 1 + (rand()&1);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, MINE_PACK_PICKUP_SOUND);
 	    break;
 	case OBJ_TANK: {
 	    int c = pl->fuel.current;
@@ -574,9 +586,11 @@ static void PlayerObjectCollision(int i)
 	    Add_fuel(&(pl->fuel), TANK_FUEL(pl->fuel.current));
 	    pl->fuel.count = FUEL_NOTIFY;
 	    pl->fuel.current = c;
+	    sound_play_sensors(pl->pos.x, pl->pos.y, TANK_PICKUP_SOUND);
 	    break;
 	}
 	case OBJ_MINE:
+	    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_MINE_SOUND);
 	    if (obj->id == -1)
 		sprintf(msg, "%s hit a %smine.",
 			pl->name, obj->status ? "moving " : "");
@@ -588,6 +602,12 @@ static void PlayerObjectCollision(int i)
 		SCORE(killer, sc);
 		SCORE(i, -sc);
 	    }
+	    Set_message(msg);
+	    break;
+        case OBJ_NUKE:
+          sprintf(msg, "%s had a full on nuclear wind in the face courtesy %s",
+		    pl->name,
+		    Players[killer=GetInd[Obj[j]->id]]->name);
 	    Set_message(msg);
 	    break;
 	default:
@@ -604,11 +624,20 @@ static void PlayerObjectCollision(int i)
 
 	    case OBJ_TORPEDO:
 		type = "torpedo";
+	    	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EAT_TORPEDO_SHOT_SOUND);
+            case OBJ_NUKE:
 	    case OBJ_HEAT_SHOT:
-		if (!type) type = "heat shot";
+		if (!type)
+		{
+			type = "heat shot";
+	    		sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EAT_HEAT_SHOT_SOUND);
+		}
 	    case OBJ_SMART_SHOT:
-		if (!type) type = "smart shot";
-
+		if (!type)
+		{
+			type = "smart shot";
+	    		sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EAT_SMART_SHOT_SOUND);
+		}
 		if (obj->id == -1)
 		    sprintf(msg, "%s ate a %s.", pl->name, type);
 		else
@@ -622,6 +651,7 @@ static void PlayerObjectCollision(int i)
 
 	    case OBJ_SHOT:
 	    case OBJ_CANNON_SHOT:
+		sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EAT_SHOT_SOUND);
 		Add_fuel(&(pl->fuel), ED_SHOT_HIT);
 		pl->forceVisible += 1;
 		break;
@@ -636,6 +666,10 @@ static void PlayerObjectCollision(int i)
 		Add_fuel(&(pl->fuel),ED_SMART_SHOT_HIT);
 		if (rand()&3)
 		    break;
+            case OBJ_NUKE:
+		Add_fuel(&(pl->fuel),ED_SMART_SHOT_HIT);
+		if (rand()&3)
+		  break;
 	    case OBJ_SHOT:
 	    case OBJ_SMART_SHOT:
 	    case OBJ_HEAT_SHOT:
@@ -645,6 +679,7 @@ static void PlayerObjectCollision(int i)
 		SET_BIT(pl->status, KILLED);
 
 		if (killer == i) {
+		    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_SHOT_THEMSELF_SOUND);
 		    strcat(msg, " How strange!");
 		    SCORE(i, PTS_PR_PL_SHOT);
 		} else {
@@ -662,6 +697,7 @@ static void PlayerObjectCollision(int i)
 
 		    if (pl->robot_lock != LOCK_PLAYER
 			|| pl->robot_lock_id != Players[killer]->id) {
+			sound_play_all(DECLARE_WAR_SOUND);
 			sprintf(msg, "%s declares war on %s.",
 				pl->name, Players[killer]->name);
 			pl->robot_lock_id = Players[killer]->id;
@@ -672,7 +708,7 @@ static void PlayerObjectCollision(int i)
 		break;
 	    case OBJ_CANNON_SHOT:
 		SET_BIT(pl->status, KILLED);
-
+		sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNONFIRE_SOUND);
 		sprintf(msg, "%s was hit by cannonfire.", pl->name);
 		Set_message(msg);
 		SCORE(i, -Rate(CANNON_RATING, pl->score)/4);
@@ -766,8 +802,8 @@ static void WallCollide(object *obj, int x, int y,
 		float ddx, ddy;
 		
 		/* Compute the total distance travelled... */
-		ddx = obj->pos.x - obj->prevpos.x;
-		ddy = obj->pos.y - obj->prevpos.y;
+		ddx = WRAP_DX(obj->pos.x - obj->prevpos.x);
+		ddy = WRAP_DY(obj->pos.y - obj->prevpos.y);
 		
 		/* Did we start in this square? */
 		if (!count) {
@@ -780,24 +816,24 @@ static void WallCollide(object *obj, int x, int y,
 			if (axis) {	/* Major axis is X axis */
 			    ex = x * BLOCK_SZ;
 			    ey = obj->prevpos.y
-				+ ddy * (((float)ex - obj->prevpos.x) / ddx);
+				+ ddy * (WRAP_DX(ex - obj->prevpos.x) / ddx);
 			}
 			else {		/* Major axis is Y axis */
 			    ey = y * BLOCK_SZ;
 			    ex = obj->prevpos.x
-				+ ddx * ((ey - obj->prevpos.y) / ddy);
+				+ ddx * (WRAP_DY(ey - obj->prevpos.y) / ddy);
 			}
 		    }
 		    else {		/* Decreasing on major axis */
 			if (axis) {	/* Major axis is X axis */
 			    ex = x * BLOCK_SZ + BLOCK_SZ - 1;
 			    ey = obj->prevpos.y
-				+ ddy * ((ex - obj->prevpos.x) / ddx);
+				+ ddy * (WRAP_DX(ex - obj->prevpos.x) / ddx);
 			}
 			else {  	/* Major axis is Y axis */
 			    ey = y * BLOCK_SZ + BLOCK_SZ - 1;
 			    ex = obj->prevpos.x
-				+ ddx * ((ey - obj->prevpos.y) / ddy);
+				+ ddx * (WRAP_DY(ey - obj->prevpos.y) / ddy);
 			}
 		    }
 		}
@@ -813,24 +849,24 @@ static void WallCollide(object *obj, int x, int y,
 			if (axis) {		/* Major axis is X axis */
 			    lx = x * BLOCK_SZ + BLOCK_SZ - 1;
 			    ly = obj->prevpos.y
-				+ ddy * ((lx - obj->prevpos.x) / ddx);
+				+ ddy * (WRAP_DX(lx - obj->prevpos.x) / ddx);
 			}
 			else {    		/* Major axis is Y axis */
 			    ly = y * BLOCK_SZ + BLOCK_SZ - 1;
 			    lx = obj->prevpos.x
-				+ ddx * ((ly - obj->prevpos.y) / ddy);
+				+ ddx * (WRAP_DY(ly - obj->prevpos.y) / ddy);
 			}
 		    }
 		    else  {         		/* Decreasing on major axis */
 			if (axis) {		/* Major axis is X axis */
 			    lx = x * BLOCK_SZ;
 			    ly = obj->prevpos.y
-				+ ddy * ((lx - obj->prevpos.x) / ddx);
+				+ ddy * (WRAP_DX(lx - obj->prevpos.x) / ddx);
 			}
 			else {     		/* Major axis is Y axis */
 			    ly = y * BLOCK_SZ;
 			    lx = obj->prevpos.x
-				+ ddx * ((ly - obj->prevpos.y) / ddy);
+				+ ddx * (WRAP_DY(ly - obj->prevpos.y) / ddy);
 			}
 		    }
 		}
@@ -949,10 +985,12 @@ static bool Landing(int ind, int point, int blockdir)
     int landdir;
     bool diagonal;
     player *pl = Players[ind];
+    float tx, ty;
 
 
     /* Head first? */
     if (point == 0) {
+	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
 	sprintf(msg, "%s smashed head first into a wall.", Players[ind]->name);
 	Set_message(msg);
 	return False;
@@ -960,18 +998,32 @@ static bool Landing(int ind, int point, int blockdir)
     
     /* Way too fast? */
     if (LENGTH(pl->vel.y, pl->vel.x) > 12.0) {
+	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
 	sprintf(msg, "%s smashed into a wall.", Players[ind]->name);
 	Set_message(msg);
 	return False;
     }
     
-    x = pl->pos.x + ships[pl->dir].pts[point].x;
-    y = pl->pos.y + ships[pl->dir].pts[point].y;
+    tx = pl->pos.x + ships[pl->dir].pts[point].x;
+    ty = pl->pos.y + ships[pl->dir].pts[point].y;
+    if (BIT(World.rules->mode, WRAP_PLAY)) {
+	if (tx < 0)
+	    tx += World.x * BLOCK_SZ;
+	if (tx >= World.x * BLOCK_SZ)
+	    tx -= World.x * BLOCK_SZ;
+	if (ty < 0)
+	    ty += World.y * BLOCK_SZ;
+	if (ty >= World.y * BLOCK_SZ)
+	    ty -= World.y * BLOCK_SZ;
+    }
+    x = (int) tx;
+    y = (int) ty;
 
     landdir = ((pl->dir + RES/16) / (RES/8)) * (RES/8);
     diagonal = (landdir % (RES/4) != 0);
  
     if (diagonal && blockdir != landdir) { /* Wrong angle? */
+	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
 	sprintf(msg, "%s crashed into a wall.", Players[ind]->name);
 	Set_message(msg);
         return False;
@@ -980,7 +1032,7 @@ static bool Landing(int ind, int point, int blockdir)
     /* Wrong angle? */
     if (!diagonal && blockdir != 0
 	&& (landdir+(RES-blockdir)+RES/4) % RES <= RES/2) {
-
+	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
 	sprintf(msg, "%s crashed into a wall.", Players[ind]->name);
 	Set_message(msg);
         return False;
@@ -1000,6 +1052,7 @@ static bool Landing(int ind, int point, int blockdir)
 
     if (depth > 20) {
 	sprintf(msg, "%s crashed into a wall.", Players[ind]->name);
+	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
 	Set_message(msg);
 	return False;
     }
@@ -1019,18 +1072,42 @@ static bool Landing(int ind, int point, int blockdir)
     if (landdir < RES/4 || landdir > 3*RES/4) {
 	pl->pos.x = x + depth - ships[pl->dir].pts[point].x;
 	pl->vel.x = ABS(pl->vel.x);
+	if (BIT(World.rules->mode, WRAP_PLAY)) {
+	    if (pl->pos.x < 0)
+		pl->pos.x += World.x * BLOCK_SZ;
+	    if (pl->pos.x >= World.x * BLOCK_SZ)
+		pl->pos.x -= World.x * BLOCK_SZ;
+	}
     }
     if (landdir > RES/4 && landdir < 3*RES/4) {
 	pl->pos.x = x - depth - ships[pl->dir].pts[point].x;
 	pl->vel.x = -ABS(pl->vel.x);
+	if (BIT(World.rules->mode, WRAP_PLAY)) {
+	    if (pl->pos.x < 0)
+		pl->pos.x += World.x * BLOCK_SZ;
+	    if (pl->pos.x >= World.x * BLOCK_SZ)
+		pl->pos.x -= World.x * BLOCK_SZ;
+	}
     }
     if (landdir > 0 && landdir < RES/2) {
 	pl->pos.y = y + depth - ships[pl->dir].pts[point].y;
 	pl->vel.y = ABS(pl->vel.y);
+	if (BIT(World.rules->mode, WRAP_PLAY)) {
+	    if (pl->pos.y < 0)
+		pl->pos.y += World.y * BLOCK_SZ;
+	    if (pl->pos.y >= World.y * BLOCK_SZ)
+		pl->pos.y -= World.y * BLOCK_SZ;
+	}
     }
     if (landdir > RES/2 && landdir < RES) {
 	pl->pos.y = y - depth - ships[pl->dir].pts[point].y;
 	pl->vel.y = -ABS(pl->vel.y);
+	if (BIT(World.rules->mode, WRAP_PLAY)) {
+	    if (pl->pos.y < 0)
+		pl->pos.y += World.y * BLOCK_SZ;
+	    if (pl->pos.y >= World.y * BLOCK_SZ)
+		pl->pos.y -= World.y * BLOCK_SZ;
+	}
     }
  
     pl->vel.x *= 0.90;

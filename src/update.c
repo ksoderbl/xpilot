@@ -1,4 +1,4 @@
-/* $Id: update.c,v 1.11 1993/04/01 18:17:55 bjoerns Exp $
+/* $Id: update.c,v 1.13 1993/04/18 16:46:26 kenrsc Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -17,7 +17,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 1.11 1993/04/01 18:17:55 bjoerns Exp $";
+    "@(#)$Id: update.c,v 1.13 1993/04/18 16:46:26 kenrsc Exp $";
 #endif
 
 
@@ -32,6 +32,7 @@ static char sourceid[] =
 
 #define update_object_pos(obj)	{					\
     int x=(int)((obj).pos.x/BLOCK_SZ), y=(int)((obj).pos.y/BLOCK_SZ);	\
+    (obj).wrapped = 0;                                               	\
     if (x<0 || x>=World.x || y<0 || y>=World.y) {			\
 	LIMIT((obj).pos.x, 0.0, BLOCK_SZ*World.x-1.0);		    	\
 	LIMIT((obj).pos.y, 0.0, BLOCK_SZ*World.y-1.0);		    	\
@@ -121,7 +122,8 @@ void Update_objects(void)
 	if (BIT(Obj[i]->type, OBJ_BALL) && Obj[i]->id != -1)
 	    Move_ball(i);
 
-        if (BIT(Obj[i]->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO))
+        if (BIT(Obj[i]->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT
+		|OBJ_TORPEDO|OBJ_NUKE))
 	    Move_smart_shot(i);
     }
 
@@ -168,9 +170,9 @@ void Update_objects(void)
 	if (pl->count > 0) {
 	    pl->count--;
 	    if (!BIT(pl->status, PLAYING)) {
-		pl->vel.x = (BLOCK_SZ * World.base[pl->home_base].pos.x
+		pl->vel.x = WRAP_DX(BLOCK_SZ * World.base[pl->home_base].pos.x
 			     + BLOCK_SZ/2 - pl->pos.x) / (pl->count + 1);
-		pl->vel.y = (BLOCK_SZ * World.base[pl->home_base].pos.y
+		pl->vel.y = WRAP_DY(BLOCK_SZ * World.base[pl->home_base].pos.y
 			     + BLOCK_SZ/2 - pl->pos.y) / (pl->count + 1);
 		goto update;
 	    }
@@ -260,8 +262,8 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->used, OBJ_REFUEL)) {
-	    if ((LENGTH((pl->pos.x-World.fuel[pl->fs].pos.x),
-		       (pl->pos.y-World.fuel[pl->fs].pos.y)) > 90.0)
+	    if ((Wrap_length((pl->pos.x-World.fuel[pl->fs].pos.x),
+		             (pl->pos.y-World.fuel[pl->fs].pos.y)) > 90.0)
 		|| (pl->fuel.sum >= pl->fuel.max)) {
 		CLR_BIT(pl->used, OBJ_REFUEL);
 	    } else {
@@ -424,7 +426,7 @@ void Update_objects(void)
 
 	switch (pl->lock.tagged) {
 	case LOCK_PLAYER:
-	    pl->lock.distance = LENGTH(pl->pos.x -
+	    pl->lock.distance = Wrap_length(pl->pos.x -
 				     Players[GetInd[pl->lock.pl_id]]->pos.x,
 				     pl->pos.y -
 				     Players[GetInd[pl->lock.pl_id]]->pos.y);

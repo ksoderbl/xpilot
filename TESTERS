@@ -1,4 +1,4 @@
-$Id: TESTERS,v 1.10 1993/03/28 16:48:13 bjoerns Exp $
+$Id: TESTERS,v 1.12 1993/04/22 10:21:12 bjoerns Exp $
 
 			  TESTERS for XPilot v2.0
 
@@ -10,14 +10,12 @@ Alpha testers:
 	Bert Gijsbergs		bert@mc.bio.uva.nl		// bug fixer
 	David J. Bianco		bianco@cs.odu.edu		// sound,
 								// CS project
-	Robert Blum		blum@pool.informatik.rwth-achen.de
-
 Beta testers:
 
 	Aaron Averill		averila@oes.orst.edu		// map editor
 	Paul Gardner		pgar@excalib.com		// random maps,
 								// optimizer
-	Randall			ge!severy%severy@uunet.UU.NET
+	Randall	Severly		ge!severy%severy@uunet.UU.NET	// HP [47]00
 	Evan Miller		emiller@swatc1.convex.com	// Convex port
 	Eric Flink		flink@hpfcdn.fc.hp.com		// HP release
 M	Maurice Abraham		maurice@hpopd.pwd.hp.com	// Robots etc.
@@ -26,3 +24,4 @@ M	Maurice Abraham		maurice@hpopd.pwd.hp.com	// Robots etc.
 	Karthik P. Sheka 	karthik@shadow.cs.columbia.edu  // Sun X11R5,
 								// new features
 	Jim Hickey		jimh@hprpcd.rose.hp.com		// New features
+	Robert Blum		blum@pool.informatik.rwth-achen.de

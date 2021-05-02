@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 1.1 1993/03/09 14:31:48 kenrsc Exp $
+/* $Id: rules.h,v 1.2 1993/04/18 17:11:05 bjoerns Exp $
  *
  *	This file is part of the XPilot project, written by
  *
@@ -20,6 +20,7 @@
 #define LIMITED_VISIBILITY  (1<<6)
 #define TEAM_PLAY	    (1<<7)
 #define WRAP_PLAY	    (1<<8)
+#define ALLOW_NUKES	    (1<<9)
 
 typedef struct {
     int lives;
