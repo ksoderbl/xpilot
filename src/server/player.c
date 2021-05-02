@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.24 2002/03/05 22:49:32 bertg Exp $
+/* $Id: player.c,v 5.27 2002/03/26 21:17:53 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -645,7 +645,9 @@ void Reset_all_players(void)
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
 	if (endOfRoundReset) {
-	    if (!BIT(pl->status, PAUSE)) {
+	    if (BIT(pl->status, PAUSE)) {
+		Player_death_reset(i);
+	    } else {
 		Kill_player(i);
 		if (pl != Players[i]) {
 		    /* player was deleted. */
@@ -727,7 +729,7 @@ void Reset_all_players(void)
 	    object *obj = Obj[i];
 	    if (BIT(obj->type, OBJ_SHOT|OBJ_MINE|OBJ_DEBRIS|OBJ_SPARK
 			       |OBJ_CANNON_SHOT|OBJ_TORPEDO|OBJ_SMART_SHOT
-			       |OBJ_HEAT_SHOT)) {
+			       |OBJ_HEAT_SHOT|OBJ_ITEM)) {
 		obj->life = 0;
 		if (BIT(obj->type, OBJ_TORPEDO|OBJ_SMART_SHOT|OBJ_HEAT_SHOT
 				   |OBJ_CANNON_SHOT|OBJ_MINE)) {
@@ -1528,7 +1530,9 @@ void Compute_game_status(void)
 		}
 	    }
 	    if (winners == 1) {
-		sprintf(msg, " by destroying %d treasures and successfully defending %d",
+		sprintf(msg,
+			" by destroying %d treasures"
+			" and successfully defending %d",
 			max_destroyed, max_left);
 		Team_game_over(winning_team, msg);
 		return;
@@ -1821,7 +1825,8 @@ void Detach_ball(int ind, int obj)
 	if (cnt == 0)
 	    CLR_BIT(Players[ind]->have, HAS_BALL);
 	else {
-	    sound_play_sensors(Players[ind]->pos.x, Players[ind]->pos.y, DROP_BALL_SOUND);
+	    sound_play_sensors(Players[ind]->pos.x, Players[ind]->pos.y,
+			       DROP_BALL_SOUND);
 	}
     }
 }
@@ -1864,7 +1869,7 @@ void Player_death_reset(int ind)
 
     pl->forceVisible	= 0;
     pl->shot_max	= ShotsMax;
-    pl->count		= RECOVERY_DELAY;
+    pl->count		= MAX(RECOVERY_DELAY, pl->count);
     pl->ecmcount	= 0;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
@@ -1876,7 +1881,7 @@ void Player_death_reset(int ind)
     pl->stunned		= 0;
     pl->lock.distance	= 0;
 
-    pl->fuel.sum       	= (long)(pl->fuel.sum*0.90);		/* Loose 10% of fuel */
+    pl->fuel.sum       	= (long)(pl->fuel.sum*0.90);	/* Loose 10% of fuel */
     minfuel		= (World.items[ITEM_FUEL].initial * FUEL_SCALE_FACT);
     minfuel		+= (int)(rfrac() * (1 + minfuel) * 0.2f);
     pl->fuel.sum	= MAX(pl->fuel.sum, minfuel);
@@ -1895,27 +1900,30 @@ void Player_death_reset(int ind)
      *-KK have different robots in your team every round.
      */
 
-    if (BIT(World.rules->mode, LIMITED_LIVES)) { 
-	pl->life--;
-	if (pl->life == -1) {
-	    if (IS_ROBOT_PTR(pl)) {
-		if (!BIT(World.rules->mode, TIMING|TEAM_PLAY)
-		    || (robotsLeave && pl->score < robotLeaveScore)) {
-		    Robot_delete(ind, false);
-		    return;
+    if (!BIT(pl->status, PAUSE)) {
+
+	pl->deaths++;
+
+	if (BIT(World.rules->mode, LIMITED_LIVES)) { 
+	    pl->life--;
+	    if (pl->life == -1) {
+		if (IS_ROBOT_PTR(pl)) {
+		    if (!BIT(World.rules->mode, TIMING|TEAM_PLAY)
+			|| (robotsLeave && pl->score < robotLeaveScore)) {
+			Robot_delete(ind, false);
+			return;
+		    }
 		}
+		pl->life = 0;
+		SET_BIT(pl->status, GAME_OVER);
+		pl->mychar = 'D';
+		Player_lock_closest(ind, 0);
 	    }
-	    pl->life = 0;
-	    SET_BIT(pl->status, GAME_OVER);
-	    pl->mychar = 'D';
-	    Player_lock_closest(ind, 0);
+	}
+	else {
+	    pl->life++;
 	}
     }
-    else {
-	pl->life++;
-    }
-
-    pl->deaths++;
 
     pl->have	= DEF_HAVE;
     pl->used	|= DEF_USED;

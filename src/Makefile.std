@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 5.25 2002/01/07 20:49:25 bertg Exp $
+# $Id: Makefile.std,v 5.27 2002/04/09 11:11:52 bertg Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
@@ -25,12 +25,11 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=4.5.0
+VERSION=4.5.1
 
 # Change these for your site
-INSTALLDIR=/usr/local/games
+INSTALLDIR=/usr/local
 LIBDIR=$(INSTALLDIR)/lib/xpilot
-SOUNDDIR=/usr/local/lib/sounds
 LOCALGURU=xpilot@xpilot.org
 MANDIR=/usr/local/man/man6
 
@@ -476,9 +475,13 @@ install-binaries:
 
 install-libdir:
 	if [ ! -d $(LIBDIR)/. ]; then mkdir -p $(LIBDIR); fi
-	/bin/rm -f $(LIBDIR)/maps
-	cp -r ../lib/defaults ../lib/sounds ../lib/maps ../lib/textures $(LIBDIR)
-	chmod -R a+r $(LIBDIR)/. $(SOUNDDIR)/.
+	cp ../lib/defaults $(LIBDIR)/.
+	cp ../lib/sounds $(LIBDIR)/.
+	if [ -f $(LIBDIR)/maps ]; then /bin/rm -f $(LIBDIR)/maps; fi
+	cp -r ../lib/maps $(LIBDIR)/.
+	cp -r ../lib/textures $(LIBDIR)/.
+	chmod -R a+r $(LIBDIR)/.
+	chmod a+x $(LIBDIR) $(LIBDIR)/maps $(LIBDIR)/textures
 
 install-man:
 	if [ ! -d $(MANDIR)/. ]; then mkdir -p $(MANDIR); fi

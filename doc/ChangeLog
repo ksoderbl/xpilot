@@ -3,6 +3,39 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.5.1 compared to release 4.5.0.
+
+Zemyla submitted code to remove all items at the end-of-round reset.
+
+Kimiko Koopman submitted a patch which adds two new options, selfKillScoreMult
+and unownedKillScoreMult (the latter is based on an idea from Paul Drees):
+    - scores for killing yourself or being killed by an unowned object
+      (like an asteroid) are now rated the same way other kills are, which
+      means that players with higher scores get penalized more than players
+      with lower scores.
+    - selfKillScoreMult, default 0.5, rates the score for killing oneself
+    - unownedKillScoreMult, default 0.5, rates the score for being killed
+      by asteroids and unowned shots, balls, etc.
+    - with these defaults, the base penalty for such kills is 5 points, just
+      like before, only now the player's score and different kill methods (the
+      other *KillScoreMult options) are also taken into account.
+
+Kimiko Koopman added another option, selfDestructScoreMult, because some
+folks didn't like how selfKillScoreMult applied to self-destructing as well.
+    - same default as selfKillScoreMult, 0.5.
+
+At end-of-round paused players would keep their items.  This enabled
+players to cheat by pausing right before the end-of-round reset
+and unpausing soon after.  To prevent this at paused players are
+now reset too at end-of-round.
+
+Since v4.5.0, players were unable to collide with their team's unowned
+(thrown or lost) balls. This made it impossible to destroy them in case
+en enemy player threatened to grab them. Unowned balls are now excluded
+from team immunity checking.
+
+===============================================================================
+
 This is a summary of changes of release 4.5.0 compared to release 4.4.2.
 
 Kimiko Koopman submitted a patch which changes the way scores are kept
@@ -1687,6 +1720,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.62 2002/03/05 23:08:17 bertg Exp $
+==== $Id: ChangeLog,v 5.69 2002/03/26 20:39:22 kimiko Exp $
 ===============================================================================
 

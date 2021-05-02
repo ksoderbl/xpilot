@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 5.54 2002/01/27 22:58:55 kimiko Exp $
+/* $Id: collision.c,v 5.57 2002/03/26 20:32:04 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -433,8 +433,13 @@ static void PlayerCollision(void)
 			sound_play_sensors(pl->pos.x, pl->pos.y,
 					   PLAYER_RAN_OVER_PLAYER_SOUND);
 			Players[j]->kills++;
-			sc = Rate(Players[j]->score, pl->score)
+			if (IS_TANK_IND(j)) {
+			    sc = Rate(Players[j_tank_owner]->score, pl->score)
+				   * tankKillScoreMult;
+			} else {
+			    sc = Rate(Players[j]->score, pl->score)
 				   * runoverKillScoreMult;
+			}
 			Score_players(j_tank_owner, sc, pl->name,
 				      i, -sc, Players[j]->name);
 		    }
@@ -646,7 +651,9 @@ static void PlayerObjectCollision(int ind)
 	    }
 	} else if (BIT(World.rules->mode, TEAM_PLAY)
 		   && teamImmunity
-		   && obj->team == pl->team) {
+		   && obj->team == pl->team
+		   /* allow players to destroy their team's unowned balls */
+		   && obj->type != OBJ_BALL) {
 	    continue;
 	}
 
@@ -787,7 +794,10 @@ static void Player_collides_with_ball(int ind, object *obj, int radius)
     }
     if (ball->owner == NO_ID) {
 	sprintf(msg, "%s was killed by a ball.", pl->name);
-	SCORE(ind, PTS_PR_PL_SHOT,
+	sc = Rate(0, pl->score)
+		* ballKillScoreMult
+		* unownedKillScoreMult;
+	SCORE(ind, -sc,
 	      OBJ_X_IN_BLOCKS(pl),
 	      OBJ_Y_IN_BLOCKS(pl),
 	      "Ball");
@@ -799,7 +809,10 @@ static void Player_collides_with_ball(int ind, object *obj, int radius)
 
 	if (killer == ind) {
 	    strcat(msg, "  How strange!");
-	    SCORE(ind, PTS_PR_PL_SHOT,
+	    sc = Rate(0, pl->score)
+		   * ballKillScoreMult
+		   * selfKillScoreMult;
+	    SCORE(ind, -sc,
 		  OBJ_X_IN_BLOCKS(pl),
 		  OBJ_Y_IN_BLOCKS(pl),
 		  Players[killer]->name);
@@ -1098,7 +1111,10 @@ static void Player_collides_with_debris(int ind, object *obj)
 	}
 	Set_message(msg);
 	if (killer == -1 || killer == ind) {
-	    SCORE(ind, PTS_PR_PL_SHOT,
+	    sc = Rate(0, pl->score)
+		   * explosionKillScoreMult
+		   * selfKillScoreMult;
+	    SCORE(ind, -sc,
 		  OBJ_X_IN_BLOCKS(pl),
 		  OBJ_Y_IN_BLOCKS(pl),
 		  (killer == -1) ? "[Explosion]" : pl->name);
@@ -1145,6 +1161,7 @@ static void Player_collides_with_asteroid(int ind, wireobject *ast)
 	&& (pl->fuel.sum == 0
 	    || (!BIT(pl->used, HAS_SHIELD)
 		&& !BIT(pl->have, HAS_ARMOR)))) {
+	DFLOAT sc;
 	SET_BIT(pl->status, KILLED);
 	if (pl->velocity > v) {
 	    /* player moves faster than asteroid */
@@ -1153,7 +1170,8 @@ static void Player_collides_with_asteroid(int ind, wireobject *ast)
 	    sprintf(msg, "%s was hit by an asteroid.", pl->name);
 	}
 	Set_message(msg);
-	SCORE(ind, PTS_PR_PL_SHOT,
+	sc = Rate(0, pl->score) * unownedKillScoreMult;
+	SCORE(ind, -sc,
 	      OBJ_X_IN_BLOCKS(pl),
 	      OBJ_Y_IN_BLOCKS(pl),
 	      "[Asteroid]");
@@ -1180,7 +1198,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
     DFLOAT	sc;
     DFLOAT   	drainfactor;
     long	drain;
-    int		killer;
+    int		killer = NO_ID;
 
     /*
      * Player got hit by a potentially deadly object.
@@ -1266,6 +1284,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 	    Player_hit_armor(ind);
 	}
     } else {
+	DFLOAT factor;
 	switch (obj->type) {
 	case OBJ_TORPEDO:
 	case OBJ_SMART_SHOT:
@@ -1276,28 +1295,12 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   PLAYER_HIT_CANNONFIRE_SOUND);
 		sprintf(msg, "%s was hit by cannonfire.", pl->name);
-		Set_message(msg);
 		sc = Rate(CANNON_SCORE, pl->score)/4;
-		SCORE(ind, -sc,
-		      OBJ_X_IN_BLOCKS(pl),
-		      OBJ_Y_IN_BLOCKS(pl),
-		      "Cannon");
-		if (BIT(World.rules->mode, TEAM_PLAY)
-		    && pl->team != obj->team)
-		    TEAM_SCORE(obj->team, sc);
-		SET_BIT(pl->status, KILLED);
-		return;
-	    }
-
-	    if (obj->id == NO_ID) {
+	    } else if (obj->id == NO_ID) {
 		sprintf(msg, "%s was killed by %s.", pl->name,
 			Describe_shot(obj->type, obj->status,
 				      obj->mods, 1));
-		SCORE(ind, PTS_PR_PL_SHOT,
-		      OBJ_X_IN_BLOCKS(pl),
-		      OBJ_Y_IN_BLOCKS(pl),
-		      "N/A");
-		killer = ind;
+		sc = Rate(0, pl->score) * unownedKillScoreMult;
 	    } else {
 		sprintf(msg, "%s was killed by %s from %s.", pl->name,
 			Describe_shot(obj->type, obj->status,
@@ -1307,43 +1310,54 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 		    sound_play_sensors(pl->pos.x, pl->pos.y,
 				       PLAYER_SHOT_THEMSELF_SOUND);
 		    strcat(msg, "  How strange!");
-		    SCORE(ind, PTS_PR_PL_SHOT,
-			  OBJ_X_IN_BLOCKS(pl),
-			  OBJ_Y_IN_BLOCKS(pl),
-			  Players[killer]->name);
+		    sc = Rate(0, pl->score) * selfKillScoreMult;
 		} else {
-		    DFLOAT factor;
 		    Players[killer]->kills++;
-		    switch (obj->type) {
-		    case OBJ_SHOT:
-			if (BIT(obj->mods.warhead, CLUSTER)) {
-			    factor = clusterKillScoreMult;
-			} else {
-			    factor = shotKillScoreMult;
-			}
-			break;
-		    case OBJ_TORPEDO:
-			factor = torpedoKillScoreMult;
-			break;
-		    case OBJ_SMART_SHOT:
-			factor = smartKillScoreMult;
-			break;
-		    case OBJ_HEAT_SHOT:
-			factor = heatKillScoreMult;
-			break;
-		    default:
-			factor = shotKillScoreMult;
-			break;
-		    }
-		    sc = Rate(Players[killer]->score, pl->score)
-			       * factor;
-		    Score_players(killer, sc, pl->name,
-				  ind, -sc, Players[killer]->name);
+		    sc = Rate(Players[killer]->score, pl->score);
 		}
+	    }
+	    switch (obj->type) {
+	    case OBJ_SHOT:
+		if (BIT(obj->mods.warhead, CLUSTER)) {
+		    factor = clusterKillScoreMult;
+		} else {
+		    factor = shotKillScoreMult;
+		}
+		break;
+	    case OBJ_TORPEDO:
+		factor = torpedoKillScoreMult;
+		break;
+	    case OBJ_SMART_SHOT:
+		factor = smartKillScoreMult;
+		break;
+	    case OBJ_HEAT_SHOT:
+		factor = heatKillScoreMult;
+		break;
+	    default:
+		factor = shotKillScoreMult;
+		break;
+	    }
+	    sc *= factor;
+	    if (BIT(obj->status, FROMCANNON)) {
+		SCORE(ind, -sc,
+		      OBJ_X_IN_BLOCKS(pl),
+		      OBJ_Y_IN_BLOCKS(pl),
+		      "Cannon");
+		if (BIT(World.rules->mode, TEAM_PLAY)
+		    && pl->team != obj->team)
+		    TEAM_SCORE(obj->team, sc);
+	    } else if (obj->id == NO_ID || killer == ind) {
+		SCORE(ind, -sc,
+		      OBJ_X_IN_BLOCKS(pl),
+		      OBJ_Y_IN_BLOCKS(pl),
+		      (obj->id == NO_ID ? "" : pl->name));
+	    } else {
+		Score_players(killer, sc, pl->name,
+			      ind, -sc, Players[killer]->name);
+		Robot_war(ind, killer);
 	    }
 	    Set_message(msg);
 	    SET_BIT(pl->status, KILLED);
-	    Robot_war(ind, killer);
 	    return;
 
 	default:

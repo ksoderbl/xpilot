@@ -1,4 +1,4 @@
-/* $Id: laser.c,v 5.10 2002/01/21 22:04:03 kimiko Exp $
+/* $Id: laser.c,v 5.12 2002/03/17 21:18:27 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -263,7 +263,10 @@ static void Laser_pulse_hits_player(
 		    "%s got roasted alive by %s's laser.",
 		    vicpl->name, pl->name);
 		if (vicpl->id == pl->id) {
-		    SCORE(victim->ind, PTS_PR_PL_SHOT,
+		    sc = Rate(0, pl->score)
+			   * laserKillScoreMult
+			   * selfKillScoreMult;
+		    SCORE(victim->ind, -sc,
 			  OBJ_X_IN_BLOCKS(vicpl),
 			  OBJ_Y_IN_BLOCKS(vicpl),
 			  vicpl->name);

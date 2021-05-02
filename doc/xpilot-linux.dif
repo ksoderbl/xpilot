@@ -4,7 +4,7 @@
  #define	LocalGuru xpilot@xpilot.org	/* The one to contact for problems */
  #endif /* LocalGuru */
  
--PREFIX = /usr/local/games
+-PREFIX = /usr/local
 +PREFIX = /usr/X11R6
  
  /* Manual pages for games usually go to section 6. */

@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.30 2002/01/26 13:03:58 bertg Exp $
+/* $Id: netserver.c,v 5.31 2002/04/08 17:50:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -792,8 +792,8 @@ static int Handle_listening(int ind)
     connection_t	*connp = &Conn[ind];
     unsigned char	type;
     int			n;
-    char		nick[MAX_NAME_LEN],
-			real[MAX_NAME_LEN];
+    char		nick[MAX_CHARS],
+			real[MAX_CHARS];
 
     if (connp->state != CONN_LISTENING) {
 	Destroy_connection(ind, "not listening");

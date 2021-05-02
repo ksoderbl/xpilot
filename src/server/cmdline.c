@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 5.49 2002/01/27 22:58:55 kimiko Exp $
+/* $Id: cmdline.c,v 5.53 2002/03/26 21:34:51 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -185,6 +185,9 @@ DFLOAT		explosionKillScoreMult;
 DFLOAT		shoveKillScoreMult;
 DFLOAT		crashScoreMult;
 DFLOAT		mineScoreMult;
+DFLOAT		selfKillScoreMult;
+DFLOAT		selfDestructScoreMult;
+DFLOAT		unownedKillScoreMult;
 DFLOAT		asteroidPoints;
 DFLOAT		cannonPoints;
 DFLOAT		asteroidMaxScore;
@@ -2204,6 +2207,37 @@ static option_desc options[] = {
         valReal,
         tuner_dummy,
         "Multiplication factor to scale score for mine hits.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"selfKillScoreMult",
+	"selfKillScoreMult",
+	"0.5",
+	&selfKillScoreMult,
+	valReal,
+	tuner_dummy,
+	"Multiplication factor to scale score for killing yourself.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"selfDestructScoreMult",
+	"selfDestructScoreMult",
+	"0",
+	&selfDestructScoreMult,
+	valReal,
+	tuner_dummy,
+	"Multiplication factor to scale score for self-destructing.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"unownedKillScoreMult",
+	"unownedKillScoreMult",
+	"0.5",
+	&unownedKillScoreMult,
+	valReal,
+	tuner_dummy,
+	"Multiplication factor to scale score for being killed by asteroids\n"
+	"or other objects without an owner.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {

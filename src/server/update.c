@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.23 2002/03/05 22:51:48 bertg Exp $
+/* $Id: update.c,v 5.27 2002/03/21 18:20:20 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -690,8 +690,15 @@ void Update_objects(void)
 		Go_home(i);
 	    }
 	    if (BIT(pl->status, SELF_DESTRUCT)) {
+		if (selfDestructScoreMult != 0) {
+		    DFLOAT sc = Rate(0, pl->score) * selfDestructScoreMult;
+		    SCORE(GetInd[pl->id], -sc,
+			  OBJ_X_IN_BLOCKS(pl),
+			  OBJ_Y_IN_BLOCKS(pl),
+			  "Self-Destruct");
+		}
 		SET_BIT(pl->status, KILLED);
-		sprintf(msg, "%s has comitted suicide.", pl->name);
+		sprintf(msg, "%s has committed suicide.", pl->name);
 		Set_message(msg);
 		Throw_items(i);
 		Kill_player(i);

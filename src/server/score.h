@@ -1,4 +1,4 @@
-/* $Id: score.h,v 5.4 2002/01/21 22:04:03 kimiko Exp $
+/* $Id: score.h,v 5.5 2002/03/17 13:25:14 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,8 +42,6 @@
 /* was 90 -> 2 -> 40 -> 20 -> 10 */
 #define ED_LASER_HIT		(-100.0*FUEL_SCALE_FACT)
 /* was 120 -> 80 -> 40 -> 50 -> 60 -> 100 */
-
-#define PTS_PR_PL_SHOT	    	-5    	/* Points if you get shot by a player */
 
 #define CANNON_SCORE	    	-1436
 #define WALL_SCORE	    	2000

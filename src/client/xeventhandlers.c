@@ -1,4 +1,4 @@
-/* $Id: xeventhandlers.c,v 5.4 2001/07/08 09:07:28 bertg Exp $
+/* $Id: xeventhandlers.c,v 5.5 2002/04/08 20:56:33 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -330,8 +330,8 @@ void ButtonPress_event(XEvent *event)
 		    Net_key_change();
 		}
 	    }
-#ifndef _WINDOWS
 	} 
+#ifndef _WINDOWS
 	else if (selectionAndHistory) {
 	    switch (event->xbutton.button) {
 	    case Button1:
@@ -365,8 +365,8 @@ void ButtonPress_event(XEvent *event)
 	        break;
 	    } /* switch */
 	      /* end of selectionAndHistory */
-#endif /* not _WINDOWS */
 	}
+#endif /* not _WINDOWS */
 	return;
     }
     if (Widget_event(event) != 0) {

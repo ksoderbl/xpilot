@@ -1,4 +1,4 @@
-/* $Id: global.h,v 5.29 2002/01/27 22:58:55 kimiko Exp $
+/* $Id: global.h,v 5.32 2002/03/21 18:20:20 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -197,6 +197,9 @@ extern DFLOAT		explosionKillScoreMult;
 extern DFLOAT		shoveKillScoreMult;
 extern DFLOAT		crashScoreMult;
 extern DFLOAT		mineScoreMult;
+extern DFLOAT		selfKillScoreMult;
+extern DFLOAT		selfDestructScoreMult;
+extern DFLOAT		unownedKillScoreMult;
 extern DFLOAT		asteroidPoints;
 extern DFLOAT		cannonPoints;
 extern DFLOAT		asteroidMaxScore;
