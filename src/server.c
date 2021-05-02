@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.85 1994/05/23 19:24:17 bert Exp $
+/* $Id: server.c,v 3.92 1994/09/20 19:59:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -43,6 +43,9 @@
 					(struct process_stats *)NULL, \
 					(struct process_stats *)NULL)
 #endif
+#ifdef sony_news
+#define setvbuf(A,B,C,D)	setlinebuf(A)
+#endif
 #ifdef VMS
 #include "username.h"
 #include <socket.h>
@@ -57,13 +60,14 @@
 #endif
 #include <netdb.h>
 
-#include "config.h"
-#include "global.h"
-#include "socklib.h"
 #include "version.h"
+#include "config.h"
+#include "const.h"
+#include "global.h"
+#include "proto.h"
+#include "socklib.h"
 #include "map.h"
 #include "pack.h"
-#include "draw.h"
 #include "robot.h"
 #include "saudio.h"
 #include "bit.h"
@@ -76,7 +80,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.85 1994/05/23 19:24:17 bert Exp $";
+    "@(#)$Id: server.c,v 3.92 1994/09/20 19:59:51 bert Exp $";
 #endif
 
 
@@ -92,10 +96,9 @@ long			Id = 1;		    /* Unique ID for each object */
 long			GetInd[MAX_ID];
 server			Server;
 int			ShutdownServer = -1, ShutdownDelay = 1000;
+char			ShutdownReason[MAX_CHARS];
 int 			framesPerSecond = 18;
-
-int			Argc;
-char			**Argv;
+long			main_loops = 0;		/* needed in events.c */
 
 static int		Socket;
 static sockbuf_t	ibuf;
@@ -138,7 +141,6 @@ int main(int argc, char *argv[])
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
 
-    Argc = argc; Argv = argv;
 #ifdef SUNCMW
     cmw_priv_init();
 #endif /* SUNCMW */
@@ -192,7 +194,7 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, SIG_IGN);
 	if (hinfo == NULL) {
 	    /* This should be changed since we now send to meta host 1.
-	     * But there is no harm that there are sent two packets to the 
+	     * But there is no harm that there are sent two packets to the
 	     * same meta server. */
 	    strncpy(meta_address_two, META_IP, sizeof meta_address_two);
 	} else {
@@ -256,17 +258,17 @@ int main(int argc, char *argv[])
 #endif
 
     /*
-     * Set the time the server started 
+     * Set the time the server started
      */
 
     serverTime = time(NULL);
 
-    /* 
+    /*
      * Report to Meta server
      */
-   
+
     Send_meta_server(1);
-    
+
     /*
      * If the server is not in raw mode it should run only if
      * there are players logged in.
@@ -281,12 +283,12 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, SIG_IGN);
 	SetTimeout(0, 0);
     }
- 
+
     if (gameDuration > 0.0) {
 	printf("Server will stop in %g minutes.\n", gameDuration);
 	gameOverTime = (time_t)(gameDuration * 60) + time((time_t *)NULL);
     }
-    
+
     Main_Loop();			    /* Entering main loop. */
     /* NEVER REACHED */
     return (-1);
@@ -336,13 +338,13 @@ void Send_meta_server(int change)
 	    "add timing %d\n"
 	    "add stime %ld\n"
 	    "add sound " SOUND_SUPPORT_STR "\n",
-	    Server.host, NumPlayers - NumRobots, 
-	    VERSION, World.name, World.x, World.y, World.author, 
+	    Server.host, NumPlayers - NumRobots,
+	    VERSION, World.name, World.x, World.y, World.author,
 	    World.NumBases, FPS, contactPort,
 	    (lock && ShutdownServer == -1) ? "locked"
 		: (!lock && ShutdownServer != -1) ? "shutting down"
 		: (lock && ShutdownServer != -1) ? "locked and shutting down"
-		: "ok", World.NumTeamBases, 
+		: "ok", World.NumTeamBases,
 	    BIT(World.rules->mode, TIMING) ? 1:0,
 	    time(NULL) - serverTime);
 
@@ -359,11 +361,11 @@ void Send_meta_server(int change)
 		sprintf(status,"{%d}",Players[i]->team);
 		strcat(string,status);
 	    }
-		
+
 	    first = false;
 	}
     }
-    
+
     strcat(string,"\nadd status ");
     if (strlen(string) + strlen(status) >= sizeof(string)) {
 	/* Prevent array overflow */
@@ -390,7 +392,6 @@ void Send_meta_server(int change)
 void Main_Loop(void)
 {
     extern void		Loop_delay(void);
-    int			main_loops = 0;
 
 #ifndef SILENT
     printf("Server runs at %d frames per second\n", framesPerSecond);
@@ -401,7 +402,7 @@ void Main_Loop(void)
     while (NoQuit
 	   || NumPlayers - NumPseudoPlayers > NumRobots
 	   || NoPlayersEnteredYet) {
-	
+
 	main_loops++;
 
 	if (NumPlayers - NumPseudoPlayers == NumRobots && !RawMode) {
@@ -409,9 +410,9 @@ void Main_Loop(void)
 	    Wait_for_new_players();
 	    allow_timer();
 	}
-	
+
 	Update_objects();
-	
+
 	/*
 	 * Check for possible shutdown, the server will
 	 * shutdown when ShutdownServer (a counter) reaches 0.
@@ -423,7 +424,7 @@ void Main_Loop(void)
 	    else
 		ShutdownServer--;
 	}
-	
+
 	if ((main_loops % UPDATES_PR_FRAME) == 0) {
 	    Frame_update();
 	    if ((main_loops & 0xF) == 0) {
@@ -488,13 +489,16 @@ static void Wait_for_new_players(void)
  */
 void End_game(void)
 {
-    player	*pl;
-    int		len;
-    char	string[80];
+    player		*pl;
+    int			len;
+    char		msg[MSG_LEN];
 
     if (ShutdownServer == 0) {
 	errno = 0;
 	error("Shutting down...");
+	sprintf(msg, "shutting down: %s", ShutdownReason);
+    } else {
+	sprintf(msg, "server exiting");
     }
 
     while (NumPlayers > 0) {	/* Kick out all remaining players */
@@ -502,18 +506,18 @@ void End_game(void)
 	if (pl->conn == NOT_CONNECTED) {
 	    Delete_player(NumPlayers - 1);
 	} else {
-	    Destroy_connection(pl->conn, "server exiting");
+	    Destroy_connection(pl->conn, msg);
 	}
     }
 
-    /* Tell meta serve that we are gone */
+    /* Tell meta server that we are gone */
     if (reportToMetaServer) {
-	sprintf(string, "server %s\nremove", Server.host);
-	len = strlen(string) + 1;
-	DgramSend(Socket, meta_address, META_PORT, string, len);
+	sprintf(msg, "server %s\nremove", Server.host);
+	len = strlen(msg) + 1;
+	DgramSend(Socket, meta_address, META_PORT, msg, len);
 	if (meta_address_two[0] != '\0'
 	    && strcmp(meta_address, meta_address_two)) {
-	    DgramSend(Socket, meta_address_two, META_PORT, string, len);
+	    DgramSend(Socket, meta_address_two, META_PORT, msg, len);
 	}
     }
 
@@ -528,12 +532,12 @@ void End_game(void)
 }
 
 /*
- * Return a good team number for a player. 
+ * Return a good team number for a player.
  *
  * If the team is not specified, the player is assigned
  * to a non-empty team which has space.  The team chosen
  * is one with the least number of players.
- * 
+ *
  * If all non-empty teams are full, the player is assigned
  * to the first available team.
  *
@@ -580,11 +584,11 @@ static int Pick_team(void)
 void Contact(void)
 {
     int			i,
-    			team,
-    			bytes,
-    			delay,
-                        max_robots,
-    			login_port;
+			team,
+			bytes,
+			delay,
+			max_robots,
+			login_port;
     char		*in_host,
 			status,
 			reply_to;
@@ -646,7 +650,7 @@ void Contact(void)
      * Get hostname.
      */
     in_host = DgramLastaddr();
-    
+
     /*
      * Determine if we can talk with this client.
      */
@@ -665,6 +669,10 @@ void Contact(void)
 	return;
     }
     real_name[MAX_NAME_LEN - 1] = '\0';
+
+#ifdef PACKLOG
+#include "packlog.c"
+#endif
 
     /*
      * Now see if we have the same (or a compatible) version.
@@ -763,7 +771,7 @@ void Contact(void)
 		status = E_TEAM_FULL;
 	    }
 	}
-	    
+
 	/*
 	 * All names must be unique (so we know who we're talking about).
 	 */
@@ -815,7 +823,7 @@ void Contact(void)
     }
 	break;
 
-	
+
     case MESSAGE_pack:	{
 	/*
 	 * Someone wants to transmit a message to the server.
@@ -853,7 +861,7 @@ void Contact(void)
     }
 	break;
 
-	
+
     case CONTACT_pack:	{
 	/*
 	 * Got contact message from client.
@@ -874,12 +882,12 @@ void Contact(void)
 	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	}
-	else if (Packet_scanf(&ibuf, "%d%s", &delay, str) <= 0) {
+	else if (Packet_scanf(&ibuf, "%d%s", &delay, ShutdownReason) <= 0) {
 	    status = E_INVAL;
 	} else {
 	    sprintf(msg, "|*******| %s (%s) |*******| \"%s\"",
 		(delay > 0) ? "SHUTTING DOWN" : "SHUTDOWN STOPPED",
-		real_name, str);
+		real_name, ShutdownReason);
 	    if (delay > 0) {
 		ShutdownServer = delay * FPS;		/* delay is in seconds */;
 		ShutdownDelay = ShutdownServer;
@@ -894,7 +902,7 @@ void Contact(void)
     }
 	break;
 
-	
+
     case KICK_PLAYER_pack:	{
 	/*
 	 * Kick someone from the game.
@@ -922,8 +930,9 @@ void Contact(void)
 	    if (found == -1) {
 		status = E_NOT_FOUND;
 	    } else {
-		sprintf(msg, "\"%s\" upset the gods and was kicked out "
-			"of the game.", Players[found]->name);
+		sprintf(msg,
+			"\"%s\" upset the gods and was kicked out of the game.",
+			 Players[found]->name);
 		Set_message(msg);
 		if (Players[found]->conn == NOT_CONNECTED) {
 		    Delete_player(found);
@@ -1048,7 +1057,7 @@ void Contact(void)
 
 		    if (Players[i]->robot_mode != RM_NOT_ROBOT
 			&& Players[i]->robot_mode != RM_OBJECT) {
-			if (ind == -1)	
+			if (ind == -1)
 			    ind = i;
 			else if (Players[i]->score < Players[ind]->score)
 			    ind = i;
@@ -1068,7 +1077,7 @@ void Contact(void)
     }
 	break;
 
-	
+
     default:
 	/*
 	 * Incorrect packet type.
@@ -1087,7 +1096,7 @@ void Contact(void)
 }
 
 /*
- * Return status for server 
+ * Return status for server
 */
 void Server_info(char *str, unsigned max_size)
 {
@@ -1154,7 +1163,7 @@ void Server_info(char *str, unsigned max_size)
 		    order[k] = order[k - 1];
 		}
 		break;
-	    } 
+	    }
 	}
 	order[j] = pl;
     }
@@ -1172,7 +1181,7 @@ void Server_info(char *str, unsigned max_size)
 	sprintf(lblstr, "%c%c %-19s%03d%6d",
 		(pl == best) ? '*' : pl->mychar,
 		(pl->team == TEAM_NOT_SET) ? ' ' : pl->team+'0',
-		name, pl->life, pl->score);
+		name, pl->life, (int)pl->score);
 	sprintf(msg, "%2d... %-36s%s@%s\n",
 		i+1, lblstr, pl->realname,
 		pl->robot_mode == RM_NOT_ROBOT
@@ -1308,28 +1317,28 @@ void Game_Over(void)
     long		maxsc, minsc;
     int			i, win, loose;
     char		msg[128];
-	
+
     Set_message("Game over...");
 
     /*
      * Hack to prevent Compute_Game_Status from starting over again...
      */
     gameDuration = -1.0;
-    
+
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	int teamscore[MAX_TEAMS];
 	maxsc = -32767;
 	minsc = 32767;
 	win = loose = -1;
-	
+
 	for (i=0; i < MAX_TEAMS; i++) {
 	    teamscore[i] = 1234567; /* These teams are not used... */
 	}
 	for (i=0; i < NumPlayers; i++) {
 	    int team;
 	    if (Players[i]->robot_mode == RM_NOT_ROBOT) {
-	        team = Players[i]->team;
-	        if (teamscore[team] == 1234567) {
+		team = Players[i]->team;
+		if (teamscore[team] == 1234567) {
 		    teamscore[team] = 0;
 		}
 		teamscore[team] += Players[i]->score;
@@ -1350,13 +1359,13 @@ void Game_Over(void)
 	}
 
 	if (win != -1) {
-	    sprintf(msg,"Best team (%d Pts): Team %d", maxsc, win);
+	    sprintf(msg,"Best team (%ld Pts): Team %d", maxsc, win);
 	    Set_message(msg);
 	    printf("%s\n", msg);
 	}
-	
+
 	if (loose != -1 && loose != win) {
-	    sprintf(msg,"Worst team (%d Pts): Team %d", minsc, loose);
+	    sprintf(msg,"Worst team (%ld Pts): Team %d", minsc, loose);
 	    Set_message(msg);
 	    printf("%s\n", msg);
 	}

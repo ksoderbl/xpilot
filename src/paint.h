@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.37 1994/05/23 19:19:13 bert Exp $
+/* $Id: paint.h,v 3.42 1994/09/17 01:06:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -25,11 +25,15 @@
 #define PAINT_H
 
 #include <X11/Xlib.h>
-#include <X11/Xproto.h>
+
+#ifndef TYPES_H
+/* need u_byte */
 #include "types.h"
-#include "dbuff.h"
-#include "keys.h"
+#endif
+#ifndef CLIENT_H
+/* need other_t */
 #include "client.h"
+#endif
 
 void Add_message(char *message);
 int Handle_start(long server_loops);
@@ -54,8 +58,6 @@ int Handle_ball(int x, int y, int id);
 int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshield);
 int Handle_mine(int x, int y, int teammine, int id);
 int Handle_item(int x, int y, int type);
-int Handle_shot(int x, int y, int color);
-int Handle_teamshot(int x, int y, int color);
 int Handle_fastshot(int type, u_byte *p, int n);
 int Handle_debris(int type, u_byte *p, int n);
 int Handle_ecm(int x, int y, int size);
@@ -110,7 +112,6 @@ extern XFontStruct* scoreListFont;
 extern XFontStruct* buttonFont;
 extern XFontStruct* textFont;
 extern XFontStruct* talkFont;
-extern XFontStruct* keyListFont;
 extern XFontStruct* motdFont;
 
 /* The name of the fonts used in the game */
@@ -120,7 +121,6 @@ extern char scoreListFontName[FONT_LEN];
 extern char buttonFontName[FONT_LEN];
 extern char textFontName[FONT_LEN];
 extern char talkFontName[FONT_LEN];
-extern char keyListFontName[FONT_LEN];
 extern char motdFontName[FONT_LEN];
 
 extern Display	*dpy;			/* Display of player (pointer) */
@@ -128,21 +128,22 @@ extern Display	*kdpy;			/* Keyboard display */
 extern short	about_page;		/* Which page is the player on? */
 extern u_short	team;			/* What team is the player on? */
 extern bool	players_exposed;	/* Is score window exposed? */
-extern bool	radar_exposed;		/* Is radar window exposed? */
+extern int	radar_exposures;	/* Is radar window exposed? */
 
 #define MAX_COLOR_LEN		32
 
 extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
-extern GC	keyListGC, motdGC;
+extern GC	motdGC;
 extern Window	top, draw, keyboard, radar, players;
 extern Pixmap	p_draw, p_radar, s_radar;
 extern Pixmap	itemBitmaps[];
 extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-extern Window	about_w, about_close_b, about_next_b, about_prev_b,
-		keys_w, keys_close_b, talk_w;
+extern Window	about_w, about_close_b, about_next_b, about_prev_b, talk_w;
 extern XColor	colors[MAX_COLORS];		/* Colors */
 extern Colormap	colormap;		/* Private colormap */
 extern int	maxColors;		/* Max. number of colors to use */
+extern int	hudColor;		/* Color index for HUD drawing */
+extern int	targetRadarColor;	/* Color index for targets on radar. */
 extern bool	gotFocus;
 extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */
@@ -159,8 +160,6 @@ extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 		 int x, int y, unsigned width, unsigned height);
 
 extern int		maxKeyDefs;
-extern keydefs_t	*keyDefs;
 extern other_t*		self;		/* Player info */
-extern dbuff_state_t*	dbuf_state;	/* Holds current dbuff state */
 
 #endif

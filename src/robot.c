@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 3.42 1994/05/23 19:22:39 bert Exp $
+/* $Id: robot.c,v 3.49 1994/08/15 08:31:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -22,14 +22,17 @@
  */
 /* Robot code submitted by Maurice Abraham. */
 
-#define SERVER
 #include <unistd.h>
 #include <stdlib.h>
-#include "types.h"
+
+#define SERVER
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "map.h"
 #include "score.h"
-#include "draw.h"
 #include "robot.h"
 #include "bit.h"
 #include "saudio.h"
@@ -41,14 +44,15 @@ static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
 
 
 #define EMPTY_SPACE(s)	\
-    BIT(1 << (s), 1 << SPACE | 1 << BASE | 1 << WORMHOLE | 1 << POS_GRAV | \
-	1 << NEG_GRAV | 1 << CWISE_GRAV | 1 << ACWISE_GRAV | 1 << CHECK)
+    BIT(1 << (s), SPACE_BIT | BASE_BIT | WORMHOLE_BIT | POS_GRAV_BIT | \
+		  NEG_GRAV_BIT | CWISE_GRAV_BIT | ACWISE_GRAV_BIT | \
+		  CHECK_BIT | ITEM_CONCENTRATOR_BIT)
 
 extern long KILLING_SHOTS;
 
 enum robot_talk_t {
     ROBOT_TALK_ENTER,
-    ROBOT_TALK_LEAVE, 
+    ROBOT_TALK_LEAVE,
     ROBOT_TALK_KILL,
     ROBOT_TALK_WAR,
     NUM_ROBOT_TALK_TYPES
@@ -59,111 +63,111 @@ static int  MAX_ROBOTS = 1;
 static robot_t Robots[] =
 {
     { "Mad Max", 94, 20, 0, "(15,8,7)(15,0)(7,1)(7,2)(2,4)(-1,11)"
-                            "(-3,11)(-2,3)(-8,6)(-8,-6)(-2,-3)(-3,-11)"
-                            "(-1,-11)(2,-4)(7,-2)(7,-1)"},
+			    "(-3,11)(-2,3)(-8,6)(-8,-6)(-2,-3)(-3,-11)"
+			    "(-1,-11)(2,-4)(7,-2)(7,-1)"},
     { "Blackie", 10, 90, 0, "(16,6,10)(15,0)(6,2)(-2,3)(-1,4)(-2,5)"
-                            "(-10,8)(-13,8)(-13,1)(-15,0)(-13,-1)"
-                            "(-13,-8)(-10,-8)(-2,-5)(-1,-4)(-2,-3)(6,-2)" },
+			    "(-10,8)(-13,8)(-13,1)(-15,0)(-13,-1)"
+			    "(-13,-8)(-10,-8)(-2,-5)(-1,-4)(-2,-3)(6,-2)" },
     { "Kryten", 70, 40, 0, "(4,1,3)(15,0)(0,8)(-8,0)(0,-8)" },
     { "Marvin", 30, 70, 0, "(15,4,5)(10,0)(10,7)(5,14)(-5,14)(-10,7)"
-                           "(-10,-7)(-5,-14)(5,-14)(10,-7)(10,0)(5,5)"
-                           "(2,7)(5,0)(2,-7)(5,-5)" },
+			   "(-10,-7)(-5,-14)(5,-14)(10,-7)(10,0)(5,5)"
+			   "(2,7)(5,0)(2,-7)(5,-5)" },
     { "R2D2", 50, 60, 0, "(15,8,9)(15,0)(14,1)(-1,2)(-2,9)(0,10)"
-                         "(-4,10)(-7,2)(-8,2)(-8,-2)(-7,-2)(-4,-10)"
-                         "(0,-10)(-2,-9)(-1,-2)(14,-1)"},
+			 "(-4,10)(-7,2)(-8,2)(-8,-2)(-7,-2)(-4,-10)"
+			 "(0,-10)(-2,-9)(-1,-2)(14,-1)"},
     { "C3PO", 60, 50, 0, "(16,1,15)(10,0)(0,5)(0,15)(15,10)(0,15)"
-                         "(-15,10)(0,15)(0,5)(-7,0)(0,-5)(0,-15)"
-                         "(-15,-10)(0,-15)(15,-10)(0,-15)(0,-5)" },
+			 "(-15,10)(0,15)(0,5)(-7,0)(0,-5)(0,-15)"
+			 "(-15,-10)(0,-15)(15,-10)(0,-15)(0,-5)" },
     { "K9", 50, 50, 0, "(14,0,5)(15,0)(15,5)(5,5)(5,-5)(15,-5)"
-                       "(15,0)(-15,0)(-15,5)(5,5)(5,-5)(-15,-5)"
-                       "(-15,-8)(-15,8)(-15,0)" },
+		       "(15,0)(-15,0)(-15,5)(5,5)(5,-5)(-15,-5)"
+		       "(-15,-8)(-15,8)(-15,0)" },
     { "Robby", 45, 55, 0, "(5,2,3)(15,0)(0,12)(-9,8)(-9,-8)(0,-12)" },
     { "Mickey", 05, 95, 0, "(15,6,7)(5,-1)(8,-5)(7,-9)(4,-11)(-1,-10)"
-                           "(-5,-6)(-8,-10)(-8,10)(-5,6)(-1,10)(4,11)"
-                           "(7,9)(8,5)(5,1)(0,0)" },
+			   "(-5,-6)(-8,-10)(-8,10)(-5,6)(-1,10)(4,11)"
+			   "(7,9)(8,5)(5,1)(0,0)" },
     { "Hermes", 15, 85, 0, "(16,12,11)(10,1)(12,8)(-11,8)(-10,3)"
-                           "(-7,0)(-5,2)(-7,0)(-10,-1)(-10,-3)"
-                           "(-13,-4)(-13,-7)(-15,-8)(-15,-13)(-5,-5)"
-                           "(-2,-4)(5,-2)" },
+			   "(-7,0)(-5,2)(-7,0)(-10,-1)(-10,-3)"
+			   "(-13,-4)(-13,-7)(-15,-8)(-15,-13)(-5,-5)"
+			   "(-2,-4)(5,-2)" },
     { "Pan", 60, 60, 0, "(14,6,5)(15,-1)(15,0)(5,0)(5,-1)(5,9)(-15,9)"
-                        "(-15,-4)(-5,-7)(-3,-8)(-7,-8)(-5,-7)(5,-4)"
-                        "(5,-1)(-15,-1)" },
+			"(-15,-4)(-5,-7)(-3,-8)(-7,-8)(-5,-7)(5,-4)"
+			"(5,-1)(-15,-1)" },
     { "Azurion", 40, 30, 0, "(6,2,4)(15,0)(0,2)(-9,8)(-3,0)(-9,-8)(0,-2)" },
     { "Droidion", 60, 30, 0, "(6,2,4)(9,0)(4,8)(-5,8)(-10,0)(-5,-8)(4,-8)" },
     { "Terminator", 80, 40, 0, "(6,2,4)(15,0)(0,2)(-9,8)(-3,0)"
-                               "(-9,-8)(0,-2)" },
+			       "(-9,-8)(0,-2)" },
     { "Sniper", 30, 90, 0, "(15,6,9)(15,0)(4,2)(-2,8)(-4,7)(-3,2)"
-                           "(-8,5)(-8,2)(-6,1)(-6,-1)(-8,-2)(-8,-5)"
-                           "(-3,-2)(-4,-7)(-2,-8)(4,-2)" },
+			   "(-8,5)(-8,2)(-6,1)(-6,-1)(-8,-2)(-8,-5)"
+			   "(-3,-2)(-4,-7)(-2,-8)(4,-2)" },
     { "Slugger", 40, 40, 0, "(15,8,7)(13,0)(11,1)(3,2)(-1,8)(-3,8)"
-                            "(-3,2)(-5,2)(-8,5)(-8,-5)(-5,-2)(-3,-2)"
-                            "(-3,-8)(-1,-8)(3,-2)(11,-1)" },
+			    "(-3,2)(-5,2)(-8,5)(-8,-5)(-5,-2)(-3,-2)"
+			    "(-3,-8)(-1,-8)(3,-2)(11,-1)" },
     { "Uzi", 95, 5, 0, "(16,9,8)(15,3)(7,3)(7,-8)(3,-8)(3,1)(-2,1)"
-                       "(-3,-1)(-5,-1)(-14,-5)(-15,2)(-3,4)(-1,8)"
-                       "(0,6)(13,6)(14,8)(15,6)" },
+		       "(-3,-1)(-5,-1)(-14,-5)(-15,2)(-3,4)(-1,8)"
+		       "(0,6)(13,6)(14,8)(15,6)" },
     { "Capone", 80, 50, 0, "(15,9,6)(14,0)(2,2)(0,8)(1,8)(-3,8)(-3,2)"
-                           "(-8,4)(-7,1)(-7,-1)(-8,-4)(-3,-2)(-3,-8)"
-                           "(1,-8)(0,-8)(2,-2)" },
+			   "(-8,4)(-7,1)(-7,-1)(-8,-4)(-3,-2)(-3,-8)"
+			   "(1,-8)(0,-8)(2,-2)" },
     { "Tanx", 40, 70, 0, "(16,7,8)(15,1)(2,0)(1,-2)(6,-3)(6,-5)(3,-8)"
-                         "(-10,-8)(-13,-6)(-13,-3)(-10,-2)(-11,2)(-7,2)"
-                         "(-7,8)(-7,2)(1,2)(2,1)" },
+			 "(-10,-8)(-13,-6)(-13,-3)(-10,-2)(-11,2)(-7,2)"
+			 "(-7,8)(-7,2)(1,2)(2,1)" },
     { "Chrome Star", 60, 60, 0, "(5,1,4)(8,0)(-8,5)(2,-8)(2,8)(-8,-5)" },
     { "Bully", 80, 10, 0, "(15,6,9)(11,0)(12,-3)(9,-3)(8,-2)(-5,-5)"
-                          "(-9,-11)(-14,-14)(-5,-3)(-5,3)(-14,14)"
-                          "(-9,11)(-5,5)(8,2)(9,3)(12,3)" },
+			  "(-9,-11)(-14,-14)(-5,-3)(-5,3)(-14,14)"
+			  "(-9,11)(-5,5)(8,2)(9,3)(12,3)" },
     { "Metal Hero", 40, 45, 0, "(16,7,9)(15,5)(12,-2)(9,-2)(10,-1)"
-                               "(-8,-1)(-4,-1)(1,-3)(-13,-9)(-9,0)"
-                               "(-15,8)(1,3)(-4,1)(-8,1)(-8,-1)(-8,1)"
-                               "(11,1)" },
+			       "(-8,-1)(-4,-1)(1,-3)(-13,-9)(-9,0)"
+			       "(-15,8)(1,3)(-4,1)(-8,1)(-8,-1)(-8,1)"
+			       "(11,1)" },
     { "Aurora", 60, 55, 0, "(16,5,11)(15,0)(-1,3)(-3,5)(-3,9)(7,10)"
-                           "(-12,10)(-6,9)(-6,4)(-8,0)(-6,-4)(-6,-9)"
-                           "(-12,-10)(7,-10)(-3,-9)(-3,-5)(-1,-3)" },
+			   "(-12,10)(-6,9)(-6,4)(-8,0)(-6,-4)(-6,-9)"
+			   "(-12,-10)(7,-10)(-3,-9)(-3,-5)(-1,-3)" },
     { "Dalt Wisney", 30, 75, 0, "(16,10,6)(14,0)(7,-4)(0,-1)(-5,-4)"
-                                "(2,-8)(0,-10)(-14,-10)(-5,-7)"
-                                "(-14,0)(-5,7)(-14,10)(0,10)(2,8)"
-                                "(-5,4)(0,1)(7,4)" },
+				"(2,-8)(0,-10)(-14,-10)(-5,-7)"
+				"(-14,0)(-5,7)(-14,10)(0,10)(2,8)"
+				"(-5,4)(0,1)(7,4)" },
     { "Psycho", 65, 55, 0, "(11,5,6)(8,0)(5,8)(3,12)(0,15)(0,0)"
-                           "(-8,3)(-8,-3)(0,0)(0,-15)(3,-12)(5,-8)" },
+			   "(-8,3)(-8,-3)(0,0)(0,-15)(3,-12)(5,-8)" },
     { "Gorgon", 30, 40, 0, "(15,7,8)(15,0)(5,2)(3,8)(2,2)(-9,2)"
-                           "(-10,4)(-12,2)(-14,4)(-14,-4)(-12,-2)"
-                           "(-10,-4)(-9,-2)(2,-2)(3,-8)(5,-2)" },
+			   "(-10,4)(-12,2)(-14,4)(-14,-4)(-12,-2)"
+			   "(-10,-4)(-9,-2)(2,-2)(3,-8)(5,-2)" },
     { "Pompel", 50, 50, 0, "(15,7,8)(15,0)(14,4)(10,5)(5,2)(-7,3)"
-                           "(-7,6)(5,8)(-9,8)(-9,-8)(5,-8)(-7,-6)"
-                           "(-7,-3)(5,-2)(10,-5)(14,-4)" },
+			   "(-7,6)(5,8)(-9,8)(-9,-8)(5,-8)(-7,-6)"
+			   "(-7,-3)(5,-2)(10,-5)(14,-4)" },
     { "Pilt", 50, 50, 0, "(16,8,7)(15,0)(13,-2)(9,-3)(3,-3)(-3,-3)"
-                         "(-5,-2)(-13,-2)(-15,-3)(-15,3)(-13,2)"
-                         "(-5,2)(-3,3)(-3,-8)(-3,8)(-3,3)(8,3)" },
+			 "(-5,-2)(-13,-2)(-15,-3)(-15,3)(-13,2)"
+			 "(-5,2)(-3,3)(-3,-8)(-3,8)(-3,3)(8,3)" },
     { "Sparky", 20, 40, 0, "(15,8,7)(15,-8)(6,-5)(7,-4)(1,-2)(2,-1)"
-                           "(-4,0)(-3,2)(-15,8)(-15,2)(-8,0)(-9,-2)"
-                           "(-3,-3)(-4,-4)(3,-5)(2,-7)"  },
+			   "(-4,0)(-3,2)(-15,8)(-15,2)(-8,0)(-9,-2)"
+			   "(-3,-3)(-4,-4)(3,-5)(2,-7)"  },
     { "Cobra", 85, 60, 0, "(16,5,11)(8,0)(8,-6)(6,-8)(0,-7)(5,-6)"
-                          "(-8,-4)(5,-2)(0,-1)(5,0)(0,1)(5,2)(-8,4)"
-                          "(5,6)(0,7)(6,8)(8,6)" },
+			  "(-8,-4)(5,-2)(0,-1)(5,0)(0,1)(5,2)(-8,4)"
+			  "(5,6)(0,7)(6,8)(8,6)" },
     { "Falcon", 70, 20, 0, "(16,5,6)(14,2)(14,4)(2,10)(-5,10)(-10,8)"
-                           "(-12,3)(-12,-3)(-10,-8)(-5,-10)(9,-11)"
-                           "(10,-8)(7,-8)(14,-4)(14,-2)(4,-2)(4,2)"  },
+			   "(-12,3)(-12,-3)(-10,-8)(-5,-10)(9,-11)"
+			   "(10,-8)(7,-8)(14,-4)(14,-2)(4,-2)(4,2)"  },
     { "Boson", 25, 35, 0, "(16,11,12)(15,0)(10,-5)(4,-8)(7,-2)(7,2)"
-                          "(4,8)(6,0)(4,-8)(-10,-8)(-10,8)(-10,-8)"
-                          "(-15,-7)(-15,7)(-10,8)(4,8)(10,5)" },
+			  "(4,8)(6,0)(4,-8)(-10,-8)(-10,8)(-10,-8)"
+			  "(-15,-7)(-15,7)(-10,8)(4,8)(10,5)" },
     { "Blazy", 40, 40, 0, "(12,4,8)(4,0)(2,4)(-5,11)(10,12)(-8,12)"
-                          "(-4,6)(-2,0)(-4,-6)(-8,-12)(10,-12)"
-                          "(-5,-11)(2,-4)" },
+			  "(-4,6)(-2,0)(-4,-6)(-8,-12)(10,-12)"
+			  "(-5,-11)(2,-4)" },
     { "Pixie", 15, 93, 0, "(13,6,7)(15,0)(7,4)(11,1)(-4,3)(3,5)"
-                          "(-7,10)(-9,2)(-9,-2)(-7,-10)(3,-5)(-4,-3)"
-                          "(11,-1)(7,-4)" },
+			  "(-7,10)(-9,2)(-9,-2)(-7,-10)(3,-5)(-4,-3)"
+			  "(11,-1)(7,-4)" },
     { "Wimpy", 5, 98, 0, "(16,9,7)(3,0)(6,5)(8,10)(5,11)(1,10)(-1,8)"
-                         "(-4,9)(-8,6)(-5,0)(-8,-6)(-4,-9)(-1,-8)"
-                         "(1,-10)(5,-11)(8,-10)(6,-5)" },
+			 "(-4,9)(-8,6)(-5,0)(-8,-6)(-4,-9)(-1,-8)"
+			 "(1,-10)(5,-11)(8,-10)(6,-5)" },
     { "Bonnie", 30, 40, 0, "(16,9,6)(13,3)(5,3)(5,1)(4,-1)(0,-1)"
-                           "(-2,-8)(-8,-8)(-5,3)(-6,6)(-8,7)(-7,8)"
-                           "(-4,7)(8,7)(10,8)(12,8)(13,7)"},
+			   "(-2,-8)(-8,-8)(-5,3)(-6,6)(-8,7)(-7,8)"
+			   "(-4,7)(8,7)(10,8)(12,8)(13,7)"},
     { "Clyde", 40, 45, 0, "(16,5,11)(14,0)(5,5)(6,2)(0,2)(0,8)(-13,8)"
-                          "(-13,4)(-4,4)(-6,0)(-4,-4)(-13,-4)(-13,-8)"
-                          "(0,-8)(0,-2)(6,-2)(5,-5)" },
+			  "(-13,4)(-4,4)(-6,0)(-4,-4)(-13,-4)(-13,-8)"
+			  "(0,-8)(0,-2)(6,-2)(5,-5)" },
     { "Neuro", 70, 70, 0, "(16,7,5)(12,-7)(12,-12)(5,-12)(2,-10)"
-                          "(1,-5)(-9,-4)(-11,2)(-8,8)(-3,11)(3,11)"
-                          "(9,8)(11,2)(13,0)(12,-3)(12,-7)(7,-7)" },
-    { NULL, 0, 0, 0, NULL }
+			  "(1,-5)(-9,-4)(-11,2)(-8,8)(-3,11)(3,11)"
+			  "(9,8)(11,2)(13,0)(12,-3)(12,-7)(7,-7)" },
+    { NULL, 0, 0, 0, "" }
 };
 
 
@@ -195,8 +199,8 @@ static void Calculate_max_robots(void)
 static void Delete_robot(void)
 {
     long        i,
-                low_score = LONG_MAX,
-                low_i = -1;
+		low_score = LONG_MAX,
+		low_i = -1;
 
     for (i = 0; i < NumPlayers; i++) {
 	player     *pl = Players[i];
@@ -268,9 +272,9 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"UNBELIEVABLE, me shot down by %s?!?!  This means war [%s]",
 	"People like %s just piss me off. [%s]",
 	"Nice %s.  But now its my turn. [%s]",
-	"Red alarm... target: %s. [%s]",
+	"Red alert... target: %s. [%s]",
 	"$%#^@#$^#$%  That's the last time you did that %s! [%s]",
-	"Enough's enough!  It's only room enough for one of use %s here. [%s]",
+	"Enough's enough!  It's only room enough for one of us %s here. [%s]",
 	"I'm sorry %s, but you must... DIE!!!!! [%s]",
 	"Jihad!  Die %s!  Die! [%s]",
     };
@@ -330,7 +334,7 @@ static void New_robot(void)
     player     *robot;
     robot_t    *rob;
     int         i,
-                num;
+		num;
     int		most_used,
 		least_used;
     static bool first_time = true;
@@ -387,7 +391,8 @@ static void New_robot(void)
     robot->power_s = MAX_PLAYER_POWER;
     if (BIT(World.rules->mode, TEAM_PLAY))
 	robot->team = 0;		/* Robots are on their own team */
-    robot->mychar = 'R';
+    if (robot->mychar != 'W')
+	robot->mychar = 'R';
     robot->robot_mode = RM_TAKE_OFF;
     robot->robot_ind = num;
     robot->conn = NOT_CONNECTED;
@@ -481,7 +486,9 @@ static bool Check_robot_navigate(int ind, bool * num_evade)
 
 	    case SPACE:
 	    case BASE:
+	    case CHECK:
 	    case WORMHOLE:
+	    case ITEM_CONCENTRATOR:
 		area_val[i][j] = 1;
 		area_val[i + 1][j] = 1;
 		area_val[i + 1][j + 1] = 1;
@@ -1012,8 +1019,7 @@ static void Robot_check_new_modifiers(player *pl, modifiers mods)
     pl->mods = mods;
 }
 
-static void
-Choose_weapon_modifier(player *pl, int weapon_type)
+static void Choose_weapon_modifier(player *pl, int weapon_type)
 {
     robot_t	*rob = &Robots[pl->robot_ind];
     int		stock, min;
@@ -1023,14 +1029,14 @@ Choose_weapon_modifier(player *pl, int weapon_type)
 
     switch (weapon_type) {
     case OBJ_TRACTOR_BEAM:
-	Robot_check_new_modifiers(pl, mods);	    
+	Robot_check_new_modifiers(pl, mods);
 	return;
 
     case OBJ_LASER:
 	/*
 	 * Robots choose non-damage laser settings occasionally.
 	 */
-	if ((pl->robot_count % 8) == 0)
+	if ((pl->robot_count % 4) == 0)
 	    mods.laser = rand() % (MODS_LASER_MAX+1);
 	Robot_check_new_modifiers(pl, mods);
 	return;
@@ -1103,7 +1109,7 @@ static bool Check_robot_target(int ind,
 			       int item_x, int item_y,
 			       int new_mode, int attack_level)
 {
-    player     *pl;
+    player     *pl, *ship;
     long        item_dist;
     int         item_dir;
     int         travel_dir;
@@ -1261,13 +1267,23 @@ static bool Check_robot_target(int ind,
 	    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
 	}
 	else if (pl->lasers > pl->num_pulses
-		 && BIT(pl->robot_lock, LOCK_PLAYER)
 		 && -ED_LASER < pl->fuel.sum - pl->fuel.l3) {
-	    player	*ship = Players[GetInd[pl->robot_lock_id]];
-	    float	x1, y1, x3, y3, x4, y4, x5, y5;
-	    float	ship_dist, dir3, dir4, dir5;
+	    if (BIT(pl->robot_lock, LOCK_PLAYER)
+		&& BIT(Players[GetInd[pl->robot_lock_id]]->status,
+		       PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+		ship = Players[GetInd[pl->robot_lock_id]];
+	    }
+	    else if (pl->shot_max <= 0 && BIT(pl->lock.tagged, LOCK_PLAYER)) {
+		ship = Players[GetInd[pl->lock.pl_id]];
+	    }
+	    else {
+		ship = NULL;
+	    }
+	    if (ship
+		&& BIT(ship->status, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
 
-	    if (BIT(ship->status, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+		float	x1, y1, x3, y3, x4, y4, x5, y5;
+		float	ship_dist, dir3, dir4, dir5;
 
 		x1 = pl->pos.x + pl->vel.x + pl->ship->m_gun[pl->dir].x;
 		y1 = pl->pos.y + pl->vel.y + pl->ship->m_gun[pl->dir].y;
@@ -1278,10 +1294,10 @@ static bool Check_robot_target(int ind,
 
 		if (ship_dist < PULSE_SPEED*PULSE_LIFE(pl->lasers) + SHIP_SZ) {
 		    dir3 = Wrap_findDir(x3 - x1, y3 - y1);
-		    x4 = x3 + tcos((int)(dir3 - RES/4)) * SHIP_SZ;
-		    y4 = y3 + tsin((int)(dir3 - RES/4)) * SHIP_SZ;
-		    x5 = x3 + tcos((int)(dir3 + RES/4)) * SHIP_SZ;
-		    y5 = y3 + tsin((int)(dir3 + RES/4)) * SHIP_SZ;
+		    x4 = x3 + tcos(MOD2((int)(dir3 - RES/4), RES)) * SHIP_SZ;
+		    y4 = y3 + tsin(MOD2((int)(dir3 - RES/4), RES)) * SHIP_SZ;
+		    x5 = x3 + tcos(MOD2((int)(dir3 + RES/4), RES)) * SHIP_SZ;
+		    y5 = y3 + tsin(MOD2((int)(dir3 + RES/4), RES)) * SHIP_SZ;
 		    dir4 = Wrap_findDir(x4 - x1, y4 - y1);
 		    dir5 = Wrap_findDir(x5 - x1, y5 - y1);
 		    if ((dir4 > dir5)
@@ -1300,11 +1316,11 @@ static bool Check_robot_target(int ind,
 		&& pl->fuel.sum > pl->fuel.l3
 		&& pl->lock.distance < TRACTOR_MAX_RANGE(pl)) {
 
-		player *ship = Players[GetInd[pl->lock.pl_id]];
 		float xvd, yvd, vel;
 		long dir;
 		int away;
 
+		ship = Players[GetInd[pl->lock.pl_id]];
 		xvd = ship->vel.x - pl->vel.x;
 		yvd = ship->vel.y - pl->vel.y;
 		vel = LENGTH(xvd, yvd);
@@ -1335,6 +1351,7 @@ static bool Check_robot_target(int ind,
 	}
 	if (BIT(pl->used, OBJ_LASER)) {
 	    pl->turnacc = 0.0;
+	    Choose_weapon_modifier(pl, OBJ_LASER);
 	}
 	else if ((pl->robot_count % 10) == 0 && pl->missiles > 0) {
 	    int type;
@@ -1389,7 +1406,7 @@ static bool Check_robot_hunt(int ind)
     int travel_dir;
     int delta_dir;
     int adj_dir;
-    bool toofast, tooslow;
+    int toofast, tooslow;
 
     pl = Players[ind];
 
@@ -1557,7 +1574,7 @@ void Update_robots(void)
 	    if (BIT(shot->type, OBJ_DEBRIS|OBJ_SPARK)) {
 		continue;
 	    }
-	    if (BIT(shot->type, OBJ_ALL_ITEMS)) {
+	    if (BIT(shot->type, OBJ_ITEM)) {
 		if ((dx = shot->pos.x - pl->pos.x,
 			dx = WRAP_DX(dx),
 			ABS(dx)) < item_dist
@@ -1573,8 +1590,8 @@ void Update_robots(void)
 	    if (BIT(shot->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_MINE)) {
 		fx = shot->pos.x - pl->pos.x;
 		fy = shot->pos.y - pl->pos.y;
-		if ((dx = fx, dx = WRAP_DX(dx), ABS(dx)) < mine_dist 
-		    && (dy = fy, dy = WRAP_DY(dy), ABS(dy)) < mine_dist 
+		if ((dx = fx, dx = WRAP_DX(dx), ABS(dx)) < mine_dist
+		    && (dy = fy, dy = WRAP_DY(dy), ABS(dy)) < mine_dist
 		    && (distance = LENGTH(dx, dy)) < mine_dist) {
 		    mine_i = j;
 		    mine_dist = distance;
@@ -1705,13 +1722,15 @@ void Update_robots(void)
 	    dx = ship->pos.x - pl->pos.x, dx = WRAP_DX(dx);
 	    dy = ship->pos.y - pl->pos.y, dy = WRAP_DY(dy);
 	    distance = LENGTH(dx, dy);
-  
+
 	    if (distance < ship_dist) {
 		ship_i = j;
 		ship_dist = distance;
 	    }
 
-	    if (BIT(pl->robot_lock, LOCK_PLAYER)) {
+	    if (BIT(pl->robot_lock, LOCK_PLAYER)
+		&& BIT(Players[GetInd[pl->robot_lock_id]]->status,
+		       PLAYING|PAUSE|GAME_OVER) == PLAYING) {
 		/* ignore all players unless target */
 		if (pl->robot_lock_id == ship->id
 		    && distance < enemy_dist) {
@@ -1728,7 +1747,7 @@ void Update_robots(void)
 	    }
 	}
 
-	if (ship_dist <= 3*SHIP_SZ)
+	if (ship_dist <= 3*SHIP_SZ && BIT(pl->have, OBJ_SHIELD))
 	    SET_BIT(pl->used, OBJ_SHIELD);
 
 	if (BIT(pl->robot_lock, LOCK_PLAYER)
@@ -1740,12 +1759,15 @@ void Update_robots(void)
 	    ship = Players[GetInd[pl->lock.pl_id]];
 	    if (BIT(ship->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
 		|| (BIT(pl->robot_lock, LOCK_PLAYER)
-		    && pl->robot_lock_id != pl->lock.pl_id)
+		    && pl->robot_lock_id != pl->lock.pl_id
+		    && BIT(Players[GetInd[pl->robot_lock_id]]->status,
+			   PLAYING|PAUSE|GAME_OVER) == PLAYING)
 		|| pl->lock.distance > 2 * VISIBILITY_DISTANCE
 		|| (!(pl->visibility[GetInd[pl->lock.pl_id]].canSee)
 		    && (pl->robot_count % 25) == 0)) {
-		pl->lock.pl_id = 1;
+		/* unset the player lock */
 		CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
+		pl->lock.pl_id = 1;
 		pl->lock.pos.x = pl->pos.x;
 		pl->lock.pos.y = pl->pos.y;
 		pl->lock.distance = 0;
@@ -1850,13 +1872,16 @@ void Update_robots(void)
 		|| pl->fuel.sum >= MAX_PLAYER_FUEL - 200 * FUEL_SCALE_FACT)
 		continue;
 
-	    if ((dx = World.fuel[j].pos.x - pl->pos.x,
+	    if ((dx = World.fuel[j].pix_pos.x - pl->pos.x,
 		    dx = WRAP_DX(dx), ABS(dx)) < fuel_dist
-		&& (dy = World.fuel[j].pos.y - pl->pos.y,
+		&& (dy = World.fuel[j].pix_pos.y - pl->pos.y,
 		    dy = WRAP_DY(dy), ABS(dy)) < fuel_dist
 		&& (distance = LENGTH(dx, dy)) < fuel_dist) {
-		fuel_i = j;
-		fuel_dist = distance;
+		if (World.block[World.fuel[j].blk_pos.x]
+			       [World.fuel[j].blk_pos.y] == FUEL) {
+		    fuel_i = j;
+		    fuel_dist = distance;
+		}
 	    }
 	}
 
@@ -1866,7 +1891,7 @@ void Update_robots(void)
 	    if (World.targets[j].dead_time > 0
 		|| pl->team == World.targets[j].team)
 		continue;
-	    
+
 	    if ((dx = World.targets[j].pos.x*BLOCK_SZ + BLOCK_SZ/2 - pl->pos.x,
 		    dx = WRAP_DX(dx), ABS(dx)) < target_dist
 		&& (dy = World.targets[j].pos.y*BLOCK_SZ+BLOCK_SZ/2-pl->pos.y,
@@ -1880,8 +1905,8 @@ void Update_robots(void)
 	if (fuel_i >= 0 && cannon_dist > fuel_dist) {
 
 	    fuel_checked = true;
-	    dx = World.fuel[fuel_i].pos.x;
-	    dy = World.fuel[fuel_i].pos.y + SHIP_SZ / 2;
+	    dx = World.fuel[fuel_i].pix_pos.x;
+	    dy = World.fuel[fuel_i].pix_pos.y + SHIP_SZ / 2;
 
 	    SET_BIT(pl->used, OBJ_REFUEL);
 	    pl->fs = fuel_i;
@@ -1907,11 +1932,11 @@ void Update_robots(void)
 		continue;
 	    }
 	}
-	    
+
 	if (fuel_i >= 0 && !fuel_checked) {
 
-	    dx = World.fuel[fuel_i].pos.x;
-	    dy = World.fuel[fuel_i].pos.y + SHIP_SZ / 2;
+	    dx = World.fuel[fuel_i].pix_pos.x;
+	    dy = World.fuel[fuel_i].pix_pos.y + SHIP_SZ / 2;
 
 	    SET_BIT(pl->used, OBJ_REFUEL);
 	    pl->fs = fuel_i;

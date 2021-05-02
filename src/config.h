@@ -1,4 +1,4 @@
-/* $Id: config.h,v 3.15 1994/02/07 13:19:30 bjoerns Exp $
+/* $Id: config.h,v 3.16 1994/07/10 19:41:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -25,7 +25,7 @@
 #define CONFIG_H
 
 #ifdef MOD2
-#  error MOD2 already defined - config.h should be included before const.h
+#error "MOD2 already defined - config.h should be included before const.h"
 #endif
 
 /*

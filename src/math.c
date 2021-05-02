@@ -1,4 +1,4 @@
-/* $Id: math.c,v 3.13 1994/05/25 07:30:31 bert Exp $
+/* $Id: math.c,v 3.24 1994/09/16 23:28:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -30,15 +30,16 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+
+#include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "draw.h"
 #include "error.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.13 1994/05/25 07:30:31 bert Exp $";
+    "@(#)$Id: math.c,v 3.24 1994/09/16 23:28:09 bert Exp $";
 #endif
 
 
@@ -49,6 +50,7 @@ static int	shapeLimits;
 static int	Get_shape_keyword(char *keyw);
 
 float		tbl_sin[TABLE_SIZE];
+float		tbl_cos[TABLE_SIZE];
 
 
 int mod(int x, int y)
@@ -62,6 +64,11 @@ int mod(int x, int y)
     return x;
 }
 
+
+int f2i(float f)
+{
+    return (f < 0) ? -(int)(0.5f - f) : (int)(f + 0.5f);
+}
 
 float findDir(float x, float y)
 {
@@ -78,12 +85,23 @@ float findDir(float x, float y)
 }
 
 
+float rfrac()
+{
+    /*
+     * Return a pseudo-random value in the range { 0 <= x < 1 }.
+     * Assume all RAND_MAXs are at least 32767 and divide by 32768.
+     */
+    return ((rand() & 0x7FFF) * 0.000030517578125f);
+}
+
 void Make_table(void)
 {
     int i;
 
-    for (i=0; i<TABLE_SIZE; i++)
+    for (i=0; i<TABLE_SIZE; i++) {
 	tbl_sin[i] = sin((2*PI) * ((float)i/TABLE_SIZE));
+	tbl_cos[i] = cos((2*PI) * ((float)i/TABLE_SIZE));
+    }
 }
 
 
@@ -182,11 +200,11 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
  */
 #define GRID_PT(x,y)	grid.pt[(x)+15][(y)+15]
 #define GRID_ADD(x,y)	(GRID_PT(x, y) = 2, \
-			 grid.chk[grid.todo][0] = (x), \
-			 grid.chk[grid.todo][1] = (y), \
+			 grid.chk[grid.todo][0] = (x) + 15, \
+			 grid.chk[grid.todo][1] = (y) + 15, \
 			 grid.todo++)
-#define GRID_GET(x,y)	((x) = grid.chk[grid.done][0], \
-			 (y) = grid.chk[grid.done][1], \
+#define GRID_GET(x,y)	((x) = (int)grid.chk[grid.done][0] - 15, \
+			 (y) = (int)grid.chk[grid.done][1] - 15, \
 			 grid.done++)
 #define GRID_CHK(x,y)	(GRID_PT(x, y) == 2)
 #define GRID_READY()	(grid.done >= grid.todo)
@@ -196,14 +214,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
     struct grid_t {
 	int		todo, done;
-	char		pt[32][32];
-	char		chk[32*32][2];
+	unsigned char	pt[32][32];
+	unsigned char	chk[32*32][2];
     } grid;
 
     int 		i, j, x, y, dx, dy,
-    			inx, iny, max,
-    			ofNum, ofLeft, ofRight,		/* old format */
-    			shape_version = 0;
+			inx, iny, max,
+			ofNum, ofLeft, ofRight,		/* old format */
+			shape_version = 0;
     ipos 		pt[MAX_SHIP_PTS],
 			engine,
 			m_gun,
@@ -215,9 +233,9 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
     bool		mainGunSet = false,
 			engineSet = false;
     char		*str,
-    			*teststr;
+			*teststr;
     char 		keyw[20],
-    			buf[MSG_LEN];
+			buf[MSG_LEN];
 
     w->num_points = 0;
     w->num_l_gun = 0;
@@ -232,9 +250,9 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
     for (str = ship_shape_str; (str = strchr(str, '(' )) != NULL; ) {
 
-        str++;
+	str++;
 
-        if (shape_version == 0) {
+	if (shape_version == 0) {
 	    if (isdigit(*str)) {
 		shape_version = 0x3100;
 		if (verboseShapeParsing) {
@@ -247,7 +265,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    }
 	}
 
-        for (i = 0; (keyw[i] = str[i]) != '\0'; i++) {
+	for (i = 0; (keyw[i] = str[i]) != '\0'; i++) {
 	    if (i == sizeof(keyw) - 1) {
 		keyw[i] = '\0';
 		break;
@@ -263,13 +281,13 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    }
 	    continue;
 	}
-        for (teststr = &buf[++i]; (buf[i] = str[i]) != '\0'; i++) {
+	for (teststr = &buf[++i]; (buf[i] = str[i]) != '\0'; i++) {
 	    if (buf[i] == ')' ) {
 		buf[++i] = '\0';
 		break;
 	    }
-        }
-        str += i;
+	}
+	str += i;
 
 	switch (Get_shape_keyword(keyw)) {
 
@@ -485,6 +503,12 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    }
 	    break;
 
+	case 8:		/* Keyword is 'name' */
+	    break;
+
+	case 9:		/* Keyword is 'author' */
+	    break;
+
 	default:
 	    if (verboseShapeParsing) {
 		printf("Invalid ship shape keyword: \"%s\"\n", keyw);
@@ -559,55 +583,55 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	return -1;
     }
     if (!mainGunSet) {		/* No main gun set, put at foremost point */
-    	max = 0;
-    	for (i = 1; i < w->num_points; i++) {
-    	    if (pt[i].x > pt[max].x
-		|| pt[i].x == pt[max].x
-		    && ABS(pt[i].y) < ABS(pt[max].y)) {
-    	        max = i;
-            }
-        }
+	max = 0;
+	for (i = 1; i < w->num_points; i++) {
+	    if (pt[i].x > pt[max].x
+		|| (pt[i].x == pt[max].x
+		    && ABS(pt[i].y) < ABS(pt[max].y))) {
+		max = i;
+	    }
+	}
 	m_gun = pt[max];
 	mainGunSet = true;
     }
     if (!w->num_l_light) {	/* No left light set, put at leftmost point */
 	max = 0;
-    	for (i = 1; i < w->num_points; i++) {
-    	    if (pt[i].y > pt[max].y
-		|| pt[i].y == pt[max].y
-		    && pt[i].x <= pt[max].x) {
-    	        max = i;
-            }
-        }
+	for (i = 1; i < w->num_points; i++) {
+	    if (pt[i].y > pt[max].y
+		|| (pt[i].y == pt[max].y
+		    && pt[i].x <= pt[max].x)) {
+		max = i;
+	    }
+	}
 	l_light[0] = pt[max];
-        w->num_l_light = 1;
+	w->num_l_light = 1;
     }
     if (!w->num_r_light) {	/* No right light set, put at rightmost point */
 	max = 0;
-    	for (i = 1; i < w->num_points; i++) {
-    	    if (pt[i].y < pt[max].y
-		|| pt[i].y == pt[max].y
-		    && pt[i].x <= pt[max].x) {
-    	        max = i;
-            }
-        }
+	for (i = 1; i < w->num_points; i++) {
+	    if (pt[i].y < pt[max].y
+		|| (pt[i].y == pt[max].y
+		    && pt[i].x <= pt[max].x)) {
+		max = i;
+	    }
+	}
 	r_light[0] = pt[max];
-        w->num_r_light = 1;
+	w->num_r_light = 1;
     }
     if (!engineSet) {		/* No engine position, put at rear of ship */
-    	max = 0;
-    	for (i = 1; i < w->num_points; i++) {
-    	    if (pt[i].x < pt[max].x) {
-    	        max = i;
-            }
-        }
+	max = 0;
+	for (i = 1; i < w->num_points; i++) {
+	    if (pt[i].x < pt[max].x) {
+		max = i;
+	    }
+	}
 	engine.x = pt[max].x;
 	engine.y = 0;		/* this may lay outside of ship. */
 	engineSet = true;
     }
     if (!w->num_m_rack) {	/* No missile racks, put at main gun position*/
-        m_rack[0] = m_gun;
-        w->num_m_rack = 1;
+	m_rack[0] = m_gun;
+	w->num_m_rack = 1;
     }
 
     if (shapeLimits) {
@@ -618,7 +642,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	int		low = 0, hi = 0, left = 0, right = 0,
 			count = 0, change, max = 0,
 			lowest = 0, highest = 0, leftmost = 0, rightmost = 0;
-	bool		invalid = 0;
+	int		invalid = 0;
 
 	for (i = 0; i < w->num_points; i++) {
 	    x = pt[i].x;
@@ -663,11 +687,11 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	}
 	if (leftmost - rightmost + highest - lowest < minSize) {
 	    if (verboseShapeParsing) {
-		printf("Warning: ship is not big enough, "
-		       "future versions may not allow this.\n"
-		       "The ship's width and height added together should "
+		printf("Ship shape is not big enough.\n"
+		       "The ship's width and height added together should\n"
 		       "be at least %d.\n", minSize);
 	    }
+	    return -1;
 	}
 
 	/*
@@ -680,7 +704,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	GRID_RESET();
 
 	/* Draw the ship outline first. */
- 	for (i = 0; i < w->num_points; i++) {
+	for (i = 0; i < w->num_points; i++) {
 	    j = i + 1;
 	    if (j == w->num_points) j = 0;
 
@@ -747,47 +771,47 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    }
 	    invalid++;
 	}
- 	for (i = 0; i < w->num_l_gun; i++) {
- 	    if (GRID_CHK(l_gun[i].x, l_gun[i].y)) {
+	for (i = 0; i < w->num_l_gun; i++) {
+	    if (GRID_CHK(l_gun[i].x, l_gun[i].y)) {
 		if (verboseShapeParsing) {
 		    printf("Left gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
- 	for (i = 0; i < w->num_r_gun; i++) {
- 	    if (GRID_CHK(r_gun[i].x, r_gun[i].y)) {
+	for (i = 0; i < w->num_r_gun; i++) {
+	    if (GRID_CHK(r_gun[i].x, r_gun[i].y)) {
 		if (verboseShapeParsing) {
 		    printf("Right gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
- 	for (i = 0; i < w->num_m_rack; i++) {
- 	    if (GRID_CHK(m_rack[i].x, m_rack[i].y)) {
+	for (i = 0; i < w->num_m_rack; i++) {
+	    if (GRID_CHK(m_rack[i].x, m_rack[i].y)) {
 		if (verboseShapeParsing) {
 		    printf("Missile rack %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
- 	for (i = 0; i < w->num_l_light; i++) {
- 	    if (GRID_CHK(l_light[i].x, l_light[i].y)) {
+	for (i = 0; i < w->num_l_light; i++) {
+	    if (GRID_CHK(l_light[i].x, l_light[i].y)) {
 		if (verboseShapeParsing) {
 		    printf("Left light %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
- 	for (i = 0; i < w->num_r_light; i++) {
- 	    if (GRID_CHK(r_light[i].x, r_light[i].y)) {
+	for (i = 0; i < w->num_r_light; i++) {
+	    if (GRID_CHK(r_light[i].x, r_light[i].y)) {
 		if (verboseShapeParsing) {
 		    printf("Right light %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
- 	if (GRID_CHK(engine.x, engine.y)) {
+	if (GRID_CHK(engine.x, engine.y)) {
 	    if (verboseShapeParsing) {
 		printf("Engine outside of ship\n");
 	    }
@@ -827,30 +851,30 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
     i = sizeof(position) * RES;
     if (!(w->pts[0] = (position*)malloc(w->num_points * i))
-	|| w->num_l_gun
-	&& !(w->l_gun[0] = (position*)malloc(w->num_l_gun * i))
-	|| w->num_r_gun
-	&& !(w->r_gun[0] = (position*)malloc(w->num_r_gun * i))
-	|| w->num_l_light
-	&& !(w->l_light[0] = (position*)malloc(w->num_l_light * i))
-	|| w->num_r_light
-	&& !(w->r_light[0] = (position*)malloc(w->num_r_light * i))
-	|| w->num_m_rack
-	&& !(w->m_rack[0] = (position*)malloc(w->num_m_rack * i))
+	|| (w->num_l_gun
+	    && !(w->l_gun[0] = (position*)malloc(w->num_l_gun * i)))
+	|| (w->num_r_gun
+	    && !(w->r_gun[0] = (position*)malloc(w->num_r_gun * i)))
+	|| (w->num_l_light
+	    && !(w->l_light[0] = (position*)malloc(w->num_l_light * i)))
+	|| (w->num_r_light
+	    && !(w->r_light[0] = (position*)malloc(w->num_r_light * i)))
+	|| (w->num_m_rack
+	    && !(w->m_rack[0] = (position*)malloc(w->num_m_rack * i)))
 	) {
 	error("Not enoug memory for ship shape");
-	if (w->pts) {
-	    free(w->pts);
-	    if (w->l_gun) {
-		free(w->l_gun);
-		if (w->r_gun) {
-		    free(w->r_gun);
-		    if (w->l_light) {
-			free(w->l_light);
-			if (w->r_light) {
-			    free(w->r_light);
-			    if (w->m_rack) {
-				free(w->m_rack);
+	if (w->pts[0]) {
+	    free(w->pts[0]);
+	    if (w->l_gun[0]) {
+		free(w->l_gun[0]);
+		if (w->r_gun[0]) {
+		    free(w->r_gun[0]);
+		    if (w->l_light[0]) {
+			free(w->l_light[0]);
+			if (w->r_light[0]) {
+			    free(w->r_light[0]);
+			    if (w->m_rack[0]) {
+				free(w->m_rack[0]);
 			    }
 			}
 		    }
@@ -982,113 +1006,184 @@ int Validate_shape_str(char *str)
     return (w && w != Default_ship());
 }
 
-void Convert_ship_2_string(wireobj *w, char *buf, unsigned shape_version)
+void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
+			   unsigned shape_version)
 {
+    char		tmp[MSG_LEN];
     int			i,
-			len,
+			buflen,
+			extlen,
+			tmplen,
 			ll,
 			rl;
 
-    if (shape_version == 0x3200) {
+    ext[extlen = 0] = '\0';
+
+    if (shape_version >= 0x3200) {
 	strcpy(buf, "(SH:");
-	len = strlen(&buf[0]);
+	buflen = strlen(&buf[0]);
 	for (i = 0; i < w->num_points; i++) {
-	    sprintf(&buf[len], " %d,%d",
+	    sprintf(&buf[buflen], " %d,%d",
 		    (int)w->pts[i][0].x, (int)w->pts[i][0].y);
-	    len += strlen(&buf[len]);
+	    buflen += strlen(&buf[buflen]);
 	}
-	sprintf(&buf[len], ")(EN: %d,%d)(MG: %d,%d",
+	sprintf(&buf[buflen], ")(EN: %d,%d)(MG: %d,%d)",
 		(int)w->engine[0].x, (int)w->engine[0].y,
 		(int)w->m_gun[0].x, (int)w->m_gun[0].y);
-	len += strlen(&buf[len]);
+	buflen += strlen(&buf[buflen]);
+
+	/*
+	 * If the calculations are correct then only from here on
+	 * there is danger for overflowing the MSG_LEN size
+	 * of the buffer.  Therefore first copy a new pair of
+	 * parentheses into a temporary buffer and when the closing
+	 * parenthesis is reached then determine if there is enough
+	 * room in the main buffer or else copy it into the extended
+	 * buffer.  This scheme allows cooperation with versions which
+	 * didn't had the extended buffer yet for which the extended
+	 * buffer will simply be discarded.
+	 */
 	if (w->num_l_gun > 0) {
-	    strcpy(&buf[len], ")(LG:");
-	    len += strlen(&buf[len]);
+	    strcpy(&tmp[0], "(LG:");
+	    tmplen = strlen(&tmp[0]);
 	    for (i = 0; i < w->num_l_gun; i++) {
-		sprintf(&buf[len], " %d,%d",
+		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->l_gun[i][0].x, (int)w->l_gun[i][0].y);
-		len += strlen(&buf[len]);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
 	    }
 	}
 	if (w->num_r_gun > 0) {
-	    strcpy(&buf[len], ")(RG:");
-	    len += strlen(&buf[len]);
+	    strcpy(&tmp[0], "(RG:");
+	    tmplen = strlen(&tmp[0]);
 	    for (i = 0; i < w->num_r_gun; i++) {
-		sprintf(&buf[len], " %d,%d",
+		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->r_gun[i][0].x, (int)w->r_gun[i][0].y);
-		len += strlen(&buf[len]);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
 	    }
 	}
 	if (w->num_l_light > 0) {
-	    strcpy(&buf[len], ")(LL:");
-	    len += strlen(&buf[len]);
+	    strcpy(&tmp[0], "(LL:");
+	    tmplen = strlen(&tmp[0]);
 	    for (i = 0; i < w->num_l_light; i++) {
-		sprintf(&buf[len], " %d,%d",
+		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->l_light[i][0].x, (int)w->l_light[i][0].y);
-		len += strlen(&buf[len]);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
 	    }
 	}
 	if (w->num_r_light > 0) {
-	    strcpy(&buf[len], ")(LR:");
-	    len += strlen(&buf[len]);
+	    strcpy(&tmp[0], "(RL:");
+	    tmplen = strlen(&tmp[0]);
 	    for (i = 0; i < w->num_r_light; i++) {
-		sprintf(&buf[len], " %d,%d",
+		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->r_light[i][0].x, (int)w->r_light[i][0].y);
-		len += strlen(&buf[len]);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
 	    }
 	}
 	if (w->num_m_rack > 0) {
-	    strcpy(&buf[len], ")(MR:");
-	    len += strlen(&buf[len]);
+	    strcpy(&tmp[0], "(MR:");
+	    tmplen = strlen(&tmp[0]);
 	    for (i = 0; i < w->num_m_rack; i++) {
-		sprintf(&buf[len], " %d,%d",
+		sprintf(&tmp[tmplen], " %d,%d",
 			(int)w->m_rack[i][0].x, (int)w->m_rack[i][0].y);
-		len += strlen(&buf[len]);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
 	    }
 	}
-	strcpy(&buf[len], ")");
     }
     else {
-        /* 3.1 version had 16 points maximum.  just ignore the excess. */
+	/* 3.1 version had 16 points maximum.  just ignore the excess. */
 	int num_points = MIN(w->num_points, 16);
+
+	if (num_points < w->num_points) {
+	    printf("Truncating ship to 16 points for old 3.1 server\n");
+	}
 
 	if (shape_version != 0x3100) {
 	    errno = 0;
 	    error("Unknown ship shape version: %x", shape_version);
 	}
 
-    	for (i = 1, ll = rl = 0; i < num_points; i++) {
-    	    if (w->pts[i][0].y > w->pts[ll][0].y
-		|| w->pts[i][0].y == w->pts[ll][0].y
-		    && w->pts[i][0].x < w->pts[ll][0].x) {
-    	        ll = i;
-            }
-    	    if (w->pts[i][0].y < w->pts[rl][0].y
-		|| w->pts[i][0].y == w->pts[rl][0].y
-		    && w->pts[i][0].x < w->pts[rl][0].x) {
-    	        rl = i;
-            }
-        }
-        sprintf(buf, "(%d,%d,%d)", num_points, ll, rl);
-        len = strlen(buf);
-    	for (i = 0; i < num_points; i++) {
-	    sprintf(&buf[len], "(%d,%d)",
+	for (i = 1, ll = rl = 0; i < num_points; i++) {
+	    if (w->pts[i][0].y > w->pts[ll][0].y
+		|| (w->pts[i][0].y == w->pts[ll][0].y
+		    && w->pts[i][0].x < w->pts[ll][0].x)) {
+		ll = i;
+	    }
+	    if (w->pts[i][0].y < w->pts[rl][0].y
+		|| (w->pts[i][0].y == w->pts[rl][0].y
+		    && w->pts[i][0].x < w->pts[rl][0].x)) {
+		rl = i;
+	    }
+	}
+	sprintf(buf, "(%d,%d,%d)", num_points, ll, rl);
+	buflen = strlen(buf);
+	for (i = 0; i < num_points; i++) {
+	    sprintf(&buf[buflen], "(%d,%d)",
 		    (int)w->pts[i][0].x, (int)w->pts[i][0].y);
-	    len += strlen(&buf[len]);
-    	}
+	    buflen += strlen(&buf[buflen]);
+	}
     }
-    if (len >= MSG_LEN - 1) {
+    if (buflen >= MSG_LEN || extlen >= MSG_LEN) {
 	errno = 0;
-	error("bug ship 2 str: buffer overflow");
+	error("BUG: convert ship: buffer overflow (%d,%d)", buflen, extlen);
     }
     if (debugShapeParsing) {
-	printf("ship 2 str: %s\n", buf);
+	printf("ship 2 str: %s %s\n", buf, ext);
     }
 }
 
 static int Get_shape_keyword(char *keyw)
 {
-#define NUM_SHAPE_KEYS	8
+#define NUM_SHAPE_KEYS	10
 
     static char		shape_keys[NUM_SHAPE_KEYS][16] = {
 			    "shape:",
@@ -1098,7 +1193,9 @@ static int Get_shape_keyword(char *keyw)
 			    "leftLight:",
 			    "rightLight:",
 			    "engine:",
-			    "missileRack:"
+			    "missileRack:",
+			    "name:",
+			    "author:",
 			};
     static char		abbrev_keys[NUM_SHAPE_KEYS][4] = {
 			    "SH:",
@@ -1108,17 +1205,27 @@ static int Get_shape_keyword(char *keyw)
 			    "LL:",
 			    "RL:",
 			    "EN:",
-			    "MR:"
+			    "MR:",
+			    "NM:",
+			    "AU:",
 			};
     int			i;
 
-    /* non-abbreviated keywords start with an upper case letter. */
+    /* non-abbreviated keywords start with a lower case letter. */
     if (islower(*keyw)) {
-	for (i = 0; strcmp(keyw, shape_keys[i]) && i < NUM_SHAPE_KEYS; i++);
+	for (i = 0; i < NUM_SHAPE_KEYS; i++) {
+	    if (!strcmp(keyw, shape_keys[i])) {
+		break;
+	    }
+	}
     }
     /* abbreviated keywords start with an upper case letter. */
     else if (isupper(*keyw)) {
-        for (i = 0; strcmp(keyw, abbrev_keys[i]) && i < NUM_SHAPE_KEYS; i++);
+	for (i = 0; i < NUM_SHAPE_KEYS; i++) {
+	    if (!strcmp(keyw, abbrev_keys[i])) {
+		break;
+	    }
+	}
     }
     /* dunno what this is. */
     else {

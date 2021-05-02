@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 3.10 1994/02/07 13:19:36 bjoerns Exp $
+/* $Id: dbuff.c,v 3.12 1994/07/10 19:41:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,13 +24,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 
-#include "client.h"
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "draw.h"
 #include "bit.h"
+#include "dbuff.h"
 
 #ifdef SPARC_CMAP_HACK
 #include <fcntl.h>
@@ -44,8 +46,11 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.10 1994/02/07 13:19:36 bjoerns Exp $";
+    "@(#)$Id: dbuff.c,v 3.12 1994/07/10 19:41:55 bert Exp $";
 #endif
+
+
+dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
 
 static void release(register dbuff_state_t *state)
@@ -171,7 +176,7 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 
     return (state);
 }
-    
+
 
 
 void dbuff_switch(dbuff_state_t *state)

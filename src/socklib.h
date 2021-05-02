@@ -14,8 +14,19 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /usr/local/tromsoe/cvsroot/xpilot/src/socklib.h,v 3.10 1994/04/10 13:21:24 bert Exp $
+ * RCS:      $Header: /zen/net/tromsoe/cvsroot/xpilot/src/socklib.h,v 3.11 1994/07/10 20:04:26 bert Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 3.11  1994/07/10  20:04:26  bert
+ * Several small changes to:
+ *     - resolve compilation problems with very strict ANSI C or C++ compilers.
+ *     - resolve potential problems for systems for which a long integer
+ *       is bigger than a normal integer.
+ *     - resolve problems for compilers for which enumeration constants
+ *       are smaller than an integer.
+ * Removed lots of superfluous whitespace.
+ * More changes to the new help system.
+ * Different key help list window.
+ *
  * Revision 3.10  1994/04/10  13:21:24  bert
  * Extended the way sockets are made non-blocking by trying three different
  * possibilities depending upon which system include file constants are defined.
@@ -83,10 +94,10 @@
  *
  * Revision 1.2  91/10/02  08:38:20  08:38:20  arne (Arne Helme)
  * "ANSI C prototypes added."
- * 
+ *
  * Revision 1.1  91/10/02  08:34:53  08:34:53  arne (Arne Helme)
  * Initial revision
- * 
+ *
  */
 
 #ifndef _SOCKLIB_INCLUDED
@@ -121,6 +132,8 @@ extern int
     sl_broadcast_enabled;
 extern struct sockaddr_in
     sl_dgram_lastaddr;
+
+#endif /* _SOCKLIB_LIBSOURCE */
 
 #ifdef __cplusplus
 #ifndef __STDC__
@@ -190,9 +203,9 @@ extern int	DgramLastport();
 extern void	GetLocalHostName();
 #endif /* __STDC__ */
 
-#ifdef __cplusplus
-int select(size_t n, fd_set *r, fd_set *w, fd_set *e, const struct timeval *t);
+#if !defined(select) && defined(__linux__)
+#define select(N, R, W, E, T)	select((N),		\
+	(fd_set*)(R), (fd_set*)(W), (fd_set*)(E), (T))
 #endif
 
-#endif /* _SOCKLIB_LIBSOURCE */
 #endif /* _SOCKLIB_INCLUDED */

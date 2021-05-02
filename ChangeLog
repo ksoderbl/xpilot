@@ -1,6 +1,704 @@
 
 ===============================================================================
-====                         Xpilot Change Log                             ====
+====                         XPilot Change Log                             ====
+===============================================================================
+
+This is a summary of changes of release 3.2.6 compared to release 3.2.5:
+
+The Makefile.std is changed to allow the client and server to be build
+in parallel.  Either on the same machine if it is a multi-processor computer,
+or on two different computers in the same network.
+This can be done by the following two command lines:
+    make -f Makefile.std architecture TARGETS=xpilots
+    make -f Makefile.std architecture TARGETS=xpilot
+Where architecture is the operating system being used.
+
+Ben Jackson pointed out two bugs regarding mini missiles.
+For mini missiles the effect of a hit was much too weak compared
+to the effect of a non-minified missile.  For nuclear cluster
+mini missiles the effect was even worse.  Ben provided a patch
+to cure both problems.
+
+Note for XPilot hackers only: the number of different objects have been
+reduced by merging all different item object types into one.  This makes
+it possible to add new types to XPilot.  Previously this wasn't because
+all bitfields in a 32-bit unsigned long were already in use.
+
+Steve Marsden added user controllable mine detonation:
+    Xpilot has had mines for a long time, and they have evolved over time,
+    but they have always been effectively "drop/throw and forget" weapons
+    (except when someone else re-programs them).  This patch now allows
+    the user some control over them once they have left the player:
+    by pressing the key denoted by "keyDetonateMines" (the equal key by
+    default), you will cause all of your dropped/thrown mines to explode
+    at this very instant!  The ones which you still have "in your pocket"
+    do not explode, but all the rest do.  This may be useful when you think
+    someone is lurking close to some of your mines but not close enough to
+    set them off.
+
+Ben Jackson pointed out a bug with initialTractorBeams:
+    I found a nasty bug while playing on a map I made to practice using
+    tractor beams.  Given a map where you start with n (>0) tractor items,
+    if you die (doesn't matter how) while using a tractor/ pressor beam,
+    and don't hit the tractor/pressor keys after you're ressurected, you
+    will still be using them when you next come into range of your locked
+    player.
+    As it turns out, this is because the main loop uses `pl->used &= pl->have'
+    to limit your used bits.  If you *start* with the item, though (eg set
+    initialTractors to >0) it will never get cleared.  So of course this bug
+    extends to all items (shields, if you can manage to die with them on),
+    emergency thrust, hover, etc.
+
+Joshua Yelon contributed a patch (some changes were made to the patch):
+    This patch corrects a severe deficiency in the xpilot scoring system - 
+    you don't get any points for shoving somebody into a wall (say, with
+    a tractor beam).
+    This patch works like this:
+	- whenever you 'shove' somebody, a record of the shove
+	  is made in the player record.  The following information
+	  is recorded:
+	    - who did the shoving,
+	    - time of the shove.
+	  the following things count as shoves:
+	    - pushing with a pressor or tractor
+	    - pushing back on somebody else's tractor/pressor,
+	    - hitting somebody with mine debris,
+	    - hitting somebody with an ECM.
+	- if you hit a wall, a check is made to see if somebody
+	  shoved you within the last 20 frames.  If so, all players
+	  who shoved you share credit for your death equally.
+	  If not, you lose the usual amount of credit for slamming
+	  the wall on your own.
+
+A bug described by Christian Engstler and Russ Glaeser has now been fixed.
+The bug manifested itself when a player tried to connect to a ball by turning
+on his connector and then crashing with the ball while still in the process
+of connecting.  The ball would reappear in its treasure, but for a very short
+moment the ball and the connecting player would be pushed away from or pulled
+towards eachother.  This could result in the player smashing into a wall and
+the ball dropping out of its treasure again.
+
+A new server option was added to reset the world when the end of round
+is reached in maps with limited lives like Tournament and Blood's Music.
+At end of round  all mines, missiles, shots and explosions will be
+removed from the world and all players including the winner(s)
+will be transported back to their homebases.
+The default value for this option is true.
+
+Fixed several minor bugs with initial items.
+
+Improved the visibility algorithms for edgewrap mode.
+This fixes invisibility bugs for very small maps.
+Now an arbitrarily small map can be used in edgewrap mode without problems.
+Ironically these changes resulted in reduction of code and better
+understandability.
+
+Fixed a bug which could have caused corrupt connections and
+messages like: "Unknown packet type.  Quit."
+
+A change to prevent use of macros.
+
+Fixed a bug for drawing transporter lines in ERASE mode.
+
+Steven Singer improved race mode and added a -friction option:
+    When a player completes a lap their lap time and best lap time are
+    displayed in the messages section.
+
+    Race mode can be played with or without limited lives mode. It can't
+    mix with team mode (IMHO race mode goes best with limited lives).
+
+    With unlimited lives, when the first person completes the race all other
+    players are returned to their start position and the race reset.
+
+    With limited lives, the race is reset when all players have finished
+    the race or have died.
+
+    Points are awarded to the player with the fastest lap (who needn't
+    finish the race). Points are awarded to the winner of the race and,
+    in limited lives mode, everyone else who crosses the line. The points
+    awarded are (for N players) :
+            Winning the race : 2N+10
+            Fastest lap      : N+5
+            Coming second    : N+5                Limited lives mode only
+            Third place      : (N+5)/2                "        "
+            Fourth place     : (N+5)/4                "        "
+            Fifth place      : (N+5)/8                "        "
+            etc.
+
+    There are two server options controlling race mode :
+            raceLaps         : how many laps you have to do to finish the race
+            checkpointRadius : how close you have to go to checkpoint to
+                                activate it.
+            Defaults are 3 laps, and 6.0 blocks.
+
+    I've also added another server option called friction. This causes players
+    to gradually lose velocity (as if you hadn't guessed). The default is 0.0
+    (no friction). Friction only affects players (actually anything that goes
+    through the player code). I didn't want it to affect bullets, missiles,
+    lasers etc.
+
+    I've also provided a map - grandprix.map - which should test all the
+    features in this patch.
+
+    Suggestions for improvements (I'm not going to write these) :
+            Continuous display of current lap and time.
+            Countdown at start of race.
+            Teach robots to race.
+
+Steven also provided a new map to test all his new features.
+This map is called grandprix.map and is now part of the XPilot distribution.
+
+Small change in Makefile.std to add an alias "client" for "xpilot"
+and an alias "server" for "xpilots".
+This way one can compile only the client by saying:
+    make -f Makefile.std architecture TARGETS=client
+or:
+    make -f Makefile.std architecture TARGETS=server
+to make only the server.
+
+Fix (hopefully) to play the START_SOUND when a player enters the game.
+This was the case in 3.2.4, but in 3.2.5 only players which were already
+in the game heard it, not the player which just entered the game.
+
+Fix for drawing all of the visible map when in edgewrap mode.
+
+Fix for displaying the round and checkpoint a player is at when
+the game is over.  Now this info is reset and blank until the
+player checks the first checkpoint again.
+
+A few changes to make sure that a player structure which could have
+been destroyed (for instance if it was a tank) is not accessed anymore.
+
+Fix to correctly move paused players to their new homebase
+on racemode game over.
+
+When a player leaves mines are no longer made anonymous,
+but removed instead, so that they won't hurt the team.
+
+When all players are thrown out of the game because the
+server is shutting down now all clients will get a message
+which explains the reason of the shutdown.
+
+A small race mode patch by Harvey Thompson:
+    Here's a patch that I think will improve race mode.  We just play
+    tested grandprix.map, with no-shields/one-shot/bouncy-walls/afterburners,
+    which makes it a lot more interesting.
+    In race mode, if you die you will be transported back to the last
+    checkpoint you passed, or your base (start) if you've not passed any
+    checkpoints yet.  At a checkpoint restart you will point in the direction
+    of the next checkpoint.  I think this gives a reasonable time penalty
+    without alienating the player if he's half way round the course from the
+    rest of the bunch.
+
+Updated TkXpInterface with the latest and greatest version 3.6.2.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.5 compared to release 3.2.4:
+
+Fixed a bug which caused torpedoes (except for mini torpedoes) to have a
+negative acceleration and to always return to the originator.
+
+Harvey Thompson added the following improvements:
+    - Removed the playerMinimumStartFuel server option
+      and replaced it with initialFuel.  This has the advantage
+      that the players initial fuel can be changed on the fly.
+    - Don't display the target destroy messages for each target destroyed
+      if the -teamTargetCollision option is false.  In this mode targets are
+      usually used as base shields, and there will probably be many of them.
+      In such maps (ninebases.map) these messages often swamped others.
+    - A new server option called treasuresOnRadar option.
+      By default it is set to false.  When enabled all balls appear
+      as smallish dots on the radar (slightly larger than mines).
+    - When a treasure is brought back to its own hoop by a player
+      on the same team then the ball is replaced.
+      The player scores 5 points for saving the ball.
+    - now the initialFuel is distributed properly among extra fuel tanks.
+      If there isn't enough room in the fuel tanks, left over initialFuel
+      isn't given to the player.
+
+Russ Glaeser added the following new code:
+    This reworks the end-of-round bonus scheme and fixes a (very) minor
+    bug with paused players.
+
+    First the easy one.  Paused players no longer show up on radar.
+
+    Now, the tougher one.  The end of round code now computes a kill
+    ratio and gives a bonus based on this ratio.  The winning team gets
+    this bonus, and the one player with the highest kill ratio gets a
+    bonus also.  The 20 point bonus for winning a round is no longer
+    given.  Here's how it works:
+
+    Deaths(anything which causes you to lose a life) are tallied.  Also,
+    any time a death is caused by another player(getting shot, letting
+    your target or treasure be destroyed, getting clocked on the head with
+    a treasure, etc) that player gets credit for a kill.  At the end of
+    each round the program figures out who is the Deadliest Player.  The
+    player with the highest kill ratio get a bonus based on their score
+    vs. the average score and their kill ratio.  If there are more than
+    one players with the same (highest) kill ratio then they share the
+    Deadliest Player bonus.  After the Deadliest Player is computed and
+    points for that are given then the winning team collects an
+    end-of-round bonus using the same formula.  If you got the Deadliest
+    Player bonus you DON'T get a Winning Team bonus, but the points you
+    get are the same so it doesn't really matter(this just makes sure you
+    don't get two bonuses at the end of a round).
+
+    One problem with this is that it doesn't take into account the number
+    of people on your team vs. the other teams. Perhaps sometime in the
+    future someone(or I) can figure out a way to fix this.
+
+Jyke Jokinen adds the following:
+    What is it?
+	This adds a new option for the server: 'targetSync'.
+	Default is 'no' and then the action is the same as before.
+	When the flag is on then the server will repair ALL the targets
+	belonging to a team when the first one is repaired (update.c).
+    Why?
+	We (@modeemi.cs.tut.fi) think that the targets are a too easy way
+	to kill a team.  And increasing targets did not help because they
+	are repaired individually (you could wait for the first target to 
+	reappear and then blow out it and kill the team again).  Now with
+	this enhancement ALL the targets will appear and the player must
+	destroy them all before the team is killed...
+
+Now clients which don't have sound suppport are not getting any audio
+information from servers which are compiled with sound support enabled.
+Previously all clients got all the audio stuff in their packets from
+sound servers even if they didn't have sound support whatsoever.
+This unnecessarily made the network packets bigger and thereby increasing lag.
+Since 3.2.5 clients which do want sound info must explicitly request this
+from the server in order to get it.  This is done automatically if the
+client has been compiled with sound support enabled.
+For old clients connecting to a 3.2.5 server nothing has changed.
+
+Added a new compile time conditional SERVER_SOUND.
+This enables sound only in the server, not in the client.
+Handy if you want to setup an Internet server for all your
+friends who do like to have sound on their clients.
+
+Patrick Kenny improved and added some new options to his Blood's Music map.
+
+Now players having picked up an emergency shield item and having enabled
+the emergency shield now can put their shields on even if in the rest of
+the game shields are not allowed.  If you don't like this feature you can
+turn it off by setting itemEmergencyShieldProb to 0.
+
+A new map object is introduced.  Putting it in a map will determine
+where items appear.  It is called an item concentrator.  (Have a better name?)
+When one or more item concentrators are in a map then all items appear
+only in an area around the item concentrators.  The area is a circle
+with a radius determined by the new server option -itemConcentratorRadius.
+If no item concentrators are defined in a map then items can popup anywhere
+just like things used to be.
+The map symbol for the item concentrator is the percentage symbol '%'.
+
+Some changes to the transcendental functions in the hope
+that this will speedup the server somewhat.
+
+Tweaked the player explosion code so that the effect more resembles the
+pre-3.2.4 versions.
+
+The default value for the duration of emergency shield is reduced from
+8 seconds to 4 seconds.
+
+The range of a laser has been made slightly longer if the ship has only
+one laser or three lasers.
+
+Robots now use lasers also against players they are not at war with
+provided that maxPlayerShots has been set to zero.  This makes them
+for excellent sparring partners in maps like Zap! You're Dead
+and Tournament style maps.
+
+Now if the player a robot is at war with is not playing then the robot
+will more behave as if it is not at war at all and try to find a new victim.
+This was especially needed in tournament style games where the robot would
+not should at anybody at all if its war victim was in game over mode.
+But also robots being at war with a paused player would not do anything.
+
+Lance <berc@src.dec.com> improved the AF audio support:
+    The AF audio support in 3.2.4 doesn't work with the AF3, which has 
+    been available for a couple of months.  I changes afaudio.c to:
+	(a) work with AF3, the current release of AudioFile.
+	(b) cache sound files (with entry and space limits) to improve
+	    operation when the files are coming from a loaded NFS server.
+	(c) add a bit (50msec) of latency to account for scheduling jitter 
+	    and eliminate missed sounds.
+	(d) play each sample at its own volume.
+	(e) some minor code cleanups, etc.
+
+Geert Van der Plas pointed out a nasty bug:
+    Description of the Bug :
+	When playing Tourmination we noticed that after some time
+	the limited shots were gradually becoming more in number
+	until you could fire all the time.
+	A more exact analysis showed that the number of bullets
+	increased after some cluster mines / missiles had been
+	successfully thrown / fired.
+    Probable explanation :
+	Make_debris-code.
+	The objects created in Make_debris don't have
+	modifier information. Objects
+	are created when a mine  explodes. These don't
+	have the modifiers set. So when after some time
+	these objects are deleted, they seem to be regular
+	shots. The counter of shots of a player is reduced.
+	This counter then drops below zero when no
+	shots are living anymore, hence the growing 
+	number of shots.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.4 compared to release 3.2.3:
+
+New joystick support for Linux 1.0 by Eckard Kopatzki (eko@isar.muc.de).
+Needs joystick-0.7 by Art Smith, Jeff Tranter, Carlos Puchol.
+Which in turn requires Linux 1.0 or higher.
+
+Joshua Yelon contributed code to improve server response when many players
+are playing in the same game:
+    I had an xpilots server running, and noticed that it would bog down
+    (even on a sparc 10) if more than 8 or so people joined.  I wanted to
+    support more people, but didn't have a bigger machine.  I speculated
+    that the server probably spent a lot of time tracking debris
+    particles, and I speculated that if I were to simply reduce the number
+    of debris particles, the server would run faster (and therefore
+    support more people).  A few preliminary tests strongly confirmed this
+    hypothesis.
+    I decided to study the debris code to see if I could reduce the number
+    of debris particles WITHOUT significantly affecting the amount of
+    recoil from mines and other explosions, and in general without
+    affecting the "feel" of the game.  For example, I wanted to try
+    reducing the number of particles while increasing their speed and mass
+    to compensate.  Unfortunately, there was no one place in the code where
+    I could make these adjustments --- the parameters were scattered all over
+    the code, making tuning quite difficult.
+    Hence the following patch --- it has the following effects:
+	- It completely redesigns the code that creates debris (and
+	  sparks).  The new code is set up to put all the parameters for
+	  any given debris-source in one place.  Hopefully, you will agree
+	  that the resulting code is cleaner and less confusing.
+	- A few minor improvements to the explosions themselves have been
+	  made --- for example, the particles no longer radiate outward from
+	  center in 128 discrete directions, but rather travel outward in
+	  completely random directions.
+	- I have experimentally tuned the number of particles, reducing them
+	  to 2/3 of what they used to be, and compensated by increasing the
+	  radius of debris particles to 6 pixels (thereby making them more
+	  likely to hit a ship).  This results in approximately a 30% CPU
+	  reduction for xpilots on a typical map, but mines and explosions
+	  feel about the same.
+    You might want to double-check for yourselves that the 'feel' of
+    explosions has not changed too much.  I tested it myself on the kinds
+    of maps which I usually play, namely the spartan 'bloods music' style.
+    Since I am not experienced with the 'feel' of the hectic
+    cluster-and-nuke style maps, I wasn't able to verify that those maps
+    still feel the same.  If you play that style, you might want to verify
+    for yourselves that things haven't changed too much.
+    In particular, look out for imploding cluster mines.  Those used to be
+    implemented as two superimposed explosions.  I have simplified that to
+    one explosion containing cluster shots of negative mass.  That may be
+    too powerful, it may be necessary to reduce the mass of cluster shots
+    or something like that.
+
+Joshua Yelon mailed an old patch written by someone else:
+    - dead people are black on the scorelist.
+    - team scores are shown on the scorelist.
+    - when you enter 'xpilot', and are at the prompt, you can
+      specify which team to join as an argument to the 'j' command.
+
+Improved the initial contact between the client and the server.
+Now the client retries a couple of times to overcome incidental packet loss.
+
+Changed the client option system to make it fully self-documenting
+when doing: "xpilot -help".  Now for each option some helpful information
+is displayed together with its default value and, if appropriate, the
+range of possible values.
+
+The key help list is now displayed by the same kind of browser as
+the server MOTD.  This should improve the readability a lot.
+
+Several small changes to:
+    - resolve compilation problems with very strict ANSI C or C++ compilers.
+    - resolve potential problems for systems for which a long integer
+      is bigger than a normal integer.
+    - resolve problems for compilers for which enumeration constants
+      are smaller than an integer.
+
+The one and only Blood's Music map from Patrick Kenny is now part of XPilot.
+Patrick kindly permitted his map to be included.  Many people have played
+this map a lot, but I fear that still more people have not had a chance to
+play it yet.  It is a teammode map with 3 teams of 4 players each and each
+team having one target and treasure to defend.  Shields are not allowed,
+but most of the items are.
+
+New is support for the HP audio server.  It doesn't really work well
+due to (in my view) some audio misdesign by HP.  It is just there in the
+hope that somebody succeeds in improving it.
+This has been tested on a HP 715/75 running HP-UX 9.05 + PHKL_4174 + PHSS_3103.
+
+Ship shapes now have two new keywords.
+The first is the "name" keyword.  Abbreviated as "NM".
+This can be used to give each ship its unique name.
+The second new keyword is "author".  Abbreviated as "AU".
+This can be used to add the name of the designer to the ship shape definition.
+
+Jyke Jokinen added a bugfix for DEC Alphas.
+The bug was that an int was initialised with LONG_MAX,
+which becomes a negative value if it is truncated to an int.
+This caused balls to become fixed to their treasure.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.3 compared to release 3.2.2:
+
+Pete Ford contributed a patch to fix the problem when a ship equipped
+with several missile racks will kill itself when firing a set of mini missiles.
+
+The Makefile flag LINUX is changed to LINUX0 as recent 1.1*
+versions of Linux seem to have resolved most of the incompatibilities.
+Patch by Evmorfopoulos Dimitris.
+
+Fixed a bug which caused clients to quit when a ship shape was used which
+was defined by exactly 255 characters.
+
+Harvey Thompson contributed several patches.  They add a few bugfixes
+for the recent emergency shield and makes missile rack launches as
+sensible as possible while keeping the mini spread ideas he introduced:
+    - Fixed bug where shots and missiles fired from certain ship shapes
+      caused instant death, depending on turning and thrust and fire points.
+      Shots now have a very short owner immunity fuse.
+    - With emergency shields engaged, lasers have no effects (such as stun,
+      blindness or damage).
+    - Bouncing into a wall doesn't cause any owned items to be lost.
+    - Emergency shields/thrust not lost if not currently in use and you hit
+      a player or wall.
+    - Missile rack lauch code radically rewritten.  Missiles launch angle is
+      calculated based on 66% of the offset from ship center, and 33% of the
+      number of missiles lauched from that rack.
+    - Each missile rack is now used in turn, not randomly chosen.
+
+Harvey also added a huge comment explaining the history of aerial combat and
+how missiles evolved.  Contrary to most code comments this one is pleasant
+reading and likely to show up in more easily accessible places in the future.
+I wish more people added comments like this instead of adding new options :-)
+
+Patch from Nicholas Vargish that adds two options concerning the 
+probability that a missile or mine will go rogue. The options are:
+rogueHeatProb and rogueMineProb.
+
+Harvey Thompson added these features:
+    - New configuration variable; minVisibilityDistance.  This defines the
+      minimum distance, in blocks, that you can see on the radar and compass.
+      This is most useful in limitedVisibility mode.  It is equivalent to
+      having the initial fuel/sensor configuration of a new player.
+      The default value is zero, a sensible default is used (about 28.5).
+    - New configuration variable; maxVisibilityDistance.  This specifies the
+      maximum number of blocks you can ever see on the radar or with the
+      compass, most useful in limitedVisibility mode.
+      The default value is zero, which implies no limit.
+    - Each sensor pack you own increases your sensor range by 25% (upto the
+      maximum of course).
+
+Harvey Thompson added still more changes:
+    - After completing a talk message, the mouse pointer is now warped
+      back to where it was originally.  Also had to fix a talk key repeat
+      bug for this to work.
+    - Show player being viewed on radar during a game wait/pause where
+      you can watch other players.
+    - Show invisible team members on radar even if they are not immune.
+    - Show team members on radar even if playersOnRadar is false
+      (constrained by visibility rules).
+    - If somebody kills a team member they now get negative points
+      instead of positive.  The killed team member still gets negative
+      points (for getting in the way).  Bug reported by Mark Boyns.
+
+Russ Glaeser (rglaeser@golden.cecer.army.mil) provided a patch to
+correct the scoring for treasures:
+    Sorry about changing my mind so soon, but this came to me in a flash
+    this morning.  Really, the number of members on your team and the
+    opposite team should also factor into how many points you get.
+    Here's what I did:
+
+    I figured out the total number of points the other team lost based on
+    points-for-destroying-their-target*3, then I divided those points
+    among the winning team as such
+
+      let WTM = number of members on the winning team
+	  LTM = number of members on the losing team
+	  SCO = points you would have gotten for destroying their target
+	  TSC = 3*SCO*LTM (total number of points the other team lost)
+	  PORTION = TSC/(2*WTM+1)  **see note below**
+
+    I divided TSC amongst the winning team like so:
+      *) destroyer gets 3*PORTION and his/her other teammates get 2*PORTION.
+      *) losing team members each lose 3*SCO
+
+    All this sounds complicated, but it's not really.  It all means essentially
+    that treasures are a zero-sum gain.  the same number of points are given
+    the winning team as are subtracted from the losing team.  If you have lots
+    of teammates you don't get as many points for destroying treasures, however
+    if you don't have many teammates and destroy a treasure from a team with
+    lots of people and points you could get upwards of 100 points for it.
+    I think this is more fair than my other scheme and MUCH more fair than the
+    current scheme.
+
+    ** note
+       This just divides the total score into pieces which I can give the
+    winners.  It's rounded to the nearest whole number.  If you have 3
+    teammates then there will be 7 pieces.  The destroyer will get 3 and
+    his/her teammates will each get 2.  This gives a little 'bonus' for
+    being the one to destroy the treasure, but still keeps treasures
+    zero-sum.
+
+    I hope all this makes sense.  I tested it pretty thouroughly, so I'm
+    confident it's correct(knock on wood).
+
+Steven Singer added mouse control:
+    I've had to create a new packet type PKT_POINTER_MOVE, which is sent from
+    the client to the server. It contains a signed integer which is the number
+    of pixels the pointer moved horizontally.
+
+    The server scales the pointer movement by pl->turnspeed /
+    MAX_PLAYER_TURNSPEED, and adds it onto pl->turn_vel (actually subtracts it
+    to get the sense correct).
+
+    The top window has been made sensitive to MotionNotify, ButtonPress and
+    ButtonRelease events.
+
+    On receiving a MotionNotify event (and if pointer control is enabled), the
+    client notes how far the pointer moved, and if non-zero it send a packet
+    to the server, and warps the pointer back to the centre of the screen.
+
+    ButtonPress and ButtonRelease events are mapped to keystrokes.
+
+    Pointer control can be toggled via the key keyPointerControl with the
+    default value KP_Enter (we're running out of keys).
+
+    The button effects can be altered via pointerButton[1-5] each of which
+    take a single argument which is the xpilot key name (like keyFireShot, the
+    comparison is case insensitive and the initial `key' can be left out).
+    The defaults are button1 - FireShot, button2 - Thrust, button3 - Shield.
+
+    If the talk window is popped up, the pointer control is disabled. When the
+    window is closed pointer control returns to whatever state it was in.
+
+    During initialisation a blank cursor is created, and if pointer control
+    is enabled this cursor is used in the top window. When pointer control is
+    disabled or the talk window is up the default cursor is restored.
+
+    To summarise the server/client changes :
+
+	    I've created 1 new packet type (PKT_POINTER_MOVE = 73).
+
+	    I've used 1 more key (keyPointerControl = KP_Enter).
+
+	    I've created 6 more command line arguments/resources
+	    (-keyPointerControl, -pointerButton1 .. -pointerButton5).
+
+	    The new server can accept connections from old clients.
+
+	    The new client can connect to the old server, but will generate
+	    errors if pointer control is switched on.
+
+    The important question is what does it play like, well, I've tried it at
+    18 fps on a good NCD colour display, and it's not bad. The nice feature is
+    the way you can turn slowly whilst tracking someone, but you can still
+    turn quickly in a hurry without having to play with your turnspeed.
+
+    On a jerky display it's not as good.
+
+Fixed a bug which could cause a server crash when a rogue missile was fired.
+
+Russ Glaeser contributed a patch to not let autopiloting ships change
+direction if the ship has no velocity and there is no gravity.
+
+Russ Glaeser contributed a patch which applied his treasure points scheme
+also to targets.  Now the number of players on your team is taken into
+account when you are given points for destroying another team's target.
+He also fixed the messages, which were just a bit messed up (as he says).
+
+Added a new option -targetRadarColor to the client.  By default it is set
+to 4 which for color screens is defined to be green (same as hudColor).
+This will draw all targets on the radar in green.
+You can change this in two ways:
+  1) give the -color4 option a different color value.
+  2) give the -hudColor a different value like 2 which is the current blue.
+Of course color 4 is only used if maxColors is 8 or 16.
+
+Fixed a bug which caused own targets to be drawn in red instead of blue
+if team wasn't explicitly set.
+
+Harvey Thompson pointed out a few problems with the new mouse control stuff
+for some of which he provided a patch:
+    - Mousecontrol is not very smooth yet.
+      Removed a factor 2 somewhere.
+    - Added an option "pointerControl" to the cliebt to set the initial
+      control.  This is only enabled when the mouse first moves into the
+      xpilot game window, the mouse pointer will then disappear until the
+      Key pad enter key is pressed.
+    - During mouse pointer control, the mouse pointer is grabbed such that
+      you can't go out of the drawing window.  This makes large mouse
+      movements still work fairly well.
+    - With mouse control, if you hit "talk" and then move the mouse,
+      you couldn't know where the mouse is, and things went horribly
+      odd (could't talk).  Fixed now.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.2 compared to release 3.2.1:
+
+The maximum allowed (sub-)packet size limitation was removed.
+
+Hendrik Harrison pointed out that some code handling shots and teamshots
+wasn't used anymore, so we thankfully removed it.
+
+Added a new option -hudColor to the client.  By default it is set to 4
+and for color screens the color4 is now defined to be green.  This
+will draw your HUD in green.  You can change this in two ways:
+  1) give the -color4 option a different color value.
+  2) give the -hudColor a different value like 2 which is the current blue.
+Of course color 4 is only used if maxColors is set 8 or 16.
+Score objects are now drawn in the hudColor color.
+
+The right marking light is now drawn in green, if available.
+
+Made an extension to the way the ship shape definition is transported
+between client and server to allow for very large ship shape definitions.
+The maximum allowed length of a ship shape definition is now 510 characters.
+
+Harvey Thompson provided a patch to fix a bug with emergency thrust/shield.
+When colliding with players or walls a currently used emergency
+thrust/shield was finished immediately, which shouldn't be.
+
+Relaxed the entering of players in a team game with limited lives mode.
+Previously if any other player had already lost a life then this would put
+a new player in waiting mode.  Now players are not put in waiting mode
+if it is only a team member who has lost a life.
+
+Fixed bug in fetching X resources which also limited ship shapes to 256 bytes.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.1 compared to release 3.2.0:
+
+Mike Morrison provided two bugfixes for the new ship shape stuff.
+One bug caused core dumps on AIX machines.  The other one prevented
+use of the Right Light feature.
+
+Pete Ford supplied a patch to fix the bug that caused lasers to fire
+always from the right side of the ship.
+
+Pete Ford supplied a patch to fix the bug that caused the server to
+crash on some systems if a random heat seaker was fired.
+
+The missile racks are now actually being used when firing missiles.
+Note that this may cause you to shoot yourself if you have placed
+your missile racks too close to the centre of the ship.
+
+The maximum allowed packet size was set too small.  This caused
+all kinds of problems when a ship shape definition was very large.
+
 ===============================================================================
 
 This is a summary of changes of release 3.2.0 compared to release 3.1.3:

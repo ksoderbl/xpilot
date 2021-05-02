@@ -1,4 +1,4 @@
-/* $Id: timer.c,v 3.16 1994/04/10 15:58:16 bert Exp $
+/* $Id: timer.c,v 3.17 1994/07/10 20:05:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -38,6 +38,9 @@
 #include <signal.h>
 #include <stdlib.h>
 
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "error.h"
 
 #ifdef sony_news
@@ -137,7 +140,7 @@ void allow_timer(void)
 #else
 
 static volatile long   timer_count,	/* SIGALRMs that have occurred */
-                       timers_used;	/* SIGALRMs that have been used */
+		       timers_used;	/* SIGALRMs that have been used */
 
 /*
  * Catch SIGALRM.

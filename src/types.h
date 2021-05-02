@@ -1,4 +1,4 @@
-/* $Id: types.h,v 3.11 1994/03/05 22:07:15 bert Exp $
+/* $Id: types.h,v 3.12 1994/07/10 20:05:30 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -39,7 +39,7 @@ typedef unsigned char	u_byte;
 
 #ifdef VMS
 #if !defined(CADDR_T) && !defined(__CADDR_T) && !defined(__SOCKET_TYPEDEFS)
-typedef char *caddr_t; 
+typedef char *caddr_t;
 #define CADDR_T
 #define __CADDR_T
 #endif
@@ -63,19 +63,9 @@ typedef vector			position;
 typedef struct { int x, y; }	ivec;
 typedef ivec			ipos;
 
-/*
- * Modern environments use the fd_set type as argument to select.
- * This allows a select on more than 32 file descriptors.
- * To not get the rest of the pack into trouble this macro
- * is used to prevent any integer vs. pointer clashes
- * and to allow for C++ compilation.
- */
-#if defined(__linux__)
-#define select_t fd_set
+#if !defined(select) && defined(__linux__)
 #define select(N, R, W, E, T)	select((N),		\
-	(select_t*)(R), (select_t*)(W), (select_t*)(E), (T))
-#else
-#define select_t int
+	(fd_set*)(R), (fd_set*)(W), (fd_set*)(E), (T))
 #endif
 
 #endif

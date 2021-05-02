@@ -2,7 +2,7 @@
 XPilot README.sounds
 last update: Thu Jan 27 19:10:17 GMT 1994
 
-XPilot currently has rplay, NCD, and DEC AudioFile sound support.  
+XPilot currently has rplay, NCD, DEC AudioFile and HP Aserver sound support.  
 See the Imakefile and/or the Makefile.std files in the src directory 
 for details on how to compile XPilot with sound support enabled.
 
@@ -15,6 +15,8 @@ For NCD sound support the NCD MCX X terminals must be running release 3.1
 or later of the NCD software.  Email NCD questions to gred@ncd.com.
 
 DEC AudioFile sound support was provided by Tom de Pauw.
+
+HP Aserver sound support is NOT working well on a HP 715.
 
 Most sound files can be obtained from sounds.sdsu.edu in the /pub/xpilot-sounds
 directory.  Note that if rplay is used with sounds.sdsu.edu as an RPTP server,

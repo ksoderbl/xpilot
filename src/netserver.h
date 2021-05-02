@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.37 1994/05/23 19:15:19 bert Exp $
+/* $Id: netserver.h,v 3.44 1994/09/17 01:05:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -99,6 +99,7 @@ typedef struct {
     long		talk_sequence_num;	/* talk acknowledgement */
     long		motd_offset;		/* offset into motd or -1 */
     long		motd_stop;		/* max offset into motd */
+    int			num_keyboard_updates;	/* Keyboards in one packet */
     int			view_width, view_height;/* Viewable area dimensions */
     int			debris_colors;		/* Max. debris intensities */
     int			spark_rand;		/* Sparkling effect */
@@ -132,6 +133,8 @@ static int Receive_display(int ind);
 static int Receive_modifier_bank(int ind);
 static int Receive_motd(int ind);
 static int Receive_shape(int ind);
+static int Receive_pointer_move(int ind);
+static int Receive_audio_request(int ind);
 
 static int Send_motd(int ind);
 
@@ -160,6 +163,7 @@ int Send_seek(int ind, int programmer_id, int robot_id, int sought_id);
 int Send_player(int ind, int id);
 int Send_score(int ind, int id, int score, int life, int mychar);
 int Send_score_object(int ind, int score, int x, int y, char *string);
+int Send_timing(int ind, int id, int check, int round);
 int Send_base(int ind, int id, int num);
 int Send_fuel(int ind, int num, int fuel);
 int Send_cannon(int ind, int num, int dead_time);
@@ -169,7 +173,6 @@ int Send_thrusttime(int ind, int count, int max);
 int Send_shieldtime(int ind, int count, int max);
 int Send_debris(int ind, int type, unsigned char *p, int n);
 int Send_fastshot(int ind, int type, unsigned char *p, int n);
-int Send_shot(int ind, int x, int y, int color, int teamshot);
 int Send_missile(int ind, int x, int y, int len, int dir);
 int Send_ball(int ind, int x, int y, int id);
 int Send_mine(int ind, int x, int y, int teammine, int id);

@@ -1,6 +1,6 @@
 /*
  * strdup.c
- * 
+ *
  * Simple version of strdup for machines without it (ie DEC Ultrix 4.2)
  *
  * By David Chatterton
@@ -9,8 +9,8 @@
  * You can do anything you like to this... :)
  */
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 char* strdup (const char* s1)
 {

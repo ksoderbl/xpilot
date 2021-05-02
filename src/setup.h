@@ -1,4 +1,4 @@
-/* $Id: setup.h,v 3.12 1994/02/07 13:20:45 bjoerns Exp $
+/* $Id: setup.h,v 3.14 1994/08/04 19:31:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -23,8 +23,6 @@
 
 #ifndef SETUP_H
 #define SETUP_H
-
-#include "const.h"
 
 /*
  * Definitions to tell the client how the server has been setup.
@@ -67,15 +65,16 @@
 #define SETUP_CANNON_DOWN	17
 #define SETUP_CANNON_LEFT	18
 #define SETUP_SPACE_DOT		19
-#define SETUP_TREASURE		20	/* + team number */
+#define SETUP_TREASURE		20	/* + team number (10) */
 #define SETUP_BASE_LOWEST	30	/* lowest base number */
-#define SETUP_BASE_UP		30	/* + team number */
-#define SETUP_BASE_RIGHT	40	/* + team number */
-#define SETUP_BASE_DOWN		50	/* + team number */
-#define SETUP_BASE_LEFT		60	/* + team number */
+#define SETUP_BASE_UP		30	/* + team number (10) */
+#define SETUP_BASE_RIGHT	40	/* + team number (10) */
+#define SETUP_BASE_DOWN		50	/* + team number (10) */
+#define SETUP_BASE_LEFT		60	/* + team number (10) */
 #define SETUP_BASE_HIGHEST	69	/* highest base number */
-#define SETUP_TARGET		70	/* + team number */
-#define SETUP_CHECK		80	/* + check point number */
+#define SETUP_TARGET		70	/* + team number (10) */
+#define SETUP_CHECK		80	/* + check point number (26) */
+#define SETUP_ITEM_CONCENTRATOR		110
 
 #define BLUE_UP			0x01
 #define BLUE_RIGHT		0x02

@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 3.20 1994/05/23 19:23:45 bert Exp $
+/* $Id: rules.h,v 3.24 1994/09/16 18:53:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -49,8 +49,9 @@
 #define PLAYING			(1L<<0)		/* Not returning to base */
 #define PAUSE			(1L<<1) 	/* Must stay below 8 */
 #define GAME_OVER		(1L<<2)		/* Must stay below 8 */
-#define THRUSTING		(1L<<3)
-#define SELF_DESTRUCT		(1L<<4)
+#define THRUSTING		(1L<<3)		/* not used by client? */
+#define SELF_DESTRUCT		(1L<<4)		/* not used by client? */
+#define WANT_AUDIO		(1L<<5)		/* whether client has SOUND */
 
 #define KILLED			(1L<<10)
 #define GRAVITY			(1L<<11)
@@ -63,6 +64,10 @@
 #define FROMBOUNCE		(1L<<18)	/* Spark from wall bounce */
 #define OWNERIMMUNE		(1L<<19)	/* Owner is immune to object */
 #define REPROGRAM		(1L<<20)	/* Player reprogramming */
+#define NOEXPLOSION		(1L<<21)	/* No ball recreate explosion */
+#define COLLISIONSHOVE		(1L<<22)	/* Collision counts as shove */
+#define FINISH			(1L<<23)	/* Reached race finish */
+#define RACE_OVER		(1L<<24)	/* After finished and score. */
 
 /* #define WAITING_SHOTS	(1L<<32) */
 /* #define SHOT_GRAVITY		(1L<<32) */

@@ -100,6 +100,10 @@ This panel fixes the following Xpilots options :
         Are nukes visible or highlighted on radar
     -/+distinguishMissiles
         Are different types of missiles distinguished (by length)
+     -minVisibilityDistance or minVisibility <real>
+       Minimum block distance for limited visibility, 0 for default
+     -maxVisibilityDistance or maxVisibility <real>
+       Maximum block distance for limited visibility, 0 for default
 
     Please refer to the manual pages, xpilots(6) and xpilot(6),
     for more specific help.
@@ -112,6 +116,10 @@ This panel fixes the following Xpilots options :
         Also reduces number of particles in the explosion
     -mineFuseTime <seconds>
         Time after which owned mines become deadly, zero means never
+     -rogueHeatProb <real>
+       Probability that unclaimed missile packs will go rogue.
+     -rogueMineProb <real>
+       Probability that unclaimed mines will activate.
     -/+laserIsStunGun or stunGun
         Is the laser weapon a stun gun weapon?
     -/+allowClusters or clusters
@@ -369,7 +377,7 @@ This panel fixes the following Xpilots options :
            from the xpilots dump exept if the ^R Save ^R all ^R options 
            button is On.
          - with the original map data (to change it, use XmapEdit).
-         - with all original options unknown by Xpilots-3.1.x you may have
+         - with all original options unknown by Xpilots-3.2.x you may have
            seen in a error message window when you loaded this map.
           You can save it in another directory with another file name (it
          is a copy) with a compressed or uncompressed format selected with
@@ -387,6 +395,7 @@ This panel fixes the following Xpilots options :
    ^R Team ^R to ^R join you selected before or after calling
    the ^S Meta ^S server menu. If the connection is OK, you can quit TkXpInterface,
    otherwise try another remote server or the same server again (still selected)
+ - NOTICE THAT TEAM -1 MEANS NO TEAM IN THE XPILOT CLIENT PROMPT !!
 
  ^R Ping button :
  - To do a PING on a selected remote server.
@@ -397,6 +406,10 @@ This panel fixes the following Xpilots options :
  ^R Status button :
    It's useful if you want more info about a game (i.e. the scores of all the
    players, the lives, the robots...)
+
+ ^R Local button :
+   First this button is only present on the only client interface.
+   Press this button open a new window in which you can see the local servers. 
 
  ^R Update button :
    To update the list of active remote servers.
@@ -412,9 +425,9 @@ This panel fixes the following Xpilots options :
    written before it.
 
  ^R Word(s) ^R to ^R search entry box :
-   to search for some sub-strings in the list of remote servers, it's useful if you 
-   want to look for a friend (with his nick name or e-mail adress) and a map name,
-   etc....
+   to search for some sub-strings in the list of remote servers, it's useful if
+   you want to look for a friend (with his nick name or e-mail adress) and a
+   map name, etc....
    + The search mode doesn't take into account the difference between the
     lowercases and uppercases.
    + You must enter ^U at ^U least 3 characters for each sub-string you look for.
@@ -535,7 +548,7 @@ This panel fixes the following Xpilots options :
  (i.e. Quit button, not <Control-c>).
 
  TkXpInterface will verify if all options in the map file are compatible with
- Xpilots-3.1.x, if not you will be given an error message in a window when  you
+ Xpilots-3.2.x, if not you will be given an error message in a window when  you
  load the map if you have switched on the ^R Check ^R options button.
  The ^U button ^U on ^U the ^U right of ^R Check ^R options button will show you if some options
  warnings occured.
@@ -664,7 +677,7 @@ Client option :
     - manually with your keyboard on the acquisition area,
       but I know you know.
 
-       - if the gravity is a point (Clockwise or Anticlockwise) and you
+       - if the gravity is a point (Clockwise, Anticlockwise or nothing) and you
          enter some values greater than the map size, the map size will
          be set automatically.
 

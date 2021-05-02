@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 3.22 1994/05/24 14:26:46 bert Exp $
+/* $Id: draw.h,v 3.26 1994/09/10 12:58:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,14 +24,17 @@
 #ifndef	DRAW_H
 #define	DRAW_H
 
+#ifndef TYPES_H
+/* need position */
+#include "types.h"
+#endif
+
 /*
  * Abstract (non-display system specific) drawing definitions.
- * 
+ *
  * This file should not contain any X window stuff as VMS
  * does not accept this in the server.  Rightly so. :-)
  */
-
-#include "types.h"
 
 /*
  * The server supports only 4 colors, except for spark/debris, which
@@ -68,6 +71,7 @@
 
 #define TITLE_DELAY	    500
 #define	UPDATE_SCORE_DELAY  (FPS)
+#define CONTROL_DELAY	    100
 
 #define CLOAK_FAILURE	    130
 
@@ -89,11 +93,11 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
     int		num_l_gun,
 		num_r_gun;		/* number of additional cannons */
     position	*l_gun[MAX_GUN_PTS],	/* Additional cannon positions, left*/
-     		*r_gun[MAX_GUN_PTS];	/* Additional cannon positions, right*/
+		*r_gun[MAX_GUN_PTS];	/* Additional cannon positions, right*/
     int		num_l_light,		/* Number of lights */
 		num_r_light;
     position	*l_light[MAX_LIGHT_PTS], /* Left and right light positions */
-    		*r_light[MAX_LIGHT_PTS];
+		*r_light[MAX_LIGHT_PTS];
     int		num_m_rack;		/* Number of missile racks */
     position	*m_rack[MAX_RACK_PTS];
 } wireobj;
@@ -105,6 +109,10 @@ extern void Free_ship_shape(wireobj *w);
 extern wireobj *Parse_shape_str(char *str);
 extern wireobj *Convert_shape_str(char *str);
 extern int Validate_shape_str(char *str);
-extern void Convert_ship_2_string(wireobj *w, char *buf, unsigned shape_version);
+extern void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
+				  unsigned shape_version);
+
+extern float rfrac();
+extern int mod(int x, int y);
 
 #endif

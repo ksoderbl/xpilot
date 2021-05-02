@@ -1,4 +1,4 @@
-/* $Id: map.h,v 3.13 1994/05/23 19:11:31 bert Exp $
+/* $Id: map.h,v 3.20 1994/09/17 01:01:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,10 +24,18 @@
 #ifndef	MAP_H
 #define	MAP_H
 
+#ifndef TYPES_H
+/* need position */
 #include "types.h"
+#endif
+#ifndef RULES_H
+/* need rules_t */
 #include "rules.h"
-#include "const.h"
+#endif
+#ifndef ITEM_H
+/* need NUM_ITEMS */
 #include "item.h"
+#endif
 
 #define SPACE			0
 #define BASE			1
@@ -46,6 +54,7 @@
 #define WORMHOLE		14
 #define TREASURE		15
 #define TARGET			16
+#define ITEM_CONCENTRATOR	17
 #define BASE_ATTRACTOR		127
 
 #define SPACE_BIT		(1 << SPACE)
@@ -65,22 +74,20 @@
 #define WORMHOLE_BIT		(1 << WORMHOLE)
 #define TREASURE_BIT		(1 << TREASURE)
 #define TARGET_BIT		(1 << TARGET)
+#define ITEM_CONCENTRATOR_BIT	(1 << ITEM_CONCENTRATOR)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)
 #define DIR_LEFT		(RES/2)
 #define DIR_DOWN		(3*RES/4)
 
-/* Do NOT change these! */
-#define MAX_CHECKS		26
-#define MAX_TEAMS		10
-
 typedef struct {
-    position	pos;
+    ipos	blk_pos;
+    position	pix_pos;
     long	fuel;
     unsigned	conn_mask;
     long	last_change;
-} fuel_t; 
+} fuel_t;
 
 typedef struct {
     ipos	pos;
@@ -92,6 +99,11 @@ typedef struct {
     int		dir;
     u_short	team;
 } base_t;
+
+typedef struct {
+    int		base_idx;	/* Index in World.base[] */
+    float	dist;		/* Distance to first checkpoint */
+} baseorder_t;
 
 typedef struct {
     ipos	pos;
@@ -124,10 +136,10 @@ typedef struct {
 } treasure_t;
 
 typedef struct {
-    ipos       pos;
-    u_short    team;
-    int        dead_time;
-    int        damage;
+    ipos	pos;
+    u_short	team;
+    int		dead_time;
+    int		damage;
     unsigned	conn_mask;
     unsigned 	update_mask;
     long	last_change;
@@ -140,7 +152,10 @@ typedef struct {
     int		TreasuresDestroyed;	/* Number of destroyed treasures */
     int		TreasuresLeft;		/* Number of treasures left */
 } team_t;
-    
+
+typedef struct {
+    ipos	pos;
+} item_concentrator_t;
 
 typedef struct {
     int		x, y;		/* Size of world in blocks */
@@ -161,6 +176,7 @@ typedef struct {
     int		NumTeamBases;      /* How many 'different' teams are allowed */
     int		NumBases;
     base_t	*base;
+    baseorder_t	*baseorder;
     int		NumFuels;
     fuel_t	*fuel;
     int		NumGravs;
@@ -175,6 +191,9 @@ typedef struct {
     treasure_t	*treasures;
     int         NumTargets;
     target_t    *targets;
+    int		NumItemConcentrators;
+    item_concentrator_t	*itemConcentrators;
+    long	nextEvent;
 } World_map;
 
 #endif

@@ -1,4 +1,4 @@
-/* $Id: robot.h,v 3.8 1994/04/28 16:30:03 bert Exp $
+/* $Id: robot.h,v 3.9 1994/07/10 20:01:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -53,7 +53,7 @@
 typedef struct {
     char	*name;
     int		attack,		/* Attack + defense ~ 100 */
-    		defense;
+		defense;
     unsigned	used;		/* Number of times robot played in a game */
     char	shape[5*2+16*10+4];
 } robot_t;

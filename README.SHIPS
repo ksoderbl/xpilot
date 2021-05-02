@@ -134,6 +134,7 @@ ship-shape format.  It features:
         rightLight:    RL:             Right (blue) light positions(s)
         engine:        EN:             Engine thrust point
         missileRack:   MR:             Missile launch point(s)
+        name:          NM:             The name of the ship
 
     The points given for weapons, lights etc. need not be points defined in 
     the ship shape definition.

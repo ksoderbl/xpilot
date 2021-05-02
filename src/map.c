@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.31 1994/05/23 19:11:02 bert Exp $
+/* $Id: map.c,v 3.38 1994/09/17 01:00:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -30,7 +30,11 @@
 #include <sys/stat.h>
 #endif
 
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "map.h"
 #include "bit.h"
 
@@ -38,7 +42,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.31 1994/05/23 19:11:02 bert Exp $";
+    "@(#)$Id: map.c,v 3.38 1994/09/17 01:00:45 bert Exp $";
 #endif
 
 
@@ -48,9 +52,11 @@ static char sourceid[] =
 World_map World;
 
 
-u_short Find_closest_team(int posx, int posy);
+static u_short Find_closest_team(int posx, int posy);
+static void Find_base_order(void);
 
 
+#ifdef DEBUG
 void Print_map(void)			/* Debugging only. */
 {
     int x, y;
@@ -71,6 +77,7 @@ void Print_map(void)			/* Debugging only. */
 	putchar('\n');
     }
 }
+#endif
 
 
 void Init_map(void)
@@ -86,8 +93,9 @@ void Init_map(void)
     World.NumGravs	= 0;
     World.NumCannons	= 0;
     World.NumWormholes	= 0;
-    World.NumTreasures  = 0;
-    World.NumTargets    = 0;
+    World.NumTreasures	= 0;
+    World.NumTargets	= 0;
+    World.NumItemConcentrators	= 0;
 }
 
 
@@ -100,6 +108,7 @@ void Free_map(void)
     if (World.cannon) free(World.cannon);
     if (World.fuel) free(World.fuel);
     if (World.wormHoles) free(World.wormHoles);
+    if (World.itemConcentrators) free(World.itemConcentrators);
 }
 
 
@@ -111,16 +120,17 @@ void Alloc_map(void)
 	Free_map();
 
     World.block =
-        (unsigned char **)malloc(sizeof(unsigned char *)*World.x
+	(unsigned char **)malloc(sizeof(unsigned char *)*World.x
 				 + World.x*sizeof(unsigned char)*World.y);
-    World.gravity = 
-        (vector **)malloc(sizeof(vector *)*World.x
+    World.gravity =
+	(vector **)malloc(sizeof(vector *)*World.x
 			  + World.x*sizeof(vector)*World.y);
-    World.grav = 0;
-    World.base = 0;
-    World.fuel = 0;
-    World.cannon = 0;
-    World.wormHoles = 0;
+    World.grav = NULL;
+    World.base = NULL;
+    World.fuel = NULL;
+    World.cannon = NULL;
+    World.wormHoles = NULL;
+    World.itemConcentrators = NULL;
     if (World.block == NULL || World.gravity == NULL) {
 	Free_map();
 	error("Couldn't allocate memory for map (%d bytes)",
@@ -129,23 +139,23 @@ void Alloc_map(void)
 			 + sizeof(unsigned char*)));
 	exit(-1);
     } else {
-        unsigned char *map_line;
-        unsigned char **map_pointer;
-        vector *grav_line;
-        vector **grav_pointer;
+	unsigned char *map_line;
+	unsigned char **map_pointer;
+	vector *grav_line;
+	vector **grav_pointer;
 
-        map_pointer = World.block;
-        map_line = (unsigned char*) ((unsigned char**)map_pointer + World.x);
-        grav_pointer = World.gravity;
-        grav_line = (vector*) ((vector**)grav_pointer + World.x);
+	map_pointer = World.block;
+	map_line = (unsigned char*) ((unsigned char**)map_pointer + World.x);
+	grav_pointer = World.gravity;
+	grav_line = (vector*) ((vector**)grav_pointer + World.x);
 
 	for (x=0; x<World.x; x++) {
-            *map_pointer = map_line;
-            map_pointer += 1;
-            map_line += World.y;
-            *grav_pointer = grav_line;
-            grav_pointer += 1;
-            grav_line += World.y;
+	    *map_pointer = map_line;
+	    map_pointer += 1;
+	    map_line += World.y;
+	    *grav_pointer = grav_line;
+	    grav_pointer += 1;
+	    grav_line += World.y;
 	}
     }
 }
@@ -176,7 +186,7 @@ void Grok_map(void)
     char *s;
 
     Init_map();
-    
+
     World.x = mapWidth;
     World.y = mapHeight;
     if (extraBorder) {
@@ -191,13 +201,18 @@ void Grok_map(void)
     World.name[sizeof(World.name) - 1] = '\0';
     strncpy(World.author, mapAuthor, sizeof(World.author) - 1);
     World.author[sizeof(World.author) - 1] = '\0';
-    
+
     Alloc_map();
-    
+
     x = -1;
     y = World.y - 1;
-    
+
     Set_world_rules();
+
+    if (BIT(World.rules->mode, TEAM_PLAY|TIMING) == (TEAM_PLAY|TIMING)) {
+	error("Cannot teamplay while in race mode -- ignoring teamplay");
+	CLR_BIT(World.rules->mode, TEAM_PLAY);
+    }
 
     if (!mapData) {
 	errno = 0;
@@ -210,7 +225,7 @@ void Grok_map(void)
 
     s = mapData;
     while (y >= 0) {
-	    
+
 	x++;
 
 	if (extraBorder && (x == 0 || x == World.x - 1
@@ -267,11 +282,14 @@ void Grok_map(void)
 	    else
 		World.block[x][y] = ' ';
 	    break;
-	case '#': 
+	case '#':
 	    World.NumFuels++;
 	    break;
 	case '!':
 	    World.NumTargets++;
+	    break;
+	case '%':
+	    World.NumItemConcentrators++;
 	    break;
 	case '_':
 	case '0':
@@ -310,7 +328,7 @@ void Grok_map(void)
 	}
     }
 
-    free (mapData);
+    free(mapData);
     mapData = NULL;
 
     /*
@@ -339,7 +357,7 @@ void Grok_map(void)
 	    malloc(World.NumWormholes * sizeof(wormhole_t))) == NULL) {
 	error("Out of memory - wormholes");
 	exit(-1);
-    }    
+    }
     if (World.NumTreasures > 0
 	&& (World.treasures = (treasure_t *)
 	    malloc(World.NumTreasures * sizeof(treasure_t))) == NULL) {
@@ -350,6 +368,12 @@ void Grok_map(void)
 	&& (World.targets = (target_t *)
 	    malloc(World.NumTargets * sizeof(target_t))) == NULL) {
 	error("Out of memory - targets");
+	exit(-1);
+    }
+    if (World.NumItemConcentrators > 0
+	&& (World.itemConcentrators = (item_concentrator_t *)
+	    malloc(World.NumItemConcentrators * sizeof(item_concentrator_t))) == NULL) {
+	error("Out of memory - item concentrators");
 	exit(-1);
     }
     if (World.NumBases > 0) {
@@ -368,6 +392,7 @@ void Grok_map(void)
     World.NumTreasures = 0;		/* into structures. */
     World.NumTargets = 0;
     World.NumBases = 0;
+    World.NumItemConcentrators = 0;
     for (i=0; i<MAX_TEAMS; i++) {
 	World.teams[i].NumMembers = 0;
 	World.teams[i].NumBases = 0;
@@ -383,11 +408,11 @@ void Grok_map(void)
 	int	worm_in = 0,
 		worm_out = 0,
 		worm_norm = 0;
-    
-        for (x=0; x<World.x; x++) {
-            u_byte *line = World.block[x];
-    
-            for (y=0; y<World.y; y++) {
+
+	for (x=0; x<World.x; x++) {
+	    u_byte *line = World.block[x];
+
+	    for (y=0; y<World.y; y++) {
 		char c = line[y];
 		switch (c) {
 		case ' ':
@@ -459,8 +484,10 @@ void Grok_map(void)
 
 		case '#':
 		    line[y] = FUEL;
-		    World.fuel[World.NumFuels].pos.x = x*BLOCK_SZ+BLOCK_SZ/2;
-		    World.fuel[World.NumFuels].pos.y = y*BLOCK_SZ+BLOCK_SZ/2;
+		    World.fuel[World.NumFuels].blk_pos.x = x;
+		    World.fuel[World.NumFuels].blk_pos.y = y;
+		    World.fuel[World.NumFuels].pix_pos.x = (x+0.5f)*BLOCK_SZ;
+		    World.fuel[World.NumFuels].pix_pos.y = (y+0.5f)*BLOCK_SZ;
 		    World.fuel[World.NumFuels].fuel = START_STATION_FUEL;
 		    World.fuel[World.NumFuels].conn_mask = (unsigned)-1;
 		    World.fuel[World.NumFuels].last_change = loops;
@@ -495,6 +522,12 @@ void Grok_map(void)
 		    World.targets[World.NumTargets].update_mask = 0;
 		    World.targets[World.NumTargets].last_change = loops;
 		    World.NumTargets++;
+		    break;
+		case '%':
+		    line[y] = ITEM_CONCENTRATOR;
+		    World.itemConcentrators[World.NumItemConcentrators].pos.x = x;
+		    World.itemConcentrators[World.NumItemConcentrators].pos.y = y;
+		    World.NumItemConcentrators++;
 		    break;
 		case '$':
 		    line[y] = BASE_ATTRACTOR;
@@ -595,13 +628,14 @@ void Grok_map(void)
 			World.check[c-'A'].x = x;
 			World.check[c-'A'].y = y;
 			line[y] = CHECK;
-		    } else
+		    } else {
 			line[y] = SPACE;
+		    }
 		    break;
 		}
 	    }
 	}
-    
+
 	/*
 	 * Verify that the wormholes are consistent, i.e. that if
 	 * we have no 'out' wormholes, make sure that we don't have
@@ -612,15 +646,21 @@ void Grok_map(void)
 	    : (worm_in) ? (worm_out < 1)
 	    : (worm_out > 0)) {
 
-            int i;
-            
-            error("Inconsistent use of wormholes, removing them");
-            for (i=0; i<World.NumWormholes; i++)
-                World.block
+	    int i;
+
+	    printf("Inconsistent use of wormholes, removing them.\n");
+	    for (i=0; i<World.NumWormholes; i++)
+		World.block
 		    [World.wormHoles[i].pos.x]
 		    [World.wormHoles[i].pos.y] = SPACE;
-            World.NumWormholes = 0;
-        }
+	    World.NumWormholes = 0;
+	}
+
+	if (BIT(World.rules->mode, TIMING) && World.NumChecks == 0) {
+	    printf("No checkpoints found while race mode (timing) was set.\n");
+	    printf("Turning off race mode.\n");
+	    CLR_BIT(World.rules->mode, TIMING);
+	}
 
 	/*
 	 * Determine which team a treasure belongs to.
@@ -646,7 +686,7 @@ void Grok_map(void)
 		    error("Couldn't find a matching team for the target.");
 		}
 		World.targets[i].team = team;
-	    }	
+	    }
 	}
     }
 
@@ -657,8 +697,10 @@ void Grok_map(void)
 	    WantedNumRobots = World.NumBases;
 	}
     }
-    if (BIT(World.rules->mode, TIMING))
+    if (BIT(World.rules->mode, TIMING)) {
 	WantedNumRobots = 0;
+	Find_base_order();
+    }
 
 #ifndef	SILENT
     printf("World....: %s\nBases....: %d\nMapsize..: %dx%d\nTeam play: %s\n",
@@ -741,9 +783,9 @@ void Generate_random_map(void)
 	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
     }
     for (i='A'; i<='Z'; i++) {
-        x = rand() % (World.x-2) + 1;
-        y = rand() % (World.y-2) + 1;
-        mapData[x + y * (World.x + 1)] = i;
+	x = rand() % (World.x-2) + 1;
+	y = rand() % (World.y-2) + 1;
+	mapData[x + y * (World.x + 1)] = i;
     }
     for (y = 0; y < World.y; y++) {
 	mapData[(y + 1) * (World.x + 1) - 1] = '\n';
@@ -756,6 +798,9 @@ void Generate_random_map(void)
 /*
  * Find the correct direction of the base, according to the gravity in
  * the base region.
+ *
+ * If a base attractor is adjacent to a base then the base will point
+ * to the attractor.
  */
 void Find_base_direction(void)
 {
@@ -767,7 +812,7 @@ void Find_base_direction(void)
 		dir,
 		att;
 	double	dx = World.gravity[x][y].x,
-	    	dy = World.gravity[x][y].y;
+		dy = World.gravity[x][y].y;
 
 	if (dx == 0.0 && dy == 0.0) {	/* Undefined direction? */
 	    dir = DIR_UP;	/* Should be set to direction of gravity! */
@@ -815,27 +860,71 @@ void Find_base_direction(void)
 /*
  * Return the team that is closest to this position.
  */
-u_short Find_closest_team(int posx, int posy)
+static u_short Find_closest_team(int posx, int posy)
 {
     u_short team = TEAM_NOT_SET;
     int i;
     float closest = FLT_MAX, l;
 
     for (i=0; i<World.NumBases; i++) {
-        if (World.base[i].team == TEAM_NOT_SET)
-            continue;
-        
-        l = Wrap_length((posx - World.base[i].pos.x)*BLOCK_SZ,
+	if (World.base[i].team == TEAM_NOT_SET)
+	    continue;
+
+	l = Wrap_length((posx - World.base[i].pos.x)*BLOCK_SZ,
 			(posy - World.base[i].pos.y)*BLOCK_SZ);
-	
-        if (l < closest) {
-            team = World.base[i].team;
-            closest = l;
-        }	
-    }	
+
+	if (l < closest) {
+	    team = World.base[i].team;
+	    closest = l;
+	}
+    }
 
     return team;
 }
+
+
+/*
+ * Determine the order in which players are placed
+ * on starting positions after race mode reset.
+ */
+static void Find_base_order(void)
+{
+    int			i, j, k, n;
+    float		cx, cy, dist;
+
+    if (!BIT(World.rules->mode, TIMING)) {
+	World.baseorder = NULL;
+	return;
+    }
+    if ((n = World.NumBases) <= 0) {
+	error("Cannot support race mode in a map without bases");
+	exit(-1);
+    }
+
+    if ((World.baseorder = (baseorder_t *)
+	    malloc(n * sizeof(baseorder_t))) == NULL) {
+	error("Out of memory - baseorder");
+	exit(-1);
+    }
+
+    cx = World.check[0].x * BLOCK_SZ;
+    cy = World.check[0].y * BLOCK_SZ;
+    for (i = 0; i < n; i++) {
+	dist = Wrap_length(World.base[i].pos.x * BLOCK_SZ - cx,
+			   World.base[i].pos.y * BLOCK_SZ - cy);
+	for (j = 0; j < i; j++) {
+	    if (World.baseorder[j].dist > dist) {
+		break;
+	    }
+	}
+	for (k = i - 1; k >= j; k--) {
+	    World.baseorder[k + 1] = World.baseorder[k];
+	}
+	World.baseorder[j].base_idx = i;
+	World.baseorder[j].dist = dist;
+    }
+}
+
 
 float Wrap_findDir(float dx, float dy)
 {

@@ -1,4 +1,4 @@
-/* $Id: dbuff.h,v 3.8 1994/02/07 13:19:37 bjoerns Exp $
+/* $Id: dbuff.h,v 3.9 1994/07/10 19:42:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -23,8 +23,6 @@
 
 #ifndef	DBUFF_H
 #define	DBUFF_H
-
-#include <X11/Xlib.h>
 
 #ifdef SPARC_CMAP_HACK
 # ifdef sparc
@@ -56,6 +54,8 @@ typedef struct {
     struct fbcmap	hardcmap;
 #endif
 } dbuff_state_t;
+
+extern dbuff_state_t   *dbuf_state;    /* Holds current dbuff state */
 
 dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 			   dbuff_t type,

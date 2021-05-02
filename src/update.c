@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.39 1994/05/23 19:25:04 bert Exp $
+/* $Id: update.c,v 3.56 1994/09/20 19:48:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -21,19 +21,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdlib.h>
+#include <stdio.h>
+
+#define SERVER
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "map.h"
 #include "score.h"
-#include "draw.h"
 #include "robot.h"
 #include "bit.h"
 #include "saudio.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.39 1994/05/23 19:25:04 bert Exp $";
+    "@(#)$Id: update.c,v 3.56 1994/09/20 19:48:26 bert Exp $";
 #endif
 
 
@@ -55,7 +60,9 @@ static char msg[MSG_LEN];
 static void Transport_to_home(int ind)
 {
     /*
-     * Transport a corpse from the place where it died back to its homebase.
+     * Transport a corpse from the place where it died back to its homebase,
+     * or if in race mode, back to the last passed check point.
+     * 
      * During the first part of the distance we give it a positive constant
      * acceleration G, during the second part we make this a negative one -G.
      * This results in a visually pleasing take off and landing.
@@ -64,8 +71,19 @@ static void Transport_to_home(int ind)
     float		bx, by, dx, dy,	t, m;
     const int		T = RECOVERY_DELAY;
 
-    bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
-    by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
+    if (BIT(World.rules->mode, TIMING) && pl->round) {
+	    int check;
+
+	    if (pl->check)
+		    check = pl->check - 1;
+	    else
+		    check = World.NumChecks - 1;
+	    bx = World.check[check].x * BLOCK_SZ + BLOCK_SZ/2;
+	    by = World.check[check].y * BLOCK_SZ + BLOCK_SZ/2;
+    } else {
+	    bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
+	    by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
+    }
     dx = WRAP_DX(bx - pl->pos.x);
     dy = WRAP_DY(by - pl->pos.y);
     t = pl->count + 0.5f;
@@ -111,7 +129,7 @@ void Emergency_thrust (int ind, int on)
 void Emergency_shield (int ind, int on)
 {
     player	*pl = Players[ind];
-    const int	emergency_shield_time = 8 * FPS;
+    const int	emergency_shield_time = 4 * FPS;	/* 8 -> 4 */
 
     if (on) {
 	if (pl->emergency_shield_left <= 0) {
@@ -126,6 +144,10 @@ void Emergency_shield (int ind, int on)
 	if (pl->emergency_shield_left <= 0) {
 	    if (pl->emergency_shields <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
+	}
+	if (!BIT(DEF_HAVE, OBJ_SHIELD)) {
+	    CLR_BIT(pl->have, OBJ_SHIELD);
+	    CLR_BIT(pl->used, OBJ_SHIELD);
 	}
 	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_OFF_SOUND);
     }
@@ -215,7 +237,7 @@ static void do_Autopilot (player *pl)
 	pl->vel.x = pl->vel.y = vel = 0.0;
 	pl->pos = pl->prevpos;
     }
-	
+
     /*
      * Calculate power needed to change instantaneously to stopped.  We
      * must include gravity here for next time round the update loop.
@@ -224,12 +246,15 @@ static void do_Autopilot (player *pl)
     power = acc * pl->mass;
     if (afterburners)
 	power /= AFTER_BURN_POWER_FACTOR(afterburners);
-    
+
     /*
      * Calculate direction change needed to reduce velocity to zero.
      */
     if (vel == 0.0) {
-	vad = findDir(-gx, -gy);
+	if (gx == 0 && gy == 0)
+	    vad = pl->dir;
+	else
+	    vad = findDir(-gx, -gy);
     } else {
 	vad = findDir(-pl->vel.x, -pl->vel.y);
     }
@@ -322,16 +347,18 @@ static void do_Autopilot (player *pl)
  */
 void do_Tractor_beam (player *pl)
 {
-    player	*to;
-    float	maxdist, maxforce, percent;
-    float	xd, yd, force, mass;
-    long	cost;
-    int		theta;
+    player		*victim;
+    float		maxdist, maxforce, percent;
+    float		xd, yd;
+    float		dvx, dvy;
+    float		force, mass;
+    long		cost;
+    int			theta;
 
     maxdist = TRACTOR_MAX_RANGE(pl);
 
-    if (BIT(pl->lock.tagged, (LOCK_PLAYER|LOCK_VISIBLE)) != (LOCK_PLAYER
-							     |LOCK_VISIBLE)
+    if (BIT(pl->lock.tagged, (LOCK_PLAYER|LOCK_VISIBLE))
+		!= (LOCK_PLAYER|LOCK_VISIBLE)
 	|| pl->lock.distance >= maxdist) {
 	pl->tractor = NULL;
 	return;
@@ -349,40 +376,29 @@ void do_Tractor_beam (player *pl)
     }
 
     sound_play_sensors(pl->pos.x, pl->pos.y,
-		       force < 0 ? TRACTOR_BEAM_SOUND : PRESSOR_BEAM_SOUND);
+		       (force < 0) ? TRACTOR_BEAM_SOUND : PRESSOR_BEAM_SOUND);
 
-    to = pl->tractor = Players[GetInd[pl->lock.pl_id]];
+    victim = pl->tractor = Players[GetInd[pl->lock.pl_id]];
 
     Add_fuel(&(pl->fuel), cost);
 
-    xd = WRAP_DX(pl->pos.x - to->pos.x);
-    yd = WRAP_DY(pl->pos.y - to->pos.y);
+    xd = WRAP_DX(pl->pos.x - victim->pos.x);
+    yd = WRAP_DY(pl->pos.y - victim->pos.y);
 
     theta = findDir(xd, yd);
-    mass = pl->mass + to->mass;
+    mass = pl->mass + victim->mass;
 
-    pl->vel.x += tcos(theta) * force / pl->mass;
-    pl->vel.y += tsin(theta) * force / pl->mass;
-    to->vel.x -= tcos(theta) * force / to->mass;
-    to->vel.y -= tsin(theta) * force / to->mass;
-}
+    dvx = tcos(theta) * (force / pl->mass);
+    dvy = tsin(theta) * (force / pl->mass);
+    pl->vel.x += dvx;
+    pl->vel.y += dvy;
+    Record_shove(pl, victim, loops);
 
-/*
- * Update `target' on all players radars.  Usually used when target is
- * destroyed or recreated.
- */
-void Update_radar_target(int target)
-{
-    target_t *targ = &World.targets[target];
-    int i;
-
-    for (i = 0; i < NumPlayers; i++) {
-	player *pl = Players[i];
-
-	if (pl->robot_mode != RM_NOT_ROBOT || pl->conn == NOT_CONNECTED)
-	    continue;
-	SET_BIT(targ->update_mask, (1 << pl->conn));
-    }
+    dvx = -(tcos(theta) * (force / victim->mass));
+    dvy = -(tsin(theta) * (force / victim->mass));
+    victim->vel.x += dvx;
+    victim->vel.y += dvy;
+    Record_shove(victim, pl, loops);
 }
 
 /********** **********
@@ -407,7 +423,7 @@ void Update_objects(void)
     if (fireRepeatRate > 0) {
 	for (i = 0; i < NumPlayers; i++) {
 	    pl = Players[i];
-	    if (BIT(pl->used, OBJ_FIRE)
+	    if (BIT(pl->used, OBJ_SHOT)
 		&& loops - pl->shot_time >= fireRepeatRate) {
 		Fire_normal_shots(i);
 	    }
@@ -459,7 +475,7 @@ void Update_objects(void)
 	update_object_speed(obj);
 	Move_object(i);
 
-	if (BIT(Obj[i]->type, OBJ_MINE))
+	if (BIT(obj->type, OBJ_MINE))
 	    Move_mine(i);
 
 	else if (BIT(obj->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO))
@@ -490,7 +506,7 @@ void Update_objects(void)
 	}
 	World.cannon[i].active = false;
     }
-    
+
     /*
      * Update targets
      */
@@ -500,8 +516,24 @@ void Update_objects(void)
 		World.block[World.targets[i].pos.x][World.targets[i].pos.y]
 		    = TARGET;
 		World.targets[i].conn_mask = 0;
+		World.targets[i].update_mask = (unsigned)-1;
 		World.targets[i].last_change = loops;
-		Update_radar_target(i);
+
+		if (targetSync) {
+		    u_short team = World.targets[i].team;
+
+		    for (j = 0; j < World.NumTargets; j++) {
+			if (World.targets[j].team == team) {
+			    World.block[World.targets[j].pos.x]
+				       [World.targets[j].pos.y] = TARGET;
+			    World.targets[j].conn_mask = 0;
+			    World.targets[j].update_mask = (unsigned)-1;
+			    World.targets[j].last_change = loops;
+			    World.targets[j].dead_time = 0;
+			    World.targets[j].damage = TARGET_DAMAGE;
+			}
+		    }
+		}
 	    }
 	    continue;
 	}
@@ -530,7 +562,7 @@ void Update_objects(void)
      */
     for (i=0; i<NumPlayers; i++) {
 #ifdef TURN_FUEL
-        long tf = 0;
+	long tf = 0;
 #endif
 
 	pl = Players[i];
@@ -563,9 +595,6 @@ void Update_objects(void)
 		Throw_items(pl);
 		Kill_player(i);
 		updateScores = true;
-		pl->check = 0;
-		pl->round = 0;
-		pl->time  = 0;
 	    }
 	}
 
@@ -574,7 +603,9 @@ void Update_objects(void)
 
 	if (pl->shield_time > 0) {
 	    if (--pl->shield_time == 0) {
-		CLR_BIT(pl->used, OBJ_SHIELD);
+		if (!BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
+		    CLR_BIT(pl->used, OBJ_SHIELD);
+		}
 	    }
 	    if (BIT(pl->used, OBJ_SHIELD) == 0) {
 		CLR_BIT(pl->have, OBJ_SHIELD);
@@ -610,23 +641,23 @@ void Update_objects(void)
 	 */
 	pl->turnvel	+= pl->turnacc;
 	pl->turnvel	*= pl->turnresistance;
-        
+
 #ifdef TURN_FUEL
-        tf = pl->oldturnvel-pl->turnvel;
-        tf = TURN_FUEL(tf);
-        if (pl->fuel.sum <= tf) {
-            tf = 0;
-            pl->turnacc = 0.0;
-            pl->turnvel = pl->oldturnvel;
-        } else {
-            Add_fuel(&(pl->fuel),-tf);
-            pl->oldturnvel = pl->turnvel;
-        }
+	tf = pl->oldturnvel - pl->turnvel;
+	tf = TURN_FUEL(tf);
+	if (pl->fuel.sum <= tf) {
+	    tf = 0;
+	    pl->turnacc = 0.0;
+	    pl->turnvel = pl->oldturnvel;
+	} else {
+	    Add_fuel(&(pl->fuel),-tf);
+	    pl->oldturnvel = pl->turnvel;
+	}
 #endif
 
 
 	pl->float_dir	+= pl->turnvel;
-        
+
 	if (pl->float_dir < 0)
 	    pl->float_dir += RES;
 	if (pl->float_dir >= RES)
@@ -639,10 +670,10 @@ void Update_objects(void)
 	 * Compute energy drainage
 	 */
 	if (BIT(pl->used, OBJ_SHIELD))
-            Add_fuel(&(pl->fuel), ED_SHIELD);
+	    Add_fuel(&(pl->fuel), ED_SHIELD);
 
 	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
-            Add_fuel(&(pl->fuel), ED_CLOAKING_DEVICE);
+	    Add_fuel(&(pl->fuel), ED_CLOAKING_DEVICE);
 
 #define UPDATE_RATE 100
 
@@ -665,35 +696,37 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->used, OBJ_REFUEL)) {
-	    if ((Wrap_length((pl->pos.x-World.fuel[pl->fs].pos.x),
-		             (pl->pos.y-World.fuel[pl->fs].pos.y)) > 90.0)
-		|| (pl->fuel.sum >= pl->fuel.max)) {
+	    if ((Wrap_length((pl->pos.x-World.fuel[pl->fs].pix_pos.x),
+			     (pl->pos.y-World.fuel[pl->fs].pix_pos.y)) > 90.0)
+		|| (pl->fuel.sum >= pl->fuel.max)
+		|| (World.block[World.fuel[i].blk_pos.x]
+			       [World.fuel[i].blk_pos.y] != FUEL)) {
 		CLR_BIT(pl->used, OBJ_REFUEL);
 	    } else {
-                int i = pl->fuel.num_tanks;
-                int ct = pl->fuel.current;
-                
-                do {
+		int i = pl->fuel.num_tanks;
+		int ct = pl->fuel.current;
+
+		do {
 		    if (World.fuel[pl->fs].fuel > REFUEL_RATE) {
-		        World.fuel[pl->fs].fuel -= REFUEL_RATE;
+			World.fuel[pl->fs].fuel -= REFUEL_RATE;
 			World.fuel[pl->fs].conn_mask = 0;
 			World.fuel[pl->fs].last_change = loops;
-		        Add_fuel(&(pl->fuel), REFUEL_RATE);
+			Add_fuel(&(pl->fuel), REFUEL_RATE);
 		    } else {
-		        Add_fuel(&(pl->fuel), World.fuel[pl->fs].fuel);
-		        World.fuel[pl->fs].fuel = 0;
-		        World.fuel[pl->fs].conn_mask = 0;
-		        World.fuel[pl->fs].last_change = loops;
-		        CLR_BIT(pl->used, OBJ_REFUEL);
-                        break;
+			Add_fuel(&(pl->fuel), World.fuel[pl->fs].fuel);
+			World.fuel[pl->fs].fuel = 0;
+			World.fuel[pl->fs].conn_mask = 0;
+			World.fuel[pl->fs].last_change = loops;
+			CLR_BIT(pl->used, OBJ_REFUEL);
+			break;
 		    }
-                    if (pl->fuel.current == pl->fuel.num_tanks)
-                        pl->fuel.current = 0;
-                    else
-                        pl->fuel.current += 1;
-                } while (i--);
-                pl->fuel.current = ct;
-            }
+		    if (pl->fuel.current == pl->fuel.num_tanks)
+			pl->fuel.current = 0;
+		    else
+			pl->fuel.current += 1;
+		} while (i--);
+		pl->fuel.current = ct;
+	    }
 	}
 
 	/* target repair */
@@ -742,18 +775,19 @@ void Update_objects(void)
 	 * Update acceleration vector etc.
 	 */
 	if (BIT(pl->status, THRUSTING)) {
-            float power = pl->power;
-            float f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
-            int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST) ? MAX_AFTERBURNER
+	    float power = pl->power;
+	    float f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
+	    int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST) ? MAX_AFTERBURNER
 		     : pl->afterburners);
+	    float inert = pl->mass;
 
-            if (a) {
-                power = AFTER_BURN_POWER(power, a);
-                f = AFTER_BURN_FUEL(f, a);
-            }
-	    pl->acc.x = power * tcos(pl->dir) / pl->mass;
-	    pl->acc.y = power * tsin(pl->dir) / pl->mass;
-            Add_fuel(&(pl->fuel), -f * FUEL_SCALE_FACT); /* Decrement fuel */
+	    if (a) {
+		power = AFTER_BURN_POWER(power, a);
+		f = AFTER_BURN_FUEL(f, a);
+	    }
+	    pl->acc.x = power * tcos(pl->dir) / inert;
+	    pl->acc.y = power * tsin(pl->dir) / inert;
+	    Add_fuel(&(pl->fuel), -f * FUEL_SCALE_FACT); /* Decrement fuel */
 	} else {
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
@@ -763,8 +797,8 @@ void Update_objects(void)
 	if (BIT(pl->status, WARPING)) {
 	    position w;
 	    int wx, wy, proximity,
-	    	nearestFront, nearestRear,
-	    	proxFront, proxRear;
+		nearestFront, nearestRear,
+		proxFront, proxRear;
 
 	    if (World.wormHoles[pl->wormHoleHit].countdown
 		&& World.wormHoles[pl->wormHoleHit].lastplayer != i)
@@ -777,22 +811,22 @@ void Update_objects(void)
 	    else {
 		nearestFront = nearestRear = -1;
 		proxFront = proxRear = 10000000;
-		
+
 		for (j = 0; j < World.NumWormholes; j++) {
 		    if (j == pl->wormHoleHit
 			|| World.wormHoles[j].type == WORM_IN)
 			continue;
-		    
+
 		    wx = (World.wormHoles[j].pos.x -
 			  World.wormHoles[pl->wormHoleHit].pos.x) * BLOCK_SZ;
-		    wy = (World.wormHoles[j].pos.y - 
+		    wy = (World.wormHoles[j].pos.y -
 			  World.wormHoles[pl->wormHoleHit].pos.y) * BLOCK_SZ;
 		    wx = WRAP_DX(wx);
 		    wy = WRAP_DX(wy);
-		    
+
 		    proximity = pl->vel.y * wx + pl->vel.x * wy;
 		    proximity = ABS(proximity);
-		    
+
 		    if (pl->vel.x * wx + pl->vel.y * wy < 0) {
 			if (proximity < proxRear) {
 			    nearestRear = j;
@@ -803,7 +837,7 @@ void Update_objects(void)
 			proxFront = proximity;
 		    }
 		}
-		
+
 #define RANDOM_REAR_WORM
 #ifndef RANDOM_REAR_WORM
 		j = nearestFront < 0 ? nearestRear : nearestFront;
@@ -818,7 +852,7 @@ void Update_objects(void)
 #endif /* RANDOM_REAR_WORM */
 	    }
 
-            sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 
 	    w.x = World.wormHoles[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
 	    w.y = World.wormHoles[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
@@ -867,7 +901,7 @@ void Update_objects(void)
 	    CLR_BIT(pl->status, WARPING);
 	    SET_BIT(pl->status, WARPED);
 
-            sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 	}
 
 	/*
@@ -899,38 +933,20 @@ void Update_objects(void)
 	    Move_player(i);
 	}
 
-	if (BIT(pl->status, THRUSTING))
+	if (BIT(pl->status, THRUSTING)) {
 	    Thrust(i);
+	}
 #ifdef TURN_FUEL
 	if (tf)
-            Turn_thrust(i, TURN_SPARKS(tf));
+	    Turn_thrust(i, TURN_SPARKS(tf));
 #endif
 
-	/*
-	 * Updating time player has used. Only used when timing
-	 */
-	if (pl->round != 0)
-	    pl->time++;
-
-	if (pl->round == 4) {
-	    if ((pl->time < pl->best_run) || (pl->best_run == 0)) 
-		pl->best_run = pl->time;
-	    Players[i]->last_lap_time = Players[i]->time 
-		- Players[i]->last_lap;
-	    Kill_player(i);
-	    pl->round = 0;
-	    pl->check = 0;
-	    pl->time = 0;
-	}
-
 	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
-	    pl->lock.distance = Wrap_length(pl->pos.x -
-				     Players[GetInd[pl->lock.pl_id]]->pos.x,
-				     pl->pos.y -
-				     Players[GetInd[pl->lock.pl_id]]->pos.y);
-	    pl->sensor_range = MAX(pl->fuel.sum * ENERGY_RANGE_FACTOR,
-				   VISIBILITY_DISTANCE);
+	    pl->lock.distance =
+		Wrap_length(pl->pos.x - Players[GetInd[pl->lock.pl_id]]->pos.x,
+			    pl->pos.y - Players[GetInd[pl->lock.pl_id]]->pos.y);
 	}
+	Compute_sensor_range(pl);
 
 	pl->used &= pl->have;
     }
@@ -938,7 +954,7 @@ void Update_objects(void)
     for (i=0; i<World.NumWormholes; i++)
        if (World.wormHoles[i].countdown)
 	   --World.wormHoles[i].countdown;
-	    
+
     for (i = 0; i < NumPlayers; i++) {
 	player *pl = Players[i];
 
@@ -967,24 +983,17 @@ void Update_objects(void)
      * Update tanks, Kill players that ought to be killed.
      */
     for (i=NumPlayers-1; i>=0; i--) {
-        player *pl = Players[i];
-        
+	player *pl = Players[i];
+
 	if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) == PLAYING)
 	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
 	    Throw_items(pl);
 
 	    Detonate_items(pl);
-	    
-            if (pl->robot_mode != RM_OBJECT) {
-	        Kill_player(i);
-            } else {
-                NumPseudoPlayers--;
-                Explode(i);
-                Delete_player(i);
-		updateScores = true;
-            }
-        }
+
+	    Kill_player(i);
+	}
     }
 
     /*
@@ -1008,3 +1017,4 @@ void Update_objects(void)
     if (updateScores && loops % UPDATE_SCORE_DELAY == 0)
 	Update_score_table();
 }
+

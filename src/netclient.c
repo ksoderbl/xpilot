@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 3.62 1994/05/25 07:33:36 bert Exp $
+/* $Id: netclient.c,v 3.74 1994/09/17 01:02:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -48,6 +48,8 @@
 #include <netdb.h>
 
 #include "version.h"
+#include "config.h"
+#include "const.h"
 #include "error.h"
 #include "net.h"
 #include "netclient.h"
@@ -57,8 +59,7 @@
 #include "paint.h"
 #include "xinit.h"
 #include "pack.h"
-#include "draw.h"
-#include "client.h"
+#include "socklib.h"
 
 #define TALK_RETRY	FPS
 
@@ -76,6 +77,7 @@ typedef struct {
  */
 setup_t			*Setup;
 int			receive_window_size;
+long			last_loops;
 
 /*
  * Local variables.
@@ -87,8 +89,7 @@ static frame_t		*Frames;
 static int		(*receive_tbl[256])(void),
 			(*reliable_tbl[256])(void);
 static unsigned		magic;
-static long		last_loops,
-			last_keyboard_change,
+static long		last_keyboard_change,
 			last_keyboard_ack,
 			last_keyboard_update,
 			last_send_anything,
@@ -141,14 +142,6 @@ static void Receive_init(void)
     receive_tbl[PKT_RADAR]	= Receive_radar;
     receive_tbl[PKT_RELIABLE]	= Receive_reliable;
     receive_tbl[PKT_QUIT]	= Receive_quit;
-    receive_tbl[PKT_SHOT+0]	= Receive_shot;
-    receive_tbl[PKT_SHOT+1]	= Receive_shot;
-    receive_tbl[PKT_SHOT+2]	= Receive_shot;
-    receive_tbl[PKT_SHOT+3]	= Receive_shot;
-    receive_tbl[PKT_TEAMSHOT+0] = Receive_teamshot;
-    receive_tbl[PKT_TEAMSHOT+1] = Receive_teamshot;
-    receive_tbl[PKT_TEAMSHOT+2] = Receive_teamshot;
-    receive_tbl[PKT_TEAMSHOT+3] = Receive_teamshot;
     receive_tbl[PKT_MODIFIERS]  = Receive_modifiers;
     receive_tbl[PKT_FASTSHOT]	= Receive_fastshot;
     receive_tbl[PKT_THRUSTTIME] = Receive_thrusttime;
@@ -161,6 +154,7 @@ static void Receive_init(void)
     reliable_tbl[PKT_MESSAGE]	= Receive_message;
     reliable_tbl[PKT_PLAYER]	= Receive_player;
     reliable_tbl[PKT_SCORE]	= Receive_score;
+    reliable_tbl[PKT_TIMING]	= Receive_timing;
     reliable_tbl[PKT_LEAVE]	= Receive_leave;
     reliable_tbl[PKT_WAR]	= Receive_war;
     reliable_tbl[PKT_SEEK]	= Receive_seek;
@@ -247,7 +241,7 @@ static int Uncompress_map(void)
 }
 
 /*
- * Receive the map data and some game parameters from 
+ * Receive the map data and some game parameters from
  * the server.  The map data may be in compressed form.
  */
 int Net_setup(void)
@@ -391,7 +385,7 @@ int Net_setup(void)
  * Send the first packet to the server with our name,
  * nick and display contained in it.
  * The server uses this data to verify that the packet
- * is from the right UDP connection, it already has 
+ * is from the right UDP connection, it already has
  * this info from the ENTER_GAME_pack.
  */
 int Net_verify(char *real, char *nick, char *disp, int my_team)
@@ -421,7 +415,9 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 	    }
 	    time(&last);
 #ifndef SILENT
-	    printf("Waiting for verify response\n");
+	    if (retries > 1) {
+		printf("Waiting for verify response\n");
+	    }
 #endif
 	}
 	SetTimeout(1, 0);
@@ -478,7 +474,9 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 	break;
     }
 #ifndef SILENT
-    printf("Verified correctly\n");
+    if (retries > 1) {
+	printf("Verified correctly\n");
+    }
 #endif
     return 0;
 }
@@ -564,7 +562,7 @@ int Net_init(char *server, int port)
     return 0;
 }
 
-/* 
+/*
  * Cleanup all the network buffers and close the datagram socket.
  * Also try to send the server a quit packet if possible.
  * Because this quit packet may get lost we send one at the
@@ -677,7 +675,10 @@ int Net_start(void)
 	    if (Send_shape(shipShape) == -1
 		|| Packet_printf(&wbuf, "%c", PKT_PLAY) <= 0
 		|| Client_power() == -1
-	    	|| Sockbuf_flush(&wbuf) == -1) {
+#ifdef SOUND
+		|| Send_audio_request(1) == -1
+#endif
+		|| Sockbuf_flush(&wbuf) == -1) {
 		error("Can't send start play packet");
 		return -1;
 	    }
@@ -841,8 +842,20 @@ static int Net_packet(void)
 	    error("Got reply packet (%d,%d)", replyto, status);
 	}
 	else if (reliable_tbl[type] == NULL) {
+	    int i;
 	    errno = 0;
-	    error("Received unknown reliable data packet type (%d)", type);
+	    error("Received unknown reliable data packet type (%d,%d,%d)",
+		  type, cbuf.ptr - cbuf.buf, cbuf.len);
+	    printf("\tdumping buffer for debugging:\n");
+	    for (i = 0; i < cbuf.len; i++) {
+		printf("%3d", cbuf.buf[i] & 0xFF);
+		if (i % 20 == 0) {
+		    printf("\n");
+		} else {
+		    printf(" ");
+		}
+	    }
+	    printf("\n");
 	    return -1;
 	}
 	else if ((result = (*reliable_tbl[type])()) <= 0) {
@@ -1138,8 +1151,8 @@ int Net_input(void)
      * or we haven't sent anything for a while (keepalive)
      * then we send our current keyboard state.
      */
-    if (last_keyboard_ack != last_keyboard_change
-	&& last_keyboard_update < last_loops
+    if ((last_keyboard_ack != last_keyboard_change
+	    && last_keyboard_update < last_loops)
 	|| last_loops - last_send_anything > 5 * Setup->frames_per_second) {
 	Key_update();
 	last_send_anything = last_loops;
@@ -1312,9 +1325,6 @@ int Net_ask_for_motd(long offset, long maxlen)
 	error("Can't ask motd");
 	return -1;
     }
-#ifndef SILENT
-    printf("Asking for a motd\n");
-#endif
 
     return 0;
 }
@@ -1329,7 +1339,7 @@ int Receive_self(void)
 {
     int		n;
     short	x, y, vx, vy, lockId, lockDist,
-    		fuelSum, fuelMax;
+		fuelSum, fuelMax;
     u_byte	ch, heading, power, turnspeed, turnresistance,
 		nextCheckPoint, lockDir, autopilotLight, currentTank, stat;
     u_byte	num_items[NUM_ITEMS];
@@ -1649,43 +1659,6 @@ int Receive_debris(void)
     return (r == -1) ? -1 : 1;
 }
 
-int Receive_shot(void)
-{
-    int		n, color;
-    short	x, y;
-    u_byte	ch;
-
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
-	return n;
-    }
-    color = ch - PKT_SHOT;
-    if ((n = Handle_shot(x, y, color)) == -1) {
-	return -1;
-    }
-    return 1;
-}
-
-int Receive_teamshot(void)
-{
-    int		n, color;
-    short	x, y;
-    u_byte	ch;
-
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
-	return n;
-    }
-    color = ch - PKT_TEAMSHOT;
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad teamshot color %d (%d)", color, ch);
-	return -1;
-    }
-    if ((n = Handle_teamshot(x, y, color)) == -1) {
-	return -1;
-    }
-    return 1;
-}
-
 int Receive_ecm(void)
 {
     int			n;
@@ -1707,13 +1680,13 @@ int Receive_trans(void)
     short		x1, y1, x2, y2;
     u_byte		ch;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%hd%hd", 
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%hd%hd",
 			  &ch, &x1, &y1, &x2, &y2)) <= 0) {
 	return n;
     }
     if ((n = Handle_trans(x1, y1, x2, y2)) == -1) {
 	return -1;
-    } 
+    }
     return 1;
 }
 
@@ -1741,7 +1714,7 @@ int Receive_radar(void)
     if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c", &ch, &x, &y, &size)) <= 0) {
 	return n;
     }
-	    
+
     if ((n = Handle_radar(x, y, size)) == -1) {
 		    return -1;
     }
@@ -1813,20 +1786,27 @@ int Receive_player(void)
 {
     int			n;
     short		id;
-    u_byte		ch, team, mychar;
+    u_byte		ch, myteam, mychar;
     char		name[MAX_CHARS],
 			real[MAX_CHARS],
 			host[MAX_CHARS],
-			shape[MSG_LEN];
+			shape[2*MSG_LEN],
+			*cbuf_ptr = cbuf.ptr;
 
     if ((n = Packet_scanf(&cbuf,
 			  "%c%hd%c%c" "%s%s%s" "%S",
-			  &ch, &id, &team, &mychar,
+			  &ch, &id, &myteam, &mychar,
 			  name, real, host,
 			  shape)) <= 0) {
 	return n;
     }
-    if ((n = Handle_player(id, team, mychar, name, real, host, shape)) == -1) {
+    if (version > 0x3200) {
+	if ((n = Packet_scanf(&cbuf, "%S", &shape[strlen(shape)])) <= 0) {
+	    cbuf.ptr = cbuf_ptr;
+	    return n;
+	}
+    }
+    if ((n = Handle_player(id, myteam, mychar, name, real, host, shape)) == -1) {
 	return -1;
     }
     return 1;
@@ -1840,7 +1820,7 @@ int Receive_score_object(void)
     char		msg[MAX_CHARS];
     u_byte		ch;
 
-    if ((n = Packet_scanf(&cbuf, "%c%hd%hu%hu%s", 
+    if ((n = Packet_scanf(&cbuf, "%c%hd%hu%hu%s",
 			  &ch, &score, &x, &y, msg)) <= 0) {
 	return n;
     }
@@ -1863,6 +1843,27 @@ int Receive_score(void)
 	return n;
     }
     if ((n = Handle_score(id, score, life, mychar)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_timing(void)
+{
+    int			n,
+			check,
+			round;
+    short		id;
+    unsigned short	timing;
+    u_byte		ch;
+
+    n = Packet_scanf(&cbuf, "%c%hd%hu", &ch, &id, &timing);
+    if (n <= 0) {
+	return n;
+    }
+    check = timing % MAX_CHECKS;
+    round = timing / MAX_CHECKS;
+    if ((n = Handle_timing(id, check, round)) == -1) {
 	return -1;
     }
     return 1;
@@ -1908,7 +1909,7 @@ int Receive_target(void)
 			damage;
     u_byte		ch;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hu%hu%hu", &ch, 
+    if ((n = Packet_scanf(&rbuf, "%c%hu%hu%hu", &ch,
 			  &num, &dead_time, &damage)) <= 0) {
 	return n;
     }
@@ -2102,13 +2103,18 @@ int Send_keyboard(u_byte *keyboard_vector)
 int Send_shape(char *str)
 {
     wireobj		*w;
-    char		buf[MSG_LEN];
+    char		buf[MSG_LEN], ext[MSG_LEN];
 
     w = Convert_shape_str(str);
-    Convert_ship_2_string(w, buf, (version < 0x3200) ? 0x3100 : 0x3200);
+    Convert_ship_2_string(w, buf, ext, (version < 0x3200) ? 0x3100 : 0x3200);
     Free_ship_shape(w);
     if (Packet_printf(&wbuf, "%c%S", PKT_SHAPE, buf) <= 0) {
 	return -1;
+    }
+    if (version > 0x3200) {
+	if (Packet_printf(&wbuf, "%S", ext) <= 0) {
+	    return -1;
+	}
     }
     return 0;
 }
@@ -2255,8 +2261,8 @@ int Send_display(void)
 {
     int			num_col;
 
-    num_col = (maxColors == 8) ? 4
-	: (maxColors == 16) ? 8
+    num_col = (maxColors == 8) ? 3
+	: (maxColors == 16) ? 7
 	: 0;
     if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
 		      draw_width, draw_height, num_col, spark_rand) == -1) {
@@ -2275,3 +2281,29 @@ int Send_modifier_bank(int bank)
 	return -1;
     return 0;
 }
+
+int Send_pointer_move(int movement)
+{
+    if (version > 0x3201) {
+	if (Packet_printf(&wbuf, "%c%hd", PKT_POINTER_MOVE,
+			  movement) == -1) {
+	    return -1;
+	}
+    }
+    return 0;
+}
+
+int Send_audio_request(int onoff)
+{
+    if (version < 0x3250) {
+	return 0;
+    }
+#ifndef SOUND
+    onoff = 0;
+#endif
+    if (Packet_printf(&wbuf, "%c%c", PKT_REQUEST_AUDIO, (onoff != 0)) == -1) {
+	return -1;
+    }
+    return 0;
+}
+

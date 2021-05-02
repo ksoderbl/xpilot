@@ -1,4 +1,4 @@
-/* $Id: net.c,v 3.21 1994/04/11 16:57:52 bert Exp $
+/* $Id: net.c,v 3.25 1994/07/10 19:48:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -46,10 +46,13 @@
 #include <netdb.h>
 
 #include "version.h"
+#include "config.h"
+#include "const.h"
 #include "error.h"
 #include "net.h"
 #include "packet.h"
 #include "bit.h"
+#include "socklib.h"
 
 int last_packet_of_frame;
 
@@ -408,7 +411,6 @@ int Packet_printf(va_alist)
     unsigned short	usval;
     long		lval;
     unsigned long	ulval;
-    float		fval;
     char		*str,
 			*end,
 			*buf,
@@ -426,14 +428,10 @@ int Packet_printf(va_alist)
 #endif
 
     /*
-     * We only send complete packets, so check if it will fit.
+     * Stream socket buffers should flush the buffer if running
+     * out of write space.  This is currently not needed cause
+     * only datagram sockets are used or the buffer is locked.
      */
-    if (sbuf->size < sbuf->len + MAX_PACKET_SIZE) {
-	if (BIT(sbuf->state, SOCKBUF_LOCK | SOCKBUF_DGRAM) == 0
-	    && Sockbuf_flush(sbuf) == -1) {
-	    failure = PRINTF_IO;
-	}
-    }
 
     /*
      * Mark the end of the available buffer space,
@@ -446,8 +444,6 @@ int Packet_printf(va_alist)
     end = sbuf->buf + sbuf->size;
     if (last_packet_of_frame != 1) {
 	end -= SOCKBUF_WRITE_SPARE;
-    } else {
-	last_packet_of_frame = 0;
     }
     buf = sbuf->buf + sbuf->len;
     for (i = 0; failure == 0 && fmt[i] != '\0'; i++) {
@@ -529,19 +525,6 @@ int Packet_printf(va_alist)
 		    break;
 		}
 		break;
-	    case 'f':
-		if (buf + 4 >= end) {
-		    failure = PRINTF_SIZE;
-		    break;
-		}
-		/*
-		 * Very likely to cause problems across
-		 * different architectures.  Discouraged.
-		 */
-		fval = va_arg(ap, double);
-		memcpy(buf, &fval, 4);
-		buf += 4;
-		break;
 	    case 'S':	/* Big strings */
 	    case 's':	/* Small strings */
 		max_str_size = (fmt[i] == 'S') ? MSG_LEN : MAX_CHARS;
@@ -557,7 +540,7 @@ int Packet_printf(va_alist)
 			break;
 		    }
 		} while ((*buf++ = *str++) != '\0');
-		if (buf >= stop) {
+		if (buf > stop) {
 		    failure = PRINTF_SIZE;
 		}
 		break;
@@ -590,17 +573,7 @@ int Packet_printf(va_alist)
 	}
     } else {
 	count = buf - (sbuf->buf + sbuf->len);
-	if (count > MAX_PACKET_SIZE) {
-#ifndef SILENT
-	    printf("Max packet size exceeded while printing (\"%s\",%d)\n",
-		fmt, count);
-#endif
-	    /* We don't want to send packets that are too big */
-	    /* failure = PRINTF_SIZE; */
-	    count = -1;
-	} else {
-	    sbuf->len += count;
-	}
+	sbuf->len += count;
     }
 
     va_end(ap);
@@ -627,7 +600,6 @@ int Packet_scanf(va_alist)
     unsigned short	*usptr;
     long		*lptr;
     unsigned long	*ulptr;
-    float		*fptr;
     char		*cptr,
 			*str;
     va_list		ap;
@@ -772,29 +744,6 @@ int Packet_scanf(va_alist)
 		    break;
 		}
 		break;
-	    case 'f':
-		/*
-		 * Very likely to cause problems across
-		 * different architectures.  Discouraged.
-		 */
-		if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
-		    if (BIT(sbuf->state, SOCKBUF_DGRAM | SOCKBUF_LOCK) != 0) {
-			failure = 3;
-			break;
-		    }
-		    if (Sockbuf_read(sbuf) == -1) {
-			failure = 2;
-			break;
-		    }
-		    if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j + 4]) {
-			failure = 3;
-			break;
-		    }
-		}
-		fptr = va_arg(ap, float *);
-		memcpy(fptr, sbuf->ptr, 4);
-		j += 4;
-		break;
 	    case 'S':	/* Big strings */
 	    case 's':	/* Small strings */
 		max_str_size = (fmt[i] == 'S') ? MSG_LEN : MAX_CHARS;
@@ -848,15 +797,6 @@ int Packet_scanf(va_alist)
 	    }
 	} else {
 	    failure = 1;
-	}
-    }
-    if (j > MAX_PACKET_SIZE) {
-#ifndef SILENT
-	errno = 0;
-	error("Max packet size exceeded while scanning (\"%s\",%d)", fmt, j);
-#endif
-	if (failure == 0) {
-	    failure = 3;
 	}
     }
     if (failure == 1) {

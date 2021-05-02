@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.43 1994/05/25 07:34:45 bert Exp $
+/* $Id: xpilot.c,v 3.49 1994/07/10 20:11:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -52,7 +52,7 @@
 #else
 #include <sys/time.h>
 #endif
-#ifndef LINUX
+#ifndef LINUX0
 #include <net/if.h>
 #endif
 #include <netdb.h>
@@ -60,10 +60,12 @@
 
 #include "version.h"
 #include "config.h"
+#include "const.h"
 #include "types.h"
 #include "pack.h"
 #include "bit.h"
 #include "error.h"
+#include "socklib.h"
 #include "net.h"
 #ifdef SUNCMW
 #include "cmw.h"
@@ -72,36 +74,45 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.43 1994/05/25 07:34:45 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.49 1994/07/10 20:11:01 bert Exp $";
 #endif
 
-#if defined(LINUX) || defined(VMS)
+#if defined(LINUX0) || defined(VMS)
 # ifndef QUERY_FUDGED
 #  define QUERY_FUDGED
 # endif
 #endif
 
+#ifdef	LIMIT_ACCESS
+extern bool		Is_allowed(char *);
+#endif
+extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
+			  int *my_team, int *list, int *join, int *noLocalMotd,
+			  char *nickName, char *dispName, char *shut_msg);
+extern int Join(char *server_addr, char *server_name, int port,
+		char *real, char *nick, int my_team,
+		char *display, unsigned version);
+
+
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */
 
 
-static int		socket_c,		/* Contact socket */
-    			contact_port = SERVER_PORT,
-    			server_port,
-    			login_port;
+static int		contact_port = SERVER_PORT,
+			server_port,
+			login_port;
 static char		nick_name[MAX_NAME_LEN],
 			real_name[MAX_NAME_LEN],
-    			server_addr[MAXHOSTNAMELEN],
-    			server_name[MAXHOSTNAMELEN],
-    			hostname[MAXHOSTNAMELEN],
-    			display[MAX_DISP_LEN],
+			server_addr[MAXHOSTNAMELEN],
+			server_name[MAXHOSTNAMELEN],
+			hostname[MAXHOSTNAMELEN],
+			display[MAX_DISP_LEN],
 			shutdown_reason[MAX_CHARS];
 static int		auto_connect = false,
-    			list_servers = false,
+			list_servers = false,
 			noLocalMotd = false,
-    			auto_shutdown = false;
+			auto_shutdown = false;
 static unsigned		server_version;
 static int		team = TEAM_NOT_SET;
-static sockbuf_t	sbuf;			/* contact buffer */
 
 char			**Argv;
 int			Argc;
@@ -129,18 +140,18 @@ static void printfile(char *filename)
 
 
 
-static bool Get_contact_message(void)
+static bool Get_contact_message(sockbuf_t *sbuf)
 {
     int			len;
     unsigned		magic;
     unsigned char	reply_to, status;
     bool		readable = false;
 
-    SetTimeout(3, 0);
-    while (readable == false && SocketReadable(socket_c) > 0) {
+    SetTimeout(2, 0);
+    while (readable == false && SocketReadable(sbuf->sock) > 0) {
 
-	Sockbuf_clear(&sbuf);
-	len = DgramReceiveAny(sbuf.sock, sbuf.buf, sbuf.size);
+	Sockbuf_clear(sbuf);
+	len = DgramReceiveAny(sbuf->sock, sbuf->buf, sbuf->size);
 	if (len <= 0) {
 	    if (len == 0) {
 		continue;
@@ -148,7 +159,7 @@ static bool Get_contact_message(void)
 	    error("DgramReceiveAny, contact message");
 	    exit(-1);
 	}
-	sbuf.len = len;
+	sbuf->len = len;
 
 	/*
 	 * Get server's host and port.
@@ -157,7 +168,7 @@ static bool Get_contact_message(void)
 	server_port = DgramLastport();
 	strcpy(server_name, DgramLastname());
 
-	if (Packet_scanf(&sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0) {
+	if (Packet_scanf(sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0) {
 	    errno = 0;
 	    error("Incomplete contact reply message (%d)", len);
 	}
@@ -222,7 +233,7 @@ static int Get_reply_message(sockbuf_t *ibuf)
 	}
     } else
 	return (0);
-    
+
     return (len);
 }
 
@@ -342,13 +353,16 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    }
 	    else {
 		int newteam;
-		if (sscanf(str, " %d", &newteam) != 1
-		    || newteam < 0 || newteam > 9) {
+		if (sscanf(str, " %d", &newteam) != 1) {
 		    printf("Invalid team specification: %s.\n", str);
 		}
-		else {
+		else if (newteam >= 0 && newteam <= 9) {
 		    team = newteam;
 		    printf("Team set to %d\n", team);
+		}
+		else {
+		    team = TEAM_NOT_SET;
+		    printf("Team set to unspecified\n");
 		}
 	    }
 	    continue;
@@ -391,6 +405,14 @@ static bool Process_commands(sockbuf_t *ibuf)
 	case '\0':
 	    c = 'J';
 	case 'J':				/* Trying to enter game. */
+	    if (str[1] >= '0' && str[1] <= '9') {
+		team = str[1] - '0';
+		printf("Joining team %d\n", team);
+	    }
+	    else if (str[1] == '-') {
+		team = TEAM_NOT_SET;
+		printf("Team set to unspecified\n");
+	    }
 	    Packet_printf(ibuf, "%c%s%s%s%d", ENTER_GAME_pack,
 			  nick_name, display, hostname, team);
 	    break;
@@ -412,11 +434,13 @@ static bool Process_commands(sockbuf_t *ibuf)
 		   "R(#) -   set maximum number of Robots. (only owner)\n"
 		   "O    -   Modify a server option.       (only owner)\n"
 		   "V    -   View the server options.\n"
-		   "J or just Return enters the game.\n"
+		   "J(&) or just Return enters the game.\n"
 		   "(*) If you don't specify any delay, you will signal that\n"
 		   "    the server should stop an ongoing shutdown.\n"
 		   "(#) Not specifying the maximum number of robots is\n"
-		   "    the same as specifying 0 robots.\n");
+		   "    the same as specifying 0 robots.\n"
+		   "(&) You may specify a team number after the J.\n"
+		  );
 
 	    /*
 	     * Next command.
@@ -424,7 +448,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    continue;
 	}
 
-	retries = (c == 'J') ? 2 : 0;
+	retries = (c == 'J' || c == 'S') ? 2 : 0;
 	for (i = 0; i <= retries; i++) {
 	    if (i > 0) {
 		SetTimeout(1, 0);
@@ -562,10 +586,10 @@ static bool Process_commands(sockbuf_t *ibuf)
 		return (false);
 
 	    /*
-	     * If we wanted to enter the game and we were allowed to, return true
-	     * (we are done).  If we weren't allowed, either return false (get next
-	     * server) if we are auto_connecting or get next command if we aren't
-	     * auto_connecting (interactive).
+	     * If we wanted to enter the game and we were allowed to, return
+	     * true (we are done).  If we weren't allowed, either return false
+	     * (get next server) if we are auto_connecting or get next command
+	     * if we aren't auto_connecting (interactive).
 	     */
 	    if (reply_to == ENTER_GAME_pack) {
 		if (status == SUCCESS && login_port > 0) {
@@ -624,21 +648,86 @@ static bool Connect_to_server(void)
 }
 
 
+static bool Contact_servers(int count, char **servers)
+{
+    bool		connected = false;
+    const int		max_retries = 2;
+    int			i;
+    int			fd;
+    int			retries;
+    int			contacted;
+    sockbuf_t		sbuf;			/* contact buffer */
+
+
+    if ((fd = CreateDgramSocket(0)) == -1) {
+	error("Could not create connection socket");
+	exit(1);
+    }
+    if (Sockbuf_init(&sbuf, fd, CLIENT_RECV_SIZE,
+		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
+	error("No memory for contact buffer");
+	exit(1);
+    }
+    if (!count) {
+	retries = 0;
+	contacted = 0;
+	do {
+	    Sockbuf_clear(&sbuf);
+	    Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
+			  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
+	    if (Query_all(sbuf.sock, contact_port, sbuf.buf, sbuf.len) == -1) {
+		error("Couldn't send contact requests");
+		exit(1);
+	    }
+	    if (retries) {
+		printf("Searching again...\n");
+	    }
+	    while (Get_contact_message(&sbuf)) {
+		contacted++;
+		if ((connected = Connect_to_server()) != 0) {
+		    break;
+		}
+	    }
+	} while (!contacted && retries++ < max_retries);
+    }
+    else {
+	for (i = 0; i < count; i++) {
+	    retries = 0;
+	    contacted = 0;
+	    do {
+		Sockbuf_clear(&sbuf);
+		Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
+			      real_name, GetPortNum(sbuf.sock), CONTACT_pack);
+		if (DgramSend(sbuf.sock, servers[i], contact_port,
+			      sbuf.buf, sbuf.len) == -1) {
+		    error("Can't contact server at %s on port %d",
+			  servers[i], contact_port);
+		}
+		if (retries) {
+		    printf("Retrying %s...\n", servers[i]);
+		}
+		if (Get_contact_message(&sbuf)) {
+		    contacted++;
+		    if ((connected = Connect_to_server()) != 0) {
+			break;
+		    }
+		}
+	    } while (!contacted && retries++ < max_retries);
+	}
+    }
+    Sockbuf_cleanup(&sbuf);
+    close(fd);
+
+    return (connected ? true : false);
+}
+
 
 /*
  * Oh glorious main(), without thee we cannot exist.
  */
 int main(int argc, char *argv[])
 {
-    int			i, n;
     struct passwd	*pwent;
-    bool		connected = false;
-#ifdef	LIMIT_ACCESS
-    extern bool		Is_allowed(char *);
-#endif
-    void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-		       int *my_team, int *list, int *join, int *noLocalMotd,
-		       char *nickName, char *dispName, char *shut_msg);
 
 
     /*
@@ -664,18 +753,6 @@ int main(int argc, char *argv[])
     init_error(argv[0]);
     GetLocalHostName(hostname, sizeof hostname);
 
-    if ((socket_c = CreateDgramSocket(0)) == -1) {
-	error("Could not create connection socket");
-	SocketClose(socket_c);
-	exit(-1);
-    }
-    if (Sockbuf_init(&sbuf, socket_c, CLIENT_RECV_SIZE,
-		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for contact buffer");
-	SocketClose(socket_c);
-	exit(-1);
-    }
-
     /*
      * --- Setup core of pack ---
      */
@@ -690,9 +767,6 @@ int main(int argc, char *argv[])
     strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
 #endif
     nick_name[0] = '\0';
-    Sockbuf_clear(&sbuf);
-    Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
-		  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
 
 
     /*
@@ -727,60 +801,13 @@ int main(int argc, char *argv[])
 	exit (-1);
 #endif
 
-    /*
-     * --- Try to contact server ---
-     */
-    if (argc > 1) {		/* Server specified on command line? */
-	n = 0;
-	for (i = 1; i < argc; i++) {
-	    if (DgramSend(sbuf.sock, argv[i], contact_port,
-			  sbuf.buf, sbuf.len) == -1) {
-		error("Can't send contact request to server at %s port %d",
-		      argv[i], contact_port);
-	    } else {
-		n++;
-	    }
-	}
-	if (n == 0) {
-	    exit(1);
-	}
-
-	while (Get_contact_message()) {
-	    if ((connected = Connect_to_server()) != 0 || --n == 0) {
-		break;
-	    }
-	}
-
-    } else {				/* Search for servers... */
-	SetTimeout(3, 0);
-	if (Query_all(sbuf.sock, contact_port, sbuf.buf, sbuf.len) == -1) {
-	    error("Couldn't send contact requests");
-	    exit(1);
-	}
-
-	/*
-	 * Wait for answer.
-	 */
-	while (Get_contact_message()) {
-	    if ((connected = Connect_to_server()) != 0) {
-		break;
-	    }
-	}
-    }
-
-    close(socket_c);
-    Sockbuf_cleanup(&sbuf);
-    if (connected) {
-	extern int Join(char *server_addr, char *server_name, int port,
-			char *real, char *nick, int my_team,
-			char *display, unsigned version);
-
+    if (Contact_servers(argc - 1, &argv[1])) {
 	Join(server_addr, server_name, login_port,
 	     real_name, nick_name, team,
 	     display, server_version);
+	return 0;
     }
-
-    return ((connected == true) ? 0 : 1);
+    return 1;
 }
 
 
@@ -929,7 +956,7 @@ static int Query_fudged(int sockfd, int port, char *msg, int msglen)
 static int Query_all(int sockfd, int port, char *msg, int msglen)
 {
 #ifdef QUERY_FUDGED
-    return Query_fudged(sbuf.sock, contact_port, sbuf.buf, sbuf.len);
+    return Query_fudged(sockfd, contact_port, msg, msglen);
 #else
 
     int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
@@ -971,7 +998,7 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 	D( printf("\taddress family %d\n", ifreqp->ifr_addr.sa_family); );
 
 	len += sizeof(struct ifreq);
-#if BSD >= 199006 || HAVE_SA_LEN
+#if BSD >= 199006 || HAVE_SA_LEN || defined(_SOCKADDR_LEN) || defined(_AIX)
 	/*
 	 * Recent TCP/IP implementations have a sa_len member in the socket
 	 * address structure in order to support protocol families that have
@@ -1075,7 +1102,7 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 		 */
 		continue;
 	    }
-	    
+
 	    /*
 	     * Broadcasting failed.
 	     * Try it in a different (kludgy) manner.

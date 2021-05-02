@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.31 1994/05/25 07:40:52 bert Exp $
+/* $Id: Imakefile,v 3.38 1994/09/17 00:53:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -50,26 +50,29 @@ LOCALGURU = xpilot@cs.uit.no
  * DEFS should be used for program specific defines.
  * Currently supported flags are:
  *
- *  LOG				- try to log every server start
- *  TURN_THRUST			- makes turning drain fuel and gives
- *				  you a nice spark...
- *  SILENT			- makes the server real silent.
- *  ERASE			- use a different, possible faster, frame
- *				  drawing technique which is not perfect yet.
- *				  It needs more work by a volunteer.
- *  SPARC_CMAP_HACK		- try the alternate colormap swapping code
- *				  that talks directly to the sparc hardware
- *				  WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
- *				  CAUTION: dangerous if you don't know
- *				  what it does and how it works.
- *				  It needs more work by a volunteer.
+ *  LOG			- try to log every server start
+ *  TURN_THRUST		- makes turning drain fuel and gives
+ *			  you a nice spark...
+ *  SILENT		- makes the server real silent.
+ *  SERVER_SOUND	- sound support in the server only, not in the client.
+ *  ERASE=1		- use a different, possible faster, frame
+ *			  drawing technique which is not perfect yet.
+ *			  It needs more work by a volunteer.
+ *  SPARC_CMAP_HACK	- try the alternate colormap swapping code
+ *			  that talks directly to the sparc hardware
+ *			  Only makes sense together with -DERASE=1.
+ *			  WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
+ *			  CAUTION: dangerous if you don't know
+ *			  what it does and how it works.
+ *			  It needs more work by a volunteer.
+ *  JOYSTICK		- joystick support for Linux 1.0, needs joystick-0.7.
  *
  * You should also set these appropriately (see config.h):
  *
- *  LOCALGURU			- define to the person in charge
- *				  of xpilot on this site.
- *  LIBDIR			- define to where you want the help-files etc.
- *				  (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
+ *  LOCALGURU		- define to the person in charge
+ *			  of xpilot on this site.
+ *  LIBDIR		- define to where you want the help-files etc.
+ *			  (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
  */
 DEFS = -DLOCALGURU=\"$(LOCALGURU)\"  -DLIBDIR=\"$(LIBDIR)/\"
 
@@ -135,6 +138,11 @@ RPLAYAUDIOLIB = -L/usr/local/lib/rplay -lrplay
 AFAUDIOINC = -I/usr/include/AF
 AFAUDIOLIB = -lAF -lAFUtil
 
+/* Note that this doesn't really work well.  Dunno why.  Blame Alib & Aserver. */
+/* #define HP_SOUND			/* Uncomment for HP sound support */
+HPAUDIOINC = 
+HPAUDIOLIB = -lAlib
+
 /*
  * Miscellaneous.
  * SGI users must select their CCOPTIONS here.
@@ -178,11 +186,19 @@ USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
   AUDIOOBJ = afaudio.o
   DEFINES = $(DEFS) -DSOUND
 #else
+#if defined(HP_SOUND)
+  AUDIOINC = $(HPAUDIOINC)
+  AUDIOLIB = $(HPAUDIOLIB)
+  AUDIOSRC = hpaudio.c
+  AUDIOOBJ = hpaudio.o
+  DEFINES = $(DEFS) -DSOUND
+#else
   AUDIOINC =
   AUDIOLIB =
   AUDIOSRC =
   AUDIOOBJ =
   DEFINES = $(DEFS)
+#endif
 #endif
 #endif
 #endif
@@ -229,8 +245,8 @@ install::
 	    [ -r $(BINDIR)/$$prog-$(VERSION) ] && rm -f $(BINDIR)/$$prog-$(VERSION); \
 	    ( set -x ; ln $(BINDIR)/$$prog $(BINDIR)/$$prog-$(VERSION) ) \
 	done
-	@cd ../man6; for manpage in *.6; do \
-	    ( set -x ; $(MANFILT) <$$manpage >$(MANDIR)/xpilot.$(MANEXT) ) \
+	@cd ../man6; for manpage in xpilot xpilots; do \
+	    ( set -x ; $(MANFILT) <$$manpage.6 >$(MANDIR)/$$manpage.$(MANEXT) ) \
 	done
 	$(MKDIRHIER) $(LIBDIR)/maps;
 	@cd ../lib; for libfile in *; do \

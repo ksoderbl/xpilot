@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.44 1994/05/12 20:47:07 bert Exp $
+/* $Id: const.h,v 3.50 1994/08/22 19:15:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -53,7 +53,7 @@
 #ifndef	M_PI
 #   define PI		3.14159265358979323846
 #else
-#   define	PI		M_PI
+#   define PI		M_PI
 #endif
 
 /* Not everyone has LINE_MAX either, *sigh* */
@@ -61,13 +61,28 @@
 #   define LINE_MAX 2048
 #endif
 
-#define RES			128
+#define RES		128
 
-#define BLOCK_SZ		35
+#define BLOCK_SZ	35
 
 #define TABLE_SIZE	RES
-#define tsin(x)		(tbl_sin[MOD2(x, TABLE_SIZE)])
-#define tcos(x)		(tbl_sin[MOD2((x)+TABLE_SIZE/4, TABLE_SIZE)])
+
+#if 0
+  /* The way it was: one table, and always range checking. */
+# define tsin(x)	(tbl_sin[MOD2(x, TABLE_SIZE)])
+# define tcos(x)	(tbl_sin[MOD2((x)+TABLE_SIZE/4, TABLE_SIZE)])
+#else
+# if 0
+   /* Range checking: find out where the table size is exceeded. */
+#  define CHK2(x, m)	((MOD2(x, m) != x) ? (printf("MOD %s:%d:%s\n", __FILE__, __LINE__, #x), MOD2(x, m)) : (x))
+# else
+   /* No range checking. */
+#  define CHK2(x, m)	(x)
+# endif
+  /* New table lookup with optional range checking and no extra calculations. */
+# define tsin(x)	(tbl_sin[CHK2(x, TABLE_SIZE)])
+# define tcos(x)	(tbl_cos[CHK2(x, TABLE_SIZE)])
+#endif
 
 #define NELEM(a)	((int)(sizeof(a) / sizeof((a)[0])))
 
@@ -110,6 +125,10 @@
 #ifndef MOD2
 #  define MOD2(x, m)		( (x) & ((m) - 1) )
 #endif	/* MOD2 */
+
+/* Do NOT change these! */
+#define MAX_CHECKS		26
+#define MAX_TEAMS		10
 
 #define PSEUDO_TEAM(i,j)\
 	(Players[(i)]->pseudo_team == Players[(j)]->pseudo_team)
@@ -222,6 +241,7 @@
 	((BIT((o)->mods.nuclear, NUCLEAR) && BIT((o)->mods.warhead, CLUSTER)) \
 	 ? nukeClusterDamage : 1.0f)
 
+#define MINE_RADIUS		8
 #define MINE_RANGE              (VISIBILITY_DISTANCE*0.1)
 #define MINE_SENSE_BASE_RANGE   (MINE_RANGE*1.3)
 #define MINE_SENSE_RANGE_FACTOR (MINE_RANGE*0.3)
@@ -272,14 +292,12 @@
 #define HEAT_SHOT_LEN		15
 #define TORPEDO_LEN		18
 
-#define MINE_RADIUS		8
-
 #define MAX_LASERS		5
 #define PULSE_SPEED		90
 #define PULSE_SAMPLE_DISTANCE	5
 #define PULSE_LENGTH		(PULSE_SPEED - PULSE_SAMPLE_DISTANCE)
 #define PULSE_MAX_LIFE		6
-#define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS - (lasers)) / 2)
+#define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS+1 - (lasers)) / 4)
 
 #define MAX_TRACTORS		4
 
@@ -297,6 +315,7 @@
 #define BALL_STRING_LENGTH      120
 
 #define TEAM_NOT_SET		0xffff
+#define TEAM_NOT_SET_STR	"4095"
 
 #define DEBRIS_MASS             4.5
 #define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)

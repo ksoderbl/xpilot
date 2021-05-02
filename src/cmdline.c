@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.58 1994/05/23 19:04:27 bert Exp $
+/* $Id: cmdline.c,v 3.69 1994/09/17 00:56:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,14 +24,19 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <stdio.h>
+
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "robot.h"
-#include "map.h"
 #include "defaults.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.58 1994/05/23 19:04:27 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.69 1994/09/17 00:56:29 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -49,7 +54,6 @@ int		robotLeaveScore;	/* Min score for robot to live (0=off)*/
 int		robotLeaveRatio;	/* Min ratio for robot to live (0=off)*/
 int		ShotsMax;		/* Max shots pr. player */
 bool		ShotsGravity;		/* Shots affected by gravity */
-bool		LooseMass;		/* Loose mass when firering */
 int		fireRepeatRate;		/* Frames per autorepeat fire (0=off) */
 
 bool		RawMode;		/* Let robots live even if there */
@@ -89,8 +93,11 @@ float		objectWallBounceLifeFactor;	/* reduce object life */
 float		wallBounceFuelDrainMult;/* Wall bouncing fuel drain factor */
 float		wallBounceDestroyItemProb;/* Wall bouncing item destroy prob */
 bool		limitedVisibility;	/* Is visibility limited? */
+float		minVisibilityDistance;	/* Minimum visibility when starting */
+float		maxVisibilityDistance;	/* Maximum visibility */
 bool		limitedLives;		/* Are lives limited? */
 int		worldLives;		/* If so, what's the max? */
+bool		endOfRoundReset;	/* Reset the world when round ends? */
 bool		teamPlay;		/* Are teams allowed? */
 bool		onePlayerOnly;		/* Can there be multiple players? */
 bool		timing;			/* Is this a race? */
@@ -126,6 +133,8 @@ float		dropItemOnKillProb;	/* Probability for players items to */
 float		detonateItemOnKillProb;	/* Probaility for remaining items to */
 					/* detonate when player is killed */
 float		destroyItemInCollisionProb;
+float           rogueHeatProb;          /* prob. that unclaimed rocketpack */
+float           rogueMineProb;          /* or minepack will "activate" */
 float 		itemEnergyPackProb;
 float 		itemTankProb;
 float		itemECMProb;
@@ -144,6 +153,7 @@ float		itemAutopilotProb;
 float		itemEmergencyShieldProb;
 float		itemProbMult;
 float		maxItemDensity;
+int		itemConcentratorRadius;
 int		initialFuel;
 int 		initialTanks;
 int		initialECMs;
@@ -171,6 +181,7 @@ bool		playersOnRadar;		/* Are players visible on radar? */
 bool		missilesOnRadar;	/* Are missiles visible on radar? */
 bool		minesOnRadar;		/* Are mines visible on radar? */
 bool		nukesOnRadar;		/* Are nuke weapons radar visible? */
+bool		treasuresOnRadar;	/* Are treasure balls radar visible? */
 bool		distinguishMissiles;	/* Smarts, heats & torps look diff.? */
 int		maxMissilesPerPack;	/* Number of missiles per item. */
 bool		identifyMines;		/* Mines have names displayed? */
@@ -180,419 +191,1235 @@ bool		laserIsStunGun;		/* Is the laser a stun gun? */
 bool		reportToMetaServer;	/* Send status to meta-server? */
 float		gameDuration;		/* total duration of game in minutes */
 
-float		playerMinimumStartFuel;	/* Minimum starting fuel */
-
 bool		teamAssign;		/* Assign player to team if not set? */
 bool		teamImmunity;		/* Is team immune from player action */
-  
+
 bool		targetKillTeam;		/* if your target explodes, you die? */
 bool		targetTeamCollision;	/* Does team collide with target? */
+bool		targetSync;		/* all targets reappear together */
 bool		treasureKillTeam;	/* die if treasure is destroyed? */
 bool		treasureCollisionDestroys;
 bool		treasureCollisionMayKill;
 
+float		friction;		/* friction only affects ships */
+float		checkpointRadius;      	/* in blocks */
+int		raceLaps;		/* how many laps per race */
+
 static optionDesc options[] = {
-  { "help", "help", "Print out this message", "0", NULL, valVoid },
-  { "version", "version", "Print version information", "0", NULL, valVoid },
-  { "dump", "dump",
-        "Print all options with their default values in defaultsfile format.",
-        "0", NULL, valVoid },
-  { "gravity", "gravity", "Gravity strength", "-0.14", &Gravity, valReal },
-  { "shipMass", "shipmass", "Mass of fighters", "20.0", &ShipMass, valReal },
-  { "shotMass", "shotmass", "Mass of bullets", "0.1", &ShotsMass, valReal },
-  { "shotSpeed", "shotspeed", "Maximum speed of bullets", "21.0",
-	&ShotsSpeed, valReal },
-  { "shotLife", "shotlife", "Life of bullets in ticks",
-	"60", &ShotsLife, valInt },
-  { "fireRepeatRate", "fireRepeat",
-	"Number of frames per automatic fire (0=off)",
-	"2", &fireRepeatRate, valInt },
-  { "maxRobots", "robots", "How many robots do you want?", 
-	"4", &WantedNumRobots, valInt },
-  { "robotsTalk", "robotsTalk", "Do robots talk when they die, kill, etc.?", 
-	"false", &robotsTalk, valBool },
-  { "robotsLeave", "robotsLeave", "Do robots leave the game?", 
-	"true", &robotsLeave, valBool },
-  { "robotLeaveLife", "robotLeaveLife", "Max life per robot (0=off)", 
-	"50", &robotLeaveLife, valInt },
-  { "robotLeaveScore", "robotLeaveScore",
-	"Min score for robot to play (0=off)", 
-	"-90", &robotLeaveScore, valInt },
-  { "robotLeaveRatio", "robotLeaveRatio",
-	"Min ratio for robot to play (0=off)", 
-	"-5", &robotLeaveRatio, valInt },
-  { "maxPlayerShots", "shots", "Maximum bullets present at one time",
-	"256", &ShotsMax, valInt },
-  { "shotsGravity", "shotsGravity", "Are bullets afflicted by gravity",
-	"true", &ShotsGravity, valBool },
-  { "idleRun", "rawMode",
-	"The robots keep playing even if all human players quit",
-	"false", &RawMode, valBool },
-  { "noQuit", "noquit", 
-	"The server keeps running even if all players have left",
-	"false", &NoQuit, valBool },
-  { "mapWidth", "mapWidth", "Width of world", "100", &mapWidth, valInt },
-  { "mapHeight", "mapHeight", "Height of world", "100", &mapHeight, valInt },
-  { "mapFileName", "map", "Filename of map to use", DEFAULT_MAP, 
-	&mapFileName, valString },
-  { "mapName", "mapName", "Name of the map",
-	"unknown", &mapName, valString },
-  { "mapAuthor", "mapAuthor", "Name of map's author",
-	"anonymous", &mapAuthor, valString },
-  { "contactPort", "port", "Contact port number",
-	"15345", &contactPort, valInt },
-  { "motd", "motd", "File name for server-motd",
-	SERVERMOTDFILE, &motd, valString },
-  { "mapData", "mapData", "The map's topology",
-	NULL, &mapData, valString },
-  { "allowPlayerCrashes", "allowPlayerCrashes", 
-	"Can players overrun other players?",
-	"yes", &crashWithPlayer, valBool },
-  { "allowPlayerBounces", "allowPlayerBounces", 
-	"Can players bounce with other players?",
-	"yes", &bounceWithPlayer, valBool },
-  { "allowPlayerKilling", "killings",
-	"Should players be allowed to kill one other?",
-	"yes", &playerKillings, valBool },
-  { "allowShields", "shields", "Should we allow shields?",
-	"yes", &playerShielding, valBool },
-  { "playerStartsShielded", "playerStartShielded",
-	"Players start with shields up",
-	"yes", &playerStartsShielded, valBool },
-  { "shotsWallBounce", "shotsWallBounce",
-	"Do shots bounce off walls?",
-	"no", &shotsWallBounce, valBool },
-  { "ballsWallBounce", "ballsWallBounce",
-	"Do balls bounce off walls?",
-	"yes", &ballsWallBounce, valBool },
-  { "minesWallBounce", "minesWallBounce",
-	"Do mines bounce off walls?",
-	"no", &minesWallBounce, valBool },
-  { "itemsWallBounce", "itemsWallBounce",
-	"Do items bounce off walls?",
-	"yes", &itemsWallBounce, valBool },
-  { "missilesWallBounce", "missilesWallBounce",
-	"Do missiles bounce off walls?",
-	"no", &missilesWallBounce, valBool },
-  { "sparksWallBounce", "sparksWallBounce",
-	"Do thrust spark particles bounce off walls to give reactive thrust?",
-	"no", &sparksWallBounce, valBool },
-  { "debrisWallBounce", "debrisWallBounce",
-	"Do explosion debris particles bounce off walls?",
-	"no", &debrisWallBounce, valBool },
-  { "maxObjectWallBounceSpeed", "maxObjectBounceSpeed",
-	"The maximum allowed speed for objects to bounce off walls",
-	"40", &maxObjectWallBounceSpeed, valReal },
-  { "maxShieldedWallBounceSpeed", "maxShieldedBounceSpeed",
-	"The maximum allowed speed for a shielded player to bounce off walls",
-	"50", &maxShieldedWallBounceSpeed, valReal },
-  { "maxUnshieldedWallBounceSpeed", "maxUnshieldedBounceSpeed",
-	"Maximum allowed speed for an unshielded player to bounce off walls",
-	"20", &maxUnshieldedWallBounceSpeed, valReal },
-  { "maxShieldedPlayerWallBounceAngle", "maxShieldedBounceAngle",
-	"Maximum allowed angle for a shielded player to bounce off walls",
-	"90", &maxShieldedWallBounceAngle, valReal },
-  { "maxUnshieldedPlayerWallBounceAngle", "maxUnshieldedBounceAngle",
-	"Maximum allowed angle for an unshielded player to bounce off walls",
-	"30", &maxUnshieldedWallBounceAngle, valReal },
-  { "playerWallBounceBrakeFactor", "playerWallBrake",
-	"Factor to slow down players when they hit the wall (between 0 and 1)",
-	"0.89", &playerWallBrakeFactor, valReal },
-  { "objectWallBounceBrakeFactor", "objectWallBrake",
-	"Factor to slow down objects when they hit the wall (between 0 and 1)",
-	"0.95", &objectWallBrakeFactor, valReal },
-  { "objectWallBounceLifeFactor", "objectWallBounceLifeFactor",
-	"Factor to reduce the life of objects after bouncing (between 0 and 1)",
-	"0.80", &objectWallBounceLifeFactor, valReal },
-  { "wallBounceFuelDrainMult", "wallBounceDrain",
-	"Multiplication factor for player wall bounce fuel cost.",
-	"1.0", &wallBounceFuelDrainMult, valReal },
-  { "wallBounceDestroyItemProb", "wallBounceDestroyItemProb",
-	"Player wall bounce item damage probability.",
-	"0.0", &wallBounceDestroyItemProb, valReal },
-  { "reportToMetaServer", "reportMeta",
-	"Keep the meta server informed about our game?", "yes",
-	&reportToMetaServer, valBool },
-  { "limitedVisibility", "limitedVisibility",
-	"Should the players have a limited visibility?",
-	"no", &limitedVisibility, valBool },
-  { "limitedLives", "limitedLives",
-	"Should players have limited lives?",
-	"no", &limitedLives, valBool },
-  { "worldLives", "lives",
-	"Number of lives each player has (no sense without limitedLives)",
-	"0", &worldLives, valInt },
-  { "teamPlay", "teams", "Should we allow team play?",
-	"no", &teamPlay, valBool },
-  { "teamAssign", "teamAssign",
-	"Should player be assigned to first non-empty team if team isn't set?",
-	"yes", &teamAssign, valBool },
-  { "teamImmunity", "teamImmunity",
-	"Should other team members be immune to various shots, thrust etc.?",
-	"yes", &teamImmunity, valBool },
-  { "emcsReprogramMines", "ecmsReprogramMines",
-	"Do ECMs reprogram mines?",
-	"yes", &ecmsReprogramMines, valBool },
-
-  { "playerMinimumStartFuel", "playerMinStartFuel",
-	"Minimum amount of fuel a player will have after being killed",
-	"400.0", &playerMinimumStartFuel, valReal },
-
-  { "targetKillTeam", "targetKillTeam",
-	"Do team members die when their last target explodes?",
-	"no", &targetKillTeam, valBool },
-  { "targetTeamCollision", "targetCollision",
-	"Do team members collide with their own target or not",
-	"yes", &targetTeamCollision, valBool },
-
-  { "treasureKillTeam", "treasureKillTeam",
-	"Do team members die when treasure is destroyed?", "no",
-	&treasureKillTeam, valBool },
-  { "treasureCollisionDestroys", "treasureCollisionDestroy",
-	"Destroy balls on collisions",
-	"yes", &treasureCollisionDestroys, valBool },
-  { "treasureCollisionMayKill", "treasureUnshieldedCollisionKills",
-	"Does unshielded collision kill player",
-	"no", &treasureCollisionMayKill, valBool },
-
-  { "onePlayerOnly", "onePlayerOnly", "One player modus",
-	"no", &onePlayerOnly, valBool },
-  { "timing", "race", "Race mode", "no", &timing, valBool },
-  { "edgeWrap", "edgeWrap", "Wrap around edges", "no", &edgeWrap, valBool },
-  { "edgeBounce", "edgeBounce",
-	"Players and bullets bounce when they hit the edge",
-	"yes", &edgeBounce, valBool },
-  { "extraBorder", "extraBorder", "Give map an extra border of solid rock",
-	"no", &extraBorder, valBool },
-  { "gravityPoint", "gravityPoint",
-	"If the gravity is a point source, where does that gravity originate?",
-	"0,0", &gravityPoint, valIPos },
-  { "gravityAngle", "gravityAngle",
-	"If gravity is along a uniform line, at what angle is that line?",
-	"90", &gravityAngle, valReal },
-  { "gravityPointSource", "gravityPointSource",
-	"Is gravity originating from a single point?",
-	"false", &gravityPointSource, valBool },
-  { "gravityClockwise", "gravityClockwise",
-	"If the gravity is a point source, is it clockwise?",
-	"false", &gravityClockwise, valBool },
-  { "gravityAnticlockwise", "gravityAnticlockwise",
-	"If the gravity is a point source, is it anticlockwise?",
-	"false", &gravityAnticlockwise, valBool },
-  { "defaultsFileName", "defaults",
-	"Filename of defaults file to read on startup",
-	"", &defaultsFileName, valString },
-  { "scoreTableFileName", "scoretable",
-	"Filename for the score table to be dumped to",
-	"", &scoreTableFileName, valString },
-  { "framesPerSecond", "FPS", 
-	"Number of frames per second the server should strive for",
-	"18", &framesPerSecond, valInt },
-  { "allowNukes", "nukes", "Should nuclear weapons be allowed?",
-	"False", &allowNukes, valBool },
-  { "allowClusters", "clusters", "Should cluster weapons be allowed?",
-	"False", &allowClusters, valBool },
-  { "allowModifiers", "modifiers", "Should the weapon modifiers be allowed?",
-	"False", &allowModifiers, valBool },
-  { "allowLaserModifiers", "lasermodifiers",
-	"Can lasers be modified to be a different weapon?",
-	"False", &allowLaserModifiers, valBool },
-  { "allowShipShapes", "ShipShapes",
-	"Are players allowed to define their own ship shape?",
-	"True", &allowShipShapes, valBool },
-  { "playersOnRadar", "playersRadar",
-	"Are players visible on the radar",
-	"True", &playersOnRadar, valBool },
-  { "missilesOnRadar", "missilesRadar",
-	"Are missiles visible on the radar",
-	"True", &missilesOnRadar, valBool },
-  { "minesOnRadar", "minesRadar",
-	"Are mines visible on the radar",
-	"False", &minesOnRadar, valBool },
-  { "nukesOnRadar", "nukesRadar",
-	"Are nukes visible or highlighted on radar",
-	"True", &nukesOnRadar, valBool },
-  { "distinguishMissiles", "distinguishMissiles",
-	"Are different types of missiles distinguished (by length)",
-	"True", &distinguishMissiles, valBool },
-  { "maxMissilesPerPack", "maxMissilesPerPack",
-	"Number of missiles gotten by picking up one missile item.",
-	"4", &maxMissilesPerPack, valInt },
-  { "identifyMines", "identifyMines",
-	"Are mine owner's names displayed",
-	"True", &identifyMines, valBool },
-  { "shieldedItemPickup", "shieldItem",
-	"Can items be picked up while shields are up?",
-	"False", &shieldedItemPickup, valBool },
-  { "shieldedMining", "shieldMine",
-	"Can mines be thrown and placed while shields are up?",
-	"False", &shieldedMining, valBool },
-  { "laserIsStunGun", "stunGun",
-	"Is the laser weapon a stun gun weapon?",
-	"False", &laserIsStunGun, valBool },
-  { "nukeMinSmarts", "nukeMinSmarts",
-	"Minimum number of smart missiles needed to make a nuclear variant",
-	"7", &nukeMinSmarts, valInt },
-  { "nukeMinMines", "nukeMinMines",
-	"Minimum number of mines needed to make a nuclear variant",
-	"4", &nukeMinMines, valInt },
-  { "nukeClusterDamage", "nukeClusterDamage",
-	"How much each cluster debris does damage wise from a nuke variant"
-	"\n\tAlso reduces number of particles in the explosion",
-	"1.0", &nukeClusterDamage, valReal },
-  { "mineFuseTime", "mineFuseTime",
-	"Time after which owned mines become deadly, zero means never",
-	"0.0", &mineFuseTime, valSec },
-  { "movingItemProb", "movingItemProb",
-	"Probability for an item to appear as moving",
-	"0.2", &movingItemProb, valReal },
-  { "dropItemOnKillProb", "dropItemOnKillProb",
-	"Probability for dropping an item (each item) when you are killed",
-	"0.5", &dropItemOnKillProb, valReal },
-  { "detonateItemOnKillProb", "detonateItemOnKillProb",
-	"Probability for undropped items to detonate when you are killed",
-	"0.5", &detonateItemOnKillProb, valReal },
-  { "destroyItemInCollisionProb", "destroyItemInCollisionProb",
-	"Probability for items (some items) to be destroyed in a collision",
-	"0.0", &destroyItemInCollisionProb, valReal },
-  { "itemProbMult", "itemProbFact",
-	"Item Probability Multiplication Factor scales all item probabilities",
-	"1.0", &itemProbMult, valReal },
-  { "maxItemDensity", "maxItemDensity",
-	"Maximum density [0.0-1.0] for items (max items per block)",
-	"0.00012", &maxItemDensity, valReal },
-
-  { "itemEnergyPackProb", "itemEnergyPackProb",
-	"Probability for an energy pack to appear",
-	"0", &itemEnergyPackProb, valReal },
-  { "itemTankProb", "itemTankProb",
-	"Probability for an extra tank to appear",
-	"0", &itemTankProb, valReal },
-  { "itemECMProb", "itemECMProb",
-	"Probability for an ECM item to appear",
-	"0", &itemECMProb, valReal },
-  { "itemMineProb", "itemMineProb",
-	"Probability for a mine item to appear",
-	"0", &itemMineProb, valReal },
-  { "itemMissileProb", "itemMissileProb",
-	"Probability for a missile item to appear",
-	"0", &itemMissileProb, valReal },
-  { "itemCloakProb", "itemCloakProb",
-	"Probability for a cloak item to appear",
-	"0", &itemCloakProb, valReal },
-  { "itemSensorProb", "itemSensorProb",
-	"Probability for a sensor item to appear",
-	"0", &itemSensorProb, valReal },
-  { "itemWideangleProb", "itemWideangleProb",
-	"Probability for a wideangle item to appear",
-	"0", &itemWideangleProb, valReal },
-  { "itemRearshotProb", "itemRearshotProb",
-	"Probability for a rearshot item to appear",
-	"0", &itemRearshotProb, valReal },
-  { "itemAfterburnerProb", "itemAfterburnerProb",
-	"Probability for an afterburner item to appear",
-	"0", &itemAfterburnerProb, valReal },
-  { "itemTransporterProb", "itemTransporterProb",
-	"Probability for a transporter item to appear",
-	"0", &itemTransporterProb, valReal },
-  { "itemLaserProb", "itemLaserProb",
-	"Probability for a Laser item to appear",
-	"0", &itemLaserProb, valReal },
-  { "itemEmergencyThrustProb", "itemEmergencyThrustProb",
-	"Probability for an Emergency Thrust item to appear",
-	"0", &itemEmergencyThrustProb, valReal },
-  { "itemTractorBeamProb", "itemTractorBeamProb",
-	"Probability for a Tractor Beam item to appear",
-	"0", &itemTractorBeamProb, valReal },
-  { "itemAutopilotProb", "itemAutopilotProb",
-	"Probability for an Autopilot item to appear",
-	"0", &itemAutopilotProb, valReal },
-  { "itemEmergencyShieldProb", "itemEmergencyShieldProb",
-	"Probability for an Emergency Shield item to appear",
-	"0", &itemEmergencyShieldProb, valReal },
-
-  { "initialFuel", "initialFuel",
-        "How much fuel players start with",
-        "1000", &initialFuel, valInt },
-  { "initialTanks", "initialTanks",
-        "How many tanks players start with",
-        "0", &initialTanks, valInt },
-  { "initialECMs", "initialECMs",
-        "How many ECMs players start with",
-        "0", &initialECMs, valInt },
-  { "initialMines", "initialMines",
-        "How many mines players start with",
-        "0", &initialMines, valInt },
-  { "initialMissiles", "initialMissiles",
-        "How many missiles players start with",
-        "0", &initialMissiles, valInt },
-  { "initialCloaks", "initialCloaks",
-        "How many cloaks players start with",
-        "0", &initialCloaks, valInt },
-  { "initialSensors", "initialSensors",
-        "How many sensors players start with",
-        "0", &initialSensors, valInt },
-  { "initialWideangles", "initialWideangles",
-        "How many wideangles players start with",
-        "0", &initialWideangles, valInt },
-  { "initialRearshots", "initialRearshots",
-        "How many rearshots players start with",
-        "0", &initialRearshots, valInt },
-  { "initialAfterburners", "initialAfterburners",
-        "How many afterburners players start with",
-        "0", &initialAfterburners, valInt },
-  { "initialTransporters", "initialTransporters",
-        "How many transporters players start with",
-        "0", &initialTransporters, valInt },
-  { "initialLasers", "initialLasers",
-        "How many lasers players start with",
-        "0", &initialLasers, valInt },
-  { "initialEmergencyThrusts", "initialEmergencyThrusts",
-        "How many emergency thrusts players start with",
-        "0", &initialEmergencyThrusts, valInt },
-  { "initialTractorBeams", "initialTractorBeams",
-        "How many tractor/pressor beams players start with",
-        "0", &initialTractorBeams, valInt },
-  { "initialAutopilots", "initialAutopilots",
-        "How many autopilots players start with",
-        "0", &initialAutopilots, valInt },
-  { "initialEmergencyShields", "initialEmergencyShields",
-        "How many emergency shields players start with",
-        "0", &initialEmergencyShields, valInt },
-
-  { "gameDuration", "time",
-	"Duration of game in minutes (aka. pizza mode)",
-	"0.0", &gameDuration, valReal },
+    {
+	"help",
+	"help",
+	"0",
+	NULL,
+	valVoid,
+	"Print out this help message.\n"
+    },
+    {
+	"version",
+	"version",
+	"0",
+	NULL,
+	valVoid,
+	"Print version information.\n"
+    },
+    {
+	"dump",
+	"dump",
+	"0",
+	NULL,
+	valVoid,
+	"Print all options with their default values in defaultsfile format.\n"
+    },
+    {
+	"gravity",
+	"gravity",
+	"-0.14",
+	&Gravity,
+	valReal,
+	"Gravity strength.\n"
+    },
+    {
+	"shipMass",
+	"shipMass",
+	"20.0",
+	&ShipMass,
+	valReal,
+	"Mass of fighters.\n"
+    },
+    {
+	"shotMass",
+	"shotMass",
+	"0.1",
+	&ShotsMass,
+	valReal,
+	"Mass of bullets.\n"
+    },
+    {
+	"shotSpeed",
+	"shotSpeed",
+	"21.0",
+	&ShotsSpeed,
+	valReal,
+	"Maximum speed of bullets.\n"
+    },
+    {
+	"shotLife",
+	"shotLife",
+	"60",
+	&ShotsLife,
+	valInt,
+	"Life of bullets in ticks.\n"
+    },
+    {
+	"fireRepeatRate",
+	"fireRepeat",
+	"2",
+	&fireRepeatRate,
+	valInt,
+	"Number of frames per automatic fire (0=off).\n"
+    },
+    {
+	"maxRobots",
+	"robots",
+	"4",
+	&WantedNumRobots,
+	valInt,
+	"How many robots do you want?\n"
+    },
+    {
+	"robotsTalk",
+	"robotsTalk",
+	"false",
+	&robotsTalk,
+	valBool,
+	"Do robots talk when they kill, die etc.?\n"
+    },
+    {
+	"robotsLeave",
+	"robotsLeave",
+	"true",
+	&robotsLeave,
+	valBool,
+	"Do robots leave the game?\n"
+    },
+    {
+	"robotLeaveLife",
+	"robotLeaveLife",
+	"50",
+	&robotLeaveLife,
+	valInt,
+	"Max life per robot (0=off).\n"
+    },
+    {
+	"robotLeaveScore",
+	"robotLeaveScore",
+	"-90",
+	&robotLeaveScore,
+	valInt,
+	"Min score for robot to play (0=off).\n"
+    },
+    {
+	"robotLeaveRatio",
+	"robotLeaveRatio",
+	"-5",
+	&robotLeaveRatio,
+	valInt,
+	"Min ratio for robot to play (0=off).\n"
+    },
+    {
+	"maxPlayerShots",
+	"shots",
+	"256",
+	&ShotsMax,
+	valInt,
+	"Maximum allowed bullets per player.\n"
+    },
+    {
+	"shotsGravity",
+	"shotsGravity",
+	"true",
+	&ShotsGravity,
+	valBool,
+	"Are bullets afflicted by gravity.\n"
+    },
+    {
+	"idleRun",
+	"rawMode",
+	"false",
+	&RawMode,
+	valBool,
+	"Do robots keep on playing even if all human players quit?\n"
+    },
+    {
+	"noQuit",
+	"noQuit",
+	"false",
+	&NoQuit,
+	valBool,
+	"Does the server wait for new human players to show up\n"
+	"after all players have left.\n"
+    },
+    {
+	"mapWidth",
+	"mapWidth",
+	"100",
+	&mapWidth,
+	valInt,
+	"Width of the world in blocks.\n"
+    },
+    {
+	"mapHeight",
+	"mapHeight",
+	"100",
+	&mapHeight,
+	valInt,
+	"Height of the world in blocks.\n"
+    },
+    {
+	"mapFileName",
+	"map",
+	DEFAULT_MAP,
+	&mapFileName,
+	valString,
+	"The filename of the map to use.\n"
+    },
+    {
+	"mapName",
+	"mapName",
+	"unknown",
+	&mapName,
+	valString,
+	"The title of the map.\n"
+    },
+    {
+	"mapAuthor",
+	"mapAuthor",
+	"anonymous",
+	&mapAuthor,
+	valString,
+	"The name of the map author.\n"
+    },
+    {
+	"contactPort",
+	"port",
+	"15345",
+	&contactPort,
+	valInt,
+	"The server contact port number.\n"
+    },
+    {
+	"motd",
+	"motd",
+	SERVERMOTDFILE,
+	&motd,
+	valString,
+	"The filename for the server-motd.\n"
+    },
+    {
+	"mapData",
+	"mapData",
+	NULL,
+	&mapData,
+	valString,
+	"The map's topology.\n"
+    },
+    {
+	"allowPlayerCrashes",
+	"allowPlayerCrashes",
+	"yes",
+	&crashWithPlayer,
+	valBool,
+	"Can players overrun other players?\n"
+    },
+    {
+	"allowPlayerBounces",
+	"allowPlayerBounces",
+	"yes",
+	&bounceWithPlayer,
+	valBool,
+	"Can players bounce with other players?\n"
+    },
+    {
+	"allowPlayerKilling",
+	"killings",
+	"yes",
+	&playerKillings,
+	valBool,
+	"Should players be allowed to kill one other?\n"
+    },
+    {
+	"allowShields",
+	"shields",
+	"yes",
+	&playerShielding,
+	valBool,
+	"Are shields allowed?\n"
+    },
+    {
+	"playerStartsShielded",
+	"playerStartShielded",
+	"yes",
+	&playerStartsShielded,
+	valBool,
+	"Do players start with shields up?\n"
+    },
+    {
+	"shotsWallBounce",
+	"shotsWallBounce",
+	"no",
+	&shotsWallBounce,
+	valBool,
+	"Do shots bounce off walls?\n"
+    },
+    {
+	"ballsWallBounce",
+	"ballsWallBounce",
+	"yes",
+	&ballsWallBounce,
+	valBool,
+	"Do balls bounce off walls?\n"
+    },
+    {
+	"minesWallBounce",
+	"minesWallBounce",
+	"no",
+	&minesWallBounce,
+	valBool,
+	"Do mines bounce off walls?\n"
+    },
+    {
+	"itemsWallBounce",
+	"itemsWallBounce",
+	"yes",
+	&itemsWallBounce,
+	valBool,
+	"Do items bounce off walls?\n"
+    },
+    {
+	"missilesWallBounce",
+	"missilesWallBounce",
+	"no",
+	&missilesWallBounce,
+	valBool,
+	"Do missiles bounce off walls?\n"
+    },
+    {
+	"sparksWallBounce",
+	"sparksWallBounce",
+	"no",
+	&sparksWallBounce,
+	valBool,
+	"Do thrust spark particles bounce off walls to give reactive thrust?\n"
+    },
+    {
+	"debrisWallBounce",
+	"debrisWallBounce",
+	"no",
+	&debrisWallBounce,
+	valBool,
+	"Do explosion debris particles bounce off walls?\n"
+    },
+    {
+	"maxObjectWallBounceSpeed",
+	"maxObjectBounceSpeed",
+	"40",
+	&maxObjectWallBounceSpeed,
+	valReal,
+	"The maximum allowed speed for objects to bounce off walls.\n"
+    },
+    {
+	"maxShieldedWallBounceSpeed",
+	"maxShieldedBounceSpeed",
+	"50",
+	&maxShieldedWallBounceSpeed,
+	valReal,
+	"The maximum allowed speed for a shielded player to bounce off walls.\n"
+    },
+    {
+	"maxUnshieldedWallBounceSpeed",
+	"maxUnshieldedBounceSpeed",
+	"20",
+	&maxUnshieldedWallBounceSpeed,
+	valReal,
+	"Maximum allowed speed for an unshielded player to bounce off walls.\n"
+    },
+    {
+	"maxShieldedPlayerWallBounceAngle",
+	"maxShieldedBounceAngle",
+	"90",
+	&maxShieldedWallBounceAngle,
+	valReal,
+	"Maximum allowed angle for a shielded player to bounce off walls.\n"
+    },
+    {
+	"maxUnshieldedPlayerWallBounceAngle",
+	"maxUnshieldedBounceAngle",
+	"30",
+	&maxUnshieldedWallBounceAngle,
+	valReal,
+	"Maximum allowed angle for an unshielded player to bounce off walls.\n"
+    },
+    {
+	"playerWallBounceBrakeFactor",
+	"playerWallBrake",
+	"0.89",
+	&playerWallBrakeFactor,
+	valReal,
+	"Factor to slow down players when they hit the wall (between 0 and 1).\n"
+    },
+    {
+	"objectWallBounceBrakeFactor",
+	"objectWallBrake",
+	"0.95",
+	&objectWallBrakeFactor,
+	valReal,
+	"Factor to slow down objects when they hit the wall (between 0 and 1).\n"
+    },
+    {
+	"objectWallBounceLifeFactor",
+	"objectWallBounceLifeFactor",
+	"0.80",
+	&objectWallBounceLifeFactor,
+	valReal,
+	"Factor to reduce the life of objects after bouncing (between 0 and 1).\n"
+    },
+    {
+	"wallBounceFuelDrainMult",
+	"wallBounceDrain",
+	"1.0",
+	&wallBounceFuelDrainMult,
+	valReal,
+	"Multiplication factor for player wall bounce fuel cost.\n"
+    },
+    {
+	"wallBounceDestroyItemProb",
+	"wallBounceDestroyItemProb",
+	"0.0",
+	&wallBounceDestroyItemProb,
+	valReal,
+	"The probability for each item a player owns to get destroyed\n"
+	"when the player bounces against a wall.\n"
+    },
+    {
+	"reportToMetaServer",
+	"reportMeta",
+	"yes",
+	&reportToMetaServer,
+	valBool,
+	"Keep the meta server informed about our game?\n"
+    },
+    {
+	"limitedVisibility",
+	"limitedVisibility",
+	"no",
+	&limitedVisibility,
+	valBool,
+	"Should the players have a limited visibility?\n"
+    },
+    {
+	"minVisibilityDistance",
+	"minVisibility",
+	"0.0",
+	&minVisibilityDistance,
+	valReal,
+	"Minimum block distance for limited visibility, 0 for default.\n"
+    },
+    {
+	"maxVisibilityDistance",
+	"maxVisibility",
+	"0.0",
+	&maxVisibilityDistance,
+	valReal,
+	"Maximum block distance for limited visibility, 0 for default.\n"
+    },
+    {
+	"limitedLives",
+	"limitedLives",
+	"no",
+	&limitedLives,
+	valBool,
+	"Should players have limited lives?\n"
+	"See also worldLives.\n"
+    },
+    {
+	"worldLives",
+	"lives",
+	"0",
+	&worldLives,
+	valInt,
+	"Number of lives each player has (no sense without limitedLives).\n"
+    },
+    {
+	"reset",
+	"reset",
+	"yes",
+	&endOfRoundReset,
+	valBool,
+	"Does the world reset when the end of round is reached?\n"
+	"When true all mines, missiles, shots and explosions will be\n"
+	"removed from the world and all players including the winner(s)\n"
+	"will be transported back to their homebases.\n"
+	"This option is only effective when limitedLives is turned on.\n"
+    },
+    {
+	"teamPlay",
+	"teams",
+	"no",
+	&teamPlay,
+	valBool,
+	"Is the map a team play map?\n"
+    },
+    {
+	"teamAssign",
+	"teamAssign",
+	"yes",
+	&teamAssign,
+	valBool,
+	"If a player has not specified which team he likes to join\n"
+	"should the server choose a team for him automatically?\n"
+    },
+    {
+	"teamImmunity",
+	"teamImmunity",
+	"yes",
+	&teamImmunity,
+	valBool,
+	"Should other team members be immune to various shots thrust etc.?\n"
+    },
+    {
+	"emcsReprogramMines",
+	"ecmsReprogramMines",
+	"yes",
+	&ecmsReprogramMines,
+	valBool,
+	"Is it possible to reprogram mines with ECMs?\n"
+    },
+    {
+	"targetKillTeam",
+	"targetKillTeam",
+	"no",
+	&targetKillTeam,
+	valBool,
+	"Do team members die when their last target explodes?\n"
+    },
+    {
+	"targetTeamCollision",
+	"targetCollision",
+	"yes",
+	&targetTeamCollision,
+	valBool,
+	"Do team members collide with their own target or not.\n"
+    },
+    {
+	"targetSync",
+	"targetSync",
+	"no",
+	&targetSync,
+	valBool,
+	"Do all the targets of a team reappear/repair at the same time?"
+    },
+    {
+	"treasureKillTeam",
+	"treasureKillTeam",
+	"no",
+	&treasureKillTeam,
+	valBool,
+	"Do team members die when their treasure is destroyed?\n"
+    },
+    {
+	"treasureCollisionDestroys",
+	"treasureCollisionDestroy",
+	"yes",
+	&treasureCollisionDestroys,
+	valBool,
+	"Are balls destroyed when a player touches it?\n"
+    },
+    {
+	"treasureCollisionMayKill",
+	"treasureUnshieldedCollisionKills",
+	"no",
+	&treasureCollisionMayKill,
+	valBool,
+	"Does a ball kill a player when the player touches it unshielded?\n"
+    },
+    {
+	"onePlayerOnly",
+	"onePlayerOnly",
+	"no",
+	&onePlayerOnly,
+	valBool,
+	"One player modus.\n"
+    },
+    {
+	"timing",
+	"race",
+	"no",
+	&timing,
+	valBool,
+	"Is the map a race mode map?\n"
+    },
+    {
+	"edgeWrap",
+	"edgeWrap",
+	"no",
+	&edgeWrap,
+	valBool,
+	"Wrap around edges.\n"
+    },
+    {
+	"edgeBounce",
+	"edgeBounce",
+	"yes",
+	&edgeBounce,
+	valBool,
+	"Players and bullets bounce when they hit the (non-wrapping) edge.\n"
+    },
+    {
+	"extraBorder",
+	"extraBorder",
+	"no",
+	&extraBorder,
+	valBool,
+	"Give map an extra border of solid rock.\n"
+    },
+    {
+	"gravityPoint",
+	"gravityPoint",
+	"0,0",
+	&gravityPoint,
+	valIPos,
+	"If the gravity is a point source where does that gravity originate?\n"
+	"Specify the point int the form: x,y.\n"
+    },
+    {
+	"gravityAngle",
+	"gravityAngle",
+	"90",
+	&gravityAngle,
+	valReal,
+	"If gravity is along a uniform line, at what angle is that line?\n"
+    },
+    {
+	"gravityPointSource",
+	"gravityPointSource",
+	"false",
+	&gravityPointSource,
+	valBool,
+	"Is gravity originating from a single point?\n"
+    },
+    {
+	"gravityClockwise",
+	"gravityClockwise",
+	"false",
+	&gravityClockwise,
+	valBool,
+	"If the gravity is a point source, is it clockwise?\n"
+    },
+    {
+	"gravityAnticlockwise",
+	"gravityAnticlockwise",
+	"false",
+	&gravityAnticlockwise,
+	valBool,
+	"If the gravity is a point source, is it anticlockwise?\n"
+    },
+    {
+	"defaultsFileName",
+	"defaults",
+	"",
+	&defaultsFileName,
+	valString,
+	"The filename of the defaults file to read on startup.\n"
+    },
+    {
+	"scoreTableFileName",
+	"scoretable",
+	"",
+	&scoreTableFileName,
+	valString,
+	"The filename for the score table to be dumped to.\n"
+    },
+    {
+	"framesPerSecond",
+	"FPS",
+	"18",
+	&framesPerSecond,
+	valInt,
+	"The number of frames per second the server should strive for.\n"
+    },
+    {
+	"allowNukes",
+	"nukes",
+	"False",
+	&allowNukes,
+	valBool,
+	"Should nuclear weapons be allowed?\n"
+    },
+    {
+	"allowClusters",
+	"clusters",
+	"False",
+	&allowClusters,
+	valBool,
+	"Should cluster weapons be allowed?\n"
+    },
+    {
+	"allowModifiers",
+	"modifiers",
+	"False",
+	&allowModifiers,
+	valBool,
+	"Should the weapon modifiers be allowed?\n"
+    },
+    {
+	"allowLaserModifiers",
+	"lasermodifiers",
+	"False",
+	&allowLaserModifiers,
+	valBool,
+	"Can lasers be modified to be a different weapon?\n"
+    },
+    {
+	"allowShipShapes",
+	"ShipShapes",
+	"True",
+	&allowShipShapes,
+	valBool,
+	"Are players allowed to define their own ship shape?\n"
+    },
+    {
+	"playersOnRadar",
+	"playersRadar",
+	"True",
+	&playersOnRadar,
+	valBool,
+	"Are players visible on the radar.\n"
+    },
+    {
+	"missilesOnRadar",
+	"missilesRadar",
+	"True",
+	&missilesOnRadar,
+	valBool,
+	"Are missiles visible on the radar.\n"
+    },
+    {
+	"minesOnRadar",
+	"minesRadar",
+	"False",
+	&minesOnRadar,
+	valBool,
+	"Are mines visible on the radar.\n"
+    },
+    {
+	"nukesOnRadar",
+	"nukesRadar",
+	"True",
+	&nukesOnRadar,
+	valBool,
+	"Are nukes visible or highlighted on the radar.\n"
+    },
+    {
+	"treasuresOnRadar",
+	"treasuresRadar",
+	"False",
+	&treasuresOnRadar,
+	valBool,
+	"Are treasure balls visible or highlighted on the radar.\n"
+    },
+    {
+	"distinguishMissiles",
+	"distinguishMissiles",
+	"True",
+	&distinguishMissiles,
+	valBool,
+	"Are different types of missiles distinguished (by length).\n"
+    },
+    {
+	"maxMissilesPerPack",
+	"maxMissilesPerPack",
+	"4",
+	&maxMissilesPerPack,
+	valInt,
+	"The number of missiles gotten by picking up one missile item.\n"
+    },
+    {
+	"identifyMines",
+	"identifyMines",
+	"True",
+	&identifyMines,
+	valBool,
+	"Are mine owner's names displayed.\n"
+    },
+    {
+	"shieldedItemPickup",
+	"shieldItem",
+	"False",
+	&shieldedItemPickup,
+	valBool,
+	"Can items be picked up while shields are up?\n"
+    },
+    {
+	"shieldedMining",
+	"shieldMine",
+	"False",
+	&shieldedMining,
+	valBool,
+	"Can mines be thrown and placed while shields are up?\n"
+    },
+    {
+	"laserIsStunGun",
+	"stunGun",
+	"False",
+	&laserIsStunGun,
+	valBool,
+	"Is the laser weapon a stun gun weapon?\n"
+    },
+    {
+	"nukeMinSmarts",
+	"nukeMinSmarts",
+	"7",
+	&nukeMinSmarts,
+	valInt,
+	"The minimum number of missiles needed to fire one nuclear missile.\n"
+    },
+    {
+	"nukeMinMines",
+	"nukeMinMines",
+	"4",
+	&nukeMinMines,
+	valInt,
+	"The minimum number of mines needed to make a nuclear mine.\n"
+    },
+    {
+	"nukeClusterDamage",
+	"nukeClusterDamage",
+	"1.0",
+	&nukeClusterDamage,
+	valReal,
+	"How much each cluster debris does damage wise from a nuke mine.\n"
+	"This helps to reduce the number of particles caused by nuclear mine\n"
+	"explosions, which improves server response time for such explosions.\n"
+    },
+    {
+	"mineFuseTime",
+	"mineFuseTime",
+	"0.0",
+	&mineFuseTime,
+	valSec,
+	"Time after which owned mines become deadly, zero means never.\n"
+    },
+    {
+	"movingItemProb",
+	"movingItemProb",
+	"0.2",
+	&movingItemProb,
+	valReal,
+	"Probability for an item to appear as moving.\n"
+    },
+    {
+	"dropItemOnKillProb",
+	"dropItemOnKillProb",
+	"0.5",
+	&dropItemOnKillProb,
+	valReal,
+	"Probability for dropping an item (each item) when you are killed.\n"
+    },
+    {
+	"detonateItemOnKillProb",
+	"detonateItemOnKillProb",
+	"0.5",
+	&detonateItemOnKillProb,
+	valReal,
+	"Probability for undropped items to detonate when you are killed.\n"
+    },
+    {
+	"destroyItemInCollisionProb",
+	"destroyItemInCollisionProb",
+	"0.0",
+	&destroyItemInCollisionProb,
+	valReal,
+	"Probability for items (some items) to be destroyed in a collision.\n"
+    },
+    {
+	"itemProbMult",
+	"itemProbFact",
+	"1.0",
+	&itemProbMult,
+	valReal,
+	"Item Probability Multiplication Factor scales all item probabilities.\n"
+    },
+    {
+	"maxItemDensity",
+	"maxItemDensity",
+	"0.00012",
+	&maxItemDensity,
+	valReal,
+	"Maximum density [0.0-1.0] for items (max items per block).\n"
+    },
+    {
+	"itemConcentratorRadius",
+	"itemConcentratorRange",
+	"10",
+	&itemConcentratorRadius,
+	valInt,
+	"The maximum distance from an item concentator for items to appear in.\n"
+	"Sensible values are in the range 1 to 20.\n"
+	"If no item concentators are defined in a map then items can popup anywhere.\n"
+	"Otherwise items always popup in the vicinity of an item concentrator.\n"
+	"An item concentrator is drawn on screen as three rotating triangles.\n"
+	"The map symbol is the percentage symbol '%'.\n"
+    },
+    {
+	"rogueHeatProb",
+	"rogueHeatProb",
+	"1.0",
+	&rogueHeatProb,
+	valReal,
+	"Probability that unclaimed missile packs will go rogue."
+    },
+    {
+	"rogueMineProb",
+	"rogueMineProb",
+	"1.0",
+	&rogueMineProb,
+	valReal,
+	"Probability that unclaimed mine items will activate."
+    },
+    {
+	"itemEnergyPackProb",
+	"itemEnergyPackProb",
+	"0",
+	&itemEnergyPackProb,
+	valReal,
+	"Probability for an energy pack to appear.\n"
+    },
+    {
+	"itemTankProb",
+	"itemTankProb",
+	"0",
+	&itemTankProb,
+	valReal,
+	"Probability for an extra tank to appear.\n"
+    },
+    {
+	"itemECMProb",
+	"itemECMProb",
+	"0",
+	&itemECMProb,
+	valReal,
+	"Probability for an ECM item to appear.\n"
+    },
+    {
+	"itemMineProb",
+	"itemMineProb",
+	"0",
+	&itemMineProb,
+	valReal,
+	"Probability for a mine item to appear.\n"
+    },
+    {
+	"itemMissileProb",
+	"itemMissileProb",
+	"0",
+	&itemMissileProb,
+	valReal,
+	"Probability for a missile item to appear.\n"
+    },
+    {
+	"itemCloakProb",
+	"itemCloakProb",
+	"0",
+	&itemCloakProb,
+	valReal,
+	"Probability for a cloak item to appear.\n"
+    },
+    {
+	"itemSensorProb",
+	"itemSensorProb",
+	"0",
+	&itemSensorProb,
+	valReal,
+	"Probability for a sensor item to appear.\n"
+    },
+    {
+	"itemWideangleProb",
+	"itemWideangleProb",
+	"0",
+	&itemWideangleProb,
+	valReal,
+	"Probability for a wideangle item to appear.\n"
+    },
+    {
+	"itemRearshotProb",
+	"itemRearshotProb",
+	"0",
+	&itemRearshotProb,
+	valReal,
+	"Probability for a rearshot item to appear.\n"
+    },
+    {
+	"itemAfterburnerProb",
+	"itemAfterburnerProb",
+	"0",
+	&itemAfterburnerProb,
+	valReal,
+	"Probability for an afterburner item to appear.\n"
+    },
+    {
+	"itemTransporterProb",
+	"itemTransporterProb",
+	"0",
+	&itemTransporterProb,
+	valReal,
+	"Probability for a transporter item to appear.\n"
+    },
+    {
+	"itemLaserProb",
+	"itemLaserProb",
+	"0",
+	&itemLaserProb,
+	valReal,
+	"Probability for a Laser item to appear.\n"
+    },
+    {
+	"itemEmergencyThrustProb",
+	"itemEmergencyThrustProb",
+	"0",
+	&itemEmergencyThrustProb,
+	valReal,
+	"Probability for an Emergency Thrust item to appear.\n"
+    },
+    {
+	"itemTractorBeamProb",
+	"itemTractorBeamProb",
+	"0",
+	&itemTractorBeamProb,
+	valReal,
+	"Probability for a Tractor Beam item to appear.\n"
+    },
+    {
+	"itemAutopilotProb",
+	"itemAutopilotProb",
+	"0",
+	&itemAutopilotProb,
+	valReal,
+	"Probability for an Autopilot item to appear.\n"
+    },
+    {
+	"itemEmergencyShieldProb",
+	"itemEmergencyShieldProb",
+	"0",
+	&itemEmergencyShieldProb,
+	valReal,
+	"Probability for an Emergency Shield item to appear.\n"
+    },
+    {
+	"initialFuel",
+	"initialFuel",
+	"1000",
+	&initialFuel,
+	valInt,
+	"How much fuel players start with, or the minimum after being killed.\n"
+    },
+    {
+	"initialTanks",
+	"initialTanks",
+	"0",
+	&initialTanks,
+	valInt,
+	"How many tanks players start with.\n"
+    },
+    {
+	"initialECMs",
+	"initialECMs",
+	"0",
+	&initialECMs,
+	valInt,
+	"How many ECMs players start with.\n"
+    },
+    {
+	"initialMines",
+	"initialMines",
+	"0",
+	&initialMines,
+	valInt,
+	"How many mines players start with.\n"
+    },
+    {
+	"initialMissiles",
+	"initialMissiles",
+	"0",
+	&initialMissiles,
+	valInt,
+	"How many missiles players start with.\n"
+    },
+    {
+	"initialCloaks",
+	"initialCloaks",
+	"0",
+	&initialCloaks,
+	valInt,
+	"How many cloaks players start with.\n"
+    },
+    {
+	"initialSensors",
+	"initialSensors",
+	"0",
+	&initialSensors,
+	valInt,
+	"How many sensors players start with.\n"
+    },
+    {
+	"initialWideangles",
+	"initialWideangles",
+	"0",
+	&initialWideangles,
+	valInt,
+	"How many wideangles players start with.\n"
+    },
+    {
+	"initialRearshots",
+	"initialRearshots",
+	"0",
+	&initialRearshots,
+	valInt,
+	"How many rearshots players start with.\n"
+    },
+    {
+	"initialAfterburners",
+	"initialAfterburners",
+	"0",
+	&initialAfterburners,
+	valInt,
+	"How many afterburners players start with.\n"
+    },
+    {
+	"initialTransporters",
+	"initialTransporters",
+	"0",
+	&initialTransporters,
+	valInt,
+	"How many transporters players start with.\n"
+    },
+    {
+	"initialLasers",
+	"initialLasers",
+	"0",
+	&initialLasers,
+	valInt,
+	"How many lasers players start with.\n"
+    },
+    {
+	"initialEmergencyThrusts",
+	"initialEmergencyThrusts",
+	"0",
+	&initialEmergencyThrusts,
+	valInt,
+	"How many emergency thrusts players start with.\n"
+    },
+    {
+	"initialTractorBeams",
+	"initialTractorBeams",
+	"0",
+	&initialTractorBeams,
+	valInt,
+	"How many tractor/pressor beams players start with.\n"
+    },
+    {
+	"initialAutopilots",
+	"initialAutopilots",
+	"0",
+	&initialAutopilots,
+	valInt,
+	"How many autopilots players start with.\n"
+    },
+    {
+	"initialEmergencyShields",
+	"initialEmergencyShields",
+	"0",
+	&initialEmergencyShields,
+	valInt,
+	"How many emergency shields players start with.\n"
+    },
+    {
+	"gameDuration",
+	"time",
+	"0.0",
+	&gameDuration,
+	valReal,
+	"The duration of the game in minutes (aka. pizza mode).\n"
+    },
+    {
+	"friction",
+	"friction",
+	"0.0",
+	&friction,
+	valReal,
+	"Fraction of velocity ship loses each frame.\n"
+    },
+    {
+	"checkpointRadius",
+	"checkpointRadius",
+	"6.0",
+	&checkpointRadius,
+	valReal,
+	"How close you have to be to a checkpoint to register - in blocks.\n"
+    },
+    {
+	"raceLaps",
+	"raceLaps",
+	"3",
+	&raceLaps,
+	valInt,
+	"How many laps a race is run over.\n"
+    },
 };
-  
+
 
 static void Parse_help(char *progname)
 {
     int			j;
+    char		*str;
 
-    printf("Usage:\t%s [ options ]\n\nWhere options include:\n",
+    printf("Usage: %s [ options ]\n"
+	   "Where options include:\n"
+	   "\n",
 	   progname);
-    for(j=0; j<NELEM(options); j++) {
+    for (j = 0; j < NELEM(options); j++) {
 	printf("    %s%s",
 	       options[j].type == valBool ? "-/+" : "-",
 	       options[j].name);
-	if (strcmp(options[j].commandLineOption, options[j].name))
+	if (strcasecmp(options[j].commandLineOption, options[j].name))
 	    printf(" or %s", options[j].commandLineOption);
-	printf(" %s\n\t%s\n",
-	       options[j].type == valInt ? "<integer>" : 
+	printf(" %s\n",
+	       options[j].type == valInt ? "<integer>" :
 	       options[j].type == valReal ? "<real>" :
 	       options[j].type == valString ? "<string>" :
 	       options[j].type == valIPos ? "<position>" :
 	       options[j].type == valSec ? "<seconds>" :
 	       options[j].type == valPerSec ? "<per-second>" :
-	       "", options[j].helpLine);
+	       "");
+	for (str = options[j].helpLine; *str; str++) {
+	    if (str == options[j].helpLine || str[-1] == '\n') {
+		putchar('\t');
+	    }
+	    putchar(*str);
+	}
+	if (str > options[j].helpLine && str[-1] != '\n') {
+	    putchar('\n');
+	}
+	putchar('\n');
     }
-    printf("\n    The probabilities are in the range [0.0-1.0] "
-	   "and they refer to the\n    probability that an event "
-	   "will occur in a block in second.\n"
-	   "    Boolean options are turned off by using +<option>.\n");
-    printf("\n    Please refer to the manual pages, xpilots(6) "
-	   "and xpilot(6),\n    for more specific help.\n");
+    printf(
+"    \n"
+"    The probabilities are in the range [0.0-1.0] and they refer to the\n"
+"    probability that an event will occur in a block in second.\n"
+"    Boolean options are turned off by using +<option>.\n"
+"    \n"
+"    Please refer to the manual pages, xpilots(6) and xpilot(6),\n"
+"    for more specific help.\n"
+	  );
 }
 
 static void Parse_dump(char *progname)
@@ -603,8 +1430,7 @@ static void Parse_dump(char *progname)
     printf("# %s option dump\n", progname);
     printf("# \n");
     printf("# LIBDIR = %s\n", LIBDIR);
-    printf("# DEFAULTS_FILE_NAME = %s\n",
-	   DEFAULTS_FILE_NAME);
+    printf("# DEFAULTS_FILE_NAME = %s\n", DEFAULTS_FILE_NAME);
     printf("# MAPDIR = %s\n", MAPDIR);
     printf("# DEFAULT_MAP = %s\n", DEFAULT_MAP);
     printf("# \n");
@@ -644,7 +1470,7 @@ int Parse_list(int *index, char *buf)
 	break;
     case valBool:
 	sprintf(buf, "%s:%s", options[i].name,
-	        *(bool *)options[i].variable ? "yes" : "no");
+		*(bool *)options[i].variable ? "yes" : "no");
 	break;
     case valIPos:
 	sprintf(buf, "%s:%d,%d", options[i].name,
@@ -676,7 +1502,7 @@ void Parser(int argc, char *argv[])
 	    Parse_dump(*argv);
 	    exit(0);
 	}
-	if (strncmp("-version", argv[i], 2) == 0) {
+	if (strcmp("-version", argv[i]) == 0 || strcmp("-v", argv[i]) == 0) {
 	    puts(TITLE);
 	    exit(0);
 	}
@@ -728,11 +1554,11 @@ void Parser(int argc, char *argv[])
 	    }
 	}
     }
-    
+
     /*
      * Read local defaults file
      */
-    if (fname = getOption("defaultsFileName"))
+    if ((fname = getOption("defaultsFileName")) != NULL)
 	parseDefaultsFile(fname);
     else
 	parseDefaultsFile(DEFAULTS_FILE_NAME);

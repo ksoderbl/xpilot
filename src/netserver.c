@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 3.82 1994/05/25 15:10:06 bert Exp $
+/* $Id: netserver.c,v 3.99 1994/09/19 21:39:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -58,7 +58,7 @@
  * The second intermediate state is entered after the
  * ready-but-not-playing-yet state and before the actively-playing state.
  * The difference being that in this second intermediate state the client
- * is already considered an active player by the rest of the server 
+ * is already considered an active player by the rest of the server
  * but should not get frame updates yet until it has acknowledged its last
  * reliable data.
  *
@@ -117,15 +117,16 @@
 #include <ctype.h>
 
 #define SERVER
-#include "global.h"
 #include "version.h"
+#include "config.h"
+#include "const.h"
+#include "global.h"
+#include "proto.h"
 #include "map.h"
 #include "pack.h"
-#include "error.h"
 #include "bit.h"
 #include "socklib.h"
 #include "net.h"
-#include "draw.h"
 #define NETSERVER_C
 #include "netserver.h"
 #include "packet.h"
@@ -224,6 +225,7 @@ static int Init_setup(void)
 	    case CWISE_GRAV:	*mapptr = SETUP_CWISE_GRAV; break;
 	    case POS_GRAV:	*mapptr = SETUP_POS_GRAV; break;
 	    case NEG_GRAV:	*mapptr = SETUP_NEG_GRAV; break;
+	    case ITEM_CONCENTRATOR:	*mapptr = SETUP_ITEM_CONCENTRATOR; break;
 	    case WORMHOLE:
 		switch (World.wormHoles[wormhole++].type) {
 		case WORM_NORMAL: *mapptr = SETUP_WORM_NORMAL; break;
@@ -374,6 +376,7 @@ void Init_receive(void)
     login_receive[PKT_MODIFIERBANK]		= Receive_modifier_bank;
     login_receive[PKT_MOTD]			= Receive_motd;
     login_receive[PKT_SHAPE]			= Receive_shape;
+    login_receive[PKT_REQUEST_AUDIO]		= Receive_audio_request;
 
     playing_receive[PKT_ACK]			= Receive_ack;
     playing_receive[PKT_VERIFY]			= Receive_discard;
@@ -394,6 +397,8 @@ void Init_receive(void)
     playing_receive[PKT_MODIFIERBANK]		= Receive_modifier_bank;
     playing_receive[PKT_MOTD]			= Receive_motd;
     playing_receive[PKT_SHAPE]			= Receive_shape;
+    playing_receive[PKT_POINTER_MOVE]		= Receive_pointer_move;
+    playing_receive[PKT_REQUEST_AUDIO]		= Receive_audio_request;
 }
 
 /*
@@ -460,7 +465,7 @@ void Destroy_connection(int ind, char *reason)
 	write(sock, pkt, len);
     }
 #ifndef SILENT
-    printf("Destroying connection for %s=%s@%s|%s (\"%s\")\n",
+    printf("Goodbye %s=%s@%s|%s (\"%s\")\n",
 	    connp->nick, connp->real, connp->host, connp->dpy,
 	    reason);
 #endif
@@ -529,7 +534,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
 		 * May happen for multi-homed hosts
 		 * and if previous packet got lost.
 		 */
-		login_in_progress = 1; 
+		login_in_progress = 1;
 		return connp->my_port;
 	    } else {
 		/*
@@ -672,11 +677,11 @@ static int Handle_listening(int ind)
 	return -1;
     }
 #ifndef SILENT
-    printf("Connected to %s(%s)/%d", connp->host, connp->addr, connp->his_port);
+    printf("Welcome %s=%s@%s|%s (%s/%d)", connp->nick, connp->real,
+	   connp->host, connp->dpy, connp->addr, connp->his_port);
     if (connp->version != MY_VERSION)
-	printf(" (version %04x)\n", connp->version);
-    else
-	printf("\n");
+	printf(" (version %04x)", connp->version);
+    printf("\n");
 #endif
     if (connp->r.ptr[0] != PKT_VERIFY) {
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
@@ -704,7 +709,7 @@ static int Handle_listening(int ind)
     }
     Sockbuf_clear(&connp->w);
     if (Send_reply(ind, PKT_VERIFY, PKT_SUCCESS) == -1
-    	|| Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
+	|| Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
 	|| Send_reliable(ind) <= 0) {
 	Destroy_connection(ind, "confirm failed");
 	return -1;
@@ -861,9 +866,8 @@ static int Handle_login(int ind)
     }
 
 #ifndef	SILENT
-    printf("%s (%d, %s@%s|%s) starts at startpos %d.\n",
-	   pl->name, NumPlayers, pl->realname,
-	   connp->host, connp->dpy, pl->home_base);
+    printf("%s (%d) starts at startpos %d.\n",
+	   pl->name, NumPlayers, pl->home_base);
 #endif
 
     /*
@@ -902,7 +906,7 @@ static int Handle_login(int ind)
 	    Send_war(pl->conn, Players[i]->id, Players[i]->robot_lock_id);
 	}
     }
- 
+
     if (NumPlayers == 1) {
 	sprintf(msg, "Welcome to \"%s\", made by %s.",
 		World.name, World.author);
@@ -914,14 +918,6 @@ static int Handle_login(int ind)
 		pl->name, pl->realname, World.name, World.author);
     }
     Set_message(msg);
-
-#ifdef SOUND
-    if (sound_player_init(pl) < 0) {
-	error("Silent mode\n");
-    }
-
-    sound_play_all(START_SOUND);
-#endif
 
     conn_bit = (1 << ind);
     for (i = 0; i < World.NumCannons; i++) {
@@ -958,6 +954,10 @@ static int Handle_login(int ind)
 	}
     }
 
+    sound_player_init(pl);
+
+    sound_play_all(START_SOUND);
+
     return 0;
 }
 
@@ -993,6 +993,8 @@ static int Handle_input(int ind)
 	}
 	return -1;
     }
+    connp->num_keyboard_updates = 0;
+
     Sockbuf_clear(&connp->r);
     if (Sockbuf_read(&connp->r) == -1) {
 	Destroy_connection(ind, "input error");
@@ -1044,7 +1046,7 @@ int Input(void)
 			state,
 			found,
 			fdmask,
-    			count,
+			count,
 			save_mask,
 			contact_mask,
 			num_input = 0,
@@ -1243,6 +1245,7 @@ int Send_self(int ind,
     connection_t	*connp = &Conn[ind];
     int			pw, ts, tr, n;
     u_byte		stat = status;
+    int			sbuf_len = connp->w.len;
 
     pw = (int) (power + 0.5);
     ts = (int) (turnspeed + 0.5);
@@ -1288,8 +1291,11 @@ int Send_self(int ind,
 	n = Packet_printf(&connp->w,
 			  "%c",
 			  emergency_shields);
+	if (n <= 0) {
+	    connp->w.len = sbuf_len;
+	}
     }
-		     
+
     return n;
 }
 
@@ -1308,8 +1314,7 @@ int Send_leave(int ind, int id)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for leave info (%d,%d)",
 	      connp->state, connp->id);
@@ -1325,8 +1330,7 @@ int Send_war(int ind, int robot_id, int killer_id)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for war declaration (%d,%d,%d)",
 	      ind, connp->state, connp->id);
@@ -1343,8 +1347,7 @@ int Send_seek(int ind, int programmer_id, int robot_id, int sought_id)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for seek declaration (%d,%d,%d)",
 	      ind, connp->state, connp->id);
@@ -1361,7 +1364,9 @@ int Send_player(int ind, int id)
 {
     connection_t	*connp = &Conn[ind];
     player		*pl = Players[GetInd[id]];
-    char		buf[MSG_LEN];
+    int			n;
+    char		buf[MSG_LEN], ext[MSG_LEN];
+    int			sbuf_len = connp->c.len;
 
     if (!BIT(connp->state, CONN_PLAYING|CONN_READY)) {
 	errno = 0;
@@ -1369,14 +1374,23 @@ int Send_player(int ind, int id)
 	      connp->state, connp->id);
 	return 0;
     }
-    Convert_ship_2_string(pl->ship, buf,
+    Convert_ship_2_string(pl->ship, buf, ext,
 			  (connp->version < 0x3200) ? 0x3100 : 0x3200);
-    return Packet_printf(&connp->c,
-			 "%c%hd" "%c%c" "%s%s%s" "%S",
-			 PKT_PLAYER, pl->id,
-			 pl->team, pl->mychar,
-			 pl->name, pl->realname, pl->hostname,
-			 buf);
+    n = Packet_printf(&connp->c,
+		      "%c%hd" "%c%c" "%s%s%s" "%S",
+		      PKT_PLAYER, pl->id,
+		      pl->team, pl->mychar,
+		      pl->name, pl->realname, pl->hostname,
+		      buf);
+    if (connp->version > 0x3200) {
+	if (n > 0) {
+	    n = Packet_printf(&connp->c, "%S", ext);
+	    if (n <= 0) {
+		connp->c.len = sbuf_len;
+	    }
+	}
+    }
+    return n;
 }
 
 /*
@@ -1386,8 +1400,7 @@ int Send_score(int ind, int id, int score, int life, int mychar)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for score(%d,%d)",
 	    connp->state, connp->id);
@@ -1398,14 +1411,33 @@ int Send_score(int ind, int id, int score, int life, int mychar)
 }
 
 /*
+ * Send the new score for some player to a client.
+ */
+int Send_timing(int ind, int id, int check, int round)
+{
+    connection_t	*connp = &Conn[ind];
+
+    if (connp->version < 0x3261) {
+	return 1;
+    }
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+	errno = 0;
+	error("Connection not ready for timing(%d,%d)",
+	      connp->state, connp->id);
+	return 0;
+    }
+    return Packet_printf(&connp->c, "%c%hd%hu", PKT_TIMING,
+			 id, round * MAX_CHECKS + check);
+}
+
+/*
  * Send info about a player having which base.
  */
 int Send_base(int ind, int id, int num)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
@@ -1424,14 +1456,13 @@ int Send_score_object(int ind, int score, int x, int y, char *string)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
     }
-    return Packet_printf(&Conn[ind].c, "%c%hd%hu%hu%s",PKT_SCORE_OBJECT, 
+    return Packet_printf(&Conn[ind].c, "%c%hd%hu%hu%s",PKT_SCORE_OBJECT,
 			 score, x, y, string);
 }
 
@@ -1518,15 +1549,6 @@ int Send_fastshot(int ind, int type, unsigned char *p, int n)
     return n;
 }
 
-int Send_shot(int ind, int x, int y, int color, int teamshot)
-{
-    connection_t	*connp = &Conn[ind];
-    int			id;
-
-    id = (teamshot ? PKT_TEAMSHOT : PKT_SHOT);
-    return Packet_printf(&connp->w, "%c%hd%hd", id + color, x, y);
-}
-
 int Send_missile(int ind, int x, int y, int len, int dir)
 {
     return Packet_printf(&Conn[ind].w, "%c%hd%hd%c%c",
@@ -1548,7 +1570,7 @@ int Send_mine(int ind, int x, int y, int teammine, int id)
 
 int Send_target(int ind, int num, int dead_time, int damage)
 {
-    return Packet_printf(&Conn[ind].w, "%c%hu%hu%hu", PKT_TARGET, 
+    return Packet_printf(&Conn[ind].w, "%c%hu%hu%hu", PKT_TARGET,
 			 num, dead_time, damage);
 }
 
@@ -1574,7 +1596,7 @@ int Send_ecm(int ind, int x, int y, int size)
 
 int Send_trans(int ind, int x1, int y1, int x2, int y2)
 {
-    return Packet_printf(&Conn[ind].w,"%c%hd%hd%hd%hd", 
+    return Packet_printf(&Conn[ind].w,"%c%hd%hd%hd%hd",
 			 PKT_TRANS, x1, y1, x2, y2);
 }
 
@@ -1654,8 +1676,7 @@ int Send_message(int ind, char *msg)
 {
     connection_t	*connp = &Conn[ind];
 
-    if (connp->state != CONN_PLAYING
-	&& connp->state != CONN_READY) {
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
 	error("Connection not ready for message (%d,%d)",
 	    connp->state, connp->id);
@@ -1768,6 +1789,10 @@ static int Receive_keyboard(int ind)
 	pl->key_changed = 1;
 	Handle_keyboard(GetInd[connp->id]);
     }
+    if (connp->num_keyboard_updates++ && (connp->state & CONN_PLAYING)) {
+	Destroy_connection(ind, "no macros");
+	return -1;
+    }
 
     return 1;
 }
@@ -1818,7 +1843,7 @@ static int Receive_play(int ind)
 	Destroy_connection(ind, "login failed");
 	return -1;
     }
-   
+
     return 2;
 }
 
@@ -2216,11 +2241,11 @@ static void Handle_talk(int ind, char *str)
     player		*pl = Players[GetInd[connp->id]];
     int			i, sent, team, len;
     char		*cp,
-			msg[MSG_LEN * 2]; 
+			msg[MSG_LEN * 2];
 
     if ((cp = strchr (str, ':')) == NULL
 	|| cp == str
-	|| strchr("-)/}", cp[1])	/* smileys are smileys */
+	|| strchr("-_~)(/\\}{[]", cp[1])	/* smileys are smileys */
 	) {
 	sprintf(msg, "%s [%s]", str, pl->name);
 	Set_message(msg);
@@ -2353,7 +2378,7 @@ static int Receive_modifier_bank(int ind)
 {
     connection_t	*connp = &Conn[ind];
     player		*pl;
-    char		bank;
+    unsigned char	bank;
     char		str[MAX_CHARS];
     unsigned char	ch;
     char		*cp;
@@ -2367,7 +2392,7 @@ static int Receive_modifier_bank(int ind)
 	return n;
     }
     pl = Players[GetInd[connp->id]];
-    if (bank >= 0 && bank < NUM_MODBANKS) {
+    if (bank < NUM_MODBANKS) {
 	CLEAR_MODS(mods);
 	if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
 	    for (cp = str; *cp; cp++) {
@@ -2447,13 +2472,21 @@ static int Receive_shape(int ind)
     connection_t	*connp = &Conn[ind];
     int			n;
     char		ch;
-    char		str[MSG_LEN];
+    char		str[2*MSG_LEN];
 
     if ((n = Packet_scanf(&connp->r, "%c%S", &ch, str)) <= 0) {
 	if (n == -1) {
 	    Destroy_connection(ind, "read shape");
 	}
 	return n;
+    }
+    if (connp->version > 0x3200) {
+	if ((n = Packet_scanf(&connp->r, "%S", &str[strlen(str)])) <= 0) {
+	    if (n == -1) {
+		Destroy_connection(ind, "read shape ext");
+	    }
+	    return n;
+	}
     }
     if (connp->state == CONN_LOGIN && connp->ship == NULL) {
 	connp->ship = Parse_shape_str(str);
@@ -2551,5 +2584,59 @@ static int Send_motd(int ind)
 
     /* Return ok */
     return 0;
+}
+
+static int Receive_pointer_move(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+    player		*pl;
+    unsigned char	ch;
+    short		movement;
+    int			n;
+    float		turnspeed, turndir;
+
+    if ((n = Packet_scanf(&connp->r, "%c%hd", &ch, &movement)) <= 0) {
+	if (n == -1) {
+	    Destroy_connection(ind, "read error");
+	}
+	return n;
+    }
+    pl = Players[GetInd[connp->id]];
+    if (BIT(pl->used, OBJ_AUTOPILOT))
+	Autopilot(ind, 0);
+    turnspeed = movement * pl->turnspeed / MAX_PLAYER_TURNSPEED;
+    if (turnspeed < 0) {
+	turndir = -1;
+	turnspeed = -turnspeed;
+    }
+    else {
+	turndir = 1;
+    }
+    LIMIT(turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
+    pl->turnvel -= turndir * turnspeed;
+
+    return 1;
+}
+
+static int Receive_audio_request(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+    player		*pl;
+    int			n;
+    unsigned char	ch;
+    unsigned char	onoff;
+
+    if ((n = Packet_scanf(&connp->r, "%c%c", &ch, &onoff)) <= 0) {
+	if (n == -1) {
+	    Destroy_connection(ind, "read error");
+	}
+	return n;
+    }
+    if (connp->id != -1) {
+	pl = Players[GetInd[connp->id]];
+	sound_player_onoff(pl, onoff);
+    }
+
+    return 1;
 }
 

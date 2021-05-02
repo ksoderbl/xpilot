@@ -1,4 +1,4 @@
-/* $Id: saudio.h,v 3.6 1994/02/07 13:20:41 bjoerns Exp $
+/* $Id: saudio.h,v 3.9 1994/09/19 21:45:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -25,12 +25,18 @@
 #ifndef _saudio_h
 #define _saudio_h
 
+#if defined(SERVER_SOUND) && defined(SERVER) && !defined(SOUND)
+/* Enable only sound support in the server, not in the client. */
+#define SOUND	1
+#endif
+
 #ifndef SOUND
 
 /*
  * Define like this to avoid having to put #ifdef SOUND all over the place.
  */
-#define sound_player_init(player)
+#define sound_player_init(player)		((player)->audio = NULL)
+#define sound_player_onoff(player, onoff)
 #define sound_play_player(player, index)
 #define sound_play_all(index)
 #define sound_play_sensors(x, y, index)
@@ -41,12 +47,13 @@
 
 #include "audio.h"
 
-int             sound_player_init(player *);
-void            sound_play_player(player *, int);
-void            sound_play_all(int);
-void            sound_play_sensors(float, float, int);
-void            sound_play_queued(player * pl);
-void            sound_close(player * pl);
+int		sound_player_init(player *);
+void		sound_player_onoff(player *pl, int onoff);
+void		sound_play_player(player *, int);
+void		sound_play_all(int);
+void		sound_play_sensors(float, float, int);
+void		sound_play_queued(player * pl);
+void		sound_close(player * pl);
 
 #endif						/* SOUND */
 

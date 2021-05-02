@@ -1,4 +1,4 @@
-/* $Id: net.h,v 3.14 1994/03/06 20:39:07 bert Exp $
+/* $Id: net.h,v 3.17 1994/07/10 19:49:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,14 +24,12 @@
 #ifndef	NET_H
 #define	NET_H
 
-#include "socklib.h"
-#include "const.h"
 
 #define MIN_SOCKBUF_SIZE	1024
 #define MAX_SOCKBUF_SIZE	(50*1024)
 
 #define SERVER_RECV_SIZE	MIN_SOCKBUF_SIZE
-#if defined(LINUX) || defined(__linux__)
+#if defined(LINUX0)
 /* bwahg, linux tcp/ip still has silly limitations in 0.99.15 */
 #define SERVER_SEND_SIZE	(3*512 + 3*128)
 #else
@@ -64,7 +62,7 @@
 /*
  * Currently biggest packet size.
  */
-#define	MAX_PACKET_SIZE		(1 + MSG_LEN)
+#define	MAX_PACKET_SIZE		(1 + MSG_LEN + 16 + 64 + 80 + 5)
 
 /*
  * A buffer to reduce the number of system calls made and to reduce

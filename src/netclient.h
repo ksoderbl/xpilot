@@ -1,4 +1,4 @@
-/* $Id: netclient.h,v 3.24 1994/05/23 19:13:28 bert Exp $
+/* $Id: netclient.h,v 3.31 1994/09/17 01:03:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,13 +24,18 @@
 #ifndef	NETCLIENT_H
 #define	NETCLIENT_H
 
+#ifndef TYPES_H
+/* need u_byte */
 #include "types.h"
+#endif
 
-#define MIN_RECEIVE_WINDOW_SIZE	1
-#define MAX_RECEIVE_WINDOW_SIZE	4
-#define DEF_RECEIVE_WINDOW_SIZE	3
+#define MIN_RECEIVE_WINDOW_SIZE		1
+#define MAX_RECEIVE_WINDOW_SIZE		4
+#define DEF_RECEIVE_WINDOW_SIZE		3
+#define DEF_RECEIVE_WINDOW_SIZE_STR	"3"
 
-extern int			receive_window_size;
+extern int	receive_window_size;
+extern long	last_loops;
 
 int Net_setup(void);
 int Net_verify(char *real, char *nick, char *dpy, int my_team);
@@ -61,8 +66,6 @@ int Receive_thrusttime(void);
 int Receive_shieldtime(void);
 int Receive_debris(void);
 int Receive_fastshot(void);
-int Receive_shot(void);
-int Receive_teamshot(void);
 int Receive_ecm(void);
 int Receive_trans(void);
 int Receive_paused(void);
@@ -74,6 +77,7 @@ int Receive_seek(void);
 int Receive_player(void);
 int Receive_score(void);
 int Receive_score_object(void);
+int Receive_timing(void);
 int Receive_fuel(void);
 int Receive_cannon(void);
 int Receive_target(void);
@@ -91,6 +95,7 @@ int Send_turnspeed(float turnspeed);
 int Send_turnspeed_s(float turnspeed_s);
 int Send_turnresistance(float turnresistance);
 int Send_turnresistance_s(float turnresistance_s);
+int Send_pointer_move(int movement);
 int Receive_audio(void);
 int Receive_talk_ack(void);
 int Send_talk(void);
@@ -102,5 +107,6 @@ int Receive_time_left(void);
 int Receive_eyes(void);
 int Receive_motd(void);
 int Receive_magic(void);
+int Send_audio_request(int onoff);
 
 #endif

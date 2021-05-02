@@ -1,4 +1,4 @@
-/* $Id: syslimit.c,v 3.6 1994/02/07 13:20:48 bjoerns Exp $
+/* $Id: syslimit.c,v 3.8 1994/08/16 08:45:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <time.h>
+
 #include "types.h"
 
 #define PATTERN		"lglab[01]"
@@ -40,7 +41,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 3.6 1994/02/07 13:20:48 bjoerns Exp $";
+    "@(#)$Id: syslimit.c,v 3.8 1994/08/16 08:45:59 bert Exp $";
 #endif
 
 

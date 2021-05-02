@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 3.30 1994/05/23 19:16:17 bert Exp $
+/* $Id: pack.h,v 3.37 1994/09/16 18:41:39 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,13 +24,10 @@
 #ifndef	PACK_H
 #define	PACK_H
 
-#include "socklib.h"
-#include "const.h"
-#include "types.h"
-
 #define CAP_LETTER(c)	(c = (c>='a' && c<='z') ? c-'a'+'A' : c)
 
 #define SERVER_PORT	15345		/* Port which server listens to. */
+#define SERVER_PORT_STR	"15345"		/* ASCII version of server port. */
 #define META_PORT	5500
 #define META_HOST	"xpilot.cs.uit.no"
 #define META_HOST_TWO	"xpilot.mc.bio.uva.nl"
@@ -83,8 +80,13 @@
  * 3.1.0.2: different player status byte.
  * 3.1.0.3: different mine packet.
  * 3.2.0.0: New ship shape definition and big patches.
+ * 3.2.0.1: Extended buffer for very large ship shape definitions.
+ * 3.2.0.2: New mouse pointer control packet.
+ * 3.2.5.0: Now client must ask for audio packets in order to get them.
+ * 3.2.6.0: New map update packet.
+ * 3.2.6.1: New player timing packet.
  */
-#define	MAGIC		0x3200F4ED
+#define	MAGIC		0x3261F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))

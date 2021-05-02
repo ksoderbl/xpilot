@@ -25,15 +25,15 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.6 1994/03/30 17:08:00 bert Exp $";
+    "@(#)$Id: usleep.c,v 3.7 1994/07/10 20:06:33 bert Exp $";
 #endif
 
 
 void usleep(unsigned long usec)
 {
-/*#ifdef SYSV
+#if 0 /* SYSV */
     poll((struct poll *) 0, (size_t) 0, usec / 1000);	/* ms RES */
-/*#else*/
+#endif
 #ifdef VMS
     float timeout;
 

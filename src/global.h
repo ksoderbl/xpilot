@@ -1,4 +1,4 @@
-/* $Id: global.h,v 3.51 1994/05/23 19:09:52 bert Exp $
+/* $Id: global.h,v 3.61 1994/09/17 01:00:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,20 +24,14 @@
 #ifndef	GLOBAL_H
 #define	GLOBAL_H
 
-#include <stdio.h>
-/*#include <stdlib.h> */
-#include <math.h>
-#include <errno.h>
-#include "config.h"
-#include "types.h"
-#include "rules.h"
+#ifndef OBJECT_H
+/* need player */
 #include "object.h"
+#endif
+#ifndef MAP_H
+/* need World_map */
 #include "map.h"
-#include "draw.h"
-#include "bit.h"
-#include "version.h"
-#include "proto.h"
-
+#endif
 
 #ifndef MAX
 #define MAX(a,b)  ((a) > (b) ? (a) : (b))
@@ -75,11 +69,13 @@ extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
 extern long		GetInd[];
 #endif
 extern float		tbl_sin[];
+extern float		tbl_cos[];
 #ifdef SERVER
 extern int		ShutdownServer, ShutdownDelay;
 extern bool		RawMode;
 extern bool		NoQuit;
 extern int		framesPerSecond;
+extern long		main_loops;
 extern char		*mapFileName;
 extern int		mapRule;
 extern char		*mapData;
@@ -113,11 +109,12 @@ extern float		objectWallBounceLifeFactor;
 extern float		wallBounceFuelDrainMult;
 extern float		wallBounceDestroyItemProb;
 
-extern float		playerMinimumStartFuel;
-
 extern bool		limitedVisibility;
+extern float		minVisibilityDistance;
+extern float		maxVisibilityDistance;
 extern bool		limitedLives;
 extern int		worldLives;
+extern bool		endOfRoundReset;
 extern bool		teamPlay;
 extern bool		teamAssign;
 extern bool		teamImmunity;
@@ -151,12 +148,14 @@ extern bool		shieldedItemPickup;
 extern bool		shieldedMining;
 extern bool		laserIsStunGun;
 extern bool		targetKillTeam;
+extern bool		targetSync;
 extern bool		reportToMetaServer;
 
 extern bool		playersOnRadar;
 extern bool		missilesOnRadar;
 extern bool		minesOnRadar;
 extern bool		nukesOnRadar;
+extern bool		treasuresOnRadar;
 extern bool 		identifyMines;
 extern bool		distinguishMissiles;
 extern int		maxMissilesPerPack;
@@ -168,6 +167,8 @@ extern bool		treasureCollisionMayKill;
 extern float 		dropItemOnKillProb;
 extern float		detonateItemOnKillProb;
 extern float 		movingItemProb;
+extern float            rogueHeatProb;
+extern float            rogueMineProb;
 extern float 		itemEnergyPackProb;
 extern float 		itemTankProb;
 extern float		itemECMProb;
@@ -186,6 +187,7 @@ extern float		itemAutopilotProb;
 extern float		itemEmergencyShieldProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
+extern int		itemConcentratorRadius;
 extern float		gameDuration;
 extern time_t		gameOverTime;
 
@@ -207,6 +209,11 @@ extern int		initialAutopilots;
 extern int		initialEmergencyShields;
 
 extern char	       	*scoreTableFileName;
+
+extern float		friction;
+extern float		checkpointRadius;
+extern int		raceLaps;
+
 #endif
 
 #endif /* GLOBAL_H */

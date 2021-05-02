@@ -1,4 +1,4 @@
-/* $Id: option.c,v 3.18 1994/02/07 13:20:15 bjoerns Exp $
+/* $Id: option.c,v 3.19 1994/07/10 19:53:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -31,8 +31,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+
 #define SERVER
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "robot.h"
 #include "map.h"
 #include "defaults.h"
@@ -247,15 +252,15 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
  */
 #define EXPAND					\
     if (i == slen) {				\
-        s = (char *)realloc(s, slen *= 2);	\
+	s = (char *)realloc(s, slen *= 2);	\
     }
 static void parseLine(FILE *ifile)
 {
     int         ich;
     char       *value,
-               *head,
-               *name,
-               *s = (char *)malloc(128);
+	       *head,
+	       *name,
+	       *s = (char *)malloc(128);
     int         slen = 128;
     int         i = 0;
     int         override = 0;
@@ -576,11 +581,11 @@ void parseOptions(void)
 	    FPS);
 	End_game();
     }
-    
+
     for (i = 0; i < NHASH; i++)
 	for (tmp = hashArray[i]; tmp; tmp = tmp->next) {
 	    /* Does it have a default?   (If so, get a pointer to it) */
-	    if (desc = (optionDesc *)tmp->def) {
+	    if ((desc = (optionDesc *)tmp->def) != NULL) {
 		if (desc->variable) {
 		    switch (desc->type) {
 
@@ -589,7 +594,7 @@ void parseOptions(void)
 
 		    case valInt:
 			{
-			    int        *ptr = desc->variable;
+			    int        *ptr = (int *)desc->variable;
 
 			    *ptr = atoi(tmp->value);
 			    break;
@@ -597,7 +602,7 @@ void parseOptions(void)
 
 		    case valReal:
 			{
-			    float     *ptr = desc->variable;
+			    float     *ptr = (float *)desc->variable;
 
 			    *ptr = atof(tmp->value);
 			    break;

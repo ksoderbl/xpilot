@@ -1,4 +1,4 @@
-/* $Id: saudio.c,v 3.11 1994/02/07 13:20:40 bjoerns Exp $
+/* $Id: saudio.c,v 3.15 1994/09/20 14:21:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,8 +24,17 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <stdio.h>
+
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "netserver.h"
+#include "saudio.h"
+
+#ifdef SOUND
 
 #define SOUND_RANGE_FACTOR	0.5		/* factor to increase sound
 						 * range by */
@@ -40,7 +49,7 @@
 typedef struct _AudioQRec
 {
     int             index,
-                    volume;
+		    volume;
     struct _AudioQRec *next;
 } AudioQRec, *AudioQPtr;
 
@@ -73,7 +82,28 @@ int sound_player_init(player * pl)
 {
     pl->audio = NULL;
 
+    if (pl->version < 0x3250) {
+	SET_BIT(pl->status, WANT_AUDIO);
+    }
+
     return 0;
+}
+
+/*
+ * Set (or reset) a player status flag indicating
+ * that a player wants (or doesn't want) sound.
+ */
+void sound_player_onoff(player *pl, int onoff)
+{
+    if (onoff) {
+	if (!BIT(pl->status, WANT_AUDIO)) {
+	    SET_BIT(pl->status, WANT_AUDIO);
+	    sound_play_player(pl, START_SOUND);
+	}
+    }
+    else {
+	CLR_BIT(pl->status, WANT_AUDIO);
+    }
 }
 
 /*
@@ -81,8 +111,9 @@ int sound_player_init(player * pl)
  */
 void sound_play_player(player * pl, int index)
 {
-    if (pl->conn != NOT_CONNECTED)
+    if (BIT(pl->status, WANT_AUDIO)) {
 	queue_audio(pl, index, 100);
+    }
 }
 
 /*
@@ -92,8 +123,11 @@ void sound_play_all(int index)
 {
     int i;
 
-    for (i = 0; i < NumPlayers; i++)
-	sound_play_player(Players[i], index);
+    for (i = 0; i < NumPlayers; i++) {
+	if (BIT(Players[i]->status, WANT_AUDIO)) {
+	    sound_play_player(Players[i], index);
+	}
+    }
 }
 
 /*
@@ -105,17 +139,17 @@ void sound_play_all(int index)
 void sound_play_sensors(float x, float y, int index)
 {
     int             i,
-                    volume;
+		    volume;
     float           dx,
-                    dy,
-                    range,
-                    factor;
+		    dy,
+		    range,
+		    factor;
     player         *pl;
 
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
 
-	if (pl->conn == NOT_CONNECTED)
+	if (!BIT(pl->status, WANT_AUDIO))
 	    continue;
 
 	dx = ABS(pl->pos.x - x);
@@ -137,7 +171,7 @@ void sound_play_sensors(float x, float y, int index)
 void sound_play_queued(player * pl)
 {
     AudioQPtr       p,
-                    n;
+		    n;
 
     p = (AudioQPtr)pl->audio;
     pl->audio = NULL;
@@ -153,7 +187,7 @@ void sound_play_queued(player * pl)
 void sound_close(player * pl)
 {
     AudioQPtr       p,
-                    n;
+		    n;
 
     p = (AudioQPtr)pl->audio;
     pl->audio = NULL;
@@ -164,3 +198,5 @@ void sound_close(player * pl)
 	p = n;
     }
 }
+
+#endif /* SOUND */

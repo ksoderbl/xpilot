@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.93 1994/05/25 16:16:10 bert Exp $
+/* $Id: paint.c,v 3.110 1994/09/19 21:41:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 
@@ -38,18 +37,18 @@
 #include <time.h>
 
 #include "version.h"
-#include "client.h"
+#include "config.h"
 #include "const.h"
 #include "error.h"
-#include "draw.h"
-#include "item.h"
 #include "paint.h"
 #include "xinit.h"
 #include "setup.h"
 #include "rules.h"
 #include "bit.h"
+#include "keys.h"
 #include "net.h"
 #include "netclient.h"
+#include "dbuff.h"
 
 #ifndef ERASE
 #define ERASE		0
@@ -61,14 +60,14 @@
 #define MAX_LINE_WIDTH	4	/* widest line drawn */
 
 #define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (view_height - (co) + world.y))
+#define Y(co)  ((int) (world.y + view_height - (co)))
 
 extern float  		tbl_sin[];
+extern float  		tbl_cos[];
 extern setup_t		*Setup;
 extern int		RadarHeight;
 extern score_object_t	score_objects[MAX_SCORE_OBJECTS];
 extern int 		score_object;
-extern int		hudColor;
 
 
 /*
@@ -80,7 +79,6 @@ XFontStruct* scoreListFont;
 XFontStruct* buttonFont;
 XFontStruct* textFont;
 XFontStruct* talkFont;
-XFontStruct* keyListFont;
 XFontStruct* motdFont;
 char	gameFontName[FONT_LEN];	/* The fonts used in the game */
 char	messageFontName[FONT_LEN];
@@ -88,7 +86,6 @@ char	scoreListFontName[FONT_LEN];
 char	buttonFontName[FONT_LEN];
 char	textFontName[FONT_LEN];
 char	talkFontName[FONT_LEN];
-char	keyListFontName[FONT_LEN];
 char	motdFontName[FONT_LEN];
 
 Display	*dpy;			/* Display of player (pointer) */
@@ -103,7 +100,6 @@ GC	buttonGC;		/* GC for the buttons */
 GC	scoreListGC;		/* GC for the player list */
 GC	textGC;			/* GC for the info text */
 GC	talkGC;			/* GC for the message window */
-GC	keyListGC;		/* GC for the keys text */
 GC	motdGC;			/* GC for the motd text */
 
 Window	top;			/* Top-level window (topshell) */
@@ -117,7 +113,6 @@ Pixmap	p_radar, s_radar;	/* Pixmaps for the radar (implements */
 				/* the planes hack on the radar for */
 				/* monochromes) */
 long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-Window	keys_w;			/* Help window */
 Window	about_w;		/* About window */
 Window	about_close_b;		/* About window's close button */
 Window	about_next_b;		/* About window's next button */
@@ -127,8 +122,10 @@ Window	talk_w;			/* Talk window */
 XColor	colors[MAX_COLORS];	/* Colors */
 Colormap	colormap;	/* Private colormap */
 int	maxColors;		/* Max. number of colors to use */
+int	hudColor;		/* Color index for HUD drawing */
+int	targetRadarColor;	/* Color index for targets on radar. */
 bool	gotFocus;
-bool	radar_exposed;
+int	radar_exposures;
 bool	players_exposed;
 short	view_width, view_height;	/* Visible area according to server */
 u_byte	debris_colors;		/* Number of debris intensities from server */
@@ -141,8 +138,6 @@ char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
 int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 	(Display *disp, Drawable d, GC gc,
 	 int x, int y, unsigned width, unsigned height);
-
-dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
 int		maxKeyDefs;
 keydefs_t	*keyDefs;
@@ -196,10 +191,6 @@ typedef struct {
 typedef struct {
     short		x, y, type;
 } itemtype_t;
-
-typedef struct {
-    short		x, y, color;
-} shot_t;
 
 typedef struct {
     short		x, y, size;
@@ -268,10 +259,6 @@ static mine_t		*mine_ptr;
 static int		 num_mine, max_mine;
 static itemtype_t	*itemtype_ptr;
 static int		 num_itemtype, max_itemtype;
-static shot_t		*shot_ptr;
-static int		 num_shot, max_shot;
-static shot_t		*teamshot_ptr;
-static int		 num_teamshot, max_teamshot;
 static ecm_t		*ecm_ptr;
 static int		 num_ecm, max_ecm;
 static trans_t 		*trans_ptr;
@@ -293,26 +280,46 @@ static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
 static int		 num_fastshot[DEBRIS_TYPES * 2],
 			 max_fastshot[DEBRIS_TYPES * 2];
 
-#define HANDLE(P,N,M,T)							\
+/*
+ * Macro to add one new element of a given type to a dynamic array.
+ * T is the type of the element.
+ * P is the pointer to the array memory.
+ * N is the current number of elements in the array.
+ * M is the current size of the array.
+ * V is the new element to add.
+ * The goal is to keep the number of malloc/realloc calls low
+ * while not wasting too much memory because of over-allocation.
+ */
+#define HANDLE(T,P,N,M,V)							\
     if (N >= M && ((M <= 0)						\
-	? (P = (void *) malloc((M = 1) * sizeof(*P)))			\
-	: (P = (void *) realloc(P, (M += M) * sizeof(*P)))) == NULL) {	\
+	? (P = (T *) malloc((M = 1) * sizeof(*P)))			\
+	: (P = (T *) realloc(P, (M += M) * sizeof(*P)))) == NULL) {	\
 	error("No memory");						\
 	N = M = 0;							\
 	return -1;							\
     } else								\
-    	(P[N++] = T)
+	(P[N++] = V)
 
 #ifndef PAINT_FREE
 # define PAINT_FREE	1
 #endif
 #if PAINT_FREE
-# define RELEASE(P, N, M)	(free(P), (M) = 0, (N) = 0)
+# define RELEASE(P, N, M)	if (!(N)) ; else (free(P), (M) = 0, (N) = 0)
 #else
 # define RELEASE(P, N, M)	((N) = 0)
 #endif
 
 #if ERASE
+/*
+ * Macro to make room in a given dynamic array for new elements.
+ * P is the pointer to the array memory.
+ * N is the current number of elements in the array.
+ * M is the current size of the array.
+ * T is the type of the elements.
+ * E is the number of new elements to store in the array.
+ * The goal is to keep the number of malloc/realloc calls low
+ * while not wasting too much memory because of over-allocation.
+ */
 #define EXPAND(P,N,M,T,E)						\
     if ((N) + (E) > (M)) {						\
 	if ((M) <= 0) {							\
@@ -345,14 +352,6 @@ static long		loops = 0,
 
 static XPoint		points[255];
 static XGCValues	gcv;
-
-static XPoint		diamond[] = {
-    { 0, -DSIZE },
-    { DSIZE, -DSIZE },
-    { -DSIZE, -DSIZE },
-    { -DSIZE, DSIZE },
-    { DSIZE, DSIZE }
-};
 
 static XRectangle	*rect_ptr[MAX_COLORS];
 static int		num_rect[MAX_COLORS], max_rect[MAX_COLORS];
@@ -597,7 +596,7 @@ static int Rectangle_add(int color, int x, int y, int width, int height)
     t.y = y;
     t.width = width;
     t.height = height;
-    HANDLE(rect_ptr[color], num_rect[color], max_rect[color], t);
+    HANDLE(XRectangle, rect_ptr[color], num_rect[color], max_rect[color], t);
     return 0;
 }
 
@@ -638,7 +637,7 @@ static int Arc_add(int color,
     t.height = height;
     t.angle1 = angle1;
     t.angle2 = angle2;
-    HANDLE(arc_ptr[color], num_arc[color], max_arc[color], t);
+    HANDLE(XArc, arc_ptr[color], num_arc[color], max_arc[color], t);
     return 0;
 }
 
@@ -674,7 +673,7 @@ static int Segment_add(int color, int x1, int y1, int x2, int y2)
     t.y1 = y1;
     t.x2 = x2;
     t.y2 = y2;
-    HANDLE(seg_ptr[color], num_seg[color], max_seg[color], t);
+    HANDLE(XSegment, seg_ptr[color], num_seg[color], max_seg[color], t);
     return 0;
 }
 
@@ -683,7 +682,7 @@ static char *scroll(char *string, int start, int len)
 {
     static char str[MAX_SCROLL_LEN];
     int i;
-    
+
     for (i=0; string[i+start] && i<length; i++)
 	str[i] = string[i+start];
     str[length] = '\0';
@@ -698,10 +697,10 @@ static char *scroll(char *string, int start, int len)
 static void Paint_meter(int x, int y, char *title, int val, int max)
 {
     const int	mw1_4 = METER_WIDTH/4,
-    		mw2_4 = METER_WIDTH/2,
+		mw2_4 = METER_WIDTH/2,
 		mw3_4 = 3*METER_WIDTH/4,
 		mw4_4 = METER_WIDTH,
-    		BORDER = 5;
+		BORDER = 5;
 
     Rectangle_add(RED,
 		  x+2, y+2,
@@ -726,47 +725,23 @@ static void Paint_meter(int x, int y, char *title, int val, int max)
 		    gameFont->ascent + gameFont->descent);
 }
 
-static int wrap(int *x, int *y)
+static int wrap(int *xp, int *yp)
 {
-    int x1, y1;
+    int			x = *xp, y = *yp;
 
-    if (*x >= world.x
-	&& *x <= world.x + view_width
-	&& *y >= world.y
-	&& *y <= world.y + view_height) {
-	return 1;
+    if (x < world.x || x > world.x + view_width) {
+	if (x < realWorld.x || x > realWorld.x + view_width) {
+	    return 0;
+	}
+	*xp += world.x - realWorld.x;
     }
-    if (BIT(Setup->mode, WRAP_PLAY) && wrappedWorld) {
-	if ((wrappedWorld & 1) && *x > view_width) {
-	    x1 = *x - Setup->width;
-	} else {
-	    x1 = *x;
+    if (y < world.y || y > world.y + view_height) {
+	if (y < realWorld.y || y > realWorld.y + view_height) {
+	    return 0;
 	}
-	if ((wrappedWorld & 2) && *y > view_height) {
-	    y1 = *y - Setup->height;
-	} else {
-	    y1 = *y;
-	}
-	if (x1 >= realWorld.x
-	    && x1 <= realWorld.x + view_width
-	    && y1 >= realWorld.y
-	    && y1 <= realWorld.y + view_height) {
-	    
-	    if ((wrappedWorld & 1) && *x == x1) {
-		*x = x1 + Setup->width;
-	    }
-	    if ((wrappedWorld & 2) && *y == y1) {
-		*y = y1 + Setup->height;
-	    }
-	    return 1;
-	}
+	*yp += world.y - realWorld.y;
     }
-#if 0
-    errno = 0;
-    error("Object (%d, %d) not in view (%d, %d) (%x)",
-	  *x, *y, pos.x, pos.y, wrappedWorld);
-#endif
-    return 0;
+    return 1;
 }
 
 void Game_over_action(u_byte stat)
@@ -788,22 +763,22 @@ void Game_over_action(u_byte stat)
     old_stat = stat;
 }
 
-static void Paint_item_symbol(u_byte type, Drawable d, GC gc, int x, int y)
+static void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y)
 {
     gcv.stipple = itemBitmaps[type];
     gcv.fill_style = FillStippled;
     gcv.ts_x_origin = x;
     gcv.ts_y_origin = y;
-    XChangeGC(dpy, gc,
+    XChangeGC(dpy, mygc,
 	      GCStipple|GCFillStyle|GCTileStipXOrigin|GCTileStipYOrigin,
 	      &gcv);
-    XFillRectangle(dpy, d, gc, x, y, ITEM_SIZE, ITEM_SIZE);
+    XFillRectangle(dpy, d, mygc, x, y, ITEM_SIZE, ITEM_SIZE);
     gcv.fill_style = FillSolid;
-    XChangeGC(dpy, gc, GCFillStyle, &gcv);
+    XChangeGC(dpy, mygc, GCFillStyle, &gcv);
 }
 
 
-void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
+void Paint_item(u_byte type, Drawable d, GC mygc, int x, int y)
 {
     const int		SIZE = ITEM_TRIANGLE_SIZE;
 
@@ -816,19 +791,19 @@ void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
     points[2].y = y - SIZE;
     points[3] = points[0];
     SET_FG(colors[BLUE].pixel);
-    XDrawLines(dpy, d, gc, points, 4, CoordModeOrigin);
+    XDrawLines(dpy, d, mygc, points, 4, CoordModeOrigin);
 #endif
 
     SET_FG(colors[RED].pixel);
 #if 0
     str[0] = itemtype_ptr[i].type + '0';
     str[1] = '\0';
-    XDrawString(dpy, d, gc,
+    XDrawString(dpy, d, mygc,
 		x - XTextWidth(gameFont, str, 1)/2,
 		y + SIZE - 1,
 		str, 1);
 #endif
-    Paint_item_symbol(type, d, gc, x - ITEM_SIZE/2, y - SIZE + 2);
+    Paint_item_symbol(type, d, mygc, x - ITEM_SIZE/2, y - SIZE + 2);
 }
 
 
@@ -851,29 +826,6 @@ static void Paint_shots(void)
 	    }
 	}
 	RELEASE(itemtype_ptr, num_itemtype, max_itemtype);
-    }
-
-    if (num_shot > 0) {
-	for (i = 0; i < num_shot; i++) {
-	    x = shot_ptr[i].x;
-	    y = shot_ptr[i].y;
-	    if (wrap(&x, &y)) {
-		Rectangle_add(shot_ptr[i].color, X(x), Y(y), 3, 3);
-	    }
-	}
-	RELEASE(shot_ptr, num_shot, max_shot);
-    }
-
-    if (num_teamshot > 0) {
-	for (i = 0; i < num_teamshot; i++) {
-	    x = teamshot_ptr[i].x;
-	    y = teamshot_ptr[i].y;
-	    if (wrap(&x, &y)) {
-		Rectangle_add(teamshot_ptr[i].color, X(x), Y(y),
-			      teamshot_size, teamshot_size);
-	    }
-	}
-	RELEASE(teamshot_ptr, num_teamshot, max_teamshot);
     }
 
     if (num_ball > 0) {
@@ -955,46 +907,46 @@ static void Paint_shots(void)
 		 * Determine if the name of the player who is safe
 		 * from the mine should be drawn.
 		 * Mines unsafe to all players have the name "Expired"
-		 * We do not know who is safe for mines sent with id==0 
+		 * We do not know who is safe for mines sent with id==0
 		 */
 		if (BIT(instruments, SHOW_MINE_NAME) && mine_ptr[i].id!=0) {
 		    other_t *other;
 		    char *name;
 		    int name_width, name_len;
 		    if (mine_ptr[i].id == EXPIRED_MINE_ID) {
-		        static char *expired_name = "Expired";
-		        static int expired_name_width = 0;
-		        static int expired_name_len = 0;
-		        if (expired_name_len == 0) {
+			static char *expired_name = "Expired";
+			static int expired_name_width = 0;
+			static int expired_name_len = 0;
+			if (expired_name_len == 0) {
 			    expired_name_len = strlen(expired_name);
 			    expired_name_width = XTextWidth(gameFont,
 							    expired_name,
 							    expired_name_len);
-		        }
-		        name = expired_name;
-		        name_len = expired_name_len;
-		        name_width = expired_name_width;
+			}
+			name = expired_name;
+			name_len = expired_name_len;
+			name_width = expired_name_width;
 		    } else if ((other=Other_by_id(mine_ptr[i].id))!=NULL) {
-		        FIND_NAME_WIDTH(other);
-		        name = other->name;
-		        name_len = other->name_len;
-		        name_width = other->name_width;
+			FIND_NAME_WIDTH(other);
+			name = other->name;
+			name_len = other->name_len;
+			name_width = other->name_width;
 		    } else {
-		        static char *unknown_name = "Not of this world!";
-		        static int unknown_name_width = 0;
-		        static int unknown_name_len = 0;
-		        if (unknown_name_len == 0) {
+			static char *unknown_name = "Not of this world!";
+			static int unknown_name_width = 0;
+			static int unknown_name_len = 0;
+			if (unknown_name_len == 0) {
 			    unknown_name_len = strlen(unknown_name);
 			    unknown_name_width = XTextWidth(gameFont,
 							    unknown_name,
 							    unknown_name_len);
-		        }
-		        name = unknown_name;
-		        name_len = unknown_name_len;
-		        name_width = unknown_name_width;
+			}
+			name = unknown_name;
+			name_len = unknown_name_len;
+			name_width = unknown_name_width;
 		    }
 		    if (name!=NULL) {
-		        XDrawString(dpy, p_draw, gc,
+			XDrawString(dpy, p_draw, gc,
 				    x - name_width / 2,
 				    y + gameFont->ascent + 4,
 				    name, name_len);
@@ -1018,9 +970,9 @@ static void Paint_shots(void)
 #define COLOR(i)	(i / areas)
 #define DEBRIS_COLOR(color) \
 	((debris_colors > 4) ?				\
-	 (4 + (((color & 1) << 2) | (color >> 1))) :	\
+	 (5 + (((color & 1) << 2) | (color >> 1))) :	\
 	 ((debris_colors >= 3) ?			\
-	  (color + 4) : (color)))
+	  (5 + color) : (color)))
 
     for (i = 0; i < max; i++) {
 	if (num_debris[i] > 0) {
@@ -1034,7 +986,7 @@ static void Paint_shots(void)
 			      spark_size, spark_size);
 	    }
 	    RELEASE(debris_ptr[i], num_debris[i], max_debris[i]);
-    	}
+	}
     }
 
     /*
@@ -1054,7 +1006,7 @@ static void Paint_shots(void)
 			      shot_size, shot_size);
 	    }
 	    RELEASE(fastshot_ptr[i], num_fastshot[i], max_fastshot[i]);
-    	}
+	}
 
 	/*
 	 * Teamshots are in range DEBRIS_TYPES to DEBRIS_TYPES*2-1 in fastshot.
@@ -1070,11 +1022,11 @@ static void Paint_shots(void)
 			      teamshot_size, teamshot_size);
 	    }
 	    RELEASE(fastshot_ptr[t], num_fastshot[t], max_fastshot[t]);
-    	}
+	}
     }
 
     if (num_missile > 0) {
-        int len;
+	int len;
 	SET_FG(colors[WHITE].pixel);
 	XSetLineAttributes(dpy, gc, 4,
 			   LineSolid, CapButt, JoinMiter);
@@ -1082,8 +1034,9 @@ static void Paint_shots(void)
 	    x = missile_ptr[i].x;
 	    y = missile_ptr[i].y;
 	    len = MISSILE_LEN;
-	    if (missile_ptr[i].len > 0)
-	      len = missile_ptr[i].len;
+	    if (missile_ptr[i].len > 0) {
+		len = missile_ptr[i].len;
+	    }
 	    if (wrap(&x, &y)) {
 		x1 = X(x);
 		y1 = Y(y);
@@ -1127,7 +1080,8 @@ static void Paint_shots(void)
 
 static void Paint_ships(void)
 {
-    int			i, j, x, y, cnt, dir, x0, y0, x1, y1, size, lcnt;
+    int			i, x, y, x0, y0, x1, y1;
+    int			cnt, dir, size, lcnt, ship_color;
     unsigned long	mask;
     other_t		*other;
     static int		pauseCharWidth = -1;
@@ -1187,7 +1141,6 @@ static void Paint_ships(void)
     }
 
     if (num_ship > 0) {
-	SET_FG(colors[WHITE].pixel);
 	for (i = 0; i < num_ship; i++) {
 	    x = ship_ptr[i].x;
 	    y = ship_ptr[i].y;
@@ -1209,6 +1162,7 @@ static void Paint_ships(void)
 		    && self->id != ship_ptr[i].id
 		    && (other = Other_by_id(ship_ptr[i].id)) != NULL) {
 		    FIND_NAME_WIDTH(other);
+		    SET_FG(colors[WHITE].pixel);
 		    XDrawString(dpy, p_draw, gc,
 				X(x - other->name_width / 2),
 				Y(y - gameFont->ascent - 15),
@@ -1220,72 +1174,80 @@ static void Paint_ships(void)
 				    gameFont->ascent + gameFont->descent);
 		}
 
+		ship_color = WHITE;
+#if ERASE
+/*
+ * If ERASE is defined outline the locked ship in a different color,
+ * instead of mucking around with polygons.
+ */
+		if (lock_id == ship_ptr[i].id
+		    && ship_ptr[i].id != -1
+		    && lock_dist != 0) {
+		    ship_color = RED;
+		}
+#endif
+#ifndef NO_BLUE_TEAM
+		if (BIT(Setup->mode, TEAM_PLAY)
+		    && self != NULL
+		    && self->id != ship_ptr[i].id
+		    && (other = Other_by_id(ship_ptr[i].id)) != NULL
+		    && self->team == other->team) {
+		    ship_color = BLUE;
+		}
+#endif
+
 		if (ship_ptr[i].cloak == 0) {
 		    if (gcv.line_style != LineSolid) {
 			gcv.line_style = LineSolid;
 			XChangeGC(dpy, gc, GCLineStyle, &gcv);
 		    }
+		    SET_FG(colors[ship_color].pixel);
 		    XDrawLines(dpy, p_draw, gc, points, cnt, 0);
+		    Erase_points(0, points, cnt);
+#if !ERASE
 		    if (lock_id == ship_ptr[i].id
 			&& ship_ptr[i].id != -1
 			&& lock_dist != 0) {
-/* if ERASE is defined outline the locked ship in blue, instead of
-** mucking around with polygons, SKS 25/05/94
-*/
-#if ERASE
-			SET_FG(colors[BLUE].pixel);
-			XDrawLines(dpy, p_draw, gc, points, cnt, 0);
-			SET_FG(colors[WHITE].pixel);
-			Erase_points(0, points, cnt);
-#else
 			XFillPolygon(dpy, p_draw, gc, points, cnt,
 				     Complex, CoordModeOrigin);
-			x0 = x1 = y0 = y1 = 0;
-			for (j = 0; j < cnt; j++) {
-			    if (points[j].x < x0) x0 = points[j].x;
-			    else if (points[j].x > x1) x1 = points[j].x;
-			    if (points[j].y < y0) y0 = points[j].y;
-			    else if (points[j].y > y1) y1 = points[j].y;
-			}
-			Erase_rectangle(x0, y0, x1 + 2 - x0, y1 + 2 - y0);
-#endif
-		    } else {
-			Erase_points(0, points, cnt);
 		    }
+#endif
+
 		    if (markingLights) {
 			if (((loops + ship_ptr[i].id) & 0xF) == 0) {
-		            for (lcnt = 0; lcnt < ship->num_l_light; lcnt++) {
-			        Rectangle_add(RED,
-                                    X(x + ship->l_light[lcnt][dir].x) - 2,
-                                    Y(y + ship->l_light[lcnt][dir].y) - 2, 
-                                    6, 6);
-			        Segment_add(RED,
-                                    X(x + ship->l_light[lcnt][dir].x)-8,
-                                    Y(y + ship->l_light[lcnt][dir].y),
-                                    X(x + ship->l_light[lcnt][dir].x)+8,
-                                    Y(y + ship->l_light[lcnt][dir].y));
-			        Segment_add(RED,
-                                    X(x + ship->l_light[lcnt][dir].x),
-                                    Y(y + ship->l_light[lcnt][dir].y)-8,
-                                    X(x + ship->l_light[lcnt][dir].x),
-                                    Y(y + ship->l_light[lcnt][dir].y)+8);
-                            }
+			    for (lcnt = 0; lcnt < ship->num_l_light; lcnt++) {
+				Rectangle_add(RED,
+				    X(x + ship->l_light[lcnt][dir].x) - 2,
+				    Y(y + ship->l_light[lcnt][dir].y) - 2,
+				    6, 6);
+				Segment_add(RED,
+				    X(x + ship->l_light[lcnt][dir].x)-8,
+				    Y(y + ship->l_light[lcnt][dir].y),
+				    X(x + ship->l_light[lcnt][dir].x)+8,
+				    Y(y + ship->l_light[lcnt][dir].y));
+				Segment_add(RED,
+				    X(x + ship->l_light[lcnt][dir].x),
+				    Y(y + ship->l_light[lcnt][dir].y)-8,
+				    X(x + ship->l_light[lcnt][dir].x),
+				    Y(y + ship->l_light[lcnt][dir].y)+8);
+			    }
 			} else if (((loops + ship_ptr[i].id) & 0xF) == 2) {
-		            for (lcnt = 0; lcnt < ship->num_r_light; lcnt++) {
-                                Rectangle_add(BLUE,
-                                    X(x + ship->r_light[lcnt][dir].x)-2,
-                                    Y(y + ship->r_light[lcnt][dir].y)-2, 6, 6);
-                                Segment_add(BLUE,
-                                    X(x + ship->r_light[lcnt][dir].x)-8,
-                                    Y(y + ship->r_light[lcnt][dir].y),
-                                    X(x + ship->r_light[lcnt][dir].x)+8,
-                                    Y(y + ship->r_light[lcnt][dir].y));
-                                Segment_add(BLUE,
-                                    X(x + ship->r_light[lcnt][dir].x),
-                                    Y(y + ship->r_light[lcnt][dir].y)-8,
-                                    X(x + ship->r_light[lcnt][dir].x),
-                                    Y(y + ship->r_light[lcnt][dir].y)+8);
-                            }
+			    for (lcnt = 0; lcnt < ship->num_r_light; lcnt++) {
+				int rightLightColor = maxColors > 4 ? 4 : BLUE;
+				Rectangle_add(rightLightColor,
+				    X(x + ship->r_light[lcnt][dir].x)-2,
+				    Y(y + ship->r_light[lcnt][dir].y)-2, 6, 6);
+				Segment_add(rightLightColor,
+				    X(x + ship->r_light[lcnt][dir].x)-8,
+				    Y(y + ship->r_light[lcnt][dir].y),
+				    X(x + ship->r_light[lcnt][dir].x)+8,
+				    Y(y + ship->r_light[lcnt][dir].y));
+				Segment_add(rightLightColor,
+				    X(x + ship->r_light[lcnt][dir].x),
+				    Y(y + ship->r_light[lcnt][dir].y)-8,
+				    X(x + ship->r_light[lcnt][dir].x),
+				    Y(y + ship->r_light[lcnt][dir].y)+8);
+			    }
 			}
 		    }
 		}
@@ -1299,6 +1261,7 @@ static void Paint_ships(void)
 #endif
 			XChangeGC(dpy, gc, mask, &gcv);
 		    }
+		    SET_FG(colors[ship_color].pixel);
 		    if (ship_ptr[i].cloak) {
 #if ERASE
 			int j;
@@ -1313,16 +1276,16 @@ static void Paint_ships(void)
 #endif
 		    }
 		    if (ship_ptr[i].shield) {
-			XDrawArc(dpy, p_draw, gc, X(x - 17), Y(y + 17), 
+			XDrawArc(dpy, p_draw, gc, X(x - 17), Y(y + 17),
 				 34, 34, 0, 64 * 360);
 			Erase_arc(X(x - 17), Y(y + 17),
 				  34, 34, 0, 64 * 360);
 
 			if (ship_ptr[i].eshield) {	/* Emergency Shield */
-			    XDrawArc(dpy, p_draw, gc, X(x - 19), Y(y + 19), 
-			        38, 38, 0, 64 * 360);
-			    Erase_arc(X(x - 19), Y(y + 19), 
-			        38, 38, 0, 64 * 360);
+			    XDrawArc(dpy, p_draw, gc, X(x - 19), Y(y + 19),
+				38, 38, 0, 64 * 360);
+			    Erase_arc(X(x - 19), Y(y + 19),
+				38, 38, 0, 64 * 360);
 			}
 		    }
 		}
@@ -1394,10 +1357,11 @@ static void Paint_ships(void)
 		y0 = trans_ptr[i].y1;
 		x1 = trans_ptr[i].x2;
 		y1 = trans_ptr[i].y2;
-		if (wrap(&x0, &y0) && wrap(&x1, &y1))
-		    XDrawLine(dpy, p_draw, gc, 
+		if (wrap(&x0, &y0) && wrap(&x1, &y1)) {
+		    XDrawLine(dpy, p_draw, gc,
 			      X(x0), Y(y0), X(x1), Y(y1));
 		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
+		}
 	    }
 	    RELEASE(trans_ptr, num_trans, max_trans);
 	}
@@ -1420,14 +1384,14 @@ static void Paint_score_objects(void)
 	score_object_t*	sobj = &score_objects[i];
 	if (sobj->count > 0) {
 	    if (sobj->count%3) {
-		x = sobj->x * BLOCK_SZ + BLOCK_SZ/2 - sobj->msg_width/2; 
+		x = sobj->x * BLOCK_SZ + BLOCK_SZ/2 - sobj->msg_width/2;
 		y = sobj->y * BLOCK_SZ + BLOCK_SZ/2 - gameFont->ascent/2;
 		if (wrap(&x, &y)) {
-		    SET_FG(colors[RED].pixel);
+		    SET_FG(colors[hudColor].pixel);
 		    XDrawString(dpy, p_draw, gc,
-				X(x), 
+				X(x),
 				Y(y),
-				sobj->msg, 
+				sobj->msg,
 				sobj->msg_len);
 		    Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
 				    sobj->msg_width + 2,
@@ -1449,7 +1413,7 @@ static void Paint_meters(void)
     if (BIT(instruments, SHOW_FUEL_METER))
 	Paint_meter(10, 10, "Fuel", fuelSum, fuelMax);
     if (BIT(instruments, SHOW_POWER_METER) || control_count)
-     	Paint_meter(10, 40, "Power", power, MAX_PLAYER_POWER);
+	Paint_meter(10, 40, "Power", power, MAX_PLAYER_POWER);
     if (BIT(instruments, SHOW_TURNSPEED_METER) || control_count)
 	Paint_meter(10, 60, "Turnspeed", turnspeed, MAX_PLAYER_TURNSPEED);
     if (control_count > 0)
@@ -1570,13 +1534,13 @@ static void Paint_HUD(void)
 
     int modlen = 0;
 
-    /* 
+    /*
      * Show speed pointer
      */
     if (ptr_move_fact != 0.0
 	&& selfVisible != 0
 	&& (vel.x != 0 || vel.y != 0)) {
-        Segment_add(hudColor,
+	Segment_add(hudColor,
 		    view_width / 2,
 		    view_height / 2,
 		    view_width / 2 - ptr_move_fact*vel.x,
@@ -1598,7 +1562,7 @@ static void Paint_HUD(void)
     /* HUD frame */
     gcv.line_style = LineOnOffDash;
     XChangeGC(dpy, gc, GCLineStyle | GCDashOffset, &gcv);
-    
+
     if (BIT(instruments, SHOW_HUD_HORIZONTAL)) {
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x-HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET,
@@ -1615,10 +1579,10 @@ static void Paint_HUD(void)
     }
     if (BIT(instruments, SHOW_HUD_VERTICAL)) {
 	XDrawLine(dpy, p_draw, gc,
-		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE, 
+		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE,
 		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y+HUD_SIZE);
 	Erase_segment(0,
-		      hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE, 
+		      hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE,
 		      hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y+HUD_SIZE);
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y-HUD_SIZE,
@@ -1629,8 +1593,8 @@ static void Paint_HUD(void)
     }
     gcv.line_style = LineSolid;
     XChangeGC(dpy, gc, GCLineStyle, &gcv);
-    
-    
+
+
     /* Special itemtypes */
     if (vertSpacing < 0)
 	vertSpacing
@@ -1703,10 +1667,10 @@ static void Paint_HUD(void)
 
     /* Fuel notify, HUD meter on */
     if (fuelCount || fuelSum < fuelLevel3) {
- 	sprintf(str, "%04d", fuelSum);
- 	XDrawString(dpy, p_draw, gc,
+	sprintf(str, "%04d", (int)fuelSum);
+	XDrawString(dpy, p_draw, gc,
 		    hud_pos_x + HUD_SIZE-HUD_OFFSET+BORDER,
- 		    hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER + gameFont->ascent,
+		    hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER + gameFont->ascent,
 		    str, strlen(str));
 	Erase_rectangle(hud_pos_x + HUD_SIZE-HUD_OFFSET+BORDER - 1,
 			hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER,
@@ -1717,9 +1681,9 @@ static void Paint_HUD(void)
 		strcpy(str,"M ");
 	    else
 		sprintf(str, "T%d", fuelCurrent);
- 	    XDrawString(dpy, p_draw, gc,
+	    XDrawString(dpy, p_draw, gc,
 			hud_pos_x + HUD_SIZE-HUD_OFFSET + BORDER,
- 		        hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
+			hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
 			+ gameFont->descent + 2*gameFont->ascent,
 			str, strlen(str));
 	    Erase_rectangle(hud_pos_x + HUD_SIZE-HUD_OFFSET + BORDER - 1,
@@ -1754,7 +1718,7 @@ static void Paint_HUD(void)
     }
 
     if (time_left >= 0) {
-	sprintf(str, "%3d:%02d", time_left / 60, time_left % 60);
+	sprintf(str, "%3d:%02d", (int)(time_left / 60), (int)(time_left % 60));
 	size = XTextWidth(gameFont, str, strlen(str));
 	XDrawString(dpy, p_draw, gc,
 		    hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER - size,
@@ -1787,9 +1751,9 @@ static void Paint_HUD(void)
 		    hud_pos_x - XTextWidth(gameFont, autopilot,
 					   sizeof(autopilot)-1)/2,
 		    hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
-		        - gameFont->descent * 2 - gameFont->ascent,
+			- gameFont->descent * 2 - gameFont->ascent,
 		    autopilot, sizeof(autopilot)-1);
-	
+
 	Erase_rectangle(hud_pos_x - XTextWidth(gameFont, autopilot,
 						sizeof(autopilot)-1)/2,
 			hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
@@ -1799,7 +1763,7 @@ static void Paint_HUD(void)
 			gameFont->ascent + gameFont->descent);
 
     }
-    
+
     /* Fuel gauge, must be last */
     if (BIT(instruments, SHOW_FUEL_GAUGE) == 0
 	|| !((fuelCount)
@@ -1892,14 +1856,14 @@ void Add_message(char *message)
 {
     int i;
     message_t *tmp;
-    
-    
+
+
     tmp = Msg[MAX_MSGS-1];
     for (i=MAX_MSGS-1; i>0; i--)
 	Msg[i] = Msg[i-1];
-    
+
     Msg[0] = tmp;
-    
+
     Msg[0]->life = MSG_DURATION;
     strcpy(Msg[0]->txt, message);
     Msg[0]->len = strlen(message);
@@ -1917,9 +1881,9 @@ static void Paint_radar(void)
 {
     int			i, x, y, x1, y1, xw, yw;
     const float		xf = 256.0f / (float)Setup->width,
-    			yf = (float)RadarHeight / (float)Setup->height;
+			yf = (float)RadarHeight / (float)Setup->height;
 
-    if (radar_exposed == false) {
+    if (radar_exposures == 0) {
 	return;
     }
     if (s_radar != p_radar) {
@@ -1932,7 +1896,7 @@ static void Paint_radar(void)
 	XFillRectangle(dpy, p_radar,
 		       radarGC, 0, 0, 256, RadarHeight);
     }
-    
+
     XSetForeground(dpy, radarGC, colors[WHITE].pixel);
 
     /* Checkpoint */
@@ -1940,10 +1904,23 @@ static void Paint_radar(void)
 	Check_pos_by_index(nextCheckPoint, &x, &y);
 	x = (int)(x * BLOCK_SZ * xf + 0.5);
 	y = RadarHeight - (int)(y * BLOCK_SZ * yf + 0.5) + DSIZE - 1;
-	diamond[0].x = x;
-	diamond[0].y = y;
+	/* top */
+	points[0].x = x;
+	points[0].y = y;
+	/* right */
+	points[1].x = x + DSIZE;
+	points[1].y = y - DSIZE;
+	/* bottom */
+	points[2].x = x;
+	points[2].y = y - 2*DSIZE;
+	/* left */
+	points[3].x = x - DSIZE;
+	points[3].y = y - DSIZE;
+	/* top */
+	points[4].x = x;
+	points[4].y = y;
 	XDrawLines(dpy, p_radar, radarGC,
-		   diamond, 5, CoordModePrevious);
+		   points, 5, 0);
     }
     if (selfVisible != 0 && loops % 16 < 13) {
 	x = (int)(pos.x * xf + 0.5);
@@ -2142,7 +2119,7 @@ static void Paint_vbase(void)
 		Segment_add(WHITE,
 			    X(x-1), Y(y+BLOCK_SZ),
 			    X(x-1), Y(y));
-    		y += BLOCK_SZ/2 - gameFont->ascent/2;
+		y += BLOCK_SZ/2 - gameFont->ascent/2;
 		x -= BORDER;
 		break;
 	    default:
@@ -2196,29 +2173,32 @@ static void Paint_vbase(void)
 
 static void Paint_world(void)
 {
-    int xi, yi, xb, yb, size, fuel, color;
-    int rxb, ryb;
-    int dot;
-    int x, y;
-    const int WS_PR_SC_W = 1+(float)view_width/BLOCK_SZ;
-    const int WS_PR_SC_H = 1+(float)view_height/BLOCK_SZ;
-    static const int INSIDE_WS=BLOCK_SZ-2;
-    static int wormDrawCount;
-    int type, mapoff;
-    int sx = 0, sy = 0;
-    char s[2];
+    int			xi, yi, xb, yb, xe, ye, size, fuel, color;
+    int			rxb, ryb;
+    int			x, y;
+    int			type, mapoff;
+    int			dot;
+    char		s[2];
+    static const int	INSIDE_BL = BLOCK_SZ - 2;
+    static int		wormDrawCount;
 
 
     wormDrawCount = (wormDrawCount + 1) & 7;
 
-    xb = (world.x/BLOCK_SZ);
-    yb = (world.y/BLOCK_SZ);
-    if (!BIT (Setup->mode, WRAP_PLAY)) {
+    xb = ((world.x < 0) ? (world.x - (BLOCK_SZ - 1)) : world.x) / BLOCK_SZ;
+    yb = ((world.y < 0) ? (world.y - (BLOCK_SZ - 1)) : world.y) / BLOCK_SZ;
+    xe = (world.x + view_width) / BLOCK_SZ;
+    ye = (world.y + view_height) / BLOCK_SZ;
+    if (!BIT(Setup->mode, WRAP_PLAY)) {
 	if (xb < 0)
-	    sx = -xb;
+	    xb = 0;
 	if (yb < 0)
-	    sy = -yb;
-	if (world.x < 0) {
+	    yb = 0;
+	if (xe >= Setup->x)
+	    xe = Setup->x - 1;
+	if (ye >= Setup->y)
+	    ye = Setup->y - 1;
+	if (world.x <= 0) {
 	    Segment_add(BLUE,
 			X(0), Y(0),
 			X(0), Y(Setup->height));
@@ -2228,7 +2208,7 @@ static void Paint_world(void)
 			X(Setup->width), Y(0),
 			X(Setup->width), Y(Setup->height));
 	}
-	if (world.y < 0) {
+	if (world.y <= 0) {
 	    Segment_add(BLUE,
 			X(0), Y(0),
 			X(Setup->width), Y(0));
@@ -2240,29 +2220,29 @@ static void Paint_world(void)
 	}
     }
 
-    for (rxb = sx, xi = xb + rxb, x = xi * BLOCK_SZ, mapoff = xi * Setup->y;
-	    rxb <= WS_PR_SC_W;
-	    rxb++, xi++, x += BLOCK_SZ, mapoff += Setup->y) {
+    x = xb * BLOCK_SZ;
+    xi = mod(xb, Setup->x);
+    mapoff = xi * Setup->y;
 
-	if (xi >= Setup->x) {
-	    if (xi == Setup->x) {
-		if (!BIT(Setup->mode, WRAP_PLAY))
-		    break;
-	    }
-	    xi -= Setup->x;
-	    mapoff = xi * Setup->y;
+    for (rxb = xb; rxb <= xe; rxb++, xi++, x += BLOCK_SZ,
+			      mapoff += Setup->y) {
+
+	if (xi == Setup->x) {
+	    if (!BIT(Setup->mode, WRAP_PLAY))
+		break;
+	    xi = 0;
+	    mapoff = 0;
 	}
 
-	for (ryb = sy, yi = ryb + yb, y = yi * BLOCK_SZ;
-		ryb <= WS_PR_SC_H;
-		ryb++, yi++, y += BLOCK_SZ) {
+	y = yb * BLOCK_SZ;
+	yi = mod(yb, Setup->y);
 
-	    if (yi >= Setup->y) {
-		if (yi == Setup->y) {
-		    if (!BIT(Setup->mode, WRAP_PLAY))
-			break;
-		}
-		yi -= Setup->y;
+	for (ryb = yb; ryb <= ye; ryb++, yi++, y += BLOCK_SZ) {
+
+	    if (yi == Setup->y) {
+		if (!BIT(Setup->mode, WRAP_PLAY))
+		    break;
+		yi = 0;
 	    }
 
 	    type = Setup->map_data[mapoff + yi];
@@ -2318,7 +2298,7 @@ static void Paint_world(void)
 	    }
 
 	    switch (type) {
-		
+
 	    case SETUP_CHECK:
 		SET_FG(colors[BLUE].pixel);
 		points[0].x = X(x+(BLOCK_SZ/2));
@@ -2338,11 +2318,11 @@ static void Paint_world(void)
 				    BLOCK_SZ, BLOCK_SZ);
 		} else {
 		    XDrawLines(dpy, p_draw, gc,
-			       points, 5, 0); 
+			       points, 5, 0);
 		    Erase_points(0, points, 5);
 		}
 		break;
-		
+
 	    case SETUP_ACWISE_GRAV:
 		Arc_add(RED,
 			X(x+5), Y(y+BLOCK_SZ-5),
@@ -2358,7 +2338,7 @@ static void Paint_world(void)
 			    X(x+BLOCK_SZ/2+4),
 			    Y(y+BLOCK_SZ-9));
 		break;
-		
+
 	    case SETUP_CWISE_GRAV:
 		Arc_add(RED,
 			X(x+5), Y(y+BLOCK_SZ-5),
@@ -2374,11 +2354,11 @@ static void Paint_world(void)
 			    X(x+BLOCK_SZ/2-4),
 			    Y(y+BLOCK_SZ-9));
 		break;
-		
+
 	    case SETUP_POS_GRAV:
 		Arc_add(RED,
 			X(x+1), Y(y+BLOCK_SZ-1),
-			INSIDE_WS, INSIDE_WS, 0, 64*360);
+			INSIDE_BL, INSIDE_BL, 0, 64*360);
 		Segment_add(RED,
 			  X(x+BLOCK_SZ/2),
 			  Y(y+5),
@@ -2390,18 +2370,18 @@ static void Paint_world(void)
 			    X(x+BLOCK_SZ-5),
 			    Y(y+BLOCK_SZ/2));
 		break;
-		
+
 	    case SETUP_NEG_GRAV:
 		Arc_add(RED,
 			X(x+1), Y(y+BLOCK_SZ-1),
-			INSIDE_WS, INSIDE_WS, 0, 64*360);
+			INSIDE_BL, INSIDE_BL, 0, 64*360);
 		Segment_add(RED,
 			    X(x+5),
 			    Y(y+BLOCK_SZ/2),
 			    X(x+BLOCK_SZ-5),
 			    Y(y+BLOCK_SZ/2));
 		break;
-		
+
 	    case SETUP_WORM_IN:
 	    case SETUP_WORM_NORMAL:
 		{
@@ -2420,7 +2400,7 @@ static void Paint_world(void)
     Arc_add(RED,						\
 	    X(x) + (_x),					\
 	    Y(y + BLOCK_SZ) + (_y),				\
-	    INSIDE_WS - (_w), INSIDE_WS - (_w), 0, 64 * 360)
+	    INSIDE_BL - (_w), INSIDE_BL - (_w), 0, 64 * 360)
 
 		    SET_FG(colors[RED].pixel);
 		    ARC(0, 0, 0);
@@ -2428,6 +2408,52 @@ static void Paint_world(void)
 		    ARC(_O[0] * 2, _O[1] * 2, _O[2] * 2);
 		    break;
 		}
+
+	    case SETUP_ITEM_CONCENTRATOR:
+		{
+		    static struct concentrator_triangle {
+			int		radius;
+			int		displ;
+			int		dir_off;
+			int		rot_speed;
+			int		rot_dir;
+		    } tris[] = {
+			{ 14, 3, 0, 1, 0 },
+			{ 11, 5, 3, 2, 0 },
+			{  7, 8, 5, 3, 0 },
+		    };
+		    static unsigned	rot_dir;
+		    static long		concentratorloop;
+		    unsigned		rdir, tdir;
+		    int			i, cx, cy;
+		    XPoint		pts[4];
+
+		    SET_FG(colors[RED].pixel);
+		    if (concentratorloop != loops) {
+			concentratorloop = loops;
+			rot_dir += 5;
+			for (i = 0; i < NELEM(tris); i++) {
+			    tris[i].rot_dir += tris[i].rot_speed;
+			}
+		    }
+		    for (i = 0; i < NELEM(tris); i++) {
+			rdir = MOD2(rot_dir + tris[i].dir_off, RES);
+			cx = X(x + BLOCK_SZ / 2) + tris[i].displ * tcos(rdir);
+			cy = Y(y + BLOCK_SZ / 2) + tris[i].displ * tsin(rdir);
+			tdir = MOD2(tris[i].rot_dir, RES);
+			pts[0].x = cx + tris[i].radius * tcos(tdir);
+			pts[0].y = cy + tris[i].radius * tsin(tdir);
+			pts[1].x = cx + tris[i].radius * tcos(MOD2(tdir + RES/3, RES));
+			pts[1].y = cy + tris[i].radius * tsin(MOD2(tdir + RES/3, RES));
+			pts[2].x = cx + tris[i].radius * tcos(MOD2(tdir + 2*RES/3, RES));
+			pts[2].y = cy + tris[i].radius * tsin(MOD2(tdir + 2*RES/3, RES));
+			pts[3] = pts[0];
+			XDrawLines(dpy, p_draw, gc,
+				   pts, NELEM(pts), CoordModeOrigin);
+			Erase_points(0, pts, NELEM(pts));
+		    }
+		}
+		break;
 
 	    case SETUP_CANNON_UP:
 	    case SETUP_CANNON_DOWN:
@@ -2444,8 +2470,8 @@ static void Paint_world(void)
 
 	    case SETUP_SPACE_DOT:
 		Rectangle_add(BLUE,
-			      X(x + BLOCK_SZ / 2),
-			      Y(y + BLOCK_SZ / 2),
+			      X(x + BLOCK_SZ / 2) - (map_point_size >> 1),
+			      Y(y + BLOCK_SZ / 2) - (map_point_size >> 1),
 			      map_point_size, map_point_size);
 		break;
 
@@ -2469,11 +2495,11 @@ static void Paint_world(void)
 		{
 		    int 	a1,a2,b1,b2;
 		    int 	damage;
-		    
+
 		    if (Target_alive(xi, yi, &damage) != 0)
 			break;
 
-		    if (team == type - SETUP_TARGET) {
+		    if (self && self->team == type - SETUP_TARGET) {
 			color = BLUE;
 		    } else {
 			color = RED;
@@ -2539,7 +2565,7 @@ static void Paint_world(void)
 	    case SETUP_TREASURE+7:
 	    case SETUP_TREASURE+8:
 	    case SETUP_TREASURE+9:
-		if (team == type - SETUP_TREASURE) {
+		if (self && self->team == type - SETUP_TREASURE) {
 		    color = BLUE;
 		} else {
 		    color = RED;
@@ -2594,7 +2620,7 @@ void Paint_sliding_radar(void)
 				256, RadarHeight,
 				DefaultDepth(dpy, DefaultScreen(dpy)));
 	p_radar = s_radar;
-	if (radar_exposed == true) {
+	if (radar_exposures > 0) {
 	    Paint_world_radar();
 	}
     } else {
@@ -2604,7 +2630,7 @@ void Paint_sliding_radar(void)
 	XFreePixmap(dpy, s_radar);
 	s_radar = radar;
 	p_radar = s_radar;
-	if (radar_exposed == true) {
+	if (radar_exposures > 0) {
 	    Paint_world_radar();
 	}
     }
@@ -2622,8 +2648,10 @@ void Paint_world_radar(void)
     XSegment		segments[256];
     XPoint		points[256];
 
-    if (s_radar == p_radar) 
-	XSetPlaneMask(dpy, radarGC, 
+    radar_exposures = 2;
+
+    if (s_radar == p_radar)
+	XSetPlaneMask(dpy, radarGC,
 		      AllPlanes&(~(dpl_1[0]|dpl_1[1])));
     if (s_radar != radar) {
 	/* Clear radar */
@@ -2754,22 +2782,33 @@ void Paint_world_radar(void)
     }
 
     if (s_radar == p_radar)
-	XSetPlaneMask(dpy, radarGC, 
+	XSetPlaneMask(dpy, radarGC,
 		      AllPlanes&(~(dpl_2[0]|dpl_2[1])));
+
+    for (i = 0;; i++) {
+	int dead_time, damage;
+	if (Target_by_index(i, &xi, &yi, &dead_time, &damage) == -1) {
+	    break;
+	}
+	if (dead_time) {
+	    continue;
+	}
+	Paint_radar_block(xi, yi, targetRadarColor);
+    }
 }
 
 /*
  * Try and draw an area of the radar which represents block position
  * `xi' `yi'.  If `draw' is zero the area is cleared.
  */
-void Paint_radar_block(int xi, int yi, int draw)
+void Paint_radar_block(int xi, int yi, int color)
 {
     float	xs, ys;
     int		xp, yp, xw, yw;
 
     if (s_radar == p_radar)
 	XSetPlaneMask(dpy, radarGC, AllPlanes&(~(dpl_1[0]|dpl_1[1])));
-    XSetForeground(dpy, radarGC, colors[(draw ? BLUE : BLACK)].pixel);
+    XSetForeground(dpy, radarGC, colors[color].pixel);
 
     if (Setup->x >= 256) {
 	xs = (float)(256 - 1) / (Setup->x - 1);
@@ -2798,11 +2837,11 @@ void Paint_radar_block(int xi, int yi, int draw)
 	XFillRectangle(dpy, s_radar, radarGC, xp, yp, xw+1, yw+1);
     }
     if (s_radar == p_radar)
-	XSetPlaneMask(dpy, radarGC, 
+	XSetPlaneMask(dpy, radarGC,
 		      AllPlanes&(~(dpl_2[0]|dpl_2[1])));
 }
-    
-		       
+
+
 void Paint_frame(void)
 {
     static long scroll_i = 0;
@@ -2835,7 +2874,7 @@ void Paint_frame(void)
 	    XStoreName(dpy, top, COPYRIGHT);
 	else
 	    XStoreName(dpy, top, TITLE);
-	
+
     }
 #endif
 
@@ -2877,10 +2916,14 @@ void Paint_frame(void)
 	Paint_score_objects();
     }
 
+    if (radar_exposures == 1) {
+	Paint_world_radar();
+    }
+
     /*
      * Now switch planes and clear the screen.
      */
-    if (p_radar != radar && radar_exposed == true) {
+    if (p_radar != radar && radar_exposures > 0) {
 	if (BIT(instruments, SHOW_SLIDING_RADAR) == 0
 	    || BIT(Setup->mode, WRAP_PLAY) == 0) {
 	    XCopyArea(dpy, p_radar, radar, gc,
@@ -2915,6 +2958,9 @@ void Paint_frame(void)
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      x, y, w, h, 0, 0);
 	}
+    }
+    else if (radar_exposures > 2) {
+	Paint_world_radar();
     }
     if (p_draw != draw)
 	XCopyArea(dpy, p_draw, draw, gc,
@@ -2975,8 +3021,6 @@ int Handle_start(long server_loops)
     num_ship = 0;
     num_mine = 0;
     num_itemtype = 0;
-    num_shot = 0;
-    num_teamshot = 0;
     num_ecm = 0;
     num_trans = 0;
     num_paused = 0;
@@ -3043,21 +3087,18 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
     world.x = pos.x - (view_width / 2);
     world.y = pos.y - (view_height / 2);
     realWorld = world;
-    wrappedWorld = 0;
     if (BIT(Setup->mode, WRAP_PLAY)) {
-	if (world.x < 0) {
-	    wrappedWorld |= 1;
+	if (world.x < 0 && world.x + view_width < Setup->width) {
 	    world.x += Setup->width;
-	} else if (world.x + view_width >= Setup->width) {
-	    realWorld.x -= Setup->width;
-	    wrappedWorld |= 1;
 	}
-	if (world.y < 0) {
-	    wrappedWorld |= 2;
+	else if (world.x > 0 && world.x + view_width >= Setup->width) {
+	    realWorld.x -= Setup->width;
+	}
+	if (world.y < 0 && world.y + view_height < Setup->height) {
 	    world.y += Setup->height;
-	} else if (world.y + view_height >= Setup->height) {
+	}
+	else if (world.y > 0 && world.y + view_height >= Setup->height) {
 	    realWorld.y -= Setup->height;
-	    wrappedWorld |= 2;
 	}
     }
     return 0;
@@ -3119,7 +3160,7 @@ int Handle_refuel(int x0, int y0, int x1, int y1)
     t.x1 = x1;
     t.y0 = y0;
     t.y1 = y1;
-    HANDLE(refuel_ptr, num_refuel, max_refuel, t);
+    HANDLE(refuel_t, refuel_ptr, num_refuel, max_refuel, t);
     return 0;
 }
 
@@ -3132,7 +3173,7 @@ int Handle_connector(int x0, int y0, int x1, int y1, int tractor)
     t.y0 = y0;
     t.y1 = y1;
     t.tractor = tractor;
-    HANDLE(connector_ptr, num_connector, max_connector, t);
+    HANDLE(connector_t, connector_ptr, num_connector, max_connector, t);
     return 0;
 }
 
@@ -3145,7 +3186,7 @@ int Handle_laser(int color, int x, int y, int len, int dir)
     t.y = y;
     t.len = len;
     t.dir = dir;
-    HANDLE(laser_ptr, num_laser, max_laser, t);
+    HANDLE(laser_t, laser_ptr, num_laser, max_laser, t);
     return 0;
 }
 
@@ -3157,7 +3198,7 @@ int Handle_missile(int x, int y, int len, int dir)
     t.y = y;
     t.dir = dir;
     t.len = len;
-    HANDLE(missile_ptr, num_missile, max_missile, t);
+    HANDLE(missile_t, missile_ptr, num_missile, max_missile, t);
     return 0;
 }
 
@@ -3168,7 +3209,7 @@ int Handle_ball(int x, int y, int id)
     t.x = x;
     t.y = y;
     t.id = id;
-    HANDLE(ball_ptr, num_ball, max_ball, t);
+    HANDLE(ball_t, ball_ptr, num_ball, max_ball, t);
     return 0;
 }
 
@@ -3183,7 +3224,7 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshiel
     t.shield = shield;
     t.cloak = cloak;
     t.eshield = eshield;
-    HANDLE(ship_ptr, num_ship, max_ship, t);
+    HANDLE(ship_t, ship_ptr, num_ship, max_ship, t);
 
     if (id == eyesId) {
 	selfVisible = 1;
@@ -3201,7 +3242,7 @@ int Handle_mine(int x, int y, int teammine, int id)
     t.y = y;
     t.teammine = teammine;
     t.id = id;
-    HANDLE(mine_ptr, num_mine, max_mine, t);
+    HANDLE(mine_t, mine_ptr, num_mine, max_mine, t);
     return 0;
 }
 
@@ -3212,29 +3253,7 @@ int Handle_item(int x, int y, int type)
     t.x = x;
     t.y = y;
     t.type = type;
-    HANDLE(itemtype_ptr, num_itemtype, max_itemtype, t);
-    return 0;
-}
-
-int Handle_shot(int x, int y, int color)
-{
-    shot_t	t;
-
-    t.x = x;
-    t.y = y;
-    t.color = color;
-    HANDLE(shot_ptr, num_shot, max_shot, t);
-    return 0;
-}
-
-int Handle_teamshot(int x, int y, int color)
-{
-    shot_t	t;
-
-    t.x = x;
-    t.y = y;
-    t.color = color;
-    HANDLE(teamshot_ptr, num_teamshot, max_teamshot, t);
+    HANDLE(itemtype_t, itemtype_ptr, num_itemtype, max_itemtype, t);
     return 0;
 }
 
@@ -3290,7 +3309,7 @@ int Handle_ecm(int x, int y, int size)
     t.x = x;
     t.y = y;
     t.size = size;
-    HANDLE(ecm_ptr, num_ecm, max_ecm, t);
+    HANDLE(ecm_t, ecm_ptr, num_ecm, max_ecm, t);
     return 0;
 }
 
@@ -3302,7 +3321,7 @@ int Handle_trans(int x1, int y1, int x2, int y2)
     t.y1 = y1;
     t.x2 = x2;
     t.y2 = y2;
-    HANDLE(trans_ptr, num_trans, max_trans, t);
+    HANDLE(trans_t, trans_ptr, num_trans, max_trans, t);
     return 0;
 }
 
@@ -3313,7 +3332,7 @@ int Handle_paused(int x, int y, int count)
     t.x = x;
     t.y = y;
     t.count = count;
-    HANDLE(paused_ptr, num_paused, max_paused, t);
+    HANDLE(paused_t, paused_ptr, num_paused, max_paused, t);
     return 0;
 }
 
@@ -3324,7 +3343,7 @@ int Handle_radar(int x, int y, int size)
     t.x = x;
     t.y = y;
     t.size = size;
-    HANDLE(radar_ptr, num_radar, max_radar, t);
+    HANDLE(radar_t, radar_ptr, num_radar, max_radar, t);
     return 0;
 }
 
@@ -3351,7 +3370,7 @@ int Handle_vcannon(int x, int y, int type)
     t.x = x;
     t.y = y;
     t.type = type;
-    HANDLE(vcannon_ptr, num_vcannon, max_vcannon, t);
+    HANDLE(vcannon_t, vcannon_ptr, num_vcannon, max_vcannon, t);
     return 0;
 }
 
@@ -3362,7 +3381,7 @@ int Handle_vfuel(int x, int y, long fuel)
     t.x = x;
     t.y = y;
     t.fuel = fuel;
-    HANDLE(vfuel_ptr, num_vfuel, max_vfuel, t);
+    HANDLE(vfuel_t, vfuel_ptr, num_vfuel, max_vfuel, t);
     return 0;
 }
 
@@ -3375,7 +3394,7 @@ int Handle_vbase(int x, int y, int xi, int yi, int type)
     t.xi = xi;
     t.yi = yi;
     t.type = type;
-    HANDLE(vbase_ptr, num_vbase, max_vbase, t);
+    HANDLE(vbase_t, vbase_ptr, num_vbase, max_vbase, t);
     return 0;
 }
 
@@ -3396,10 +3415,15 @@ void Paint_score_start(void)
     if (showRealName) {
 	strcpy(headingStr, "NICK=USER@HOST");
     } else {
-	if (BIT(Setup->mode, TEAM_PLAY))
+	strcpy(headingStr, "  ");
+	if (BIT(Setup->mode, TIMING)) {
+	    if (version >= 0x3261) {
+		strcat(headingStr, "LAP ");
+	    }
+	}
+	else if (BIT(Setup->mode, TEAM_PLAY)) {
 	    strcpy(headingStr, " TM ");
-	else
-	    strcpy(headingStr, "  ");
+	}
 	strcat(headingStr, "SCORE ");
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    strcat(headingStr, "LIFE");
@@ -3430,18 +3454,20 @@ void Paint_score_entry(int entry_num,
 		       other_t* other,
 		       bool best)
 {
-    static char	teamStr[3], lifeStr[6], label[MSG_LEN];
-    static int lineSpacing = -1, firstLine;
-    int thisLine;
+    static char		raceStr[8], teamStr[4], lifeStr[8], label[MSG_LEN];
+    static int		lineSpacing = -1, firstLine;
+    int			thisLine;
 
     /*
      * First time we're here, set up miscellaneous strings for
      * efficiency and calculate some other constants.
      */
     if (lineSpacing == -1) {
-	teamStr[0] = teamStr[2] = '\0';
+	memset(raceStr, '\0', sizeof raceStr);
+	memset(teamStr, '\0', sizeof teamStr);
+	memset(lifeStr, '\0', sizeof lifeStr);
 	teamStr[1] = ' ';
-	lifeStr[0] = '\0';
+	raceStr[2] = ' ';
 
 	lineSpacing
 	    = scoreListFont->ascent + scoreListFont->descent + 3;
@@ -3458,19 +3484,36 @@ void Paint_score_entry(int entry_num,
     } else {
 	other_t*	war = Other_by_id(other->war_id);
 
-	if (BIT(Setup->mode, TEAM_PLAY))
+	if (BIT(Setup->mode, TIMING)) {
+	    raceStr[0] = ' ';
+	    raceStr[1] = ' ';
+	    if (version >= 0x3261) {
+		if ((other->mychar == ' ' || other->mychar == 'R')
+		    && other->round + other->check > 0) {
+		    if (other->round > 99) {
+			sprintf(raceStr, "%3d", other->round);
+		    }
+		    else {
+			sprintf(raceStr, "%d%c",
+				other->round, other->check + 'a');
+		    }
+		}
+	    }
+	}
+	else if (BIT(Setup->mode, TEAM_PLAY)) {
 	    teamStr[0] = other->team + '0';
+	}
 
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);
 
 	if (war) {
-	    sprintf(label, "%c %s%5d%s  %s (%s)",
-		    other->mychar, teamStr, other->score, lifeStr,
+	    sprintf(label, "%c %s%s%5d%s  %s (%s)",
+		    other->mychar, raceStr, teamStr, other->score, lifeStr,
 		    other->name, war->name);
 	} else {
-	    sprintf(label, "%c %s%5d%s  %s",
-		    other->mychar, teamStr, other->score, lifeStr,
+	    sprintf(label, "%c %s%s%5d%s  %s",
+		    other->mychar, raceStr, teamStr, other->score, lifeStr,
 		    other->name);
 	}
     }
@@ -3478,11 +3521,21 @@ void Paint_score_entry(int entry_num,
     /*
      * Draw the line
      */
-    ShadowDrawString(dpy, players, scoreListGC,
-		     BORDER, thisLine,
-		     label,
-		     colors[WHITE].pixel,
-		     colors[BLACK].pixel);
+    if ((other->mychar == 'D'
+	|| other->mychar == 'P'
+	|| other->mychar == 'W')
+	&& !mono) {
+	XSetForeground(dpy, scoreListGC, colors[BLACK].pixel);
+	XDrawString(dpy, players, scoreListGC,
+		    BORDER, thisLine,
+		    label, strlen(label));
+    } else {
+	ShadowDrawString(dpy, players, scoreListGC,
+			 BORDER, thisLine,
+			 label,
+			 colors[WHITE].pixel,
+			 colors[BLACK].pixel);
+    }
 
     /*
      * Underline the best player
@@ -3490,7 +3543,7 @@ void Paint_score_entry(int entry_num,
     if (best) {
 	XDrawLine(dpy, players, scoreListGC,
 		  BORDER, thisLine,
-  		  SCORE_LIST_WINDOW_WIDTH - BORDER, thisLine);
+		  SCORE_LIST_WINDOW_WIDTH - BORDER, thisLine);
     }
 }
 

@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.31 1994/04/23 16:58:29 bert Exp $
+/* $Id: configure.c,v 3.35 1994/08/15 08:13:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -52,7 +52,6 @@
  * 8: Mail a context diff of your changes to xpilot@cs.uit.no.
  */
 
-#include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
@@ -75,11 +74,12 @@
 #include <limits.h>
 
 #include "version.h"
-#include "client.h"
+#include "config.h"
+#include "const.h"
 #include "paint.h"
-#include "draw.h"
 #include "xinit.h"
 #include "bit.h"
+#include "keys.h"
 #include "netclient.h"
 #include "widget.h"
 #include "configure.h"
@@ -593,10 +593,10 @@ static int Config_create_altTurnResistance(int widget_desc, int *height)
 static int Config_create_showMessages(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "showMessages",
-                            BIT(instruments, SHOW_MESSAGES)
-                                ? true : false,
-                            Config_update_instruments,
-                            (void *) SHOW_MESSAGES);
+			    BIT(instruments, SHOW_MESSAGES)
+				? true : false,
+			    Config_update_instruments,
+			    (void *) SHOW_MESSAGES);
 }
 
 static int Config_create_showHUD(int widget_desc, int *height)
@@ -701,19 +701,19 @@ static int Config_create_backgroundPointDist(int widget_desc, int *height)
 static int Config_create_showItems(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "showItems",
-                            BIT(instruments, SHOW_ITEMS)
-                                ? true : false,
-                            Config_update_instruments,
-                            (void *) SHOW_ITEMS);
+			    BIT(instruments, SHOW_ITEMS)
+				? true : false,
+			    Config_update_instruments,
+			    (void *) SHOW_ITEMS);
 }
 
 static int Config_create_showItemsTime(int widget_desc, int *height)
 {
     return Config_create_float(widget_desc, height,
-                             "showItemsTime", &showItemsTime,
-                             MIN_SHOW_ITEMS_TIME,
-                             MAX_SHOW_ITEMS_TIME,
-                             NULL, NULL);
+			     "showItemsTime", &showItemsTime,
+			     MIN_SHOW_ITEMS_TIME,
+			     MAX_SHOW_ITEMS_TIME,
+			     NULL, NULL);
 }
 
 static int Config_create_backgroundPointSize(int widget_desc, int *height)
@@ -758,17 +758,17 @@ static int Config_create_toggleShield(int widget_desc, int *height)
 static int Config_create_shotSize(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
-                           "shotSize", &shot_size,
-                           MIN_SHOT_SIZE, MAX_SHOT_SIZE,
-                           NULL, NULL);
+			   "shotSize", &shot_size,
+			   MIN_SHOT_SIZE, MAX_SHOT_SIZE,
+			   NULL, NULL);
 }
 
 static int Config_create_teamShotSize(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
-                           "teamShotSize", &teamshot_size,
-                           MIN_TEAMSHOT_SIZE, MAX_TEAMSHOT_SIZE,
-                           NULL, NULL);
+			   "teamShotSize", &teamshot_size,
+			   MIN_TEAMSHOT_SIZE, MAX_TEAMSHOT_SIZE,
+			   NULL, NULL);
 }
 
 #ifdef SOUND
@@ -867,7 +867,7 @@ static int Config_create_markingLights(int widget_desc, int *height)
 			      markingLights,
 			      Config_update_bool, &markingLights);
 }
-    
+
 
 static int Config_create_save(int widget_desc, int *height)
 {
@@ -920,7 +920,8 @@ static int Config_update_instruments(int widget_desc, void *data, bool *val)
 	Paint_sliding_radar();
     }
     if ((long)data == SHOW_OUTLINE_WORLD) {
-	Map_blue();
+	Map_restore(0, 0, Setup->x, Setup->y);
+	Map_blue(0, 0, Setup->x, Setup->y);
     }
     if ((long)data == SHOW_PACKET_DROP_METER
 	|| (long)data == SHOW_PACKET_LOSS_METER) {
@@ -1136,9 +1137,9 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Widget_draw(widget_desc);
     Client_flush();
 
-    if ((home = getenv("HOME")) == NULL
+    if (((home = getenv("HOME")) == NULL
 	&& ((pwent = getpwuid(getuid())) == NULL
-	|| (home = pwent->pw_dir)[0] == '\0')
+	    || (home = pwent->pw_dir)[0] == '\0'))
 	|| access(home, 0) == -1) {
 	Config_save_failed("Can't find home directory.", strptr);
 	return 1;

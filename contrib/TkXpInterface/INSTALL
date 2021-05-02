@@ -1,12 +1,12 @@
 #
-# Installation procedure for TkXpInterface-3.4
+# Installation procedure for TkXpInterface-3.6.1
 #
 
 1) Install the "maps2image" package FIRST !
-   Use the LAST version in the ./TkXpInterface-3.4/contrib directory
-   of Xpilots-3.1.x
+   Use the LAST version in the ./TkXpInterface/contrib directory
+   of Xpilots-3.2.x
 
-2) Edit the Makefile in the ./TkXpInterface-3.4 directory.
+2) Edit the Makefile in the ./TkXpInterface-3.6.1 directory.
    Specify where you want everything to go 
 
 3) type :
@@ -49,17 +49,17 @@ The UNIX commands used are :
       grep sort sed telnet cat rm mv cp ls echo tail head ping
 
 e-mail troubles to :
-berne@ensisun.imag.fr And ferhati@aremihp.univ-lille1.fr
+berne@imag.fr 
 
 Enjoy !
 
 -------------------------------------------------------------------------- 
-Package name:     TkXpInterface-3.4
-Version number:   3.4
+Package name:     TkXpInterface-3.6.1
+Version number:   3.6.1
 Original author:  Ramdane Ferhati (ferhati@aremihp.univ-lille1.fr)
-		  Berne Yves-Henri (berne@ensisun.imag.fr)
+		  Berne Yves-Henri (berne@imag.fr)
 Based on the idea of Richard Oak (Original author of tkxpilots)
-Report bugs to:   berne@ensisun.imag.fr or ferhati@aremihp.univ-lille1.fr
+Report bugs to:   berne@imag.fr
 Tested on:        HP 9000/735 running HP-UX 9.01
 		  SUN Sparc server 1000
 		  IBM Risc 6000
@@ -68,5 +68,5 @@ Interface to xpilot server. This is a Tcl/Tk script that allows you to
 configure xpilots servers using buttons and sliders. It also allows you to
 choose from all maps in the default map directory and includes all of the
 xpilots command line options.
-Date archived:    22 April 1994
+Date archived:    18 August 1994
 Special notes:    None

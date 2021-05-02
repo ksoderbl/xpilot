@@ -1,10 +1,10 @@
 Followup-To: poster
 Reply-To: bert@mc.bio.uva.nl
 Archive-name: xpilot-faq
-Expires: Sun, 29 May 1994 00:00:00 GMT
+Expires: Sun, 1 Oct 1994 00:00:00 GMT
 Summary: XPilot, a multi-player tactical manouvring game for X and Unix.
-Last-modified: 1994/05/25
-Version: 2.6.0
+Last-modified: 1994/08/20
+Version: 2.8.5
 
 This is the Frequently Asked Questions list With Answers for XPilot.
 Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
@@ -13,10 +13,10 @@ and on the XPilot mailing list every couple of weeks.
 It is part of the XPilot distribution.
 It can also be obtained by: telnet xpilot.cs.uit.no 4402.
 Or by anonymous ftp to xpilot.sdsu.edu in /pub/xpilot-maps/FAQ.
-Or by anonymous ftp to ftp.x.org in /contrib/games/xpilot/xpilot-FAQ.
 
-Questions changed in this release: 0, 1, 2, 17
-Questions changed in the previous release: 1
+New questions in this release:
+Questions changed in this release: 1 (WWW!)
+Questions changed in the previous release:
 
 Questions:
 
@@ -33,19 +33,21 @@ Questions:
 10) xpilot fails: ioctl SIOCGIFCONF (Operation not supported on socket)?
    or: Couldn't send query packets (Operation not supported on socket)?
    or: Can't make socket non-blocking (Operation not supported on socket)?
-11) Why is the client so slow?  Why is my display so jerky?
-12) Where can I get new maps?
-13) How can I distribute my own carefully crafted maps?
-14) How can I design my own maps easily?
-15) I have a problem because this and that is not working.
-16) What is the meta server?  Where can I find other players?
-17) What information on XPilot is available on World-Wide Web?
-18) How should I subscribe/unsubscribe to/from the XPilot mailing list?
-19) How can I contribute bugfixes and new features to the game?
-20) Is there an archive of alt.games.xpilot and the mailing list?
-21) Why do I never get any items (triangles) to appear in my maps?
-22) What are the Well Known Problems for the latest version?
-23) What if I'm having trouble installing XPilot on Platform XYZ?
+11) xpilots fails: Could not create Dgram socket (Invalid argument)
+12) Why is the client so slow?  Why is my display so jerky?
+13) Where can I get new maps?
+14) How can I distribute my own carefully crafted maps?
+15) How can I design my own maps easily?
+16) How can I design my own ship?
+17) I have a problem because this and that is not working.
+18) What is the meta server?  Where can I find other players?
+19) What information on XPilot is available on World-Wide Web?
+20) How should I subscribe/unsubscribe to/from the XPilot mailing list?
+21) How can I contribute bugfixes and new features to the game?
+22) Is there an archive of alt.games.xpilot and the mailing list?
+23) Why do I never get any items (triangles) to appear in my maps?
+24) What are the Well Known Problems for the latest version?
+25) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Answers:
 
@@ -88,25 +90,35 @@ XPilot is written by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
 Many people around the world have contributed ideas and code or helped in
 other ways to have XPilot run on a diverse set of Unix computers and VMS.
 
-The following World-Wide Web info about the authors is available:
-        http://www.cs.uit.no/~bjoerns/
-        http://www.cs.uit.no/~kenrsc/
+The XPilot home page on World-Wide Web is:
+    http://www.cs.uit.no/XPilot/
+
+Other WWW pages about XPilot are:
+    http://heron.met.nps.navy.mil/~forsythe/index.html
+    http://bau2.uibk.ac.at/che/xpilot.html
+    http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html
+    http://ernie.ucsc.edu:8001/1g/xpilot
+    http://ece.uiuc.edu/lard/lard.html
+    http://www.sdsu.edu/~boyns/xpilot.html
+    http://www.sdsu.edu/~turtle/
+    http://www.sdsu.edu/~garrett/
+    http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html
+    http://rs560.cl.msu.edu/misc/xpilot.html
 
 2) What is the latest version?
 
-3.2.0.  Which is XPilot release 3.2, patchlevel 0.
+3.2.5.  Which is XPilot release 3.2, patchlevel 5.
 
 3) Where can I get it as soon as possible?
 
 Anonymous ftp to ftp.cs.uit.no (129.242.16.93) in /pub/games/xpilot.
 Use as login name anonymous or ftp and use as password your email address.
-Look for the file named xpilot-3.2.0.tar.gz, which is the already fully
+Look for the file named xpilot-3.2.5.tar.gz, which is the already fully
 patched up version.  Some patches for older versions are also available.
 Other anonymous ftp sites may have it as well, the most up to date is
-ftp.x.org (198.112.44.100) in /contrib/games/xpilot.
-Also have a look in the /contrib/games/xpilot/util subdirectory where
-you can find an assortment of utilities complementing XPilot.
-Another important ftp site is ftp.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games.
+ftp.x.org (198.112.44.100) in /contrib/games.
+Another important ftp site (especially for HP 700 series computers) is
+hpux.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games/Arcade.
 
 If you have absolutely no FTP access then you can get it send by email.
 Mail to bert@mc.bio.uva.nl with a Subject line of `mail xpilot'.
@@ -116,7 +128,7 @@ much faster anyway.
 You will get a dozen mails with XPilot in gzipped uuencoded format.
 Strip the mail headers and concatenate these files in the right order
 into one big file.  The last line of this file should read: "end".
-Then uudecode this file to get xpilot-3.2.0.tar.gz.
+Then uudecode this file to get xpilot-3.2.5.tar.gz.
 This is the XPilot distribution file as found on ftp.cs.uit.no.
 
 4) Sound?  Does it really have sound?
@@ -137,7 +149,15 @@ There is also sound support for NCD MCX X terminals.  These X terminals
 must be running release 3.1 or later of the NCD software.
 Greg Renda can provide you with more details at greg@ncd.com.
 
-And there is sound support for DEC AutioFile.  AudioFile supports Digital RISC
+The NAS (Network Audio System) support will also work with any machine running
+a netaudio server.  At the moment, the following are capable of doing this:
+    NCD MCX X-terminals (running NCDware 3.1 & later)
+    Sun Sparcs
+    SGI workstations
+    Linux
+    FreeBSD
+
+And there is sound support for DEC AudioFile.  AudioFile supports Digital RISC
 systems running Ultrix, Digital Alpha AXP systems running OSF/1, Sun Microsystems
 SPARCstations running SunOS, and SGI Indigos.
 Tom De Pauw can provide with more details at tom@wimsey.com.
@@ -153,11 +173,11 @@ prep.ai.mit.edu (18.71.0.38).  The last one in the pub/gnu directory.
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.2.0.tar.gz > xpilot-3.2.0.tar
+    gzip -d < xpilot-3.2.5.tar.gz > xpilot-3.2.5.tar
 
 or even better :
 
-    gzip -d < xpilot-3.2.0.tar.gz | tar xvf -
+    gzip -d < xpilot-3.2.5.tar.gz | tar xvf -
 
 6) I do not have the patch program on my system, so how can I upgrade?
 
@@ -188,6 +208,9 @@ The xpilot client program should now print a message like:
 
 Now type a question mark '?' to see some possible options.
 Or simply type a return to enter the game.
+Newbies should note that in order to fire one has to put down
+the shield first.  This is done by pressing and releasing the
+spacebar once.
 
 9) The xpilots server complains that it is unable to read globe.map?
 
@@ -222,7 +245,31 @@ which makes gcc pick up the standard include files rather than its
 special includes.  I directly hacked the makefile to cut this out
 and the resulting build worked.
 
-11) Why is the client so slow?  Why is my display so jerky?
+Craig Powers <craig_powers@stortek.com> writes:
+We had fits trying to get xpilot to compile correctly with gcc on our
+Solaris2.3.  The compiler said that it was in the file signal.h.  We thought
+it must be a problem with the program since we had compiled small programs
+with gcc and they seemed to work.  It turned out that our problems were due to
+the compiler not being installed correctly.  We made our sys-admin guy go
+through the whole installation for gcc.  This time xpilot compiled the very
+first time!!  So check the installation of gcc.  It may look like its working
+correctly but it isn't.  It seems that gcc wanted to modify the header
+files and our sys-admin guy didn't let it.  What I think really happens is
+that gcc takes copies of the systems header files and modifies them and saves
+these in a special place.  Then a enviroment variable is set so that gcc
+knows where the modified headers are.  After our sys-admin guy let gcc do
+this, everything worked.
+
+11) xpilots fails: Could not create Dgram socket (Invalid argument)
+
+You are probably running Linux or one of the BSD flavors on your PC
+and "forgot" to install the network support of your operating system.
+
+For Linux you should install the N series of disks n1, n2 and n3.
+You won't need everything that's on the disks in order to run XPilot,
+i.e. you can drop things like lynx, tin, nn, etc.
+
+12) Why is the client so slow?  Why is my display so jerky?
 
 This is probably due to you not using a standard MIT X server, but
 one of those customized servers supplied by your workstation vendor.
@@ -290,7 +337,7 @@ If you have achieved any success with speeding up graphics performance
 then send a note to xpilot@cs.uit.no telling how and for which hardware,
 X server, XPilot version, compile time options and frames per second.
 
-12) Where can I get new maps?
+13) Where can I get new maps?
 
 anonymous ftp:
         xpilot.sdsu.edu:/pub/xpilot-maps
@@ -305,13 +352,13 @@ gopher:
 You can also use the new xpmtp program which is in the contrib directory
 of the distribution.  Xpmtp is an abbreviation of XPilot Map Transfer
 Protocol and provides an easy way to upload, download and preview maps
-from sounds.sdsu.edu.  Xpmtp was made by Andrew Scherpbier.
+from xpilot.sdsu.edu.  Xpmtp was made by Andrew Scherpbier.
 
 Questions and comments about this map server should go to Andrew@SDSU.Edu
 
 You can also receive or send maps by e-mail.  Mark Boyns has setup a nifty
-map mailing and submitting service on sounds.sdsu.edu.  The map mailing
-program can be activated by mailing to xpilot-maps@sounds.sdsu.edu.
+map mailing and submitting service on xpilot.sdsu.edu.  The map mailing
+program can be activated by mailing to xpilot-maps@xpilot.sdsu.edu.
 The command you want it to perform should be specified as the Subject.
 The body of the mail command is ignored except for the submit command.
 The xpilot map mailer supports the following commands:
@@ -349,22 +396,19 @@ Send questions & comments & suggestions to boyns@sdsu.edu (DR.DEATH).
 
 
 There is also a world writeable map directory on ftp.cs.uit.no in
-/pub/games/xpilot/maps.
+/pub/games/xpilot/maps where you can find a lot of maps also.
 
-13) How can I distribute my own carefully crafted maps?
+14) How can I distribute my own carefully crafted maps?
 
 See the previous question.  The sites mentioned in the previous question
 are eager to add your map to their set of maps, but it is perhaps also
 a good idea to post an announcement in alt.games.xpilot or on the mailing
 list explaining some ideas behind and properties of your map.
 
-For easy uploading of maps to sounds.sdsu.edu you can use the xpmtp
+For easy uploading of maps to xpilot.sdsu.edu you can use the xpmtp
 program which is in the contrib directory of the distribution.
-Because sounds.sdsu.edu is also a very big sound depository it may
-often have a large wait queue of users.  Using xpmtp provides a way
-to circumvent that.  Or use the map mailing service to submit a map.
 
-14) How can I design my own maps easily?
+15) How can I design my own maps easily?
 
 Use the XMapEdit program, which was made
 by Aaron Averila (averila@oes.orst.edu).
@@ -375,7 +419,13 @@ it that way before XMapEdit, but that seems hopelessly complex
 and tedious now.
 Special thanks to Aaron for making XMapEdit.
 
-15) I have a problem because this and that is not working.
+16) How can I design my own ship?
+
+Use editss.  You can get it by anonymous ftp to
+dnpap.et.tudelft.nl in the /pub/Private/Ronald directory.
+Or from ftp.cs.uit.no in the /pub/games/xpilot/contrib directory.
+
+17) I have a problem because this and that is not working.
 
 Make sure you use the latest `officially released' version.
 You will be most cooperative if you try to fix it yourself first.
@@ -384,7 +434,7 @@ to xpilot@cs.uit.no.
 If you tried everything and you still cannot solve it then post
 a help request to alt.games.xpilot or mail to xpilot-list@cs.uit.no.
 
-16) What is the meta server?  Where can I find other players?
+18) What is the meta server?  Where can I find other players?
 
 The meta server is a server program that allows people to find other
 XPilot servers running on the Internet.  XPilot servers can report
@@ -420,30 +470,30 @@ Help is available online.  Example session:
     E-mail problems to kenrsc@stud.cs.uit.no (Ken Ronny Schouten).
 
     >list
-    3.1.1          :144.168.23.100           :15345    :0   :2.51      :Team-combat
-    3.1.2          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
-    3.1.2          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
-    3.1.3          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
-    3.1.0          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
-    3.1.3          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
-    3.1.3          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
-    3.1.3          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
-    3.1.2          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
-    3.1.3          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
-    3.1.3          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
-    3.1.2          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
-    3.1.1          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
-    3.1.3          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
-    3.1.3          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
-    3.1.3          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
-    3.1.3          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
-    3.1.3          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
-    3.1.3          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
-    3.1.3          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
-    3.1.3          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
+    3.2.5          :144.168.23.100           :15345    :0   :2.51      :Team-combat
+    3.2.5          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
+    3.2.5          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
+    3.2.5          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
+    3.2.5          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
+    3.2.5          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
+    3.2.5          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
+    3.2.5          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
+    3.2.5          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
+    3.2.5          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
+    3.2.5          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
+    3.2.5          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
+    3.2.5          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
+    3.2.5          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
+    3.2.5          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
+    3.2.5          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
+    3.2.5          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
+    3.2.5          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
+    3.2.5          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
+    3.2.5          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
+    3.2.5          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
     >server scratch.eecs.umich.edu
     >status
-    SERVER VERSION...: XPilot 3.1.1
+    SERVER VERSION...: XPilot 3.2.5
     STARTED BY.......: pkenny
     STATUS...........: ok
     MAX SPEED........: 12 fps
@@ -477,12 +527,12 @@ there is an backup meta server at telnet xpilot.mc.bio.uva.nl 4400.
 The meta server is developed and maintained by Ken Ronny Schouten.
 His email address is kenrsc@stud.cs.uit.no.
 
-17) What information about XPilot is available on World-Wide Web?
+19) What information about XPilot is available on World-Wide Web?
 
 The XPilot Page on the World-Wide Web can be found on URL
 <http://www.cs.uit.no/XPilot/>.
 
-18) How should I subscribe/unsubscribe to/from the XPilot mailing list?
+20) How should I subscribe/unsubscribe to/from the XPilot mailing list?
 
 Requests for (un)subscription to the XPilot mailing list should
 be send to xpilot-request@cs.uit.no.  People really dislike it
@@ -490,7 +540,7 @@ to see any (un)subscribe requests in the mailing list itself.
 The mailing list itself is xpilot-list@cs.uit.no, which is gateway-ed
 to alt.games.xpilot.
 
-19) How can I contribute bugfixes and new features to the game?
+21) How can I contribute bugfixes and new features to the game?
 
 Make your contributions as context diffs against the latest version
 and mail them to xpilot@cs.uit.no.  You can make context diffs with
@@ -500,7 +550,7 @@ longstanding tradition of incorporating code from hackers all over the world.
 Ideas for new features can of course be discussed in alt.games.xpilot
 and the mailing list.
 
-20) Is there an archive of alt.games.xpilot and the mailing list?
+22) Is there an archive of alt.games.xpilot and the mailing list?
 
 David Bianco has set up an archive of alt.games.xpilot which can be
 accessed via anonymous FTP to ftp.cs.odu.edu:/pub/news/alt.games.xpilot.
@@ -509,7 +559,7 @@ Note that this is also an archive of the mailing list (they are the same).
 There is also an older archive of the XPilot mailing list on ftp.cs.uit.no
 in pub/games/xpilot.
 
-21) Why do I never get any items (triangles) to appear in my maps?
+23) Why do I never get any items (triangles) to appear in my maps?
 
 At startup the xpilot server looks for a configuration file to
 retrieve default values for some of the options.
@@ -523,7 +573,7 @@ This is the case if you do not get any items to appear in your maps.
 An example defaults file with reasonable default values can be
 found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
 
-22) What are the Well Known Problems for the latest version?
+24) What are the Well Known Problems for the latest version?
 
 The first of these Well Known Problems apply to XPilot 3.0 patchlevel 3,
 but may also apply to later patchlevels:
@@ -597,7 +647,24 @@ Fixed in 3.1.2.
 
 Patchlevel 3.1.3 seems to be the most stable version sofar.
 
-23) What if I'm having trouble installing XPilot on Platform XYZ?
+Versions 3.2.0 and 3.2.1 are quite buggy.  Upgrade to 3.2.2 which
+is as good as perfect, except for a few known small problems.
+    a) some ship shapes whose definition is exactly 255 characters
+       when transmitted to the server cause the client to exit.
+    b) targets are not always drawn in the right color if teammode
+       is on and you didn't set your team explicitly but relied
+       on teamAsignment.
+    c) rogue heat seakers can cause the server to crash.  This bug
+       may also exist in earlier 3.2 versions.
+
+Version 3.2.3 looks to be quite stable.  Sofar two people reported some
+strange problems, which have not been repeated on other systems (yet?).
+
+No problems reported for 3.2.4 sofar.
+
+3.2.5 is bugfree ;-)
+
+25) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Below is a list of people who are willing to help others install XPilot
 on various platforms. Please feel free to mail these people about any
@@ -616,5 +683,7 @@ Trusted Solaris CMW     Steve Marsden       marsdens@logica.co.uk
 VMS                     Curt Hjorring       HJORRING@esv1.aukuni.ac.nz
 
 Linux                   Bert Gijsbers       bert@mc.bio.uva.nl
+
+HP-UX                   Bert Gijsbers       bert@mc.bio.uva.nl
 
 EOFAQ

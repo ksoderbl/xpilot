@@ -1,4 +1,4 @@
-/* $Id: version.h,v 3.49 1994/05/25 07:39:50 bert Exp $
+/* $Id: version.h,v 3.80 1994/09/26 10:59:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -36,7 +36,7 @@
  */
 #define VERSION_MAJOR		"3"
 #define VERSION_MINOR		"2"
-#define VERSION_PATCHLEVEL	"0"
+#define VERSION_PATCHLEVEL	"6"
 #define VERSION_STATUS		""
 
 /*
@@ -54,5 +54,5 @@
 #endif
 
 #define COPYRIGHT	\
-	"© 1991-94 by Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers" 
+	"© 1991-94 by Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers"
 #endif

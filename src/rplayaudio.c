@@ -1,4 +1,4 @@
-/* $Id: rplayaudio.c,v 3.8 1994/02/07 13:20:36 bjoerns Exp $
+/* $Id: rplayaudio.c,v 3.10 1994/07/10 20:01:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <netdb.h>
+
 #include "rplay.h"
 #include "audio.h"
 

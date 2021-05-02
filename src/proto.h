@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 3.29 1994/05/23 19:22:02 bert Exp $
+/* $Id: proto.h,v 3.40 1994/09/17 01:08:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,16 +24,9 @@
 #ifndef	PROTO_H
 #define	PROTO_H
 
-#include <stddef.h>
-#include <string.h>
-
 #ifdef VMS
 #include "strcasecmp.h"
 #endif
-
-#include "types.h"
-#include "object.h"
-
 
 /*
  * Prototypes for collision.c
@@ -79,7 +72,9 @@ extern float Wrap_length(float dx, float dy);
  * Prototypes for math.c
  */
 extern int mod(int x, int y);
+extern int f2i(float f);
 extern float findDir(float x, float y);
+extern float rfrac(void);
 extern void Make_table(void);
 
 
@@ -97,6 +92,7 @@ extern void Thrust(int ind);
 extern void Turn_thrust(int ind,int num_sparks);
 #endif
 extern void Recoil(object *ship, object *shot);
+extern void Record_shove(player *pl, player *pusher, long time);
 extern void Delta_mv(object *ship, object *obj);
 extern void Obj_repel(object *obj1, object *obj2, int repel_dist);
 extern void Item_damage(int ind, float prob);
@@ -108,10 +104,11 @@ extern void Update_tanks(pl_fuel_t*);
 extern void Place_item(int type, player*, int);
 extern void Place_mine(int ind);
 extern void Place_moving_mine(int ind);
-extern void Place_general_mine(int ind, int status, float x, float y,
-			       float vx, float vy, modifiers mods);
+extern void Place_general_mine(int ind, long status, float x, float y,
+  			       float vx, float vy, modifiers mods);
+extern void Detonate_mines(int ind);
 extern void Cannon_fire(int ind);
-extern char *Describe_shot(int type, int status, modifiers mods, int hit);
+extern char *Describe_shot(int type, long status, modifiers mods, int hit);
 extern void Fire_ecm(int ind);
 extern void Move_ball(int ind);
 extern void Fire_shot(int ind, int type, int dir);
@@ -124,9 +121,22 @@ extern void Delete_shot(int ind);
 extern void do_transporter(player *pl);
 extern void Move_smart_shot(int ind);
 extern void Move_mine(int ind);
-extern void Explode_object(object *shot, float x, float y,
-			   int real_dir, int spread, int intensity);
+extern void Make_debris(
+	    /* pos.x, pos.y   */ float  x,          float y,
+	    /* vel.x, vel.y   */ float  velx,       float vely,
+	    /* owner id       */ int    id,
+	    /* type           */ int    type,
+	    /* mass           */ float  mass,
+	    /* status         */ long   status,
+	    /* color          */ int    color,
+	    /* radius         */ int    radius,
+	    /* min,max debris */ int    min_debris, int    max_debris,
+	    /* min,max dir    */ int    min_dir,    int    max_dir,
+	    /* min,max speed  */ float  min_speed,  float  max_speed,
+	    /* min,max life   */ int    min_life,   int    max_life
+	    );
 extern void Explode(int ind);
+extern void Explode_fighter(int ind);
 extern void Throw_items(player*);
 extern void Detonate_items(player*);
 
@@ -135,6 +145,7 @@ extern void Detonate_items(player*);
  */
 extern void Pick_startpos(int ind);
 extern void Go_home(int ind);
+extern void Compute_sensor_range(player *);
 extern void Init_player(int ind, wireobj *ship);
 extern void Alloc_players(int number);
 extern void Free_players(void);
@@ -146,6 +157,7 @@ extern void Compute_game_status(void);
 extern void Delete_player(int ind);
 extern void Detach_ball(int ind, int ball);
 extern void Kill_player(int ind);
+extern void Player_death_reset(int ind);
 
 /*
  * Prototypes for robot.c
@@ -198,6 +210,7 @@ extern void allow_timer(void);
 extern void Update_radar_target(int);
 extern void Update_objects(void);
 extern void Emergency_thrust(int ind, int on);
+extern void Emergency_shield(int ind, int on);
 extern void Autopilot(int ind, int on);
 
 /*

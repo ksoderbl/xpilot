@@ -34,6 +34,25 @@ The new map format is as follows:
 				Players starting on homebases that are
 				adjacent to this symbol will start with the
 				front of their ship pointing to this dollar
-				sign.  Except that client don't draw it.
+				sign.  Clients don't draw this symbol.
+
+	%			Item concentrator.  Putting it in a map will
+				determine where items appear.  When one or
+				more item concentrators are in a map then
+				all items appear only in an area around the
+				item concentrators.  The area is a circle with
+				a radius determined by the server option
+				-itemConcentratorRadius.  If no item
+				concentrators are defined in a map then items
+				can popup anywhere.  An item concentrator is
+				drawn on screen as three rotating triangles.
 
 	any other char		Empty block
+
+In case you are wondering if all the characters for map symbols have any
+special meaning, they are not abbreviations, but if you take a look at
+where they are placed on the keyboard, you might grasp the logic behind
+selecting them.  Try imagining the block center between the keys qwas
+(for the logica behind qwas) and between dfrc (for the logic behind dfrc).
+'x' was just chosen since it makes a nice 'fill it all' character.
+

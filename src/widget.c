@@ -1,4 +1,4 @@
-/* $Id: widget.c,v 3.15 1994/02/13 15:49:19 bert Exp $
+/* $Id: widget.c,v 3.17 1994/07/10 20:07:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
@@ -34,9 +33,9 @@
 #include <limits.h>
 
 #include "version.h"
-#include "client.h"
+#include "config.h"
+#include "const.h"
 #include "paint.h"
-#include "draw.h"
 #include "xinit.h"
 #include "bit.h"
 #include "error.h"
@@ -595,7 +594,8 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	if (expose && expose->count > 0)
 	    break;
 	boolw = (widget_bool_t *) widget->sub;
-	Widget_draw_button(widget, boolw->pressed && boolw->inside,
+	Widget_draw_button(widget,
+			   (boolw->pressed && boolw->inside) ? true : false,
 			   (boolw->state == true) ? "Yes" : "No");
 	break;
 
@@ -610,7 +610,8 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	if (expose && expose->count > 0)
 	    break;
 	activw = (widget_activate_t *) widget->sub;
-	Widget_draw_button(widget, activw->pressed && activw->inside,
+	Widget_draw_button(widget,
+			   (activw->pressed && activw->inside) ? true : false,
 			   activw->str);
 	break;
 
@@ -1038,6 +1039,9 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 		    }
 		}
 		break;
+	    default:
+		/*NOTREACHED*/
+		break;
 	    }
 	}
 	break;
@@ -1160,6 +1164,9 @@ int Widget_event(XEvent *event)
 			count++;
 			Widget_button(event, i, false);
 		    }
+		    break;
+		default:
+		    /*NOTREACHED*/
 		    break;
 		}
 	    }
@@ -1646,7 +1653,8 @@ int Widget_create_label(int parent_desc,
     return widget_desc;
 }
 
-static int Widget_create_arrow(int type, int parent_desc, int x, int y,
+static int Widget_create_arrow(widget_type_t type, int parent_desc,
+			       int x, int y,
 			       int width, int height,
 			       int border, int related_desc)
 {
@@ -1776,7 +1784,7 @@ int Widget_create_confirm(char *confirm_str,
 			button_desc;
 
     popup_desc = Widget_create_popup(popup_width, popup_height, 1,
-    				"Confirm", "Confirm");
+				"Confirm", "Confirm");
     if (popup_desc == NO_WIDGET) {
 	return NO_WIDGET;
     }
@@ -1792,7 +1800,7 @@ int Widget_create_confirm(char *confirm_str,
     button_desc = Widget_create_activate(popup_desc,
 					 (popup_width - button_width) / 2,
 					 popup_height - button_height
-					 	- button_space,
+						- button_space,
 					 button_width, button_height,
 					 0, button_str,
 					 callback,
@@ -2031,7 +2039,7 @@ static void Widget_resize_viewer(XEvent *event, int ind)
     widget_t		*viewer_widget = Widget_pointer(viewer_desc);
     widget_viewer_t	*viewer_sub = (widget_viewer_t *)viewer_widget->sub;
     XFontStruct		*font = viewer_sub->font;
-    const int		
+    const int
 			close_width = 2*8 + XTextWidth(font, "CLOSE", 5),
 			close_height = 6 + font->ascent + font->descent,
 			close_x_offset = (width - close_width) / 2,
@@ -2062,7 +2070,7 @@ static void Widget_resize_viewer(XEvent *event, int ind)
 		vert_slider_x, vert_slider_y);
     Widget_resize(formw->children[3], close_width, close_height);
     XMoveWindow(dpy, Widget_pointer(formw->children[3])->window,
-	        close_x_offset, viewer_height + close_y_offset);
+		close_x_offset, viewer_height + close_y_offset);
     popup->width = width;
     popup->height = height;
     viewer_widget->width = viewer_width;
@@ -2077,7 +2085,7 @@ int Widget_create_viewer(const char *buf, int len,
 			 char *window_name, char *icon_name,
 			 XFontStruct *font)
 {
-    const int		
+    const int
 			close_width = 2*8 + XTextWidth(font, "CLOSE", 5),
 			close_height = 6 + font->ascent + font->descent,
 			close_x_offset = (width - close_width) / 2,
@@ -2151,8 +2159,8 @@ int Widget_create_viewer(const char *buf, int len,
     Widget_window_gravity(window, NorthWestGravity);
     XMapWindow(dpy, window);
     viewer_desc = Widget_create(WIDGET_VIEWER, "viewer", window,
-			        viewer_width, viewer_height,
-			        viewerw);
+				viewer_width, viewer_height,
+				viewerw);
     if (viewer_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
@@ -2227,7 +2235,7 @@ int Widget_update_viewer(int popup_desc, const char *buf, int len)
     widget_t		*viewer_widget;
     widget_viewer_t	*viewer_sub;
     int			text_height,
-			first_visible, 
+			first_visible,
 			last_visible,
 			start,
 			end;

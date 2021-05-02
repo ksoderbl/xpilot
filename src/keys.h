@@ -1,4 +1,4 @@
-/* $Id: keys.h,v 3.20 1994/05/23 19:10:32 bert Exp $
+/* $Id: keys.h,v 3.25 1994/08/22 19:19:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,12 +24,6 @@
 #ifndef KEYS_H
 #define KEYS_H
 
-#ifndef SERVER
-#include <X11/X.h>
-
-#define CONTROL_DELAY	100
-#endif
-
 /*
  * The following enum type defines the possible actions as a result of
  * a keypress or keyrelease.
@@ -54,7 +48,7 @@ typedef enum {
     KEY_TURN_LEFT,
     KEY_TURN_RIGHT,
     KEY_SELF_DESTRUCT,
-    KEY_ID_MODE,
+    KEY_UNUSED_16,		/* Was KEY_ID_MODE up to 3.2.5 */
     KEY_PAUSE,
     KEY_TANK_DETACH,
     KEY_TANK_NEXT,
@@ -90,8 +84,8 @@ typedef enum {
     KEY_LOAD_MODIFIERS_2,
     KEY_LOAD_MODIFIERS_3,					/* 50 */
     KEY_LOAD_MODIFIERS_4,
-    KEY_TOGGLE_OWNED_ITEMS,
-    KEY_TOGGLE_MESSAGES,
+    KEY_UNUSED_52,		/* Was KEY_TOGGLE_OWNED_ITEMS up to 3.2.5 */
+    KEY_UNUSED_53,		/* Was KEY_TOGGLE_MESSAGES up to 3.2.5 */
     KEY_REPAIR,
     KEY_TOGGLE_IMPLOSION,
     KEY_REPROGRAM,
@@ -100,9 +94,25 @@ typedef enum {
     KEY_LOAD_LOCK_3,
     KEY_LOAD_LOCK_4,						/* 60 */
     KEY_EMERGENCY_SHIELD,
-    KEY_UNUSED_62,
-    KEY_UNUSED_63,
+    KEY_UNUSED_62,		/* Was KEY_POINTER_CONTROL up to 3.2.5 */
+    KEY_DETONATE_MINES,
     NUM_KEYS		/* The number of different keys_t */
+#ifndef SERVER
+    /*
+     * Hack (patent pending BG):
+     * Here all keys only used by the client can be defined.
+     * Be careful that the key vector is not set with these keys or
+     * array boundaries will be exceeded.
+     * The reason for this hack is to create new empty key slots while
+     * retaining compatibility.  Change this at the next major cleanup.
+     */
+    ,
+    KEY_ID_MODE,
+    KEY_TOGGLE_OWNED_ITEMS,
+    KEY_TOGGLE_MESSAGES,
+    KEY_POINTER_CONTROL,
+    NUM_CLIENT_KEYS	/* The number of keys really used by the client. */
+#endif
 } keys_t;
 
 
@@ -111,6 +121,8 @@ typedef struct {
     KeySym	keysym;			/* Keysym-to-action array */
     keys_t	key;
 } keydefs_t;
+
+extern keydefs_t	*keyDefs;
 #endif
 
 #endif

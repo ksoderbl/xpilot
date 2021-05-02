@@ -1,32 +1,32 @@
-# Makefile for TkXpInterface-3.4
+# Makefile for TkXpInterface-3.6.1
 
 # Where is wish installed ( Tcl path and filename) ?
 WISH = /usr/local/bin/wish
 
 # Directory where TkXpInterface is to be installed.
-BINDIR = /usr/local/games
+BINDIR = /home/orion/berne/bin
 
 # Where do you want the manpage?
 # Assuming that someone is actually going to bother reading it. ;-)
-MANDIR = /usr/local/games/man
+MANDIR = /home/orion/berne/man/man1
 
 # Where are the xpilot maps on this system?
-MAPDIR = /usr/local/bin/xpilot/maps
+MAPDIR = /home/orion/berne/lib/xpilot/maps
 
 # Directory to put the temporary file of list server  ?
 TEMPDIR = /tmp
 
 # Directory to put the help and the shipshapes files (TkXpI.hlp,TkXpI.shp) ?
-LIBDIR = /usr/local/games/lib/xpilot
+LIBDIR = /home/orion/berne/lib/xpilot
 
 # Path and filename of the xpilot default file
-DEFAULT = /usr/local/games/lib/xpilot/defaults
+DEFAULT = /home/orion/berne/lib/xpilot/defaults
 
 # Map to charge by default (without extension)
 MAP = globe
 
 # motd file with its pathname to charge by default
-MOTDFILE=
+MOTDFILE= /home/orion/berne/lib/xpilot/servermotd
 
 # file with its pathname where xpilots dumps the scores.
 # You can set now this option BUT xpilots-3.1.3 and lower doesn't
@@ -109,15 +109,15 @@ COLORBUT= red
 #-Each word must have at least 3 caracters.
 #-The words are in a decreased order.
 #-You can change these words when you use TkXpInterface
-WHOWHAT=
+WHOWHAT= 
 
 
 # Which flavour install program do we like best. If all else fails try cp.
-INSTALL= cp -f
+INSTALL= install
 
 #######################  Don't change the lines below ####################
 
-VERSION= 3.4
+VERSION= 3.6.1
 
 SEDOPT= -e 's;WISH;$(WISH);' \
 	-e 's;MAPDIR;$(MAPDIR);' \
@@ -161,14 +161,14 @@ TkXpI.hlp: src/TkXpI.hlp
 install: install.TkXpInterface install.man install.lib
 
 install.TkXpInterface: TkXpInterface
-	$(INSTALL) TkXpInterface $(BINDIR) ; chmod 555 $(BINDIR)/TkXpInterface
+	$(INSTALL) TkXpInterface $(BINDIR) ; chmod 755 $(BINDIR)/TkXpInterface
 
 install.man: TkXpInterface.1
-	$(INSTALL) TkXpInterface.1 $(MANDIR) ; chmod 444 $(MANDIR)/TkXpInterface.1
+	$(INSTALL) TkXpInterface.1 $(MANDIR) ; chmod 644 $(MANDIR)/TkXpInterface.1
 
 install.lib: TkXpI.hlp
 	$(INSTALL) src/TkXpI.shp $(LIBDIR) ; chmod 644 $(LIBDIR)/TkXpI.shp
-	$(INSTALL) TkXpI.hlp $(LIBDIR) ; chmod 444 $(LIBDIR)/TkXpI.hlp
+	$(INSTALL) TkXpI.hlp $(LIBDIR) ; chmod 644 $(LIBDIR)/TkXpI.hlp
 
 	@echo ""
 	@echo " Now type : make clean "

@@ -1,4 +1,4 @@
-/* $Id: audio.h,v 3.11 1994/05/23 19:02:55 bert Exp $
+/* $Id: audio.h,v 3.12 1994/08/08 09:01:28 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -100,7 +100,7 @@ enum {
     EMERGENCY_SHIELD_PICKUP_SOUND,
     EMERGENCY_SHIELD_ON_SOUND,
     EMERGENCY_SHIELD_OFF_SOUND,
-    MAX_SOUNDS,
+    MAX_SOUNDS
 };
 
 #ifdef _CAUDIO_C_

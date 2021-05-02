@@ -1,5 +1,5 @@
-		TkXpInterface-3.4
-Is in /contrib/games/xpilot/util of the ftp site :  ftp.x.org
+		TkXpInterface-3.6.1
+Is in /contrib/games of the ftp site :  ftp.x.org
 
 This is a tcl/tk script that allows you to configure xpilots servers, by giving
 you lots of buttons to click on, and things to slide :-)
@@ -9,7 +9,7 @@ Features:
    o     Easy to use interface
    o     Choose from all maps in the directory you select.
    o     Each game is highly configurable with the 140 options to
-         xpilots-3.1.x included.
+         xpilots-3.1.x and later included.
    o     Support is included for multiple ports, removal of individual items,
          pizza mode, changing server speed, and much more!
 

@@ -25,8 +25,31 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.35 1994/05/17 07:35:29 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.39 1994/09/16 18:54:15 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.39  1994/09/16  18:54:15  bert
+ * Improved XPilot host alias stuff.
+ *
+ * Revision 3.38  1994/07/18  10:18:54  bert
+ * Moved void before #ifdef __STDC__ for SetTimeout().
+ * Thanks to Yves-Henri.Berne@imag.fr.
+ *
+ * Revision 3.37  1994/07/10  20:03:45  bert
+ * Several small changes to:
+ *     - resolve compilation problems with very strict ANSI C or C++ compilers.
+ *     - resolve potential problems for systems for which a long integer
+ *       is bigger than a normal integer.
+ *     - resolve problems for compilers for which enumeration constants
+ *       are smaller than an integer.
+ * Removed lots of superfluous whitespace.
+ * More changes to the new help system.
+ * Different key help list window.
+ *
+ * Revision 3.36  1994/06/04  14:40:30  bert
+ * Changed conditional compilation constant LINUX to LINUX0 as recent 1.1*
+ * versions of Linux seem to have resolved most of the incompatibilities.
+ * Notification by: devmorfo@cs.mtu.edu  (Evmorfopoulos Dimitris).
+ *
  * Revision 3.35  1994/05/17  07:35:29  bert
  * More fiddling with the xpilot hostname alias and getting the domainname.
  *
@@ -441,10 +464,10 @@
  * Revision 1.2  91/10/02  08:38:01  08:38:01  arne (Arne Helme)
  * "ANSI C prototypes added.
  * Timeout interface changed."
- * 
+ *
  * Revision 1.1  91/10/02  08:34:45  08:34:45  arne (Arne Helme)
  * Initial revision
- * 
+ *
  */
 
 #ifndef lint
@@ -582,8 +605,8 @@ int			sl_broadcast_enabled = 0;
  *
  * Originally coded by Arne Helme
  */
-#ifdef __STDC__
 void
+#ifdef __STDC__
 SetTimeout(int s, int us)
 #else
 SetTimeout(s, us)
@@ -611,8 +634,8 @@ int s, us;
  *	None
  *
  * Return Value
- *	The function returns the socket descriptor, or -1 if 
- *	any errors occured. 
+ *	The function returns the socket descriptor, or -1 if
+ *	any errors occured.
  *
  * Globals Referenced
  *	sl_errno	- if errors occured: SL_ESOCKET, SL_EBIND,
@@ -650,7 +673,7 @@ int	port;
     addr_in.sin_family		= AF_INET;
     addr_in.sin_addr.s_addr	= INADDR_ANY;
     addr_in.sin_port		= htons(port);
-    
+
     retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
     if (retval < 0)
     {
@@ -700,7 +723,7 @@ int	port;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 GetPortNum(int fd)
 #else
@@ -752,7 +775,7 @@ int	fd;
  *
  * Originally coded by Bert Gijsbers
  */
-char * 
+char *
 #ifdef __STDC__
 GetSockAddr(int fd)
 #else
@@ -803,7 +826,7 @@ int	fd;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 SLGetPeerName(int fd, char *name, int namelen)
 #else
@@ -872,7 +895,7 @@ int	namelen;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 CreateClientSocket(char *host, int port)
 #else
@@ -884,11 +907,11 @@ int	port;
     struct sockaddr_in	peer;
     struct hostent	*hp;
     int			fd;
-    
+
     memset((char *)&peer, 0, sizeof(struct sockaddr_in));
     peer.sin_family = AF_INET;
     peer.sin_port   = htons(port);
-    
+
     peer.sin_addr.s_addr = inet_addr(host);
     if (peer.sin_addr.s_addr == (int)-1)
     {
@@ -909,7 +932,7 @@ int	port;
 	return (-1);
     }
 
-    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0) 
+    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0)
     {
 	sl_errno = SL_ECONNECT;
 	(void) close(fd);
@@ -928,7 +951,7 @@ int	port;
  *******************************************************************************
  * Description
  *	This function is called in a TCP/IP server to accept incoming calls.
- *	
+ *
  * Input Parameters
  *	fd		- The listen socket.
  *
@@ -944,13 +967,13 @@ int	port;
  *
  * External Calls
  *	none
- *	
+ *
  * Called By
  *	User applications.
  *
  * Originally coded by Arne Helme.
  */
-int 
+int
 #ifdef __STDC__
 SocketAccept(int fd)
 #else
@@ -976,7 +999,7 @@ int	fd;
  *******************************************************************************
  * Description
  *	This function is called on a stream socket to set the linger option.
- *	
+ *
  * Input Parameters
  *	fd		- The stream socket to set the linger option on.
  *
@@ -991,13 +1014,13 @@ int	fd;
  *
  * External Calls
  *	setsockopt
- *	
+ *
  * Called By
  *	User applications.
  *
  * Originally coded by Arne Helme, but moved out of SocketAccept by Bert.
  */
-int 
+int
 #ifdef __STDC__
 SocketLinger(int fd)
 #else
@@ -1005,7 +1028,7 @@ SocketLinger(fd)
 int	fd;
 #endif /* __STDC__ */
 {
-#if defined(LINUX) || defined(__linux__)
+#if defined(LINUX0) || !defined(SO_LINGER)
     /*
      * As of 0.99.12 Linux doesn't have LINGER stuff.
      */
@@ -1053,7 +1076,7 @@ int	fd;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 SetSocketReceiveBufferSize(int fd, int size)
 #else
@@ -1097,7 +1120,7 @@ int	size;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 SetSocketSendBufferSize(int fd, int size)
 #else
@@ -1142,7 +1165,7 @@ int	size;
  * Originally coded by Bert Gÿsbers
  */
 #ifdef TCP_NODELAY
-int 
+int
 #ifdef __STDC__
 SetSocketNoDelay(int fd, int flag)
 #else
@@ -1192,7 +1215,7 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 SetSocketNonBlocking(int fd, int flag)
 #else
@@ -1255,28 +1278,28 @@ int	flag;
     sprintf(buf, "fcntl FNDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
- 
+
 #ifdef USE_IOCTL_FIONBIO
     if (ioctl(fd, FIONBIO, &flag) != -1)
 	return 0;
     sprintf(buf, "ioctl FIONBIO failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
- 
+
 #ifdef USE_FCNTL_O_NONBLOCK
     if (fcntl(fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1)
 	return 0;
     sprintf(buf, "fcntl O_NONBLOCK failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
- 
+
 #ifdef USE_FCNTL_O_NDELAY
     if (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1)
 	return 0;
     sprintf(buf, "fcntl O_NDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
- 
+
     return (-1);
 } /* SetSocketNonBlocking */
 
@@ -1311,7 +1334,7 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 SetSocketBroadcast(int fd, int flag)
 #else
@@ -1354,7 +1377,7 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 GetSocketError(int fd)
 #else
@@ -1403,7 +1426,7 @@ int	fd;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 SocketReadable(int fd)
 #else
@@ -1424,7 +1447,7 @@ int	fd;
 
     if (select(fd + 1, &readfds, NULL, NULL, &timeout) == -1)
 	return ((errno == EINTR) ? 0 : -1);
-    
+
     if (readfds & (1 << fd))
 	return (1);
     return (0);
@@ -1505,7 +1528,7 @@ static inthandler()
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 SocketRead(int fd, char *buf, int size)
 #else
@@ -1516,7 +1539,7 @@ char	*buf;
 {
     int	ret, ret1;
 
-    if (setjmp(env)) 
+    if (setjmp(env))
     {
 	(void) alarm(0);
 	(void) signal(SIGALRM, SIG_DFL);
@@ -1524,7 +1547,7 @@ char	*buf;
     }
     ret = 0;
     cmw_priv_assert_netaccess();
-    while (ret < size) 
+    while (ret < size)
     {
 	(void) signal(SIGALRM, inthandler);
 	(void) alarm(sl_timeout_s);
@@ -1572,7 +1595,7 @@ char	*buf;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 SocketWrite(int fd, char *buf, int size)
 #else
@@ -1626,7 +1649,7 @@ char	*buf;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 SocketClose(int fd)
 #else
@@ -1682,7 +1705,7 @@ int	fd;
  *
  * Originally coded by Arne Helme
  */
-int 
+int
 #ifdef __STDC__
 CreateDgramSocket(int port)
 #else
@@ -1731,7 +1754,7 @@ int	port;
  * Input Parameters
  *	fd		- The socket to operate on.
  *	host		- The host name.
- *	port		- The port number. 
+ *	port		- The port number.
  *
  * Output Parameters
  *	None
@@ -1751,7 +1774,7 @@ int	port;
  *
  * Originally coded by Bert Gÿsbers
  */
-int 
+int
 #ifdef __STDC__
 DgramConnect(int fd, char *host, int port)
 #else
@@ -1776,7 +1799,7 @@ int	port;
 	    return (-1);
 	}
 	else
-	    addr_in.sin_addr.s_addr = 
+	    addr_in.sin_addr.s_addr =
 		((struct in_addr*)(hp->h_addr))->s_addr;
     }
     addr_in.sin_family		= AF_INET;
@@ -1861,7 +1884,7 @@ char	*host, *sbuf;
 		return (-1);
 	    }
 	    else
-		the_addr.sin_addr.s_addr = 
+		the_addr.sin_addr.s_addr =
 		    ((struct in_addr*)(hp->h_addr))->s_addr;
 	}
     }
@@ -1987,7 +2010,7 @@ char	*from, *rbuf;
 		((struct in_addr*)(hp->h_addr))->s_addr;
     }
     retval = DgramReceiveAny(fd, rbuf, size);
-    if (retval == -1 || 
+    if (retval == -1 ||
 	tmp_addr.sin_addr.s_addr != sl_dgram_lastaddr.sin_addr.s_addr)
     {
 	sl_errno = SL_EWRONGHOST;
@@ -2127,7 +2150,7 @@ DgramInthandler()
  *	signal
  *	DgramSend
  *	DgramReceive
- *	
+ *
  * Called By
  *	User applications.
  *
@@ -2145,7 +2168,7 @@ char	*host, *sbuf, *rbuf;
 {
     int		retval = -1;
     int		retry = sl_default_retries;
-    
+
     (void) signal(SIGALRM, DgramInthandler);
     while (retry > 0)
     {
@@ -2352,18 +2375,19 @@ void GetLocalHostName(name, size)
     unsigned		size;
 #endif /* __STDC__ */
 {
-    struct hostent	*he, *he2, tmp;
-    char		*chXpilot = "xpilot";
-    char		chXpName[MAXHOSTNAMELEN];
-    int			lenXpilot;
+    struct hostent	*he, *xpilot_he, tmp;
+    int			xpilot_len;
+    char		*alias, *dot;
+    char		xpilot_hostname[MAXHOSTNAMELEN];
+    static const char	xpilot[] = "xpilot";
 
-    lenXpilot = strlen(chXpilot);
+    xpilot_len = strlen(xpilot);
 
-    /* Make a wild guess that a "xpilot" name is in this domain: */
-    if ((he2 = gethostbyname(chXpilot)) != NULL) {
-	strcpy(chXpName, he2->h_name);	/* copy data to static buffer */
-	tmp = *he2;
-	he2 = &tmp;
+    /* Make a wild guess that a "xpilot" hostname or alias is in this domain */
+    if ((xpilot_he = gethostbyname(xpilot)) != NULL) {
+	strcpy(xpilot_hostname, xpilot_he->h_name);	/* copy data to buffer */
+	tmp = *xpilot_he;
+	xpilot_he = &tmp;
     }
 
     gethostname(name, size);
@@ -2410,34 +2434,39 @@ void GetLocalHostName(name, size)
 	}
     }
 
-    /* 
+    /*
      * If a "xpilot" host is found compare if it's this one.
      * and if so, make the local name as "xpilot.*"
      */
-    if (he2 != NULL) {               /* host xpilot was found */
-	if (strcmp(he->h_name, chXpName) == 0) { 
-	   /* 
-	   * Identical official names. Can they be different hosts after this? 
-	   * Find out the name which starts with "xpilot" and use it:
-	   */
-	    he2 = gethostbyname(chXpilot); /* read again the aliases info */
-	    if (he2 == NULL)       /* shouldn't happen */
+    if (xpilot_he != NULL) {               /* host xpilot was found */
+	if (strcmp(he->h_name, xpilot_hostname) == 0) {
+	   /*
+	    * Identical official names. Can they be different hosts after this?
+	    * Find out the name which starts with "xpilot" and use it:
+	    */
+	    xpilot_he = gethostbyname(xpilot); /* read again the aliases info */
+	    if (xpilot_he == NULL)       /* shouldn't happen */
 		return;
 
-	    if (strncmp(chXpilot, he2->h_name, lenXpilot) != 0) {
-		/* 
+	    if (strncmp(xpilot, xpilot_he->h_name, xpilot_len) != 0) {
+		/*
 		 * the official hostname doesn't begin "xpilot"
 		 * so we'll find the alias:
 		 */
 		int i;
-		for (i = 0; he2->h_aliases[i] != NULL; i++) {
-		    if (!strncmp(chXpilot, he2->h_aliases[i], lenXpilot)) {
-			strncpy(name, he2->h_aliases[i], size);
+		for (i = 0; xpilot_he->h_aliases[i] != NULL; i++) {
+		    alias = xpilot_he->h_aliases[i];
+		    if (!strncmp(xpilot, alias, xpilot_len)) {
+			strcpy(xpilot_hostname, alias);
+			if (!strchr(alias, '.') && (dot = strchr(name, '.'))) {
+			    strcat(xpilot_hostname + strlen(xpilot_hostname), dot);
+			}
+			strncpy(name, xpilot_hostname, size);
 			return;
 		    }
 		}
 	    } else {
-		strncpy(name, he2->h_name, size);
+		strncpy(name, xpilot_he->h_name, size);
 		return;
 	    }
 	}
@@ -2462,12 +2491,5 @@ char *inet_ntoa (struct in_addr in)
 		addr & 0xFF);
 
 	return ascii;
-}
-#endif
-
-#ifdef __cplusplus
-int select(size_t n, fd_set *r, fd_set *w, fd_set *e, const struct timeval *t)
-{
-    return select(n, (int *)r, (int *)w, (int *)e, t);
 }
 #endif

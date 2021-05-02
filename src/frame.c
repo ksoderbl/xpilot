@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.47 1994/05/23 19:09:14 bert Exp $
+/* $Id: frame.c,v 3.54 1994/09/10 12:59:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -37,20 +37,25 @@
 #include <time.h>
 
 #define SERVER
-#include "global.h"
 #include "version.h"
+#include "config.h"
+#include "const.h"
+#include "global.h"
+#include "proto.h"
 #include "bit.h"
 #include "netserver.h"
 #include "saudio.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.47 1994/05/23 19:09:14 bert Exp $";
+    "@(#)$Id: frame.c,v 3.54 1994/09/10 12:59:11 bert Exp $";
 #endif
 
 
 /*
  * Structure for calculating if a pixel is visible by a player.
+ * The following always holds:
+ *	(world.x >= realWorld.x && world.y >= realWorld.y)
  */
 typedef struct {
     position	world;			/* Lower left hand corner is this */
@@ -58,8 +63,6 @@ typedef struct {
     position	realWorld;		/* If the player is on the edge of
 					   the screen, these are the world
 					   coordinates before adjustment... */
-    int		wrappedWorld;		/* Nonzero if we're near the edge
-					   of the world (realWorld != world) */
 } pixel_visibility_t;
 
 /*
@@ -69,7 +72,6 @@ typedef struct {
 typedef struct {
     ipos		world;
     ipos		realWorld;
-    int			wrappedWorld;
 } block_visibility_t;
 
 typedef struct {
@@ -98,48 +100,18 @@ static int		fastshot_num[DEBRIS_TYPES * 2],
 
 static int inview(float x, float y)
 {
-    if (x > pv.world.x
-	&& x < pv.world.x + view_width
-	&& y > pv.world.y
-	&& y < pv.world.y + view_height) {
-	return 1;
-    }
-    if (!pv.wrappedWorld) {
-	return 0;
-    }
-    if ((pv.wrappedWorld & 1) && x > view_width) {
-	x -= World.width;
-    }
-    if ((pv.wrappedWorld & 2) && y > view_height) {
-	y -= World.height;
-    }
-    return (x > pv.realWorld.x
-	&& x < pv.realWorld.x + view_width
-	&& y > pv.realWorld.y
-	&& y < pv.realWorld.y + view_height);
+    return ((x > pv.world.x && x < pv.world.x + view_width)
+	    || (x > pv.realWorld.x && x < pv.realWorld.x + view_width))
+	&& ((y > pv.world.y && y < pv.world.y + view_height)
+	    || (y > pv.realWorld.y && y < pv.realWorld.y + view_height));
 }
 
-static int block_inview(block_visibility_t *pl, int x, int y)
+static int block_inview(block_visibility_t *bv, int x, int y)
 {
-    if (x >= pl->world.x
-	&& x <= pl->world.x + horizontal_blocks
-	&& y >= pl->world.y
-	&& y <= pl->world.y + vertical_blocks) {
-	return 1;
-    }
-    if (!pl->wrappedWorld) {
-	return 0;
-    }
-    if ((pl->wrappedWorld & 1) && x > horizontal_blocks) {
-	x -= World.x;
-    }
-    if ((pl->wrappedWorld & 2) && y > vertical_blocks) {
-	y -= World.y;
-    }
-    return (x >= pl->realWorld.x
-	&& x <= pl->realWorld.x + horizontal_blocks
-	&& y >= pl->realWorld.y
-	&& y <= pl->realWorld.y + vertical_blocks);
+    return ((x > bv->world.x && x < bv->world.x + horizontal_blocks)
+	    || (x > bv->realWorld.x && x < bv->realWorld.x + horizontal_blocks))
+	&& ((y > bv->world.y && y < bv->world.y + vertical_blocks)
+	    || (y > bv->realWorld.y && y < bv->realWorld.y + vertical_blocks));
 }
 
 #define DEBRIS_STORE(xf,yf,color,offset) \
@@ -269,8 +241,8 @@ static int Frame_status(int conn, int ind)
 			lock_id = -1,
 			lock_dist = 0,
 			lock_dir = 0,
-    			i,
-    			showautopilot;
+			i,
+			showautopilot;
 
     /*
      * Don't make lock visible during this frame if;
@@ -341,7 +313,8 @@ static int Frame_status(int conn, int ind)
 	pl->fuel.num_tanks,
 	pl->fuel.current,
 	pl->fuel.sum,
-	pl->fuel.max, Players[GetInd[Get_player_id(conn)]]->status);
+	pl->fuel.max,
+	Players[GetInd[Get_player_id(conn)]]->status);
     if (n <= 0) {
 	return 0;
     }
@@ -416,31 +389,31 @@ static void Frame_map(int conn, int ind)
     y = pl->pos.y / BLOCK_SZ;
     bv.world.x = x - (horizontal_blocks >> 1);
     bv.world.y = y - (vertical_blocks >> 1);
-    bv.wrappedWorld = 0;
+    bv.realWorld = bv.world;
     if (BIT(World.rules->mode, WRAP_PLAY)) {
-	bv.realWorld = bv.world;
-	if (bv.world.x < 0) {
-	    bv.wrappedWorld |= 1;
+	if (bv.world.x < 0 && bv.world.x + horizontal_blocks < World.x) {
 	    bv.world.x += World.x;
-	} else if (bv.world.x + horizontal_blocks > World.x) {
-	    bv.realWorld.x -= World.x;
-	    bv.wrappedWorld |= 1;
 	}
-	if (bv.world.y < 0) {
-	    bv.wrappedWorld |= 2;
+	else if (bv.world.x > 0 && bv.world.x + horizontal_blocks > World.x) {
+	    bv.realWorld.x -= World.x;
+	}
+	if (bv.world.y < 0 && bv.world.y + vertical_blocks < World.y) {
 	    bv.world.y += World.y;
-	} else if (bv.world.y + vertical_blocks > World.y) {
+	}
+	else if (bv.world.y > 0 && bv.world.y + vertical_blocks > World.y) {
 	    bv.realWorld.y -= World.y;
-	    bv.wrappedWorld |= 2;
 	}
     }
 
     for (i = 0; i < World.NumFuels; i++) {
 	if (BIT(World.fuel[i].conn_mask, conn_bit) == 0) {
-	    if (block_inview(&bv,
-			     World.fuel[i].pos.x / BLOCK_SZ,
-			     World.fuel[i].pos.y / BLOCK_SZ)) {
-		Send_fuel(conn, i, (int) World.fuel[i].fuel);
+	    if (World.block[World.fuel[i].blk_pos.x]
+			   [World.fuel[i].blk_pos.y] == FUEL) {
+		if (block_inview(&bv,
+				 World.fuel[i].blk_pos.x,
+				 World.fuel[i].blk_pos.y)) {
+		    Send_fuel(conn, i, (int) World.fuel[i].fuel);
+		}
 	    }
 	}
     }
@@ -461,7 +434,7 @@ static void Frame_map(int conn, int ind)
     for (i = 0; i < World.NumTargets; i++) {
 	target_t *targ = &World.targets[i];
 
-	if (BIT(targ->update_mask, conn_bit) 
+	if (BIT(targ->update_mask, conn_bit)
 	    || (BIT(targ->conn_mask, conn_bit) == 0
 		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
 	    Send_target(conn, i, targ->dead_time, targ->damage);
@@ -521,7 +494,7 @@ static void Frame_shots(int conn, int ind)
 
 	    debris_store(shot->pos.x - pv.world.x,
 			 shot->pos.y - pv.world.y,
-                         color);
+			 color);
 	    break;
 	case OBJ_SHOT:
 	    if (shot->id != -1
@@ -558,78 +531,34 @@ static void Frame_shots(int conn, int ind)
 	    break;
 	case OBJ_MINE:
 	    {
-	      int id = 0;
-	      int laid_by_team = 0;
-	      int confused = 0;
-	      /* calculate whether ownership of mine can be determined */
-	      if (identifyMines
-		  && (Wrap_length(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y)
-		      < (SHIP_SZ + MINE_SENSE_BASE_RANGE
-			 + pl->sensors * MINE_SENSE_RANGE_FACTOR))) {
-		id = shot->id;
-		if (id==-1)
-		  id = EXPIRED_MINE_ID;
-		if (BIT(shot->status, CONFUSED))
-		  confused = 1;
-	      }
-	      laid_by_team = (shot->owner != -1 &&
-			((BIT(shot->status, OWNERIMMUNE)
-			  && shot->owner == pl->id)
-			 || TEAM_IMMUNE(ind, GetInd[shot->owner])));
-	      if (confused) {
-		id = 0;
-		laid_by_team = (rand()/3)%2;
-	      }
-	      Send_mine(conn, x, y, laid_by_team, id);
+		int id = 0;
+		int laid_by_team = 0;
+		int confused = 0;
+		/* calculate whether ownership of mine can be determined */
+		if (identifyMines
+		    && (Wrap_length(pl->pos.x - shot->pos.x,
+				    pl->pos.y - shot->pos.y)
+			< (SHIP_SZ + MINE_SENSE_BASE_RANGE
+			   + pl->sensors * MINE_SENSE_RANGE_FACTOR))) {
+		    id = shot->id;
+		    if (id==-1)
+			id = EXPIRED_MINE_ID;
+		    if (BIT(shot->status, CONFUSED))
+			confused = 1;
+		}
+		laid_by_team = (shot->owner != -1 &&
+				((BIT(shot->status, OWNERIMMUNE)
+				     && shot->owner == pl->id)
+				 || TEAM_IMMUNE(ind, GetInd[shot->owner])));
+		if (confused) {
+		    id = 0;
+		    laid_by_team = rand() & 0x01;
+		}
+		Send_mine(conn, x, y, laid_by_team, id);
 	    }
 	    break;
-	case OBJ_WIDEANGLE_SHOT:
-	    Send_item(conn, x, y, ITEM_WIDEANGLE_SHOT);
-	    break;
-	case OBJ_AFTERBURNER:
-	    Send_item(conn, x, y, ITEM_AFTERBURNER);
-	    break;
-	case OBJ_BACK_SHOT:
-	    Send_item(conn, x, y, ITEM_BACK_SHOT);
-	    break;
-	case OBJ_ROCKET_PACK:
-	    Send_item(conn, x, y, ITEM_ROCKET_PACK);
-	    break;
-	case OBJ_ENERGY_PACK:
-	    Send_item(conn, x, y, ITEM_ENERGY_PACK);
-	    break;
-	case OBJ_MINE_PACK:
-	    Send_item(conn, x, y, ITEM_MINE_PACK);
-	    break;
-	case OBJ_SENSOR_PACK:
-	    Send_item(conn, x, y, ITEM_SENSOR_PACK);
-	    break;
-	case OBJ_ECM:
-	    Send_item(conn, x, y, ITEM_ECM);
-	    break;
-	case OBJ_TANK:
-	    Send_item(conn, x, y, ITEM_TANK);
-	    break;
-	case OBJ_CLOAKING_DEVICE:
-	    Send_item(conn, x, y, ITEM_CLOAKING_DEVICE);
-	    break;
-	case OBJ_TRANSPORTER:
-	    Send_item(conn, x, y, ITEM_TRANSPORTER);
-	    break;
-	case OBJ_LASER:
-	    Send_item(conn, x, y, ITEM_LASER);
-	    break;
-	case OBJ_EMERGENCY_THRUST:
-		Send_item(conn, x, y, ITEM_EMERGENCY_THRUST);
-	    break;
-	case OBJ_EMERGENCY_SHIELD:
-	    Send_item(conn, x, y, ITEM_EMERGENCY_SHIELD);
-	    break;
-	case OBJ_TRACTOR_BEAM:
-		Send_item(conn, x, y, ITEM_TRACTOR_BEAM);
-	    break;
-	case OBJ_AUTOPILOT:
-		Send_item(conn, x, y, ITEM_AUTOPILOT);
+	case OBJ_ITEM:
+	    Send_item(conn, x, y, shot->info);
 	    break;
 	default:
 	    error("Frame_shots: Shot type %d not defined.", shot->type);
@@ -756,11 +685,11 @@ static void Frame_ships(int conn, int ind)
 	    );
 	}
 	if (BIT(pl_i->used, OBJ_REFUEL)) {
-	    if (inview(World.fuel[pl_i->fs].pos.x,
-		       World.fuel[pl_i->fs].pos.y)) {
+	    if (inview(World.fuel[pl_i->fs].pix_pos.x,
+		       World.fuel[pl_i->fs].pix_pos.y)) {
 		Send_refuel(conn,
-		    (int) (World.fuel[pl_i->fs].pos.x + 0.5),
-		    (int) (World.fuel[pl_i->fs].pos.y + 0.5),
+		    (int) (World.fuel[pl_i->fs].pix_pos.x),
+		    (int) (World.fuel[pl_i->fs].pix_pos.y),
 		    (int) (pl_i->pos.x + 0.5),
 		    (int) (pl_i->pos.y + 0.5));
 	    }
@@ -793,7 +722,6 @@ static void Frame_ships(int conn, int ind)
 	}
 
 	if (pl_i->ball != NULL
-	    /* && BIT(pl_i->used, OBJ_CONNECTOR) */
 	    && inview(pl_i->ball->pos.x, pl_i->ball->pos.y)) {
 	    Send_connector(conn,
 		(int) (pl_i->ball->pos.x + 0.5),
@@ -810,7 +738,7 @@ static void Frame_radar(int conn, int ind)
     player		*pl = Players[ind];
     object		*shot;
     float		x, y;
-    
+
 #ifndef NO_SMART_MIS_RADAR
     if (nukesOnRadar) {
 	mask = OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_MINE;
@@ -819,6 +747,8 @@ static void Frame_radar(int conn, int ind)
 		(OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT) : 0);
 	mask |= (minesOnRadar) ? OBJ_MINE : 0;
     }
+    if (treasuresOnRadar)
+	mask |= OBJ_BALL;
 
     if (mask) {
 	for (i = 0; i < NumObjs; i++) {
@@ -827,12 +757,19 @@ static void Frame_radar(int conn, int ind)
 		continue;
 
 	    shownuke = (nukesOnRadar && (shot)->mods.nuclear);
+	    if (shownuke && (loops & 2)) {
+		s = 3;
+	    } else {
+		s = 0;
+	    }
 
 	    if (BIT(shot->type, OBJ_MINE)) {
 		if (!minesOnRadar && !shownuke)
 		    continue;
 		if (loops % 8 >= 6)
 		    continue;
+	    } else if (BIT(shot->type, OBJ_BALL)) {
+		s = 2;
 	    } else {
 		if (!missilesOnRadar && !shownuke)
 		    continue;
@@ -842,7 +779,6 @@ static void Frame_radar(int conn, int ind)
 
 	    x = shot->pos.x;
 	    y = shot->pos.y;
-	    s = (((loops & 2) && shownuke) ? 3 : 0);
 	    if (Wrap_length(pl->pos.x - x,
 			    pl->pos.y - y) <= pl->sensor_range) {
 		Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5), s);
@@ -852,10 +788,17 @@ static void Frame_radar(int conn, int ind)
 #endif
     if (playersOnRadar || BIT(World.rules->mode, TEAM_PLAY)) {
 	for (i = 0; i < NumPlayers; i++) {
-	    if (i == ind
-		|| BIT(Players[i]->status, PLAYING|GAME_OVER) != PLAYING
-		|| !playersOnRadar && !TEAM_IMMUNE(i, ind)
-		|| !pl->visibility[i].canSee) {
+	    /*
+	     * Don't show on the radar:
+	     *		Ourselves (not necassarily same as who we watch).
+	     *		People who are not playing.
+	     *		People in other teams if;
+	     *			no playersOnRadar or if not visible
+	     */
+	    if (Players[i]->conn == conn
+		|| BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
+		|| (!TEAM(i, ind)
+		    && (!playersOnRadar || !pl->visibility[i].canSee))) {
 		continue;
 	    }
 	    x = Players[i]->pos.x;
@@ -890,23 +833,19 @@ static void Frame_parameters(int conn, int ind)
 
     pv.world.x = (int)(pl->pos.x + 0.5) - view_width / 2;	/* Scroll */
     pv.world.y = (int)(pl->pos.y + 0.5) - view_height / 2;
-    pv.wrappedWorld = 0;
+    pv.realWorld = pv.world;
     if (BIT (World.rules->mode, WRAP_PLAY)) {
-	pv.realWorld = pv.world;
-	if (pv.world.x < 0) {
-	    pv.wrappedWorld |= 1;
+	if (pv.world.x < 0 && pv.world.x + view_width < World.width) {
 	    pv.world.x += World.width;
-	} else if (pv.world.x + view_width >= World.width) {
-	    pv.realWorld.x -= World.width;
-	    pv.wrappedWorld |= 1;
 	}
-
-	if (pv.world.y < 0) {
-	    pv.wrappedWorld |= 2;
+	else if (pv.world.x > 0 && pv.world.x + view_width >= World.width) {
+	    pv.realWorld.x -= World.width;
+	}
+	if (pv.world.y < 0 && pv.world.y + view_height < World.height) {
 	    pv.world.y += World.height;
-	} else if (pv.world.y + view_height >= World.height) {
+	}
+	else if (pv.world.y > 0 && pv.world.y + view_height >= World.height) {
 	    pv.realWorld.y -= World.height;
-	    pv.wrappedWorld |= 2;
 	}
     }
 }
@@ -920,7 +859,7 @@ void Frame_update(void)
     time_t		newTimeLeft = 0;
     static time_t	oldTimeLeft;
     static bool		game_over_called = false;
-    
+
     if (++loops >= LONG_MAX)	/* Used for misc. timing purposes */
 	loops = 0;
 
@@ -965,7 +904,7 @@ void Frame_update(void)
 	 * other players 'eyes'.  If PAUSE'd this only works on team members.
 	 * We can't use TEAM() macro as it PAUSE'd players are always on
 	 * equivalent teams.
-	 * 
+	 *
 	 * This is done by using two indexes, one
 	 * determining which data should be used (ind, set below) and
 	 * one determining which connection to send it to (conn).

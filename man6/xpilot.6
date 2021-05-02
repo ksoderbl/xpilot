@@ -2,7 +2,7 @@
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .\"
 .\" File:         xpilot.6
-.\" Id:		  $Id: xpilot.6,v 3.25 1994/05/23 18:53:06 bert Exp $
+.\" Id:		  $Id: xpilot.6,v 3.28 1994/08/26 17:32:44 bert Exp $
 .\" Description:  XPilot man page
 .\" Author:       Bjoern Stabell, Ken Ronny Schouten & Bert Gijsbers
 .\" Modified:     910520
@@ -702,10 +702,9 @@ nuclear cluster explosion a \fBV2\fP or \fBV3\fP modifier should be used.
 .TP 12
 .B keyToggleMini {x}
 Pressing this key will toggle through \fBX2\fP through \fBX4\fP and
-then no modifier in turn.  The number shows how many miniture mines,
-missiles or lasers ill be fired for every key press.  The sum
-total damage and cost of using miniture weapon is equivalent to a normal
-weapon of that type.
+then no modifier in turn.  The number shows how many miniture mines or
+missiles will be fired for every key press.  The sum total damage and
+cost of using miniture weapon is equivalent to a normal weapon of that type.
 .RE
 .TP 12
 .B keyToggleSpread {z}
@@ -718,7 +717,7 @@ beam of shots.
 .TP 12
 .B keyTogglePower {b}
 Pressing this key will toggle through \fBB1\fP through \fBB3\fP and then
-no modifier.  The higher the number the less powerful a laser or tractor
+no modifier.  The higher the number the less powerful a tractor
 beam is used, mainly for conserving energy or fine adjustment in pulling
 somebody around.  The power setting also affects the engine to warhead
 ratio in missiles, a higher setting will cause each missile to have more
@@ -858,9 +857,6 @@ treasures/balls).
 .TP 12
 .B keyDropBall {d}
 Drop the ball if you are carrying it.
-.TP 12
-.B keyIdMode {i}
-Toggle ship ID mode between nick name and real name.
 .TP 0
 These keys let you adjust the control sensitivity:
 .TP 12
@@ -1068,8 +1064,7 @@ Default is true if your display hardware has enough colors available.
 .TP 12
 .B maxColors
 Tells xpilot how many colors you want it to use.
-Default is 8, with a maximum of 16.  If your display seems slow then
-try: xpilot -maxColors 4.
+Default is 4, with a maximum of 16.  Valid values are 4, 8 and 16.
 .TP 12
 .B gameFont
 The font used on the HUD and for nearly all text part of the game

@@ -1,4 +1,4 @@
-/* $Id: cmw.c,v 3.3 1994/02/07 13:19:24 bjoerns Exp $
+/* $Id: cmw.c,v 3.4 1994/07/10 19:38:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -57,26 +57,26 @@ cmw_priv_init(void)
     /* set inheritable to null set */
     PRIV_EMPTY(cmw_privs);
     if ( setprocpriv(sizeof (priv_set_t), cmw_privs,
-                     PRIV_INHERITABLE, PRIV_SET) == -1 )
+		     PRIV_INHERITABLE, PRIV_SET) == -1 )
     {
-        perror("cmw: error setting inheritable privileges");
-        exit(1);
+	perror("cmw: error setting inheritable privileges");
+	exit(1);
     }
 
     /* get process's permitted privileges */
     if ( getprocpriv(sizeof (priv_set_t), cmw_privs, PRIV_PERMITTED) == -1 )
     {
-        perror("cmw: error getting process privileges");
-        exit(1);
+	perror("cmw: error getting process privileges");
+	exit(1);
     }
 
     /* set effective set equal to permitted, but without NET_ALLOWACCESS */
     PRIV_CLEAR(cmw_privs, PRIV_NET_ALLOWACCESS);
     if ( setprocpriv(sizeof (priv_set_t), cmw_privs,
-                     PRIV_EFFECTIVE, PRIV_SET) == -1 )
+		     PRIV_EFFECTIVE, PRIV_SET) == -1 )
     {
-        perror("cmw: error setting effective privileges");
-        exit(1);
+	perror("cmw: error setting effective privileges");
+	exit(1);
     }
 
     return;
@@ -87,10 +87,10 @@ cmw_priv_assert_netaccess(void)
 {
     PRIV_ASSERT(cmw_privs, PRIV_NET_ALLOWACCESS);
     if ( setprocpriv(sizeof (priv_set_t), cmw_privs,
-                     PRIV_EFFECTIVE, PRIV_SET) == -1)
+		     PRIV_EFFECTIVE, PRIV_SET) == -1)
     {
-        perror("cmw: error asserting permitted privileges");
-        exit(1);
+	perror("cmw: error asserting permitted privileges");
+	exit(1);
     }
     return;
 }
@@ -100,10 +100,10 @@ cmw_priv_deassert_netaccess(void)
 {
     PRIV_CLEAR(cmw_privs, PRIV_NET_ALLOWACCESS);
     if ( setprocpriv(sizeof (priv_set_t), cmw_privs,
-                     PRIV_EFFECTIVE, PRIV_SET) == -1)
+		     PRIV_EFFECTIVE, PRIV_SET) == -1)
     {
-        perror("cmw: error deasserting permitted privileges");
-        exit(1);
+	perror("cmw: error deasserting permitted privileges");
+	exit(1);
     }
     return;
 }

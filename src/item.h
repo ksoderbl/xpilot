@@ -1,4 +1,4 @@
-/* $Id: item.h,v 3.12 1994/05/23 19:10:15 bert Exp $
+/* $Id: item.h,v 3.13 1994/08/15 08:16:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,23 +24,25 @@
 #ifndef ITEM_H
 #define ITEM_H
 
-#define ITEM_ENERGY_PACK	0
-#define ITEM_WIDEANGLE_SHOT	1
-#define ITEM_BACK_SHOT		2
-#define ITEM_AFTERBURNER	3
-#define ITEM_CLOAKING_DEVICE	4
-#define ITEM_SENSOR_PACK	5
-#define ITEM_TRANSPORTER	6
-#define ITEM_TANK		7
-#define ITEM_MINE_PACK		8
-#define ITEM_ROCKET_PACK	9
-#define ITEM_ECM		10
-#define ITEM_LASER		11
-#define ITEM_EMERGENCY_THRUST	12
-#define ITEM_TRACTOR_BEAM	13
-#define ITEM_AUTOPILOT		14
-#define ITEM_EMERGENCY_SHIELD	15
-#define NUM_ITEMS		16
+enum Item {
+    ITEM_ENERGY_PACK		= 0,
+    ITEM_WIDEANGLE_SHOT		= 1,
+    ITEM_BACK_SHOT		= 2,
+    ITEM_AFTERBURNER		= 3,
+    ITEM_CLOAKING_DEVICE	= 4,
+    ITEM_SENSOR_PACK		= 5,
+    ITEM_TRANSPORTER		= 6,
+    ITEM_TANK			= 7,
+    ITEM_MINE_PACK		= 8,
+    ITEM_ROCKET_PACK		= 9,
+    ITEM_ECM			= 10,
+    ITEM_LASER			= 11,
+    ITEM_EMERGENCY_THRUST	= 12,
+    ITEM_TRACTOR_BEAM		= 13,
+    ITEM_AUTOPILOT		= 14,
+    ITEM_EMERGENCY_SHIELD	= 15,
+    NUM_ITEMS			= 16
+};
 
 /* Each item is ITEM_SIZE x ITEM_SIZE */
 #define ITEM_SIZE		16

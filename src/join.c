@@ -1,4 +1,4 @@
-/* $Id: join.c,v 3.22 1994/04/05 20:27:11 bert Exp $
+/* $Id: join.c,v 3.24 1994/08/02 16:23:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -45,6 +45,8 @@
 #endif
 
 #include "version.h"
+#include "config.h"
+#include "const.h"
 #include "error.h"
 #include "client.h"
 #include "netclient.h"
@@ -87,7 +89,7 @@ void Input_loop(void)
     rfds |= (1 << netfd);
     max = (clientfd > netfd) ? clientfd : netfd;
     for (tfds = rfds; ; rfds = tfds) {
-	if (scoresChanged != 0 && ++scoresChanged > SCORE_UPDATE_DELAY
+	if ((scoresChanged != 0 && ++scoresChanged > SCORE_UPDATE_DELAY)
 	    || result > 1) {
 	    if (scoresChanged > 2 * SCORE_UPDATE_DELAY) {
 		Client_score_table();

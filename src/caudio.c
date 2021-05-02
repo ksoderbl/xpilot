@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 3.13 1994/04/04 17:16:16 bert Exp $
+/* $Id: caudio.c,v 3.15 1994/07/12 07:40:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -38,11 +38,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "version.h"
 #include "config.h"
+#include "const.h"
 #include "types.h"
 #include "audio.h"
 #include "client.h"
-#include "const.h"
 
 static int	audioEnabled;
 
@@ -132,7 +134,7 @@ int Handle_audio(int type, int volume)
 	    if (i != type
 		&& table[i].filenames
 		&& table[i].private[pick]
-		&& strcmp(table[type].filenames[0], table[i].filenames[0]) == 0) 
+		&& strcmp(table[type].filenames[0], table[i].filenames[0]) == 0)
 	    {
 		table[type].private[0] = table[i].private[0];
 		break;

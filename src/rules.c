@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 3.28 1994/05/23 19:23:26 bert Exp $
+/* $Id: rules.c,v 3.33 1994/08/29 12:22:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -23,14 +23,20 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <stdio.h>
+
+#include "version.h"
+#include "config.h"
+#include "const.h"
 #include "global.h"
+#include "proto.h"
 #include "map.h"
 #include "rules.h"
 #include "bit.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.28 1994/05/23 19:23:26 bert Exp $";
+    "@(#)$Id: rules.c,v 3.33 1994/08/29 12:22:12 bert Exp $";
 #endif
 
 
@@ -38,10 +44,13 @@ long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
 long	DEF_BITS = 0;
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
 long	DEF_HAVE =
-	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR
-	|OBJ_FIRE|OBJ_LASER);
+	(OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR
+	|OBJ_SHOT|OBJ_LASER);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
-long	USED_KILL = (OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_FIRE|OBJ_LASER);
+long	USED_KILL =
+	(OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_SHOT|OBJ_LASER
+	|OBJ_TRACTOR_BEAM|OBJ_CLOAKING_DEVICE
+	|OBJ_EMERGENCY_SHIELD|OBJ_EMERGENCY_THRUST);
 
 
 /*
@@ -92,13 +101,16 @@ void Set_initial_resources(void)
     if (initialAutopilots > 0)
 	SET_BIT(DEF_HAVE, OBJ_AUTOPILOT);
     LIMIT(initialTanks, 0, MAX_TANKS);
+    LIMIT(initialLasers, 0, MAX_LASERS);
+    LIMIT(initialAfterburners, 0, MAX_AFTERBURNER);
+    LIMIT(initialTractorBeams, 0, MAX_TRACTORS);
 }
 
 void Set_world_rules(void)
 {
     static rules_t rules;
 
-	rules.mode = 
+	rules.mode =
 	  ((crashWithPlayer ? CRASH_WITH_PLAYER : 0)
 	   | (bounceWithPlayer ? BOUNCE_WITH_PLAYER : 0)
 	   | (playerKillings ? PLAYER_KILLINGS : 0)
@@ -123,6 +135,8 @@ void Set_world_rules(void)
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
 	CLR_BIT(DEF_HAVE, OBJ_SHIELD);
 
+    DEF_USED &= DEF_HAVE;
+
     /*
      * Initializes special items.  First parameter is type, second is
      * maximum number in the world at any time, third is frequency.
@@ -143,16 +157,18 @@ void Set_world_rules(void)
     Init_item(ITEM_EMERGENCY_SHIELD, itemEmergencyShieldProb);
     Init_item(ITEM_TRACTOR_BEAM, itemTractorBeamProb);
     Init_item(ITEM_AUTOPILOT, itemAutopilotProb);
-    DEF_USED &= DEF_HAVE;
 
     /*
      * Convert from [0..1] probabilities to [0..127] probabilities
      */
     LIMIT(dropItemOnKillProb, 0.0, 1.0);
+    LIMIT(detonateItemOnKillProb, 0.0, 1.0);
     LIMIT(movingItemProb, 0.0, 1.0);
     ThrowItemOnKillRand = (int)(dropItemOnKillProb * 128);
     DetonateItemOnKillRand = (int)(detonateItemOnKillProb * 128);
     MovingItemsRand = (int)(movingItemProb * 128);
+
+    LIMIT(itemConcentratorRadius, 1, World.diagonal);
 
     Set_initial_resources();
 }

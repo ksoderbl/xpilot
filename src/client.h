@@ -1,4 +1,4 @@
-/* $Id: client.h,v 3.44 1994/05/23 19:03:53 bert Exp $
+/* $Id: client.h,v 3.51 1994/09/17 00:55:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,14 +24,16 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "const.h"
-#include "types.h"
-#include "keys.h"
-#include "dbuff.h"
-#include "item.h"
+#ifndef DRAW_H
+/* need wireobj */
 #include "draw.h"
+#endif
+#ifndef ITEM_H
+/* need NUM_ITEMS */
+#include "item.h"
+#endif
 
-#define SHOW_HUD_INSTRUMENTS	(1<<0)		    
+#define SHOW_HUD_INSTRUMENTS	(1<<0)
 #define SHOW_HUD_VERTICAL	(1<<1)
 #define SHOW_HUD_HORIZONTAL	(1<<2)
 #define SHOW_FUEL_METER		(1<<3)
@@ -77,6 +79,10 @@ typedef struct {
     short	id;
     short	team;
     short	score;
+    short	check;
+    short	round;
+    short	timing;
+    long	timing_loops;
     short	life;
     short	mychar;
     short	war_id;
@@ -102,7 +108,7 @@ typedef struct {
 typedef struct {
     int		pos;		/* Block index */
     short	dead_time,	/* Frames inactive */
-                dot;		/* Draw dot if inactive */
+		dot;		/* Draw dot if inactive */
 } cannontime_t;
 
 typedef struct {
@@ -118,15 +124,15 @@ typedef struct {
 #define SCORE_OBJECT_COUNT	100
 typedef struct {
     int		score,
-                x,
-                y,
-                count,
-                hud_msg_len,
-    		hud_msg_width,
-    		msg_width,
-    		msg_len;
+		x,
+		y,
+		count,
+		hud_msg_len,
+		hud_msg_width,
+		msg_width,
+		msg_len;
     char	msg[10],
-                hud_msg[MAX_CHARS+10];
+		hud_msg[MAX_CHARS+10];
 } score_object_t;
 
 
@@ -134,7 +140,6 @@ extern ipos	pos;
 extern ipos	vel;
 extern ipos	world;
 extern ipos	realWorld;
-extern short	wrappedWorld;
 extern short	heading;
 extern short	nextCheckPoint;
 extern u_byte	numItems[NUM_ITEMS];
@@ -203,7 +208,7 @@ extern unsigned	version;		/* Version of the server */
 extern int	scoresChanged;
 extern int	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
-
+extern int	initialPointerControl;	/* Start by using mouse for control? */
 
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -213,6 +218,7 @@ extern int 	maxVolume;		/* maximum volume (in percent) */
 
 int Fuel_by_pos(int x, int y);
 int Target_alive(int x, int y, int *damage);
+int Target_by_index(int ind, int *xp, int *yp, int *dead_time, int *damage);
 int Handle_fuel(int ind, int fuel);
 int Cannon_dead_time_by_pos(int x, int y, int *dot);
 int Handle_cannon(int ind, int dead_time);
@@ -228,10 +234,12 @@ int Handle_player(int id, int team, int mychar, char *player_name,
 		  char *real_name, char *host_name, char *shape);
 int Handle_score(int id, int score, int life, int mychar);
 int Handle_score_object(int score, int x, int y, char *msg);
+int Handle_timing(int id, int check, int round);
 int Handle_war(int robot_id, int killer_id);
 int Handle_seek(int programmer_id, int robot_id, int sought_id);
 void Map_dots(void);
-void Map_blue(void);
+void Map_restore(int startx, int starty, int width, int height);
+void Map_blue(int startx, int starty, int width, int height);
 void Client_score_table(void);
 int Client_init(char *server, unsigned server_version);
 int Client_setup(void);

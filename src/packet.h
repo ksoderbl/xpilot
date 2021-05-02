@@ -1,4 +1,4 @@
-/* $Id: packet.h,v 3.22 1994/05/23 19:16:38 bert Exp $
+/* $Id: packet.h,v 3.30 1994/09/17 01:05:37 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -23,8 +23,6 @@
 
 #ifndef PACKET_H
 #define PACKET_H
-
-#include "const.h"
 
 #define KEYBOARD_SIZE		8
 
@@ -90,15 +88,20 @@
 #define PKT_EYES		56
 #define PKT_SHAPE		57
 #define PKT_MOTD		58
-#define PKT_SHOT		60		/* + color number */
-#define PKT_TEAMSHOT		64		/* + color number */
 #define PKT_MODIFIERS		68
 #define PKT_FASTSHOT		69		/* replaces SHOT/TEAMSHOT */
 #define PKT_THRUSTTIME		70
 #define PKT_MODIFIERBANK	71
 #define PKT_SHIELDTIME		72
+#define PKT_POINTER_MOVE	73
+#define PKT_REQUEST_AUDIO	74
+#define PKT_TIMING		76
+
+/* status reports */
 #define PKT_FAILURE		101
 #define PKT_SUCCESS		102
+
+/* optimized packet types */
 #define PKT_DEBRIS		128		/* + color + x + y */
 
 #endif

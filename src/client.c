@@ -1,4 +1,4 @@
-/* $Id: client.c,v 3.50 1994/05/23 19:03:16 bert Exp $
+/* $Id: client.c,v 3.65 1994/09/17 00:54:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -21,10 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <X11/Xproto.h>
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-
 #ifdef VMS
 #include <unixio.h>
 #include <unixlib.h>
@@ -41,7 +37,8 @@
 #endif
 
 #include "version.h"
-#include "client.h"
+#include "config.h"
+#include "const.h"
 #include "setup.h"
 #include "error.h"
 #include "rules.h"
@@ -59,7 +56,6 @@ ipos	pos;
 ipos	vel;
 ipos	world;
 ipos	realWorld;
-short	wrappedWorld;
 short	heading;
 short	nextCheckPoint;
 
@@ -158,22 +154,23 @@ int			score_object = 0;
 
 static fuelstation_t *Fuelstation_by_pos(int x, int y)
 {
-    int			i, l, h, pos;
+    int			i, lo, hi, pos;
 
-    l = 0;
-    h = num_fuels - 1;
+    lo = 0;
+    hi = num_fuels - 1;
     pos = x * Setup->y + y;
-    while (l < h) {
-	i = (l + h) >> 1;
+    while (lo < hi) {
+	i = (lo + hi) >> 1;
 	if (pos > fuels[i].pos) {
-	    l = i + 1;
+	    lo = i + 1;
 	} else {
-	    h = i;
+	    hi = i;
 	}
     }
-    if (l == h && pos == fuels[l].pos) {
-	return &fuels[l];
+    if (lo == hi && pos == fuels[lo].pos) {
+	return &fuels[lo];
     }
+    errno = 0;
     error("No fuelstation at (%d,%d)", x, y);
     return NULL;
 }
@@ -188,25 +185,38 @@ int Fuel_by_pos(int x, int y)
     return fuelp->fuel;
 }
 
+int Target_by_index(int ind, int *xp, int *yp, int *dead_time, int *damage)
+{
+    if (ind < 0 || ind >= num_targets) {
+	return -1;
+    }
+    *xp = targets[ind].pos / Setup->y;
+    *yp = targets[ind].pos % Setup->y;
+    *dead_time = targets[ind].dead_time;
+    *damage = targets[ind].damage;
+    return 0;
+}
+
 int Target_alive(int x, int y, int *damage)
 {
-    int 		i, l, h, pos;
+    int 		i, lo, hi, pos;
 
-    l = 0;
-    h = num_targets - 1;
+    lo = 0;
+    hi = num_targets - 1;
     pos = x * Setup->y + y;
-    while (l < h) {
-	i = (l + h) >> 1;
+    while (lo < hi) {
+	i = (lo + hi) >> 1;
 	if (pos > targets[i].pos) {
-	    l = i + 1;
+	    lo = i + 1;
 	} else {
-	    h = i;
+	    hi = i;
 	}
     }
-    if (l == h && pos == targets[l].pos) {
-	*damage = targets[l].damage;
-	return targets[l].dead_time;
+    if (lo == hi && pos == targets[lo].pos) {
+	*damage = targets[lo].damage;
+	return targets[lo].dead_time;
     }
+    errno = 0;
     error("No targets at (%d,%d)", x, y);
     return -1;
 }
@@ -224,22 +234,23 @@ int Handle_fuel(int ind, int fuel)
 
 static cannontime_t *Cannon_by_pos(int x, int y)
 {
-    int			i, l, h, pos;
+    int			i, lo, hi, pos;
 
-    l = 0;
-    h = num_cannons - 1;
+    lo = 0;
+    hi = num_cannons - 1;
     pos = x * Setup->y + y;
-    while (l < h) {
-	i = (l + h) >> 1;
+    while (lo < hi) {
+	i = (lo + hi) >> 1;
 	if (pos > cannons[i].pos) {
-	    l = i + 1;
+	    lo = i + 1;
 	} else {
-	    h = i;
+	    hi = i;
 	}
     }
-    if (l == h && pos == cannons[l].pos) {
-	return &cannons[l];
+    if (lo == hi && pos == cannons[lo].pos) {
+	return &cannons[lo];
     }
+    errno = 0;
     error("No cannon at (%d,%d)", x, y);
     return NULL;
 }
@@ -276,38 +287,42 @@ int Handle_target(int num, int dead_time, int damage)
     if (dead_time == 0
 	&& (damage < 1
 	|| damage > TARGET_DAMAGE)) {
-	printf ("target %d, dead %d, damage %d\n", num, dead_time, damage);
+	printf ("BUG target %d, dead %d, damage %d\n", num, dead_time, damage);
     }
     if (targets[num].dead_time > 0 && dead_time == 0) {
-	    int	pos = targets[num].pos;
-	    Paint_radar_block(pos / Setup->y, pos % Setup->y, 1);
-    } else if (targets[num].dead_time == 0 && dead_time > 0) {
-	    int	pos = targets[num].pos;
-	    Paint_radar_block(pos / Setup->y, pos % Setup->y, 0);
+	int pos = targets[num].pos;
+	Paint_radar_block(pos / Setup->y, pos % Setup->y, targetRadarColor);
     }
+    else if (targets[num].dead_time == 0 && dead_time > 0) {
+	int pos = targets[num].pos;
+	Paint_radar_block(pos / Setup->y, pos % Setup->y, BLACK);
+    }
+
     targets[num].dead_time = dead_time;
     targets[num].damage = damage;
+
     return 0;
 }
 
 static homebase_t *Homebase_by_pos(int x, int y)
 {
-    int			i, l, h, pos;
+    int			i, lo, hi, pos;
 
-    l = 0;
-    h = num_bases - 1;
+    lo = 0;
+    hi = num_bases - 1;
     pos = x * Setup->y + y;
-    while (l < h) {
-	i = (l + h) >> 1;
+    while (lo < hi) {
+	i = (lo + hi) >> 1;
 	if (pos > bases[i].pos) {
-	    l = i + 1;
+	    lo = i + 1;
 	} else {
-	    h = i;
+	    hi = i;
 	}
     }
-    if (l == h && pos == bases[l].pos) {
-	return &bases[l];
+    if (lo == hi && pos == bases[lo].pos) {
+	return &bases[lo];
     }
+    errno = 0;
     error("No homebase at (%d,%d)", x, y);
     return NULL;
 }
@@ -347,7 +362,7 @@ int Check_pos_by_index(int ind, int *xp, int *yp)
 {
     if (ind < 0 || ind >= MAX_CHECKPOINT) {
 	errno = 0;
-	error("Bad check index");
+	error("Bad checkpoint index (%d)", ind);
 	*xp = 0;
 	*yp = 0;
 	return -1;
@@ -372,68 +387,8 @@ int Check_index_by_pos(int x, int y)
     return 0;
 }
 
-#if 0
 /*
- * Sets as many blocks as possible to FILLED_NO_DRAW.
- * You won't notice any difference. :)
- * (BG: try speedups + if fuel can be part of the optimizing types)
- */
-static void Map_optimize(void)
-{
-    int		x, y;
-    byte	*line, *n_line, *p_line;
-    byte	down[256], up[256], left[256], right[256];
-
-    memset(down, 0, sizeof down);
-    memset(up, 0, sizeof up);
-    memset(left, 0, sizeof left);
-    memset(right, 0, sizeof right);
-    down[SETUP_REC_LD] = 1;
-    down[SETUP_REC_RD] = 1;
-    down[SETUP_FILLED] = 1;
-    down[SETUP_FUEL] = 1;
-    up[SETUP_REC_LU] = 1;
-    up[SETUP_REC_RU] = 1;
-    up[SETUP_FILLED] = 1;
-    up[SETUP_FUEL] = 1;
-    left[SETUP_REC_RU] = 1;
-    left[SETUP_REC_RD] = 1;
-    left[SETUP_FILLED] = 1;
-    left[SETUP_FUEL] = 1;
-    right[SETUP_REC_LU] = 1;
-    right[SETUP_REC_LD] = 1;
-    right[SETUP_FILLED] = 1;
-    right[SETUP_FUEL] = 1;
-
-    line = (byte*)Setup->map_data;
-    n_line = (byte*)(Setup->map_data + Setup->y);
-
-    for (x = 1; x < Setup->x - 1; x++) {
-	p_line = line;
-	line = n_line;
-	n_line += Setup->y;
-
-	for (y = 1; y < Setup->y - 1; y++) {
-	    if (line[y] == SETUP_FILLED) {
-		if (down[line[y+1]] == 0) {
-                    y++;
-		    continue;
-                }
-		if (up[line[y-1]] == 0)
-		    continue;
-		if (left[p_line[y]] == 0)
-		    continue;
-		if (right[n_line[y]] == 0)
-		    continue;
-		line[y++] = SETUP_FILLED_NO_DRAW;
-	    }
-	}
-    }
-}
-#endif
-
-/*
- * Optimise the drawing of all blue space dots by converting
+ * Optimize the drawing of all blue space dots by converting
  * certain map objects into a specialised form of their type.
  */
 void Map_dots(void)
@@ -444,7 +399,7 @@ void Map_dots(void)
 			start;
 
     /*
-     * Restore the map to unoptimised form.
+     * Restore the map to unoptimized form.
      */
     for (i = Setup->x * Setup->y; i-- > 0; ) {
 	if (Setup->map_data[i] == SETUP_SPACE_DOT) {
@@ -453,7 +408,7 @@ void Map_dots(void)
     }
 
     /*
-     * Optimise.
+     * Optimize.
      */
     if (map_point_size > 0) {
 	if (BIT(Setup->mode, WRAP_PLAY)) {
@@ -498,53 +453,79 @@ void Map_dots(void)
 }
 
 /*
- * Optimise the drawing of all blue map objects by converting
+ * Optimize the drawing of all blue map objects by converting
  * their map type to a bitmask with bits for each blue segment.
  */
-void Map_blue(void)
+void Map_restore(int startx, int starty, int width, int height)
 {
-    int			i,
-			x,
-			y,
+    int			i, j,
+			x, y,
+			map_index,
+			type;
+
+    /*
+     * Restore an optimized map to its original unoptimized state.
+     */
+    x = startx;
+    for (i = 0; i < width; i++, x++) {
+	if (x < 0) {
+	    x += Setup->x;
+	}
+	else if (x >= Setup->x) {
+	    x -= Setup->x;
+	}
+
+	y = starty;
+	for (j = 0; j < height; j++, y++) {
+	    if (y < 0) {
+		y += Setup->y;
+	    }
+	    else if (y >= Setup->y) {
+		y -= Setup->y;
+	    }
+
+	    map_index = x * Setup->y + y;
+
+	    type = Setup->map_data[map_index];
+	    if ((type & BLUE_BIT) == 0) {
+		if (type == SETUP_FILLED_NO_DRAW) {
+		    Setup->map_data[map_index] = SETUP_FILLED;
+		}
+	    }
+	    else if ((type & BLUE_FUEL) == BLUE_FUEL) {
+		Setup->map_data[map_index] = SETUP_FUEL;
+	    }
+	    else if (type & BLUE_OPEN) {
+		if (type & BLUE_BELOW) {
+		    Setup->map_data[map_index] = SETUP_REC_RD;
+		} else {
+		    Setup->map_data[map_index] = SETUP_REC_LU;
+		}
+	    }
+	    else if (type & BLUE_CLOSED) {
+		if (type & BLUE_BELOW) {
+		    Setup->map_data[map_index] = SETUP_REC_LD;
+		} else {
+		    Setup->map_data[map_index] = SETUP_REC_RU;
+		}
+	    } else {
+		Setup->map_data[map_index] = SETUP_FILLED;
+	    }
+	}
+    }
+}
+
+void Map_blue(int startx, int starty, int width, int height)
+{
+    int			i, j,
+			x, y,
+			map_index,
 			type,
 			newtype;
     unsigned char	blue[256];
 
     /*
-     * Restore an optimised map to its original unoptimised state.
-     */
-    for (x = i = 0; x < Setup->x; x++) {
-	for (y = 0; y < Setup->y; y++, i++) {
-	    type = Setup->map_data[i];
-	    if ((type & BLUE_BIT) == 0) {
-		if (type == SETUP_FILLED_NO_DRAW) {
-		    Setup->map_data[i] = SETUP_FILLED;
-		}
-	    }
-	    else if ((type & BLUE_FUEL) == BLUE_FUEL) {
-		Setup->map_data[i] = SETUP_FUEL;
-	    }
-	    else if (type & BLUE_OPEN) {
-		if (type & BLUE_BELOW) {
-		    Setup->map_data[i] = SETUP_REC_RD;
-		} else {
-		    Setup->map_data[i] = SETUP_REC_LU;
-		}
-	    }
-	    else if (type & BLUE_CLOSED) {
-		if (type & BLUE_BELOW) {
-		    Setup->map_data[i] = SETUP_REC_LD;
-		} else {
-		    Setup->map_data[i] = SETUP_REC_RU;
-		}
-	    } else {
-		Setup->map_data[i] = SETUP_FILLED;
-	    }
-	}
-    }
-
-    /*
-     * Optimise the map for blue.
+     * Optimize the map for blue.
      */
     memset(blue, 0, sizeof blue);
     blue[SETUP_FILLED] = BLUE_LEFT | BLUE_UP | BLUE_RIGHT | BLUE_DOWN;
@@ -580,9 +561,28 @@ void Map_blue(void)
 	    blue[i] = blue[SETUP_FILLED];
 	}
     }
-    for (x = i = 0; x < Setup->x; x++) {
-	for (y = 0; y < Setup->y; y++, i++) {
-	    type = Setup->map_data[i];
+
+    x = startx;
+    for (i = 0; i < width; i++, x++) {
+	if (x < 0) {
+	    x += Setup->x;
+	}
+	else if (x >= Setup->x) {
+	    x -= Setup->x;
+	}
+
+	y = starty;
+	for (j = 0; j < height; j++, y++) {
+	    if (y < 0) {
+		y += Setup->y;
+	    }
+	    else if (y >= Setup->y) {
+		y -= Setup->y;
+	    }
+
+	    map_index = x * Setup->y + y;
+
+	    type = Setup->map_data[map_index];
 	    newtype = 0;
 	    switch (type) {
 	    case SETUP_FILLED:
@@ -623,7 +623,7 @@ void Map_blue(void)
 			    & BLUE_DOWN)))
 		    newtype |= BLUE_UP;
 		break;
-		
+
 	    case SETUP_REC_LU:
 		newtype = BLUE_BIT | BLUE_OPEN;
 		if (x == 0
@@ -642,7 +642,7 @@ void Map_blue(void)
 			    & BLUE_DOWN)))
 		    newtype |= BLUE_UP;
 		break;
-		
+
 	    case SETUP_REC_RU:
 		newtype = BLUE_BIT | BLUE_CLOSED;
 		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
@@ -662,7 +662,7 @@ void Map_blue(void)
 			    & BLUE_DOWN)))
 		    newtype |= BLUE_UP;
 		break;
-		
+
 	    case SETUP_REC_LD:
 		newtype = BLUE_BIT | BLUE_BELOW | BLUE_CLOSED;
 		if ((x == 0)
@@ -680,7 +680,7 @@ void Map_blue(void)
 			& BLUE_UP))
 		    newtype |= BLUE_DOWN;
 		break;
-		
+
 	    case SETUP_REC_RD:
 		newtype = BLUE_BIT | BLUE_BELOW | BLUE_OPEN;
 		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
@@ -707,7 +707,7 @@ void Map_blue(void)
 		if (newtype == BLUE_BIT) {
 		    newtype = SETUP_FILLED_NO_DRAW;
 		}
-		Setup->map_data[i] = newtype;
+		Setup->map_data[map_index] = newtype;
 	    }
 	}
     }
@@ -718,7 +718,7 @@ static int Map_init(void)
     int			i,
 			max,
 			type;
-    byte		types[256];
+    u_byte		types[256];
 
     num_fuels = 0;
     num_bases = 0;
@@ -909,7 +909,7 @@ int Handle_leave(int id)
     return 0;
 }
 
-int Handle_player(int id, int team, int mychar, char *player_name,
+int Handle_player(int id, int player_team, int mychar, char *player_name,
 		  char *real_name, char *host_name, char *shape)
 {
     other_t		*other;
@@ -948,10 +948,14 @@ int Handle_player(int id, int team, int mychar, char *player_name,
 	    other = &Others[0];
 	}
 	self = other;
+	team = player_team;
     }
     other->id = id;
-    other->team = team;
+    other->team = player_team;
     other->score = 0;
+    other->round = 0;
+    other->check = 0;
+    other->timing = 0;
     other->life = 0;
     other->mychar = mychar;
     other->war_id = -1;
@@ -1045,6 +1049,27 @@ int Handle_score(int id, int score, int life, int mychar)
     return 0;
 }
 
+int Handle_timing(int id, int check, int round)
+{
+    other_t		*other;
+
+    if ((other = Other_by_id(id)) == NULL) {
+	errno = 0;
+	error("Can't update timing for non-existing player %d,%d,%d", id, check, round);
+	return 0;
+    }
+    else if (other->check != check
+	|| other->round != round) {
+	other->check = check;
+	other->round = round;
+	other->timing = round * MAX_CHECKS + check;
+	other->timing_loops = last_loops;
+	scoresChanged = 1;
+    }
+
+    return 0;
+}
+
 int Handle_score_object(int score, int x, int y, char *msg)
 {
     score_object_t*	sobj = &score_objects[score_object];
@@ -1076,6 +1101,13 @@ int Handle_score_object(int score, int x, int y, char *msg)
 
 void Client_score_table(void)
 {
+    struct team_score {
+	int		score;
+	int		life;
+	int		playing;
+    };
+    struct team_score	team[MAX_TEAMS],
+			*team_order[MAX_TEAMS];
     other_t		*other,
 			**order;
     int			i, j, k, best = -1;
@@ -1096,34 +1128,129 @@ void Client_score_table(void)
 	error("No memory for score");
 	return;
     }
+    if (BIT(Setup->mode, TEAM_PLAY|TIMING) == TEAM_PLAY) {
+	memset(&team[0], 0, sizeof team);
+    }
     for (i = 0; i < num_others; i++) {
 	other = &Others[i];
-	if (BIT(Setup->mode, LIMITED_LIVES)) {
-	    ratio = (float) other->score;
-	} else {
-	    ratio = (float) other->score / (other->life + 1);
-	}
-	if (best == -1
-	    || ratio > best_ratio) {
-	    best_ratio = ratio;
-	    best = i;
-	}
-	for (j = 0; j < i; j++) {
-	    if (order[j]->score < other->score) {
-		for (k = i; k > j; k--) {
-		    order[k] = order[k - 1];
+	if (BIT(Setup->mode, TIMING)) {
+	    /*
+	     * Sort the score table on position in race.
+	     * Put paused and waiting players last as well as tanks.
+	     */
+	    if (strchr("PTW", other->mychar)) {
+		j = i;
+	    }
+	    else {
+		for (j = 0; j < i; j++) {
+		    if (order[j]->timing < other->timing) {
+			break;
+		    }
+		    if (strchr("PTW", order[j]->mychar)) {
+			break;
+		    }
+		    if (order[j]->timing == other->timing) {
+			if (order[j]->timing_loops > other->timing_loops) {
+			    break;
+			}
+		    }
 		}
-		break;
-	    } 
+	    }
+	}
+	else {
+	    if (BIT(Setup->mode, LIMITED_LIVES)) {
+		ratio = (float) other->score;
+	    } else {
+		ratio = (float) other->score / (other->life + 1);
+	    }
+	    if (best == -1
+		|| ratio > best_ratio) {
+		best_ratio = ratio;
+		best = i;
+	    }
+	    for (j = 0; j < i; j++) {
+		if (order[j]->score < other->score) {
+		    break;
+		}
+	    }
+	}
+	for (k = i; k > j; k--) {
+	    order[k] = order[k - 1];
 	}
 	order[j] = other;
+
+	if (BIT(Setup->mode, TEAM_PLAY|TIMING) == TEAM_PLAY) {
+	    switch (other->mychar) {
+	    case 'P':
+	    case 'W':
+	    case 'T':
+		break;
+	    case ' ':
+	    case 'R':
+		if (BIT(Setup->mode, LIMITED_LIVES)) {
+		    team[other->team].life += other->life + 1;
+		} else {
+		    team[other->team].life += other->life;
+		}
+		/*FALLTHROUGH*/
+	    default:
+		team[other->team].playing++;
+		team[other->team].score += other->score;
+		break;
+	    }
+	}
     }
     Paint_score_start();
+    if (BIT(Setup->mode, TIMING)) {
+	best = order[0] - Others;
+    }
     for (i = 0; i < num_others; i++) {
 	other = order[i];
 	j = other - Others;
-	Paint_score_entry(i, other, j == best ? true : false);
+	Paint_score_entry(i, other, (j == best) ? true : false);
     }
+    if (BIT(Setup->mode, TEAM_PLAY|TIMING) == TEAM_PLAY) {
+	int pos = num_others + 1;
+	int num_playing_teams = 0;
+	for (i = 0; i < MAX_TEAMS; i++) {
+	    if (team[i].playing) {
+		for (j = 0; j < num_playing_teams; j++) {
+		    if (team[i].score > team_order[j]->score
+			|| (team[i].score == team_order[j]->score
+			    && ((BIT(Setup->mode, LIMITED_LIVES))
+				? (team[i].life > team_order[j]->life)
+				: (team[i].life < team_order[j]->life)))) {
+			for (k = i; k > j; k--) {
+			    team_order[k] = team_order[k - 1];
+			}
+			break;
+		    }
+		}
+		team_order[j] = &team[i];
+		num_playing_teams++;
+	    }
+	}
+	for (i = 0; i < num_playing_teams; i++) {
+	    other_t tmp;
+	    tmp.id = -1;
+	    tmp.team = team_order[i] - &team[0];
+	    tmp.war_id = -1;
+	    tmp.name_width = 0;
+	    tmp.ship = NULL;
+	    sprintf(tmp.name, "Team %d", tmp.team);
+	    strcpy(tmp.real, tmp.name);
+	    strcpy(tmp.host, "");
+	    if (BIT(Setup->mode, LIMITED_LIVES) && team_order[i]->life == 0) {
+		tmp.mychar = 'D';
+	    } else {
+		tmp.mychar = ' ';
+	    }
+	    tmp.score = team_order[i]->score;
+	    tmp.life = team_order[i]->life;
+	    Paint_score_entry(pos++, &tmp, false);
+	}
+    }
+
     free(order);
     scoresChanged = 0;
 }
@@ -1147,7 +1274,8 @@ int Client_setup(void)
 	return -1;
     }
     Map_dots();
-    Map_blue();
+    Map_restore(0, 0, Setup->x, Setup->y);
+    Map_blue(0, 0, Setup->x, Setup->y);
 
     RadarHeight = (int)((256.0/Setup->x) * Setup->y + 0.5);
 

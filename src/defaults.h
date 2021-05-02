@@ -1,4 +1,4 @@
-/* $Id: defaults.h,v 3.9 1994/02/07 13:19:41 bjoerns Exp $
+/* $Id: defaults.h,v 3.11 1994/07/10 19:43:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -23,6 +23,9 @@
 
 /* $NCDId: @(#)defaults.h,v 1.1 1992/09/10 03:26:12 mellon Exp $ */
 
+#ifndef DEFAULTS_H
+#define DEFAULTS_H
+
 typedef struct _valPair {
     struct _valPair *next;
     char *name;
@@ -44,9 +47,10 @@ enum valType {
 typedef struct {
     char *name;
     char *commandLineOption;
-    char *helpLine;
     char *defaultValue;
     void *variable;
     enum valType type;
+    char *helpLine;
 } optionDesc;
 
+#endif

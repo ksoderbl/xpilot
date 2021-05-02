@@ -1,4 +1,4 @@
-/* $Id: xinit.h,v 3.26 1994/04/12 13:43:18 bjoerns Exp $
+/* $Id: xinit.h,v 3.30 1994/07/10 20:10:28 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,12 +24,6 @@
 #ifndef	XINIT_H
 #define	XINIT_H
 
-#include <X11/Xproto.h>
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-
-#include "client.h"
-
 #define MAX_VISUAL_NAME	12
 
 #define MIN_TOP_WIDTH	(640 + 2)
@@ -38,6 +32,8 @@
 #define MIN_TOP_HEIGHT	480
 #define MAX_TOP_HEIGHT	1024
 #define DEF_TOP_HEIGHT	768
+
+#define MAX_POINTER_BUTTONS 5
 
 #define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
 #define HaveColor(d)							\
@@ -67,13 +63,11 @@ extern int Init_window(void);
 extern int Alloc_msgs(int number);
 extern void Free_msgs(void);
 extern void Expose_info_window(void);
-extern void Expose_keys_window(void);
 extern void Expose_button_window(int color, Window w);
 extern void Info(Window w);
-extern void Keys(Window w);
 extern void Talk_cursor(bool visible);
 extern void Talk_map_window(bool map);
-extern void Talk_event(XEvent *event);
+extern int Talk_do_event(XEvent *event);
 extern void Quit(void);
 extern int FatalError(Display *dpy);
 extern void Draw_score_table(void);

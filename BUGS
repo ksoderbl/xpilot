@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.41 1994/05/23 16:31:14 bert Exp $
+$Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -205,9 +205,50 @@ $Id: BUGS,v 3.41 1994/05/23 16:31:14 bert Exp $
 
 <BUG>   024
 <STATUS>open/medium
-<VER>   3.1.3
+<VER>   3.2.2
 <DESC>  940523: Frenchy
 	When the target blows up and the game resets then the target
 	still exists, but it is untouchable.
 	Sometimes the target appears in red instead of blue, even
 	if it belongs to the player's team.
+
+<BUG>   025
+<STATUS>open/low
+<VER>   3.2.2
+<DESC>  940615: boyns@hercules.SDSU.edu (Mark Boyns)
+	*** Server on 129.186.5.2. Enter command> T
+	Enter team: 2
+	Team set to 2
+	*** Server on 129.186.5.2. Enter command> 
+	*** Login allowed
+	debris 0 < 0
+	xpilot: Received unknown packet type (84)
+	xpilot: Bad net input
+	I got this error using a 3.2.2 client with a 3.2.2 server.
+	BTW, I've got the "Bad net input" before, but I've never
+	seen the "debris 0 < 0" message.
+
+<BUG>   026
+<STATUS>open/medium
+<VER>   3.2.4
+<DESC>  940722: Berne Yves-Henri <Yves-Henri.Berne@imag.fr>
+	I don't know if you received this bug before but :
+	on the map tourmination, I began the game with 7 shots max but suddenly (I
+	haven't determine how) I have no limit (as much shots as I want)
+	And my friend (who played with the same program) stay with 7 shots max.
+
+<BUG>   027
+<STATUS>open/low
+<VER>   3.2.5
+<DESC>  940823: bj@cs.purdue.edu (Ben Jackson)
+	Sometimes when I'm ECM'd, I end up in blue instead of black.  This is
+	permament until I unmap/remap the window or get ECM'd again and end up
+	in black.  I've looked at the code in paint.c and I can't figure out
+	how it would happen.  It doesn't seem to be dependent on wheter or not
+	I die as a result of being temporarily blinded.  I played for about 45
+	minutes on a map with `-initialEcms 5' and several robots, and I only
+	got to observe the effect a few times (despite many ECM attacks) but in
+	normal gameplay I'd say up to 50% of the time I end up in blue (so it
+	happens equally often per unit time, but not per attack, if that makes
+	any sense).
+
