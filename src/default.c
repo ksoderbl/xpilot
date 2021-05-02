@@ -1,4 +1,4 @@
-/* $Id: default.c,v 3.96 1995/02/13 10:56:37 bert Exp $
+/* $Id: default.c,v 3.107 1995/11/16 00:13:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -59,7 +59,7 @@ char default_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.96 1995/02/13 10:56:37 bert Exp $";
+    "@(#)$Id: default.c,v 3.107 1995/11/16 00:13:46 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -90,6 +90,11 @@ static char sourceid[] =
 
 static char		*myName = "xpilot";
 static char		*myClass = "XPilot";
+
+
+#ifdef SPARC_CMAP_HACK
+char  frameBuffer[MAX_CHARS]; /* frame buffer */
+#endif
 
 
 keys_t buttonDefs[MAX_POINTER_BUTTONS];
@@ -223,7 +228,7 @@ struct option {
     {
 	"shipShapeFile",
 	NULL,
-	"",
+	SHIP_FILE,
 	KEY_DUMMY,
 	"An optional file where shipshapes can be stored.\n"
 	"If this resource is defined and it refers to an existing file\n"
@@ -485,6 +490,13 @@ struct option {
 	"Should a clock be displayed in the top right of the score window.\n"
     },
     {
+	"clockAMPM",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"12 or 24 hour format for clock display.\n",
+    },
+    {
 	"pointerControl",
 	NULL,
 	"No",
@@ -591,6 +603,13 @@ struct option {
 	"No",
 	KEY_DUMMY,
 	"Are shields toggled by a keypress only?\n"
+    },
+    {
+	"autoShield", /* Don auto-shield hack */
+	NULL,
+	"Yes",
+	KEY_DUMMY,
+	"Are shields lowered automatically for weapon fire?\n"
     },
     {
 	"shieldDrawSolid",
@@ -849,12 +868,71 @@ struct option {
 	"Which color number to use for drawing walls.\n"
     },
     {
+	"wallRadarColor",
+	NULL,
+	"2",
+	KEY_DUMMY,
+	"Which color number to use for drawing walls on the radar.\n"
+	"Valid values all even numbers smaller than maxColors.\n"
+    },
+    {
+	"decorColor",
+	NULL,
+	"6",
+	KEY_DUMMY,
+	"Which color number to use for drawing decorations.\n"
+    },
+    {
+	"showDecor",
+	NULL,
+	"Yes",
+	KEY_DUMMY,
+	"Should decorations be displayed on the screen and radar?\n"
+    },
+    {
+	"decorRadarColor",
+	NULL,
+	"6",
+	KEY_DUMMY,
+	"Which color number to use for drawing decorations on the radar.\n"
+	"Valid values are all even numbers smaller than maxColors.\n"
+    },
+    {
+	"outlineDecor",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draws only the outline of the map decoration.\n"
+    },
+    {
+	"filledDecor",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draws filled decorations.\n"
+    },
+    {
+	"texturedDecor",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draws the map decoration filled with a texture pattern.\n"
+	"See also the decorTextureFile and texturedWalls options.\n"
+    },
+    {
+	"decorTextureFile",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Specify a XPM format pixmap file to load the decor texture from.\n"
+    },
+    {
 	"targetRadarColor",
 	NULL,
 	"4",
 	KEY_DUMMY,
 	"Which color number to use for drawing targets on the radar.\n"
-	"Valid values all powers of 2 smaller than maxColors.\n"
+	"Valid values are all even numbers smaller than maxColors.\n"
     },
     {
 	"sparkColors",
@@ -1337,6 +1415,20 @@ struct option {
 	"Toggle recording of session (see recordFile).\n"
     },
     {
+	"keySelectItem",
+	NULL,
+	"KP_0 KP_Insert",
+	KEY_SELECT_ITEM,
+	"Select an item to lose.\n"
+    },
+    {
+	"keyLoseItem",
+	NULL,
+	"KP_Delete KP_Decimal",
+	KEY_LOSE_ITEM,
+	"Lose the selected item.\n"
+    },
+    {
 	"keyPointerControl",
 	NULL,
 	"KP_Enter",
@@ -1416,6 +1508,16 @@ struct option {
 	"Specifies the audio server to use.\n"
     },
 #endif
+#ifdef SPARC_CMAP_HACK
+    {
+	"frameBuffer",
+	NULL,
+	"/dev/fb",
+	KEY_DUMMY,
+	"Specifies the device name of the frame buffer.\n"
+    },
+#endif    
+
 };
 
 
@@ -1499,7 +1601,7 @@ static void Usage(void)
 "Each key option may have mutliple keys bound to it and\n"
 "one key may be used by multiple key options.\n"
 "If no server is specified then xpilot will search\n"
-"for servers on your local network\n"
+"for servers on your local network.\n"
 "For a listing of remote servers try: telnet xpilot.cs.uit.no 4400 \n"
 	  );
 
@@ -1740,7 +1842,11 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     KeySym		ks;
     char		*ptr,
 			*str,
+#ifdef VMS
+			resValue[PATH_MAX + 1];
+#else
 			resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
+#endif
     XrmDatabase		argDB = 0, rDB;
     XrmOptionDescRec	*xopt;
     extern void		Record_init(char *filename);
@@ -1963,6 +2069,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     else
 	shieldDrawMode = ON(resValue);
     Get_bool_resource(rDB, "toggleShield", &toggle_shield);
+    Get_bool_resource(rDB, "autoShield", &auto_shield);
 
     Get_resource(rDB, "modifierBank1", modBankStr[0], sizeof modBankStr[0]);
     Get_resource(rDB, "modifierBank2", modBankStr[1], sizeof modBankStr[1]);
@@ -1992,6 +2099,9 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_int_resource(rDB, "hudColor", &hudColor);
     Get_int_resource(rDB, "hudLockColor", &hudLockColor);
     Get_int_resource(rDB, "wallColor", &wallColor);
+    Get_int_resource(rDB, "wallRadarColor", &wallRadarColor);
+    Get_int_resource(rDB, "decorColor", &decorColor);
+    Get_int_resource(rDB, "decorRadarColor", &decorRadarColor);
     Get_int_resource(rDB, "targetRadarColor", &targetRadarColor);
     Get_resource(rDB, "sparkColors", sparkColors, MSG_LEN);
 
@@ -2012,9 +2122,14 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "slidingRadar", &instruments, SHOW_SLIDING_RADAR);
     Get_bit_resource(rDB, "showItems", &instruments, SHOW_ITEMS);
     Get_bit_resource(rDB, "clock", &instruments, SHOW_CLOCK);
+    Get_bit_resource(rDB, "clockAMPM", &instruments, SHOW_CLOCK_AMPM_FORMAT);
     Get_bit_resource(rDB, "outlineWorld", &instruments, SHOW_OUTLINE_WORLD);
     Get_bit_resource(rDB, "filledWorld", &instruments, SHOW_FILLED_WORLD);
     Get_bit_resource(rDB, "texturedWalls", &instruments, SHOW_TEXTURED_WALLS);
+    Get_bit_resource(rDB, "showDecor", &instruments, SHOW_DECOR);
+    Get_bit_resource(rDB, "outlineDecor", &instruments, SHOW_OUTLINE_DECOR);
+    Get_bit_resource(rDB, "filledDecor", &instruments, SHOW_FILLED_DECOR);
+    Get_bit_resource(rDB, "texturedDecor", &instruments, SHOW_TEXTURED_DECOR);
 
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
@@ -2043,6 +2158,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     texturePath = strdup(resValue);
     Get_resource(rDB, "wallTextureFile", resValue, sizeof resValue);
     wallTextureFile = strdup(resValue);
+    Get_resource(rDB, "decorTextureFile", resValue, sizeof resValue);
+    decorTextureFile = strdup(resValue);
 
     Get_int_resource(rDB, "maxFPS", &maxFPS);
     oldMaxFPS = maxFPS;
@@ -2052,6 +2169,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_int_resource(rDB, "maxVolume", &maxVolume);
     Get_resource(rDB, "audioServer", audioServer, sizeof audioServer);
 #endif
+
+#ifdef SPARC_CMAP_HACK
+    Get_string_resource(rDB, "frameBuffer", frameBuffer, sizeof frameBuffer);
+#endif    
 
     /*
      * Key bindings

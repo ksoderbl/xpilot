@@ -1,4 +1,4 @@
-/* $Id: option.c,v 3.25 1995/02/05 13:41:09 bert Exp $
+/* $Id: option.c,v 3.30 1995/11/12 22:15:39 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -162,42 +162,46 @@ static int  LineNumber;
 /*
  * Skips to the end of the line.
  */
-static void toeol(FILE *ifile)
+static void toeol(char **map_ptr)
 {
-    int         ich;
+    int		ich;
 
-    while (!feof(ifile))
-	if ((ich = getc(ifile)) == '\n') {
-	    ++LineNumber;
-	    return;
-	}
+    while (**map_ptr) {
+	ich = **map_ptr;
+	(*map_ptr)++;
+        if (ich == '\n') {
+            ++LineNumber;
+            return;
+        }
+    }
 }
 
 
 /*
  * Skips to the first non-whitespace character, returning that character.
  */
-static int skipspace(FILE *ifile)
+static int skipspace(char **map_ptr)
 {
-    int         ich;
+    int		ich;
 
-    while (!feof(ifile)) {
-	ich = getc(ifile);
-	if (ich == '\n') {
-	    ++LineNumber;
-	    return ich;
-	}
-	if (!isascii(ich) || !isspace(ich))
-	    return ich;
+    while (**map_ptr) {
+	ich = **map_ptr;
+	(*map_ptr)++;
+        if (ich == '\n') {
+            ++LineNumber;
+            return ich;
+        }
+        if (!isascii(ich) || !isspace(ich))
+            return ich;
     }
-    return EOF;
+    return '\0';
 }
 
 
 /*
  * Read in a multiline value.
  */
-static char *getMultilineValue(char *delimiter, FILE *ifile)
+static char *getMultilineValue(char **map_ptr, char *delimiter)
 {
     char       *s = (char *)malloc(32768);
     int         i = 0;
@@ -207,8 +211,9 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
 
     bol = s;
     for (;;) {
-	ich = getc(ifile);
-	if (ich == EOF) {
+	ich = **map_ptr;
+	(*map_ptr)++;
+	if (ich == '\0') {
 	    s = (char *)realloc(s, i + 1);
 	    s[i] = '\0';
 	    return s;
@@ -255,19 +260,21 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
     if (i == slen) {				\
 	s = (char *)realloc(s, slen *= 2);	\
     }
-static void parseLine(FILE *ifile)
+static void parseLine(char **map_ptr)
 {
-    int         ich;
+    int		ich;
     char       *value,
 	       *head,
 	       *name,
 	       *s = (char *)malloc(128);
+    char       *p;
     int         slen = 128;
     int         i = 0;
     int         override = 0;
     int         multiline = 0;
 
-    ich = getc(ifile);
+    ich = **map_ptr;
+    (*map_ptr)++;
 
     /* Skip blank lines... */
     if (ich == '\n') {
@@ -277,7 +284,7 @@ static void parseLine(FILE *ifile)
     }
     /* Skip leading space... */
     if (isascii(ich) && isspace(ich)) {
-	ich = skipspace(ifile);
+	ich = skipspace(map_ptr);
 	if (ich == '\n') {
 	    free(s);
 	    return;
@@ -285,12 +292,12 @@ static void parseLine(FILE *ifile)
     }
     /* Skip lines that start with comment character... */
     if (ich == '#') {
-	toeol(ifile);
+	toeol(map_ptr);
 	free(s);
 	return;
     }
     /* Skip lines that start with the end of the file... :') */
-    if (ich == EOF) {
+    if (ich == '\0') {
 	free(s);
 	return;
     }
@@ -298,18 +305,20 @@ static void parseLine(FILE *ifile)
     if (!isascii(ich) || !isalpha(ich)) {
 	error("%s line %d: Names must start with an alphabetic.\n",
 	      FileName, LineNumber);
-	toeol(ifile);
+	toeol(map_ptr);
 	free(s);
 	return;
     }
     s[i++] = ich;
     do {
-	ich = getc(ifile);
-	if (ich == '\n' || ich == '#' || ich == EOF) {
+	ich = **map_ptr;
+	(*map_ptr)++;
+
+	if (ich == '\n' || ich == '#' || ich == '\0') {
 	    error("%s line %d: No colon found on line.\n",
 		  FileName, LineNumber);
 	    if (ich == '#')
-		toeol(ifile);
+		toeol(map_ptr);
 	    else
 		++LineNumber;
 	    free(s);
@@ -323,7 +332,7 @@ static void parseLine(FILE *ifile)
 	s[i++] = ich;
     } while (1);
 
-    ich = skipspace(ifile);
+    ich = skipspace(map_ptr);
 
     EXPAND;
     s[i++] = '\0';
@@ -334,14 +343,15 @@ static void parseLine(FILE *ifile)
     do {
 	EXPAND;
 	s[i++] = ich;
-	ich = getc(ifile);
-    } while (ich != EOF && ich != '#' && ich != '\n');
+	ich = **map_ptr;
+	(*map_ptr)++;
+    } while (ich != '\0' && ich != '#' && ich != '\n');
 
     if (ich == '\n')
 	++LineNumber;
 
     if (ich == '#')
-	toeol(ifile);
+	toeol(map_ptr);
 
     EXPAND;
     s[i++] = 0;
@@ -350,6 +360,27 @@ static void parseLine(FILE *ifile)
     while (s >= value && isascii(*s) && isspace(*s))
 	--s;
     *++s = 0;
+
+    /* Deal with `define: MACRO \multiline: TAG'. */
+    if (strcmp(name, "define") == 0) {
+	p = value;
+	while (*p && isascii(*p) && !isspace(*p)) {
+	    p++;
+	}
+	*p++ = '\0';
+
+	/* name becomes value */
+	free(name);
+	name = (char *)malloc(p - value + 1);
+	strcpy (name, value);
+
+	/* Move value to \multiline */
+	while (*p && isspace(*p)) {
+	    p++;
+	}
+	value = p;
+    }
+
     if (!strncmp(value, "\\override:", 10)) {
 	override = 1;
 	value += 10;
@@ -370,7 +401,7 @@ static void parseLine(FILE *ifile)
 	return;
     }
     if (multiline) {
-	value = getMultilineValue(value, ifile);
+	value = getMultilineValue(map_ptr, value);
 	/*
 	 * This dynamic memory returned by getMultilineValue()
 	 * is not freed anywhere.  Thanks to a Purify report
@@ -378,7 +409,37 @@ static void parseLine(FILE *ifile)
 	 * This problem is not so easy to fix.  Later.
 	 */
     }
-    addOption(name, value, override, (optionDesc *) 0);
+
+    /* Deal with `expand: MACRO'. */
+    if (strcmp(name, "expand") == 0) {
+	p = getOption(value);
+	if (!p) {
+	    error("Can't expand `%s' since it's not already defined.\n", value);
+	}
+	else {
+	    while (*p) {
+		parseLine(&p);
+	    }
+	}
+    }
+#ifdef REGIONS /* not yet */
+    /* Deal with `region: \multiline: TAG'. */
+    else if (strcmp(name, "region") == 0) {
+	if (!multiline) { /* Must be multiline. */
+	    error("regions must use `\\multiline:'.\n");
+	    free(name);
+	    free(head);
+	    return;
+	}
+	p = value;
+	while (*p) {
+	    parseLine(&p);
+	}
+    }
+#endif
+    else {
+	addOption(name, value, override, (optionDesc *) 0);
+    }
 
     /*
      * if (multiline) free (value);
@@ -528,7 +589,8 @@ static FILE *openDefaultsFile(char *filename)
 bool parseDefaultsFile(char *filename)
 {
     FILE       *ifile;
-    int         ich;
+    int		fd, map_offset, n;
+    char       *map_buf;
 
     LineNumber = 1;
     if ((ifile = openDefaultsFile(filename)) == NULL) {
@@ -536,22 +598,66 @@ bool parseDefaultsFile(char *filename)
 	return false;
     }
 
-    ich = getc(ifile);
-    if (ich != EOF)
-	ungetc(ich, ifile);
-    if (isdigit(ich)) {
+    fd = fileno(ifile);
+
+    /* Using a 200 map sample, the average map size is 37k.
+       This chunk size could be increased to avoid lots of
+       reallocs. */
+#define MAP_CHUNK_SIZE	8192
+
+    map_offset = 0;
+    map_buf = (char *) malloc(MAP_CHUNK_SIZE + 1);
+    if (!map_buf) {
+	error("Not enough memory to read the map!");
+	free(FileName);
+	fclose(ifile);
+	return false;
+    }
+
+    for (;;) {
+	n = read(fd, &map_buf[map_offset], MAP_CHUNK_SIZE);
+	if (n < 0) {
+	    error("Error reading map!");
+	    free(FileName);
+	    fclose(ifile);
+	    free(map_buf);
+	    return false;
+	}
+	if (n == 0) {
+	    break;
+	}
+	map_offset += n;
+
+	map_buf = (char *) realloc(map_buf, map_offset + MAP_CHUNK_SIZE + 1);
+	if (!map_buf) {
+	    error("Not enough memory to read the map!");
+	    free(FileName);
+	    fclose(ifile);
+	    return false;
+	}
+    }
+
+    map_buf = (char *) realloc(map_buf, map_offset + 1);
+    map_buf[map_offset] = '\0'; /* EOF */
+
+    if (isdigit(*map_buf)) {
 	errno = 0;
 	error("%s is in old (v1.x) format, please convert it with mapmapper",
 	      FileName);
 	free(FileName);
+	free(map_buf);
 	fclose(ifile);
 	return false;
     } else {
-	while (!feof(ifile))
-	    parseLine(ifile);
+	/* Parse all the lines in the file. */
+	char *map_ptr = map_buf;
+	while (*map_ptr) {
+	    parseLine(&map_ptr);
+	}
     }
 
     free(FileName);
+    free(map_buf);
     fclose(ifile);
 
     return true;

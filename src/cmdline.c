@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.76 1995/01/11 19:17:43 bert Exp $
+/* $Id: cmdline.c,v 3.81 1995/11/12 22:14:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -37,7 +37,7 @@ char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.76 1995/01/11 19:17:43 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.81 1995/11/12 22:14:44 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -68,7 +68,6 @@ int		mapHeight;		/* Height of the universe */
 char		*mapName;		/* Name of the universe */
 char		*mapAuthor;		/* Name of the creator */
 int		contactPort;		/* Contact port number */
-char		*motd;			/* File name for motd */
 
 bool		crashWithPlayer;	/* Can players overrun other players? */
 bool		bounceWithPlayer;	/* Can players bounce other players? */
@@ -168,7 +167,9 @@ bool		treasureCollisionMayKill;
 float		friction;		/* friction only affects ships */
 float		checkpointRadius;      	/* in blocks */
 int		raceLaps;		/* how many laps per race */
-
+bool		lockOtherTeam;		/* lock ply from other teams when dead? */
+bool		loseItemDestroys; 	/* destroy or drop when player */
+					/* uses loseItem */
 static void tuner_none(void) {}
 static void tuner_dummy(void) {}
 
@@ -398,15 +399,6 @@ static optionDesc options[] = {
 	valInt,
 	tuner_none,
 	"The server contact port number.\n"
-    },
-    {
-	"motd",
-	"motd",
-	SERVERMOTDFILE,
-	&motd,
-	valString,
-	tuner_none,
-	"The filename for the server-motd.\n"
     },
     {
 	"mapData",
@@ -1485,6 +1477,24 @@ static optionDesc options[] = {
 	tuner_none,
 	"How many laps a race is run over.\n"
     },
+    {
+	"lockOtherTeam",
+	"lockOtherTeam",
+	"true",
+	&lockOtherTeam,
+	valBool,
+	tuner_none,
+	"Can you lock on players from other teams when you're dead.\n"
+    },
+    {
+	"loseItemDestroys",
+	"loseItemDestroys",
+	"false",
+	&loseItemDestroys,
+	valBool,
+	tuner_none,
+	"Destroy item that player drops. Otherwise drop it.\n"
+    },
 };
 
 
@@ -1544,6 +1554,7 @@ static void Parse_dump(char *progname)
     printf("# DEFAULTS_FILE_NAME = %s\n", DEFAULTS_FILE_NAME);
     printf("# MAPDIR = %s\n", MAPDIR);
     printf("# DEFAULT_MAP = %s\n", DEFAULT_MAP);
+    printf("# SERVERMOTDFILE = %s\n", SERVERMOTDFILE);
     printf("# \n");
     for (j = 0; j < NELEM(options); j++) {
 	if (options[j].type != valVoid) {

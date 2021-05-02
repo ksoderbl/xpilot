@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 3.42 1995/02/02 09:03:29 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.48 1995/11/24 20:56:41 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -30,7 +30,12 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 3.42 1995/02/02 09:03:29 bert Exp $";
+    "@(#)$Id: socklib.c,v 3.48 1995/11/24 20:56:41 bert Exp $";
+#endif
+
+#ifdef TERMNET
+/* support for running clients over term, but not servers please. */
+#include "termnet.h"
 #endif
 
 /* _SOCKLIB_LIBSOURCE must be defined int this file */
@@ -738,7 +743,7 @@ int	flag;
     /*
      * The fcntl(O_NDELAY) option has nothing to do
      * with the setsockopt(TCP_NODELAY) option.
-     * They achieve entirely different features!
+     * They control completely different features!
      */
     return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
 		      (void *)&flag, sizeof(flag));
@@ -1378,6 +1383,67 @@ int	port;
 /*
  *******************************************************************************
  *
+ *	DgramBind()
+ *
+ *******************************************************************************
+ * Description
+ *	Bind a UDP/IP datagram socket to a local interface address.
+ *
+ * Input Parameters
+ *	fd		- Filedescriptor of existing datagram socket.
+ *	dotaddr		- Pointer to string containing of IP address in dot-format.
+ *	port		- The port number. A value of zero may be specified in
+ *			  clients to assign any available port number.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	The UDP/IP datagram socket descriptor, or -1 on error.
+ *
+ * Globals Referenced
+ *	sl_errno	- If any errors occured: SL_ESOCKET, SL_EBIND.
+ *
+ * External Calls
+ *	memset
+ *	bind
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers, adapted from CreateDgramAddrSocket().
+ */
+int
+#ifdef __STDC__
+DgramBind(int fd, char *dotaddr, int port)
+#else
+DgramBind(fd, dotaddr, port)
+int	fd;
+char	*dotaddr;
+int	port;
+#endif /* __STDC__ */
+{
+    struct sockaddr_in	addr_in;
+    int			retval;
+
+    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
+    addr_in.sin_family		= AF_INET;
+    addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
+    addr_in.sin_port		= htons(port);
+    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
+    if (retval < 0)
+    {
+	sl_errno = SL_EBIND;
+	return (-1);
+    }
+
+    return (fd);
+} /* DgramBind */
+
+
+/*
+ *******************************************************************************
+ *
  *	DgramConnect()
  *
  *******************************************************************************
@@ -1707,6 +1773,105 @@ char	*sbuf;
 /*
  *******************************************************************************
  *
+ *	DgramRead()
+ *
+ *******************************************************************************
+ * Description
+ *	Receives a datagram on a connected datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor.
+ *	size		- Expected message size.
+ *
+ * Output Parameters
+ *	rbuf		- Pointer to a message buffer.
+ *
+ * Return Value
+ *	The number of bytes received or -1 if any errors occured.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	recv()
+ *
+ * Called By
+ *	User applications
+ *
+ * Originally coded by Bert Gijsbers
+ */
+int
+#ifdef __STDC__
+DgramRead(int fd, char *rbuf, int size)
+#else
+DgramRead(fd, rbuf, size)
+int	fd;
+char	*rbuf;
+int	size;
+#endif /* __STDC__ */
+{
+    int		retval;
+
+    cmw_priv_assert_netaccess();
+    retval = recv(fd, rbuf, size, 0);
+    cmw_priv_deassert_netaccess();
+    return retval;
+} /* DgramRead */
+
+
+/*
+ *******************************************************************************
+ *
+ *	DgramWrite()
+ *
+ *******************************************************************************
+ * Description
+ *	Sends a datagram on a connected datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor.
+ *	wbuf		- Pointer to a message buffer.
+ *	size		- Expected message size.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	The number of bytes sent or -1 if any errors occured.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	send()
+ *
+ * Called By
+ *	User applications
+ *
+ * Originally coded by Bert Gijsbers
+ */
+int
+#ifdef __STDC__
+DgramWrite(int fd, char *wbuf, int size)
+#else
+DgramWrite(fd, wbuf, size)
+int	fd;
+char	*wbuf;
+int	size;
+#endif /* __STDC__ */
+{
+    int		retval;
+
+    cmw_priv_assert_netaccess();
+    retval = send(fd, wbuf, size, 0);
+    cmw_priv_deassert_netaccess();
+    return retval;
+} /* DgramWrite */
+
+
+/*
+ *******************************************************************************
+ *
  *	DgramInthandler()
  *
  *******************************************************************************
@@ -1973,6 +2138,47 @@ DgramLastport()
 /*
  *******************************************************************************
  *
+ *	DgramClose()
+ *
+ *******************************************************************************
+ * Description
+ *	performs a close on a UDP/IP datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The datagram socket to be closed.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	None.
+ *
+ * Globals Referenced
+ *	None.
+ *
+ * External Calls
+ *	close
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+void
+#ifdef __STDC__
+DgramClose(int fd)
+#else
+DgramClose(fd)
+int	fd;
+#endif /* __STDC__ */
+{
+    close(fd);
+} /* DgramClose */
+
+
+/*
+ *******************************************************************************
+ *
  *	GetLocalHostName()
  *
  *******************************************************************************
@@ -2000,6 +2206,9 @@ DgramLastport()
  *
  * Originally coded by Bert Gijsbers
  */
+#ifdef VMS
+#define MAXHOSTNAMELEN  256
+#endif
 #ifdef __STDC__
 void GetLocalHostName(char *name, unsigned size)
 #else
@@ -2013,14 +2222,23 @@ void GetLocalHostName(name, size)
     char		*alias, *dot;
     char		xpilot_hostname[MAXHOSTNAMELEN];
     static const char	xpilot[] = "xpilot";
+#ifdef VMS
+    char                vms_inethost[MAXHOSTNAMELEN]   = "UCX$INET_HOST";
+    char                vms_inetdomain[MAXHOSTNAMELEN] = "UCX$INET_DOMAIN";
+    char                vms_host[MAXHOSTNAMELEN];
+    char                vms_domain[MAXHOSTNAMELEN];
+    int                 namelen;
+#endif
 
     xpilot_len = strlen(xpilot);
 
     /* Make a wild guess that a "xpilot" hostname or alias is in this domain */
     if ((xpilot_he = gethostbyname(xpilot)) != NULL) {
-	strcpy(xpilot_hostname, xpilot_he->h_name);	/* copy data to buffer */
-	tmp = *xpilot_he;
-	xpilot_he = &tmp;
+	if (strcmp(xpilot_he->h_name, "prince.mc.bio.uva.nl")) {
+	    strcpy(xpilot_hostname, xpilot_he->h_name);	/* copy data to buffer */
+	    tmp = *xpilot_he;
+	    xpilot_he = &tmp;
+	}
     }
 
     gethostname(name, size);
@@ -2062,6 +2280,12 @@ void GetLocalHostName(name, size)
 		}
 		fclose(fp);
 	    }
+#else
+            vms_trnlnm(vms_inethost, namelen, vms_host);
+            vms_trnlnm(vms_inetdomain, namelen, vms_domain);
+            strcpy(name, vms_host);
+            strcat(name, ".");
+            strcat(name, vms_domain);
 #endif
 	    return;
 	}

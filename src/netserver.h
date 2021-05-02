@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.48 1995/01/11 19:41:11 bert Exp $
+/* $Id: netserver.h,v 3.49 1995/11/15 20:09:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -186,6 +186,7 @@ int Send_laser(int ind, int color, int x, int y, int len, int dir);
 int Send_radar(int ind, int x, int y, int size);
 int Send_damaged(int ind, int damaged);
 int Send_message(int ind, char *msg);
+int Send_loseitem(int lose_item_index, int ind);
 int Send_start_of_frame(int ind);
 int Send_end_of_frame(int ind);
 int Send_reliable(int ind);

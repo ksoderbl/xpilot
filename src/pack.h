@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 3.41 1995/01/11 19:43:12 bert Exp $
+/* $Id: pack.h,v 3.45 1995/11/05 17:01:58 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -24,14 +24,15 @@
 #ifndef	PACK_H
 #define	PACK_H
 
-#define CAP_LETTER(c)	(c = (c>='a' && c<='z') ? c-'a'+'A' : c)
+#define CAP_LETTER(c)	((c) = ((c)>='a' && (c)<='z') ? (c)-'a'+'A' : (c))
 
 #define SERVER_PORT	15345		/* Port which server listens to. */
 #define SERVER_PORT_STR	"15345"		/* ASCII version of server port. */
 #define META_PORT	5500
 #define META_HOST	"xpilot.cs.uit.no"
-#define META_HOST_TWO	"xpilot.mc.bio.uva.nl"
+#define META_HOST_TWO	"prince.bio.uva.nl"
 #define META_IP		"129.242.16.101"
+#define META_IP_TWO	"145.18.160.57"
 
 /*
  * Magic contact word.
@@ -86,8 +87,11 @@
  * 3.2.6.0: New map update packet.
  * 3.2.6.1: New player timing packet.
  * 3.2.8.0: New asyn packet.
+ * 3.3.1.0: Different owner-only commands.
+ * 3.3.2.0: Map decorations.
+ * 3.4.0.0: Lose/drop item key.
  */
-#define	MAGIC		0x3280F4ED
+#define	MAGIC		0x3400F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))
@@ -112,18 +116,21 @@
 /*
  * Different contact pack types.
  */
-#define	REPLY_pack		0x10
 #define	ENTER_GAME_pack		0x00
+#define	REPLY_pack		0x10
 #define	REPORT_STATUS_pack	0x21
-#define	LOCK_GAME_pack		0x22
-#define	MESSAGE_pack		0x23
-#define	SHUTDOWN_pack		0x24
-#define	KICK_PLAYER_pack	0x25
-#define	MAX_ROBOT_pack		0x26
-#define	OPTION_TUNE_pack	0x27
 #define	OPTION_LIST_pack	0x28
 #define	CORE_pack		0x30
 #define	CONTACT_pack		0x31
+/* The owner-only commands have a common bit high. */
+#define PRIVILEGE_PACK_MASK	0x40
+#define	LOCK_GAME_pack		0x62
+#define	MESSAGE_pack		0x63
+#define	SHUTDOWN_pack		0x64
+#define	KICK_PLAYER_pack	0x65
+#define	MAX_ROBOT_pack		0x66
+#define	OPTION_TUNE_pack	0x67
+#define	CREDENTIALS_pack	0x69
 
 /*
  * Possible error codes returned.

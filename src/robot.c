@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 3.56 1995/01/28 16:14:45 bert Exp $
+/* $Id: robot.c,v 3.58 1995/11/15 20:09:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -52,7 +52,8 @@ static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
 #define EMPTY_SPACE(s)	\
     BIT(1 << (s), SPACE_BIT | BASE_BIT | WORMHOLE_BIT | POS_GRAV_BIT | \
 		  NEG_GRAV_BIT | CWISE_GRAV_BIT | ACWISE_GRAV_BIT | \
-		  CHECK_BIT | ITEM_CONCENTRATOR_BIT)
+		  DECOR_LU_BIT | DECOR_LD_BIT | DECOR_RU_BIT | DECOR_RD_BIT | \
+		  DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT)
 
 /*
  * Bitmask of object types the robot puts up shield for.
@@ -770,7 +771,7 @@ void Robot_program(int ind, int victim_id)
 int Robot_war_on_player(int ind)
 {
     player		*pl = Players[ind];
-    robot_type_t	*rob_type = (robot_type_t *)
+    robot_type_t	*rob_type =
 			    &robot_types[pl->robot_data_ptr->robot_types_ind];
 
     return (*rob_type->war_on_player)(ind);
@@ -836,7 +837,7 @@ void Robot_go_home(int ind)
 void Robot_message(int ind, char *message)
 {
     player		*pl = Players[ind];
-    robot_type_t	*rob_type = (robot_type_t *)
+    robot_type_t	*rob_type =
 			    &robot_types[pl->robot_data_ptr->robot_types_ind];
 
     (*rob_type->message)(ind, message);
@@ -955,6 +956,15 @@ static bool Check_robot_target(int ind, int item_x, int item_y, int new_mode,
 
 
 /*
+ * Function to cast from player structure to robot data structure.
+ * This isolates casts (aka. type violations) to a few places.
+ */
+static robot_default_data_t *Robot_default_get_data(player *pl)
+{
+    return (robot_default_data_t *)pl->robot_data_ptr->private_data;
+}
+
+/*
  * Setup the global stuff for the default robot types.
  */
 static void Robot_default_setup(void)
@@ -1002,8 +1012,7 @@ static void Robot_default_create(int ind, char *str)
 static void Robot_default_go_home(int ind)
 {
     player			*pl = Players[ind];
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     my_data->robot_mode      = RM_TAKE_OFF;
 }
@@ -1014,8 +1023,7 @@ static void Robot_default_go_home(int ind)
 static void Robot_default_set_war(int ind, int victim_id)
 {
     player			*pl = Players[ind];
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     if (victim_id == -1) {
 	CLR_BIT(my_data->robot_lock, LOCK_PLAYER);
@@ -1031,8 +1039,7 @@ static void Robot_default_set_war(int ind, int victim_id)
 static int Robot_default_war_on_player(int ind)
 {
     player			*pl = Players[ind];
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     if (BIT(my_data->robot_lock, LOCK_PLAYER)) {
 	return my_data->robot_lock_id;
@@ -1048,8 +1055,7 @@ static void Robot_default_message(int ind, char *message)
 {
 #if 0
     player			*pl = Players[ind];
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
     int				len;
     char			*ptr;
     char			sender_name[MAX_NAME_LEN];
@@ -1247,8 +1253,8 @@ static bool Check_robot_navigate(int ind, bool * num_evade)
 
     /* now focus in to local 3x3 square */
 
-    dx = pl->pos.x;
-    dy = pl->pos.y;
+    dx = (int)pl->pos.x;
+    dy = (int)pl->pos.y;
 
     dx = dx - (dx / BLOCK_SZ * BLOCK_SZ);
     dy = dy - (dy / BLOCK_SZ * BLOCK_SZ);
@@ -1438,8 +1444,7 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
     int				gravity_dir;
     long			dx, dy;
     float			velocity;
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     safe_width = 3 * SHIP_SZ / 2;
     /* Prevent overflow. */
@@ -1684,8 +1689,7 @@ static void Choose_weapon_modifier(player *pl, int weapon_type)
 {
     int				stock, min;
     modifiers			mods;
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     CLEAR_MODS(mods);
 
@@ -1782,8 +1786,7 @@ static bool Check_robot_target(int ind,
     int				locn_block;
     bool			clear_path;
     bool			slowing;
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
 
     dx = item_x - pl->pos.x, dx = WRAP_DX(dx);
@@ -2072,8 +2075,7 @@ static bool Check_robot_hunt(int ind)
     int				delta_dir;
     int				adj_dir;
     int				toofast, tooslow;
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     if (!BIT(my_data->robot_lock, LOCK_PLAYER)
 	|| my_data->robot_lock_id == pl->id)
@@ -2148,8 +2150,7 @@ static void Robot_default_play(int ind)
     int				attack_level;
     int				shoot_time;
     int				shield_range;
-    robot_default_data_t	*my_data = (robot_default_data_t *)
-					    pl->robot_data_ptr->private_data;
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
 
     killing_shots = KILLING_SHOTS;

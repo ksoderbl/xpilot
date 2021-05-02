@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 3.86 1995/02/04 15:03:46 bert Exp $
+/* $Id: xinit.c,v 3.92 1995/12/04 14:47:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -74,7 +74,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.86 1995/02/04 15:03:46 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.92 1995/12/04 14:47:20 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
@@ -377,9 +377,11 @@ static void Fill_colormap(void)
     /* Check for misunderstanding of X colormap stuff. */
     for (i = 0; i < max_fill; i++) {
 	if (pixels[i] != i) {
+#ifdef DEVELOPMENT
 	    errno = 0;
 	    error("Can't pre-fill color map, got %d'th pixel %lu",
 		  i, pixels[i]);
+#endif
 	    XFreeColors(dpy, colormap, pixels, max_fill, 0);
 	    return;
 	}
@@ -498,6 +500,7 @@ static void Get_visual_info(void)
 	visual = DefaultVisual(dpy, DefaultScreen(dpy));
 	if (visual->class == TrueColor || visual->class == DirectColor) {
 	    visual_class = PseudoColor;
+	    strcpy(visualName, "PseudoColor");
 	}
     }
     if (visual_class >= 0 || visual_id >= 0) {
@@ -676,11 +679,11 @@ void Init_disp_prop(Display *d, Window win, int w, int h, int x, int y,
 }
 
 /*
- * The following function initializes a player window.
+ * The following function initializes a toplevel window.
  * It returns 0 if the initialization was successful,
  * or -1 if it couldn't initialize the double buffering routine.
  */
-int Init_window(void)
+int Init_top(void)
 {
     int				i, p, values,
 				num_planes,
@@ -689,12 +692,8 @@ int Init_window(void)
 				x, y;
     unsigned			w, h;
     XGCValues			xgc;
-    int				button_form,
-				menu_button;
     XSetWindowAttributes	sattr;
     unsigned long		mask;
-    Pixmap			pix;
-    GC				cursorGC;
 
     colormap = 0;
 
@@ -816,20 +815,21 @@ int Init_window(void)
     if (wallColor >= maxColors || wallColor <= 0) {
 	wallColor = BLUE;
     }
+    if (wallRadarColor >= maxColors
+	|| (wallRadarColor & 1)) {
+	wallRadarColor = BLUE;
+    }
     if (targetRadarColor >= maxColors
-	|| (targetRadarColor != 8
-	    && targetRadarColor != 4
-	    && targetRadarColor != 2)) {
+	|| (targetRadarColor & 1)) {
 	targetRadarColor = BLUE;
     }
-
-
-    about_created = false;
-    talk_created = false;
-    talk_mapped = false;
-    talk_str[0] = '\0';
-    talk_cursor.point = 0;
-
+    if (decorColor >= maxColors || decorColor <= 0) {
+	decorColor = RED;
+    }
+    if (decorRadarColor >= maxColors
+	|| (decorRadarColor & 1)) {
+	decorRadarColor = 2;
+    }
 
     /*
      * Get toplevel geometry.
@@ -883,7 +883,6 @@ int Init_window(void)
 	geometry = NULL;
     }
 
-
     /*
      * Create toplevel window (we need this first so that we can create GCs)
      */
@@ -903,6 +902,10 @@ int Init_window(void)
 			0, dispDepth,
 			InputOutput, visual,
 			mask, &sattr);
+    XSelectInput(dpy, top,
+		 KeyPressMask | KeyReleaseMask
+		 | FocusChangeMask | StructureNotifyMask);
+    Init_disp_prop(dpy, top, top_width, top_height, top_x, top_y, top_flags);
     if (kdpy) {
 	int scr = DefaultScreen(kdpy);
 	keyboard = XCreateSimpleWindow(kdpy,
@@ -910,6 +913,10 @@ int Init_window(void)
 				       top_x, top_y,
 				       top_width, top_height,
 				       0, 0, BlackPixel(dpy, scr));
+	XSelectInput(kdpy, keyboard,
+		     KeyPressMask | KeyReleaseMask | FocusChangeMask);
+	Init_disp_prop(kdpy, keyboard, top_width, top_height,
+		       top_x, top_y, top_flags);
     }
 
     /*
@@ -920,7 +927,6 @@ int Init_window(void)
 	    = XCreateBitmapFromData(dpy, top,
 				    (char *)itemBitmapData[i].data,
 				    ITEM_SIZE, ITEM_SIZE);
-
 
     /*
      * Creates and initializes the graphic contexts.
@@ -951,7 +957,6 @@ int Init_window(void)
 	= XCreateGC(dpy, top, values, &xgc);
     XSetBackground(dpy, gc, colors[BLACK].pixel);
     XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
-
 
     /*
      * Set fonts
@@ -992,10 +997,8 @@ int Init_window(void)
 	      BlackPixel(dpy, DefaultScreen(dpy)),
 	      GXcopy, AllPlanes);
 
-
     if (colorSwitch)
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
-
 
     /*
      * A little hack that enables us to draw on both sets of double buffering
@@ -1012,10 +1015,6 @@ int Init_window(void)
 		    dpl_1[p] |= 1<<i;
     }
 
-
-    /*
-     * Creates the windows.
-     */
     if (mono) {
 	buttonColor = BLACK;
 	windowColor = BLACK;
@@ -1024,6 +1023,27 @@ int Init_window(void)
 	windowColor = BLUE;
 	buttonColor = RED;
 	borderColor = WHITE;
+    }
+
+    return 0;
+}
+
+/*
+ * Creates the playing windows.
+ * Returns 0 on success, -1 on error.
+ */
+int Init_windows(void)
+{
+    unsigned			w, h;
+    int				button_form,
+				menu_button;
+    Pixmap			pix;
+    GC				cursorGC;
+
+    if (!top) {
+	if (Init_top()) {
+	    return -1;
+	}
     }
 
     draw_width = top_width - (256 + 2);
@@ -1083,20 +1103,10 @@ int Init_window(void)
     /*
      * Selecting the events we can handle.
      */
-    XSelectInput(dpy, top,
-		 KeyPressMask | KeyReleaseMask
-		 | FocusChangeMask | StructureNotifyMask);
-    if (kdpy)
-	XSelectInput(kdpy, keyboard,
-		     KeyPressMask | KeyReleaseMask | FocusChangeMask);
     XSelectInput(dpy, radar, ExposureMask);
     XSelectInput(dpy, players, ExposureMask);
     XSelectInput(dpy, draw, 0);
 
-    Init_disp_prop(dpy, top, top_width, top_height, top_x, top_y, top_flags);
-    if (kdpy)
-	Init_disp_prop(kdpy, keyboard, top_width, top_height,
-		       top_x, top_y, top_flags);
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
@@ -1115,7 +1125,7 @@ int Init_window(void)
 
     XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
     if (kdpy)
-	    XAutoRepeatOff(kdpy);
+	XAutoRepeatOff(kdpy);
 
     /*
      * Define a blank cursor for use with pointer control
@@ -1143,6 +1153,12 @@ int Init_window(void)
     }
 
     Init_spark_colors();
+
+    about_created = false;
+    talk_created = false;
+    talk_mapped = false;
+    talk_str[0] = '\0';
+    talk_cursor.point = 0;
 
     return 0;
 }
@@ -1744,6 +1760,7 @@ void Talk_map_window(bool map)
 		     0, 0, 0, 0,
 		     TALK_WINDOW_WIDTH - 2,
 		     TALK_WINDOW_HEIGHT - 2);
+	XFlush(dpy);	/* warp pointer ASAP. */
     }
     else if (talk_created == true) {
 	XUnmapWindow(dpy, talk_w);

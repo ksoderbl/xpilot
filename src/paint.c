@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.129 1995/02/04 15:01:36 bert Exp $
+/* $Id: paint.c,v 3.147 1995/12/04 14:47:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -67,12 +67,12 @@ char paint_version[] = VERSION;
 #define X(co)  ((int) ((co) - world.x))
 #define Y(co)  ((int) (world.y + view_height - (co)))
 
-extern float  		tbl_sin[];
-extern float  		tbl_cos[];
+extern float		tbl_sin[];
+extern float		tbl_cos[];
 extern setup_t		*Setup;
 extern int		RadarHeight;
 extern score_object_t	score_objects[MAX_SCORE_OBJECTS];
-extern int 		score_object;
+extern int		score_object;
 
 
 /*
@@ -130,7 +130,10 @@ int	maxColors;		/* Max. number of colors to use */
 int	hudColor;		/* Color index for HUD drawing */
 int	hudLockColor;		/* Color index for lock on HUD drawing */
 int	wallColor;		/* Color index for wall drawing */
+int	wallRadarColor;		/* Color index for walls on radar. */
 int	targetRadarColor;	/* Color index for targets on radar. */
+int	decorColor;		/* Color index for decoration drawing */
+int	decorRadarColor;	/* Color index for decorations on radar. */
 bool	gotFocus;
 int	radar_exposures;
 bool	players_exposed;
@@ -144,6 +147,7 @@ int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
 char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
 char	*texturePath;		/* Path list of texture directories */
 char	*wallTextureFile;	/* Filename of wall texture */
+char	*decorTextureFile;	/* Filename of decor texture */
 
 int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 	(Display *disp, Drawable d, GC gc,
@@ -235,6 +239,10 @@ typedef struct {
     u_byte		x, y;
 } debris_t;
 
+typedef struct {
+    short		x, y, xi, yi, type;
+} vdecor_t;
+
 #if ERASE
 typedef struct {
     int			flags;
@@ -271,7 +279,7 @@ static itemtype_t	*itemtype_ptr;
 static int		 num_itemtype, max_itemtype;
 static ecm_t		*ecm_ptr;
 static int		 num_ecm, max_ecm;
-static trans_t 		*trans_ptr;
+static trans_t		*trans_ptr;
 static int		 num_trans, max_trans;
 static paused_t		*paused_ptr;
 static int		 num_paused, max_paused;
@@ -289,6 +297,8 @@ static int		 num_debris[DEBRIS_TYPES],
 static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
 static int		 num_fastshot[DEBRIS_TYPES * 2],
 			 max_fastshot[DEBRIS_TYPES * 2];
+static vdecor_t		*vdecor_ptr;
+static int		 num_vdecor, max_vdecor;
 
 /*
  * Macro to add one new element of a given type to a dynamic array.
@@ -686,20 +696,6 @@ static int Segment_add(int color, int x1, int y1, int x2, int y2)
     return 0;
 }
 
-#ifdef SCROLL
-static char *scroll(char *string, int start, int len)
-{
-    static char str[MAX_SCROLL_LEN];
-    int i;
-
-    for (i=0; string[i+start] && i<length; i++)
-	str[i] = string[i+start];
-    str[length] = '\0';
-
-    return (str);
-}
-#endif
-
 /*
  * Draw a meter of some kind on screen.
  * When the x-offset is specified as a negative value then
@@ -778,11 +774,9 @@ void Game_over_action(u_byte stat)
 	&& !BIT(stat,PAUSE)) {
 	XMapRaised(dpy, top);
     }
-    if (toggle_shield) {
-	if (BIT(old_stat, PLAYING|PAUSE|GAME_OVER) != PLAYING) {
-	    if (BIT(stat, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
-		Reset_shields();
-	    }
+    if (BIT(old_stat, PLAYING|PAUSE|GAME_OVER) != PLAYING) {
+	if (BIT(stat, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+	    Reset_shields();
 	}
     }
 
@@ -1037,6 +1031,9 @@ static void Paint_shots(void)
 	    x = BASE_X(i);
 	    y = BASE_Y(i);
 	    color = COLOR(i);
+	    if (color != WHITE && color != BLUE) {
+		color = WHITE;
+	    }
 	    for (j = 0; j < num_fastshot[i]; j++) {
 		Rectangle_add(color,
 			      x + fastshot_ptr[i][j].x - shot_size/2,
@@ -1315,16 +1312,21 @@ static void Paint_ships(void)
 #endif
 		    }
 		    if (ship_ptr[i].shield) {
-			rd.drawArc(dpy, p_draw, gc, X(x - 17), Y(y + 17),
-				 34, 34, 0, 64 * 360);
-			Erase_arc(X(x - 17), Y(y + 17),
-				  34, 34, 0, 64 * 360);
+			int radius = ship->shield_radius;
+			int e_radius = radius + 4;
+			int half_radius = radius >> 1;
+			int half_e_radius = e_radius >> 1;
+
+			rd.drawArc(dpy, p_draw, gc, X(x - half_radius), Y(y + half_radius),
+				   radius, radius, 0, 64 * 360);
+			Erase_arc(X(x - half_radius), Y(y + half_radius),
+				  radius, radius, 0, 64 * 360);
 
 			if (ship_ptr[i].eshield) {	/* Emergency Shield */
-			    rd.drawArc(dpy, p_draw, gc, X(x - 19), Y(y + 19),
-				38, 38, 0, 64 * 360);
-			    Erase_arc(X(x - 19), Y(y + 19),
-				38, 38, 0, 64 * 360);
+			    rd.drawArc(dpy, p_draw, gc, X(x - half_e_radius), Y(y + half_e_radius),
+				       e_radius, e_radius, 0, 64 * 360);
+			    Erase_arc(X(x - half_e_radius), Y(y + half_e_radius),
+				      e_radius, e_radius, 0, 64 * 360);
 			}
 		    }
 		}
@@ -1673,6 +1675,16 @@ static void Paint_HUD(void)
 
 	    /* Paint item symbol */
 	    Paint_item_symbol(i, p_draw, gc, horiz_pos - ITEM_SIZE, vert_pos);
+
+	    if (i == lose_item) {
+		if (lose_item_active != 0) {
+		    if (lose_item_active < 0) {
+			lose_item_active++;
+		    }
+		    rd.drawRectangle(dpy, p_draw, gc, horiz_pos-ITEM_SIZE-2,
+				     vert_pos-2, ITEM_SIZE+2, ITEM_SIZE+2);
+		}
+	    }
 
 	    /* Paint item count */
 	    sprintf(str, "%d", num);
@@ -2219,6 +2231,192 @@ static void Paint_vbase(void)
     }
 }
 
+static void Paint_vdecor(void)
+{
+    if (num_vdecor > 0) {
+	int			i, x, y, xi, yi, type, mask;
+	int			fill_top_left = -1,
+				fill_top_right = -1,
+				fill_bottom_left = -1,
+				fill_bottom_right = -1;
+	static int		decorTileReady = 0;
+	static Pixmap		decorTile = None;
+	int			decorTileDoit = false;
+	unsigned char		decor[256];
+
+	SET_FG(colors[decorColor].pixel);
+
+	memset(decor, 0, sizeof decor);
+	decor[SETUP_DECOR_FILLED] = DECOR_UP | DECOR_LEFT | DECOR_DOWN | DECOR_RIGHT;
+	decor[SETUP_DECOR_RU] = DECOR_UP | DECOR_RIGHT | DECOR_CLOSED;
+	decor[SETUP_DECOR_RD] = DECOR_DOWN | DECOR_RIGHT | DECOR_OPEN | DECOR_BELOW;
+	decor[SETUP_DECOR_LU] = DECOR_UP | DECOR_LEFT | DECOR_OPEN;
+	decor[SETUP_DECOR_LD] = DECOR_LEFT | DECOR_DOWN | DECOR_CLOSED | DECOR_BELOW;
+
+	if (BIT(instruments, SHOW_TEXTURED_DECOR)) {
+	    if (!decorTileReady) {
+		decorTile = Texture_decor();
+		decorTileReady = (decorTile == None) ? -1 : 1;
+	    }
+	    if (decorTileReady == 1) {
+		decorTileDoit = true;
+		XSetTile(dpy, gc, decorTile);
+		XSetTSOrigin(dpy, gc, -realWorld.x, realWorld.y);
+		XSetFillStyle(dpy, gc, FillTiled);
+	    }
+	}
+
+	for (i = 0; i < num_vdecor; i++) {
+
+	    x = vdecor_ptr[i].x;
+	    y = vdecor_ptr[i].y;
+	    xi = vdecor_ptr[i].xi;
+	    yi = vdecor_ptr[i].yi;
+	    type = vdecor_ptr[i].type;
+	    mask = decor[type];
+
+	    if (!BIT(instruments, SHOW_FILLED_DECOR|SHOW_TEXTURED_DECOR)) {
+		if (mask & DECOR_LEFT) {
+		    if ((xi == 0)
+			? (!BIT(Setup->mode, WRAP_PLAY) ||
+			    !(decor[Setup->map_data[(Setup->x - 1) * Setup->y + yi]]
+				& DECOR_RIGHT))
+			: !(decor[Setup->map_data[(xi - 1) * Setup->y + yi]]
+			    & DECOR_RIGHT)) {
+			Segment_add(decorColor,
+				    X(x),
+				    Y(y),
+				    X(x),
+				    Y(y+BLOCK_SZ));
+		    }
+		}
+		if (mask & DECOR_DOWN) {
+		    if ((yi == 0)
+			? (!BIT(Setup->mode, WRAP_PLAY) ||
+			    !(decor[Setup->map_data[xi * Setup->y + Setup->y - 1]]
+				& DECOR_UP))
+			: !(decor[Setup->map_data[xi * Setup->y + (yi - 1)]]
+			    & DECOR_UP)) {
+			Segment_add(decorColor,
+				    X(x),
+				    Y(y),
+				    X(x+BLOCK_SZ),
+				    Y(y));
+		    }
+		}
+		if (mask & DECOR_RIGHT) {
+		    if (!BIT(instruments, SHOW_OUTLINE_DECOR)
+			|| ((xi == Setup->x - 1)
+			    ? (!BIT(Setup->mode, WRAP_PLAY)
+			       || !(decor[Setup->map_data[yi]]
+				    & DECOR_LEFT))
+			    : !(decor[Setup->map_data[(xi + 1) * Setup->y + yi]]
+				& DECOR_LEFT))) {
+			Segment_add(decorColor,
+				    X(x+BLOCK_SZ),
+				    Y(y),
+				    X(x+BLOCK_SZ),
+				    Y(y+BLOCK_SZ));
+		    }
+		}
+		if (mask & DECOR_UP) {
+		    if (!BIT(instruments, SHOW_OUTLINE_DECOR)
+			|| ((yi == Setup->y - 1)
+			    ? (!BIT(Setup->mode, WRAP_PLAY)
+			       || !(decor[Setup->map_data[xi * Setup->y]]
+				    & DECOR_DOWN))
+			    : !(decor[Setup->map_data[xi * Setup->y + (yi + 1)]]
+				& DECOR_DOWN))) {
+			Segment_add(decorColor,
+				    X(x),
+				    Y(y+BLOCK_SZ),
+				    X(x+BLOCK_SZ),
+				    Y(y+BLOCK_SZ));
+		    }
+		}
+		if (mask & DECOR_OPEN) {
+		    Segment_add(decorColor,
+				X(x),
+				Y(y),
+				X(x+BLOCK_SZ),
+				Y(y+BLOCK_SZ));
+		}
+		else if (mask & DECOR_CLOSED) {
+		    Segment_add(decorColor,
+				X(x),
+				Y(y+BLOCK_SZ),
+				X(x+BLOCK_SZ),
+				Y(y));
+		}
+	    }
+	    else {
+		if (mask & DECOR_OPEN) {
+		    if (mask & DECOR_BELOW) {
+			fill_top_left = x + BLOCK_SZ;
+			fill_bottom_left = x;
+			fill_top_right = fill_bottom_right = -1;
+		    } else {
+			fill_top_right = x + BLOCK_SZ;
+			fill_bottom_right = x;
+		    }
+		}
+		else if (mask & DECOR_CLOSED) {
+		    if (!(mask & DECOR_BELOW)) {
+			fill_top_left = x;
+			fill_bottom_left = x + BLOCK_SZ;
+			fill_top_right = fill_bottom_right = -1;
+		    } else {
+			fill_top_right = x;
+			fill_bottom_right = x + BLOCK_SZ;
+		    }
+		}
+		if (mask & DECOR_RIGHT) {
+		    fill_top_right = fill_bottom_right = x + BLOCK_SZ;
+		}
+		if (fill_top_left == -1) {
+		    fill_top_left = fill_bottom_left = x;
+		}
+		if (fill_top_right == -1
+		    && (i + 1 == num_vdecor || yi != vdecor_ptr[i + 1].yi)) {
+		    fill_top_right = x + BLOCK_SZ;
+		    fill_bottom_right = x + BLOCK_SZ;
+		}
+		if (fill_top_right != -1) {
+		    points[0].x = X(fill_bottom_left);
+		    points[0].y = Y(y);
+		    points[1].x = X(fill_top_left);
+		    points[1].y = Y(y + BLOCK_SZ);
+		    points[2].x = X(fill_top_right);
+		    points[2].y = Y(y + BLOCK_SZ);
+		    points[3].x = X(fill_bottom_right);
+		    points[3].y = Y(y);
+		    points[4] = points[0];
+		    rd.fillPolygon(dpy, p_draw, gc,
+				   points, 5,
+				   Convex, CoordModeOrigin);
+#if ERASE
+		    {
+			int left_x = MIN(fill_bottom_left, fill_top_left);
+			int right_x = MAX(fill_bottom_right, fill_top_right);
+			Erase_rectangle(X(left_x), Y(y + BLOCK_SZ),
+					right_x - left_x + 1, BLOCK_SZ);
+		    }
+#endif
+		    fill_top_left =
+		    fill_top_right =
+		    fill_bottom_left =
+		    fill_bottom_right = -1;
+		}
+	    }
+	}
+	if (decorTileDoit) {
+	    XSetFillStyle(dpy, gc, FillSolid);
+	}
+
+	RELEASE(vdecor_ptr, num_vdecor, max_vdecor);
+    }
+}
+
 /*
  * Draw the current player view of the map in the large viewing area.
  * This includes drawing walls, fuelstations, targets and cannons.
@@ -2457,7 +2655,7 @@ static void Paint_world(void)
 			    { 10, 0, 10 },
 			    { 10, 5, 10 }
 			};
-#define _O 	wormOffset[wormDrawCount]
+#define _O	wormOffset[wormDrawCount]
 #define ARC(_x, _y, _w)						\
 	Arc_add(RED,						\
 		X(x) + (_x),					\
@@ -2537,6 +2735,11 @@ static void Paint_world(void)
 		    /*FALLTHROUGH*/
 
 		case SETUP_SPACE_DOT:
+		case SETUP_DECOR_DOT_FILLED:
+		case SETUP_DECOR_DOT_RU:
+		case SETUP_DECOR_DOT_RD:
+		case SETUP_DECOR_DOT_LU:
+		case SETUP_DECOR_DOT_LD:
 		    Rectangle_add(BLUE,
 				  X(x + BLOCK_SZ / 2) - (map_point_size >> 1),
 				  Y(y + BLOCK_SZ / 2) - (map_point_size >> 1),
@@ -2550,6 +2753,15 @@ static void Paint_world(void)
 		    Handle_vbase(x, y, xi, yi, type);
 		    break;
 
+		case SETUP_DECOR_FILLED:
+		case SETUP_DECOR_RD:
+		case SETUP_DECOR_RU:
+		case SETUP_DECOR_LD:
+		case SETUP_DECOR_LU:
+		    if (BIT(instruments, SHOW_DECOR))
+			Handle_vdecor(x, y, xi, yi, type);
+		    break;
+		    
 		case SETUP_TARGET+0:
 		case SETUP_TARGET+1:
 		case SETUP_TARGET+2:
@@ -2560,8 +2772,8 @@ static void Paint_world(void)
 		case SETUP_TARGET+7:
 		case SETUP_TARGET+8:
 		case SETUP_TARGET+9: {
-		    int 	a1,a2,b1,b2;
-		    int 	damage;
+		    int		a1,a2,b1,b2;
+		    int		damage;
 
 		    if (Target_alive(xi, yi, &damage) != 0)
 			break;
@@ -2859,12 +3071,12 @@ void Paint_sliding_radar(void)
 
 void Paint_world_radar(void)
 {
-    int			i, xi, yi, xm, ym, xp, yp, xmoff, xioff;
+    int			i, xi, yi, xm, ym, xp, yp = 0, xmoff, xioff;
     int			type, vis, damage;
     float		xs, ys;
-    int			npoint = 0, nsegment = 0, start, end;
+    int			npoint = 0, nsegment = 0, start, end, currColor, visibleColorChange;
     const int		max = 256;
-    u_byte		visible[256];
+    u_byte		visible[256], visibleColor[256];
     XSegment		segments[256];
     XPoint		points[256];
 
@@ -2880,7 +3092,6 @@ void Paint_world_radar(void)
     } else {
 	XClearWindow(dpy, radar);
     }
-    XSetForeground(dpy, radarGC, colors[BLUE].pixel);
 
     memset(visible, 0, sizeof visible);
     visible[SETUP_FILLED] = 1;
@@ -2896,15 +3107,56 @@ void Paint_world_radar(void)
     for (i = BLUE_BIT; i < sizeof visible; i++) {
 	visible[i] = 1;
     }
+    if (BIT(instruments, SHOW_DECOR)) {
+	visible[SETUP_DECOR_FILLED] = 1;
+	visible[SETUP_DECOR_LU] = 1;
+	visible[SETUP_DECOR_RU] = 1;
+	visible[SETUP_DECOR_LD] = 1;
+	visible[SETUP_DECOR_RD] = 1;
+    }
 
+    memset(visibleColor, 0, sizeof visibleColor);
+    visibleColor[SETUP_FILLED] = 
+	visibleColor[SETUP_FILLED_NO_DRAW] =
+	visibleColor[SETUP_REC_LU] =
+	visibleColor[SETUP_REC_RU] =
+	visibleColor[SETUP_REC_LD] =
+	visibleColor[SETUP_REC_RD] =
+	visibleColor[SETUP_FUEL] = wallRadarColor;
+    for (i = 0; i < 10; i++) {
+	visibleColor[SETUP_TARGET+i] = wallRadarColor;
+    }
+    for (i = BLUE_BIT; i < sizeof visible; i++) {
+	visibleColor[i] = wallRadarColor;
+    }
+    if (BIT(instruments, SHOW_DECOR)) {
+	visibleColor[SETUP_DECOR_FILLED] =
+	    visibleColor[SETUP_DECOR_LU] = 
+	    visibleColor[SETUP_DECOR_RU] = 
+	    visibleColor[SETUP_DECOR_LD] = 
+	    visibleColor[SETUP_DECOR_RD] = decorRadarColor;
+    }
+
+    /* The following code draws the map on the radar.  Segments and
+       points arrays are use to build lists of things to be drawn.
+       Normally the segments and points are drawn when the arrays are
+       full, but now they are also drawn when the color changes.  The
+       visibleColor array is used to determine the color to be used
+       for the given visible block type.
+
+       Another (and probably better) way to do this would be use
+       different segments and points arrays for each visible color.  */
+       
     if (Setup->x >= 256) {
 	xs = (float)(256 - 1) / (Setup->x - 1);
 	ys = (float)(RadarHeight - 1) / (Setup->y - 1);
+	currColor = -1;
 	for (xi = 0; xi < Setup->x; xi++) {
 	    start = end = -1;
 	    xp = (int)(xi * xs + 0.5);
 	    xioff = xi * Setup->y;
 	    for (yi = 0; yi < Setup->y; yi++) {
+		visibleColorChange = 0;
 		type = Setup->map_data[xioff + yi];
 		if (type >= SETUP_TARGET && type < SETUP_TARGET+10)
 		    vis = (Target_alive(xi, yi, &damage) == 0);
@@ -2912,12 +3164,28 @@ void Paint_world_radar(void)
 		if (vis) {
 		    yp = (int)(yi * ys + 0.5);
 		    if (start == -1) {
+			if ((nsegment > 0 || npoint > 0) && currColor != visibleColor[type]) {
+			    if (nsegment > 0) {
+				XDrawSegments(dpy, s_radar, radarGC,
+					      segments, nsegment);
+				nsegment = 0;
+			    }
+			    if (npoint > 0) {
+				XDrawPoints(dpy, s_radar, radarGC,
+					    points, npoint, CoordModeOrigin);
+				npoint = 0;
+			    }
+			}
 			start = end = yp;
+			currColor = visibleColor[type];
+			XSetForeground(dpy, radarGC, colors[currColor].pixel);
 		    } else {
 			end = yp;
+			visibleColorChange = visibleColor[type] != currColor;
 		    }
 		}
-		if (start != -1 && (!vis || yi == Setup->y - 1)) {
+		
+		if (start != -1 && (!vis || yi == Setup->y - 1 || visibleColorChange)) {
 		    if (end > start) {
 			segments[nsegment].x1 = xp;
 			segments[nsegment].y1 = RadarHeight - 1 - start;
@@ -2941,17 +3209,35 @@ void Paint_world_radar(void)
 		    }
 		    start = end = -1;
 		}
+
+		if (visibleColorChange) {
+		    if (nsegment > 0) {
+			XDrawSegments(dpy, s_radar, radarGC,
+				      segments, nsegment);
+			nsegment = 0;
+		    }
+		    if (npoint > 0) {
+			XDrawPoints(dpy, s_radar, radarGC,
+				    points, npoint, CoordModeOrigin);
+			npoint = 0;
+		    }
+		    start = end = yp;
+		    currColor = visibleColor[type];
+		    XSetForeground(dpy, radarGC, colors[currColor].pixel);
+		}
 	    }
 	}
     } else {
 	xs = (float)(Setup->x - 1) / (256 - 1);
 	ys = (float)(Setup->y - 1) / (RadarHeight - 1);
+	currColor = -1;
 	for (xi = 0; xi < 256; xi++) {
 	    xm = (int)(xi * xs + 0.5);
 	    xmoff = xm * Setup->y;
 	    start = end = -1;
 	    xp = xi;
 	    for (yi = 0; yi < RadarHeight; yi++) {
+		visibleColorChange = 0;
 		ym = (int)(yi * ys + 0.5);
 		type = Setup->map_data[xmoff + ym];
 		vis = visible[type];
@@ -2960,12 +3246,28 @@ void Paint_world_radar(void)
 		if (vis) {
 		    yp = yi;
 		    if (start == -1) {
+			if ((nsegment > 0 || npoint > 0) && currColor != visibleColor[type]) {
+			    if (nsegment > 0) {
+				XDrawSegments(dpy, s_radar, radarGC,
+					      segments, nsegment);
+				nsegment = 0;
+			    }
+			    if (npoint > 0) {
+				XDrawPoints(dpy, s_radar, radarGC,
+					    points, npoint, CoordModeOrigin);
+				npoint = 0;
+			    }
+			}
 			start = end = yp;
+			currColor = visibleColor[type];
+			XSetForeground(dpy, radarGC, colors[currColor].pixel);
 		    } else {
 			end = yp;
+			visibleColorChange = visibleColor[type] != currColor;
 		    }
 		}
-		if (start != -1 && (!vis || yi == RadarHeight - 1)) {
+		
+		if (start != -1 && (!vis || yi == RadarHeight - 1 || visibleColorChange)) {
 		    if (end > start) {
 			segments[nsegment].x1 = xp;
 			segments[nsegment].y1 = RadarHeight - 1 - start;
@@ -2988,6 +3290,22 @@ void Paint_world_radar(void)
 			}
 		    }
 		    start = end = -1;
+		}
+
+		if (visibleColorChange) {
+		    if (nsegment > 0) {
+			XDrawSegments(dpy, s_radar, radarGC,
+				      segments, nsegment);
+			nsegment = 0;
+		    }
+		    if (npoint > 0) {
+			XDrawPoints(dpy, s_radar, radarGC,
+				    points, npoint, CoordModeOrigin);
+			npoint = 0;
+		    }
+		    start = end = yp;
+		    currColor = visibleColor[type];
+		    XSetForeground(dpy, radarGC, colors[currColor].pixel);
 		}
 	    }
 	}
@@ -3097,19 +3415,6 @@ void Paint_frame(void)
     }
     loops = end_loops;
 
-#ifdef SCROLL
-    /*
-     * Scroll a message in the window title.
-     */
-    if ((loops % SCROLL_DELAY) == 0) {
-	if (++scroll_i >= LONG_MAX)
-	    scroll_i = 0;
-	XStoreName(dpy, top,
-		   scroll(scroll,
-			  scroll_i % scroll_len,
-			  SCROLL_LEN));
-    }
-#else
     /*
      * Switch between two different window titles.
      */
@@ -3121,7 +3426,6 @@ void Paint_frame(void)
 	    XStoreName(dpy, top, TITLE);
 
     }
-#endif
 
     rd.newFrame();
 
@@ -3149,16 +3453,18 @@ void Paint_frame(void)
 	Segment_start();
 
 	Paint_vfuel();
+	Paint_vdecor();
 	Paint_vcannon();
 	Paint_vbase();
 	Paint_shots();
-	Paint_ships();
 
 	Rectangle_end();
 	Segment_end();
 
 	Rectangle_start();
 	Segment_start();
+
+	Paint_ships();
 	Paint_meters();
 	Paint_HUD();
 
@@ -3290,6 +3596,7 @@ int Handle_start(long server_loops)
     num_vcannon = 0;
     num_vfuel = 0;
     num_vbase = 0;
+    num_vdecor = 0;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	num_debris[i] = 0;
     }
@@ -3518,26 +3825,26 @@ int Handle_item(int x, int y, int type)
     return 0;
 }
 
-#define HANDLE_DEBRIS(type, p, n) \
-    if (n > max) {						\
+#define HANDLE_DEBRIS(_type, _p, _n) \
+    if (_n > max) {						\
 	if (max == 0) {						\
-	    ptr = (debris_t *) malloc (n * sizeof(*ptr));	\
+	    ptr = (debris_t *)malloc(n * sizeof(*ptr));		\
 	} else {						\
-	    ptr = (debris_t *) realloc (ptr, n * sizeof(*ptr));	\
+	    ptr = (debris_t *)realloc(ptr, _n * sizeof(*ptr));	\
 	}							\
 	if (ptr == NULL) {					\
 	    error("No memory for debris");			\
 	    num = max = 0;					\
 	    return -1;						\
 	}							\
-	max = n;						\
+	max = _n;						\
     }								\
-    else if (n <= 0) {						\
-	printf("debris %d < 0\n", n);				\
+    else if (_n <= 0) {						\
+	printf("debris %d < 0\n", _n);				\
 	return 0;						\
     }								\
-    num = n;							\
-    memcpy(ptr, p, n * sizeof(*ptr));				\
+    num = _n;							\
+    memcpy(ptr, _p, _n * sizeof(*ptr));				\
     return 0;
 
 
@@ -3659,6 +3966,19 @@ int Handle_vbase(int x, int y, int xi, int yi, int type)
     return 0;
 }
 
+int Handle_vdecor(int x, int y, int xi, int yi, int type)
+{
+    vdecor_t	t;
+
+    t.x = x;
+    t.y = y;
+    t.xi = xi;
+    t.yi = yi;
+    t.type = type;
+    HANDLE(vdecor_t, vdecor_ptr, num_vdecor, max_vdecor, t);
+    return 0;
+}
+		   
 #define BORDER			6
 #define SCORE_LIST_WINDOW_WIDTH	256
 
@@ -3840,6 +4160,8 @@ static void Paint_clock(int redraw)
     prev_loops = loops;
     time(&t);
     m = localtime(&t);
+
+    /* round seconds up to next minute. */
     minute = m->tm_min;
     hour = m->tm_hour;
     if (minute++ == 59) {
@@ -3848,7 +4170,17 @@ static void Paint_clock(int redraw)
 	    hour = 0;
 	}
     }
-    sprintf(buf, "%02d:%02d", hour, minute);
+    if (!BIT(instruments, SHOW_CLOCK_AMPM_FORMAT)) {
+	sprintf(buf, "%02d:%02d", hour, minute);
+    } else {
+	char tmpchar = 'A';
+	/* strftime(buf, sizeof(buf), "%l:%M%p", m); */
+	if (m->tm_hour > 12){
+	    tmpchar = 'P';
+	    m->tm_hour %= 12;
+	}
+	sprintf(buf, "%2d:%02d%cM", m->tm_hour, m->tm_min, tmpchar);
+    }
     width = XTextWidth(scoreListFont, buf, strlen(buf));
     XSetForeground(dpy, scoreListGC, colors[windowColor].pixel);
     XFillRectangle(dpy, players, scoreListGC,
@@ -3856,7 +4188,7 @@ static void Paint_clock(int redraw)
 		   width + 2 * border, height);
     ShadowDrawString(dpy, players, scoreListGC,
 		     256 - (width + border),
-		     scoreListFont->ascent + 2,
+		     scoreListFont->ascent + 4,
 		     buf,
 		     colors[WHITE].pixel,
 		     colors[BLACK].pixel);

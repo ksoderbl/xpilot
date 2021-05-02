@@ -1,4 +1,4 @@
-/* $Id: client.c,v 3.69 1995/01/29 00:03:17 bert Exp $
+/* $Id: client.c,v 3.75 1995/12/04 14:47:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -124,10 +124,15 @@ char	realname[MAX_CHARS];	/* Real name of player */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
 int     toggle_shield;          /* Are shields toggled by a press? */
-int     shields;                /* When shields are considered up */
+int     shields = 1;            /* When shields are considered up */
+
+int     auto_shield = 1;        /* shield drops for fire */
 
 int	maxFPS;			/* Client's own FPS */
 int	oldMaxFPS;
+
+byte	lose_item;		/* index for dropping owned item */
+int	lose_item_active;	/* one of the lose keys is pressed */
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -393,6 +398,31 @@ int Check_index_by_pos(int x, int y)
 }
 
 /*
+ * Convert a `space' map block into a dot.
+ */
+static void Map_make_dot(unsigned char *data)
+{
+    if (*data == SETUP_SPACE) {
+	*data = SETUP_SPACE_DOT;
+    }
+    else if (*data == SETUP_DECOR_FILLED) {
+	*data = SETUP_DECOR_DOT_FILLED;
+    }
+    else if (*data == SETUP_DECOR_RU) {
+	*data = SETUP_DECOR_DOT_RU;
+    }
+    else if (*data == SETUP_DECOR_RD) {
+	*data = SETUP_DECOR_DOT_RD;
+    }
+    else if (*data == SETUP_DECOR_LU) {
+	*data = SETUP_DECOR_DOT_LU;
+    }
+    else if (*data == SETUP_DECOR_LD) {
+	*data = SETUP_DECOR_DOT_LD;
+    }
+}
+
+/*
  * Optimize the drawing of all blue space dots by converting
  * certain map objects into a specialised form of their type.
  */
@@ -402,14 +432,56 @@ void Map_dots(void)
 			x,
 			y,
 			start;
+    unsigned char	dot[256];
+
+    /*
+     * Lookup table to recognize dots.
+     */
+    memset(dot, 0, sizeof dot);
+    dot[SETUP_SPACE_DOT] = 1;
+    dot[SETUP_DECOR_DOT_FILLED] = 1;
+    dot[SETUP_DECOR_DOT_RU] = 1;
+    dot[SETUP_DECOR_DOT_RD] = 1;
+    dot[SETUP_DECOR_DOT_LU] = 1;
+    dot[SETUP_DECOR_DOT_LD] = 1;
 
     /*
      * Restore the map to unoptimized form.
      */
     for (i = Setup->x * Setup->y; i-- > 0; ) {
-	if (Setup->map_data[i] == SETUP_SPACE_DOT) {
-	    Setup->map_data[i] = SETUP_SPACE;
+	if (dot[Setup->map_data[i]]) {
+	    if (Setup->map_data[i] == SETUP_SPACE_DOT) {
+		Setup->map_data[i] = SETUP_SPACE;
+	    }
+	    else if (Setup->map_data[i] == SETUP_DECOR_DOT_FILLED) {
+		Setup->map_data[i] = SETUP_DECOR_FILLED;
+	    }
+	    else if (Setup->map_data[i] == SETUP_DECOR_DOT_RU) {
+		Setup->map_data[i] = SETUP_DECOR_RU;
+	    }
+	    else if (Setup->map_data[i] == SETUP_DECOR_DOT_RD) {
+		Setup->map_data[i] = SETUP_DECOR_RD;
+	    }
+	    else if (Setup->map_data[i] == SETUP_DECOR_DOT_LU) {
+		Setup->map_data[i] = SETUP_DECOR_LU;
+	    }
+	    else if (Setup->map_data[i] == SETUP_DECOR_DOT_LD) {
+		Setup->map_data[i] = SETUP_DECOR_LD;
+	    }
 	}
+    }
+
+    /*
+     * Lookup table to test for map data which can be turned into a dot.
+     */
+    memset(dot, 0, sizeof dot);
+    dot[SETUP_SPACE] = 1;
+    if (!BIT(instruments, SHOW_DECOR)) {
+	dot[SETUP_DECOR_FILLED] = 1;
+	dot[SETUP_DECOR_RU] = 1;
+	dot[SETUP_DECOR_RD] = 1;
+	dot[SETUP_DECOR_LU] = 1;
+	dot[SETUP_DECOR_LD] = 1;
     }
 
     /*
@@ -418,13 +490,13 @@ void Map_dots(void)
     if (map_point_size > 0) {
 	if (BIT(Setup->mode, WRAP_PLAY)) {
 	    for (x = 0; x < Setup->x; x++) {
-		if (Setup->map_data[x * Setup->y] == SETUP_SPACE) {
-		    Setup->map_data[x * Setup->y] = SETUP_SPACE_DOT;
+		if (dot[Setup->map_data[x * Setup->y]]) {
+		    Map_make_dot(&Setup->map_data[x * Setup->y]);
 		}
 	    }
 	    for (y = 0; y < Setup->y; y++) {
-		if (Setup->map_data[y] == SETUP_SPACE) {
-		    Setup->map_data[y] = SETUP_SPACE_DOT;
+		if (dot[Setup->map_data[y]]) {
+		    Map_make_dot(&Setup->map_data[y]);
 		}
 	    }
 	    start = map_point_distance;
@@ -434,8 +506,8 @@ void Map_dots(void)
 	if (map_point_distance > 0) {
 	    for (x = start; x < Setup->x; x += map_point_distance) {
 		for (y = start; y < Setup->y; y += map_point_distance) {
-		    if (Setup->map_data[x * Setup->y + y] == SETUP_SPACE) {
-			Setup->map_data[x * Setup->y + y] = SETUP_SPACE_DOT;
+		    if (dot[Setup->map_data[x * Setup->y + y]]) {
+			Map_make_dot(&Setup->map_data[x * Setup->y + y]);
 		    }
 		}
 	    }
@@ -976,6 +1048,7 @@ int Handle_player(int id, int player_team, int mychar, char *player_name,
     other->host[sizeof(other->host) - 1] = '\0';
     scoresChanged = 1;
     other->ship = Convert_shape_str(shape);
+    Calculate_shield_radius(other->ship);
 
     return 0;
 }
@@ -1287,7 +1360,7 @@ int Client_setup(void)
 
     RadarHeight = (int)((256.0/Setup->x) * Setup->y + 0.5);
 
-    if (Init_window() == -1) {
+    if (Init_windows() == -1) {
 	return -1;
     }
     if (Alloc_msgs() == -1) {

@@ -1,4 +1,4 @@
-/* $Id: widget.c,v 3.20 1995/01/24 17:27:40 bert Exp $
+/* $Id: widget.c,v 3.22 1995/11/12 22:11:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -1927,6 +1927,29 @@ static int Widget_create_slider(int parent_desc, widget_type_t slider_type,
     return widget_desc;
 }
 
+static int Widget_viewer_save_callback(int widget_desc, void *data,
+					char **strptr)
+{
+    int			popup_desc = (int) data;
+    widget_t		*popup = Widget_pointer(popup_desc);
+    widget_form_t	*formw;
+    int			viewer_desc;
+    widget_t		*viewer_widget;
+    widget_viewer_t	*viewer_sub;
+    FILE		*fp;
+
+    formw = (widget_form_t *)popup->sub;
+    viewer_desc = formw->children[0];
+    viewer_widget = Widget_pointer(viewer_desc);
+    viewer_sub = (widget_viewer_t *) viewer_widget->sub;
+    fp = fopen("xpilot.motd", "w");
+    if (fp) {
+	fwrite(viewer_sub->buf, 1, viewer_sub->len, fp);
+	fclose(fp);
+    }
+    return 0;
+}
+
 static int Widget_viewer_close_callback(int widget_desc, void *data,
 					char **strptr)
 {
@@ -2042,9 +2065,13 @@ static void Widget_resize_viewer(XEvent *event, int ind)
     widget_viewer_t	*viewer_sub = (widget_viewer_t *)viewer_widget->sub;
     XFontStruct		*font = viewer_sub->font;
     const int
+			save_width = 2*8 + XTextWidth(font, "SAVE", 5),
+			save_height = 6 + font->ascent + font->descent,
+			save_x_offset = width / 3 - save_width / 2,
+			save_y_offset = 5,
 			close_width = 2*8 + XTextWidth(font, "CLOSE", 5),
 			close_height = 6 + font->ascent + font->descent,
-			close_x_offset = (width - close_width) / 2,
+			close_x_offset = 2 * width / 3 - close_width / 2,
 			close_y_offset = 5,
 			close_spaced_height = close_height + 2*close_y_offset,
 			hori_slider_height = 20,
@@ -2070,8 +2097,11 @@ static void Widget_resize_viewer(XEvent *event, int ind)
     Widget_resize(formw->children[2], vert_slider_width, vert_slider_height);
     XMoveWindow(dpy, Widget_pointer(formw->children[2])->window,
 		vert_slider_x, vert_slider_y);
-    Widget_resize(formw->children[3], close_width, close_height);
+    Widget_resize(formw->children[3], save_width, save_height);
     XMoveWindow(dpy, Widget_pointer(formw->children[3])->window,
+		save_x_offset, viewer_height + save_y_offset);
+    Widget_resize(formw->children[4], close_width, close_height);
+    XMoveWindow(dpy, Widget_pointer(formw->children[4])->window,
 		close_x_offset, viewer_height + close_y_offset);
     popup->width = width;
     popup->height = height;
@@ -2088,11 +2118,15 @@ int Widget_create_viewer(const char *buf, int len,
 			 XFontStruct *font)
 {
     const int
+			save_width = 2*8 + XTextWidth(font, "SAVE", 5),
+			save_height = 6 + font->ascent + font->descent,
+			save_x_offset = width / 3 - save_width / 2,
+			save_y_offset = 5,
 			close_width = 2*8 + XTextWidth(font, "CLOSE", 5),
 			close_height = 6 + font->ascent + font->descent,
-			close_x_offset = (width - close_width) / 2,
+			close_x_offset = 2 * width / 3 - close_width / 2,
 			close_y_offset = 5,
-			close_spaced_height = close_height + 2*close_y_offset,
+			close_spaced_height = close_height + 2 * close_y_offset,
 			hori_slider_height = 20,
 			vert_slider_width = 20,
 			hori_slider_width = width - vert_slider_width,
@@ -2106,10 +2140,7 @@ int Widget_create_viewer(const char *buf, int len,
 			vert_slider_x = width - vert_slider_width,
 			vert_slider_y = 0;
     int			popup_desc,
-			viewer_desc,
-			hori_slider_desc,
-			vert_slider_desc,
-			close_button_desc;
+			viewer_desc;
     widget_t		*popup_widget;
     widget_viewer_t	*viewerw;
     Window		window;
@@ -2135,6 +2166,7 @@ int Widget_create_viewer(const char *buf, int len,
     viewerw->len = len;
     viewerw->vert_slider_desc = NO_WIDGET;
     viewerw->hori_slider_desc = NO_WIDGET;
+    viewerw->save_button_desc = NO_WIDGET;
     viewerw->close_button_desc = NO_WIDGET;
     viewerw->visible_x = 0;
     viewerw->visible_y = 0;
@@ -2172,53 +2204,64 @@ int Widget_create_viewer(const char *buf, int len,
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
     }
-    hori_slider_desc = Widget_create_slider(popup_desc,
-					    WIDGET_SLIDER_HORI,
-					    hori_slider_x,
-					    hori_slider_y,
-					    hori_slider_width,
-					    hori_slider_height,
-					    0,
-					    viewer_desc);
-    if (hori_slider_desc == NO_WIDGET) {
+    viewerw->hori_slider_desc = Widget_create_slider(popup_desc,
+						     WIDGET_SLIDER_HORI,
+						     hori_slider_x,
+						     hori_slider_y,
+						     hori_slider_width,
+						     hori_slider_height,
+						     0,
+						     viewer_desc);
+    if (viewerw->hori_slider_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
     }
-    Widget_window_gravity(Widget_pointer(hori_slider_desc)->window,
+    Widget_window_gravity(Widget_pointer(viewerw->hori_slider_desc)->window,
 			  SouthWestGravity);
-    vert_slider_desc = Widget_create_slider(popup_desc,
-					    WIDGET_SLIDER_VERT,
-					    vert_slider_x,
-					    vert_slider_y,
-					    vert_slider_width,
-					    vert_slider_height,
-					    0,
-					    viewer_desc);
-    if (vert_slider_desc == NO_WIDGET) {
+    viewerw->vert_slider_desc = Widget_create_slider(popup_desc,
+						     WIDGET_SLIDER_VERT,
+						     vert_slider_x,
+						     vert_slider_y,
+						     vert_slider_width,
+						     vert_slider_height,
+						     0,
+						     viewer_desc);
+    if (viewerw->vert_slider_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
     }
-    Widget_window_gravity(Widget_pointer(vert_slider_desc)->window,
+    Widget_window_gravity(Widget_pointer(viewerw->vert_slider_desc)->window,
 			  NorthEastGravity);
-    close_button_desc = Widget_create_activate(popup_desc,
-					       close_x_offset,
-					       viewer_height + close_y_offset,
-					       close_width,
-					       close_height,
-					       0,
-					       "CLOSE",
-					       Widget_viewer_close_callback,
-					       (void *)popup_desc);
-    if (close_button_desc == NO_WIDGET) {
+    viewerw->save_button_desc = Widget_create_activate(popup_desc,
+						       save_x_offset,
+						       viewer_height + save_y_offset,
+						       save_width,
+						       save_height,
+						       0,
+						       "SAVE",
+						       Widget_viewer_save_callback,
+						       (void *)popup_desc);
+    if (viewerw->save_button_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
     }
-    Widget_window_gravity(Widget_pointer(close_button_desc)->window,
+    Widget_window_gravity(Widget_pointer(viewerw->save_button_desc)->window,
 			  SouthGravity);
-
-    viewerw->vert_slider_desc = vert_slider_desc;
-    viewerw->hori_slider_desc = hori_slider_desc;
-    viewerw->close_button_desc = close_button_desc;
+    viewerw->close_button_desc = Widget_create_activate(popup_desc,
+							close_x_offset,
+							viewer_height + close_y_offset,
+							close_width,
+							close_height,
+							0,
+							"CLOSE",
+							Widget_viewer_close_callback,
+							(void *)popup_desc);
+    if (viewerw->close_button_desc == NO_WIDGET) {
+	Widget_destroy(popup_desc);
+	return NO_WIDGET;
+    }
+    Widget_window_gravity(Widget_pointer(viewerw->close_button_desc)->window,
+			  SouthGravity);
 
     Widget_map_sub(popup_desc);
     Widget_map(popup_desc);

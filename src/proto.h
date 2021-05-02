@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 3.47 1995/01/11 19:51:18 bert Exp $
+/* $Id: proto.h,v 3.52 1995/12/04 14:47:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -33,11 +33,14 @@
  */
 extern void Free_cells(void);
 extern void Alloc_cells(void);
-extern void Cell_objects_init(void);
-extern void Cell_objects_get(int x, int y, int r, object ***list, int *count);
 extern void Check_collision(void);
 extern int wormXY(int x, int y);
 extern void SCORE(int, int, int, int, char *);
+
+/*
+ * Prototypes for walls.c
+ */
+extern void Walls_init(void);
 extern void Move_init(void);
 extern void Move_object(int ind);
 extern void Move_player(int ind);
@@ -53,6 +56,7 @@ extern void Turn_player(int ind);
  */
 extern int Handle_keyboard(int);
 extern void Pause_player(int ind, int onoff);
+extern int Player_lock_closest(int ind, int next);
 
 /*
  * Prototypes for map.c
@@ -122,6 +126,7 @@ extern void Make_treasure_ball(int treasure);
 extern int Punish_team(int ind, int t_destroyed, int t_target);
 extern void Delete_shot(int ind);
 extern void do_transporter(player *pl);
+extern void do_lose_item(player *pl);
 extern void Move_smart_shot(int ind);
 extern void Move_mine(int ind);
 extern void Make_debris(
@@ -190,12 +195,9 @@ extern void Set_misc_item_limits(void);
  * Prototypes for server.c
  */
 extern int main(int argc, char *argv[]);
-extern void Main_Loop(void);
 extern void End_game(void);
 extern void Contact(void);
-extern void Handle_signal(int sig_no);
 extern void Log_game(char *heading);
-extern void Server_info(char *, unsigned);
 extern void Game_Over(void);
 extern void Send_meta_server(int change);
 

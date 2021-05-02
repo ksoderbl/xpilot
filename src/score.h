@@ -1,4 +1,4 @@
-/* $Id: score.h,v 3.22 1995/01/11 19:57:08 bert Exp $
+/* $Id: score.h,v 3.23 1995/03/04 19:36:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -42,7 +42,7 @@
 
 #define PTS_PR_PL_SHOT	    	-2    	/* Points if you get shot by a player */
 
-#define CANNON_SCORE	    	-500
+#define CANNON_SCORE	    	-1436
 #define WALL_SCORE	    	2000
 
 #define RATE_SIZE	    	20

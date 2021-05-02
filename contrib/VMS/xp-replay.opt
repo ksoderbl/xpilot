@@ -1,0 +1,7 @@
+buttons.obj
+xp-replay.obj
+gettimeofday.obj
+sys$share:decc$shr/share
+sys$share:ucx$ipc_shr/share
+sys$share:decw$xlibshr/share
+sys$share:decw$xtshr/share

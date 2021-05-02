@@ -1,0 +1,12 @@
+/* $Id: Imakefile,v 3.6 1995/07/13 12:33:07 bjoerns Exp $ */
+
+#include "Local.config"
+
+#define PassCDebugFlags 'CDEBUGFLAGS=$(CDEBUGFLAGS)'
+
+SUBDIRS = man/
+
+MakeSubdirs($(SUBDIRS))
+CleanSubdirs($(SUBDIRS))
+MakefileSubdirs($(SUBDIRS))
+InstallManSubdirs($(SUBDIRS))

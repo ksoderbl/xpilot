@@ -1,4 +1,4 @@
-/* $Id: play.c,v 3.113 1995/02/11 17:13:54 bert Exp $
+/* $Id: play.c,v 3.124 1995/11/30 21:48:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -40,7 +40,7 @@ char play_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.113 1995/02/11 17:13:54 bert Exp $";
+    "@(#)$Id: play.c,v 3.124 1995/11/30 21:48:05 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -268,7 +268,7 @@ static void Item_update_flags(player *pl)
     }
 }
 
-/* 
+/*
  * Player loses some items after some event (collision, bounce).
  * The `prob' parameter gives the chance that items are lost
  * and, if they are lost, what percentage.
@@ -336,18 +336,43 @@ void Place_item(int item, player *pl)
 			vx, vy;
     item_concentrator_t	*con;
 
+    if (NumObjs >= MAX_TOTAL_SHOTS) {
+	if (pl && !BIT(pl->status, KILLED)) {
+	    pl->item[item]--;
+	}
+	return;
+    }
 
     if (pl) {
-	num_lose = pl->item[item] - World.items[item].initial;
-	if (num_lose <= 0) {
-	    /*NOTREACHED*/
-	    error("BUG: Place_item");
-	    return;
+	if (BIT(pl->status, KILLED)) {
+	    num_lose = pl->item[item] - World.items[item].initial;
+	    if (num_lose <= 0) {
+		return;
+	    }
+	    pl->item[item] -= num_lose;
+	    num_per_pack = (int)(num_lose * dropItemOnKillProb);
+	    if (num_per_pack < World.items[item].min_per_pack) {
+		return;
+	    }
 	}
-	pl->item[item] -= num_lose;
-	num_per_pack = (int)(num_lose * dropItemOnKillProb);
-	if (num_per_pack < World.items[item].min_per_pack) {
-	    return;
+	else {
+	    num_lose = pl->item[item];
+	    if (num_lose <= 0) {
+		return;
+	    }
+	    if (World.items[item].min_per_pack == World.items[item].max_per_pack) {
+		num_per_pack = World.items[item].max_per_pack;
+	    } else {
+		num_per_pack = World.items[item].min_per_pack
+			     + rand () % (1 + World.items[item].max_per_pack
+					    - World.items[item].min_per_pack);
+	    }
+	    if (num_per_pack > num_lose) {
+		num_per_pack = num_lose;
+	    } else {
+		num_lose = num_per_pack;
+	    }
+	    pl->item[item] -= num_lose;
 	}
     } else {
 	if (World.items[item].min_per_pack == World.items[item].max_per_pack) {
@@ -359,15 +384,44 @@ void Place_item(int item, player *pl)
 	}
     }
 
-    if (NumObjs >= MAX_TOTAL_SHOTS)
-	return;
-
     if (pl) {
 	grav = GRAVITY;
 	fx = pl->prevpos.x;
 	fy = pl->prevpos.y;
+	if (!BIT(pl->status, KILLED)) {
+	    /*
+	     * Player is dropping an item on purpose.
+	     * Give the item some offset so that the
+	     * player won't immediately pick it up again.
+	     */
+	    if (pl->vel.x >= 0)
+		fx -= (BLOCK_SZ + (rand() & 0x07));
+	    else
+		fx += (BLOCK_SZ + (rand() & 0x07));
+	    if (pl->vel.y >= 0)
+		fy -= (BLOCK_SZ + (rand() & 0x07));
+	    else
+		fy += (BLOCK_SZ + (rand() & 0x07));
+	    if (fx < 0)
+		fx += World.width;
+	    else if (fx >= World.width)
+		fx -= World.width;
+	    if (fy < 0)
+		fy += World.height;
+	    else if (fy >= World.height)
+		fy -= World.height;
+	}
 	x = fx / BLOCK_SZ;
 	y = fy / BLOCK_SZ;
+	if (!BIT(1U << World.block[x][y], SPACE_BIT | BASE_BIT | WORMHOLE_BIT |
+					  POS_GRAV_BIT | NEG_GRAV_BIT |
+					  CWISE_GRAV_BIT | ACWISE_GRAV_BIT |
+					  CHECK_BIT | DECOR_FILLED_BIT |
+					  DECOR_LU_BIT | DECOR_LD_BIT |
+					  DECOR_RU_BIT | DECOR_RD_BIT |
+					  ITEM_CONCENTRATOR_BIT)) {
+	    return;
+	}
     } else {
 	if (rfrac() < movingItemProb) {
 	    grav = GRAVITY;
@@ -417,17 +471,21 @@ void Place_item(int item, player *pl)
 	    }
 	}
     }
+    vx = vy = 0;
     if (grav) {
-	vx = (rand()&7)-3;
-	vy = (rand()&7)-3;
 	if (pl) {
 	    vx += pl->vel.x;
 	    vy += pl->vel.y;
+	    if (!BIT(pl->status, KILLED)) {
+		vx += (rand()&7)-3;
+		vy += (rand()&7)-3;
+	    }
 	} else {
-	    vy -= Gravity * 12;
+	    vx -= Gravity * World.gravity[x][y].x;
+	    vy -= Gravity * World.gravity[x][y].y;
+	    vx += (rand()&7)-3;
+	    vy += (rand()&7)-3;
 	}
-    } else {
-	vx = vy = 0.0;
     }
 
     obj = Obj[NumObjs++];
@@ -472,13 +530,6 @@ void Throw_items(player *pl)
 	    } while (remain > 0 && remain < num_items_to_throw);
 	}
     }
-
-    /*
-     * Would it be nice if Tanks could be thrown?
-     */
-    /*
-     * Yes, if they are thrown as tank items.
-     */
 
     Item_update_flags(pl);
 }
@@ -1069,6 +1120,38 @@ void Fire_right_shot(int ind, int type, int dir, int gun)
 
 }
 
+void Fire_left_rshot(int ind, int type, int dir, int gun)
+{
+    player *pl = Players[ind];
+    float x,
+	  y;
+
+    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD))
+	return;
+
+    x = pl->pos.x + pl->ship->l_rgun[gun][pl->dir].x;
+    y = pl->pos.y + pl->ship->l_rgun[gun][pl->dir].y;
+
+    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+
+}
+
+void Fire_right_rshot(int ind, int type, int dir, int gun)
+{
+    player *pl = Players[ind];
+    float x,
+	  y;
+
+    if (pl->shots >= pl->shot_max || BIT(pl->used, OBJ_SHIELD))
+	return;
+
+    x = pl->pos.x + pl->ship->r_rgun[gun][pl->dir].x;
+    y = pl->pos.y + pl->ship->r_rgun[gun][pl->dir].y;
+
+    Fire_general_shot(ind, x, y, type, dir, pl->shot_speed, pl->mods);
+
+}
+
 void Fire_general_shot(int ind, float x, float y, int type, int dir,
 		       float speed, modifiers mods)
 {
@@ -1587,9 +1670,13 @@ void Fire_normal_shots(int ind)
     player		*pl = Players[ind];
     int			i, shot_angle;
 
+    if (loops < pl->shot_time + fireRepeatRate) {
+	return;
+    }
+    pl->shot_time = loops;
+
     shot_angle = MODS_SPREAD_MAX - pl->mods.spread;
 
-    pl->shot_time = loops;
     Fire_main_shot(ind, OBJ_SHOT, pl->dir);
     for (i = 0; i < pl->item[ITEM_WIDEANGLE]; i++) {
 	if (pl->ship->num_l_gun > 0) {
@@ -1610,9 +1697,34 @@ void Fire_normal_shots(int ind)
 	}
     }
     for (i = 0; i < pl->item[ITEM_REARSHOT]; i++) {
-	Fire_shot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
-		       + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
-		       RES));
+	if ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) < 0) {
+	    if (pl->ship->num_l_rgun > 0) {
+		Fire_left_rshot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
+		    + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
+			RES), (i - (pl->item[ITEM_REARSHOT] + 1) / 2) % pl->ship->num_l_rgun);
+	    }
+	    else {
+		Fire_shot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
+		    + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
+			RES));
+	    }
+	}
+	if ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) > 0) {
+	    if (pl->ship->num_r_rgun > 0) {
+		Fire_right_rshot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
+		    + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
+			RES), (pl->item[ITEM_REARSHOT] / 2 - i - 1) % pl->ship->num_r_rgun);
+	    }
+	    else {
+		Fire_shot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
+		    + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
+			RES));
+	    }
+	}
+	if ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) == 0)
+	     Fire_shot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
+		+ ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
+			RES));
     }
 }
 
@@ -1746,7 +1858,7 @@ void Delete_shot(int ind)
 	     *   num_modv /= (shot->mods.mini + 1);
 	     * triggers a bug in HP C A.09.19.
 	     */
-	    num_modv = num_modv / ((float)shot->mods.mini + 1.0f);
+	    num_modv = num_modv / ((float)(unsigned)shot->mods.mini + 1.0f);
 	}
 
 	if (BIT(shot->mods.nuclear, NUCLEAR)) {
@@ -1792,8 +1904,11 @@ void Delete_shot(int ind)
 	    || BIT(shot->mods.warhead, CLUSTER))
 	    break;
 	pl = Players[GetInd[shot->id]];
-	if (shot->type == OBJ_SHOT)
-	    pl->shots--;
+	if (shot->type == OBJ_SHOT) {
+	    if (--pl->shots == 0) {
+		pl->shots = 0;
+	    }
+	}
 	break;
 
 	/* Special items. */
@@ -2064,6 +2179,30 @@ void do_transporter(player *pl)
     Set_message(msg);
 }
 
+void do_lose_item(player *pl)
+{
+    int item = pl->lose_item;
+
+    if (item < 0 || item >= NUM_ITEMS) {
+	error("BUG: do_lose_item %d", item);
+	return;
+    }
+    if (BIT(1U << pl->lose_item, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+	return;
+    }
+    if (pl->item[item] <= 0) {
+	return;
+    }
+
+    if (loseItemDestroys == false) {
+	Place_item(item, pl);
+    }
+    else {
+	pl->item[item]--;
+    }
+
+    Item_update_flags(pl);
+}
 
 #define CONFUSED_UPDATE_GRANULARITY	10
 #define CONFUSED_TIME			3
@@ -2291,6 +2430,18 @@ void Fire_ecm(int ind)
 
 void Move_ball(int ind)
 {
+#ifdef ORIGINAL_BALL
+
+    /*
+     * This is the original ball code from XPilot versions 2.0 till 3.3.1.
+     * The `feature' which some people got dissatisfied with
+     * is that trying to connect to a fast moving ball may result
+     * in being launched with high speed into a wall.
+     * Some like that feature reasoning that making everything
+     * easy is boring.  Hence keeping the old code around.
+     * It can be enabled by adding -DORIGINAL_BALL to the compilation flags.
+     */
+
     object		*ball = Obj[ind];
     player		*pl = Players[ GetInd[ball->id] ];
     vector		F;
@@ -2317,6 +2468,104 @@ void Move_ball(int ind)
     ball->vel.y += F.y/ball->mass;
 
     ball->length = l;
+
+#else	/* ORIGINAL_BALL */
+
+    /*
+     * The new ball movement code since XPilot version 3.4.0 as made
+     * by Bretton Wade.  The code was submitted in context diff format
+     * by Mark Boyns.  Here is a an excerpt from a post in
+     * rec.games.computer.xpilot by Bretton Wade dated 27 Jun 1995:
+     *
+     *     If I'm not mistaken (not having looked very closely at the code
+     *     because I wasn't sure what it was trying to do), the original move_ball
+     *     routine was trying to model a Hook's law spring, but squared the
+     *     deformation term, which would lead to exagerated behavior as the spring
+     *     stretched too far. Not really a divide by zero, but effectively producing
+     *     large numbers.
+     *
+     *     When I coded up the spring myself, I found that I could recreate the
+     *     effect by using a VERY strong spring. This can be defeated, however, by
+     *     damping. Specifically, If you compute the critical damping factor, then
+     *     you could have the cable always be the correct length. This makes me
+     *     wonder how to decide when the cable snaps.
+     *
+     *     I chose a relatively strong spring, and a small damping factor, to make
+     *     for a nice realistic bounce when you grab at the treasure. It also gives a
+     *     fairley close approximation to the "normal" feel of the treasure.
+     *
+     *     I modeled the cable as having zero mass, or at least insignificant mass as
+     *     compared to the ship and ball. This greatly simplifies the math, and leads
+     *     to the conclusion that there will be no change in velocity when the cable
+     *     breaks. You can check this by integrating the momentum along the cable,
+     *     and the ship or ball.
+     *
+     *     If you assume that the cable snaps in the middle, then half of the
+     *     potential energy goes to each object attached. However, as you said, the
+     *     total momentum of the system cannot change. Because the weight of the
+     *     cable is small, the vast majority of the potential energy will become
+     *     heat. I've had two physicists verify this for me, and they both worked
+     *     really hard on the problem because they found it interesting.
+     *
+     * End of post.
+     *
+     * Changes since then:
+     *
+     * Comment from people was that the string snaps too soon.
+     * Changed the value (max_spring_ratio) at which the string snaps
+     * from 0.25 to 0.30.  Not sure if that helps enough, or too much.
+     */
+
+    object		*ball = Obj[ind];
+    player		*pl = Players[ GetInd[ball->id] ];
+    vector		D;
+    float		length, force, ratio, accell, cosine, pl_damping, ball_damping;
+    const float		k = 1500.0, b = 2.0;
+    const float		max_spring_ratio = 0.30;
+
+    /* compute the normalized vector between the ball and the player */
+    D.x = WRAP_DX(pl->pos.x - ball->pos.x);
+    D.y = WRAP_DY(pl->pos.y - ball->pos.y);
+    length = hypot(D.x, D.y);
+    if (length > 0.0) {
+	D.x /= length;
+	D.y /= length;
+    }
+    else
+	D.x = D.y = 0.0;
+
+    /* compute the ratio for the spring action */
+    ratio = (BALL_STRING_LENGTH - length) / (float) BALL_STRING_LENGTH;
+
+    /* compute force by spring for this length */
+    force = k * ratio;
+
+    /* if the tether is too long or too short, release it */
+    if (ABS(ratio) > max_spring_ratio) {
+	Detach_ball(GetInd[ball->id], ind);
+	return;
+    }
+    ball->length = length;
+
+    /* compute damping for player */
+    cosine = (pl->vel.x * D.x) + (pl->vel.y * D.y);
+    pl_damping = -b * cosine;
+
+    /* compute damping for ball */
+    cosine = (ball->vel.x * -D.x) + (ball->vel.y * -D.y);
+    ball_damping = -b * cosine;
+
+    /* compute accelleration for player, assume t = 1 */
+    accell = (force + pl_damping + ball_damping) / pl->mass;
+    pl->vel.x += D.x * accell;
+    pl->vel.y += D.y * accell;
+
+    /* compute accelleration for ball, assume t = 1 */
+    accell = (force + ball_damping + pl_damping) / ball->mass;
+    ball->vel.x += -D.x * accell;
+    ball->vel.y += -D.y * accell;
+
+#endif	/* ORIGINAL_BALL */
 }
 
 
@@ -2500,7 +2749,7 @@ void Move_smart_shot(int ind)
 	    case REC_LD:
 	    case REC_RD:
 	    case CANNON:
-		if(range > (SMART_SHOT_LOOK_AH-i)*(BLOCK_SZ/BLOCK_PARTS)) {
+		if (range > (SMART_SHOT_LOOK_AH-i)*(BLOCK_SZ/BLOCK_PARTS)) {
 		    if (shot_speed > SMART_SHOT_MIN_SPEED)
 			shot_speed -= acc * (SMART_SHOT_DECFACT+1);
 		}
@@ -2515,11 +2764,11 @@ void Move_smart_shot(int ind)
 	for (j=2, angle=-1, freemax=0; j>=-2; --j) {
 	    int si, xt, yt;
 
-	    for(si=1, k=0; si >= -1; --si) {
+	    for (si=1, k=0; si >= -1; --si) {
 		xt = xi + sur[(i+j+si)&7].dx;
 		yt = yi + sur[(i+j+si)&7].dy;
 
-		if(xt >= 0 && xt < World.x && yt >= 0 && yt < World.y)
+		if (xt >= 0 && xt < World.x && yt >= 0 && yt < World.y)
 		    switch (World.block[xt][yt]) {
 		    case TARGET:
 		    case TREASURE:
@@ -2530,7 +2779,7 @@ void Move_smart_shot(int ind)
 		    case REC_LD:
 		    case REC_RD:
 		    case CANNON:
-			if(!si)
+			if (!si)
 			    k = -32;
 			break;
 		    default:
@@ -2774,8 +3023,8 @@ void Tank_handle_detach(player *pl)
 
     strcpy(dummy->name, pl->name);
     strcat(dummy->name, "'s tank");
-    strcpy(dummy->realname, pl->realname);
-    strcpy(dummy->hostname, pl->hostname);
+    strcpy(dummy->realname, "tank");
+    strcpy(dummy->hostname, "tanks.org");
     dummy->home_base	= pl->home_base;
     dummy->team		= pl->team;
     dummy->pseudo_team	= pl->pseudo_team;
@@ -2799,6 +3048,8 @@ void Tank_handle_detach(player *pl)
 	    dummy->item[i] = World.items[i].initial;
 	}
     }
+    dummy->lose_item		= 0;
+    dummy->lose_item_state	= 0;
 
     /* No lasers */
     dummy->num_pulses = 0;

@@ -1,0 +1,59 @@
+This is the README file for XPilot @<VERSION>@.
+
+@<COPYRIGHT>@.
+
+Please see the LICENSE file for further details.  You may not
+distribute this project without all the documentation,
+source code, and the LICENSE file.
+
+
+
+Installation instructions are the INSTALL file.
+
+VMS users should examine the contrib/VMS subdirectory and read the
+README.VMS which is in there.
+
+The documentation for XPilot is far from complete.  The map format is
+only explained in doc/README.MAPS and doc/README.MAPS2, not in the server
+manual page, xpilots(6).  The client manual page, xpilot(6), is more or
+less up to date.
+
+For further reading, see the manuals in the doc/man directory.
+
+
+
+OTHER SOURCES OF INFORMATION ON THE INTERNET
+
+XPilot FAQ: telnet xpilot.cs.uit.no 4402
+	(also in the doc/ subdirectory)
+
+XPilot Page on WWW: http://www.cs.uit.no/XPilot/
+
+XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
+
+XPilot FTP archive: ftp.cs.uit.no:/pub/games/xpilot/
+
+XPilot newsgroup: rec.games.computer.xpilot
+
+XPilot announcement mailing list: xpilot-announce@list.uit.no
+	(send an e-mail to majordomo@list.uit.no for help on how to join).
+
+
+CONTRIBUTED SOFTWARE
+
+Check out the contrib directory and the contrib/xpmtp subdirectory for
+some extra nifty programs.  Especially TkXpInterface is a very convenient
+program for starting the xpilots and xpilot programs.
+Don't forget to get xmapedit from ftp.cs.uit.no in the directory
+/pub/games/xpilot/contrib.  It allows you to create and modify XPilot maps.
+Look in the same place for more XPilot contributed tools.
+
+
+REPORTING BUGS
+
+If you're completely stuck, found a bug, e-mail us at:
+
+        xpilot@cs.uit.no
+
+Remember to include the version of XPilot, your platform, the symptoms
+and, if you have one, a fix when reporting bugs.

@@ -1,4 +1,4 @@
-/* $Id: client.h,v 3.56 1995/01/17 14:01:18 bert Exp $
+/* $Id: client.h,v 3.62 1995/11/16 00:13:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -52,6 +52,11 @@
 #define SHOW_OUTLINE_WORLD	(1L << 17)
 #define SHOW_FILLED_WORLD	(1L << 18)
 #define SHOW_TEXTURED_WALLS	(1L << 19)
+#define SHOW_DECOR		(1L << 20)
+#define SHOW_OUTLINE_DECOR	(1L << 21)
+#define SHOW_FILLED_DECOR	(1L << 22)
+#define SHOW_TEXTURED_DECOR	(1L << 23)
+#define SHOW_CLOCK_AMPM_FORMAT	(1L << 24)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -205,10 +210,14 @@ extern unsigned	version;		/* Version of the server */
 extern int	scoresChanged;
 extern int	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
+extern int	auto_shield;            /* drops shield for fire */
 extern int	initialPointerControl;	/* Start by using mouse for control? */
 
 extern int	maxFPS;			/* Client's own FPS */
 extern int 	oldMaxFPS;
+
+extern byte	lose_item;		/* flag and index to drop item */
+extern int	lose_item_active;	/* one of the lose keys is pressed */
 
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -254,6 +263,7 @@ void Client_sync(void);
 int Client_wrap_mode(void);
 void Reset_shields(void);
 void Set_toggle_shield(int onoff);
+void Set_auto_shield(int onoff);
 int xevent(int);
 int Key_init(void);
 int Key_update(void);

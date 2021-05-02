@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.59 1995/01/31 18:26:34 bert Exp $
+/* $Id: frame.c,v 3.62 1995/11/16 00:13:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -50,7 +50,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.59 1995/01/31 18:26:34 bert Exp $";
+    "@(#)$Id: frame.c,v 3.62 1995/11/16 00:13:47 bert Exp $";
 #endif
 
 
@@ -927,6 +927,13 @@ void Frame_update(void)
 	    Frame_shots(conn, ind);
 	    Frame_ships(conn, ind);
 	    Frame_radar(conn, ind);
+	    if (pl->lose_item_state != 0) {
+		Send_loseitem(pl->lose_item, conn);
+		if (pl->lose_item_state == 1)
+		    pl->lose_item_state = -5;
+		if (pl->lose_item_state < 0)
+		    pl->lose_item_state++;
+	    }
 	    debris_end(conn);
 	    fastshot_end(conn);
 	}

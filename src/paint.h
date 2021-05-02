@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.47 1995/01/29 00:05:21 bert Exp $
+/* $Id: paint.h,v 3.51 1995/07/16 20:25:15 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -67,6 +67,7 @@ int Handle_radar(int x, int y, int size);
 int Handle_vcannon(int x, int y, int type);
 int Handle_vfuel(int x, int y, long fuel);
 int Handle_vbase(int x, int y, int xi, int yi, int type);
+int Handle_vdecor(int x, int y, int xi, int yi, int type);
 int Handle_message(char *msg);
 int Handle_eyes(int id);
 void Paint_item(u_byte type, Drawable d, GC gc, int x, int y);
@@ -142,7 +143,10 @@ extern int	maxColors;		/* Max. number of colors to use */
 extern int	hudColor;		/* Color index for HUD drawing */
 extern int	hudLockColor;           /* Color index for lock on HUD drawing */
 extern int	wallColor;		/* Color index for wall drawing */
-extern int	targetRadarColor;	/* Color index for targets on radar. */
+extern int	wallRadarColor;		/* Color index for walls on radar */
+extern int	targetRadarColor;	/* Color index for targets on radar */
+extern int	decorColor;		/* Color index for decoration drawing */
+extern int	decorRadarColor;	/* Color index for decorations on radar */
 extern bool	gotFocus;
 extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */
@@ -155,6 +159,7 @@ extern int	shieldDrawMode;		/* How to draw players shield */
 extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
 extern char	*texturePath;		/* Path list of texture directories */
 extern char	*wallTextureFile;	/* Filename of wall texture */
+extern char	*decorTextureFile;	/* Filename of decor texture */
 
 extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 		(Display *disp, Drawable d, GC gc,

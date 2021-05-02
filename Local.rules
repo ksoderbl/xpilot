@@ -1,0 +1,230 @@
+/* $Id: Local.rules,v 3.19 1995/08/08 14:00:33 bjoerns Exp $
+ *
+ * NO NEED TO EDIT THIS FILE; ONLY EDIT Local.config.
+ */
+
+/* Some Imake configurations still don't have XCOMM defined, shame on them */
+#ifndef XCOMM
+#define XCOMM #
+#endif
+/* And some doesn't have NullParameter either, double shame */
+#ifndef NullParameter
+#define NullParameter
+#endif
+
+/* The deprecated InstallNonExec must be used on systems that don't 
+ * have the newer InstallNonExecFile. */
+#ifndef InstallNonExecFile
+#define InstallNonExecFile	InstallNonExec
+#endif
+
+/*
+ * The following rules are similar to to the ComplexProgramTarget_n family
+ * except they install the binaries in $(INSTBINDIR) instead of $(BINDIR),
+ * thereby circumventing the problem that auxilary programs X's Imake.rules
+ * uses have to be situated in the same directory as you want your binary
+ * installed in.  (Such dependencies are errors of the Imake files for X IMO.)
+ *
+ * Another difference is that these macros doesn't install the manual
+ * automatically -- you have to invoke the install.man target manually
+ * so it's not so counter-intuitive to invoke the install.man rule
+ * explicitly too, besides, you might not have a manual page in this
+ * directory, or at all.
+ */
+#ifndef ProgramTarget_1
+#define	ProgramTarget_1(program,locallib,syslib)			@@\
+            OBJS = $(OBJS1) $(OBJS2) $(OBJS3)				@@\
+            SRCS = $(SRCS1) $(SRCS2) $(SRCS3)				@@\
+                                                                        @@\
+AllTarget($(PROGRAMS))							@@\
+                                                                        @@\
+program: $(OBJS1) $(DEPLIBS1)						@@\
+	RemoveTargetProgram($@)						@@\
+	$(CC) -o $@ $(LDOPTIONS) $(OBJS1) locallib $(LDLIBS) syslib $(EXTRA_LOAD_FLAGS) @@\
+									@@\
+InstallProgram(program,$(INSTBINDIR))					@@\
+                                                                        @@\
+DependTarget()								@@\
+LintTarget()								@@\
+                                                                        @@\
+clean::									@@\
+	$(RM) $(PROGRAMS)
+#endif /* ProgramTarget_1 */
+
+
+#ifndef ProgramTarget_2
+#define	ProgramTarget_2(program,locallib,syslib)			@@\
+program: $(OBJS2) $(DEPLIBS2)						@@\
+	RemoveTargetProgram($@)						@@\
+	$(CC) -o $@ $(LDOPTIONS) $(OBJS2) locallib $(LDLIBS) syslib $(EXTRA_LOAD_FLAGS) @@\
+                                                                        @@\
+InstallProgram(program,$(INSTBINDIR))
+#endif /* ProgramTarget_2 */
+
+
+#ifndef ProgramTarget_3
+#define	ProgramTarget_3(program,locallib,syslib)			@@\
+program: $(OBJS3) $(DEPLIBS3)						@@\
+	RemoveTargetProgram($@)						@@\
+	$(CC) -o $@ $(LDOPTIONS) $(OBJS3) locallib $(LDLIBS) syslib $(EXTRA_LOAD_FLAGS) @@\
+                                                                        @@\
+InstallProgram(program,$(INSTBINDIR))
+#endif /* ProgramTarget_3 */
+
+
+
+/*
+	Create target by running through msub.
+*/
+#define MsubTarget(dest,src)						@@\
+AllTarget(dest)								@@\
+src:: $(MSUB)								@@\
+                                                                        @@\
+$(MSUB)::  								@@\
+	@echo "Checking $@ over in $(MSUBSRC) first.."; \		@@\
+	cd $(MSUBSRC); $(MAKE); \					@@\
+	echo "Okay, continuing in $(CURRENT_DIR)"			@@\
+                                                                        @@\
+dest: src								@@\
+	$(MSUB) $(MSUBFLAGS) src >dest					@@\
+StuffToClean(dest)
+
+#define MsubTargetPersistent(dest,src)					@@\
+AllTarget(dest)								@@\
+src:: $(MSUB)								@@\
+                                                                        @@\
+$(MSUB)::  								@@\
+	@echo "Checking $@ over in $(MSUBSRC) first.."; \		@@\
+	cd $(MSUBSRC); $(MAKE); \					@@\
+	echo "Okay, continuing in $(CURRENT_DIR)"			@@\
+                                                                        @@\
+dest: src								@@\
+	$(RM) dest							@@\
+	$(MSUB) $(MSUBFLAGS) src >dest
+
+
+/*
+ * These rules are from the imake.support file of the msub package.
+ */
+/*
+	Create a target by running a template through some filter.
+*/
+
+#ifndef	ScriptFromTemplateTarget
+#define	ScriptFromTemplateTarget(dst,src,command,deps)			@@\
+AllTarget(dst)								@@\
+StuffToClean(dst)							@@\
+dst:: src deps								@@\
+	command src > $@
+#endif
+
+
+/*
+	Create an executable target for some arbitrary program by running a
+	template through some filter.  prog must be a full pathname.
+
+	If the HasExecableScripts configuration parameter is not YES, make sure
+	the first line begins with a colon and write the script into a temp
+	file, have the program execute that, and remove the temp file when
+	done.  Ugly ugly ugly.
+*/
+
+#ifndef	ExecScriptFromTemplateTarget
+#if HasExecableScripts		/* can use #! */
+#define	ExecScriptFromTemplateTarget(prog,dst,src,command,deps)		@@\
+AllTarget(dst)								@@\
+StuffToClean(dst)							@@\
+dst::  src deps								@@\
+	$(RM) $@							@@\
+	echo "#!"prog > $@						@@\
+	command src >> $@						@@\
+	chmod a+x $@
+#else
+#define	ExecScriptFromTemplateTarget(prog,dst,src,command,deps)		@@\
+AllTarget(dst)								@@\
+StuffToClean(dst)							@@\
+dst::  src deps								@@\
+	$(RM) $@							@@\
+	echo \: > $@							@@\
+	echo 'x=/tmp/xx$$$$' >> $@					@@\
+	echo "cat > "'$$x'" << 'EOF'" >> $@				@@\
+	command src >> $@						@@\
+	echo EOF >> $@							@@\
+	echo prog '$$x' '$$@' >> $@					@@\
+	echo $(RM) '$$x' >> $@						@@\
+	chmod a+x $@
+#endif /* HasExecableScripts */
+#endif /* ExecScriptFromTemplateTarget */
+
+
+/* From X11R6 Imake.rules file:
+ * MakeMakeSubdirs - generate rules to recursively recreate Makefiles as part
+ * of the specified step in the build.  If $(TOP) is set to an absolute path, 
+ * do not prepend the ../ prefix.  This makes running things outside of the 
+ * source tree to be much easier.
+ */
+#ifdef MakeMakeSubdirs
+#undef MakeMakeSubdirs
+#endif
+#define MakeMakeSubdirs(dirs,target)					@@\
+target::								@@\
+	-@case '${MFLAGS}' in *[ik]*) set +e;; esac; \			@@\
+	case '${MFLAGS}' in *n*) executeit="no";; esac; \		@@\
+	for i in dirs ;\						@@\
+	do \								@@\
+		case "$(CURRENT_DIR)" in \				@@\
+		.) curdir= ;; \						@@\
+		*) curdir=$(CURRENT_DIR)/ ;; \				@@\
+		esac; \							@@\
+		echo "making Makefiles in $$curdir$$i..."; \		@@\
+		case "$$i" in \						@@\
+		*/?*/?*/?*)	newtop=../../../..;; \			@@\
+		*/?*/?*)	newtop=../../..;; \			@@\
+		*/?*)		newtop=../..;; \			@@\
+		*)		newtop=..;; \				@@\
+		esac; \							@@\
+		case "$(TOP)" in \					@@\
+		/?*) imaketop=$(TOP) \					@@\
+		     imakeprefix= ;; \					@@\
+		.) imaketop=$$newtop \					@@\
+		   imakeprefix=$$newtop/ ;; \				@@\
+		*) imaketop=$$newtop/$(TOP) \				@@\
+		   imakeprefix=$$newtop/ ;; \				@@\
+		esac; \							@@\
+		cd $$i; \						@@\
+		$(RM) Makefile.bak;	 \				@@\
+		if [ -f Makefile ]; then \				@@\
+			echo "	$(MV) Makefile Makefile.bak"; \		@@\
+			if [ "$$executeit" != "no" ]; then \		@@\
+				$(MV) Makefile Makefile.bak; \		@@\
+			fi; \						@@\
+		fi; \							@@\
+		if [ "$$executeit" != "no" ]; then \			@@\
+			ImakeSubCmdHelper -DTOPDIR=$$imaketop -DCURDIR=$$curdir$$i; \ @@\
+		fi; \							@@\
+		$(MAKE) $(MFLAGS) Makefiles; \				@@\
+		cd $$newtop; \						@@\
+	done
+
+#ifdef ImakeSubCmdHelper
+#undef ImakeSubCmdHelper
+#endif
+#ifdef UseInstalled
+#define ImakeSubCmdHelper $(IMAKE_CMD)
+#else
+#define ImakeSubCmdHelper $$imakeprefix$(IMAKE) -I$$imakeprefix$(IRULESRC) $(IMAKE_DEFINES)
+#endif
+
+
+
+#ifndef StuffToClean
+#define StuffToClean(extra)						@@\
+clean::									@@\
+	$(RM) extra
+#endif /* StuffToClean */
+
+
+#ifndef AllTarget
+#define AllTarget(depends)						@@\
+all:: depends
+#endif /* AllTarget */

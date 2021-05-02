@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.42 1995/02/02 09:51:28 bert Exp $
+/* $Id: configure.c,v 3.49 1995/11/12 22:11:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -28,7 +28,7 @@
  *    or use a bit in the instruments option set (using the SHOW_XXX macros).
  * 2: Add a declaration for this storage to either client.h/paint.h/xinit.h
  *    or, in case a bit in instruments is used, add a SHOW_ macro to client.h.
- * 3: Add an X resource record to the XrmOptionDescRec opts[] table in
+ * 3: Add an X resource record to the XrmOptionDescRec options[] table in
  *    default.c to have it recognised by the X resource manager routines.
  * 4: Have it set at startup by the Parse_options() routine in default.c.
  * 5: Add the functionality of your option, probably in the same file
@@ -119,12 +119,18 @@ static int Config_create_backgroundPointSize(int widget_desc, int *height);
 static int Config_create_sparkSize(int widget_desc, int *height);
 static int Config_create_charsPerSecond(int widget_desc, int *height);
 static int Config_create_toggleShield(int widget_desc, int *height);
+static int Config_create_autoShield(int widget_desc, int *height);
 static int Config_create_sparkProb(int widget_desc, int *height);
 static int Config_create_shotSize(int widget_desc, int *height);
 static int Config_create_teamShotSize(int widget_desc, int *height);
 static int Config_create_hudColor(int widget_desc, int *height);
 static int Config_create_hudLockColor(int widget_desc, int *height);
 static int Config_create_wallColor(int widget_desc, int *height);
+static int Config_create_decorColor(int widget_desc, int *height);
+static int Config_create_showDecor(int widget_desc, int *height);
+static int Config_create_outlineDecor(int widget_desc, int *height);
+static int Config_create_filledDecor(int widget_desc, int *height);
+static int Config_create_texturedDecor(int widget_desc, int *height);
 static int Config_create_maxFPS(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
@@ -138,6 +144,7 @@ static int Config_create_packetSizeMeter(int widget_desc, int *height);
 static int Config_create_packetLossMeter(int widget_desc, int *height);
 static int Config_create_packetDropMeter(int widget_desc, int *height);
 static int Config_create_clock(int widget_desc, int *height);
+static int Config_create_clockAMPM(int widget_desc, int *height);
 static int Config_create_markingLights(int widget_desc, int *height);
 static int Config_create_save(int widget_desc, int *height);
 
@@ -155,6 +162,7 @@ static int Config_update_turnSpeed(int widget_desc, void *data, float *val);
 static int Config_update_sparkProb(int widget_desc, void *data, float *val);
 static int Config_update_charsPerSecond(int widget_desc, void *data, int *val);
 static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
+static int Config_update_autoShield(int widget_desc, void *data, bool *val);
 static int Config_update_maxFPS(int widget_desc, void *data, int *val);
 
 static int Config_close(int widget_desc, void *data, char **strptr);
@@ -224,11 +232,17 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_charsPerSecond,
     Config_create_markingLights,
     Config_create_toggleShield,
+    Config_create_autoShield,
     Config_create_shotSize,
     Config_create_teamShotSize,
     Config_create_hudColor,
     Config_create_hudLockColor,
     Config_create_wallColor,
+    Config_create_decorColor,
+    Config_create_showDecor,
+    Config_create_outlineDecor,
+    Config_create_filledDecor,
+    Config_create_texturedDecor,
     Config_create_maxFPS,
 #ifdef SOUND
     Config_create_maxVolume,
@@ -242,6 +256,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_packetLossMeter,
     Config_create_packetDropMeter,
     Config_create_clock,
+    Config_create_clockAMPM,
     Config_create_save			/* must be last */
 };
 
@@ -788,6 +803,13 @@ static int Config_create_toggleShield(int widget_desc, int *height)
 			      Config_update_toggleShield, NULL);
 }
 
+static int Config_create_autoShield(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "autoShield",
+                              (auto_shield) ? true : false,
+                              Config_update_autoShield, NULL);
+}
+
 static int Config_create_shotSize(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
@@ -826,6 +848,50 @@ static int Config_create_wallColor(int widget_desc, int *height)
 			   "wallColor", &wallColor,
 			   1, maxColors - 1,
 			   NULL, NULL);
+}
+
+static int Config_create_decorColor(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "decorColor", &decorColor,
+			   1, maxColors - 1,
+			   NULL, NULL);
+}
+
+static int Config_create_showDecor(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "showDecor",
+			      BIT(instruments, SHOW_DECOR)
+			      ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_DECOR);
+}
+
+static int Config_create_outlineDecor(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "outlineDecor",
+			      BIT(instruments, SHOW_OUTLINE_DECOR)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_OUTLINE_DECOR);
+}
+
+static int Config_create_filledDecor(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "filledDecor",
+			      BIT(instruments, SHOW_FILLED_DECOR)
+			      ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_FILLED_DECOR);
+}
+
+static int Config_create_texturedDecor(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "texturedDecor",
+			      BIT(instruments, SHOW_TEXTURED_DECOR)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_TEXTURED_DECOR);
 }
 
 #ifdef SOUND
@@ -925,6 +991,15 @@ static int Config_create_clock(int widget_desc, int *height)
 			      (void *) SHOW_CLOCK);
 }
 
+static int Config_create_clockAMPM(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "clockAMPM",
+			      BIT(instruments, SHOW_CLOCK_AMPM_FORMAT)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_CLOCK_AMPM_FORMAT);
+}
+
 static int Config_create_markingLights(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "markingLights",
@@ -989,6 +1064,11 @@ static int Config_update_instruments(int widget_desc, void *data, bool *val)
     if (bit == SHOW_SLIDING_RADAR) {
 	Paint_sliding_radar();
     }
+    else if (bit == SHOW_DECOR) {
+	Map_dots();
+	Paint_world_radar();
+    }
+    
     if (BIT(bit, outline_mask)) {
 	/* only do the map recalculations if really needed. */
 	if (!BIT(old_instruments, outline_mask)
@@ -1068,6 +1148,12 @@ static int Config_update_charsPerSecond(int widget_desc, void *data, int *val)
 static int Config_update_toggleShield(int widget_desc, void *data, bool *val)
 {
     Set_toggle_shield(*val != false);
+    return 0;
+}
+
+static int Config_update_autoShield(int widget_desc, void *data, bool *val)
+{
+    Set_auto_shield(*val != false);
     return 0;
 }
 
@@ -1200,9 +1286,6 @@ static void Config_save_bool(FILE *fp, char *resource, int value)
 
 static int Config_save(int widget_desc, void *button_str, char **strptr)
 {
-#ifdef VMS
-    return 1;
-#else
     extern char		*Get_keyResourceString(keys_t key);
     int			i;
     KeySym		ks;
@@ -1212,7 +1295,11 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     char		*str,
 			*home,
 			*res,
+#ifdef VMS
+			*base = "DECW$USER_DEFAULTS:xpilot.dat",
+#else
 			*base = ".xpilotrc",
+#endif
 			buf[512],
 			oldfile[PATH_MAX + 1],
 			newfile[PATH_MAX + 1];
@@ -1221,6 +1308,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Widget_draw(widget_desc);
     Client_flush();
 
+#ifndef VMS
     if (((home = getenv("HOME")) == NULL
 	&& ((pwent = getpwuid(getuid())) == NULL
 	    || (home = pwent->pw_dir)[0] == '\0'))
@@ -1229,6 +1317,10 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 	return 1;
     }
     sprintf(oldfile, "%s/%s", home, base);
+#else
+    sprintf(oldfile, "%s", base);
+    sprintf(newfile, "%s", base);
+#endif
     if ((fp = fopen(oldfile, "r")) != NULL) {
 	while (fgets(buf, sizeof buf, fp)) {
 	    buf[sizeof buf - 1] = '\0';
@@ -1236,8 +1328,10 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 	}
 	fclose(fp);
     }
+#ifndef VMS
     sprintf(newfile, "%s/%s.new", home, base);
     unlink(newfile);
+#endif
     if ((fp = fopen(newfile, "w")) == NULL) {
 	Config_save_failed("Can't open file to save to.", strptr);
 	return 1;
@@ -1272,7 +1366,9 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_float(fp, "showItemsTime", showItemsTime);
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
     Config_save_bool(fp, "filledWorld", BIT(instruments, SHOW_FILLED_WORLD));
+    Config_save_bool(fp, "texturedWalls", BIT(instruments, SHOW_TEXTURED_WALLS));
     Config_save_bool(fp, "clock", BIT(instruments, SHOW_CLOCK));
+    Config_save_bool(fp, "clockAMPM", BIT(instruments, SHOW_CLOCK_AMPM_FORMAT));
     Config_save_int(fp, "backgroundPointDist", map_point_distance);
     Config_save_int(fp, "backgroundPointSize", map_point_size);
     Config_save_int(fp, "sparkSize", spark_size);
@@ -1282,10 +1378,16 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_int(fp, "hudColor", hudColor);
     Config_save_int(fp, "hudLockColor", hudLockColor);
     Config_save_int(fp, "wallColor", wallColor);
+    Config_save_int(fp, "decorColor", decorColor);
+    Config_save_bool(fp, "showDecor", BIT(instruments, SHOW_DECOR));
+    Config_save_bool(fp, "outlineDecor", BIT(instruments, SHOW_OUTLINE_DECOR));
+    Config_save_bool(fp, "filledDecor", BIT(instruments, SHOW_FILLED_DECOR));
+    Config_save_bool(fp, "texturedDecor", BIT(instruments, SHOW_TEXTURED_DECOR));
     Config_save_int(fp, "receiveWindowSize", receive_window_size);
     Config_save_int(fp, "charsPerSecond", charsPerSecond);
     Config_save_bool(fp, "markingLights", markingLights);
     Config_save_bool(fp, "toggleShield", toggle_shield);
+    Config_save_bool(fp, "autoShield", auto_shield);
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
@@ -1314,12 +1416,13 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     }
     Xpilotrc_end(fp);
     fclose(fp);
+#ifndef VMS
     sprintf(newfile, "%s/%s.bak", home, base);
     rename(oldfile, newfile);
     unlink(oldfile);
     sprintf(newfile, "%s/%s.new", home, base);
     rename(newfile, oldfile);
-
+#endif
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy(config_save_confirm_desc);
 	config_save_confirm_desc = NO_WIDGET;
@@ -1327,7 +1430,6 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 
     *strptr = (char *) button_str;
     return 1;
-#endif
 }
 
 static int Config_save_confirm_callback(int widget_desc, void *popup_desc, char **strptr)

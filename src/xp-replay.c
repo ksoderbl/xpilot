@@ -1,4 +1,4 @@
-/* $Id: xp-replay.c,v 3.14 1995/02/02 18:25:02 bert Exp $
+/* $Id: xp-replay.c,v 3.24 1995/12/06 18:49:55 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
@@ -34,16 +34,26 @@
 ** implied warranty.
  */
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#include <socket.h>
+#include <time.h>
+#include "gettimeofday.h"
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
 #include <math.h>
+#ifndef  VMS
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#endif
 #include <stdarg.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -52,6 +62,10 @@
 #define gettimeofday(T,X)	get_process_stats(T, PS_SELF, \
 					(struct process_stats *)NULL, \
 					(struct process_stats *)NULL)
+#endif
+#if !defined(select) && defined(__linux__)
+#define select(N, R, W, E, T)   select((N),             \
+        (fd_set*)(R), (fd_set*)(W), (fd_set*)(E), (T))
 #endif
 
 #include "recordfmt.h"
@@ -207,14 +221,21 @@ struct frame {
     int			number;		/* frame sequence number */
 };
 
+typedef struct tile_list {
+    struct tile_list	*next;
+    Pixmap		tile;
+    unsigned char	tile_id;
+    int			flag;
+} tile_list_t;
+
 struct errorwin {
-    Window	win;			/* Error display window */
-    GC		gc;			/* GC for drawing therein */
-    XFontStruct	*font;			/* Font to use */
-    char	message[4096];		/* Current error message */
-    int		len;			/* length thereof */
-    Button	but;			/* OK button */
-    Bool	grabbed;		/* Have we grabbed the pointer ? */
+    Window		win;			/* Error display window */
+    GC			gc;			/* GC for drawing therein */
+    XFontStruct		*font;			/* Font to use */
+    char		message[4096];		/* Current error message */
+    int			len;			/* length thereof */
+    Button		but;			/* OK button */
+    Bool		grabbed;		/* Have we grabbed the pointer ? */
 };
 
 struct recordwin {
@@ -227,6 +248,7 @@ struct recordwin {
 };
 
 struct xprc {
+    char		*filename;	/* name of input */
     FILE		*fp;		/* FILE pointer for input */
     int			seekable;	/* only seek if file is regular */
     int			eof;		/* if EOF encountered */
@@ -259,6 +281,7 @@ struct xprc {
     double		scale;		/* scale reduction when saving */
     double		gamma;		/* gamma correction when saving */
     struct errorwin	*ewin;		/* Error display window */
+    tile_list_t		*tlist;		/* list of pixmaps */
 };
 
 enum LabelDataTypes {
@@ -284,9 +307,9 @@ struct label {
     char		*name;		/* Field name */
     enum LabelDataTypes	type;		/* data type */
     union {
-	int *i;
-	char *s;
-	struct frame **f;
+	int		*i;
+	char		*s;
+	struct frame	**f;
     } data;				/* pointer to data */
 };
 
@@ -315,7 +338,8 @@ static void revplayCallback(void *);
 static void recordCallback(void *);
 static void markSaveStart(void *);
 static void markSaveEnd(void *);
-static void saveStartToEnd(void *);
+static void saveStartToEndPPM(void *);
+static void saveStartToEndXPR(void *);
 
 static struct button_init {
     char *data;
@@ -446,9 +470,9 @@ static void MemPrint(void)
 /*
  * Maintain statistics on memory usage.
  * We want to know what part of the program uses what amount of memory.
- * Since some parts can be real memory consumers this information
- * is used keep the number of frames in memory limited by the amount
- * of memory used.
+ * This information is used to keep amount of memory used below a
+ * certain maximum by limiting the number of frames which are kept
+ * in memory.
  */
 static void MemStats(char *p, size_t size, enum MemTypes mt)
 {
@@ -514,6 +538,7 @@ void *MyMalloc(size_t size, enum MemTypes mt)
     return p;
 }
 
+#if 0
 /*
  * Wrapper for strdup(3).
  * This one uses MyMalloc() instead of malloc()
@@ -525,17 +550,14 @@ static char *MyStrDup(const char *str)
     memcpy(dup, str, size);
     return dup;
 }
+#endif
 
 /*
  * Read one 8-bit byte from the recorded input stream.
  */
 static unsigned char RReadByte(FILE *fp)
 {
-    unsigned char i;
-
-    i = (getc(fp) & 0xFF);
-
-    return i;
+    return (unsigned char) (getc(fp));
 }
 
 /*
@@ -643,7 +665,7 @@ static int RReadHeader(struct xprc *rc)
     /*
      * We are incompatible with newer versions
      * and with older versions whose major version number
-     * differ from ours.
+     * differs from ours.
      */
     if (major != RC_MAJORVERSION || minor > RC_MINORVERSION) {
 	fprintf(stderr,
@@ -689,17 +711,10 @@ static int RReadHeader(struct xprc *rc)
  */
 static Pixmap RReadTile(struct xprc *rc)
 {
-    typedef struct tile_list {
-	struct tile_list	*next;
-	Pixmap			tile;
-	unsigned char		tile_id;
-    } tile_list_t;
-    static tile_list_t		*list = NULL;
     tile_list_t			*lptr;
     unsigned			width, height;
     unsigned			x, y;
     unsigned			depth;
-    int				i;
     XImage			*img;
     unsigned char		ch;
     Pixmap			tile;
@@ -711,7 +726,7 @@ static Pixmap RReadTile(struct xprc *rc)
 	if (tile_id == 0) {
 	    return None;
 	}
-	for (lptr = list; lptr != NULL; lptr = lptr->next) {
+	for (lptr = rc->tlist; lptr != NULL; lptr = lptr->next) {
 	    if (lptr->tile_id == tile_id) {
 		return lptr->tile;
 	    }
@@ -755,10 +770,10 @@ static Pixmap RReadTile(struct xprc *rc)
 	perror("memory");
 	exit(1);
     }
-    lptr->next = list;
+    lptr->next = rc->tlist;
     lptr->tile = tile;
     lptr->tile_id = tile_id;
-    list = lptr;
+    rc->tlist = lptr;
 
     return tile;
 }
@@ -1427,7 +1442,8 @@ static void allocViewColors(struct xprc *rc)
 			    ? BlackPixel(dpy, screen_num)
 			    : WhitePixel(dpy, screen_num);
 	}
-	else if (i > 0 && myColor.pixel == BlackPixel(dpy, screen_num)
+	else if (i > 0
+		 && myColor.pixel == BlackPixel(dpy, screen_num)
 		 && colormap == DefaultColormap(dpy, screen_num)) {
 	    rc->pixels[i] = WhitePixel(dpy, screen_num);
 	} else {
@@ -1760,13 +1776,27 @@ static struct recordwin *Init_recordwindow(unsigned long bg, void *data)
 	x = w;
     y += h + 5;
 
-    image.string = "Save from Start to End";
+    image.string = "Save in PPM format";
     rwin->recbut = CreateButton(dpy, rwin->win,
 				5, y,
 				0, 0,
 				image, 0, 0,
 				BlackPixel(dpy, screen_num),
-				saveStartToEnd, data,
+				saveStartToEndPPM, data,
+				BUTTON_TEXT | BUTTON_RELEASE,
+				0);
+    GetButtonSize(rwin->recbut, &w, &h);
+    if (x < w)
+	x = w;
+    y += h + 5;
+
+    image.string = "Save in XPR format";
+    rwin->recbut = CreateButton(dpy, rwin->win,
+				5, y,
+				0, 0,
+				image, 0, 0,
+				BlackPixel(dpy, screen_num),
+				saveStartToEndXPR, data,
 				BUTTON_TEXT | BUTTON_RELEASE,
 				0);
     GetButtonSize(rwin->recbut, &w, &h);
@@ -1789,45 +1819,6 @@ static struct recordwin *Init_recordwindow(unsigned long bg, void *data)
 		 0, 0,
 		 PSize | PPosition);
     return(rwin);
-}
-
-static void Init_topview(struct xprc *rc)
-{
-    int			i;
-    int			w = rc->view_width;
-    int			h = rc->view_height;
-    int			x = 0;
-    int			y = (DisplayHeight(dpy, screen_num) - h) / 2;
-
-    rc->topview = XCreateSimpleWindow(dpy, RootWindow(dpy, screen_num),
-				      x, y,
-				      w, h,
-				      1,
-				      BlackPixel(dpy, screen_num),
-				      BlackPixel(dpy, screen_num));
-
-    Init_wm_prop(rc->topview,
-		 x, y,
-		 w, h,
-		 0, 0,
-		 0, 0,
-		 PSize | PPosition);
-
-    rc->gc = XCreateGC(dpy, rc->topview, 0, NULL);
-
-    XSelectInput(dpy, rc->topview,
-		 ExposureMask |
-		 KeyPressMask | KeyReleaseMask | ButtonPressMask);
-
-    for (i=0; i<NUM_ITEMS; i++)
-        itemBitmaps[i] = XCreateBitmapFromData(dpy, rc->topview,
-					       (char *)itemData[i],
-					       ITEM_SIZE, ITEM_SIZE);
-
-    rc->gameFont = loadQueryFont(rc->gameFontName, rc->gc);
-    rc->msgFont = loadQueryFont(rc->msgFontName, rc->gc);
-
-    allocViewColors(rc);
 }
 
 static void openErrorWindow(struct errorwin *ewin, char *fmt, ...)
@@ -1940,10 +1931,51 @@ static struct errorwin *Init_errorwindow(unsigned long bg)
     return(ewin);
 }
 
+static void Init_topview(struct xprc *rc)
+{
+    int			i;
+    int			w = rc->view_width;
+    int			h = rc->view_height;
+    int			x = 0;
+    int			y = (DisplayHeight(dpy, screen_num) - h) / 2;
+
+    rc->topview = XCreateSimpleWindow(dpy, RootWindow(dpy, screen_num),
+				      x, y,
+				      w, h,
+				      1,
+				      BlackPixel(dpy, screen_num),
+				      BlackPixel(dpy, screen_num));
+
+    Init_wm_prop(rc->topview,
+		 x, y,
+		 w, h,
+		 0, 0,
+		 0, 0,
+		 PSize | PPosition);
+
+    rc->gc = XCreateGC(dpy, rc->topview, 0, NULL);
+
+    XSelectInput(dpy, rc->topview,
+		 ExposureMask |
+		 KeyPressMask | KeyReleaseMask | ButtonPressMask);
+
+    for (i=0; i<NUM_ITEMS; i++)
+        itemBitmaps[i] = XCreateBitmapFromData(dpy, rc->topview,
+					       (char *)itemData[i],
+					       ITEM_SIZE, ITEM_SIZE);
+
+    rc->gameFont = loadQueryFont(rc->gameFontName, rc->gc);
+    rc->msgFont = loadQueryFont(rc->msgFontName, rc->gc);
+
+    allocViewColors(rc);
+
+    rc->ewin = Init_errorwindow(BlackPixel(dpy, screen_num));
+}
+
 static void Init_topmain(struct xui *ui, struct xprc *rc)
 {
     int			topx, topy, topw, toph, i, x, y, w, mw;
-    XWindowChanges values;
+    XWindowChanges	values;
 
     ui->black = BlackPixel(dpy, screen_num);
     ui->white = WhitePixel(dpy, screen_num);
@@ -1982,7 +2014,7 @@ static void Init_topmain(struct xui *ui, struct xprc *rc)
 
     x = 5;
     y = (toph>>1) + 5;
-    for(i=0; i<NUM_BUTTONS; i++)
+    for (i=0; i<NUM_BUTTONS; i++)
     {
 	union button_image p;
 
@@ -2036,21 +2068,21 @@ static void Init_topmain(struct xui *ui, struct xprc *rc)
     mw = 0;
     ui->labels[0].x = 5;
     ui->labels[0].y = toph + 15;
-    for(i=1; i<5; i++)
+    for (i=1; i<5; i++)
     {
 	ui->labels[i].x = ui->labels[i-1].x;
 	ui->labels[i].y = ui->labels[i-1].y
 	    + ui->boldFont->ascent + ui->boldFont->descent + 2;
     }
     toph = ui->labels[4].y + ui->boldFont->ascent + ui->boldFont->descent + 5;
-    for(i=0; i<5; i++)
+    for (i=0; i<5; i++)
     {
 	w = XTextWidth(ui->boldFont, ui->labels[i].name,
 		       strlen(ui->labels[i].name));
 	if (w > mw)
 	    mw = w;
     }
-    for(i=0; i<5; i++)
+    for (i=0; i<5; i++)
 	ui->labels[i].w = mw;
     ui->labels[5].x = topw - ui->labels[0].x;
     ui->labels[5].y = ui->labels[0].y;
@@ -2457,6 +2489,8 @@ static void SaveFramesPPM(struct xprc *rc)
 	    if (!(fp = fopen(buf, "w"))) {
 		perror(buf);
 		break;
+	    } else {
+		setvbuf(fp, NULL, _IOFBF, (size_t)(8 * 1024));
 	    }
 	} else {
 	    sprintf(buf, "compress > xp%05d.ppm.Z", save->number);
@@ -2529,6 +2563,506 @@ static void SaveFramesPPM(struct xprc *rc)
 	MyFree(line, 3 * rc->view_width, MEM_MISC);
     }
     XFreePixmap(dpy, pixmap);
+
+    if (done) {
+	sprintf(buf, "Saved %d frames OK.\n", end->number - begin->number + 1);
+	OverWriteMsg(rc, buf);
+    } else {
+	sprintf(buf, "Saving failed!\n");
+	OverWriteMsg(rc, buf);
+    }
+}
+
+static void RWriteByte(unsigned char i, FILE *fp)
+{
+    putc(i, fp);
+}
+
+static void RWriteShort(short i, FILE *fp)
+{
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+}
+
+static void RWriteUShort(unsigned short i, FILE *fp)
+{
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+}
+
+static void RWriteLong(long i, FILE *fp)
+{
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+}
+
+static void RWriteULong(unsigned long i, FILE *fp)
+{
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+    i >>= 8;
+    putc(i, fp);
+}
+
+static void RWriteString(char *str, FILE *fp)
+{
+    int				len = strlen(str);
+    int				i;
+
+    RWriteUShort(len, fp);
+    for (i = 0; i < len; i++) {
+	putc(str[i], fp);
+    }
+}
+
+static int pixel2index(struct xprc *rc, unsigned long pixel)
+{
+    int				i;
+
+    for (i = 0; i < 2 * rc->maxColors; i++) {
+	if (rc->pixels[i] == pixel) {
+	    return i;
+	}
+    }
+    fprintf(stderr, "Can't find matching pixel\n");
+    return 0;
+}
+
+static XImage *pixmap2image(Pixmap pixmap)
+{
+    XImage		*img;
+    Window		rootw;
+    int			x, y;
+    unsigned		width, height, border_width, depth;
+
+    if (!XGetGeometry(dpy, pixmap, &rootw,
+		      &x, &y,
+		      &width, &height,
+		      &border_width, &depth)) {
+	return NULL;
+    }
+    img = XGetImage(dpy, pixmap,
+		    0, 0,
+		    width, height,
+		    AllPlanes, ZPixmap);
+    if (!img) {
+	return NULL;
+    }
+    return img;
+}
+
+static void RWriteTile(struct xprc *rc, struct rGC *gcp, FILE *fp)
+{
+    tile_list_t			*tptr;
+    XImage			*img;
+    int				i, x, y;
+
+    for (tptr = rc->tlist; tptr; tptr = tptr->next) {
+	if (tptr->tile == gcp->tile) {
+	    break;
+	}
+    }
+    if (!tptr || tptr->tile_id == 0 || tptr->tile == None) {
+	RWriteByte(RC_TILE, fp);
+	RWriteByte(0, fp);
+	return;
+    }
+    if (tptr->flag) {
+	RWriteByte(RC_TILE, fp);
+	RWriteByte(tptr->tile_id, fp);
+	return;
+    }
+    if (!(img = pixmap2image(tptr->tile))) {
+	RWriteByte(RC_TILE, fp);
+	RWriteByte(0, fp);
+	return;
+    }
+    tptr->flag = 1;
+    RWriteByte(RC_NEW_TILE, fp);
+    RWriteByte(tptr->tile_id, fp);
+    RWriteUShort(img->width, fp);
+    RWriteUShort(img->height, fp);
+    for (y = 0; y < img->height; y++) {
+	for (x = 0; x < img->width; x++) {
+	    unsigned long pixel = XGetPixel(img, x, y);
+	    for (i = 0; i < rc->maxColors - 1; i++) {
+		if (pixel == rc->pixels[i]) {
+		    break;
+		}
+	    }
+	    RWriteByte(i, fp);
+	}
+    }
+
+    XDestroyImage(img);
+}
+
+static void RWriteGC(struct xprc *rc, struct rGC *gcp, FILE *fp)
+{
+    int				mask = 0;
+    int				i;
+
+    if (gcp->mask == 0) {
+	RWriteByte(RC_NOGC, fp);
+	return;
+    }
+
+    RWriteByte(RC_GC, fp);
+
+    if (gcp->mask & GCForeground) {
+	mask |= RC_GC_FG;
+    }
+    if (gcp->mask & GCBackground) {
+	mask |= RC_GC_BG;
+    }
+    if (gcp->mask & GCLineWidth) {
+	mask |= RC_GC_LW;
+    }
+    if (gcp->mask & GCLineStyle) {
+	mask |= RC_GC_LS;
+    }
+    if (gcp->mask & GCDashOffset) {
+	mask |= RC_GC_DO;
+    }
+    if (gcp->mask & GCFunction) {
+	mask |= RC_GC_FU;
+    }
+    if (gcp->num_dashes > 0 || (gcp->mask & GCDashOffset)) {
+	mask |= RC_GC_DA;
+	if (gcp->mask & GCDashOffset) {
+	    mask |= RC_GC_DO;
+	}
+    }
+    if (gcp->mask & GCFillStyle) {
+	mask |= RC_GC_FS;
+    }
+    if (gcp->mask & GCTileStipXOrigin) {
+	mask |= RC_GC_XO;
+    }
+    if (gcp->mask & GCTileStipYOrigin) {
+	mask |= RC_GC_YO;
+    }
+    if (gcp->mask & GCTile) {
+	mask |= RC_GC_TI;
+    }
+    if ((mask & 0xFF00) != 0) {
+	mask |= RC_GC_B2;
+    }
+
+    RWriteByte(mask, fp);
+    if (mask & RC_GC_B2) {
+	RWriteByte(mask >> 8, fp);
+    }
+    if (mask & RC_GC_FG) {
+	RWriteByte(pixel2index(rc, gcp->foreground), fp);
+    }
+    if (mask & RC_GC_BG) {
+	RWriteByte(pixel2index(rc, gcp->background), fp);
+    }
+    if (mask & RC_GC_LW) {
+	RWriteByte(gcp->line_width, fp);
+    }
+    if (mask & RC_GC_LS) {
+	RWriteByte(gcp->line_style, fp);
+    }
+    if (mask & RC_GC_DO) {
+	RWriteByte(gcp->dash_offset, fp);
+    }
+    if (mask & RC_GC_FU) {
+	RWriteByte(gcp->function, fp);
+    }
+    if (mask & RC_GC_DA) {
+	RWriteByte(gcp->num_dashes, fp);
+	for (i = 0; i < gcp->num_dashes; i++) {
+	    RWriteByte(gcp->dash_list[i], fp);
+	}
+    }
+    if (mask & RC_GC_FS) {
+	RWriteByte(gcp->fill_style, fp);
+    }
+    if (mask & RC_GC_XO) {
+	RWriteLong(gcp->ts_x_origin, fp);
+    }
+    if (mask & RC_GC_YO) {
+	RWriteLong(gcp->ts_y_origin, fp);
+    }
+    if (mask & RC_GC_TI) {
+	RWriteTile(rc, gcp, fp);
+    }
+}
+
+static void WriteHeader(struct xprc *rc, FILE *fp)
+{
+    int				i;
+
+    rewind(fp);
+
+    /* First write out magic 4 letter word */
+    putc('X', fp);
+    putc('P', fp);
+    putc('R', fp);
+    putc('C', fp);
+
+    /* Write which version of the XPilot Record Protocol this is. */
+    putc(RC_MAJORVERSION, fp);
+    putc('.', fp);
+    putc(RC_MINORVERSION, fp);
+    putc('\n', fp);
+
+    /* Write player's nick, login, host, server, FPS and the date. */
+    RWriteString(rc->nickname, fp);
+    RWriteString(rc->realname, fp);
+    RWriteString(rc->hostname, fp);
+    RWriteString(rc->servername, fp);
+    RWriteByte(rc->fps, fp);
+    RWriteString(rc->recorddate, fp);
+
+    /* Write info about graphics setup. */
+    putc(rc->maxColors, fp);
+    for (i = 0; i < rc->maxColors; i++) {
+	RWriteULong(rc->colors[i].pixel, fp);
+	RWriteUShort(rc->colors[i].red, fp);
+	RWriteUShort(rc->colors[i].green, fp);
+	RWriteUShort(rc->colors[i].blue, fp);
+    }
+    RWriteString(rc->gameFontName, fp);
+    RWriteString(rc->msgFontName, fp);
+
+    RWriteUShort(rc->view_width, fp);
+    RWriteUShort(rc->view_height, fp);
+}
+
+static void WriteFrame(struct xprc *rc, struct frame *f, FILE *fp)
+{
+    /* drawShapes(save, pixmap, rc); */
+    struct shape	*sp;
+    int			i;
+
+    putc(RC_NEWFRAME, fp);
+    RWriteUShort(f->width, fp);
+    RWriteUShort(f->height, fp);
+
+    for (sp = f->shapes; sp != NULL; sp = sp->next) {
+
+	switch(sp->type) {
+
+	case RC_DRAWARC:
+	    putc(RC_DRAWARC, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.arc.x, fp);
+	    RWriteShort(sp->shape.arc.y, fp);
+	    RWriteByte(sp->shape.arc.width, fp);
+	    RWriteByte(sp->shape.arc.height, fp);
+	    RWriteShort(sp->shape.arc.angle1, fp);
+	    RWriteShort(sp->shape.arc.angle2, fp);
+	    break;
+
+	case RC_DRAWLINES:
+	    putc(RC_DRAWLINES, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteUShort(sp->shape.lines.npoints, fp);
+	    for (i = 0; i < sp->shape.lines.npoints; i++) {
+		RWriteShort(sp->shape.lines.points[i].x, fp);
+		RWriteShort(sp->shape.lines.points[i].y, fp);
+	    }
+	    RWriteByte(sp->shape.lines.mode, fp);
+	    break;
+
+	case RC_DRAWLINE:
+	    putc(RC_DRAWLINE, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.line.x1, fp);
+	    RWriteShort(sp->shape.line.y1, fp);
+	    RWriteShort(sp->shape.line.x2, fp);
+	    RWriteShort(sp->shape.line.y2, fp);
+	    break;
+
+	case RC_DRAWRECTANGLE:
+	    putc(RC_DRAWRECTANGLE, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.rectangle.x, fp);
+	    RWriteShort(sp->shape.rectangle.y, fp);
+	    RWriteByte(sp->shape.rectangle.width, fp);
+	    RWriteByte(sp->shape.rectangle.height, fp);
+	    break;
+
+	case RC_DRAWSTRING:
+	    putc(RC_DRAWSTRING, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.string.x, fp);
+	    RWriteShort(sp->shape.string.y, fp);
+	    RWriteByte(sp->shape.string.font, fp);
+	    RWriteUShort(sp->shape.string.length, fp);
+	    for (i = 0; i < sp->shape.string.length; i++) {
+		putc(sp->shape.string.string[i], fp);
+	    }
+	    break;
+
+	case RC_FILLARC:
+	    putc(RC_FILLARC, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.arc.x, fp);
+	    RWriteShort(sp->shape.arc.y, fp);
+	    RWriteByte(sp->shape.arc.width, fp);
+	    RWriteByte(sp->shape.arc.height, fp);
+	    RWriteShort(sp->shape.arc.angle1, fp);
+	    RWriteShort(sp->shape.arc.angle2, fp);
+	    break;
+
+	case RC_FILLPOLYGON:
+	    putc(RC_FILLPOLYGON, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteUShort(sp->shape.polygon.npoints, fp);
+	    for (i = 0; i < sp->shape.polygon.npoints; i++) {
+		RWriteShort(sp->shape.polygon.points[i].x, fp);
+		RWriteShort(sp->shape.polygon.points[i].y, fp);
+	    }
+	    RWriteByte(sp->shape.polygon.shape, fp);
+	    RWriteByte(sp->shape.polygon.mode, fp);
+	    break;
+
+	case RC_FILLRECTANGLE:
+	    putc(RC_FILLRECTANGLE, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteShort(sp->shape.rectangle.x, fp);
+	    RWriteShort(sp->shape.rectangle.y, fp);
+	    RWriteByte(sp->shape.rectangle.width, fp);
+	    RWriteByte(sp->shape.rectangle.height, fp);
+	    break;
+
+	case RC_PAINTITEMSYMBOL:
+	    putc(RC_PAINTITEMSYMBOL, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    putc(sp->shape.symbol.type, fp);
+	    RWriteShort(sp->shape.symbol.x, fp);
+	    RWriteShort(sp->shape.symbol.y, fp);
+	    break;
+
+	case RC_FILLRECTANGLES:
+	    putc(RC_FILLRECTANGLES, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteUShort(sp->shape.rectangles.nrectangles, fp);
+	    for (i = 0; i < sp->shape.rectangles.nrectangles; i++) {
+		RWriteShort(sp->shape.rectangles.rectangles[i].x, fp);
+		RWriteShort(sp->shape.rectangles.rectangles[i].y, fp);
+		RWriteByte(sp->shape.rectangles.rectangles[i].width, fp);
+		RWriteByte(sp->shape.rectangles.rectangles[i].height, fp);
+	    }
+	    break;
+
+	case RC_DRAWARCS:
+	    putc(RC_DRAWARCS, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteUShort(sp->shape.arcs.narcs, fp);
+	    for (i = 0; i < sp->shape.arcs.narcs; i++) {
+		RWriteShort(sp->shape.arcs.arcs[i].x, fp);
+		RWriteShort(sp->shape.arcs.arcs[i].y, fp);
+		RWriteByte(sp->shape.arcs.arcs[i].width, fp);
+		RWriteByte(sp->shape.arcs.arcs[i].height, fp);
+		RWriteShort(sp->shape.arcs.arcs[i].angle1, fp);
+		RWriteShort(sp->shape.arcs.arcs[i].angle2, fp);
+	    }
+	    break;
+
+	case RC_DRAWSEGMENTS:
+	    putc(RC_DRAWSEGMENTS, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteUShort(sp->shape.segments.nsegments, fp);
+	    for (i = 0; i < sp->shape.segments.nsegments; i++) {
+		RWriteShort(sp->shape.segments.segments[i].x1, fp);
+		RWriteShort(sp->shape.segments.segments[i].y1, fp);
+		RWriteShort(sp->shape.segments.segments[i].x2, fp);
+		RWriteShort(sp->shape.segments.segments[i].y2, fp);
+	    }
+	    break;
+
+	case RC_DAMAGED:
+	    putc(RC_DAMAGED, fp);
+	    RWriteGC(rc, sp->gc, fp);
+	    RWriteByte(sp->shape.damage.damaged, fp);
+	    break;
+	}
+    }
+
+    putc(RC_ENDFRAME, fp);
+}
+
+static void SaveFramesXPR(struct xprc *rc)
+{
+    struct frame	*begin = rc->save_first;
+    struct frame	*end = rc->save_last;
+    struct frame	*save;
+    int			done = 0;
+    FILE		*fp;
+    tile_list_t		*tptr;
+    char		buf[256];
+
+    if (!begin) {
+	openErrorWindow(rc->ewin, "The first frame to save hasn't been set.");
+    }
+    else if (!end) {
+	openErrorWindow(rc->ewin, "The last frame to save hasn't been set.");
+    }
+    if (!begin || !end) {
+	return;
+    }
+    if (begin->number > end->number) {
+	openErrorWindow(rc->ewin, "First save frame exceeds last save frame, "
+			"not saving");
+	return;
+    }
+    if (!rc->seekable) {
+	if (!begin->shapes) {
+	    openErrorWindow(rc->ewin, "Save failed for standard input");
+	    return;
+	}
+    }
+    for (tptr = rc->tlist; tptr; tptr = tptr->next) {
+	tptr->flag = 0;
+    }
+
+    if (!compress) {
+	sprintf(buf, "xp%d-%d.xpr", begin->number, end->number);
+	if (!(fp = fopen(buf, "w"))) {
+	    perror(buf);
+	    return;
+	} else {
+	    setvbuf(fp, NULL, _IOFBF, (size_t)(8 * 1024));
+	}
+    } else {
+	sprintf(buf, "compress > xp%d-%d.xpr.Z", begin->number, end->number);
+	if (!(fp = popen(buf, "w"))) {
+	    perror(buf);
+	    return;
+	}
+    }
+
+    WriteHeader(rc, fp);
+
+    for (save = begin; !done; save = save->next) {
+	sprintf(buf, "Saving frame %d (of %d) ...\n",
+		save->number - begin->number + 1,
+		end->number - begin->number + 1);
+	OverWriteMsg(rc, buf);
+	if (!save->shapes) {
+	    readFrameData(rc, save);
+	}
+	WriteFrame(rc, save, fp);
+
+	done = (save == end);
+    }
+
+    fclose(fp);
 
     if (done) {
 	sprintf(buf, "Saved %d frames OK.\n", end->number - begin->number + 1);
@@ -2657,6 +3191,9 @@ static void dox(struct xui *ui, struct xprc *rc)
 		case '*':
 		    SaveFramesPPM(rc);
 		    break;
+		case '&':
+		    SaveFramesXPR(rc);
+		    break;
 
 		case 'd':
 		case 'D':
@@ -2752,10 +3289,12 @@ static void dox(struct xui *ui, struct xprc *rc)
     }
 }
 
-static void TestSeekable(struct xprc *rc)
+static void TestInput(struct xprc *rc)
 {
     int			fd = fileno(rc->fp);
     struct stat		st;
+    unsigned char	ch0, ch1;
+    char		buf[1024];
 
     rc->seekable = False;
     if (fstat(fd, &st)) {
@@ -2763,6 +3302,47 @@ static void TestSeekable(struct xprc *rc)
 	return;
     }
     rc->seekable = S_ISREG(st.st_mode);
+    if (rc->seekable) {
+	ch0 = getc(rc->fp);
+	ch1 = getc(rc->fp);
+	rewind(rc->fp);
+	if (ch0 == 0x1F && ch1 == 0x9D) {
+	    if (verbose) {
+		fprintf(stderr, "%s: \"%s\" is in compressed format, starting compress...\n",
+			*Argv, rc->filename);
+	    }
+	    lseek(fd, 0L, SEEK_SET);
+	    if (rc->fp == stdin) {
+		sprintf(buf, "compress -d");
+	    } else {
+		fclose(rc->fp);
+		sprintf(buf, "compress -d < %s", rc->filename);
+	    }
+	    if ((rc->fp = popen(buf, "r")) == NULL) {
+		perror("Unable to start compress");
+		exit(1);
+	    }
+	    rc->seekable = 0;
+	}
+	if (ch0 == 0x1F && ch1 == 0x8B) {
+	    if (verbose) {
+		fprintf(stderr, "%s: \"%s\" is in gzip format, starting gzip...\n",
+			*Argv, rc->filename);
+	    }
+	    lseek(fd, 0L, SEEK_SET);
+	    if (rc->fp == stdin) {
+		sprintf(buf, "gzip -d");
+	    } else {
+		fclose(rc->fp);
+		sprintf(buf, "gzip -d < %s", rc->filename);
+	    }
+	    if ((rc->fp = popen(buf, "r")) == NULL) {
+		perror("Unable to start gzip");
+		exit(1);
+	    }
+	    rc->seekable = 0;
+	}
+    }
     if (!rc->seekable) {
 	if (verbose) {
 	    fprintf(stderr,
@@ -2802,6 +3382,7 @@ static void usage(void)
 "        ]  -  mark the current frame as the last frame to be saved.\n"
 "        *  -  save the marked frames in PPM format.\n"
 "              WARNING: saving many frames takes HUGE amounts of diskspace!\n"
+"        &  -  save the marked frames in XPilot Recording format.\n"
 "        q  -  quit the program.\n"
     );
     exit(2);
@@ -2832,7 +3413,9 @@ int main(int argc, char **argv)
 	    verbose = 1;
 	}
 	else if (!strcmp(argv[argi], "-compress")) {
+#ifndef VMS
 	    compress = 1;
+#endif
 	}
 	else if (!strcmp(argv[argi], "-scale")) {
 	    if (++argi == argc || sscanf(argv[argi], "%lf", &scale) != 1) {
@@ -2896,21 +3479,23 @@ int main(int argc, char **argv)
 
     rc = (struct xprc *) MyMalloc(sizeof(*rc), MEM_MISC);
     memset(rc, 0, sizeof(*rc));
+    rc->filename = filename;
     rc->fp = fp;
     rc->scale = scale;
     rc->gamma = gamma;
-    TestSeekable(rc);
+    TestInput(rc);
     purge_argument = rc;
     if (RReadHeader(rc) >= 0) {
 	dox(ui, rc);
 	FreeXPRCData(rc);
     }
+    fp = rc->fp;
 
     MyFree(rc, sizeof(struct xprc), MEM_MISC);
     MyFree(ui, sizeof(struct xui), MEM_UI);
     XCloseDisplay(dpy);
 
-    if (fp != stdin) {
+    if (fp != NULL && fp != stdin) {
 	fclose(fp);
     }
 
@@ -3036,10 +3621,17 @@ static void markSaveEnd(void *data)
     rc->save_last = rc->cur;
 }
 
-static void saveStartToEnd(void *data)
+static void saveStartToEndPPM(void *data)
 {
     struct xprc		*rc = (struct xprc *) data;
 
     SaveFramesPPM(rc);
+}
+
+static void saveStartToEndXPR(void *data)
+{
+    struct xprc		*rc = (struct xprc *) data;
+
+    SaveFramesXPR(rc);
 }
 

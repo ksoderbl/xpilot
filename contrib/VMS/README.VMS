@@ -1,0 +1,189 @@
+README.VMS for XPilot
+=====================
+
+Since release 3.0.6 XPilot also supports VMS thanks to Curt Hjorring.
+The directory VMS contains extra code and MMS makefiles for VMS.
+Copy all of these files to the src directory and adapt them to your 
+environment.  Read the rest of this file for more info on how to compile 
+and install XPilot under VMS.
+
+The XPilot authors don't have access to VMS and don't know anything
+about VMS (and don't want to know anything about VMS :).  So please
+don't send us any mail about VMS related problems.  You are of course
+welcome to discuss XPilot ideas with us, contribute new features, etc.
+The XPilot-for-VMS guru is Jens Koerber <koerber@itt.uni-stuttgart.d400.de>.
+
+
+VMS port for XPilot (Version 3.0.5, Curt Hjorring)
+==================================================
+
+This is a patch to xpilot 3.0.5 so that it will run under VMS, on VAX
+machines and Alphas.  It requires the UCX library.  Not all VMS machines
+will have this.  To see if you have the UCX library look in sys$library:
+and see if you have either ucx$ipc.olb or ucx$ipc_shr.exe. If you have
+you're in luck!  If you are compiling for VAXes you will need a compiler
+that handles string concatenation. 
+
+Description of major changes in this patch:
+
+The majority of changes are to the include statements.  VMS doesn't believe
+in subdirectories for includes (probably because path names are formed
+differently, e.g. [.dir1.dir2]file.txt instead of ./dir1/dir2/file.txt)
+
+The keyboards on VAXstations and Alpha workstations do not supply correct
+key up events.  If you press and hold down say the 'A' key then a key up AND
+and key down event will be generated immediately.  This affects all
+alphanumeric keys and the spacebar.  Fortunately the function keys work
+properly.  This happens if xpilot is run locally or remotely (via X).  Because
+of this A and S will not turn the ship and the space bar will only turn the
+shield off.  My solution is to remap A and S to F1 and F2 and to change the
+server so that space bar toggles the shield.  I have added toggleShield as an
+option (the default is off).  If you are using a VAXstation as a display then
+to use your shield you need to either remap KEY_SHIELD to a function key, or
+else make sure the client is started up with toggleShield enabled.
+
+Added gettimeofday, ioctl, and username emulation.
+
+Removed X11 dependencies in the server.  It should no be possible to compile
+and link the server without needing any X11 headers or libraries.
+
+Added include files, to fix up GCC/CC incompatibilities.  These are stored
+in src/vms_include
+
+When creating a client/server connection I get errors when trying to set
+the socket buffer sizes, something like:
+  xpilots.exe;1: Can't set receive buffer size to 1040 (not owner)
+This is OK.
+
+VMS port for XPilot (Version 3.4.0, Jens Koerber)
+==================================================
+
+This is a patch to xpilot 3.4.0 so that it will run under OpenVMS (VAX 
+and Alpha). The compilation was done by the DECC 4.0 compiler.
+
+For timing purposes the server now uses the System Services SYS$SCHDWK and 
+SYS$HIBER. On VAX, this is just as precise as the system time 
+(resolution = 10 ms). The Alpha does provide a user-accessible high 
+precision timing facility, which returns a value that is, according to 
+the architecture specification, "suitable for timing intervals on the 
+order of nanoseconds". However, the VMS timing routines are, indeed, all 
+limited to a 10ms resolution.  If a specified absolute time value has 
+already passed and no repeat time is specified, the timer expires at the 
+next clock cycle (within 10 milliseconds). This is close enough for 
+timing purposes (example: 12 fps = 83,33 msec/per frame --> the timer 
+expires after 90 msec).
+                                                                         
+Instructions for the XPilot VMS patch
+=====================================
+
+To install:
+  - I used version 4.0 of DECC.  Other versions should work OK 
+    (The old VAXC Compiler doesn't work).
+  - If you use the GCC compiler, system header such as in.h need to be 
+    compiled.  GCC will choke on the ones in sys$include 
+    (they use #include file statements).  I have provided versions 
+    that GCC can handle.  These should be in the directory vms_include.
+    (Best place to get GCC is ftp://ftp.vms.stacken.kth.se/gnu-vms !?!)
+  - To install xpilot run the command procedure @INSTALL.COM in
+    the Subdirectory [-.-.CONTRIB.VMS]. This command procedure will
+    ask you for your C Compiler (DECC or GCC) and run the COM files 
+    MAKEXP.COM and MAKEXPS.COM (originally supplied by Peter Chang).
+    These do some dependency checking.
+  - There is no make command supplied with VMS.  There is a similar 
+    program called MMS which can be purchased (part of DECSET).  If you have 
+    MMS you can also use the file DESCRIP.MMS. 
+  - Look at the standard XPilot installation instructions
+
+Running xpilot:
+  - Added the startup file XP_STARTUP.COM. To use this command file run
+    @XP_STARTUP in the subdirectory [-.XPILOT.START].
+  - To give xpilot and xpilots command line arguments you will have to
+    set up some symbol assigns, e.g.
+    XPILOT :== "$LIB_DISK:[LIB.XGAMES.XPILOT.SRC]XPILOT.EXE
+  - When you start up xpilot or xpilots you may get an error message like:
+      Socket receive buffer size is 9000
+      xpilots.exe;1: Can't set receive buffer size to 1040 (not owner)
+      Socket send buffer size is 9000
+      xpilots.exe;1: Can't set send buffer size to 4112 (not owner)
+    This is normal but please tell me what your errors look like.
+  - The keyboards on our VAXstations (not the Alpha's) don't work very well 
+    They don't give proper key up/down messages.  Because of this it is 
+    impossible for xpilot to know if you are holding down one of the 
+    alphabetical keys. Fortunately the function keys work properly.  Because 
+    of this we have remapped keys such as left and right to say F1 and F2.  
+    The key bindings (VAX) that I use are:
+!--
+xpilot*keyLockNext:             Right Next
+xpilot*keyLockPrev:             Left Prior
+xpilot*keyLockClose:            Up Down
+xpilot*keyChangeHome:           Home Select
+xpilot*keyShield:               space
+xpilot*keyFireShot:             Return
+xpilot*keyFireMissile:          backslash
+xpilot*keyDropMine:             Tab F4
+xpilot*keyTurnLeft:             F1
+xpilot*keyTurnRight:            F2
+xpilot*keySelfDestruct:         q
+xpilot*keyIdMode:               i
+xpilot*keyPause:                p
+xpilot*keyToggleVelocity:       v
+xpilot*keyToggleCompass:        c
+xpilot*keySwapSettings:         Escape
+xpilot*keyRefuel:               F3
+xpilot*keyIncreasePower:        KP_Multiply KP_7
+xpilot*keyDecreasePower:        KP_Divide   KP_8
+xpilot*keyIncreaseTurnspeed:    KP_Add      KP_9
+xpilot*keyDecreaseTurnspeed:    KP_Subtract
+xpilot*keyThrust:               Shift_L Shift_R
+xpilot*keyCloak:                BackSpace Delete
+!--
+    Key bindings should be stored in your home directory in the file
+    DECW$XDEFAULTS.DAT. The computer only looks at this data when you
+    login, thus if you make a change you will need to logout and log back in
+    for the change to take effect.  Curt have added an option to xpilot so that
+    the spacebar works as a toggle.  To enable toggle shield (this is
+    necessary if using a VAXstation as a display and you want to use the
+    spacebar as the shield key) start the client by typing
+      xpilot "-toggleShield" true  <server>
+
+  - To send options to xpilot the option name (e.g. toggleShield in the above
+    example) MUST be enclosed in speech marks "".  This is because the parsing
+    is case sensitive but VMS converts command line arguments to upper-case
+    unless the arguments are quoted. You can define a symbolic name for 
+    the character string in your LOGIN.COM, e.g.
+      $  XP :== "$XPILOT:XPILOT_AXP -turn""S""peed 50 -sliding""R""adar yes"
+    Most of the options can also be set in the XPILOT.DAT file in your home 
+    directory. The options that I use are:    
+!--
+xpilot.name:             Cayenne
+xpilot.geometry:         1162x924
+xpilot.sparkProb:        0.2
+xpilot.slidingRadar:     yes
+xpilot.shipShape:        Asteroids
+xpilot.turnSpeed:        50
+!--
+  
+  - I have added SHIP_FILE in config.h as an optional file where shipshapes 
+    can be stored. If this resource is defined and it refers to an existing 
+    file then shipshapes can be referenced to by their name.
+
+Remaining problems/things to do:
+
+There is no VMS-style HELP library for xpilot. Anyone want to give it a go?
+
+Miscellaneous notes:
+
+VAXstations are pushing it to do 18 frames a second, both for the server and
+the client, you may have to reduce the frame rate (a smaller graphics window
+will help client speed).
+
+Let me know how you get on and GOOD LUCK!
+
+Jens.
+
+--
+-- Jens Koerber      jens.koerber@ciw.uni-karlsruhe.de, 
+--                   koerber@itt.uni-stuttgart.d400.de
+-- Inst. f. Technische Thermodynamik und Kaeltetechnik,
+-- University Karlsruhe, Germany
+-- 

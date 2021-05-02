@@ -1,4 +1,4 @@
-/* $Id: record.c,v 3.7 1995/01/24 17:21:44 bert Exp $
+/* $Id: record.c,v 3.9 1995/09/17 15:13:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -92,43 +92,43 @@ static void Dummy_paintItemSymbol(unsigned char type, Drawable drawable,
  */
 static void RWriteByte(unsigned char i)
 {
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
 }
 
 static void RWriteShort(short i)
 {
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
 }
 
 static void RWriteUShort(unsigned short i)
 {
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
 }
 
 static void RWriteLong(long i)
 {
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
 }
 
 static void RWriteULong(unsigned long i)
 {
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
     i >>= 8;
-    putc(i & 255, recordFP);
+    putc(i, recordFP);
 }
 
 static void RWriteString(char *str)
@@ -683,7 +683,7 @@ static int RFillRectangles(Display *display, Drawable drawable, GC gc,
 	putc(RC_FILLRECTANGLES, recordFP);
 	RWriteGC(gc, GCForeground | RTILEGC);
 	RWriteUShort(nrectangles);
-	for(i = 0; i < nrectangles; i++) {
+	for (i = 0; i < nrectangles; i++) {
 	    RWriteShort(rectangles[i].x);
 	    RWriteShort(rectangles[i].y);
 	    RWriteByte(rectangles[i].width);
@@ -832,6 +832,8 @@ void Record_toggle(void)
 		    free(record_filename);
 		    record_filename = NULL;
 		    record_start = False;
+		} else {
+		    setvbuf(recordFP, NULL, _IOFBF, (size_t)(8 * 1024));
 		}
 	    }
 	} else {

@@ -1,4 +1,4 @@
-/* $Id: net.c,v 3.29 1995/01/11 19:36:09 bert Exp $
+/* $Id: net.c,v 3.30 1995/06/09 18:00:18 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -241,7 +241,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	Sockbuf_clear(sbuf);
     } else {
 	errno = 0;
-	while ((len = write(sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
+	while ((len = DgramWrite(sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;
@@ -319,7 +319,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    len = sbuf->len;
 	else
 #endif
-	while ((len = recv(sbuf->sock, sbuf->buf + sbuf->len, max, 0)) <= 0) {
+	while ((len = DgramRead(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
 	    if (len == 0) {
 		return 0;
 	    }
@@ -355,7 +355,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	sbuf->len += len;
     } else {
 	errno = 0;
-	while ((len = read(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	while ((len = DgramRead(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
 	    if (len == 0) {
 		return 0;
 	    }

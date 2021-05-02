@@ -1,4 +1,4 @@
-/* $Id: keys.h,v 3.27 1995/01/11 19:33:06 bert Exp $
+/* $Id: keys.h,v 3.29 1995/11/16 00:13:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -48,7 +48,7 @@ typedef enum {
     KEY_TURN_LEFT,
     KEY_TURN_RIGHT,
     KEY_SELF_DESTRUCT,
-    KEY_UNUSED_16,		/* Was KEY_ID_MODE up to 3.2.5 */
+    KEY_LOSE_ITEM,		/* Was KEY_ID_MODE up to 3.2.5 */
     KEY_PAUSE,
     KEY_TANK_DETACH,
     KEY_TANK_NEXT,
@@ -84,7 +84,7 @@ typedef enum {
     KEY_LOAD_MODIFIERS_2,
     KEY_LOAD_MODIFIERS_3,					/* 50 */
     KEY_LOAD_MODIFIERS_4,
-    KEY_UNUSED_52,		/* Was KEY_TOGGLE_OWNED_ITEMS up to 3.2.5 */
+    KEY_SELECT_ITEM,		/* Was KEY_TOGGLE_OWNED_ITEMS up to 3.2.5 */
     KEY_UNUSED_53,		/* Was KEY_TOGGLE_MESSAGES up to 3.2.5 */
     KEY_REPAIR,
     KEY_TOGGLE_IMPLOSION,

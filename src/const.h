@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.56 1995/01/15 16:58:25 bert Exp $
+/* $Id: const.h,v 3.58 1995/12/04 14:47:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -100,16 +100,58 @@
 
 #undef ABS
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
-#ifndef VMS
 #ifndef MAX
 #   define MIN(x, y)		( (x)>(y) ? (y) : (x) )
 #   define MAX(x, y)		( (x)>(y) ? (x) : (y) )
-#endif
 #endif
 #define sqr(x)			( (x)*(x) )
 #define LENGTH(x, y)		( hypot( (double) (x), (double) (y) ) )
 #define VECTOR_LENGTH(v)	( hypot( (double) (v).x, (double) (v).y ) )
 #define LIMIT(val, lo, hi)	( val=(val)>(hi)?(hi):((val)<(lo)?(lo):(val)) )
+
+/*
+ * Two acros for edge wrap of x and y coordinates measured in pixels.
+ * Note that the correction needed shouldn't ever be bigger than one mapsize.
+ */
+#define WRAP_XPIXEL(x_)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((x_) < 0 \
+		? (x_) + World.width \
+		: ((x_) >= World.width \
+		    ? (x_) - World.width \
+		    : (x_))) \
+	    : (x_))
+
+#define WRAP_YPIXEL(y_)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((y_) < 0 \
+		? (y_) + World.height \
+		: ((y_) >= World.height \
+		    ? (y_) - World.height \
+		    : (y_))) \
+	    : (y_))
+
+/*
+ * Two acros for edge wrap of x and y coordinates measured in map blocks.
+ * Note that the correction needed shouldn't ever be bigger than one mapsize.
+ */
+#define WRAP_XBLOCK(x_)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((x_) < 0 \
+		? (x_) + World.x \
+		: ((x_) >= World.x \
+		    ? (x_) - World.x \
+		    : (x_))) \
+	    : (x_))
+
+#define WRAP_YBLOCK(y_)	\
+	(BIT(World.rules->mode, WRAP_PLAY) \
+	    ? ((y_) < 0 \
+		? (y_) + World.y \
+		: ((y_) >= World.y \
+		    ? (y_) - World.y \
+		    : (y_))) \
+	    : (y_))
 
 /*
  * Two macros for edge wrap of differences in position.
@@ -169,7 +211,6 @@
 #define MAX_PSEUDO_PLAYERS      16
 
 #define MAX_MSGS		8
-#define MAX_SCROLL_LEN		4096
 #define MAX_CHARS		80
 #define MSG_LEN			256
 

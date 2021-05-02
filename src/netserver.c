@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 3.106 1995/01/11 19:39:46 bert Exp $
+/* $Id: netserver.c,v 3.115 1995/12/04 19:08:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -92,6 +92,7 @@
 #ifdef VMS
 #include <unixio.h>
 #include <unixlib.h>
+#include <file.h>
 #else
 #include <unistd.h>
 #endif
@@ -99,19 +100,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 #ifndef  VMS
-#include <sys/param.h>
+# include <sys/param.h>
+# include <sys/stat.h>
 #endif
 #if defined(__hpux) || defined(VMS)
-#include <time.h>
+# include <time.h>
 #else
-#if defined(_AIX) && !defined(_BSD_INCLUDES)
-#define _BSD_INCLUDES
-#endif
-#ifdef sco
-#include <time.h>
-#endif
-#include <sys/time.h>
+# if defined(_AIX)
+#  if !defined(_BSD_INCLUDES)
+#   define _BSD_INCLUDES
+#  endif
+#  include <time.h>
+# endif
+# ifdef sco
+#  include <time.h>
+# endif
+# include <sys/time.h>
 #endif
 #ifdef VMS
 #include <socket.h>
@@ -147,8 +153,11 @@
 char netserver_version[] = VERSION;
 
 #define MAX_SELECT_FD			(sizeof(int) * 8 - 1)
-#define MAX_MOTD_CHUNK			512
 #define MAX_RELIABLE_DATA_PACKET_SIZE	1024
+
+#define MAX_MOTD_CHUNK			512
+#define MAX_MOTD_SIZE			(30*1024)
+#define MAX_MOTD_LOOPS			(10*FPS)
 
 static connection_t	*Conn = NULL;
 static int		max_connections = 0;
@@ -157,10 +166,8 @@ static int		contact_socket,
 			(*playing_receive[256])(int ind),
 			(*login_receive[256])(int ind),
 			(*drain_receive[256])(int ind);
-static FILE		*motd_fp;
 int			compress_maps = 1;
 int			login_in_progress;
-
 
 /*
  * Compress the map data using a simple Run Length Encoding algorithm.
@@ -234,6 +241,11 @@ static int Init_setup(void)
 	    case POS_GRAV:	*mapptr = SETUP_POS_GRAV; break;
 	    case NEG_GRAV:	*mapptr = SETUP_NEG_GRAV; break;
 	    case ITEM_CONCENTRATOR:	*mapptr = SETUP_ITEM_CONCENTRATOR; break;
+	    case DECOR_FILLED:	*mapptr = SETUP_DECOR_FILLED; break;
+	    case DECOR_RU:	*mapptr = SETUP_DECOR_RU; break;
+	    case DECOR_RD:	*mapptr = SETUP_DECOR_RD; break;
+	    case DECOR_LU:	*mapptr = SETUP_DECOR_LU; break;
+	    case DECOR_LD:	*mapptr = SETUP_DECOR_LD; break;
 	    case WORMHOLE:
 		switch (World.wormHoles[wormhole++].type) {
 		case WORM_NORMAL: *mapptr = SETUP_WORM_NORMAL; break;
@@ -467,9 +479,9 @@ void Destroy_connection(int ind, char *reason)
     pkt[sizeof(pkt) - 1] = '\0';
     pkt[0] = PKT_QUIT;
     len = strlen(pkt) + 1;
-    if (write(sock, pkt, len) != len) {
+    if (DgramWrite(sock, pkt, len) != len) {
 	GetSocketError(sock);
-	write(sock, pkt, len);
+	DgramWrite(sock, pkt, len);
     }
 #ifndef SILENT
     printf("Goodbye %s=%s@%s|%s (\"%s\")\n",
@@ -509,11 +521,11 @@ void Destroy_connection(int ind, char *reason)
     /* Tell the meta server */
     Send_meta_server(1);
 
-    if (write(sock, pkt, len) != len) {
+    if (DgramWrite(sock, pkt, len) != len) {
 	GetSocketError(sock);
-	write(sock, pkt, len);
+	DgramWrite(sock, pkt, len);
     }
-    close(sock);
+    DgramClose(sock);
 }
 
 /*
@@ -577,17 +589,17 @@ int Setup_connection(char *real, char *nick, char *dpy,
 	/* Not handled with our current oldfashioned use of select(2). */
 	errno = 0;
 	error("Socket filedescriptor too big");
-	close(sock);
+	DgramClose(sock);
 	return -1;
     }
     if ((my_port = GetPortNum(sock)) == 0) {
 	error("Cannot get port from socket");
-	close(sock);
+	DgramClose(sock);
 	return -1;
     }
     if (SetSocketNonBlocking(sock, 1) == -1) {
 	error("Cannot make client socket non-blocking");
-	close(sock);
+	DgramClose(sock);
 	return -1;
     }
     if (SetSocketReceiveBufferSize(sock, SERVER_RECV_SIZE + 256) == -1) {
@@ -871,7 +883,6 @@ static int Handle_login(int ind)
     pl->conn = ind;
     memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
     memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
-    pl->key_changed = 0;
 
     connp->state = CONN_READY;
     connp->drain_state = CONN_PLAYING;
@@ -1713,6 +1724,16 @@ int Send_message(int ind, char *msg)
     return Packet_printf(&connp->c, "%c%S", PKT_MESSAGE, msg);
 }
 
+int Send_loseitem(int lose_item_index, int ind)
+{
+    if (Conn[ind].version < 0x3400) { /* this should never hit since */
+				      /* only a 3.4+ client would send */
+				      /* the loseitem key */
+	return 1;
+    }
+    return Packet_printf(&Conn[ind].w, "%c%c", PKT_LOSEITEM, lose_item_index);
+}
+
 int Send_start_of_frame(int ind)
 {
     connection_t	*connp = &Conn[ind];
@@ -1809,7 +1830,6 @@ static int Receive_keyboard(int ind)
 	pl = Players[GetInd[connp->id]];
 	memcpy(pl->last_keyv, connp->r.ptr, size);
 	connp->r.ptr += size;
-	pl->key_changed = 1;
 	Handle_keyboard(GetInd[connp->id]);
     }
     if (connp->num_keyboard_updates++ && (connp->state & CONN_PLAYING)) {
@@ -2580,6 +2600,97 @@ static int Receive_motd(int ind)
 }
 
 /*
+ * Return part of the MOTD into buf starting from offset
+ * and continueing at most for maxlen bytes.
+ * Return the total MOTD size in size_ptr.
+ * The return value is the actual amount of MOTD bytes copied
+ * or -1 on error.  A value of 0 means EndOfMOTD.
+ *
+ * The MOTD is completely read into a dynamic buffer.
+ * If this MOTD buffer hasn't been accessed for a while
+ * then on the next access the MOTD file is checked for changes.
+ */
+int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)
+{
+    static int		motd_size;
+    static char		*motd_buf;
+    static long		motd_loops;
+    static time_t	motd_mtime;
+
+    if (size_ptr) {
+	*size_ptr = 0;
+    }
+    if (offset < 0 || maxlen < 0) {
+	return -1;
+    }
+
+    if (!motd_loops
+	|| (motd_loops + MAX_MOTD_LOOPS < loops
+	    && offset == 0)) {
+
+	int			fd, size;
+	struct stat		st;
+
+	motd_loops = loops;
+
+	if ((fd = open(SERVERMOTDFILE, O_RDONLY)) == -1) {
+	    motd_size = 0;
+	    return -1;
+	}
+	if (fstat(fd, &st) == -1) {
+	    motd_size = 0;
+	    close(fd);
+	    return -1;
+	}
+	size = st.st_size;
+	if (size > MAX_MOTD_SIZE) {
+	    size = MAX_MOTD_SIZE;
+	}
+	if (size != motd_size) {
+	    motd_mtime = 0;
+	    motd_size = size;
+	    if (motd_size == 0) {
+		close(fd);
+		return 0;
+	    }
+	    if (motd_buf) {
+		free(motd_buf);
+	    }
+	    if ((motd_buf = (char *) malloc(size)) == NULL) {
+		close(fd);
+		return -1;
+	    }
+	}
+	if (motd_mtime != st.st_mtime) {
+	    motd_mtime = st.st_mtime;
+	    if ((size = read(fd, motd_buf, motd_size)) <= 0) {
+		free(motd_buf);
+		motd_buf = 0;
+		close(fd);
+		motd_size = 0;
+		return -1;
+	    }
+	    motd_size = size;
+	}
+	close(fd);
+    }
+
+    motd_loops = loops;
+
+    if (size_ptr) {
+	*size_ptr = motd_size;
+    }
+    if (offset + maxlen > motd_size) {
+	maxlen = motd_size - offset;
+    }
+    if (maxlen <= 0) {
+	return 0;
+    }
+    memcpy(buf, motd_buf + offset, maxlen);
+    return maxlen;
+}
+
+/*
  * Send the server MOTD to the client.
  * The last time we send a motd packet it should
  * have datalength zero to mean EOMOTD.
@@ -2587,66 +2698,35 @@ static int Receive_motd(int ind)
 static int Send_motd(int ind)
 {
     connection_t	*connp = &Conn[ind];
-    int			len = 0;
-    long		off = connp->motd_offset,
-			size = 0,
-			readmax;
+    int			len;
+    int			off = connp->motd_offset,
+			size = 0;
     char		buf[MAX_MOTD_CHUNK];
 
-    if (off < 0) {
-	errno = 0;
-	error("Send_motd bad offset %ld", off);
-	Destroy_connection(ind, "motd offset");
-	return -1;
-    }
-    if (connp->c.len >= MAX_RELIABLE_DATA_PACKET_SIZE) {
-	return 1;
-    }
-    if (motd_fp || (motd_fp = fopen(motd, "r"))) {
-	if (fseek(motd_fp, 0, SEEK_END) >= 0) {
-	    size = ftell(motd_fp);
-	    if (size < 0) {
-		size = 0;
-	    }
-	    if (size < connp->motd_stop) {
-		connp->motd_stop = size;
-	    }
-	    else if (size > connp->motd_stop) {
-		size = connp->motd_stop;
-	    }
-	    readmax = connp->motd_stop - connp->motd_offset;
-	    if (readmax <= 0) {
-		len = 0;
-	    }
-	    else if (fseek(motd_fp, connp->motd_offset, SEEK_SET) >= 0) {
-		len = fread(buf, 1, (int)MIN(readmax, sizeof buf), motd_fp);
-	    }
+    len = MIN(MAX_MOTD_CHUNK, MAX_RELIABLE_DATA_PACKET_SIZE - connp->c.len - 10);
+    if (len >= 10) {
+	len = Get_motd(buf, off, len, &size);
+	if (len <= 0) {
+	    len = 0;
+	    connp->motd_offset = -1;
 	}
-    }
-    if (len <= 0) {
-	len = 0;
-	connp->motd_offset = -1;
-	if (motd_fp) {
-	    fclose(motd_fp);
-	    motd_fp = NULL;
-	}
-    }
-    if (Packet_printf(&connp->c,
-		      "%c%ld%hd%ld",
-		      PKT_MOTD, off, len, size) <= 0) {
-	Destroy_connection(ind, "motd header");
-	return -1;
-    }
-    if (len > 0) {
-	connp->motd_offset += len;
-	if (Sockbuf_write(&connp->c, buf, len) != len) {
-	    Destroy_connection(ind, "motd data");
+	if (Packet_printf(&connp->c,
+			  "%c%ld%hd%ld",
+			  PKT_MOTD, off, len, size) <= 0) {
+	    Destroy_connection(ind, "motd header");
 	    return -1;
+	}
+	if (len > 0) {
+	    connp->motd_offset += len;
+	    if (Sockbuf_write(&connp->c, buf, len) != len) {
+		Destroy_connection(ind, "motd data");
+		return -1;
+	    }
 	}
     }
 
     /* Return ok */
-    return 0;
+    return 1;
 }
 
 static int Receive_pointer_move(int ind)

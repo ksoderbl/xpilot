@@ -1,0 +1,111 @@
+$Id: INSTALL,v 3.1 1995/07/17 10:33:58 bjoerns Exp $
+
+To compile XPilot, you'll need at least
+
+An ANSI C compiler
+	gcc with gcc-includes installed should work just fine,
+	though many default compilers (like Sun's) are NOT
+	ANSI C compliant so check and double check that the
+	compiler you plan to use is ANSI C compliant.
+	About 95% of all the problems reported is because
+	users are not using an ANSI C compliant compiler!)
+
+X11	(only R4 and R5 tested, but R6 has been reported to work too)
+
+Also note that XPilot isn't gentle with the X server, so a fast machine
+(with a graphics accelerator that does line drawing in hardware),
+in a fast network is the ideal situation.
+
+
+
+INSTALLATION
+
+The complete installation just requires three steps -- geez, how easy
+can it be? :)
+
+1. Edit configuration files:
+
+   If you don't have Imake, you'll have to manage with the Makefile.std
+   in the src directory; just cd to src, copy Makefile.std to Makefile,
+   and edit config.h.
+
+   If you have Imake, you must first
+
+	edit Local.config
+
+   to suit your environment.
+   Then issue the following command
+
+	xmkmf -a
+
+   or, if that fails,
+
+	xmkmf ; make Makefiles ; make includes ; make depend
+
+
+2. Compile:
+
+   Just run
+
+	make
+
+   If you get lots of errors, verify that you're using an ANSI C compiler.
+
+   If you're compiling with gcc and get conflicting types for `abort'
+   and `exit', check that your include files has prototypes and if not,
+   that you have installed gcc-includes.  You should always install
+   gcc-includes if your system include files doesn't have prototypes.
+   (As a temporary hack, you may remove #include <stdlib.h> from all
+   the files.)
+
+
+3. Install:
+
+   To install the executables, maps, and textures, run
+
+        make install
+
+   and to install the manual pages, run
+
+	make install.man
+
+   If you have logging enabled you will have to touch a file called
+   log in the INSTLIBDIR and give other users write permission to it.
+   This is necessary since xpilot isn't, and shouldn't be, set[ug]id.
+
+
+If everything fails, see the FAQ, which you can find in the doc subdirectory.
+$Id: INSTALL,v 3.1 1995/07/17 10:33:58 bjoerns Exp $
+
+This is the README file for XPilot.
+
+For version and copyright information, see VERSION and LICENSE.
+
+For information on how to install XPilot, see INSTALL.
+
+VMS users should examine the contrib/VMS subdirectory and read the
+README.VMS which is in there.
+
+The documentation for XPilot is far from complete, though we have tried to
+remove all the errors from it.  Because of lack of time, the map format is
+only explained in README.MAPS and README.MAPS2, not in the server
+manual page (xpilots(6)).  The client manual page (xpilot(6)) is more
+or less up to date.
+
+See the manuals in the doc/man directory for further reading.
+
+
+
+OTHER SOURCES OF INFORMATION
+
+XPilot FAQ: telnet xpilot.cs.uit.no 4402
+	(also in the doc/ subdirectory)
+
+XPilot Page on WWW: http://www.cs.uit.no/XPilot/
+
+XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
+
+XPilot newsgroup: rec.games.computer.xpilot
+
+XPilot announcement mailing list: xpilot-announce@list.uit.no
+	(send an e-mail to majordomo@list.uit.no for help on how to join).

@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 3.51 1995/01/24 17:29:27 bert Exp $
+/* $Id: xevent.c,v 3.59 1995/11/16 17:58:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -75,8 +75,8 @@ extern Cursor	pointerControlCursor;
  */
 #define JS_X0	630
 #define JS_Y0	630
-#define JS_DX	50
-#define JS_DY	50
+#define JS_DX	100
+#define JS_DY	100
 
 /*
  * Functions which are bound to the joystick actions.
@@ -116,7 +116,7 @@ static void Joystick_event(void)
 	if ((js_fd = open(JS_DEVICE, O_RDONLY)) == -1) {
 	    return;
 	}
-	js_avail = TRUE;
+	js_avail = true;
     }
     if (js_avail && read(js_fd, &js, JS_RETURN) == JS_RETURN) {
 	change |= Key_set(JS_BUTTON0, (js.buttons & 1));
@@ -152,17 +152,17 @@ static keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     }
 #ifdef DEVELOPMENT
     if (reset && ret == KEY_DUMMY) {
-	XComposeStatus	compose;
-	char		str[4];
-	int		count;
+	static XComposeStatus	compose;
+	char			str[4];
+	int			count;
 
 	memset(str, 0, sizeof str);
 	count = XLookupString(&event->xkey, str, 1, &ks, &compose);
 	if (count == NoSymbol) {
-	    printf("Unknown keysym: 0x%03x", ks);
+	    printf("Unknown keysym: 0x%03lx", ks);
 	}
 	else {
-	    printf("No action bound to keysym 0x%03x", ks);
+	    printf("No action bound to keysym 0x%03lx", ks);
 	    if (*str) {
 		printf(", which is key \"%s\"", str);
 	    }
@@ -223,6 +223,7 @@ int Key_init(void)
 	exit(1);
     }
     memset(keyv, 0, sizeof keyv);
+    BITV_SET(keyv, KEY_SHIELD);
 
     return 0;
 }
@@ -240,6 +241,19 @@ static bool Key_press(keys_t key)
 	scoresChanged++;
 	return false;	/* server doesn't need to know */
 
+    /* Don auto-shield hack */
+    case KEY_FIRE_SHOT:
+    case KEY_FIRE_LASER:
+    case KEY_FIRE_MISSILE:
+    case KEY_FIRE_TORPEDO:
+    case KEY_FIRE_HEAT:
+    case KEY_DROP_MINE:
+    case KEY_DETACH_MINE:
+	if (auto_shield && BITV_ISSET(keyv, KEY_SHIELD)) {
+	    BITV_CLR(keyv, KEY_SHIELD);
+	}
+	break;
+
     case KEY_SHIELD:
 	if (toggle_shield) {
 	    shields = !shields;
@@ -249,6 +263,14 @@ static bool Key_press(keys_t key)
 		BITV_CLR(keyv, key);
 	    }
 	    return true;
+	}
+	else if (auto_shield) {
+	    shields = 1;
+#if 0
+	    shields = 0;
+	    BITV_CLR(keyv, key);
+	    return true;
+#endif
 	}
 	break;
 
@@ -289,6 +311,22 @@ static bool Key_press(keys_t key)
     case KEY_TOGGLE_RECORD:
 	Record_toggle();
 	return false;	/* server doesn't need to know */
+    case KEY_SELECT_ITEM:
+    case KEY_LOSE_ITEM:
+	if (version < 0x3400) {
+	    static int before;
+	    if (!before++) {
+		errno = 0;
+		error("Servers less than 3.4.0 dont know how to drop items");
+	    }
+	    return false;
+	}
+	if (lose_item_active == 1) {
+	    lose_item_active = 2;
+	} else {
+	    lose_item_active = 1;
+	}
+        break;
     default:
 	break;
     }
@@ -308,9 +346,43 @@ static bool Key_release(keys_t key)
     case KEY_TOGGLE_MESSAGES:
 	return false;	/* server doesn't need to know */
 
+    /* Don auto-shield hack */
+    /* restore shields */
+    case KEY_FIRE_SHOT:
+    case KEY_FIRE_LASER:
+    case KEY_FIRE_MISSILE:
+    case KEY_FIRE_TORPEDO:
+    case KEY_FIRE_HEAT:
+    case KEY_DROP_MINE:
+    case KEY_DETACH_MINE:
+	if (auto_shield && shields && !BITV_ISSET(keyv, KEY_SHIELD)) {
+	    /* Here We need to know if any other weapons are still on */
+	    /*      before we turn shield back on   */
+	    BITV_CLR(keyv, key);
+	    if (!BITV_ISSET(keyv, KEY_FIRE_SHOT) &&
+		!BITV_ISSET(keyv, KEY_FIRE_LASER) &&
+		!BITV_ISSET(keyv, KEY_FIRE_MISSILE) &&
+		!BITV_ISSET(keyv, KEY_FIRE_TORPEDO) &&
+		!BITV_ISSET(keyv, KEY_FIRE_HEAT) &&
+		!BITV_ISSET(keyv, KEY_DROP_MINE) &&
+		!BITV_ISSET(keyv, KEY_DETACH_MINE)
+	    ) {
+		BITV_SET(keyv, KEY_SHIELD);
+	    }
+	}
+	break;
+
     case KEY_SHIELD:
 	if (toggle_shield) {
 	    return false;
+	}
+	else if (auto_shield) {
+	    shields = 0;
+#if 0
+	    shields = 1;
+	    BITV_SET(keyv, key);
+	    return true;
+#endif
 	}
 	break;
 
@@ -318,6 +390,18 @@ static bool Key_release(keys_t key)
     case KEY_REPAIR:
 	fuelCount = FUEL_NOTIFY;
 	break;
+
+    case KEY_SELECT_ITEM:
+    case KEY_LOSE_ITEM:
+	if (version < 0x3400) {
+	    return false;
+	}
+	if (lose_item_active == 2) {
+	    lose_item_active = 1;
+	} else {
+	    lose_item_active = -FPS;
+	}
+        break;
 
     default:
 	break;
@@ -364,18 +448,39 @@ static void Key_event(XEvent *event)
 
 void Reset_shields(void)
 {
-    if (toggle_shield) {
+    if (toggle_shield || auto_shield) {
 	BITV_SET(keyv, KEY_SHIELD);
-	Net_key_change();
 	shields = 1;
+	if (auto_shield) {
+	    if (BITV_ISSET(keyv, KEY_FIRE_SHOT) ||
+		BITV_ISSET(keyv, KEY_FIRE_LASER) ||
+		BITV_ISSET(keyv, KEY_FIRE_MISSILE) ||
+		BITV_ISSET(keyv, KEY_FIRE_TORPEDO) ||
+		BITV_ISSET(keyv, KEY_FIRE_HEAT) ||
+		BITV_ISSET(keyv, KEY_DROP_MINE) ||
+		BITV_ISSET(keyv, KEY_DETACH_MINE)) {
+		BITV_CLR(keyv, KEY_SHIELD);
+	    }
+	}
+	Net_key_change();
     }
+}
+
+void Set_auto_shield(int onoff)
+{
+    auto_shield = onoff;
 }
 
 void Set_toggle_shield(int onoff)
 {
     toggle_shield = onoff;
     if (toggle_shield) {
-	shields = (BITV_ISSET(keyv, KEY_SHIELD) != 0);
+	if (auto_shield) {
+	    shields = 1;
+	}
+	else {
+	    shields = (BITV_ISSET(keyv, KEY_SHIELD) != 0);
+	}
     }
 }
 

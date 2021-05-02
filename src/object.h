@@ -1,4 +1,4 @@
-/* $Id: object.h,v 3.56 1995/01/24 17:06:16 bert Exp $
+/* $Id: object.h,v 3.60 1995/11/16 00:13:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -297,6 +297,8 @@ struct player {
     int		emergency_shield_max;	/* maximum time left */
 
     int		item[NUM_ITEMS];	/* for each item type how many */
+    int		lose_item;		/* which item to drop */
+    int		lose_item_state;	/* lose item key state, 2=up,1=down */
 
     float	auto_power_s;		/* autopilot saves of current */
     float	auto_turnacc_s;		/* power, turnacc, turnspeed and */
@@ -366,7 +368,6 @@ struct player {
 
     BITV_DECL(last_keyv, NUM_KEYS);	/* Keyboard state */
     BITV_DECL(prev_keyv, NUM_KEYS);	/* Keyboard state */
-    int		key_changed;
 
     void	*audio;			/* audio private data */
 

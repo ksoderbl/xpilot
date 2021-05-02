@@ -1,4 +1,4 @@
-/* $Id: event.c,v 3.57 1995/01/11 19:28:38 bert Exp $
+/* $Id: event.c,v 3.65 1995/11/30 21:48:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -40,7 +40,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.57 1995/01/11 19:28:38 bert Exp $";
+    "@(#)$Id: event.c,v 3.65 1995/11/30 21:48:04 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -106,6 +106,21 @@ static void Repair(int ind)
     }
 }
 
+bool team_dead(int team)
+{
+    int i;
+    bool alive = false;
+
+    for (i = 0; i < NumPlayers; i++) {
+	if (Players[i]->team == team &&
+	    BIT(Players[i]->status, PLAYING|GAME_OVER) == PLAYING) {
+	    alive = true;
+	    break;
+	}
+    }
+    return (!alive);
+}
+
 int Player_lock_closest(int ind, int next)
 {
     player *pl = Players[ind];
@@ -126,7 +141,13 @@ int Player_lock_closest(int ind, int next)
     newpl = -1;
     best = FLT_MAX;
     for (i = 0; i < NumPlayers; i++) {
-	if (lock == i || i == ind || TEAM(ind, i) ||
+	if (lock == i || i == ind || ((lockOtherTeam || team_dead(pl->team)) &&
+				       TEAM(ind, i)) ||
+	    ((!lockOtherTeam && !team_dead(pl->team)) &&
+	    ((BIT(World.rules->mode, TEAM_PLAY) &&
+	     BIT(pl->status, PLAYING|GAME_OVER) == PLAYING && TEAM(ind, i)) ||
+	    (BIT(World.rules->mode, TEAM_PLAY) &&
+	     BIT(pl->status, PLAYING|GAME_OVER) != PLAYING && !TEAM(ind, i)))) ||
 	    BIT(Players[i]->status, PLAYING|GAME_OVER) != PLAYING)
 	    continue;
 	l = Wrap_length(Players[i]->pos.x - pl->pos.x,
@@ -309,7 +330,10 @@ int Handle_keyboard(int ind)
 		    }
 		    if (i == j)
 			break;
-		} while (i == ind || BIT(Players[i]->status, GAME_OVER));
+		} while (i == ind || BIT(Players[i]->status, GAME_OVER) ||
+			 ((!lockOtherTeam && !team_dead(pl->team)) &&
+			  (BIT(World.rules->mode, TEAM_PLAY) &&
+			   BIT(pl->status, GAME_OVER) && !TEAM(ind, i))));
 		if (i == ind) {
 		    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
 		}
@@ -401,16 +425,15 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_DROP_BALL:
-		sound_play_sensors(pl->pos.x, pl->pos.y, DROP_BALL_SOUND);
 		Detach_ball(ind, -1);
 		break;
 
 	    case KEY_FIRE_SHOT:
 		if (!BIT(pl->used, OBJ_SHIELD|OBJ_SHOT)
 		    && BIT(pl->have, OBJ_SHOT)) {
+		    SET_BIT(pl->used, OBJ_SHOT);
 		    Fire_normal_shots(ind);
 		}
-		SET_BIT(pl->used, OBJ_SHOT);
 		break;
 
 	    case KEY_FIRE_MISSILE:
@@ -780,7 +803,27 @@ int Handle_keyboard(int ind)
 		    do_transporter(pl);
 		    pl->item[ITEM_TRANSPORTER]--;
 		    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
+		}
+		break;
+
+	    case KEY_SELECT_ITEM:
+		for (i = 0; i < NUM_ITEMS; i++) {
+		    if (++pl->lose_item >= NUM_ITEMS) {
+			pl->lose_item = 0;
 		    }
+		    if (BIT(1U << pl->lose_item, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+			/* can't lose fuel or tanks. */
+			continue;
+		    }
+		    if (pl->item[pl->lose_item] > 0) {
+			pl->lose_item_state = 2;	/* 2: key down; 1: key up */
+			break;
+		    }
+		}
+		break;
+
+	    case KEY_LOSE_ITEM:
+		do_lose_item(pl);
 		break;
 
 	    default:
@@ -820,7 +863,15 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_SHIELD:
-		CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER);
+		if (BIT(pl->used, OBJ_SHIELD)) {
+		    CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER);
+		    /*
+		     * Insert the default fireRepeatRate between lowering
+		     * shields and firing in order to prevent macros
+		     * and hacked clients.
+		     */
+		    pl->shot_time = loops;
+		}
 		break;
 
 	    case KEY_FIRE_SHOT:
@@ -841,13 +892,16 @@ int Handle_keyboard(int ind)
 		CLR_BIT(pl->status, REPROGRAM);
 		break;
 
+	    case KEY_SELECT_ITEM:
+		pl->lose_item_state = 1;
+		break;
+
 	    default:
 		break;
 	    }
 	}
     }
     memcpy(pl->prev_keyv, pl->last_keyv, sizeof(pl->last_keyv));
-    pl->key_changed = 0;
 
     return 1;
 }

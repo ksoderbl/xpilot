@@ -1,4 +1,4 @@
-/* $Id: timer.c,v 3.19 1995/01/11 19:59:30 bert Exp $
+/* $Id: timer.c,v 3.21 1995/08/04 20:29:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -111,24 +111,33 @@ void Loop_delay(void)
     long		msec;
     struct timeval	tval;
     struct timezone	tzone;
+#ifdef VMS
+    unsigned short      deltime[4]={-1,-1,-1,-1};
+#endif
 
     if (adj_sec == 0) {
-	if (gettimeofday(&tval, &tzone) != 0)
-	    return;
-
-	adj_sec = tval.tv_sec;
-	last_msec = (tval.tv_sec - adj_sec)*1000 + (tval.tv_usec)/1000;
-	return;
+        if (gettimeofday(&tval, &tzone) != 0)
+            return;
+        adj_sec = tval.tv_sec*1000;
+        last_msec = tval.tv_usec*0.001;
+        return;
     }
 
-    do {
-	if (gettimeofday(&tval, &tzone) != 0)
-	    return;
-
-	msec = (tval.tv_sec - adj_sec)*1000 + (tval.tv_usec)/1000;
-
-    } while (msec < last_msec + 1000/framesPerSecond);
-
+    last_msec = last_msec + 1000/framesPerSecond;
+    if (gettimeofday(&tval, &tzone) != 0)
+        return;
+    msec = tval.tv_sec*1000 - adj_sec + tval.tv_usec*0.001;
+    if (msec < last_msec) {
+      do {
+#ifdef VMS
+         SYS$SCHDWK(0,0,&deltime,0);
+         SYS$HIBER();
+#endif 
+         if (gettimeofday(&tval, &tzone) != 0)
+            return;
+         msec = tval.tv_sec*1000 - adj_sec + tval.tv_usec*0.001;
+         } while (msec < last_msec);
+    }
     last_msec = msec;
 }
 

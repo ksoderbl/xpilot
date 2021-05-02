@@ -1,4 +1,4 @@
-/* $Id: dbuff.h,v 3.10 1995/01/11 19:25:27 bert Exp $
+/* $Id: dbuff.h,v 3.11 1995/05/13 15:49:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -25,7 +25,7 @@
 #define	DBUFF_H
 
 #ifdef SPARC_CMAP_HACK
-# ifdef sparc
+# if defined(sparc) || defined(__sparc)
 #  if defined(SVR4) || defined(__svr4__)
 #   include <sys/fbio.h>
 #  else

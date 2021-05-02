@@ -1,4 +1,4 @@
-/* $Id: widget.h,v 3.10 1995/01/11 20:02:54 bert Exp $
+/* $Id: widget.h,v 3.11 1995/07/29 16:58:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -134,6 +134,7 @@ typedef struct widget_viewer {
     int				len,
 				vert_slider_desc,
 				hori_slider_desc,
+				save_button_desc,
 				close_button_desc,
 				visible_x,
 				visible_y,

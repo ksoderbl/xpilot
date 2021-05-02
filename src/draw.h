@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 3.29 1995/01/24 17:04:21 bert Exp $
+/* $Id: draw.h,v 3.33 1995/12/04 14:47:13 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -66,9 +66,6 @@
 #define MSG_DURATION	    1024
 #define MSG_FLASH	    892
 
-#define SCROLL_DELAY	    10
-#define SCROLL_LEN	    100
-
 #define TITLE_DELAY	    500
 #define	UPDATE_SCORE_DELAY  (FPS)
 #define CONTROL_DELAY	    100
@@ -89,26 +86,32 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
     position	engine[RES];		/* Engine position */
     position	m_gun[RES];		/* Main gun position */
     int		num_l_gun,
-		num_r_gun;		/* number of additional cannons */
+		num_r_gun,
+		num_l_rgun,
+		num_r_rgun;		/* number of additional cannons */
     position	*l_gun[MAX_GUN_PTS],	/* Additional cannon positions, left*/
-		*r_gun[MAX_GUN_PTS];	/* Additional cannon positions, right*/
+		*r_gun[MAX_GUN_PTS],	/* Additional cannon positions, right*/
+		*l_rgun[MAX_GUN_PTS],	/* Additional rear cannon positions, left*/
+		*r_rgun[MAX_GUN_PTS];	/* Additional rear cannon positions, right*/
     int		num_l_light,		/* Number of lights */
 		num_r_light;
     position	*l_light[MAX_LIGHT_PTS], /* Left and right light positions */
 		*r_light[MAX_LIGHT_PTS];
     int		num_m_rack;		/* Number of missile racks */
     position	*m_rack[MAX_RACK_PTS];
+    int		shield_radius;		/* Radius of shield used by client. */
 } wireobj;
 
 extern wireobj *Default_ship(void);
 extern void Free_ship_shape(wireobj *w);
 extern wireobj *Parse_shape_str(char *str);
 extern wireobj *Convert_shape_str(char *str);
+extern void Calculate_shield_radius(wireobj *w);
 extern int Validate_shape_str(char *str);
 extern void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 				  unsigned shape_version);
 
-extern float rfrac();
+extern float rfrac(void);
 extern int mod(int x, int y);
 
 #endif

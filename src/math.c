@@ -1,4 +1,4 @@
-/* $Id: math.c,v 3.29 1995/01/11 19:35:08 bert Exp $
+/* $Id: math.c,v 3.33 1995/11/24 21:19:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -41,7 +41,7 @@ char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.29 1995/01/11 19:35:08 bert Exp $";
+    "@(#)$Id: math.c,v 3.33 1995/11/24 21:19:12 bert Exp $";
 #endif
 
 
@@ -148,6 +148,12 @@ static void Rotate_ship(wireobj *w)
     for (i = 0; i < w->num_r_gun; i++) {
 	Rotate_point(&w->r_gun[i][0]);
     }
+    for (i = 0; i < w->num_l_rgun; i++) {
+	Rotate_point(&w->l_rgun[i][0]);
+    }
+    for (i = 0; i < w->num_r_rgun; i++) {
+	Rotate_point(&w->r_rgun[i][0]);
+    }
     for (i = 0; i < w->num_l_light; i++) {
 	Rotate_point(&w->l_light[i][0]);
     }
@@ -202,6 +208,8 @@ wireobj *Default_ship(void)
 	sh.m_rack[0][0].x = 15;
 	sh.m_rack[0][0].y = 0;
 
+	sh.num_l_gun = sh.num_r_gun = sh.num_l_rgun = sh.num_r_rgun = 0;
+
 	Make_table();
 
 	Rotate_ship(&sh);
@@ -247,6 +255,8 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 			r_light[MAX_LIGHT_PTS],
 			l_gun[MAX_GUN_PTS],
 			r_gun[MAX_GUN_PTS],
+			l_rgun[MAX_GUN_PTS],
+			r_rgun[MAX_GUN_PTS],
 			m_rack[MAX_RACK_PTS];
     bool		mainGunSet = false,
 			engineSet = false;
@@ -258,6 +268,8 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
     w->num_points = 0;
     w->num_l_gun = 0;
     w->num_r_gun = 0;
+    w->num_l_rgun = 0;
+    w->num_r_rgun = 0;
     w->num_l_light = 0;
     w->num_r_light = 0;
     w->num_m_rack  = 0;
@@ -525,6 +537,60 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    break;
 
 	case 9:		/* Keyword is 'author' */
+	    break;
+
+	case 10:		/* Keyword is 'leftRearGun' */
+	    while (teststr) {
+		while (*teststr == ' ') teststr++;
+		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
+		    if (verboseShapeParsing) {
+			printf("Missing left rear gun coordinate in: \"%s\"\n",
+			       teststr);
+		    }
+		    break;
+		}
+		if (w->num_l_rgun >= MAX_GUN_PTS) {
+		    if (verboseShapeParsing) {
+			printf("Too many left rear gun coordinates\n");
+		    }
+		}
+		else {
+		    l_rgun[w->num_l_rgun].x = inx;
+		    l_rgun[w->num_l_rgun].y = iny;
+		    w->num_l_rgun++;
+		    if (debugShapeParsing) {
+			printf("left rear gun at %d,%d\n", inx, iny);
+		    }
+		}
+		teststr = strchr(teststr, ' ');
+	    }
+	    break;
+
+	case 11:		/* Keyword is 'rightRearGun' */
+	    while (teststr) {
+		while (*teststr == ' ') teststr++;
+		if (sscanf(teststr, "%d,%d" ,&inx, &iny) != 2) {
+		    if (verboseShapeParsing) {
+			printf("Missing right rear gun coordinate in: \"%s\"\n",
+			       teststr);
+		    }
+		    break;
+		}
+		if (w->num_r_rgun >= MAX_GUN_PTS) {
+		    if (verboseShapeParsing) {
+			printf("Too many right rear gun coordinates\n");
+		    }
+		}
+		else {
+		    r_rgun[w->num_r_rgun].x = inx;
+		    r_rgun[w->num_r_rgun].y = iny;
+		    w->num_r_rgun++;
+		    if (debugShapeParsing) {
+			printf("right rear gun at %d,%d\n", inx, iny);
+		    }
+		}
+		teststr = strchr(teststr, ' ');
+	    }
 	    break;
 
 	default:
@@ -805,6 +871,22 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		invalid++;
 	    }
 	}
+	for (i = 0; i < w->num_l_rgun; i++) {
+	    if (GRID_CHK(l_rgun[i].x, l_rgun[i].y)) {
+		if (verboseShapeParsing) {
+		    printf("Left rear gun %d outside ship\n", i);
+		}
+		invalid++;
+	    }
+	}
+	for (i = 0; i < w->num_r_rgun; i++) {
+	    if (GRID_CHK(r_rgun[i].x, r_rgun[i].y)) {
+		if (verboseShapeParsing) {
+		    printf("Right rear gun %d outside ship\n", i);
+		}
+		invalid++;
+	    }
+	}
 	for (i = 0; i < w->num_m_rack; i++) {
 	    if (GRID_CHK(m_rack[i].x, m_rack[i].y)) {
 		if (verboseShapeParsing) {
@@ -873,6 +955,10 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    && !(w->l_gun[0] = (position*)malloc(w->num_l_gun * i)))
 	|| (w->num_r_gun
 	    && !(w->r_gun[0] = (position*)malloc(w->num_r_gun * i)))
+	|| (w->num_l_rgun
+	    && !(w->l_rgun[0] = (position*)malloc(w->num_l_rgun * i)))
+	|| (w->num_r_rgun
+	    && !(w->r_rgun[0] = (position*)malloc(w->num_r_rgun * i)))
 	|| (w->num_l_light
 	    && !(w->l_light[0] = (position*)malloc(w->num_l_light * i)))
 	|| (w->num_r_light
@@ -887,12 +973,18 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		free(w->l_gun[0]);
 		if (w->r_gun[0]) {
 		    free(w->r_gun[0]);
-		    if (w->l_light[0]) {
-			free(w->l_light[0]);
-			if (w->r_light[0]) {
-			    free(w->r_light[0]);
-			    if (w->m_rack[0]) {
-				free(w->m_rack[0]);
+		    if (w->l_rgun[0]) {
+			free(w->l_rgun[0]);
+			if (w->r_rgun[0]) {
+			    free(w->r_rgun[0]);
+			    if (w->l_light[0]) {
+				free(w->l_light[0]);
+				if (w->r_light[0]) {
+				    free(w->r_light[0]);
+				    if (w->m_rack[0]) {
+					free(w->m_rack[0]);
+				    }
+				}
 			    }
 			}
 		    }
@@ -910,6 +1002,12 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
     }
     for (i = 1; i < w->num_r_gun; i++) {
 	w->r_gun[i] = &w->r_gun[i - 1][RES];
+    }
+    for (i = 1; i < w->num_l_rgun; i++) {
+	w->l_rgun[i] = &w->l_rgun[i - 1][RES];
+    }
+    for (i = 1; i < w->num_r_rgun; i++) {
+	w->r_rgun[i] = &w->r_rgun[i - 1][RES];
     }
     for (i = 1; i < w->num_l_light; i++) {
 	w->l_light[i] = &w->l_light[i - 1][RES];
@@ -940,6 +1038,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
     for (i = 0; i < w->num_r_gun; i++) {
 	w->r_gun[i][0].x = r_gun[i].x;
 	w->r_gun[i][0].y = r_gun[i].y;
+    }
+    for (i = 0; i < w->num_l_rgun; i++) {
+	w->l_rgun[i][0].x = l_rgun[i].x;
+	w->l_rgun[i][0].y = l_rgun[i].y;
+    }
+    for (i = 0; i < w->num_r_rgun; i++) {
+	w->r_rgun[i][0].x = r_rgun[i].x;
+	w->r_rgun[i][0].y = r_rgun[i].y;
     }
     for (i = 0; i < w->num_l_light; i++) {
 	w->l_light[i][0].x = l_light[i].x;
@@ -992,6 +1098,8 @@ void Free_ship_shape(wireobj *w)
 	if (w->num_points > 0 && w->pts[0]) free(w->pts[0]);
 	if (w->num_l_gun > 0 && w->l_gun[0]) free(w->l_gun[0]);
 	if (w->num_r_gun > 0 && w->r_gun[0]) free(w->r_gun[0]);
+	if (w->num_l_rgun > 0 && w->l_rgun[0]) free(w->l_rgun[0]);
+	if (w->num_r_rgun > 0 && w->r_rgun[0]) free(w->r_rgun[0]);
 	if (w->num_l_light > 0 && w->l_light[0]) free(w->l_light[0]);
 	if (w->num_r_light > 0 && w->r_light[0]) free(w->r_light[0]);
 	if (w->num_m_rack > 0 && w->m_rack[0]) free(w->m_rack[0]);
@@ -1099,6 +1207,44 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 		extlen += tmplen;
 	    }
 	}
+	if (w->num_l_rgun > 0) {
+	    strcpy(&tmp[0], "(LR:");
+	    tmplen = strlen(&tmp[0]);
+	    for (i = 0; i < w->num_l_rgun; i++) {
+		sprintf(&tmp[tmplen], " %d,%d",
+			(int)w->l_rgun[i][0].x, (int)w->l_rgun[i][0].y);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
+	    }
+	}
+	if (w->num_r_rgun > 0) {
+	    strcpy(&tmp[0], "(RR:");
+	    tmplen = strlen(&tmp[0]);
+	    for (i = 0; i < w->num_r_rgun; i++) {
+		sprintf(&tmp[tmplen], " %d,%d",
+			(int)w->r_rgun[i][0].x, (int)w->r_rgun[i][0].y);
+		tmplen += strlen(&tmp[tmplen]);
+	    }
+	    strcpy(&tmp[tmplen], ")");
+	    tmplen++;
+	    if (buflen + tmplen < MSG_LEN) {
+		strcpy(&buf[buflen], tmp);
+		buflen += tmplen;
+	    }
+	    else {
+		strcpy(&ext[extlen], tmp);
+		extlen += tmplen;
+	    }
+	}
 	if (w->num_l_light > 0) {
 	    strcpy(&tmp[0], "(LL:");
 	    tmplen = strlen(&tmp[0]);
@@ -1160,11 +1306,11 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
     else {
 	/* 3.1 version had 16 points maximum.  just ignore the excess. */
 	int num_points = MIN(w->num_points, 16);
-
+#if 0
 	if (num_points < w->num_points) {
 	    printf("Truncating ship to 16 points for old 3.1 server\n");
 	}
-
+#endif
 	if (shape_version != 0x3100) {
 	    errno = 0;
 	    error("Unknown ship shape version: %x", shape_version);
@@ -1201,7 +1347,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 
 static int Get_shape_keyword(char *keyw)
 {
-#define NUM_SHAPE_KEYS	10
+#define NUM_SHAPE_KEYS	12
 
     static char		shape_keys[NUM_SHAPE_KEYS][16] = {
 			    "shape:",
@@ -1214,6 +1360,8 @@ static int Get_shape_keyword(char *keyw)
 			    "missileRack:",
 			    "name:",
 			    "author:",
+			    "leftRearGun:",
+			    "rightRearGun:",
 			};
     static char		abbrev_keys[NUM_SHAPE_KEYS][4] = {
 			    "SH:",
@@ -1226,6 +1374,8 @@ static int Get_shape_keyword(char *keyw)
 			    "MR:",
 			    "NM:",
 			    "AU:",
+			    "LR:",
+			    "RR:",
 			};
     int			i;
 
@@ -1250,5 +1400,21 @@ static int Get_shape_keyword(char *keyw)
 	i = -1;
     }
     return(i);
+}
+
+void Calculate_shield_radius(wireobj *w)
+{
+    int			i;
+    int			radius, max_radius = 0;
+
+    for (i = 0; i < w->num_points; i++) {
+	radius = 2 * LENGTH(w->pts[i][0].x, w->pts[i][0].y);
+	if (radius > max_radius) {
+	    max_radius = radius;
+	}
+    }
+    w->shield_radius = (max_radius + 2 <= 34)
+			? 34
+			: (max_radius + 2 - (max_radius & 1));
 }
 

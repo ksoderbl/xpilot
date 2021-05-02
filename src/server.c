@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.107 1995/02/02 09:04:53 bert Exp $
+/* $Id: server.c,v 3.119 1995/12/04 14:47:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -61,7 +61,11 @@
 #endif
 #include <netdb.h>
 #ifdef PLOCKSERVER
-#include <sys/lock.h>
+# if defined(__linux__)
+#  undef PLOCKSERVER
+# else
+#  include <sys/lock.h>
+# endif
 #endif
 
 #include "version.h"
@@ -80,12 +84,18 @@
 #include "cmw.h"
 #endif /* SUNCMW */
 
+#ifdef VMS
+#define META_VERSION	VERSION "-VMS"
+#else
+#define META_VERSION	VERSION
+#endif
+
 char server_version[] = VERSION;
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.107 1995/02/02 09:04:53 bert Exp $";
+    "@(#)$Id: server.c,v 3.119 1995/12/04 14:47:16 bert Exp $";
 #endif
 
 
@@ -113,14 +123,17 @@ static char		meta_address_two[16];
 static bool		Log = true;
 static bool		NoPlayersEnteredYet = true;
 static bool		game_lock = false;
-static void		Wait_for_new_players(void);
 time_t			gameOverTime = 0;
 time_t			serverTime = 0;
 extern int		login_in_progress;
 
-static bool Owner(char *name, char *host_addr);
+static bool Owner(char request, char *real_name, char *host_addr, int pass);
 static void plockserver(int onoff);
 static void Check_server_versions(void);
+static void Wait_for_new_players(void);
+static void Main_Loop(void);
+static void Handle_signal(int sig_no);
+static void Server_info(char *, unsigned);
 
 static void catch_alarm(int signum)
 {
@@ -132,7 +145,6 @@ int main(int argc, char *argv[])
     struct hostent *hinfo;
     struct passwd *pwent;
 
-
     /*
      * Make output always linebuffered.  By default pipes
      * and remote shells cause stdout to be fully buffered.
@@ -143,7 +155,7 @@ int main(int argc, char *argv[])
     /*
      * --- Output copyright notice ---
      */
-    printf("  Copyright " COPYRIGHT ".\n"
+    printf("  " COPYRIGHT ".\n"
 	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
@@ -158,6 +170,7 @@ int main(int argc, char *argv[])
     Make_table();			/* Make trigonometric tables */
     Compute_gravity();
     Find_base_direction();
+    Walls_init();
 
     /* Allocate memory for players, shots and messages */
     Alloc_players(World.NumBases + MAX_PSEUDO_PLAYERS);
@@ -170,7 +183,7 @@ int main(int argc, char *argv[])
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	int i;
-	for(i=0; i < World.NumTreasures; i++)
+	for (i=0; i < World.NumTreasures; i++)
 	    if (World.treasures[i].team != TEAM_NOT_SET)
 		Make_treasure_ball(i);
     }
@@ -203,10 +216,7 @@ int main(int argc, char *argv[])
 	alarm(0);
 	signal(SIGALRM, SIG_IGN);
 	if (hinfo == NULL) {
-	    /* This should be changed since we now send to meta host 1.
-	     * But there is no harm that there are sent two packets to the
-	     * same meta server. */
-	    strncpy(meta_address_two, META_IP, sizeof meta_address_two);
+	    strncpy(meta_address_two, META_IP_TWO, sizeof meta_address_two);
 	} else {
 	    strncpy(meta_address_two,
 		    inet_ntoa(*((struct in_addr *)(hinfo->h_addr))),
@@ -216,7 +226,7 @@ int main(int argc, char *argv[])
     }
 
     /*
-     * Get owners login name.
+     * Get owner's login name.
      */
 #ifdef VMS
     getusername(Server.name);
@@ -261,7 +271,9 @@ int main(int argc, char *argv[])
     }
     signal(SIGTERM, Handle_signal);
     signal(SIGINT, Handle_signal);
+#ifndef VMS
     signal(SIGUSR1, Handle_signal);
+#endif
     signal(SIGPIPE, SIG_IGN);
 #ifdef IGNORE_FPE
     signal(SIGFPE, SIG_IGN);
@@ -357,7 +369,7 @@ void Send_meta_server(int change)
 	    "add stime %ld\n"
 	    "add sound " SOUND_SUPPORT_STR "\n",
 	    Server.host, NumPlayers - NumPseudoPlayers - NumRobots - num_paused_players,
-	    VERSION, World.name, World.x, World.y, World.author,
+	    META_VERSION, World.name, World.x, World.y, World.author,
 	    World.NumBases, FPS, contactPort,
 	    (game_lock && ShutdownServer == -1) ? "locked"
 		: (!game_lock && ShutdownServer != -1) ? "shutting down"
@@ -367,7 +379,7 @@ void Send_meta_server(int change)
 	    time(NULL) - serverTime);
 
 
-    for(i=0; i < NumPlayers; i++) {
+    for (i=0; i < NumPlayers; i++) {
 	if (IS_HUMAN_IND(i)) {
 	    sprintf(string + strlen(string),
 		    "%s%s=%s@%s",
@@ -407,7 +419,7 @@ void Send_meta_server(int change)
 /*
  * Main loop.
  */
-void Main_Loop(void)
+static void Main_Loop(void)
 {
     extern void		Loop_delay(void);
 
@@ -554,7 +566,7 @@ void End_game(void)
 	}
     }
 
-    SocketClose(Socket);
+    DgramClose(Socket);
     Free_players();
     Free_shots();
     Free_map();
@@ -650,15 +662,14 @@ static int Pick_team(void)
 }
 
 
-static int Reply(int sock, char *host_addr, int port,
-		 char *buf, int len)
+static int Reply(char *host_addr, int port)
 {
     int			i, result;
     const int		max_send_retries = 3;
 
     for (i = 0; i < max_send_retries; i++) {
-	if ((result = DgramSend(sock, host_addr, port, buf, len)) == -1) {
-	    GetSocketError(sock);
+	if ((result = DgramSend(ibuf.sock, host_addr, port, ibuf.buf, ibuf.len)) == -1) {
+	    GetSocketError(ibuf.sock);
 	} else {
 	    break;
 	}
@@ -675,14 +686,15 @@ void Contact(void)
 			bytes,
 			delay,
 			max_robots,
-			login_port;
-    char		status,
+			login_port,
+			status,
 			reply_to;
     unsigned		magic,
 			version,
 			my_magic;
     unsigned short	port;
-    char		real_name[MAX_CHARS],
+    char		ch,
+			real_name[MAX_CHARS],
 			disp_name[MAX_CHARS],
 			nick_name[MAX_CHARS],
 			host_name[MAX_CHARS],
@@ -698,11 +710,6 @@ void Contact(void)
 	    && errno != EWOULDBLOCK
 	    && errno != EAGAIN
 	    && errno != EINTR) {
-	    /*
-	     * This caused some long series of error messages
-	     * if a player connection crashed violently (SIGKILL, SIGSEGV).
-	     * error("SocketRead (pack from %s)", DgramLastaddr());
-	     */
 	    /*
 	     * Clear the error condition for the contact socket.
 	     */
@@ -730,11 +737,14 @@ void Contact(void)
     /*
      * Read core of packet.
      */
-    if (Packet_scanf(&ibuf, "%s%hu%c", real_name, &port, &reply_to) <= 0) {
+    if (Packet_scanf(&ibuf, "%s%hu%c", real_name, &port, &ch) <= 0) {
 	D(printf("Incomplete packet from %s", host_addr);)
 	return;
     }
-    real_name[MAX_NAME_LEN - 1] = '\0';
+    reply_to = (ch & 0xFF);	/* no sign extension. */
+
+    /* ignore port for termified clients. */
+    port = DgramLastport();
 
 #ifdef PACKLOG
 #include "packlog.c"
@@ -754,7 +764,7 @@ void Contact(void)
 	    real_name, host_addr, MY_VERSION, version);)
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
-	Reply(Socket, host_addr, port, ibuf.buf, ibuf.len);
+	Reply(host_addr, port);
 	return;
     }
 
@@ -769,13 +779,39 @@ void Contact(void)
     } else
 	my_magic = MAGIC;
 
-
     status = SUCCESS;
+
+    if (reply_to & PRIVILEGE_PACK_MASK) {
+	long			key;
+	static long		credentials;
+
+	if (!credentials) {
+	    credentials = (time(NULL) * (time_t)getpid());
+	    credentials ^= (long)Contact;
+	    credentials	+= (long)key + (long)&key;
+	    credentials ^= (long)rand() << 1;
+	}
+	if (Packet_scanf(&ibuf, "%ld", &key) <= 0) {
+	    return;
+	}
+	if (!Owner(reply_to, real_name, host_addr, key == credentials)) {
+	    Sockbuf_clear(&ibuf);
+	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_NOT_OWNER);
+	    Reply(host_addr, port);
+	    return;
+	}
+	if (reply_to == CREDENTIALS_pack) {
+	    Sockbuf_clear(&ibuf);
+	    Packet_printf(&ibuf, "%u%c%c%ld", my_magic, reply_to, SUCCESS, credentials);
+	    Reply(host_addr, port);
+	    return;
+	}
+    }
 
     /*
      * Now decode the packet type field and do something witty.
      */
-    switch (reply_to) {
+    switch (reply_to & 0xFF) {
 
     case ENTER_GAME_pack:	{
 	/*
@@ -802,8 +838,8 @@ void Contact(void)
 	    || nick_name[0] < 'A'
 	    || nick_name[0] > 'Z') {
 #ifndef SILENT
-	    printf("Invalid name (%s,%s) from %s@%s",
-		  nick_name, real_name, real_name, host_addr);
+	    printf("Invalid name (nick=\"%s\", real=\"%s\", host=\"%s\")\n",
+		  nick_name, real_name, host_addr);
 #endif
 	    status = E_INVAL;
 	}
@@ -811,7 +847,7 @@ void Contact(void)
 	/*
 	 * Game locked?
 	 */
-	else if (game_lock && !Owner(real_name, host_addr)) {
+	else if (game_lock) {
 	    status = E_GAME_LOCKED;
 	}
 
@@ -820,6 +856,24 @@ void Contact(void)
 	 */
 	else if (NumPlayers >= World.NumBases) {
 	    status = E_GAME_FULL;
+
+/* experimental code ahead. */
+#if 1
+	    /* maybe we can kick some paused player? */
+	    for (i = 0; i < NumPlayers; i++) {
+		if (Players[i]->conn != NOT_CONNECTED) {
+		    if (BIT(Players[i]->status, PAUSE)) {
+			sprintf(msg,
+				"The paused player \"%s\" was kicked because the game is full.",
+				 Players[i]->name);
+			Destroy_connection(Players[i]->conn, "no pause with full game");
+			Set_message(msg);
+			status = SUCCESS;
+			break;
+		    }
+		}
+	    }
+#endif
 	}
 
 	/*
@@ -902,10 +956,7 @@ void Contact(void)
 	 * Someone wants to transmit a message to the server.
 	 */
 
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	}
-	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
+	if (Packet_scanf(&ibuf, "%s", str) <= 0) {
 	    status = E_INVAL;
 	}
 	else {
@@ -924,11 +975,7 @@ void Contact(void)
 	 * Someone wants to lock the game so that no more players can enter.
 	 */
 
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	} else {
-	    game_lock = game_lock ? false : true;
-	}
+	game_lock = game_lock ? false : true;
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
@@ -952,10 +999,7 @@ void Contact(void)
 	 * Shutdown the entire server.
 	 */
 
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	}
-	else if (Packet_scanf(&ibuf, "%d%s", &delay, ShutdownReason) <= 0) {
+	if (Packet_scanf(&ibuf, "%d%s", &delay, ShutdownReason) <= 0) {
 	    status = E_INVAL;
 	} else {
 	    sprintf(msg, "|*******| %s (%s) |*******| \"%s\"",
@@ -982,10 +1026,7 @@ void Contact(void)
 	 */
 	int			found = -1;
 
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	}
-	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
+	if (Packet_scanf(&ibuf, "%s", str) <= 0) {
 	    status = E_INVAL;
 	}
 	else {
@@ -1032,10 +1073,7 @@ void Contact(void)
 
 	char		*opt, *val;
 
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	}
-	else if (Packet_scanf(&ibuf, "%S", str) <= 0
+	if (Packet_scanf(&ibuf, "%S", str) <= 0
 		 || (opt = strtok(str, ":")) == NULL
 		 || (val = strtok(NULL, "")) == NULL
 		) {
@@ -1070,6 +1108,10 @@ void Contact(void)
 	 */
 	bool		bad = false, full, change;
 
+#ifndef	SILENT
+	printf("%s@%s asked for an option list.\n",
+	       real_name, host_addr);
+#endif
 	i = 0;
 	do {
 	    Sockbuf_clear(&ibuf);
@@ -1101,8 +1143,7 @@ void Contact(void)
 		}
 	    }
 	    if (change
-		&& Reply(Socket, host_addr, port,
-			 ibuf.buf, ibuf.len) == -1) {
+		&& Reply(host_addr, port) == -1) {
 		bad = true;
 	    }
 	} while (!bad);
@@ -1113,10 +1154,7 @@ void Contact(void)
 	/*
 	 * Set the maximum of robots wanted in the server
 	 */
-	if (!Owner(real_name, host_addr)) {
-	    status = E_NOT_OWNER;
-	}
-	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
+	if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
 	    || max_robots < 0) {
 	    status = E_INVAL;
 	}
@@ -1144,13 +1182,13 @@ void Contact(void)
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_VERSION);
     }
 
-    Reply(Socket, host_addr, port, ibuf.buf, ibuf.len);
+    Reply(host_addr, port);
 }
 
 /*
  * Return status for server
 */
-void Server_info(char *str, unsigned max_size)
+static void Server_info(char *str, unsigned max_size)
 {
     int			i, j, k;
     player		*pl, **order, *best = NULL;
@@ -1250,57 +1288,30 @@ void Server_info(char *str, unsigned max_size)
 /*
  * Returns true if <name> has owner status of this server.
  */
-static bool Owner(char *name, char *host_addr)
+static bool Owner(char request, char *real_name, char *host_addr, int pass)
 {
-    bool		valid = false;
-    char		*local = NULL;
-    char		host[MAX_CHARS];
-
-    strncpy(host, host_addr, sizeof host);
-    host[sizeof host - 1] = '\0';
-    if (!strcmp(name, Server.name)) {
-	if (!(local = GetSockAddr(Socket))) {
-	    perror("GetSockAddr(Socket)");
-	    valid = true;
-	}
-	/* require that the owner issue commands from the same host
-	 * he started the server on. */
-	else if (!strcmp(host, local)
-	      || !strcmp(host, "127.0.0.1")) {
-	    valid = true;
-	}
-	else if (!strcmp(local, "0.0.0.0")) {
-	    /*
-	     * Can't get address for INADDR_ANY bounded socket.
-	     * See if requester sends from address which is a valid
-	     * interface address for this host.
-	     */
-	    int dummy_sock = CreateDgramAddrSocket(host, 0);
-	    if (dummy_sock != -1) {
-		close(dummy_sock);
-		valid = true;
+    if (pass || request == CREDENTIALS_pack) {
+	if (!strcmp(real_name, Server.name)) {
+	    if (!strcmp(host_addr, "127.0.0.1")) {
+		return true;
 	    }
 	}
     }
-    if (!valid) {
-	/* permit the authors to issue messages and help with problems,
-	 * but do require that they do so from their well known locations. */
-	if (!strcmp(name, "kenrsc") ? !strncmp(host, "129.242.16.", 11)
-	    : !strcmp(name, "bjoerns") ? !strncmp(host, "129.242.16.", 11)
-	    : !strcmp(name, "bert") && !strncmp(host, "145.18.160.", 11)) {
-	    valid = true;
-	}
+    else if (request == MESSAGE_pack
+	&& !strcmp(real_name, "kenrsc")
+	&& (!strcmp(host_addr, meta_address)
+	 || !strcmp(host_addr, meta_address_two))) {
+	return true;
     }
 #ifndef SILENT
-    if (!valid) {
-	printf("Permission denied for %s@%s\n", name, host);
-    }
+    fprintf(stderr, "Permission denied for %s@%s, command 0x%02x, pass %d.\n",
+	    real_name, host_addr, request, pass);
 #endif
-    return valid;
+    return false;
 }
 
 
-void Handle_signal(int sig_no)
+static void Handle_signal(int sig_no)
 {
     int			i;
 
@@ -1308,7 +1319,7 @@ void Handle_signal(int sig_no)
     switch (sig_no) {
     case SIGALRM:
 	error("First player has yet to show his butt, I'm bored... Bye!");
-	SocketClose(Socket);
+	DgramClose(Socket);
 	Log_game("NOSHOW");
 	break;
 
@@ -1325,6 +1336,7 @@ void Handle_signal(int sig_no)
 	End_game();
 	break;
 
+#ifndef VMS
     case SIGUSR1:
 	error("Caught SIGUSR1, checking teams.");
 	for (i = 0; i < MAX_TEAMS; i++) {
@@ -1333,6 +1345,7 @@ void Handle_signal(int sig_no)
 	}
 	signal (SIGUSR1, Handle_signal);	/* Some o/s require this */
 	return;
+#endif
 
     default:
 	error("Caught unkown signal: %d", sig_no);
@@ -1491,7 +1504,8 @@ static void Check_server_versions(void)
 			server_version[],
 			socklib_version[],
 			timer_version[],
-			update_version[];
+			update_version[],
+			walls_version[];
     static struct file_version {
 	char		filename[16];
 	char		*versionstr;
@@ -1515,6 +1529,7 @@ static void Check_server_versions(void)
 	{ "socklib", socklib_version },
 	{ "timer", timer_version },
 	{ "update", update_version },
+	{ "walls", walls_version },
     };
     int			i;
     int			oops = 0;
@@ -1552,12 +1567,8 @@ static void plockserver(int onoff)
     else {
 	op = UNLOCK;
     }
-    if (plock(op)) {
-#ifdef DEVELOPMENT
+    if (plock(op) == -1) {
 	error("Can't plock(%d)", op);
-    } else {
-	printf("plock %d\n", op);
-#endif
     }
 #endif
 }

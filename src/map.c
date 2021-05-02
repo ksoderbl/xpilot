@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.41 1995/01/11 19:33:48 bert Exp $
+/* $Id: map.c,v 3.42 1995/03/19 15:32:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -44,7 +44,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.41 1995/01/11 19:33:48 bert Exp $";
+    "@(#)$Id: map.c,v 3.42 1995/03/19 15:32:47 bert Exp $";
 #endif
 
 
@@ -634,6 +634,22 @@ void Grok_map(void)
 		    } else {
 			line[y] = SPACE;
 		    }
+		    break;
+
+		case 'b':
+		    line[y] = DECOR_FILLED;
+		    break;
+		case 'h':
+		    line[y] = DECOR_LU;
+		    break;
+		case 'g':
+		    line[y] = DECOR_RU;
+		    break;
+		case 'y':
+		    line[y] = DECOR_LD;
+		    break;
+		case 't':
+		    line[y] = DECOR_RD;
 		    break;
 		}
 	    }

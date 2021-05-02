@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.58 1995/01/24 17:36:02 bert Exp $
+/* $Id: xpilot.c,v 3.67 1995/12/04 14:47:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -25,38 +25,38 @@
 # define _SOCKADDR_LEN
 #endif
 #ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
+# include <unixio.h>
+# include <unixlib.h>
 #else
-#include <unistd.h>
+# include <unistd.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #ifdef VMS
-#include "username.h"
-#include <socket.h>
-#include <in.h>
-#include <inet.h>
+# include "username.h"
+# include <socket.h>
+# include <in.h>
+# include <inet.h>
 #else
-#include <pwd.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+# include <pwd.h>
+# include <sys/types.h>
+# include <sys/param.h>
+# include <sys/socket.h>
+# include <sys/ioctl.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 #endif
 #if defined(SVR4) || defined(__svr4__)
 # include <sys/sockio.h>
 #endif
 #ifdef VMS
-#include <time.h>
+# include <time.h>
 #else
-#include <sys/time.h>
+# include <sys/time.h>
 #endif
 #ifndef LINUX0
-#include <net/if.h>
+# include <net/if.h>
 #endif
 #include <netdb.h>
 #include <string.h>
@@ -71,7 +71,7 @@
 #include "socklib.h"
 #include "net.h"
 #ifdef SUNCMW
-#include "cmw.h"
+# include "cmw.h"
 #endif /* SUNCMW */
 
 char xpilot_version[] = VERSION;
@@ -79,7 +79,7 @@ char xpilot_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.58 1995/01/24 17:36:02 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.67 1995/12/04 14:47:22 bert Exp $";
 #endif
 
 #if defined(LINUX0) || defined(VMS)
@@ -119,6 +119,7 @@ static int		auto_connect = false,
 			auto_shutdown = false;
 static unsigned		server_version;
 static int		team = TEAM_NOT_SET;
+static int		onesock = 0;
 
 char			**Argv;
 int			Argc;
@@ -146,6 +147,47 @@ static void printfile(char *filename)
 }
 
 
+/* just like fgets() but strips newlines like gets() */
+static char* getline(char* buf, int len, FILE* stream)
+{
+	char* ret;
+	char* newline;
+
+	ret = fgets(buf, len, stream);
+	if (ret && (newline=strchr(ret, '\n'))) {
+		*newline = '\0';		/* strip newline */
+	}
+	return ret;
+}
+
+
+static int create_dgram_addr_socket(char *dotaddr, int port)
+{
+    static int save_fd = -1;
+    int fd;
+
+    if (save_fd == -1) {
+	fd = CreateDgramAddrSocket(dotaddr, port);
+	if (onesock) {
+	    save_fd = fd;
+	}
+    } else {
+	fd = save_fd;
+    }
+    return fd;
+}
+
+static int create_dgram_socket(int port)
+{
+    return create_dgram_addr_socket("0.0.0.0", port);
+}
+
+static void close_dgram_socket(int fd)
+{
+    if (!onesock) {
+	DgramClose(fd);
+    }
+}
 
 static bool Get_contact_message(sockbuf_t *sbuf)
 {
@@ -213,7 +255,7 @@ static int Get_reply_message(sockbuf_t *ibuf)
 
     if (SocketReadable(ibuf->sock)) {
 	Sockbuf_clear(ibuf);
-	if ((len = read(ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
+	if ((len = DgramRead(ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
 	    error("Can't read reply message from %s/%d",
 		  server_addr, server_port);
 	    exit(1);
@@ -246,6 +288,32 @@ static int Get_reply_message(sockbuf_t *ibuf)
 
 
 
+static void Command_help(void)
+{
+    printf("Supported commands are:\n"
+	   "H/?  -   Help - this text.\n"
+	   "N    -   Next server, skip this one.\n"
+	   "S    -   list Status.\n"
+	   "T    -   set Team.\n"
+	   "Q    -   Quit.\n"
+	   "K    -   Kick a player.                (only owner)\n"
+	   "M    -   send a Message.               (only owner)\n"
+	   "L    -   Lock/unLock server access.    (only owner)\n"
+	   "D(*) -   shutDown/cancel shutDown.     (only owner)\n"
+	   "R(#) -   set maximum number of Robots. (only owner)\n"
+	   "O    -   Modify a server option.       (only owner)\n"
+	   "V    -   View the server options.\n"
+	   "J(&) or just Return enters the game.\n"
+	   "(*) If you don't specify any delay, you will signal that\n"
+	   "    the server should stop an ongoing shutdown.\n"
+	   "(#) Not specifying the maximum number of robots is\n"
+	   "    the same as specifying 0 robots.\n"
+	   "(&) You may specify a team number after the J.\n"
+	  );
+}
+
+
+
 /*
  * This is the routine that interactively (if not auto_connect) prompts
  * the user on his/her next action.  Returns true if player joined this
@@ -257,6 +325,12 @@ static bool Process_commands(sockbuf_t *ibuf)
     int			i, len, retries, delay, max_robots;
     char		c, status, reply_to, str[MAX_LINE];
     unsigned short	port;
+    int			has_credentials = 0;
+    int			cmd_credentials = 0;
+    int			privileged_cmd;
+    int			max_replies;
+    long		key = 0;
+    static char		localhost[] = "127.0.0.1";
 
 
     if (auto_connect && !list_servers && !auto_shutdown) {
@@ -265,17 +339,26 @@ static bool Process_commands(sockbuf_t *ibuf)
 
     for (;;) {
 
+	max_replies = 1;
+
 	/*
 	 * Now, what do you want from the server?
 	 */
-	if (!auto_connect) {
+	if (cmd_credentials) {
+	    c = cmd_credentials;
+	    cmd_credentials = 0;
+	}
+	else if (!auto_connect) {
 	    printf("*** Server on %s. Enter command> ", server_name);
 
-	    gets(str);
-	    c = str[0];
+	    getline(str, MAX_LINE-1, stdin);
 	    if (feof(stdin)) {
 		puts("");
 		c = 'Q';
+	    } else {
+		c = str[0];
+		if (c == '\0')
+		    c = 'J';
 	    }
 	    CAP_LETTER(c);
 	} else {
@@ -293,184 +376,208 @@ static bool Process_commands(sockbuf_t *ibuf)
 	 * This assures us that we only get replies to the last command sent.
 	 */
 	if (ibuf->sock != -1) {
-	    SocketClose(ibuf->sock);
+	    close_dgram_socket(ibuf->sock);
+	    ibuf->sock = -1;
 	}
-	if ((ibuf->sock = CreateDgramSocket(0)) == -1) {
-	    error("Could not create info socket");
-	    exit(1);
+
+	privileged_cmd = (strchr("DKLMOR", c) != NULL);
+	if (privileged_cmd) {
+	    if (!has_credentials) {
+		if ((ibuf->sock = create_dgram_addr_socket(server_addr, 0)) == -1) {
+		    printf("Server %s is not local, privileged command not possible.\n",
+			   server_addr);
+		    continue;
+		}
+		close_dgram_socket(ibuf->sock);
+	    }
+	    if ((ibuf->sock = create_dgram_addr_socket(localhost, 0)) == -1) {
+		error("Could not create localhost socket");
+		exit(1);
+	    }
+	    if (DgramConnect(ibuf->sock, localhost, server_port) == -1) {
+		error("Can't connect to local server %s on port %d\n",
+		      localhost, server_port);
+		return (false);
+	    }
+	} else {
+	    if ((ibuf->sock = create_dgram_socket(0)) == -1) {
+		error("Could not create socket");
+		exit(1);
+	    }
+	    if (DgramConnect(ibuf->sock, server_addr, server_port) == -1 && !onesock) {
+		error("Can't connect to server %s on port %d\n",
+		      server_addr, server_port);
+		return (false);
+	    }
 	}
-	if (DgramConnect(ibuf->sock, server_addr, server_port) == -1) {
-	    error("Can't connect to server %s on port %d\n",
-		  server_addr, server_port);
-	    return (false);
-	}
+
 	Sockbuf_clear(ibuf);
 	Packet_printf(ibuf, "%u%s%hu", VERSION2MAGIC(server_version),
 		      real_name, GetPortNum(ibuf->sock));
 
-	switch (c) {
+	if (privileged_cmd && !has_credentials) {
+	    Packet_printf(ibuf, "%c%ld", CREDENTIALS_pack, 0L);
+	} else {
 
-	    /*
-	     * Owner only commands:
-	     */
-	case 'K':
-	    printf("Enter name of victim: ");
-	    fflush(stdout);
-	    gets(str);
-	    str[MAX_NAME_LEN - 1] = '\0';
-	    Packet_printf(ibuf, "%c%s", KICK_PLAYER_pack, str);
-	    break;
+	    switch (c) {
 
-	case 'R':
-	    printf("Enter maximum number of robots: ");
-	    fflush(stdout);
-	    gets(str);
-	    if (sscanf(str, "%d", &max_robots) <= 0 || max_robots < 0) {
-		printf("Invalid number of robots \"%s\".\n", str);
-		continue;
-	    }
-	    Packet_printf(ibuf, "%c%d", MAX_ROBOT_pack, max_robots);
-	    break;
+		/*
+		 * Owner only commands:
+		 */
 
-	case 'M':				/* Send a message to server. */
-	    printf("Enter message: ");
-	    fflush(stdout);
-	    if (!gets(str) || !str[0]) {
-		printf("No message sent.\n");
-		continue;
-	    }
-	    str[MAX_CHARS - 1] = '\0';
-	    Packet_printf(ibuf, "%c%s", MESSAGE_pack, str);
-	    break;
-
-	    /*
-	     * Public commands:
-	     */
-	case 'N':				/* Next server. */
-	    return (false);
-
-	case 'O':				/* Tune an option. */
-	    printf("Enter option: ");
-	    fflush(stdout);
-	    if (!gets(str) || (len = strlen(str)) == 0) {
-		printf("Nothing changed.\n");
-		continue;
-	    }
-	    printf("Enter new value for %s: ", str);
-	    fflush(stdout);
-	    strcat(str, ":"); len++;
-	    if (!gets(&str[len]) || str[len] == '\0') {
-		printf("Nothing changed.\n");
-		continue;
-	    }
-	    Packet_printf(ibuf, "%c%S", OPTION_TUNE_pack, str);
-	    break;
-
-	case 'V':				/* View options. */
-	    Packet_printf(ibuf, "%c", OPTION_LIST_pack);
-	    break;
-
-	case 'T':				/* Set team. */
-	    printf("Enter team: ");
-	    fflush(stdout);
-	    if (!gets(str) || (len = strlen(str)) == 0) {
-		printf("Nothing changed.\n");
-	    }
-	    else {
-		int newteam;
-		if (sscanf(str, " %d", &newteam) != 1) {
-		    printf("Invalid team specification: %s.\n", str);
+	    case 'K':
+		printf("Enter name of victim: ");
+		fflush(stdout);
+		if (!getline(str, MAX_LINE-1, stdin)) {
+		    printf("Nothing changed.\n");
+		    continue;
 		}
-		else if (newteam >= 0 && newteam <= 9) {
-		    team = newteam;
-		    printf("Team set to %d\n", team);
+		str[MAX_NAME_LEN - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%s", KICK_PLAYER_pack, key, str);
+		break;
+
+	    case 'R':
+		printf("Enter maximum number of robots: ");
+		fflush(stdout);
+		if (!getline(str, MAX_LINE-1, stdin)) {
+		    printf("Nothing changed.\n");
+		    continue;
 		}
-		else {
+		if (sscanf(str, "%d", &max_robots) <= 0 || max_robots < 0) {
+		    printf("Invalid number of robots \"%s\".\n", str);
+		    continue;
+		}
+		Packet_printf(ibuf, "%c%ld%d", MAX_ROBOT_pack, key, max_robots);
+		break;
+
+	    case 'M':				/* Send a message to server. */
+		printf("Enter message: ");
+		fflush(stdout);
+		if (!getline(str, MAX_LINE-1, stdin) || !str[0]) {
+		    printf("No message sent.\n");
+		    continue;
+		}
+		str[MAX_CHARS - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%s", MESSAGE_pack, key, str);
+		break;
+
+	    case 'L':				/* Lock the game. */
+		Packet_printf(ibuf, "%c%ld", LOCK_GAME_pack, key);
+		break;
+
+	    case 'D':				/* Shutdown */
+		if (!auto_shutdown) {
+		    printf("Enter delay in seconds or return for cancel: ");
+		    getline(str, MAX_LINE-1, stdin);
+		    /*
+		     * No argument = cancel shutdown = arg_int=0
+		     */
+		    if (sscanf(str, "%d", &delay) <= 0) {
+			delay = 0;
+		    } else
+			if (delay <= 0)
+			    delay = 1;
+
+		    printf("Enter reason: ");
+		    getline(str, MAX_LINE-1, stdin);
+		} else {
+		    strcpy(str, shutdown_reason);
+		    delay = 60;
+		}
+		str[MAX_CHARS - 1] = '\0';
+		Packet_printf(ibuf, "%c%ld%d%s", SHUTDOWN_pack, key, delay, str);
+		break;
+
+	    case 'O':				/* Tune an option. */
+		printf("Enter option: ");
+		fflush(stdout);
+		if (!getline(str, MAX_LINE-1, stdin)
+		    || (len=strlen(str)) == 0) {
+		    printf("Nothing changed.\n");
+		    continue;
+		}
+		printf("Enter new value for %s: ", str);
+		fflush(stdout);
+		strcat(str, ":"); len++;
+		if (!getline(&str[len], MAX_LINE-1-len, stdin)
+		    || str[len] == '\0') {
+		    printf("Nothing changed.\n");
+		    continue;
+		}
+		printf("option \"%s\"\n", str); fflush(stdout);
+		Packet_printf(ibuf, "%c%ld%S", OPTION_TUNE_pack, key, str);
+		break;
+
+		/*
+		 * Public commands:
+		 */
+
+	    case 'J':				/* Trying to enter game. */
+		if (str[1] >= '0' && str[1] <= '9') {
+		    team = str[1] - '0';
+		    printf("Joining team %d\n", team);
+		}
+		else if (str[1] == '-') {
 		    team = TEAM_NOT_SET;
 		    printf("Team set to unspecified\n");
 		}
-	    }
-	    continue;
+		Packet_printf(ibuf, "%c%s%s%s%d", ENTER_GAME_pack,
+			      nick_name, display, hostname, team);
+		break;
 
-	case 'S':				/* Report status. */
-	    Packet_printf(ibuf, "%c", REPORT_STATUS_pack);
-	    break;
+	    case 'S':				/* Report status. */
+		Packet_printf(ibuf, "%c", REPORT_STATUS_pack);
+		break;
 
-	case 'D':				/* Shutdown */
-	    if (!auto_shutdown) {
-		printf("Enter delay in seconds or return for cancel: ");
-		gets(str);
+	    case 'V':				/* View options. */
+		Packet_printf(ibuf, "%c", OPTION_LIST_pack);
+		max_replies = 5;
+		break;
+
 		/*
-		 * No argument = cancel shutdown = arg_int=0
+		 * User interface commands:
 		 */
-		if (sscanf(str, "%d", &delay) <= 0) {
-		    delay = 0;
-		} else
-		    if (delay <= 0)
-			delay = 1;
 
-		printf("Enter reason: ");
-		gets(str);
-	    } else {
-		strcpy(str, shutdown_reason);
-		delay = 60;
+	    case 'N':				/* Next server. */
+		return (false);
+
+	    case 'T':				/* Set team. */
+		printf("Enter team: ");
+		fflush(stdout);
+		if (!getline(str, MAX_LINE-1, stdin)
+		    || (len = strlen(str)) == 0) {
+		    printf("Nothing changed.\n");
+		}
+		else {
+		    int newteam;
+		    if (sscanf(str, " %d", &newteam) != 1) {
+			printf("Invalid team specification: %s.\n", str);
+		    }
+		    else if (newteam >= 0 && newteam <= 9) {
+			team = newteam;
+			printf("Team set to %d\n", team);
+		    }
+		    else {
+			team = TEAM_NOT_SET;
+			printf("Team set to unspecified\n");
+		    }
+		}
+		continue;
+
+	    case 'Q':
+		exit (0);
+		break;
+
+	    case '?':
+	    case 'H':				/* Help. */
+	    default:
+		Command_help();
+
+		/*
+		 * Next command.
+		 */
+		continue;
 	    }
-	    str[MAX_CHARS - 1] = '\0';
-	    Packet_printf(ibuf, "%c%d%s", SHUTDOWN_pack, delay, str);
-	    break;
-
-	case 'Q':
-	    exit (0);
-	    break;
-
-	case 'L':				/* Lock the game. */
-	    Packet_printf(ibuf, "%c", LOCK_GAME_pack);
-	    break;
-
-	case '\0':
-	    c = 'J';
-	case 'J':				/* Trying to enter game. */
-	    if (str[1] >= '0' && str[1] <= '9') {
-		team = str[1] - '0';
-		printf("Joining team %d\n", team);
-	    }
-	    else if (str[1] == '-') {
-		team = TEAM_NOT_SET;
-		printf("Team set to unspecified\n");
-	    }
-	    Packet_printf(ibuf, "%c%s%s%s%d", ENTER_GAME_pack,
-			  nick_name, display, hostname, team);
-	    break;
-
-	case '?':
-	case 'H':				/* Help. */
-	default:
-	    printf("CLIENT VERSION...: %s\n", TITLE);
-	    printf("Supported commands are:\n"
-		   "H/?  -   Help - this text.\n"
-		   "N    -   Next server, skip this one.\n"
-		   "S    -   list Status.\n"
-		   "T    -   set Team.\n"
-		   "Q    -   Quit.\n"
-		   "K    -   Kick a player.                (only owner)\n"
-		   "M    -   send a Message.               (only owner)\n"
-		   "L    -   Lock/unLock server access.    (only owner)\n"
-		   "D(*) -   shutDown/cancel shutDown.     (only owner)\n"
-		   "R(#) -   set maximum number of Robots. (only owner)\n"
-		   "O    -   Modify a server option.       (only owner)\n"
-		   "V    -   View the server options.\n"
-		   "J(&) or just Return enters the game.\n"
-		   "(*) If you don't specify any delay, you will signal that\n"
-		   "    the server should stop an ongoing shutdown.\n"
-		   "(#) Not specifying the maximum number of robots is\n"
-		   "    the same as specifying 0 robots.\n"
-		   "(&) You may specify a team number after the J.\n"
-		  );
-
-	    /*
-	     * Next command.
-	     */
-	    continue;
 	}
 
 	retries = (c == 'J' || c == 'S') ? 2 : 0;
@@ -481,7 +588,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		    break;
 		}
 	    }
-	    if (write(ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
+	    if (DgramWrite(ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
 		error("Couldn't send request to server.");
 		exit(1);
 	    }
@@ -514,7 +621,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		/*
 		 * Oh glorious success.
 		 */
-		switch (reply_to) {
+		switch (reply_to & 0xFF) {
 
 		case OPTION_LIST_pack:
 		    while (Packet_scanf(ibuf, "%S", str) > 0) {
@@ -560,6 +667,18 @@ static bool Process_commands(sockbuf_t *ibuf)
 		    } else {
 			login_port = port;
 			printf("*** Login allowed\n");
+		    }
+		    break;
+
+		case CREDENTIALS_pack:
+		    if (Packet_scanf(ibuf, "%ld", &key) <= 0) {
+			errno = 0;
+			error("Incomplete credentials reply from server");
+		    }
+		    else {
+			has_credentials++;
+			cmd_credentials = c;
+			continue;
 		    }
 		    break;
 
@@ -632,8 +751,8 @@ static bool Process_commands(sockbuf_t *ibuf)
 		}
 	    }
 
-	     SetTimeout(0, 500*1000);
-	} while (SocketReadable(ibuf->sock));
+	    SetTimeout(0, 500*1000);
+	} while (--max_replies > 0 && SocketReadable(ibuf->sock));
 
 	/*
 	 * Get next command.
@@ -662,7 +781,7 @@ static bool Connect_to_server(void)
     }
     result = Process_commands(&ibuf);
     if (ibuf.sock != -1) {
-	SocketClose(ibuf.sock);
+	close_dgram_socket(ibuf.sock);
     }
     Sockbuf_cleanup(&ibuf);
 
@@ -681,7 +800,7 @@ static bool Contact_servers(int count, char **servers)
     sockbuf_t		sbuf;			/* contact buffer */
 
 
-    if ((fd = CreateDgramSocket(0)) == -1) {
+    if ((fd = create_dgram_socket(0)) == -1) {
 	error("Could not create connection socket");
 	exit(1);
     }
@@ -738,7 +857,7 @@ static bool Contact_servers(int count, char **servers)
 	}
     }
     Sockbuf_cleanup(&sbuf);
-    close(fd);
+    close_dgram_socket(fd);
 
     return (connected ? true : false);
 }
@@ -750,12 +869,12 @@ static bool Contact_servers(int count, char **servers)
 int main(int argc, char *argv[])
 {
     struct passwd	*pwent;
-
+    int			result;
 
     /*
      * --- Output copyright notice ---
      */
-    printf("  Copyright " COPYRIGHT ".\n"
+    printf("  " COPYRIGHT ".\n"
 	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
@@ -773,6 +892,7 @@ int main(int argc, char *argv[])
     cmw_priv_init();
 #endif /* CMW */
     init_error(argv[0]);
+    srand(time((time_t *)0) * getpid());
     Check_client_versions();
     GetLocalHostName(hostname, sizeof hostname);
 
@@ -824,7 +944,18 @@ int main(int argc, char *argv[])
 	exit (-1);
 #endif
 
-    if (Contact_servers(argc - 1, &argv[1])) {
+#if 1
+    result = Contact_servers(argc - 1, &argv[1]);
+#else
+    if (auto_connect) {
+	result = Contact_servers(argc - 1, &argv[1]);
+    }
+    else {
+	extern int metaclient(int, char **);
+	result = metaclient(argc - 1, &argv[1]);
+    }
+#endif
+    if (result == 1) {
 	Join(server_addr, server_name, login_port,
 	     real_name, nick_name, team,
 	     display, server_version);
@@ -842,6 +973,10 @@ int main(int argc, char *argv[])
 
 #ifndef MAX_INTERFACE
 #define MAX_INTERFACE    16	/* Max. number of network interfaces. */
+#endif
+#ifdef DEBUGBROADCAST
+#undef D
+#define D(x)	x
 #endif
 
 
@@ -1065,8 +1200,10 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 	    /*
 	     * Only send on the loopback if we don't broadcast.
 	     */
-	    loopback = *(struct sockaddr_in *)&ifreq.ifr_addr;
-	    haslb = 1;
+	    if (haslb == 0) {
+		loopback = *(struct sockaddr_in *)&ifreq.ifr_addr;
+		haslb = 1;
+	    }
 	    continue;
 	} else if ((ifflags & IFF_POINTOPOINT) != 0) {
 	    D( printf("\tpoint-to-point interface\n"); );

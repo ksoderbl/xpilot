@@ -1,4 +1,4 @@
-/* $Id: join.c,v 3.27 1995/01/11 19:32:34 bert Exp $
+/* $Id: join.c,v 3.28 1995/11/12 22:11:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -90,6 +90,7 @@ void Input_loop(void)
 	error("Bad socket filedescriptor");
 	return;
     }
+    Net_key_change();
     rfds = 0;
     rfds |= (1 << clientfd);
     rfds |= (1 << netfd);

@@ -1,4 +1,4 @@
-/* $Id: player.c,v 3.81 1995/01/11 19:50:13 bert Exp $
+/* $Id: player.c,v 3.91 1995/11/30 21:48:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -40,7 +40,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.81 1995/01/11 19:50:13 bert Exp $";
+    "@(#)$Id: player.c,v 3.91 1995/11/30 21:48:07 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -177,8 +177,8 @@ void Go_home(int ind)
     pl->turnacc = pl->turnvel = 0.0;
     memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
     memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
-    pl->key_changed = 0;
     pl->used &= ~USED_KILL;
+
     if (playerStartsShielded != 0) {
 	SET_BIT(pl->used, OBJ_SHIELD);
 	if (playerShielding == 0) {
@@ -373,6 +373,7 @@ void Init_player(int ind, wireobj *ship)
     pl->shot_max	= ShotsMax;
     pl->shot_life	= ShotsLife;
     pl->shot_mass	= ShotsMass;
+    pl->shot_time	= 0;
     pl->color		= WHITE;
     pl->score		= 0;
     pl->prev_score	= 0;
@@ -458,6 +459,9 @@ void Init_player(int ind, wireobj *ship)
     GetInd[Id]		= ind;
     pl->conn		= NOT_CONNECTED;
     pl->audio		= NULL;
+
+    pl->lose_item	= 0;
+    pl->lose_item_state	= 0;
 
     pl->shove_next = 0;
     for (i = 0; i < MAX_RECORDED_SHOVES; i++) {
@@ -1514,6 +1518,7 @@ void Delete_player(int ind)
 			OBJ_MINE|OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO)) {
 		    obj->mass = 0;
 		}
+		obj->id = -1;
 	    }
 	}
 	else if (obj->owner == id) {
@@ -1548,20 +1553,29 @@ void Delete_player(int ind)
 
     /*
      * Swap entry no 'ind' with the last one.
+     *
+     * Change the Players[] pointer array to have Players[ind] point to
+     * a valid player and move our leaving player to Players[NumPlayers].
      */
     pl			= Players[NumPlayers];	/* Swap pointers... */
     Players[NumPlayers]	= Players[ind];
     Players[ind]	= pl;
+    pl			= Players[NumPlayers];	/* Restore pointer. */
 
-    Check_team_members (Players[ind]->team);
+    Check_team_members(Players[ind]->team);
 
     GetInd[Players[ind]->id] = ind;
     GetInd[Players[NumPlayers]->id] = NumPlayers;
 
     for (i=0; i<NumPlayers; i++) {
-	if (BIT(Players[i]->lock.tagged, LOCK_PLAYER)
-	    && (Players[i]->lock.pl_id == id || NumPlayers <= 1))
-	    CLR_BIT(Players[i]->lock.tagged, LOCK_PLAYER);
+	if (BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE)
+	    && (Players[i]->lock.pl_id == id || NumPlayers <= 1)) {
+	    CLR_BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE);
+	    /* bugfix (1995/08/07): */
+	    Players[i]->tractor = NULL;
+	    /* consider this: */
+	    CLR_BIT(Players[i]->used, OBJ_TRACTOR_BEAM);
+	}
 	if (IS_ROBOT_IND(i)
 	    && Robot_war_on_player(i) == id) {
 	    Robot_reset_war(i);
@@ -1607,6 +1621,9 @@ void Detach_ball(int ind, int obj)
 	}
 	if (cnt == 0)
 	    CLR_BIT(Players[ind]->have, OBJ_BALL);
+	else {
+	    sound_play_sensors(Players[ind]->pos.x, Players[ind]->pos.y, DROP_BALL_SOUND);
+	}
     }
 }
 
@@ -1683,6 +1700,7 @@ void Player_death_reset(int ind)
     if (pl->life == -1) {
 	pl->life = 0;
 	SET_BIT(pl->status, GAME_OVER);
+	Player_lock_closest(ind, 0);
 	pl->mychar = 'D';
     }
 

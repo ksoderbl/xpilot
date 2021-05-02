@@ -1,4 +1,4 @@
-/* $Id: afaudio.c,v 3.9 1995/01/28 15:30:15 bert Exp $
+/* $Id: afaudio.c,v 3.10 1995/09/17 15:13:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -127,7 +127,7 @@ AFAudioConn *aud;
   if (s != NULL) return(atoi(s));
 
   /* Find the first 8kHz, mono device, non-phone device. */
-  for(i=0; i < ANumberOfAudioDevices(aud); i++) {
+  for (i=0; i < ANumberOfAudioDevices(aud); i++) {
     aDev = AAudioDeviceDescriptor(aud, i);
     if ((aDev->inputsFromPhone == 0) &&
 	(aDev->outputsToPhone == 0) &&

@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.63 1995/01/11 20:00:31 bert Exp $
+/* $Id: update.c,v 3.69 1995/11/30 21:48:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -39,7 +39,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.63 1995/01/11 20:00:31 bert Exp $";
+    "@(#)$Id: update.c,v 3.69 1995/11/30 21:48:08 bert Exp $";
 #endif
 
 
@@ -73,17 +73,17 @@ static void Transport_to_home(int ind)
     const int		T = RECOVERY_DELAY;
 
     if (BIT(World.rules->mode, TIMING) && pl->round) {
-	    int check;
+	int check;
 
-	    if (pl->check)
-		    check = pl->check - 1;
-	    else
-		    check = World.NumChecks - 1;
-	    bx = World.check[check].x * BLOCK_SZ + BLOCK_SZ/2;
-	    by = World.check[check].y * BLOCK_SZ + BLOCK_SZ/2;
+	if (pl->check)
+		check = pl->check - 1;
+	else
+		check = World.NumChecks - 1;
+	bx = World.check[check].x * BLOCK_SZ + BLOCK_SZ/2;
+	by = World.check[check].y * BLOCK_SZ + BLOCK_SZ/2;
     } else {
-	    bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
-	    by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
+	bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
+	by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
     }
     dx = WRAP_DX(bx - pl->pos.x);
     dy = WRAP_DY(by - pl->pos.y);
@@ -350,7 +350,7 @@ static void do_Autopilot (player *pl)
  * Do tractor beam attraction between two players, where `pl' is doing
  * the tractor beam and `to' is the target.
  */
-void do_Tractor_beam (player *pl)
+static void Tractor_beam (player *pl)
 {
     player		*victim;
     float		maxdist, maxforce, percent;
@@ -428,8 +428,7 @@ void Update_objects(void)
     if (fireRepeatRate > 0) {
 	for (i = 0; i < NumPlayers; i++) {
 	    pl = Players[i];
-	    if (BIT(pl->used, OBJ_SHOT)
-		&& loops - pl->shot_time >= fireRepeatRate) {
+	    if (BIT(pl->used, OBJ_SHOT)) {
 		Fire_normal_shots(i);
 	    }
 	}
@@ -595,6 +594,7 @@ void Update_objects(void)
 		Go_home(i);
 	    }
 	    if (BIT(pl->status, SELF_DESTRUCT)) {
+		SET_BIT(pl->status, KILLED);
 		sprintf(msg, "%s has comitted suicide.", pl->name);
 		Set_message(msg);
 		Throw_items(pl);
@@ -613,7 +613,8 @@ void Update_objects(void)
 		}
 	    }
 	    if (BIT(pl->used, OBJ_SHIELD) == 0) {
-		if (!BIT(pl->have, OBJ_EMERGENCY_SHIELD)) {
+		/* BG 95/06/03: change test on "have" to "used". */
+		if (!BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
 		    CLR_BIT(pl->have, OBJ_SHIELD);
 		}
 		pl->shield_time = 0;
@@ -703,11 +704,11 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->used, OBJ_REFUEL)) {
-	    if ((Wrap_length((pl->pos.x-World.fuel[pl->fs].pix_pos.x),
-			     (pl->pos.y-World.fuel[pl->fs].pix_pos.y)) > 90.0)
+	    if ((Wrap_length(pl->pos.x - World.fuel[pl->fs].pix_pos.x,
+			     pl->pos.y - World.fuel[pl->fs].pix_pos.y) > 90.0)
 		|| (pl->fuel.sum >= pl->fuel.max)
-		|| (World.block[World.fuel[i].blk_pos.x]
-			       [World.fuel[i].blk_pos.y] != FUEL)) {
+		|| (World.block[World.fuel[pl->fs].blk_pos.x]
+			       [World.fuel[pl->fs].blk_pos.y] != FUEL)) {
 		CLR_BIT(pl->used, OBJ_REFUEL);
 	    } else {
 		int i = pl->fuel.num_tanks;
@@ -976,7 +977,7 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->used, OBJ_TRACTOR_BEAM))
-	    do_Tractor_beam (pl);
+	    Tractor_beam(pl);
 	else
 	    pl->tractor = NULL;
     }

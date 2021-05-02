@@ -1,4 +1,4 @@
-/* $Id: texture.c,v 3.3 1995/02/01 19:33:32 bert Exp $
+/* $Id: texture.c,v 3.6 1995/10/01 19:27:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -66,11 +66,19 @@ typedef struct texture_info {
 /*
  * XPM format pixmap data.
  */
-#include "textures/rock4.xpm"
+#include "../lib/textures/rock4.xpm"
 
 static texture_info_t wall_texture_info = {
     "wall",
     &wallTextureFile,
+    rock4_xpm,
+    None,
+    TextureUnloaded
+};
+
+static texture_info_t decor_texture_info = {
+    "decor",
+    &decorTextureFile,
     rock4_xpm,
     None,
     TextureUnloaded
@@ -129,7 +137,7 @@ static Pixmap Texture_load_from_file(char *filename)
  */
 static Pixmap Texture_load(texture_info_t *ti)
 {
-    Pixmap		pixmap;
+    Pixmap		pixmap = None;
 
     if (ti->status == TextureLoaded) {
 	pixmap = ti->pixmap;
@@ -155,5 +163,13 @@ static Pixmap Texture_load(texture_info_t *ti)
 Pixmap Texture_wall(void)
 {
     return Texture_load(&wall_texture_info);
+}
+
+/*
+ * Load a texture for decor drawing.
+ */
+Pixmap Texture_decor(void)
+{
+    return Texture_load(&decor_texture_info);
 }
 

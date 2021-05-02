@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 3.14 1995/01/11 19:25:06 bert Exp $
+/* $Id: dbuff.c,v 3.16 1995/09/17 15:13:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -48,7 +48,11 @@ char dbuff_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.14 1995/01/11 19:25:06 bert Exp $";
+    "@(#)$Id: dbuff.c,v 3.16 1995/09/17 15:13:02 bert Exp $";
+#endif
+
+#ifdef SPARC_CMAP_HACK
+extern char   frameBuffer[MAX_CHARS]; /* frame buffer */
 #endif
 
 
@@ -71,7 +75,7 @@ static long color(register dbuff_state_t *state, register long simple_color)
     register long i, plane, computed_color;
 
     computed_color = state->pixel;
-    for(plane=1, i=0; simple_color != 0; plane <<= 1, i++) {
+    for (plane=1, i=0; simple_color != 0; plane <<= 1, i++) {
 	if (plane & simple_color) {
 	    computed_color |= state->planes[i];
 	    simple_color &= ~plane;
@@ -165,7 +169,7 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 
 #ifdef SPARC_CMAP_HACK
     if (state->type == COLOR_SWITCH) {
-	state->fbfd = open("/dev/fb", O_RDONLY, 0);
+	state->fbfd = open(frameBuffer, O_RDONLY, 0);
 	state->hardcmap.index = state->pixel;
 	state->hardcmap.count = state->map_size;
 	state->hardcmap.red = malloc(state->map_size);

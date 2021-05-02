@@ -1,4 +1,4 @@
-/* $Id: setup.h,v 3.15 1995/01/11 19:58:38 bert Exp $
+/* $Id: setup.h,v 3.17 1995/07/16 16:27:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -74,7 +74,17 @@
 #define SETUP_BASE_HIGHEST	69	/* highest base number */
 #define SETUP_TARGET		70	/* + team number (10) */
 #define SETUP_CHECK		80	/* + check point number (26) */
-#define SETUP_ITEM_CONCENTRATOR		110
+#define SETUP_ITEM_CONCENTRATOR	110
+#define SETUP_DECOR_FILLED	111
+#define SETUP_DECOR_RU		112
+#define SETUP_DECOR_RD		113
+#define SETUP_DECOR_LU		114
+#define SETUP_DECOR_LD		115
+#define SETUP_DECOR_DOT_FILLED	116
+#define SETUP_DECOR_DOT_RU	117
+#define SETUP_DECOR_DOT_RD	118
+#define SETUP_DECOR_DOT_LU	119
+#define SETUP_DECOR_DOT_LD	120
 
 #define BLUE_UP			0x01
 #define BLUE_RIGHT		0x02
@@ -85,6 +95,14 @@
 #define BLUE_FUEL		0x30	/* when filled block is fuelstation */
 #define BLUE_BELOW		0x40	/* when triangle is below diagonal */
 #define BLUE_BIT		0x80	/* set when drawn with blue lines */
+
+#define DECOR_LEFT		0x01
+#define DECOR_RIGHT		0x02
+#define DECOR_DOWN		0x04
+#define DECOR_UP		0x08
+#define DECOR_OPEN		0x10
+#define DECOR_CLOSED		0x20
+#define DECOR_BELOW		0x40
 
 /*
  * Structure defining the server configuration, including the map layout.

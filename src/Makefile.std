@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 3.49 1995/02/13 10:29:03 bert Exp $
+# $Id: Makefile.std,v 3.57 1995/12/05 10:23:55 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993-95 by
 #
@@ -24,13 +24,12 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.3.0
+VERSION=3.4.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
-# Last slash important on LIBDIR (and on MAPDIR) !!
-LIBDIR=/usr/local/games/lib/xpilot/
-SOUNDSDIR=/usr/local/lib/sounds
+LIBDIR=$(INSTALLDIR)/lib/xpilot
+SOUNDDIR=/usr/local/lib/sounds
 LOCALGURU=xpilot@cs.uit.no
 MANDIR=/usr/local/man/man6
 
@@ -57,17 +56,15 @@ APOLLO_XLIB =
 
 #
 # Flags for the HP Precision Architecture using the native HP compiler.
-# We don't use +w1 as the source contains too much to complain about. :-/
 #
 HPPA_CC = cc
 HPPA_CPLUS = g++
-HPPA_CFLAGS = $(DEFS) $(INCS) -Aa -D_HPUX_SOURCE +w2 -z -I/usr/include/X11R5
-HPPA_OPT = +O3 +FPD
-#HPPA_OPT =
+HPPA_CFLAGS = $(DEFS) $(INCS) -Aa -D_HPUX_SOURCE +w2 -z +FPD -I/usr/include/X11R5
+HPPA_OPT = +O3 # +Oaggressive +Olimit +Olibcalls +Oregionsched +Onofltacc
 HPPA_DEBUG = -g
 HPPA_PROF = -G
-HPPA_PLUS = $(DEFS) $(INCS) -x c++ -O2 -I/usr/include/X11R5
-HPPA_LPLUS = $(DEFS) $(INCS) -O2
+HPPA_PLUS = $(DEFS) $(INCS) -x c++ -O2 -g -I/usr/include/X11R5
+HPPA_LPLUS = $(DEFS) $(INCS) -O2 -g
 HPPA_XLIB = -L/usr/lib/X11R5 -lX11
 HPPA_MLIB = -lM
 
@@ -108,7 +105,7 @@ SOLARIS_XLIB = -L/usr/openwin/lib -lX11
 # Flags to use with SGI boxes.
 # 
 SGI_CC = cc
-SGI_CFLAGS = $(DEFS) $(INCS) -xansi -prototypes -D__STDC__
+SGI_CFLAGS = $(DEFS) $(INCS) -xansi
 SGI_OPT = -O2
 SGI_PROF = 
 SGI_XLIB = -lX11
@@ -254,12 +251,12 @@ INCS = $(AUDIOINC)
 # Server program, xpilots...
 #
 OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
-        play.o player.o rules.o update.o collision.o error.o frame.o \
-        robot.o option.o socklib.o timer.o saudio.o \
+        play.o player.o rules.o update.o collision.o walls.o error.o \
+        frame.o robot.o option.o socklib.o timer.o saudio.o \
         $(STRCASECMP_OBJ) $(STRDUP_OBJ) $(SUNCMW_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
-        play.c player.c rules.c update.c collision.c error.c frame.c \
-        robot.c option.c socklib.c timer.c saudio.c
+        play.c player.c rules.c update.c collision.c walls.c error.c \
+        frame.c robot.c option.c socklib.c timer.c saudio.c
 
 #
 # Client program, xpilot...
@@ -270,7 +267,7 @@ OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
 	$(AUDIOOBJ) $(STRDUP_OBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
 	default.c math.c xevent.c syslimit.c error.c socklib.c \
-	configure.c widget.c caudio.c usleep.c record.c texture.c xpmread.c \
+	caudio.c configure.c widget.c usleep.c record.c texture.c xpmread.c \
 	$(AUDIOSRC)
 
 #
@@ -306,14 +303,23 @@ apollo-debug:
 hppa:
 	@$(MAKE) $(TARGETS) "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
+hppa-gcc:
+	@$(MAKE) $(TARGETS) "CC=gcc" "CFLAGS=-D_HPUX_SOURCE -I/usr/include/X11R5 -O2 $(DEFS) $(INCS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+
+hppa-gcc-debug:
+	@$(MAKE) $(TARGETS) "CC=gcc" "CFLAGS=-D_HPUX_SOURCE -I/usr/include/X11R5 -O2 -g $(DEFS) $(INCS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+
 hppa-debug:
-	@$(MAKE) $(TARGETS) "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_DEBUG)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+	@$(MAKE) $(TARGETS) "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_DEBUG) $(HPPA_CFLAGS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 hppa-prof:
 	@$(MAKE) $(TARGETS) "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT) $(HPPA_PROF)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 hppa-plus:
 	@$(MAKE) $(TARGETS) "CC=$(HPPA_CPLUS)" "CFLAGS=$(HPPA_PLUS)" "LFLAGS=$(HPPA_LPLUS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+
+hppa-CC:
+	@$(MAKE) $(TARGETS) "CC=CC" "CFLAGS=+a1 +O3 -I/usr/include/X11R5 $(DEFS)" "LFLAGS=+a1 +O3" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 sun:
 	@$(MAKE) $(TARGETS) "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_OPT)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
@@ -399,32 +405,34 @@ xp-replay: $(OBJS3)
 install:
 	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews or install-suncmw"
 
-install-apollo: apollo
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).apollo
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).apollo
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).apollo
-
-install-hppa: hppa
+install-binaries:
+	if [ ! -d $(INSTALLDIR)/. ]; then mkdir -p $(INSTALLDIR); fi
 	cp xpilot xpilots xp-replay $(INSTALLDIR)
-	strip $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
-	if [ ! -d $(LIBDIR) ]; then mkdir $(LIBDIR); fi
+	-strip $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
+	-chmod +x $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
+
+install-libdir:
+	if [ ! -d $(LIBDIR)/. ]; then mkdir -p $(LIBDIR); fi
 	/bin/rm -f $(LIBDIR)/maps
 	cp -r ../lib/defaults ../lib/sounds ../lib/maps ../lib/textures $(LIBDIR)
-	if [ ! -d $(SOUNDSDIR) ]; then mkdir $(SOUNDSDIR); fi
-	cp ../sounds/*.au $(SOUNDSDIR)
-	chmod -R a+r $(LIBDIR) $(SOUNDSDIR)
-	cp ../man6/*.6 $(MANDIR)
-	chmod a+r $(MANDIR)/xpilot*.6
+	chmod -R a+r $(LIBDIR)/. $(SOUNDDIR)/.
 
-install-sun: sun
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sun
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sun
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sun
+install-man:
+	if [ ! -d $(MANDIR)/. ]; then mkdir -p $(MANDIR); fi
+	for f in xpilot xpilots xp-replay; \
+	do \
+		if [ -f ../doc/man/$$f.man ]; then \
+			cp ../doc/man/$$f.man $(MANDIR)/$$f.6; \
+		fi; \
+	done
 
-install-solaris: solaris
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).solaris
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).solaris
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).solaris
+install-apollo: apollo install-binaries install-libdir
+
+install-hppa: hppa install-binaries install-libdir
+
+install-sun: sun install-binaries install-libdir
+
+install-solaris: solaris install-binaries install-libdir
 
 install-suncmw: sun
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).suncmw
@@ -453,21 +461,11 @@ install-suncmw: sun
 	chpriv f+net_broadcast      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
 	chpriv f+net_mac_override   $(INSTALLDIR)/xpilots-$(VERSION).suncmw
 
-install-sonynews: sonynews
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sonynews
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sonynews
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sonynews
+install-sonynews: sonynews install-binaries install-libdir
 
-install-sgi: sgi
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sgi
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sgi
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sgi
+install-sgi: sgi install-binaries install-libdir
 
-install-ultrix: ultrix
-	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).ultrix
-	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).ultrix
-	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).ultrix
-
+install-ultrix: ultrix install-binaries install-libdir
 
 install-apollo-debug: apollo-debug install-apollo
 
@@ -519,6 +517,9 @@ update.o: update.c version.h config.h const.h global.h object.h keys.h bit.h \
 collision.o: collision.c version.h config.h const.h global.h object.h keys.h \
   bit.h draw.h types.h item.h map.h rules.h proto.h error.h score.h saudio.h \
   netserver.h pack.h
+walls.o: walls.c version.h config.h const.h global.h object.h keys.h \
+  bit.h draw.h types.h item.h map.h rules.h proto.h error.h score.h saudio.h \
+  netserver.h pack.h walls.h
 error.o: error.c version.h config.h const.h error.h
 frame.o: frame.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
   types.h item.h map.h rules.h proto.h error.h netserver.h saudio.h
@@ -573,7 +574,7 @@ usleep.o: usleep.c types.h
 record.o: record.c version.h config.h error.h const.h client.h draw.h types.h \
   item.h paint.h setup.h record.h recordfmt.h xpmread.h
 texture.o: texture.c version.h config.h const.h paint.h types.h client.h draw.h \
-  item.h xinit.h error.h xpmread.h texture.h textures/rock4.xpm
+  item.h xinit.h error.h xpmread.h texture.h
 xpmread.o: xpmread.c version.h config.h const.h paint.h types.h client.h draw.h \
   item.h xinit.h error.h xpmread.h
 xp-replay.o: xp-replay.c recordfmt.h item.h buttons.h xp-replay.h \

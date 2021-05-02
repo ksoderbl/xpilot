@@ -1,4 +1,4 @@
-/* $Id: hpaudio.c,v 3.5 1995/01/31 18:24:28 bert Exp $
+/* $Id: hpaudio.c,v 3.6 1995/08/19 16:17:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -59,6 +59,7 @@ static AGainEntry	gain_entry[1];
 static SBucket *const	bad_bucket = (SBucket *)-1;
 static SBucket		*play_bucket;
 static AEventMask	emask;
+static ATransID		xid;
 
 int audioDeviceInit(char *display)
 {
@@ -109,6 +110,7 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
     long		status = AENoError;
     char		buf[256];
     int			vol;
+    static int		shall_i_play[MAX_SOUNDS];
 
     if (!*bucket_ptr) {
 	*bucket_ptr = ALoadAFile(audio, filename, AFFUnknown, 0, NULL, &status);
@@ -125,6 +127,21 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
     if (vol < param.play_volume) {
 	return;
     }
+
+    /* avoid the congestions of sound */
+    if (type ==  FIRE_SHOT_SOUND ||
+    	type == FIRE_TORPEDO_SOUND ||
+    	type == FIRE_HEAT_SHOT_SOUND ||
+    	type == FIRE_SMART_SHOT_SOUND ||
+    	type == THRUST_SOUND ||
+    	type == PLAYER_HIT_PLAYER_SOUND ||
+    	type == TRACTOR_BEAM_SOUND ||
+   	type == PRESSOR_BEAM_SOUND) {
+	    if ((shall_i_play[type]++) % 3) {
+		return;
+	    }
+ 	}
+
     param.priority = (volume > 3 * SOUND_MAX_VOLUME / 4) ? APriorityUrgent
 		   : (volume > 2 * SOUND_MAX_VOLUME / 4) ? APriorityHigh
 		   : (volume > 1 * SOUND_MAX_VOLUME / 4) ? APriorityNormal
@@ -137,26 +154,21 @@ void audioDeviceEvents()
 {
     long		status;
     static int		pending;
-    ATransID		xid;
     AEvent		event;
+    long		e_num;
+    AQueueCheckMode	mode = AQueuedAfterReading;
+    AStopMode		smode;		/* stop mode */
 
-    if (ACheckMaskEvent(audio, emask, &event, &status)) {
-	if (pending == 0) {
-#if 0
-	    printf("pending negative\n");
-#endif
-	} else {
-	    pending--;
-	}
-    }
     if (param.play_volume > min_gain && play_bucket != NULL) {
-	if (pending < 10) {
-	    param.event_mask = emask;
-	    xid = APlaySBucket(audio, play_bucket, &param, &status);
-	    if (status == AENoError) {
-		pending++;
-		ASelectInput(audio, xid, emask, &status);
-	    }
+	if (AEventsQueued(audio,mode,&status) > 1) {
+	    /* stop transaction - xid returned from prior call */
+	    smode = ASMThisTrans;
+	    AStopAudio(audio, xid, smode, NULL, &status);
+   	}	
+	param.event_mask = emask;
+	xid = APlaySBucket(audio, play_bucket, &param, &status);
+	if (status == AENoError) {
+	    ASelectInput(audio, xid, emask, &status);
 	}
 	param.play_volume = min_gain;
 	play_bucket = NULL;

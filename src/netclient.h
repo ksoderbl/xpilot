@@ -1,4 +1,4 @@
-/* $Id: netclient.h,v 3.34 1995/01/11 19:38:38 bert Exp $
+/* $Id: netclient.h,v 3.35 1995/09/16 19:04:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -107,5 +107,6 @@ int Receive_motd(void);
 int Receive_magic(void);
 int Send_audio_request(int onoff);
 int Send_fps_request(int fps);
+int Receive_loseitem(void);
 
 #endif

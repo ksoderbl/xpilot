@@ -1,4 +1,4 @@
-/* $Id: config.h,v 3.18 1995/02/13 10:55:15 bert Exp $
+/* $Id: config.h,v 3.23 1995/11/20 17:39:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -30,52 +30,81 @@
 
 /*
  * Configure these, that's what they're here for.
+ * Explanation about all these compile time configuration options
+ * is in the Makefile.std and in the Imakefile.
  */
 #ifndef LOCALGURU
 #    define LOCALGURU		"xpilot@cs.uit.no"
 #endif
 
 #ifndef	DEFAULT_MAP
-#  define DEFAULT_MAP		"globe.map"
+#    define DEFAULT_MAP		"globe.map"
 #endif
 
 #ifndef LIBDIR
-#ifdef VMS
-#    define LIBPREFIX		"esv1$dkb400:[user.graduate.hjorring.lib.xpilot"
-#    define LIBDIR		LIBPREFIX "]"
-#else
-#    define LIBDIR		"/usr/local/games/lib/xpilot/"
-#endif
+#    ifdef VMS
+#        define LIBPREFIX	"lib_disk:[lib.xgames.xpilot341.lib"
+#        define LIBDIR		LIBPREFIX "]"
+#    else
+#        define LIBDIR		"/usr/local/games/lib/xpilot/"
+#    endif
 #endif
 
 #ifndef DEFAULTS_FILE_NAME
-#    define DEFAULTS_FILE_NAME	LIBDIR "defaults"
+#    ifdef VMS
+#        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
+#    else
+#        define DEFAULTS_FILE_NAME	LIBDIR "/defaults"
+#    endif
 #endif
 #ifndef SERVERMOTDFILE
-#    define SERVERMOTDFILE	LIBDIR "servermotd"
+#    ifdef VMS
+#        define SERVERMOTDFILE	LIBDIR "servermotd"
+#    else
+#        define SERVERMOTDFILE	LIBDIR "/servermotd"
+#    endif
 #endif
 #ifndef LOCALMOTDFILE
-#    define LOCALMOTDFILE	LIBDIR "localmotd"
+#    ifdef VMS
+#        define LOCALMOTDFILE	LIBDIR "localmotd"
+#    else
+#        define LOCALMOTDFILE	LIBDIR "/localmotd"
+#    endif
 #endif
 #ifndef LOGFILE
-#    define LOGFILE		LIBDIR "log"
+#    ifdef VMS
+#        define LOGFILE		LIBDIR "log"
+#    else
+#        define LOGFILE		LIBDIR "/log"
+#    endif
 #endif
 #ifndef MAPDIR
-#ifdef VMS
-#    define MAPDIR		LIBPREFIX ".maps]"
-#else
-#    define MAPDIR		LIBDIR "maps/"
+#    ifdef VMS
+#        define MAPDIR		LIBPREFIX ".maps]"
+#    else
+#        define MAPDIR		LIBDIR "/maps/"
+#    endif
 #endif
+#ifndef SHIP_FILE
+#    ifdef VMS
+#        define SHIP_FILE       LIBDIR "tkxpi.shp"
+#    else
+#        define SHIP_FILE       ""
+#    endif
 #endif
 #ifndef TEXTUREDIR
-#ifdef VMS
-#    define TEXTUREDIR		LIBPREFIX ".textures]"
-#else
-#    define TEXTUREDIR		LIBDIR "textures/"
-#endif
+#    ifdef VMS
+#        define TEXTUREDIR	LIBPREFIX ".textures]"
+#    else
+#        define TEXTUREDIR	LIBDIR "/textures/"
+#    endif
 #endif
 #ifndef SOUNDFILE
-#    define SOUNDFILE		LIBDIR "sounds"
+#    ifdef VMS
+#        define SOUNDFILE	LIBDIR "sounds"
+#    else
+#        define SOUNDFILE	LIBDIR "/sounds"
+#    endif
 #endif
 
 /*

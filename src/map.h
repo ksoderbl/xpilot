@@ -1,4 +1,4 @@
-/* $Id: map.h,v 3.23 1995/01/11 19:34:33 bert Exp $
+/* $Id: map.h,v 3.24 1995/03/19 15:33:31 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -55,6 +55,11 @@
 #define TREASURE		15
 #define TARGET			16
 #define ITEM_CONCENTRATOR	17
+#define DECOR_FILLED		18
+#define DECOR_LU		19
+#define DECOR_LD		20
+#define DECOR_RU		21
+#define DECOR_RD		22
 #define BASE_ATTRACTOR		127
 
 #define SPACE_BIT		(1 << SPACE)
@@ -75,6 +80,11 @@
 #define TREASURE_BIT		(1 << TREASURE)
 #define TARGET_BIT		(1 << TARGET)
 #define ITEM_CONCENTRATOR_BIT	(1 << ITEM_CONCENTRATOR)
+#define DECOR_FILLED_BIT	(1 << DECOR_FILLED)
+#define DECOR_LU_BIT		(1 << DECOR_LU)
+#define DECOR_LD_BIT		(1 << DECOR_LD)
+#define DECOR_RU_BIT		(1 << DECOR_RU)
+#define DECOR_RD_BIT		(1 << DECOR_RD)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)

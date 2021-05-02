@@ -1,4 +1,4 @@
-/* $Id: types.h,v 3.13 1995/01/11 19:59:52 bert Exp $
+/* $Id: types.h,v 3.14 1995/03/04 20:11:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -56,7 +56,13 @@ typedef unsigned short  u_char;
 typedef unsigned short	u_short;
 #endif
 
+#if 0
 typedef enum {true = 1, false = 0} bool;
+#else
+#define false	0
+#define true	1
+typedef int bool;
+#endif
 
 typedef struct { float x, y; }	vector;
 typedef vector			position;

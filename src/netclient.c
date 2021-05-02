@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 3.82 1995/01/29 16:17:44 bert Exp $
+/* $Id: netclient.c,v 3.86 1995/09/16 19:04:33 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -150,6 +150,7 @@ static void Receive_init(void)
     receive_tbl[PKT_FASTSHOT]	= Receive_fastshot;
     receive_tbl[PKT_THRUSTTIME] = Receive_thrusttime;
     receive_tbl[PKT_SHIELDTIME] = Receive_shieldtime;
+    receive_tbl[PKT_LOSEITEM]	= Receive_loseitem;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	receive_tbl[PKT_DEBRIS + i] = Receive_debris;
     }
@@ -510,7 +511,7 @@ int Net_init(char *server, int port)
     }
     if (DgramConnect(sock, server, port) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
-	close(sock);
+	DgramClose(sock);
 	return -1;
     }
     wbuf.sock = sock;
@@ -576,13 +577,13 @@ void Net_cleanup(void)
 {
     int		i,
 		sock = wbuf.sock;
-    u_byte	ch;
+    char	ch;
 
     if (sock > 2) {
 	ch = PKT_QUIT;
-	if (write(sock, &ch, 1) != 1) {
+	if (DgramWrite(sock, &ch, 1) != 1) {
 	    GetSocketError(sock);
-	    write(sock, &ch, 1);
+	    DgramWrite(sock, &ch, 1);
 	}
 	micro_delay((unsigned)50*1000);
     }
@@ -605,16 +606,16 @@ void Net_cleanup(void)
     }
     if (sock > 2) {
 	ch = PKT_QUIT;
-	if (write(sock, &ch, 1) != 1) {
+	if (DgramWrite(sock, &ch, 1) != 1) {
 	    GetSocketError(sock);
-	    write(sock, &ch, 1);
+	    DgramWrite(sock, &ch, 1);
 	}
 	micro_delay((unsigned)50*1000);
-	if (write(sock, &ch, 1) != 1) {
+	if (DgramWrite(sock, &ch, 1) != 1) {
 	    GetSocketError(sock);
-	    write(sock, &ch, 1);
+	    DgramWrite(sock, &ch, 1);
 	}
-	close(sock);
+	DgramClose(sock);
     }
 }
 
@@ -824,8 +825,9 @@ static int Net_packet(void)
 	type = (*rbuf.ptr & 0xFF);
 	if (receive_tbl[type] == NULL) {
 	    errno = 0;
-	    error("Received unknown packet type (%d)", type);
-	    return -1;
+	    error("Received unknown packet type (%d), dropping frame.", type);
+	    Sockbuf_clear(&rbuf);
+	    break;
 	}
 	else if ((result = (*receive_tbl[type])()) <= 0) {
 	    if (result == -1) {
@@ -1975,6 +1977,19 @@ int Receive_string(void)
     /*
      * Not implemented yet.
      */
+    return 1;
+}
+
+int Receive_loseitem(void)
+{
+    int		n;
+    u_byte	pkt;
+				/* Most of the Receive_ funcs call a */
+				/* Handle_ func but that seems */
+				/* unecessary here */
+    if ((n = Packet_scanf(&rbuf, "%c%c", &pkt, &lose_item)) <= 0) {
+	return n;
+    }
     return 1;
 }
 

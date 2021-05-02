@@ -1,4 +1,4 @@
-/* $Id: global.h,v 3.66 1995/01/11 19:30:39 bert Exp $
+/* $Id: global.h,v 3.69 1995/09/16 19:04:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -84,7 +84,6 @@ extern int		mapHeight;
 extern char		*mapName;
 extern char		*mapAuthor;
 extern int 		contactPort;
-extern char		*motd;
 extern bool		crashWithPlayer;
 extern bool		bounceWithPlayer;
 extern bool		playerKillings;
@@ -177,7 +176,8 @@ extern char	       	*scoreTableFileName;
 extern float		friction;
 extern float		checkpointRadius;
 extern int		raceLaps;
-
+extern bool		lockOtherTeam;
+extern bool 		loseItemDestroys;
 #endif
 
 #endif /* GLOBAL_H */

@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.h,v 3.12 1995/02/02 09:04:16 bert Exp $
+ * RCS:      $Id: socklib.h,v 3.13 1995/06/09 18:07:51 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -89,15 +89,19 @@ extern int	SocketWrite(int, char *, int);
 extern int	SocketClose(int);
 extern int	CreateDgramSocket(int);
 extern int	CreateDgramAddrSocket(char *, int);
+extern int	DgramBind(int fd, char *dotaddr, int port);
 extern int	DgramConnect(int, char *, int);
 extern int	DgramSend(int, char *, int, char *, int);
 extern int	DgramReceiveAny(int, char *, int);
 extern int	DgramReceive(int, char *, char *, int);
 extern int	DgramReply(int, char *, int);
+extern int	DgramRead(int fd, char *rbuf, int size);
+extern int	DgramWrite(int fd, char *wbuf, int size);
 extern int	DgramSendRec(int, char *, int, char *, int, char *, int);
 extern char	*DgramLastaddr(void);
 extern char	*DgramLastname(void);
 extern int	DgramLastport(void);
+extern void	DgramClose(int);
 extern void	GetLocalHostName(char *, unsigned);
 #else /* __STDC__ */
 extern void	SetTimeout();
@@ -120,15 +124,19 @@ extern int	SocketWrite();
 extern int	SocketClose();
 extern int	CreateDgramSocket();
 extern int	CreateDgramAddrSocket();
+extern int	DgramBind();
 extern int	DgramConnect();
 extern int	DgramSend();
 extern int	DgramReceiveAny();
 extern int	DgramReceive();
 extern int	DgramReply();
+extern int	DgramRead();
+extern int	DgramWrite();
 extern int	DgramSendRec();
 extern char	*DgramLastaddr();
 extern char	*DgramLastname();
 extern int	DgramLastport();
+extern void	DgramClose();
 extern void	GetLocalHostName();
 #endif /* __STDC__ */
 

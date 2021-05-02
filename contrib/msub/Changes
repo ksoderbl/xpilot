@@ -1,0 +1,16 @@
+Changes from Version 1.0 to Version 1.1.
+
+V1.0 read the Makefile line by line into buffer, merging continuation
+lines with no overflow checking. V1.1 reads the entire Makefile into memory
+and does continuation merging in place.
+
+V1.0 only deferenced variables in the script which were known to have been
+defined or referenced in the Makefile.  V1.1 dereferences all variables in
+the script; if a variable wasn't given a value in the Makefile, it's assumed
+to have an empty value.
+
+V1.0 allowed no way to define alternate reference indicators in the template.
+V1.1 allows that using +R/-R.  This allows better disambiguation of variable
+references in shell scripts.
+
+V1.11 Added support for -e and variable=value options on the command line.
