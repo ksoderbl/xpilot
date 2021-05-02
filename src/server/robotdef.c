@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 4.16 2000/03/24 14:13:51 bert Exp $
+/* $Id: robotdef.c,v 4.17 2000/10/29 17:11:37 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: robotdef.c,v 4.16 2000/03/24 14:13:51 bert Exp $";
+    "@(#)$Id: robotdef.c,v 4.17 2000/10/29 17:11:37 bert Exp $";
 #endif
 
 #define WITHIN(NOW,THEN,DIFF) (NOW<=THEN && (THEN-NOW)<DIFF)
@@ -130,7 +130,7 @@ int Robot_default_setup(robot_type_t *type_ptr)
 /*
  * Private functions.
  */
-static bool Check_robot_navigate(int ind, bool * num_evade);
+/*static bool Check_robot_navigate(int ind, bool * num_evade);*/
 static bool Check_robot_evade(int ind, int mine_i, int ship_i);
 static bool Check_robot_target(int ind, int item_x, int item_y, int new_mode);
 static bool Detect(int ind, int j);
@@ -298,6 +298,7 @@ static void Robot_default_destroy(int ind)
 
 
 /* XXX looks like this is no longer used.  why? */
+#if 0
 static bool Check_robot_navigate(int ind, bool * num_evade)
 {
     int         i, j, k;
@@ -600,6 +601,7 @@ static bool Check_robot_navigate(int ind, bool * num_evade)
     }
     return true;
 }
+#endif
 
 static bool Really_empty_space(int ind, int x, int y)
 {

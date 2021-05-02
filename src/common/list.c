@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.6 1999/11/01 16:16:54 bert Exp $
+/* $Id: list.c,v 1.7 2000/05/20 11:09:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -197,6 +197,53 @@ list_iter_t List_push_front(list_t list, void *data)
 list_iter_t List_push_back(list_t list, void *data)
 {
     return List_insert(list, &list->tail, data);
+}
+
+/*
+ * Find an element in the list and return an iterator pointing to it.
+ * Note that this is very slow because it traverses the entire list
+ * searching for an element.
+ */
+list_iter_t	List_find(list_t list, void *data)
+{
+    return List_find_range(List_begin(list), List_end(list), data);
+}
+
+/*
+ * Find an element in a range of elements (excluding last) and return
+ * an iterator pointing to it.  Note that this is a very slow operation.
+ */
+list_iter_t	List_find_range(list_iter_t first, list_iter_t last, void *data)
+{
+    list_iter_t		pos = first;
+
+    while (pos != last && pos->data != data) {
+	pos = pos->next;
+    }
+
+    return pos;
+}
+
+/*
+ * Remove all element from the list which are equal to data.
+ * Note that this is very slow because it traverses the entire list.
+ * The return value is the number of successful removals.
+ */
+int		List_remove(list_t list, void *data)
+{
+    list_iter_t		pos = List_begin(list);
+    list_iter_t		end = List_end(list);
+    int			count = 0;
+
+    while (pos != end) {
+	pos = List_find_range(pos, end, data);
+	if (pos != end) {
+	    pos = List_erase(list, pos);
+	    count++;
+	}
+    }
+
+    return count;
 }
 
 /* return the number of elements in the list. */

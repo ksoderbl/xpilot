@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.h,v 1.4 2000/03/13 18:20:04 bert Exp $
+ * $Id: main.h,v 1.5 2000/05/20 14:46:17 bert Exp $
  */
 
 #include                 <X11/Xlib.h>
@@ -284,15 +284,17 @@ typedef struct {
    char		raceLaps[20];
    int		lockOtherTeam;
    int		loseItemDestroys;
+   int		useWreckage;
    char		maxOffensiveItems[20];
    char		maxDefensiveItems[20];
    char		roundDelay[20];
    char		maxRoundTime[20];
+   char		roundsToPlay[20];
    int		analyticalCollisionDetection;
    int		pLockServer;
-
-
-} map_t;
+   char		timerResolution[20];
+   max_str_t	password;
+} xpmap_t;
 
 /* RTT */
 typedef struct {
@@ -314,7 +316,7 @@ extern GC                White_GC, Black_GC, xorgc;
 
 extern int               drawicon,drawmode;
 extern map_data_t        clipdata;
-extern map_t             map;
+extern xpmap_t           map;
 
 typedef struct {
    char                  *name, *altname, *label;
@@ -325,7 +327,7 @@ typedef struct {
 } prefs_t;
 
 extern int               numprefs;
-extern prefs_t           prefs[222];
+extern prefs_t           prefs[226];
 
 
 

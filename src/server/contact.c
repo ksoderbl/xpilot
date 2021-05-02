@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 4.10 2000/03/24 08:53:56 bert Exp $
+/* $Id: contact.c,v 4.11 2000/09/06 13:26:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -61,7 +61,7 @@ char contact_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: contact.c,v 4.10 2000/03/24 08:53:56 bert Exp $";
+    "@(#)$Id: contact.c,v 4.11 2000/09/06 13:26:06 bert Exp $";
 #endif
 
 /*
@@ -219,7 +219,7 @@ static int Kick_paused_players(int team)
 
 static int Reply(char *host_addr, int port)
 {
-    int			i, result;
+    int			i, result = -1;
     const int		max_send_retries = 3;
 
     for (i = 0; i < max_send_retries; i++) {

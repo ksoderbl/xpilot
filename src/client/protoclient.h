@@ -1,4 +1,4 @@
-/* $Id: protoclient.h,v 4.7 1999/11/06 17:37:52 bert Exp $
+/* $Id: protoclient.h,v 4.8 2000/03/25 22:12:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -48,7 +48,10 @@ extern int keys_viewer;
  */
 void List_visuals(void);
 int Colors_init(void);
+int Colors_init_block_bitmaps(void);
+void Colors_free_block_bitmaps(void);
 void Colors_cleanup(void);
+void Colors_debug(void);
 
 /*
  * datagram.c

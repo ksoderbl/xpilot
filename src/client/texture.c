@@ -1,4 +1,4 @@
-/* $Id: texture.c,v 4.1 1998/04/16 17:39:48 bert Exp $
+/* $Id: texture.c,v 4.4 2000/09/21 18:19:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -49,6 +49,8 @@
 #include "error.h"
 #include "xpmread.h"
 #include "texture.h"
+#include "portability.h"
+
 
 #ifndef PATH_MAX
 #define PATH_MAX        1023
@@ -121,7 +123,7 @@ static Pixmap Texture_load_from_file(char *filename)
      * Always try the plain filename first,
      * without using the texturePath.
      */
-    if (access(filename, R_OK) == 0) {
+    if (access(filename, 4) == 0) {
 	return xpm_pixmap_from_file(filename);
     }
 
@@ -131,7 +133,8 @@ static Pixmap Texture_load_from_file(char *filename)
      */
     if (*filename != '/' && texturePath != NULL) {
 	for (dir = texturePath; *dir; dir = colon) {
-	    if (!(colon = strchr(dir, ':'))) {
+	    if (is_this_windows() ||
+		!(colon = strchr(dir, ':'))) {
 		len = strlen(dir);
 		colon = &dir[len];
 	    } else {
@@ -140,7 +143,7 @@ static Pixmap Texture_load_from_file(char *filename)
 	    }
 	    memcpy(path, dir, len);
 	    sprintf(&path[len], "/%s", filename);
-	    if (access(path, R_OK) == 0) {
+	    if (access(path, 4) == 0) {
 		return xpm_pixmap_from_file(path);
 	    }
 	}

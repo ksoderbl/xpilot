@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 4.13 2000/03/12 12:08:32 bert Exp $
+ * RCS:      $Id: socklib.c,v 4.14 2000/10/15 13:09:54 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 4.13 2000/03/12 12:08:32 bert Exp $";
+    "@(#)$Id: socklib.c,v 4.14 2000/10/15 13:09:54 bert Exp $";
 #endif
 
 #ifdef TERMNET
@@ -2126,9 +2126,8 @@ void GetLocalHostName(char *name, unsigned size,
     struct hostent	*he = NULL;
     struct hostent 	*xpilot_he = NULL;
 #ifndef	_WINDOWS
-    struct hostent	tmp;
     int			xpilot_len;
-    char		*alias, *dot;
+    char		*dot;
     char		xpilot_hostname[MAXHOSTNAMELEN];
 #endif
     static const char	xpilot[] = "xpilot";
@@ -2152,6 +2151,8 @@ void GetLocalHostName(char *name, unsigned size,
      * and if the address is of the normal Internet type
      * then we try to get the FQDN via the backdoor of the IP address.
      * Let's hope it works :)
+     * XXX I don't see why we must limit addrtype, why not just pass it
+     * back into gethostbyaddr blindly?  Could be IPv6 soon...
      */
     if (strchr(he->h_name, '.') == NULL
 	&& he->h_addrtype == AF_INET
@@ -2208,39 +2209,26 @@ void GetLocalHostName(char *name, unsigned size,
 	return;
     }
 
-    /* copy hostent data to buffer */
-    tmp = *he;
-    he = &tmp;
-
     /* Make a wild guess that a "xpilot" hostname or alias is in this domain */
-    strcpy(xpilot_hostname, xpilot);
-    if ((dot = strchr(name, '.')) != NULL) {
-	if (strlen(xpilot_hostname) + strlen(dot) < sizeof(xpilot_hostname)) {
+    dot = name;
+    while ((dot = strchr(dot, '.')) != NULL) {
+	if (xpilot_len + strlen(dot) < sizeof(xpilot_hostname)) {
+	    strcpy(xpilot_hostname, xpilot);
 	    strcat(xpilot_hostname, dot);
+	    /*
+	     * If there is a CNAME the h_name must be identical to the
+	     * FQDN we guessed above.  It is hard to know our IP to know
+	     * that an A record points to us.
+	     */
+	    if ((xpilot_he = gethostbyname(xpilot_hostname)) != NULL &&
+		!strcmp(name, xpilot_he->h_name))
+		break;
+	    xpilot_he = NULL;
 	}
+	++dot;
     }
-    if ((xpilot_he = gethostbyname(xpilot_hostname)) == NULL) {
-	return;
-    }
-
-    /*
-     * If a "xpilot" host is found compare if it's this one.
-     * and if so, make the local name as "xpilot.domain"
-     */
-    if (!strcmp(he->h_name, xpilot_he->h_name)) {
-       /*
-	* Identical official names. Can they be different hosts after this?
-	* The official hostname doesn't begin "xpilot" so we'll find the alias:
-	*/
-	int i;
-	for (i = 0; xpilot_he->h_aliases[i] != NULL; i++) {
-	    alias = xpilot_he->h_aliases[i];
-	    if (!strncmp(xpilot, alias, xpilot_len)) {
-		strncpy(name, xpilot_hostname, size);
-		name[size - 1] = '\0';
-		return;
-	    }
-	}
+    if (xpilot_he != NULL) {
+	strncpy(name, xpilot_hostname, size);
     }
 
 #endif

@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 4.28 2000/03/24 09:53:41 bert Exp $
+/* $Id: netserver.c,v 4.32 2000/10/15 13:09:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1848,6 +1848,12 @@ int Send_trans(int ind, int x1, int y1, int x2, int y2)
 int Send_ship(int ind, int x, int y, int id, int dir,
 	      int shield, int cloak, int emergency_shield, int phased, int deflector)
 {
+    if (Conn[ind].version < 0x4300) {
+	/* cloaking bit was also true if phased and that was used
+	 * to determine how to draw the ship.
+	 */
+	cloak = (cloak || phased);
+    }
     return Packet_printf(&Conn[ind].w,
 			 "%c%hd%hd%hd" "%c" "%c",
 			 PKT_SHIP, x, y, id,
@@ -1889,7 +1895,8 @@ int Send_radar(int ind, int x, int y, int size)
     connection_t *connp = &Conn[ind];
 
     /* Only since 4.2.1 can clients correctly handle teammates in green. */
-    if (connp->version < 0x4210) {
+    /* Except the original patch from kth.se was 4.1.0 "experimental 1" */
+    if (connp->version < 0x4210 && connp->version != 0x4101) {
 	size &= ~0x80;
     }
     return Packet_printf(&connp->w, "%c%hd%hd%c", PKT_RADAR, x, y, size);
@@ -2568,29 +2575,32 @@ static void Handle_talk(int ind, char *str)
     }
     else if (strcasecmp(str, "god") == 0) {
 	/*
-	* Only log the message if logfile already exists.
-	*
-	* XXX Ideally we would like to do a stat(2) and
-	* check if the log file size is still acceptable.
-	* However we postpone this until after the public
-	* release of the current beta.
-	*/
-	char *logfilename = Conf_logfile();
+	 * Only log the message if logfile already exists,
+	 * is writable and less than some KBs in size.
+	 */
+	char		*logfilename = Conf_logfile();
+	const int	logfile_size_limit = 100*1024;
+	FILE		*fp;
+	struct stat	st;
 
-	if (access(logfilename, 4) == 0) {
-	    FILE *fp = fopen(Conf_logfile(), "a");
-	    if (fp) {
-		fprintf(fp,
-			"%s[%s]{%s@%s(%s)|%s}:\n"
-			"\t%s\n",
-			showtime(),
-			pl->name,
-			pl->realname, connp->host, connp->addr, connp->dpy,
-			cp);
-		fclose(fp);
-		sprintf(msg + strlen(msg), ":[%s]", "GOD");
-		Set_player_message(pl, msg);
-	    }
+	if (access(logfilename, 2) == 0 &&
+	    stat(logfilename, &st) == 0 &&
+	    (st.st_size < logfile_size_limit) &&
+	    (fp = fopen(logfilename, "a")) != NULL)
+	{
+	    fprintf(fp,
+		    "%s[%s]{%s@%s(%s)|%s}:\n"
+		    "\t%s\n",
+		    showtime(),
+		    pl->name,
+		    pl->realname, connp->host, connp->addr, connp->dpy,
+		    cp);
+	    fclose(fp);
+	    sprintf(msg + strlen(msg), ":[%s]", "GOD");
+	    Set_player_message(pl, msg);
+	}
+	else {
+	    Set_player_message(pl, "Can't log to GOD.");
 	}
     }
     else {						/* Player message */

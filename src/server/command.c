@@ -1,4 +1,4 @@
-/* $Id: command.c,v 4.3 2000/03/23 20:44:53 bert Exp $
+/* $Id: command.c,v 4.4 2000/04/14 17:46:13 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -47,7 +47,7 @@ char command_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: command.c,v 4.3 2000/03/23 20:44:53 bert Exp $";
+    "@(#)$Id: command.c,v 4.4 2000/04/14 17:46:13 bert Exp $";
 #endif
 
 
@@ -510,20 +510,18 @@ static int Cmd_reset(char *arg, player *pl, int oper, char *msg)
     }
 
     if (arg && !strcasecmp(arg, "all")) {
+	for (i = NumPlayers - 1; i >= 0; i--) {
+	    Players[i]->score = 0;
+	}
 	Reset_all_players();
 	if (gameDuration == -1) {
 	    gameDuration = 0;
 	}
 	roundsPlayed = 0;
-	for (i = NumPlayers - 1; i >= 0; i--) {
-	    Players[i]->score = 0;
-	}
 
 	sprintf(msg, " < Total reset by %s! >", pl->name);
 	Set_message(msg);
 	strcpy(msg, "");
-
-	return CMD_RESULT_SUCCESS;
     }
     else {
 	Reset_all_players();
@@ -534,9 +532,9 @@ static int Cmd_reset(char *arg, player *pl, int oper, char *msg)
 	sprintf(msg, " < Round reset by %s! >", pl->name);
 	Set_message(msg);
 	strcpy(msg, "");
-
-	return CMD_RESULT_SUCCESS;
     }
+
+    return CMD_RESULT_SUCCESS;
 }
 
 

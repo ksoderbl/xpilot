@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 4.25 2000/03/23 20:51:38 bert Exp $
+/* $Id: cmdline.c,v 4.27 2000/10/15 13:09:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -45,7 +45,7 @@ char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 4.25 2000/03/23 20:51:38 bert Exp $";
+    "@(#)$Id: cmdline.c,v 4.27 2000/10/15 13:09:55 bert Exp $";
 #endif
 
 DFLOAT		Gravity;		/* Power of gravity */
@@ -200,6 +200,7 @@ bool		shieldedItemPickup;	/* Pickup items with shields up? */
 bool		shieldedMining;		/* Detach mines with shields up? */
 bool		laserIsStunGun;		/* Is the laser a stun gun? */
 bool		reportToMetaServer;	/* Send status to meta-server? */
+bool		searchDomainForXPilot;	/* Do a DNS lookup for XPilot.domain? */
 char		*denyHosts;		/* Computers which are denied service */
 DFLOAT		gameDuration;		/* total duration of game in minutes */
 bool		allowViewing;		/* Are players allowed to watch others? */
@@ -815,6 +816,16 @@ static optionDesc options[] = {
 	MAP(NULL)
     },
     {
+	"searchDomainForXPilot",
+	"searchDomainForXPilot",
+	"no",
+	&searchDomainForXPilot,
+	valBool,
+	tuner_none,
+	"Search the local domain for the existence of xpilot.domain?\n",
+	MAP(NULL)
+    },
+    {
 	"denyHosts",
 	"denyHosts",
 	"",
@@ -1402,7 +1413,7 @@ static optionDesc options[] = {
 	"4",
 	&maxMissilesPerPack,
 	valInt,
-	tuner_none,
+	Tune_item_packs,
 	"The number of missiles gotten by picking up one missile item.\n",
 	MAP(NULL)
     },
@@ -1412,7 +1423,7 @@ static optionDesc options[] = {
 	"2",
 	&maxMinesPerPack,
 	valInt,
-	tuner_none,
+	Tune_item_packs,
 	"The number of mines gotten by picking up one mine item.\n",
 	MAP(NULL)
     },

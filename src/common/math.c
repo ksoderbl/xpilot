@@ -1,4 +1,4 @@
-/* $Id: math.c,v 4.2 1998/04/16 17:40:43 bert Exp $
+/* $Id: math.c,v 4.3 2000/04/02 09:50:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -30,12 +30,14 @@
 #include "config.h"
 #include "const.h"
 #include "error.h"
+#include "commonproto.h"
+
 
 char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 4.2 1998/04/16 17:40:43 bert Exp $";
+    "@(#)$Id: math.c,v 4.3 2000/04/02 09:50:54 bert Exp $";
 #endif
 
 
@@ -99,11 +101,12 @@ DFLOAT findDir(DFLOAT x, DFLOAT y)
 DFLOAT rfrac(void)
 {
     /*
-     * Return a pseudo-random value in the range { 0 <= x < 1 }.
-     * Assume all RAND_MAXs are at least 32767 and divide by 32768.
+     * Return a pseudo-random value in the range { 0.0 <= x < 1.0 }.
+     * Use randomMT() which returns a 32 bit PRN and multiply by 1/(1<<32).
      */
-    return (DFLOAT)((double)(rand() & 0x7FFF) * 0.000030517578125);
+    return (DFLOAT)((double) randomMT() * 0.00000000023283064365386962890625);
 }
+
 
 void Make_table(void)
 {

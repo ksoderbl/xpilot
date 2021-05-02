@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 4.31 2000/03/24 12:47:01 bert Exp $
+/* $Id: welcome.c,v 4.34 2000/10/29 17:11:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -61,7 +61,7 @@ char welcome_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: welcome.c,v 4.31 2000/03/24 12:47:01 bert Exp $";
+    "@(#)$Id: welcome.c,v 4.34 2000/10/29 17:11:36 bert Exp $";
 #endif
 
 
@@ -354,7 +354,6 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 		    MAX_LOCAL_SERVERS, &n,
 		    addr_ptrs, name_ptrs,
 		    conpar);
-    printf("found %d servers\n", n);
     LIMIT(n, 0, MAX_LOCAL_SERVERS);
 
     Widget_destroy_children(subform_widget);
@@ -691,13 +690,11 @@ static void Add_meta_line(char *meta_line)
     }
     if (num < NUM_META_DATA_FIELDS) {
 	/* should not happen, except maybe for last line. */
-	printf("num too low %d\n", num);
 	free(text);
 	return;
     }
     if (fields[0] != text) {
 	/* sanity check, should not happen. */
-	printf("field 0 not text\n");
 	free(text);
 	return;
     }
@@ -1045,7 +1042,6 @@ static int Internet_server_join_cb(int widget, void *user_data, const char **tex
 			     NULL, NULL,
 			     conpar);
     if (result) {
-	printf("result = %d\n", result);
 	/* structure copy */
 	*global_conpar = *conpar;
 	joining = 1;
@@ -1447,8 +1443,6 @@ static int Internet_cb(int widget, void *user_data, const char **text)
 {
     Connect_param_t	*conpar = (Connect_param_t *) user_data;
 
-    printf("internet\n");
-
     Welcome_set_mode(ModeInternet);
 
     if (!server_list ||
@@ -1470,53 +1464,47 @@ static int Internet_cb(int widget, void *user_data, const char **text)
     server_it = List_begin(server_list);
     Welcome_show_server_list(conpar);
 
-    printf("internet done\n");
-
     return 0;
 }
 
 /*
  * User pressed the Server button.
  */
+#if 0
 static int Server_cb(int widget, void *user_data, const char **text)
 {
     /* Connect_param_t	*conpar = (Connect_param_t *) user_data; */
-
-    printf("server\n");
 
     Welcome_set_mode(ModeServer);
 
     return 0;
 }
+#endif
 
 /*
  * User pressed the Help button.
  */
+#if 0
 static int Help_cb(int widget, void *user_data, const char **text)
 {
-    printf("help\n");
-
     Welcome_set_mode(ModeHelp);
 
-#if 0
     /* Proper help about this welcome screen should be displayed.
      * For now just popup the about window.
      * Hmm, about buttons don't work.  They should become widgets.
-     */
 
     About_callback(0,0,0);
-#endif
+     */
 
     return 0;
 }
+#endif
 
 /*
  * User pressed the Quit button.
  */
 static int Quit_cb(int widget, void *user_data, const char **text)
 {
-    printf("quit\n");
-
     Welcome_set_mode(ModeQuit);
 
     quitting = 1;

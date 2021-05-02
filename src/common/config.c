@@ -1,4 +1,4 @@
-/* $Id: config.c,v 1.6 2000/03/21 10:37:22 bert Exp $
+/* $Id: config.c,v 1.7 2000/09/06 13:15:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -162,7 +162,7 @@ char config_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: config.c,v 1.6 2000/03/21 10:37:22 bert Exp $";
+    "@(#)$Id: config.c,v 1.7 2000/09/06 13:15:22 bert Exp $";
 #endif
 
 
@@ -276,36 +276,10 @@ char *Conf_zcat_format(void)
     return conf;
 }
 
-/*#ifndef _WINDOWS */
-#if 1
 char *Conf_sounddir(void)
 {
     static char conf[] = SOUNDDIR;
 
     return conf;
 }
-#else
-/* dick: i don't know where this came from but it doesn't build
- * p and sounds are both undefined.  sound on Windows sucks anyway */
-char *Conf_sounddir(void)
-{
-    static char snddir[1024];
-
-    if (!snddir[0]) {
-	strcpy(snddir, sounds);
-	p = strrchr(snddir, '\\');
-	if (p != NULL) {
-	    *++p = '\0';
-	} else {
-	    p = strrchr(snddir, '/');
-	    if (snddir != NULL) {
-		*++p = '\0';
-	    } else {
-		snddir[0] = '\0';
-	    }
-	}
-    }
-    return snddir;
-}
-#endif
 

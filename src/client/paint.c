@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 4.8 2000/03/20 15:18:56 bert Exp $
+/* $Id: paint.c,v 4.16 2000/09/15 13:22:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -56,6 +56,9 @@
 #include "paintdata.h"
 #include "record.h"
 #include "xinit.h"
+#include "blockbitmaps.h"
+#include "portability.h"
+#include "client.h"
 
 char paint_version[] = VERSION;
 
@@ -107,7 +110,7 @@ Window	buttonWindow;		/* to calculate size of buttons */
 #endif
 
 Pixmap	p_draw;			/* Saved pixmap for the drawing */
-					/* area (monochromes use this) */
+				/* area (monochromes use this) */
 Window	players;		/* Player list window */
 				/* monochromes) */
 int	maxMessages;		/* Max. number of messages to display */
@@ -142,6 +145,7 @@ other_t     *self;          /* player info */
 
 long        loops = 0;
 
+int	cacheShips = 0;		/* cache some ship bitmaps every frame */
 
 static void Paint_clock(int redraw);
 
@@ -219,7 +223,9 @@ void Paint_frame(void)
 
 	Rectangle_start();
 	Segment_start();
+
 	Paint_world();
+
 	Segment_end();
 	Rectangle_end();
 
@@ -241,7 +247,6 @@ void Paint_frame(void)
 	Paint_ships();
 	Paint_meters();
 	Paint_HUD();
-
 	Paint_recording();
 
 	Rectangle_end();
@@ -261,6 +266,9 @@ void Paint_frame(void)
 	XFillRectangle(dpy, draw, gc, 0, 0, draw_width, draw_height);
 	XSetFunction(dpy, gc, GXcopy);
 	SET_FG(colors[BLACK].pixel);
+    }
+    if (cacheShips && blockBitmaps) {
+	Cache_ships(draw);
     }
     prev_prev_damaged = prev_damaged;
     prev_damaged = damaged;
@@ -285,6 +293,7 @@ void Paint_frame(void)
 			    0, 0, 256, RadarHeight, 0, 0);
 #endif
 	} else {
+
 	    int x, y, w, h;
 	    float xp, yp, xo, yo;
 
@@ -305,6 +314,8 @@ void Paint_frame(void)
 	    y = RadarHeight - y - 1;
 	    w = 256 - x;
 	    h = RadarHeight - y;
+
+#ifndef	_WINDOWS	
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      0, 0, x, y, w, h);
 	    XCopyArea(dpy, p_radar, radar, gc,
@@ -313,6 +324,9 @@ void Paint_frame(void)
 		      0, y, x, h, w, 0);
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      x, y, w, h, 0, 0);
+#else
+	    Paint_world_radar();			  
+#endif
 	}
     }
     else if (radar_exposures > 2) {
@@ -375,19 +389,49 @@ void Paint_frame(void)
     XFlush(dpy);
 }
 
-#define BORDER			6
-#define SCORE_LIST_WINDOW_WIDTH	256
+
+#define SCORE_BORDER		6
+
+
+void Paint_score_background(int thisLine)
+{
+    if (!blockBitmaps) {
+	XClearWindow(dpy, players);
+    } else {
+	XSetForeground(dpy, scoreListGC, colors[BLACK].pixel);
+
+	IFWINDOWS( XFillRectangle(dpy, players, scoreListGC, 
+				  0, 0, 
+				  players_width, BG_IMAGE_HEIGHT); )
+
+	PaintBitmap(players, BM_SCORE_BG,
+		    0, 0,
+		    players_width, BG_IMAGE_HEIGHT,
+		    0);
+
+	if (players_height > BG_IMAGE_HEIGHT + LOGO_HEIGHT) {
+	    XFillRectangle(dpy, players, scoreListGC, 
+			   0, BG_IMAGE_HEIGHT, 
+			   players_width,
+			   players_height - (BG_IMAGE_HEIGHT + LOGO_HEIGHT));
+	}
+	PaintBitmap(players, BM_LOGO, 
+		    0, players_height - LOGO_HEIGHT, 
+		    players_width, LOGO_HEIGHT,
+		    0);
+
+	XFlush(dpy);
+    }
+
+}
+
 
 void Paint_score_start(void)
 {
-    static bool	first = true;
     char	headingStr[MSG_LEN];
     static int thisLine;
 
-    if (first) {
-	thisLine = BORDER + scoreListFont->ascent;
-	first = false;
-    }
+    thisLine = SCORE_BORDER + scoreListFont->ascent;
 
     if (showRealName) {
 	strcpy(headingStr, "NICK=USER@HOST");
@@ -406,10 +450,10 @@ void Paint_score_start(void)
 	    strcat(headingStr, "LIFE");
 	strcat(headingStr, " NAME");
     }
+    Paint_score_background(thisLine);
 
-    XClearWindow(dpy, players);
     ShadowDrawString(dpy, players, scoreListGC,
-		     BORDER, thisLine,
+		     SCORE_BORDER, thisLine,
 		     headingStr,
 		     colors[WHITE].pixel,
 		     colors[BLACK].pixel);
@@ -417,8 +461,8 @@ void Paint_score_start(void)
     gcv.line_style = LineSolid;
     XChangeGC(dpy, scoreListGC, GCLineStyle, &gcv);
     XDrawLine(dpy, players, scoreListGC,
-	      BORDER, thisLine,
-	      SCORE_LIST_WINDOW_WIDTH - BORDER, thisLine);
+	      SCORE_BORDER, thisLine,
+	      players_width - SCORE_BORDER, thisLine);
 
     gcv.line_style = LineOnOffDash;
     XChangeGC(dpy, scoreListGC, GCLineStyle, &gcv);
@@ -449,7 +493,7 @@ void Paint_score_entry(int entry_num,
 	lineSpacing
 	    = scoreListFont->ascent + scoreListFont->descent + 3;
 	firstLine
-	    = 2*BORDER + scoreListFont->ascent + lineSpacing;
+	    = 2*SCORE_BORDER + scoreListFont->ascent + lineSpacing;
     }
     thisLine = firstLine + lineSpacing * entry_num;
 
@@ -502,13 +546,22 @@ void Paint_score_entry(int entry_num,
 	|| other->mychar == 'P'
 	|| other->mychar == 'W')
 	&& !mono) {
-	XSetForeground(dpy, scoreListGC, colors[BLACK].pixel);
+
+	if (!blockBitmaps) {
+	    XSetForeground(dpy, scoreListGC, colors[BLACK].pixel);
+	} else { 
+	    /*
+	    ** hm, this grey color is pretty, but am i guaranteed that there is 
+	    ** 16 standard colors just because blockBitmaps = true?
+	    */
+	    XSetForeground(dpy, scoreListGC, colors[12].pixel);
+	}	
 	XDrawString(dpy, players, scoreListGC,
-		    BORDER, thisLine,
+		    SCORE_BORDER, thisLine,
 		    label, strlen(label));
     } else {
 	ShadowDrawString(dpy, players, scoreListGC,
-			 BORDER, thisLine,
+			 SCORE_BORDER, thisLine,
 			 label,
 			 colors[WHITE].pixel,
 			 colors[BLACK].pixel);
@@ -519,8 +572,8 @@ void Paint_score_entry(int entry_num,
      */
     if (best) {
 	XDrawLine(dpy, players, scoreListGC,
-		  BORDER, thisLine,
-		  SCORE_LIST_WINDOW_WIDTH - BORDER, thisLine);
+		  SCORE_BORDER, thisLine,
+		  players_width - SCORE_BORDER, thisLine);
     }
 }
 

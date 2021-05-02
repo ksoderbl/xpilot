@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 4.24 2000/03/24 12:36:04 bert Exp $
+/* $Id: xevent.c,v 4.26 2000/10/15 13:09:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -369,23 +369,16 @@ bool Key_press_fuel(keys_t key)
 
 bool Key_press_swap_settings(keys_t key)
 {
-    /* if the server isn't mucking with our power/turnspeed (autopilot)
-     * or we're watching someone else, then it will accept our swap
-     */
-    if ((fabs(displayedTurnspeed - turnspeed) < 0.5
-	 && fabs(displayedPower - power) < 0.5)
-       || snooping) {
-	DFLOAT _tmp;
+    DFLOAT _tmp;
 #define SWAP(a, b) (_tmp = (a), (a) = (b), (b) = _tmp)
-	    
-	SWAP(power, power_s);
-	SWAP(turnspeed, turnspeed_s);
-	SWAP(turnresistance, turnresistance_s);
-	control_count = CONTROL_DELAY;
-	Config_redraw();
-	    return true;
-    } else
-	return false;	/* don't send the key and risk skew */
+	
+    SWAP(power, power_s);
+    SWAP(turnspeed, turnspeed_s);
+    SWAP(turnresistance, turnresistance_s);
+    control_count = CONTROL_DELAY;
+    Config_redraw();
+
+    return true;
 }
 
 bool Key_press_swap_scalefactor(keys_t key)
@@ -398,6 +391,7 @@ bool Key_press_swap_scalefactor(keys_t key)
 
     Init_scale_array();
     Scale_dashes();
+    Config_redraw();
 #endif
 
     return false;

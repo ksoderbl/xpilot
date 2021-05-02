@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 4.16 2000/03/12 12:11:11 bert Exp $
+/* $Id: xpilot.c,v 4.17 2000/03/26 18:34:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -64,7 +64,7 @@ char xpilot_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 4.16 2000/03/12 12:11:11 bert Exp $";
+    "@(#)$Id: xpilot.c,v 4.17 2000/03/26 18:34:14 bert Exp $";
 #endif
 
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */

@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.3 1999/10/25 16:07:02 bert Exp $
+/* $Id: list.h,v 1.4 2000/05/20 11:09:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -79,6 +79,26 @@ list_iter_t	List_push_front(list_t list, void *data);
 /* append a new element at the end of the list.
  * and return the new position or NULL on failure. */
 list_iter_t	List_push_back(list_t list, void *data);
+
+/*
+ * Find an element in the list and return an iterator pointing to it.
+ * Note that this is very slow because it traverses the entire list
+ * searching for an element.
+ */
+list_iter_t	List_find(list_t list, void *data);
+
+/*
+ * Find an element in a range of elements (excluding last) and return
+ * an iterator pointing to it.  Note that this is a very slow operation.
+ */
+list_iter_t	List_find_range(list_iter_t first, list_iter_t last, void *data);
+
+/*
+ * Remove all element from the list which are equal to data.
+ * Note that this is very slow because it traverses the entire list.
+ * The return value is the number of successful removals.
+ */
+int		List_remove(list_t list, void *data);
 
 /* return the number of elements in the list. */
 int		List_size(list_t);

@@ -1,4 +1,4 @@
-/* $Id: textinterface.c,v 4.9 2000/03/12 14:49:00 bert Exp $
+/* $Id: textinterface.c,v 4.11 2000/04/01 13:38:25 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -59,7 +59,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: textinterface.c,v 4.9 2000/03/12 14:49:00 bert Exp $";
+    "@(#)$Id: textinterface.c,v 4.11 2000/04/01 13:38:25 bert Exp $";
 #endif
 
 
@@ -68,6 +68,7 @@ static char sourceid[] =
 
 extern int		dgram_one_socket;	/* from datagram.c */
 extern char		hostname[];		/* my local hostname */
+
 
 
 /*

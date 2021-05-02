@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 4.26 2000/03/24 12:47:01 bert Exp $
+/* $Id: xinit.c,v 4.29 2000/09/05 22:09:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -89,7 +89,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.26 2000/03/24 12:47:01 bert Exp $";
+    "@(#)$Id: xinit.c,v 4.29 2000/09/05 22:09:21 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -114,6 +114,7 @@ int			buttonColor, windowColor, borderColor;
 int			quitting = false;
 int			top_width, top_height, top_x, top_y, top_posmask;
 int			draw_width, draw_height;
+int			players_width, players_height;
 char			*geometry;
 bool			autoServerMotdPopup;
 bool			refreshMotd;
@@ -831,10 +832,12 @@ int Init_playing_windows(void)
     Widget_map_sub(button_form);
 
     /* Create score list window */
+    players_width = RadarWidth;
+    players_height = top_height - (RadarHeight + ButtonHeight + 2);
     players
-	= XCreateSimpleWindow(dpy, top, 0, RadarHeight + ButtonHeight + 2,
-			      256, top_height
-				  - (RadarHeight + ButtonHeight + 2),
+	= XCreateSimpleWindow(dpy, top,
+			      0, RadarHeight + ButtonHeight + 2,
+			      players_width, players_height,
 			      0, 0,
 			      colors[windowColor].pixel);
 #ifdef	_WINDOWS
@@ -893,7 +896,7 @@ int Init_playing_windows(void)
     XQueryBestCursor(dpy, draw, 1, 1, &w, &h);
     pix = XCreatePixmap(dpy, draw, w, h, 1);
     cursorGC = XCreateGC(dpy, pix, 0, NULL);
-    XSetForeground(dpy, gc, 0);
+    XSetForeground(dpy, cursorGC, 0);
     XFillRectangle(dpy, pix, cursorGC, 0, 0, w, h);
     XFreeGC(dpy, cursorGC);
     pointerControlCursor = XCreatePixmapCursor(dpy, pix, pix, &colors[BLACK],
@@ -936,6 +939,8 @@ void WinXCreateItemBitmaps()
 				       (char *)itemBitmapData[i].data,
 				       ITEM_SIZE, ITEM_SIZE, colors[RED].pixel);
     }
+    Colors_init_block_bitmaps();
+    
 }
 #endif
 
@@ -1067,8 +1072,9 @@ void Resize(Window w, int width, int height)
 	p_draw = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
     }
 #endif
+    players_height = top_height - (RadarHeight + ButtonHeight + 2);
     XResizeWindow(dpy, players,
-		  256, top_height - (RadarHeight + ButtonHeight + 2));
+		  players_width, players_height);
 #ifdef	_WINDOWS
     WinXResize();
 #endif

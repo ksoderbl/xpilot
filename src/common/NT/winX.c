@@ -1,4 +1,4 @@
-/* $Id: winX.c,v 4.2 1999/11/06 16:33:48 bert Exp $
+/* $Id: winX.c,v 4.3 2000/09/15 13:23:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -28,7 +28,7 @@
 *  This file is mostly Win32 translations of the X calls that xpilot uses.	*
 *  Anything starting with WinX is a special wedge function that i needed	*
 *																			*
-*  $Id: winX.c,v 4.2 1999/11/06 16:33:48 bert Exp $						*
+*  $Id: winX.c,v 4.3 2000/09/15 13:23:20 bert Exp $						*
 \***************************************************************************/
 #include "winX.h"
 #include "windows.h"
@@ -97,7 +97,7 @@ static void WinXSetupRadarWindow()
 {
 	if (radar)
 	{
-		if (instruments & SHOW_SLIDING_RADAR)
+	/*	if (instruments & SHOW_SLIDING_RADAR)
 		{
 			if (xid[radar].hwnd.hSaveDC != NULL)
 			{
@@ -106,7 +106,7 @@ static void WinXSetupRadarWindow()
 				xid[radar].hwnd.hSaveDC = NULL;
 			}
 		}
-		else
+		else*/
 		{
 			if (xid[radar].hwnd.hSaveDC == NULL)
 			{

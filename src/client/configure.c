@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 4.14 2000/03/12 14:19:31 bert Exp $
+/* $Id: configure.c,v 4.18 2000/10/29 17:11:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -120,6 +120,7 @@ static int Config_create_fuelGauge(int widget_desc, int *height);
 static int Config_create_outlineWorld(int widget_desc, int *height);
 static int Config_create_filledWorld(int widget_desc, int *height);
 static int Config_create_texturedWalls(int widget_desc, int *height);
+static int Config_create_texturedObjects(int widget_desc, int *height);
 static int Config_create_slidingRadar(int widget_desc, int *height);
 static int Config_create_showItems(int widget_desc, int *height);
 static int Config_create_showItemsTime(int widget_desc, int *height);
@@ -185,9 +186,9 @@ static int Config_update_charsPerSecond(int widget_desc, void *data, int *val);
 static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
 static int Config_update_autoShield(int widget_desc, void *data, bool *val);
 static int Config_update_maxFPS(int widget_desc, void *data, int *val);
+static int Config_update_texturedObjects(int widget_desc, void *data, bool *val);
 #ifdef	WINDOWSCALING
 static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val);
-static int Config_update_altScaleFactor(int widget_desc, void *data, DFLOAT *val);
 #endif
 
 static int Config_close(int widget_desc, void *data, const char **strptr);
@@ -249,6 +250,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_outlineWorld,
     Config_create_filledWorld,
     Config_create_texturedWalls,
+    Config_create_texturedObjects,
     Config_create_slidingRadar,
     Config_create_showItems,
     Config_create_showItemsTime,
@@ -782,6 +784,15 @@ static int Config_create_texturedWalls(int widget_desc, int *height)
 			      (void *) SHOW_TEXTURED_WALLS);
 }
 
+static int Config_create_texturedObjects(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "texturedObjects",
+			      (blockBitmaps) ? true : false,
+			      Config_update_texturedObjects,
+			      NULL);
+}
+
+
 static int Config_create_slidingRadar(int widget_desc, int *height)
 {
     if (Client_wrap_mode() == 0) {
@@ -1092,7 +1103,7 @@ static int Config_create_altScaleFactor(int widget_desc, int *height)
     return Config_create_float(widget_desc, height,
                                "altScaleFactor", &scaleFactor_s,
                                MIN_SCALEFACTOR, MAX_SCALEFACTOR,
-                               Config_update_altScaleFactor, NULL);
+                               NULL, NULL);
 }
 #endif
 
@@ -1262,16 +1273,30 @@ static int Config_update_maxFPS(int widget_desc, void *data, int *val)
     return 0;
 }
 
-#ifdef	WINDOWSCALING
-static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val)
+static int Config_update_texturedObjects(int widget_desc, void *data, bool *val)
 {
-    Init_scale_array();
-    Resize(top, top_width, top_height);
-    Scale_dashes();
+    if ((*val != false) != blockBitmaps) {
+	if (blockBitmaps == false) {
+	    /* see if we can use blockBitmaps at all. */
+	    blockBitmaps = true;
+	    if (Colors_init_block_bitmaps() == -1) {
+		/* no we can't have blockBitmaps. */
+		blockBitmaps = false;
+		/* and redraw our widget as false. */
+		*val = false;
+		return 1;
+	    }
+	}
+	else {
+	    Colors_free_block_bitmaps();
+	    blockBitmaps = false;
+	}
+    }
     return 0;
 }
 
-static int Config_update_altScaleFactor(int widget_desc, void *data, DFLOAT *val)
+#ifdef	WINDOWSCALING
+static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val)
 {
     Init_scale_array();
     Resize(top, top_width, top_height);
@@ -1489,6 +1514,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
     Config_save_bool(fp, "filledWorld", BIT(instruments, SHOW_FILLED_WORLD));
     Config_save_bool(fp, "texturedWalls", BIT(instruments, SHOW_TEXTURED_WALLS));
+    Config_save_bool(fp, "texturedObjects", blockBitmaps);
     Config_save_bool(fp, "clock", BIT(instruments, SHOW_CLOCK));
     Config_save_bool(fp, "clockAMPM", BIT(instruments, SHOW_CLOCK_AMPM_FORMAT));
     Config_save_int(fp, "backgroundPointDist", map_point_distance);

@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 4.15 2000/03/24 13:10:05 bert Exp $
+# $Id: Makefile.std,v 4.16 2000/04/02 09:25:30 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993-98 by
 #
@@ -253,16 +253,18 @@ INCS = $(AUDIOINC) -I../common -I../client -I../../lib
 # Common library libxpcommon.a
 #
 OBJS0 = checknames.o config.o cmw.o error.o list.o math.o net.o \
-	portability.o shipshape.o socklib.o strcasecmp.o strdup.o
+	portability.o randommt.o shipshape.o socklib.o strcasecmp.o strdup.o
 
 SRCS0 = checknames.c config.c cmw.c error.c list.c math.c net.c \
-	portability.c shipshape.c socklib.c strcasecmp.c strdup.c
+	portability.c randommt.c shipshape.c socklib.c strcasecmp.c strdup.c
 
 #
 # Client program xpilot
 #
-OBJS1 = about.o caudio.o client.o colors.o configure.o \
-	datagram.o dbuff.o default.o gfx3d.o guimap.o guiobjects.o \
+OBJS1 = about.o blockbitmaps.o \
+	caudio.o client.o colors.o configure.o \
+	datagram.o dbuff.o default.o \
+	gfx2d.o gfx3d.o guimap.o guiobjects.o \
 	join.o netclient.o \
 	paint.o paintdata.o painthud.o paintmap.o \
 	paintobjects.o paintradar.o query.o record.o \
@@ -270,8 +272,10 @@ OBJS1 = about.o caudio.o client.o colors.o configure.o \
 	usleep.o welcome.o widget.o xeventhandlers.o \
 	xevent.o xinit.o xpilot.o xpmread.o \
 	$(AUDIOOBJ)
-SRCS1 = about.c caudio.c client.c colors.c configure.c \
-	datagram.c dbuff.c default.c gfx3d.c guimap.c guiobjects.c \
+SRCS1 = about.c blockbitmaps.c \
+	caudio.c client.c colors.c configure.c \
+	datagram.c dbuff.c default.c \
+	gfx2d.c gfx3d.c guimap.c guiobjects.c \
 	join.c netclient.c \
 	paint.c paintdata.c painthud.c paintmap.c \
 	paintobjects.c paintradar.c query.c record.c \

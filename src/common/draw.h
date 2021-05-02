@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 4.1 1998/04/16 17:40:40 bert Exp $
+/* $Id: draw.h,v 4.3 2000/04/02 09:50:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -129,6 +129,7 @@ extern void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 				  unsigned shape_version);
 
 extern DFLOAT rfrac(void);
+
 extern int mod(int x, int y);
 
 #endif

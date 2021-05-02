@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.c,v 1.6 2000/03/13 18:20:04 bert Exp $
+ * $Id: main.c,v 1.7 2000/05/20 14:46:17 bert Exp $
  */
 
 #include                 "main.h"
@@ -45,10 +45,10 @@ char                     *fontname = "*-times-bold-r-*-*-14-*-*-*-*-*-*-*";
 
 int                      drawicon,drawmode;
 map_data_t               clipdata;
-map_t                    map;
+xpmap_t                    map;
 
-int                      num_default_settings=221;
-charlie                  default_settings[221] = {
+int                      num_default_settings=225;
+charlie                  default_settings[225] = {
 	{ "gravity","-0.14" },
 	{ "shipmass","20.0" },
 	{ "shotmass","0.1" },
@@ -264,17 +264,21 @@ charlie                  default_settings[221] = {
   	{ "racelaps","3" },
   	{ "lockotherteam","yes" },
   	{ "loseitemdestroys","no" },
+  	{ "usewreckage","yes" },
   	{ "maxoffensiveitems","50" },
   	{ "maxdefensiveitems","50" },
   	{ "rounddelay","0" },
   	{ "maxroundtime","0" },
+  	{ "roundstoplay", "0" },
   	{ "analyticalcollisiondetection", "yes" },
   	{ "plockserver","no" },
+  	{ "timerresolution", "0" },
+  	{ "password", "\0" },
 };
 
 /* JLM Reorganized for new options */
-int                      numprefs = 222;
-prefs_t                  prefs[222] = {
+int                      numprefs = 226;
+prefs_t                  prefs[226] = {
 { "mapname"      ,"", "Name:"          ,255,STRING,map.mapName,0,0,0,0 },
 { "mapauthor"    ,"", "Author:"        ,255,STRING,map.mapAuthor,0,1,0,0 },
 { "mapwidth"     ,"", "Width:"     ,3,MAPWIDTH, map.width_str,0,3,0,0 },
@@ -464,38 +468,42 @@ prefs_t                  prefs[222] = {
 { "checkpointradius","","Checkpoint Rad:",19,POSFLOAT,map.checkpointRadius,0,36,4,0},
 { "friction","","Friction:",19,POSFLOAT,map.friction,0,37,4,0},
 { "framespersecond","FPS","Frames/Second:",6,POSINT,map.framesPerSecond,0,38,4,0},
-{ "ignore20maxfps","","Ignore FPS20",0,YESNO,0,&map.ignore20MaxFPS,39,4,0},
-{ "reporttometaserver","reportmeta","Report to Meta?",0,YESNO,0,&map.reportToMetaServer,0,5,0},
-{ "idlerun","rawmode","Idle Run?",0,YESNO,0,&map.idleRun,1,5,0},
-{ "noquit","","No Quit?",0,YESNO,0,&map.noQuit,2,5,0},
-{ "resetonhuman","humanreset","ResetOnHuman?",0,YESNO,0,&map.resetOnHuman,3,5,0},
-{ "gameduration","","Game Duration:",6,POSINT,map.gameDuration,0,4,5,0},
-{ "rounddelay","","Round Delay:",19,POSINT,map.roundDelay,0,5,5,0},
-{ "maxroundtime","","MaxRoundTime:",19,POSINT,map.maxRoundTime,0,6,5,0},
-{ "contactport","port","Contact Port:",19,INT,map.contactPort,0,7,5,0},
-{ "denyhosts","","Deny Hosts:",255,STRING,map.denyHosts,0,8,5,0},
-{ "plockserver","","pLockServer?",0,YESNO,0,&map.pLockServer,9,5,0},
-{ "allowviewing","","Allow Viewing?",0,YESNO,0,&map.allowViewing,10,5,0},
-{ "analyticalcollisiondetection","","Analic.Col.Det",0,YESNO,0,&map.analyticalCollisionDetection,11,5,0},
-{ "cloakedexhaust","","Cloaked Exhaust?",6,YESNO,0,&map.cloakedExhaust,12,5,0},
-{ "cloakedshield","","Cloaked Shield?",6,YESNO,0,&map.cloakedShield,13,5,0},
-{ "itemconcentratorvisible","","Item Conc Vis?",6,YESNO,0,&map.itemConcentratorVisible,14,5,0},
-{ "gravityvisible","","Gravity Visible?",6,YESNO,0,&map.gravityVisible,15,5,0},
-{ "wormholevisible","","Wormhole Visible?",6,YESNO,0,&map.wormholeVisible,16,5,0},
-{ "wormtime","","Wormhole Time:",19,POSINT,map.wormTime,0,17,5,0},
-{ "shotkillscoremult","","ShotKillScrMlt:",19,POSFLOAT,map.shotKillScoreMult,0,18,5,0},
-{ "torpedokillscoremult","","TorpKillScrMlt:",19,POSFLOAT,map.torpedoKillScoreMult,0,19,5,0},
-{ "smartkillscoremult","","SmrtKillScrMlt:",19,POSFLOAT,map.smartKillScoreMult,0,20,5,0},
-{ "heatkillscoremult","","HeatKillScrMlt:",19,POSFLOAT,map.heatKillScoreMult,0,21,5,0},
-{ "clusterkillscoremult","","ClstrKillScrMlt:",19,POSFLOAT,map.clusterKillScoreMult,0,22,5,0},
-{ "laserkillscoremult","","LasrKillScrMlt:",19,POSFLOAT,map.laserKillScoreMult,0,23,5,0},
-{ "tankkillscoremult","","TankKillScrMlt:",19,POSFLOAT,map.tankKillScoreMult,0,24,5,0},
-{ "runoverkillscoremult","","RnvrKillScrMlt:",19,POSFLOAT,map.runoverKillScoreMult,0,25,5,0},
-{ "ballkillscoremult","","BallKillScrMlt:",19,POSFLOAT,map.ballKillScoreMult,0,26,5,0},
-{ "explosionkillscoremult","","ExplKillScrMlt:",19,POSFLOAT,map.explosionKillScoreMult,0,27,5,0},
-{ "shovekillscoremult","","ShveKillScrMlt:",19,POSFLOAT,map.shoveKillScoreMult,0,28,5,0},
-{ "crashscoremult","","CrashScrMlt:",19,POSFLOAT,map.crashScoreMult,0,29,5,0},
-{ "minescoremult","","MineScrMlt:",19,POSFLOAT,map.mineScoreMult,0,30,5,0},
+{ "timerresolution","","TimerResltn:",6,POSINT,map.timerResolution,0,39,4,0},
+{ "ignore20maxfps","","Ignore FPS20",0,YESNO,0,&map.ignore20MaxFPS,0,5,0},
+{ "reporttometaserver","reportmeta","Report to Meta?",0,YESNO,0,&map.reportToMetaServer,1,5,0},
+{ "idlerun","rawmode","Idle Run?",0,YESNO,0,&map.idleRun,2,5,0},
+{ "noquit","","No Quit?",0,YESNO,0,&map.noQuit,3,5,0},
+{ "resetonhuman","humanreset","ResetOnHuman?",0,YESNO,0,&map.resetOnHuman,4,5,0},
+{ "gameduration","","Game Duration:",6,POSINT,map.gameDuration,0,5,5,0},
+{ "rounddelay","","Round Delay:",19,POSINT,map.roundDelay,0,6,5,0},
+{ "maxroundtime","","MaxRoundTime:",19,POSINT,map.maxRoundTime,0,7,5,0},
+{ "roundstoplay","","Rounds2Play:",19,POSINT,map.roundsToPlay,0,8,5,0},
+{ "contactport","port","Contact Port:",19,INT,map.contactPort,0,9,5,0},
+{ "denyhosts","","Deny Hosts:",255,STRING,map.denyHosts,0,10,5,0},
+{ "plockserver","","pLockServer?",0,YESNO,0,&map.pLockServer,11,5,0},
+{ "password","","Password:",255,STRING,map.password,0,12,5,0},
+{ "allowviewing","","Allow Viewing?",0,YESNO,0,&map.allowViewing,13,5,0},
+{ "analyticalcollisiondetection","","Analic.Col.Det",0,YESNO,0,&map.analyticalCollisionDetection,14,5,0},
+{ "cloakedexhaust","","Cloaked Exhaust?",6,YESNO,0,&map.cloakedExhaust,15,5,0},
+{ "cloakedshield","","Cloaked Shield?",6,YESNO,0,&map.cloakedShield,16,5,0},
+{ "itemconcentratorvisible","","Item Conc Vis?",6,YESNO,0,&map.itemConcentratorVisible,17,5,0},
+{ "gravityvisible","","Gravity Visible?",6,YESNO,0,&map.gravityVisible,18,5,0},
+{ "wormholevisible","","Wormhole Visible?",6,YESNO,0,&map.wormholeVisible,19,5,0},
+{ "wormtime","","Wormhole Time:",19,POSINT,map.wormTime,0,20,5,0},
+{ "shotkillscoremult","","ShotKillScrMlt:",19,POSFLOAT,map.shotKillScoreMult,0,22,5,0},
+{ "torpedokillscoremult","","TorpKillScrMlt:",19,POSFLOAT,map.torpedoKillScoreMult,0,23,5,0},
+{ "smartkillscoremult","","SmrtKillScrMlt:",19,POSFLOAT,map.smartKillScoreMult,0,24,5,0},
+{ "heatkillscoremult","","HeatKillScrMlt:",19,POSFLOAT,map.heatKillScoreMult,0,25,5,0},
+{ "clusterkillscoremult","","ClstrKillScrMlt:",19,POSFLOAT,map.clusterKillScoreMult,0,26,5,0},
+{ "laserkillscoremult","","LasrKillScrMlt:",19,POSFLOAT,map.laserKillScoreMult,0,27,5,0},
+{ "tankkillscoremult","","TankKillScrMlt:",19,POSFLOAT,map.tankKillScoreMult,0,28,5,0},
+{ "runoverkillscoremult","","RnvrKillScrMlt:",19,POSFLOAT,map.runoverKillScoreMult,0,29,5,0},
+{ "ballkillscoremult","","BallKillScrMlt:",19,POSFLOAT,map.ballKillScoreMult,0,30,5,0},
+{ "explosionkillscoremult","","ExplKillScrMlt:",19,POSFLOAT,map.explosionKillScoreMult,0,31,5,0},
+{ "shovekillscoremult","","ShveKillScrMlt:",19,POSFLOAT,map.shoveKillScoreMult,0,32,5,0},
+{ "crashscoremult","","CrashScrMlt:",19,POSFLOAT,map.crashScoreMult,0,33,5,0},
+{ "minescoremult","","MineScrMlt:",19,POSFLOAT,map.mineScoreMult,0,34,5,0},
+{ "usewreckage","","Use Wreckage?",6,YESNO,0,&map.useWreckage,36,5,0},
 { "mapdata","",NULL,0,MAPDATA,NULL,0,0,0,0 }
 };
 

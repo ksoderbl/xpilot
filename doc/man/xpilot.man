@@ -4,7 +4,7 @@
 .\"
 .TH XPILOT  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.2.1: Mar 28th, 2000
+.ds ]W XPilot 4.3.0: Oct 29th, 2000
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1426,7 +1426,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of XPilot, i.e., 4.2.1
+\(bu The full version of XPilot, i.e., 4.3.0
 .TP
 \(bu What the bug looks like (symptoms)
 .TP

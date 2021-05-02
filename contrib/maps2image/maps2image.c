@@ -17,7 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <malloc.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "font.h"
 
@@ -25,17 +26,6 @@
 
 #define	PUBLIC
 #define	PRIVATE		static
-
-#define	TRUE		(1)
-#define	FALSE		(0)
-
-#define	OK		(0)
-#define	NOTOK		(-1)
-
-#define	when		break;case
-#define	orwhen		case
-#define	otherwise	break;default
-
 
 
 /* Private routines
@@ -93,21 +83,27 @@ PUBLIC int main(int ac, char **av)
 	{
 		switch (c)
 		{
-			when 's':
+			case 's':
 				mapsize = atoi(optarg);
-			when 'x':
+				break;
+			case 'x':
 				xcount = atoi(optarg);
-			when 'i':
+				break;
+			case 'i':
 				invert = 1;
-			when 'v':
+				break;
+			case 'v':
 				verbose = 1;
-			when 'b':
+				break;
+			case 'b':
 				bitmap = 1;
-			when 'l':
+				break;
+			case 'l':
 				label = 0;
-			when '?':
+				break;
+			default:
 				fprintf(stderr, "usage: %s [-s size][-x nmaps][-i][-v][-l] xpmap ...\n", av[0]);
-				exit(0);
+				exit(1);
 		}
 	}
 
@@ -178,7 +174,10 @@ PUBLIC int main(int ac, char **av)
 			fl = fopen(av[i], "r");
 
 		if (!fl)
+		{
 			perror("open");
+			exit(1);
+		}
 
 		build_image(image, x, y, fl);
 		if (label)
@@ -290,7 +289,8 @@ PUBLIC int main(int ac, char **av)
  */
 PRIVATE void build_image(char *image, int x, int y, FILE *fl)
 {
-	int	width, height;
+	int	width = 0;
+	int	height = 0;
 	char	buffer[1024];
 	char	*token;
 
@@ -317,6 +317,11 @@ PRIVATE void build_image(char *image, int x, int y, FILE *fl)
 			char	*p, *data, *topleft;
 			int	j;
 
+			if (!width || !height)
+			{
+				printf("Implementation fault: mapData while not mapWidth or mapHeight\n");
+				exit(1);
+			}
 			p = data = convert_map(width, height, fl);
 
 			/*
@@ -333,11 +338,9 @@ PRIVATE void build_image(char *image, int x, int y, FILE *fl)
 				topleft += xsize;
 				p += mapsize;
 			}
-			fclose(fl);
 			free(data);
 		}
 	}
-	fclose(fl);
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: paintmap.c,v 4.12 2000/03/11 19:56:56 bert Exp $
+/* $Id: paintmap.c,v 4.13 2000/10/15 13:09:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -174,7 +174,7 @@ void Paint_world(void)
 	if (wallTileReady == 1) {
 	    wallTileDoit = true;
 	    XSetTile(dpy, gc, wallTile);
-	    XSetTSOrigin(dpy, gc, -realWorld.x, realWorld.y);
+	    XSetTSOrigin(dpy, gc, -WINSCALE(realWorld.x), WINSCALE(realWorld.y));
 	}
     }
 

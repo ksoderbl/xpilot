@@ -1,4 +1,4 @@
-This is the README file for XPilot 4.2.1.
+This is the README file for XPilot 4.3.0.
 
 Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
@@ -8,7 +8,7 @@ source code, and the LICENSE file.
 
 
 
-Installation instructions are in the INSTALL file.
+Installation instructions are in the INSTALL.txt file.
 
 NT and Win95 users should examine the contrib/NT subdirectory and read
 the README.txt which is in there.
@@ -51,7 +51,7 @@ Also try the mapeditor which is included in this XPilot distribution.
 It is a nifty graphical editor with which you can design a new XPilot world.
 
 
-REPORTING BUGS
+REPORTING PROBLEMS AND BUGS
 
 If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 
@@ -60,4 +60,13 @@ If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 Remember to include the version of XPilot, your platform and the symptoms
 in as much detail as possible.
 
-$Id: README.txt.msub,v 4.3 2000/03/24 11:17:48 bert Exp $
+
+DEVELOPERS CORNER
+
+A wider group of developers are discussing technical internals of the
+software on the mailing list xpilot-hacks@nslug.ns.ca. If you want to
+discuss your potential contributions to the source code, please see the
+URL http://nslug.ns.ca/mailman/listinfo/xpilot-hacks for further
+information.
+
+$Id: README.txt,v 4.35 2000/10/29 17:11:36 bert Exp $

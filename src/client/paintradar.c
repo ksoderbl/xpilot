@@ -1,4 +1,4 @@
-/* $Id: paintradar.c,v 4.11 2000/03/22 17:46:07 bert Exp $
+/* $Id: paintradar.c,v 4.12 2000/09/15 13:22:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -68,17 +68,12 @@ int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
 	 int x, int y, unsigned width, unsigned height);
 
 
-void Paint_radar(void)
+static int	slidingradar_x;	/* sliding radar offsets for windows */
+static int	slidingradar_y;
+
+
+static void Copy_static_radar(void)
 {
-    int			i, x, y, x1, y1, xw, yw;
-    const float		xf = 256.0f / (float)Setup->width,
-			yf = (float)RadarHeight / (float)Setup->height;
-    XPoint		points[5];
-
-    if (radar_exposures == 0) {
-	return;
-    }
-
 #ifndef	_WINDOWS
     if (s_radar != p_radar) {
 	/* Draw static radar onto radar */
@@ -94,35 +89,93 @@ void Paint_radar(void)
     WinXBltPixToWin(s_radar, radar, 0, 0, 256, RadarHeight, 0, 0);
     p_radar = radar;
 #endif
+    XSetForeground(dpy, radarGC, colors[WHITE].pixel);
+}
+
+
+#ifdef	_WINDOWS
+static void Windows_copy_sliding_radar(float xf, float yf)
+{
+    slidingradar_x = (int)((pos.x * xf + 0.5) + 128) % 256;
+    slidingradar_y = (RadarHeight - (int)(pos.y * yf + 0.5) - 1 + RadarHeight/2)
+		    % RadarHeight;
+
+    /*
+     * Draw slidingradar in four chunks onto the screen.
+     */
+    WinXBltPixToWin(s_radar, radar,
+		    slidingradar_x , slidingradar_y,
+		    256-slidingradar_x, RadarHeight-slidingradar_y,
+		    0, 0);
+    WinXBltPixToWin(s_radar, radar,
+		    0, slidingradar_y,
+		    slidingradar_x, RadarHeight-slidingradar_y,
+		    256-slidingradar_x, 0);
+    WinXBltPixToWin(s_radar, radar,
+		    slidingradar_x, 1,
+		    256-slidingradar_x, slidingradar_y
+		    , 0,
+		    RadarHeight-slidingradar_y);
+    WinXBltPixToWin(s_radar, radar,
+		    0, 1,
+		    slidingradar_x, slidingradar_y,
+		    256-slidingradar_x, RadarHeight-slidingradar_y);
+    p_radar = radar;
 
     XSetForeground(dpy, radarGC, colors[WHITE].pixel);
+}
+#endif
 
-    /* Checkpoints */
+
+static void Paint_checkpoint_radar(float xf, float yf)
+{
+    int			x, y;
+    XPoint		points[5];
+
     if (BIT(Setup->mode, TIMING)) {
 	Check_pos_by_index(nextCheckPoint, &x, &y);
-	x = (int)(x * BLOCK_SZ * xf + 0.5);
-	y = RadarHeight - (int)(y * BLOCK_SZ * yf + 0.5) + DSIZE - 1;
+	x = ((int)(x * BLOCK_SZ * xf + 0.5) ) - slidingradar_x;
+	y = (RadarHeight - (int)(y * BLOCK_SZ * yf + 0.5) + DSIZE - 1) - slidingradar_y;
+	if (x <= 0) {
+	    x += 256;
+	}
+	if (y <= 0) {
+	    y += RadarHeight;
+	}
 	/* top */
-	points[0].x = x;
-	points[0].y = y;
+	points[0].x = x ;
+	points[0].y = y ;
 	/* right */
-	points[1].x = x + DSIZE;
-	points[1].y = y - DSIZE;
+	points[1].x = x + DSIZE ;
+	points[1].y = y - DSIZE ;
 	/* bottom */
-	points[2].x = x;
-	points[2].y = y - 2*DSIZE;
+	points[2].x = x ;
+	points[2].y = y - 2*DSIZE ;
 	/* left */
-	points[3].x = x - DSIZE;
-	points[3].y = y - DSIZE;
+	points[3].x = x - DSIZE ;
+	points[3].y = y - DSIZE ;
 	/* top */
-	points[4].x = x;
-	points[4].y = y;
+	points[4].x = x ;
+	points[4].y = y ;
 	XDrawLines(dpy, p_radar, radarGC,
 		   points, 5, 0);
     }
+}
+
+static void Paint_self_radar(float xf, float yf)
+{
+    int		x, y, x1, y1, xw, yw;
+
     if (selfVisible != 0 && loops % 16 < 13) {
-	x = (int)(pos.x * xf + 0.5);
-	y = RadarHeight - (int)(pos.y * yf + 0.5) - 1;
+	x = (int)(pos.x * xf + 0.5) - slidingradar_x;
+	y = RadarHeight - (int)(pos.y * yf + 0.5) - 1 - slidingradar_y;
+	if (x <= 0) {
+	    x += 256;
+	}
+	if (y <= 0) {
+	    y += RadarHeight;
+	}
+
 	x1 = (int)(x + 8 * tcos(heading));
 	y1 = (int)(y - 8 * tsin(heading));
 	XDrawLine(dpy, p_radar, radarGC,
@@ -144,22 +197,35 @@ void Paint_radar(void)
 	    }
 	}
     }
+}
+
+static void Paint_objects_radar(float xf, float yf)
+{
+    int			i, x, y, xw, yw;
+
     for (i = 0; i < num_radar; i++) {
-        int s = radar_ptr[i].size;
+	int s = radar_ptr[i].size;
 
 	/* draw players from the same team in a different color. */
-        if ((s & 0x80) != 0) {
+	if ((s & 0x80) != 0) {
 	    if (maxColors > 4) {
 		XSetForeground(dpy, radarGC, colors[4].pixel);
 	    }
-            s &= ~0x80;
-        }
-
-        if (s <= 0) {
-            s = 1;
+	    s &= ~0x80;
 	}
-	x = (int)(radar_ptr[i].x * xf + 0.5) - s / 2;
-	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1 - s / 2;
+
+	if (s <= 0) {
+	    s = 1;
+	}
+	x = (int)(radar_ptr[i].x * xf + 0.5) - s / 2 - slidingradar_x;
+	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1 - s / 2 - slidingradar_y;
+	if (x <= 0) {
+	    x += 256;
+	}
+	if (y <= 0) {
+	    y += RadarHeight;
+	}
+
 	(*radarDrawRectanglePtr)(dpy, p_radar, radarGC, x, y, s, s);
 	if (BIT(Setup->mode, WRAP_PLAY)) {
 	    xw = (x < 0) ? -256 : (x + s >= 256) ? 256 : 0;
@@ -184,6 +250,37 @@ void Paint_radar(void)
     if (num_radar) {
 	RELEASE(radar_ptr, num_radar, max_radar);
     }
+}
+
+
+void Paint_radar(void)
+{
+    const float		xf = 256.0f / (float)Setup->width,
+			yf = (float)RadarHeight / (float)Setup->height;
+
+    if (radar_exposures == 0) {
+	return;
+    }
+
+    slidingradar_x = 0;
+    slidingradar_y = 0;
+
+    Copy_static_radar();
+
+#ifdef	_WINDOWS
+    if (BIT(instruments, SHOW_SLIDING_RADAR) != 0) {
+	/*
+	 * Hack to fix slidingradar in windows.
+	 */
+	Windows_copy_sliding_radar(xf, yf);
+    }
+#endif
+
+    /* Checkpoints */
+    Paint_checkpoint_radar(xf, yf);
+
+    Paint_self_radar(xf, yf);
+    Paint_objects_radar(xf, yf);
 }
 
 
@@ -287,7 +384,7 @@ void Paint_world_radar(void)
      * for drawing when indexed with a map block type.
      */
     memset(visibleColor, 0, sizeof visibleColor);
-    visibleColor[SETUP_FILLED] = 
+    visibleColor[SETUP_FILLED] =
 	visibleColor[SETUP_FILLED_NO_DRAW] =
 	visibleColor[SETUP_REC_LU] =
 	visibleColor[SETUP_REC_RU] =
@@ -302,9 +399,9 @@ void Paint_world_radar(void)
     }
     if (BIT(instruments, SHOW_DECOR)) {
 	visibleColor[SETUP_DECOR_FILLED] =
-	    visibleColor[SETUP_DECOR_LU] = 
-	    visibleColor[SETUP_DECOR_RU] = 
-	    visibleColor[SETUP_DECOR_LD] = 
+	    visibleColor[SETUP_DECOR_LU] =
+	    visibleColor[SETUP_DECOR_RU] =
+	    visibleColor[SETUP_DECOR_LD] =
 	    visibleColor[SETUP_DECOR_RD] = decorRadarColor;
     }
 
@@ -363,7 +460,7 @@ void Paint_world_radar(void)
 			visibleColorChange = (visibleColor[type] != currColor);
 		    }
 		}
-		
+
 		if (start != -1
 		    && (!vis || yi == Setup->y - 1 || visibleColorChange)) {
 		    if (end > start) {
@@ -452,7 +549,7 @@ void Paint_world_radar(void)
 			visibleColorChange = visibleColor[type] != currColor;
 		    }
 		}
-		
+
 		if (start != -1
 		    && (!vis || yi == RadarHeight - 1 || visibleColorChange)) {
 		    if (end > start) {

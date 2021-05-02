@@ -3,6 +3,81 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.3.0 compared to release 4.2.1.
+
+Changes to be able to support many more colors.
+
+Support for RGB color cubes to be able to map true color pictures
+to screens which have less colors.
+
+Claus Leth Gregersen submitted a busload of new code which adds fancy
+graphics to the client.  The entire world and all objects and ships
+can now be drawn in full color pixmaps.  He also submitted code
+to be able to support the old client graphics and the new pixmap
+graphics in the same client.
+
+Jarrod Miller updated mapedit to include all the 4.2.1 server options.
+
+Changes to maps2image in Makefile, bdf2c.c and maps2image.c for portability.
+One fix in maps2image.c for closing a file too often, which caused a crash on
+some platforms.
+
+Fix for emergency shields.  When maxShieldedWallBounceSpeed was more than 100
+bouncing with emergency shields would lower the max allowable bounce speed
+to 100.
+
+Added the Mersenne Twister pseudo random number generator to XPilot.
+
+Changed the pseudo random number code to use the Mersenne Twister instead
+of the stock rand(3).
+
+The server log file for messages to god now must exist and be writable
+and be less than 100 KB before messages to god will be logged.
+
+Peder Herborg submitted a patch to make sliding radar also work under Windows.
+
+Ben Jackson submitted a patch containing several fixes:
+
+	altScaleFactor doesn't need a special update function.
+	Changing it doesn't change the display.
+
+	textured walls need WINSCALE'd texture offsets to stay in sync
+	with the walls
+
+	split the sending of phased/cloaked for new clients
+
+	new clients have enough info in guiobjects.c to paint phased
+	ships differently, but for now it calls the cloaked ship
+	drawing.  the code should probably be reorganized so that
+	phasing and cloaking aren't mutually exclusive.
+
+	I think there was a bug that would have made cloaked ships on
+	your team show up in the wrong color, so I fixed it.  No
+	current maps get into that situation (unless you count bloods
+	with items).
+
+	misc cleanup in guiobjects.c
+
+	fix another excess Send_display() bug.  we need an xpilot
+	protocol dumper to check this sort of thing.
+
+	swapping scalefactors calls Config_redraw() to swap the values
+	in the config panel
+
+	fix the xpilot.domain.com search code.  I might be the only
+	server using it these days...
+
+	servers send radar team information to clients running the
+	patch version that was first to have the feature, since the
+	data is sent the same way.
+
+Now the server only tries to do a DNS lookup for xpilot.yourdomain.com
+when the server option searchDomainForXPilot is explicitly turned on.
+The reason to make this an option lies in the fact that for some sites
+DNS lookups are slow, especially lookups for nonexistent names.
+
+===============================================================================
+
 This is a summary of changes of release 4.2.1 compared to release 4.2.0.
 
 The server option -armorHits was inadvertently mentioned in the ChangeLog
@@ -3970,6 +4045,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.36 2000/03/24 14:17:15 bert Exp $
+==== $Id: ChangeLog,v 4.42 2000/10/29 17:19:35 bert Exp $
 ===============================================================================
 

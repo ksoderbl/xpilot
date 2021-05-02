@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 4.18 2000/03/23 17:06:52 bert Exp $
+/* $Id: frame.c,v 4.19 2000/10/15 13:09:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -54,7 +54,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 4.18 2000/03/23 17:06:52 bert Exp $";
+    "@(#)$Id: frame.c,v 4.19 2000/10/15 13:09:55 bert Exp $";
 #endif
 
 
@@ -820,11 +820,10 @@ static void Frame_ships(int conn, int ind)
 		      pl_i->id,
 		      pl_i->dir,
 		      BIT(pl_i->used, OBJ_SHIELD) != 0,
-		      (BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0
-		       || BIT(pl_i->used, OBJ_PHASING_DEVICE) != 0),
+		      BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0,
 		      BIT(pl_i->used, OBJ_EMERGENCY_SHIELD) != 0,
-			  BIT(pl_i->used, OBJ_PHASING_DEVICE) != 0,
-			  BIT(pl_i->used, OBJ_DEFLECTOR) != 0
+		      BIT(pl_i->used, OBJ_PHASING_DEVICE) != 0,
+		      BIT(pl_i->used, OBJ_DEFLECTOR) != 0
 	    );
 	}
 	if (BIT(pl_i->used, OBJ_REFUEL)) {

@@ -1,4 +1,4 @@
-/* $Id: paintobjects.c,v 4.27 2000/03/12 11:46:24 bert Exp $
+/* $Id: paintobjects.c,v 4.31 2000/10/15 13:09:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -56,6 +56,7 @@
 #include "portability.h"
 #include "guiobjects.h"
 #include "gfx3d.h"
+#include "blockbitmaps.h" /* can go away if Paint_item_symbol is moved to gui_objects.c */
 
 char paintobjects_version[] = VERSION;
 
@@ -112,11 +113,13 @@ static int wrap(int *xp, int *yp)
     return 1;
 }
 
+/* might want to move this one to gui_objects.c */
 
 /*db960828 added color parameter cause Windows needs to blt a different
          bitmap based on the color. Unix ignores this parameter*/
 void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y, int color)
 {
+    if (!blockBitmaps) {
 #ifdef	_WINDOWS
     rd.paintItemSymbol(type, d, mygc, x, y, color);
 #else
@@ -132,6 +135,9 @@ void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y, int color
     gcv.fill_style = FillSolid;
     XChangeGC(dpy, mygc, GCFillStyle, &gcv);
 #endif
+    } else {
+	  PaintBitmap(d, BM_ALL_ITEMS, x, y, ITEM_SIZE, ITEM_SIZE, type); 	
+    }
 }
 
 
@@ -251,16 +257,19 @@ static void Paint_mines(void)
 		 * Mines unsafe to all players have the name "Expired"
 		 * We do not know who is safe for mines sent with id==0
 		 */
-		if (BIT(instruments, SHOW_MINE_NAME) && mine_ptr[i].id!=0) {
-		    other_t *other;
-		    if (mine_ptr[i].id == EXPIRED_MINE_ID) {
-			static char expired_name[] = "Expired";
-			name = expired_name;
-		    } else if ((other=Other_by_id(mine_ptr[i].id))!=NULL) {
-			name = other->name;
-		    } else {
-			static char unknown_name[] = "Not of this world!";
-			name = unknown_name;
+		name = NULL;
+		if (BIT(instruments, SHOW_MINE_NAME)) {
+		    if (mine_ptr[i].id != 0) {
+			other_t *other;
+			if (mine_ptr[i].id == EXPIRED_MINE_ID) {
+			    static char expired_name[] = "Expired";
+			    name = expired_name;
+			} else if ((other=Other_by_id(mine_ptr[i].id))!=NULL) {
+			    name = other->name;
+			} else {
+			    static char unknown_name[] = "Not of this world!";
+			    name = unknown_name;
+			}
 		    }
 		}
 		Gui_paint_mine(x, y, mine_ptr[i].teammine, name);
@@ -518,7 +527,8 @@ static void Paint_all_ships(void)
 
 	    Gui_paint_ship(x, y, 
 			   ship_ptr[i].dir, ship_ptr[i].id,
-			   ship_ptr[i].cloak, ship_ptr[i].shield,
+			   ship_ptr[i].cloak, ship_ptr[i].phased,
+			   ship_ptr[i].shield,
 			   ship_ptr[i].deflector, ship_ptr[i].eshield);
 
 

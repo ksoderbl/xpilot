@@ -1,4 +1,4 @@
-/* $Id: server.c,v 4.17 2000/03/24 14:13:18 bert Exp $
+/* $Id: server.c,v 4.18 2000/10/15 13:09:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -75,7 +75,7 @@ char server_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 4.17 2000/03/24 14:13:18 bert Exp $";
+    "@(#)$Id: server.c,v 4.18 2000/10/15 13:09:55 bert Exp $";
 #endif
 
 /*
@@ -175,7 +175,9 @@ int main(int argc, char **argv)
     /*
      * Get server's official name.
      */
-    GetLocalHostName(Server.host, sizeof Server.host, (reportToMetaServer != 0));
+    GetLocalHostName(Server.host, sizeof Server.host,
+		     (reportToMetaServer != 0 &&
+		      searchDomainForXPilot != 0));
 
     Get_login_name(Server.owner, sizeof Server.owner);
 

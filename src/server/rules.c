@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 4.4 1999/10/05 20:25:26 bert Exp $
+/* $Id: rules.c,v 4.5 2000/05/03 19:51:38 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -44,7 +44,7 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 4.4 1999/10/05 20:25:26 bert Exp $";
+    "@(#)$Id: rules.c,v 4.5 2000/05/03 19:51:38 bert Exp $";
 #endif
 
 #define MAX_FUEL                10000
@@ -156,6 +156,16 @@ void Tune_item_probs(void)
 	    }
 	}
     }
+}
+
+
+/*
+ * Postprocess a change command for the number of items per pack.
+ */
+void Tune_item_packs(void)
+{
+    World.items[ITEM_MINE].max_per_pack = maxMinesPerPack;
+    World.items[ITEM_MISSILE].max_per_pack = maxMissilesPerPack;
 }
 
 

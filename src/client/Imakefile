@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.13 2000/03/23 09:27:52 bert Exp $ */
+/* $Id: Imakefile,v 4.15 2000/04/02 09:14:39 bert Exp $ */
 
 TOPDIR=../..
 COMMON = ../common/
@@ -94,8 +94,10 @@ INCLUDES = $(AUDIOINC) -I$(COMMON) -I../../lib/
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = \
-	about.c caudio.c client.c colors.c configure.c \
-	datagram.c dbuff.c default.c gfx3d.c guimap.c guiobjects.c \
+	about.c blockbitmaps.c \
+	caudio.c client.c colors.c configure.c \
+	datagram.c dbuff.c default.c \
+	gfx2d.c gfx3d.c guimap.c guiobjects.c \
 	join.c netclient.c \
 	paint.c paintdata.c painthud.c paintmap.c \
 	paintobjects.c paintradar.c query.c record.c \
@@ -106,8 +108,10 @@ SRCS = \
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = \
-	about.o caudio.o client.o colors.o configure.o \
-	datagram.o dbuff.o default.o gfx3d.o guimap.o guiobjects.o \
+	about.o blockbitmaps.o \
+	caudio.o client.o colors.o configure.o \
+	datagram.o dbuff.o default.o \
+	gfx2d.o gfx3d.o guimap.o guiobjects.o \
 	join.o netclient.o \
 	paint.o paintdata.o painthud.o paintmap.o \
 	paintobjects.o paintradar.o query.o record.o \

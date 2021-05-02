@@ -1,4 +1,4 @@
-/* $Id: default.c,v 4.20 2000/03/21 09:49:56 bert Exp $
+/* $Id: default.c,v 4.28 2000/09/21 18:19:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -55,6 +55,7 @@ extern	int		Argc;
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "version.h"
 #include "config.h"
@@ -78,7 +79,7 @@ char *talk_fast_temp_buf_big;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.20 2000/03/21 09:49:56 bert Exp $";
+    "@(#)$Id: default.c,v 4.28 2000/09/21 18:19:59 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -511,8 +512,17 @@ struct option {
 	NULL,
 	conf_texturedir_string,
 	KEY_DUMMY,
-	"Optional search path for XPM texture files.\n"
+	"Search path for texture files.\n"
 	"This is a list of one or more directories separated by colons.\n"
+    },
+    {
+	"texturedObjects",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Whether to draw ships, shots and walls with textures.\n"
+	"Be warned that this needs a very fast graphics system.\n"
+	"You may also need to enable multibuffering or double-buffering.\n"
     },
     {
 	"markingLights",
@@ -1746,6 +1756,15 @@ struct option {
 	"Specifies the device name of the frame buffer.\n"
     },
 #endif    
+#ifdef DEVELOPMENT
+    {
+        "test",
+        NULL,
+        "",
+        KEY_DUMMY,
+        "Which development testing parameters to use?\n"
+    },
+#endif
 /* talk macros: */
     {
 	"keySendMsg1",
@@ -2494,6 +2513,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
 }
 #endif	/* _WINDOWS*/
 
+
 void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		   int *my_team, int *text, int *list,
 		   int *join, int *noLocalMotd,
@@ -2854,6 +2874,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "texturedBalls", &instruments, SHOW_TEXTURED_BALLS);
     Get_bit_resource(rDB, "reverseScroll", &instruments, SHOW_REVERSE_SCROLL);
 
+    Get_bool_resource(rDB, "texturedObjects", &blockBitmaps);
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
     Get_bool_resource(rDB, "erase", &useErase);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
@@ -2928,13 +2949,15 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_string_resource(rDB, "frameBuffer", frameBuffer, sizeof frameBuffer);
 #endif
 
-/* Erase mode and multibuffer mode can now be combined! */
-#if 0
-    /* mutually exclusive options */
-    if (useErase) {
-	multibuffer = false;
+#ifdef DEVELOPMENT
+    {
+	static void Start_testing(char testBuffer[]);
+	char testBuffer[256];
+	Get_string_resource(rDB, "test", testBuffer, sizeof testBuffer);
+	Start_testing(testBuffer);
     }
 #endif
+
 
     /*
      * Key bindings
@@ -3051,27 +3074,87 @@ void	defaultCleanup(void)
 #ifdef	_WINDOWS
     Get_xpilotini_file(-1);
 #endif
-    if (keyDefs)
-	    free(keyDefs);
-    keyDefs = NULL;
-    if (texturePath)
-	    free(texturePath);
-    texturePath = NULL;
-    if (wallTextureFile)
-	    free(wallTextureFile);
-    wallTextureFile = NULL;
-    if (decorTextureFile)
-	    free(decorTextureFile);
-    decorTextureFile = NULL;
-    if (ballTextureFile)
-	    free(ballTextureFile);
-    ballTextureFile = NULL;
-    if (shipShape)
-	    free(shipShape);
-    shipShape = NULL;
+
+    if (keyDefs) {
+	free(keyDefs);
+	keyDefs = NULL;
+    }
+    if (texturePath) {
+	free(texturePath);
+	texturePath = NULL;
+    }
+    if (wallTextureFile) {
+	free(wallTextureFile);
+	wallTextureFile = NULL;
+    }
+    if (decorTextureFile) {
+	free(decorTextureFile);
+	decorTextureFile = NULL;
+    }
+    if (ballTextureFile) {
+	free(ballTextureFile);
+	ballTextureFile = NULL;
+    }
+    if (shipShape) {
+	free(shipShape);
+	shipShape = NULL;
+    }
 
 #ifdef SOUND
     audioCleanup();
 #endif /* SOUND */
 }
+
+
+#ifdef DEVELOPMENT
+static int X_error_handler(Display *display, XErrorEvent *xev)
+{
+    char		buf[1024];
+
+    fflush(stdout);
+    fprintf(stderr, "X error\n");
+    XGetErrorText(display, xev->error_code, buf, sizeof buf);
+    buf[sizeof(buf) - 1] = '\0';
+    fprintf(stderr, "%s\n", buf);
+    fflush(stderr);
+    *(double *) -3 = 2.10;	/*core dump*/
+    exit(1);
+    return 0;
+}
+
+static void X_after(Display *display)
+{
+    static int		n;
+
+    if (n < 1000) {
+	printf("_X_ %4d\n", n++);
+    }
+}
+
+static void Start_testing(char testBuffer[])
+{
+    char	*s;
+
+    for (s = strtok(testBuffer, ":"); s != NULL; s = strtok(NULL, ":")) {
+	if (!strncasecmp(s, "xsync", 3)) {
+	    XSynchronize(dpy, True);
+	    XSetErrorHandler(X_error_handler);
+	}
+	else if (!strncasecmp(s, "xdebug", 4)) {
+	    XSetErrorHandler(X_error_handler);
+	}
+	else if (!strncasecmp(s, "after", 5)) {
+	    XSetAfterFunction(dpy, (int (*)()) X_after);
+	}
+	else if (!strncasecmp(s, "color", 3)) {
+	    extern void Colors_debug(void);
+	    Colors_debug();
+	}
+	else {
+	    printf("typo %s\n", s);
+	    exit(1);
+	}
+    }
+}
+#endif
 

@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 4.17 2000/03/13 18:26:59 bert Exp $
+/* $Id: painthud.c,v 4.20 2000/04/02 22:21:31 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -51,6 +51,7 @@
 #include "record.h"
 #include "xinit.h"
 #include "protoclient.h"
+#include "blockbitmaps.h"
 
 char painthud_version[] = VERSION;
 
@@ -106,22 +107,32 @@ static void Paint_meter(int xoff, int y, const char *title, int val, int max)
 	x = view_width - (METER_WIDTH - xoff);
         xstr = WINSCALE(x) - (BORDER + XTextWidth(gameFont, title, strlen(title)));
     }
+    if (!blockBitmaps) {
+	Rectangle_add(RED,
+		      x+2, y+2,
+		      (int)(((METER_WIDTH-3)*val)/(max?max:1)), METER_HEIGHT-3);
+	SET_FG(colors[WHITE].pixel);
+	rd.drawRectangle(dpy, p_draw, gc,
+		       WINSCALE(x), WINSCALE(y),
+		       WINSCALE(METER_WIDTH), WINSCALE(METER_HEIGHT));
+	Erase_4point(WINSCALE(x), WINSCALE(y),
+		     WINSCALE(METER_WIDTH), WINSCALE(METER_HEIGHT));
 
-    Rectangle_add(RED,
-		  x+2, y+2,
-		  (int)(((METER_WIDTH-3)*val)/(max?max:1)), METER_HEIGHT-3);
-    SET_FG(colors[WHITE].pixel);
-    rd.drawRectangle(dpy, p_draw, gc,
-		   WINSCALE(x), WINSCALE(y), WINSCALE(METER_WIDTH), WINSCALE(METER_HEIGHT));
-    Erase_4point(WINSCALE(x),
-        WINSCALE(y), WINSCALE(METER_WIDTH), WINSCALE(METER_HEIGHT));
-
-    /* Paint scale levels(?) */
-    Segment_add(WHITE, x,       y-4,	x,       y+METER_HEIGHT+4);
-    Segment_add(WHITE, x+mw4_4, y-4,	x+mw4_4, y+METER_HEIGHT+4);
-    Segment_add(WHITE, x+mw2_4, y-3,	x+mw2_4, y+METER_HEIGHT+3);
-    Segment_add(WHITE, x+mw1_4, y-1,	x+mw1_4, y+METER_HEIGHT+1);
-    Segment_add(WHITE, x+mw3_4, y-1,	x+mw3_4, y+METER_HEIGHT+1);
+	/* Paint scale levels(?) */
+	Segment_add(WHITE, x,       y-4,	x,       y+METER_HEIGHT+4);
+	Segment_add(WHITE, x+mw4_4, y-4,	x+mw4_4, y+METER_HEIGHT+4);
+	Segment_add(WHITE, x+mw2_4, y-3,	x+mw2_4, y+METER_HEIGHT+3);
+	Segment_add(WHITE, x+mw1_4, y-1,	x+mw1_4, y+METER_HEIGHT+1);
+	Segment_add(WHITE, x+mw3_4, y-1,	x+mw3_4, y+METER_HEIGHT+1);
+    } else {
+	int width = WINSCALE((int)(((METER_WIDTH-3)*val)/(max?max:1)));
+	
+	PaintMeter(p_draw, BM_METER,
+		   WINSCALE(x), WINSCALE(y),
+		   WINSCALE(METER_WIDTH), WINSCALE(11),
+		   width);
+        SET_FG(colors[WHITE].pixel);
+    }
 
     rd.drawString(dpy, p_draw, gc,
                   (xstr), WINSCALE(y)+(gameFont->ascent+METER_HEIGHT)/2,
@@ -733,8 +744,16 @@ void Paint_messages(void)
 		msg->life = 0;
 		continue;
 	    }
-	}
-
+	} 
+#ifdef _WINDOWS
+	else if (msg->life-- <= 0) {
+		msg->txt[0] = '\0';
+		msg->len = 0;
+		msg->life = 0;
+		continue;
+	    }
+#endif
+	
 	if (i < maxMessages) {
 	    x = BORDER;
 	    y = top_y;

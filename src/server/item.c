@@ -1,4 +1,4 @@
-/* $Id: item.c,v 4.8 1999/11/10 21:06:36 bert Exp $
+/* $Id: item.c,v 4.9 2000/09/06 13:27:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,7 +53,7 @@ char item_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: item.c,v 4.8 1999/11/10 21:06:36 bert Exp $";
+    "@(#)$Id: item.c,v 4.9 2000/09/06 13:27:44 bert Exp $";
 #endif
 
 
@@ -618,7 +618,7 @@ void Do_general_transporter(int ind, DFLOAT x, DFLOAT y, int target,
     char		msg[MSG_LEN];
     const char		*what = NULL;
     int			i;
-    int			item;
+    int			item = ITEM_FUEL;
     long		amount;
 
     /* choose item type to steal */

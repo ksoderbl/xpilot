@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 4.11 2000/03/23 17:06:53 bert Exp $
+/* $Id: proto.h,v 4.12 2000/05/03 19:51:38 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -250,6 +250,7 @@ void Robot_message(int ind, const char *message);
  * Prototypes for rules.c
  */
 void Tune_item_probs(void);
+void Tune_item_packs(void);
 void Set_initial_resources(void);
 void Set_world_items(void);
 void Set_world_rules(void);

@@ -1,5 +1,5 @@
-Users can now define their own ship shape with a few limitations.
-The server has a new server option -allowShipShapes to enable
+Users can define their own ship shape with a few limitations.
+The server has an option -allowShipShapes to enable
 user-defined ship shapes (the default is to enable it).
 The client has a new option called -shipShape <decription>.
 Where description defines the edges of the ship.  When the ship
@@ -9,9 +9,10 @@ point are also connected, so your first and last point should not
 be the same.
 
 The 3.1.0 version was the first XPilot version which featured
-user definable ship shapes.  The map format was changed in the 3.2.0 version
-to include more features and be more easily extensible.
+user definable ship shapes.  The format was changed in the 3.2.0
+version to include more features and be more easily extensible.
 First the old format is explained for completeness, then the new one.
+
 The ship shape is defined as if it was rotated 90 degrees to the right.
 
 For example, the following defines the default ship in old format:

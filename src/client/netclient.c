@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 4.36 2000/03/20 10:01:58 bert Exp $
+/* $Id: netclient.c,v 4.37 2000/10/15 13:09:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -1402,14 +1402,19 @@ static void Check_view_dimensions(void)
 {
     int			width_wanted = draw_width;
     int			height_wanted = draw_height;
+    int			srv_width, srv_height;
 
 #ifdef	WINDOWSCALING
     width_wanted = (int)(width_wanted * scaleFactor + 0.5);
     height_wanted = (int)(height_wanted * scaleFactor + 0.5);
 #endif
 
-    if (view_width != width_wanted ||
-	view_height != height_wanted) {
+    srv_width = width_wanted;
+    srv_height = height_wanted;
+    LIMIT(srv_height, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+    LIMIT(srv_width, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+    if (view_width != srv_width ||
+	view_height != srv_height) {
 	Send_display();
     }
 
@@ -2534,8 +2539,8 @@ int Send_display(void)
     int			height_wanted = draw_height;
 
 #ifdef	WINDOWSCALING
-    width_wanted = (int)(width_wanted * scaleFactor);
-    height_wanted = (int)(height_wanted * scaleFactor);
+    width_wanted = (int)(width_wanted * scaleFactor + 0.5);
+    height_wanted = (int)(height_wanted * scaleFactor + 0.5);
 #endif
 
     LIMIT(width_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);

@@ -1,4 +1,4 @@
-/* $Id: colors.c,v 4.14 2000/03/24 12:47:01 bert Exp $
+/* $Id: colors.c,v 4.20 2000/09/26 16:44:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -53,7 +53,7 @@ char colors_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: colors.c,v 4.14 2000/03/24 12:47:01 bert Exp $";
+    "@(#)$Id: colors.c,v 4.20 2000/09/26 16:44:46 bert Exp $";
 #endif
 
 
@@ -103,13 +103,19 @@ bool		blockBitmaps;		/* Whether to draw everything as bitmaps. */
 static struct rgb_cube_size {
     unsigned char	r, g, b;
 } rgb_cube_sizes[] = {
-    { 6, 6, 5 },
-    { 6, 6, 4 },
-    { 5, 5, 5 },
-    { 5, 5, 4 },
-    { 5, 5, 3 },
-    { 4, 4, 4 },
-    { 4, 4, 3 },
+    { 6, 6, 5 },	/* 180 */
+    { 5, 6, 5 },	/* 150 */
+    { 6, 6, 4 },	/* 144 */
+    { 5, 5, 5 },	/* 125 */
+    { 5, 6, 4 },	/* 120 */
+    { 6, 6, 3 },	/* 108 */
+    { 5, 5, 4 },	/* 100 */
+    { 5, 6, 3 },	/* 90 */
+    { 4, 5, 4 },	/* 80 */
+    { 5, 5, 3 },	/* 75 */
+    { 4, 4, 4 },	/* 64 */
+    { 4, 5, 3 },	/* 60 */
+    { 4, 4, 3 },	/* 48 */
 };
 
 unsigned long		(*RGB)(u_byte r, u_byte g, u_byte b);
@@ -156,7 +162,6 @@ struct True_color {
 static struct True_color	*true_color;
 
 static void Colors_init_radar_hack(void);
-static int  Colors_init_block_bitmaps(void);
 static int  Colors_init_color_cube(void);
 static int  Colors_init_true_color(void);
 
@@ -233,6 +238,7 @@ static void Choose_visual(void)
 				num,
 				best_size,
 				cmap_size,
+				using_default,
 				visual_id,
 				visual_class;
     XVisualInfo			*vinfo_ptr,
@@ -271,6 +277,9 @@ static void Choose_visual(void)
 	    visual_class = PseudoColor;
 	    strcpy(visualName, "PseudoColor");
 	}
+	using_default = true;
+    } else {
+	using_default = false;
     }
     if (visual_class >= 0 || visual_id >= 0) {
 	mask = 0;
@@ -287,9 +296,11 @@ static void Choose_visual(void)
 	num = 0;
 	if ((vinfo_ptr = XGetVisualInfo(dpy, mask, &my_vinfo, &num)) == NULL
 	    || num <= 0) {
-	    errno = 0;
-	    error("No visuals available with class name \"%s\", using default",
-		visualName);
+	    if (using_default == false) {
+		errno = 0;
+		error("No visuals available with class name \"%s\", using default",
+		    visualName);
+	    }
 	    visual_class = -1;
 	}
 	else {
@@ -572,17 +583,7 @@ int Colors_init(void)
 
     Colors_init_radar_hack();
 
-    if (dbuf_state->type == COLOR_SWITCH) {
-	if (blockBitmaps) {
-	    printf("Can't do blockBitmaps if colorSwitch\n");
-	    blockBitmaps = false;
-	}
-    }
-    if (blockBitmaps) {
-	if (Colors_init_block_bitmaps() == -1) {
-	    blockBitmaps = false;
-	}
-    }
+    Colors_init_block_bitmaps();
 
     return 0;
 }
@@ -622,7 +623,7 @@ static void Colors_init_radar_hack(void)
  * on error return -1,
  * on success return 0.
  */
-static int Colors_init_block_bitmaps(void)
+static int Colors_init_block_bitmap_colors(void)
 {
     int r = -1;
 
@@ -663,9 +664,44 @@ static int Colors_init_block_bitmaps(void)
 
 
 /*
+ * See if we can use block bitmaps.
+ * If we can then setup the colors
+ * and allocate the bitmaps.
+ *
+ * on error return -1,
+ * on success return 0.
+ */
+int Colors_init_block_bitmaps(void)
+{
+    if (dbuf_state->type == COLOR_SWITCH) {
+	if (blockBitmaps) {
+	    printf("Can't do blockBitmaps if colorSwitch\n");
+	    blockBitmaps = false;
+	}
+    }
+    if (blockBitmaps) {
+	if (Colors_init_block_bitmap_colors() == -1) {
+	    blockBitmaps = false;
+	}
+    }
+    if (blockBitmaps) {
+	if (Block_bitmaps_create() == -1) {
+	    /*
+	    ** not sure if this is possible after
+	    ** blockbitmap colors have been created.
+	    */
+	    blockBitmaps = false;
+	}
+    }
+
+    return (blockBitmaps == true) ? 0 : -1;
+}
+
+
+/*
  * Calculate a pixel from a RGB triplet for a PseudoColor visual.
  */
-unsigned long RGB_PC(u_byte r, u_byte g, u_byte b)
+static unsigned long RGB_PC(u_byte r, u_byte g, u_byte b)
 {
     int			i;
 
@@ -707,10 +743,10 @@ static unsigned long RGB_TC(u_byte r, u_byte g, u_byte b)
  * likely result in better color matches with on average
  * less color distance.
  */
-static void Fill_color_cube(int reds, int greens, int blues)
+static void Fill_color_cube(int reds, int greens, int blues,
+			    XColor colors[256])
 {
     int			i, r, g, b;
-    XColor		colors[256];
 
     i = 0;
     for (r = 0; r < reds; r++) {
@@ -724,13 +760,6 @@ static void Fill_color_cube(int reds, int greens, int blues)
 	    }
 	}
     }
-    XStoreColors(dpy,
-		 (colormap != 0)
-		     ? colormap
-		     : DefaultColormap(dpy,
-				       DefaultScreen(dpy)),
-		 colors,
-		 reds * greens * blues);
 
     color_cube->reds = reds;
     color_cube->greens = greens;
@@ -747,6 +776,12 @@ static void Fill_color_cube(int reds, int greens, int blues)
 static int Colors_init_color_cube(void)
 {
     int			i, n, r, g, b;
+    XColor		colors[256];
+
+    if (color_cube != NULL) {
+	error("Already a cube!\n");
+	exit(1);
+    }
 
     color_cube = (struct Color_cube *) calloc(1, sizeof(struct Color_cube));
     if (!color_cube) {
@@ -777,7 +812,15 @@ static int Colors_init_color_cube(void)
 
 	color_cube->mustfree = 1;
 
-	Fill_color_cube(r, g, b);
+	Fill_color_cube(r, g, b, &colors[0]);
+
+	XStoreColors(dpy,
+		     (colormap != 0)
+			 ? colormap
+			 : DefaultColormap(dpy,
+					   DefaultScreen(dpy)),
+		     colors,
+		     n);
 
 	RGB = RGB_PC;
 
@@ -787,6 +830,30 @@ static int Colors_init_color_cube(void)
     printf("Could not alloc colors for RGB cube\n");
 
     return -1;
+}
+
+
+/*
+ * Free our color cube.
+ */
+static void Colors_free_color_cube(void)
+{
+    if (color_cube) {
+	if (color_cube->mustfree) {
+	    XFreeColors(dpy,
+			(colormap != 0)
+			    ? colormap
+			    : DefaultColormap(dpy,
+					      DefaultScreen(dpy)),
+			&color_cube->pixels[0],
+			color_cube->reds * color_cube->greens * color_cube->blues,
+			0);
+	    color_cube->mustfree = 0;
+	}
+	free(color_cube);
+	color_cube = NULL;
+	RGB = NULL;
+    }
 }
 
 
@@ -811,6 +878,11 @@ static int Colors_init_true_color(void)
 	printf("\toverlap mask 0x%06lx\n",
 		visual->red_mask & visual->green_mask & visual->blue_mask);
 	return -1;
+    }
+
+    if (true_color) {
+	error("Already a True_color!");
+	exit(1);
     }
 
     true_color = (struct True_color *) calloc(1, sizeof(struct True_color));
@@ -862,26 +934,39 @@ static int Colors_init_true_color(void)
 
 
 /*
+ * Free a true color structure.
+ */
+static void Colors_free_true_color(void)
+{
+    if (true_color) {
+	free(true_color);
+	true_color = NULL;
+	RGB = NULL;
+    }
+}
+
+
+/*
+ * Deallocate everything related to colors.
+ */
+void Colors_free_block_bitmaps(void)
+{
+    Colors_free_color_cube();
+    Colors_free_true_color();
+
+    if (blockBitmaps) {
+
+	blockBitmaps = false;
+    }
+}
+
+
+/*
  * Deallocate everything related to colors.
  */
 void Colors_cleanup(void)
 {
-    if (color_cube) {
-	if (color_cube->mustfree) {
-	    XFreeColors(dpy,
-			(colormap != 0)
-			    ? colormap
-			    : DefaultColormap(dpy,
-					      DefaultScreen(dpy)),
-			&color_cube->pixels[0],
-			color_cube->reds * color_cube->greens * color_cube->blues,
-			0);
-	    color_cube->mustfree = 0;
-	}
-	free(color_cube);
-	color_cube = NULL;
-	RGB = NULL;
-    }
+    Colors_free_block_bitmaps();
 
     if (dbuf_state) {
 	end_dbuff(dbuf_state);
@@ -893,4 +978,54 @@ void Colors_cleanup(void)
     }
 }
 
-#endif
+
+#ifdef DEVELOPMENT
+void Colors_debug(void)
+{
+    int			i, n, r, g, b;
+    XColor		colors[256];
+    FILE		*fp = fopen("rgb", "w");
+
+    if (!color_cube) {
+	static struct Color_cube cc;
+	color_cube = &cc;
+	for (i = 0; i < 256; i++) {
+	    cc.pixels[i] = i;
+	}
+    }
+
+    for (i = 0; i < NELEM(rgb_cube_sizes); i++) {
+
+	r = rgb_cube_sizes[i].r;
+	g = rgb_cube_sizes[i].g;
+	b = rgb_cube_sizes[i].b;
+	n = r * g * b;
+
+	Fill_color_cube(r, g, b, colors);
+
+	fprintf(fp, "\n\n  RGB  %d %d %d\n\n", r, g, b);
+	i = 0;
+	for (r = 0; r < color_cube->reds; r++) {
+	    for (g = 0; g < color_cube->greens; g++) {
+		for (b = 0; b < color_cube->blues; b++, i++) {
+		    fprintf(fp, "color %4d    %04X  %04X  %04X\n",
+			    i, colors[i].red, colors[i].green, colors[i].blue);
+		}
+	    }
+	}
+	fprintf(fp, "\nblack %3lu\nwhite %3lu\nred   %3lu\ngreen %3lu\nblue  %3lu\n",
+		RGB_PC(0, 0, 0),
+		RGB_PC(255, 255, 255),
+		RGB_PC(255, 0, 0),
+		RGB_PC(0, 255, 0),
+		RGB_PC(0, 0, 255));
+    }
+
+    fclose(fp);
+
+    exit(1);
+}
+#endif	/* DEVELOPMENT */
+
+
+#endif	/* _WINDOWS */

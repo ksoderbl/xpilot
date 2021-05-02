@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 4.17 1999/11/16 18:05:15 bert Exp $
+/* $Id: walls.c,v 4.21 2000/10/29 16:37:31 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -2353,7 +2353,9 @@ void Move_player(int ind)
 
 		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		    == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-		    max_speed = 100;
+		    if (max_speed < 100) {
+			max_speed = 100;
+		    }
 		    max_angle = RES;
 		}
 

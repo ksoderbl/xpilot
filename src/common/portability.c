@@ -1,4 +1,4 @@
-/* $Id: portability.c,v 4.3 1999/10/23 23:30:03 svenske Exp $
+/* $Id: portability.c,v 4.4 2000/09/07 21:14:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -118,6 +118,16 @@ void move_memory(void *dst, void *src, size_t len)
         memmove(dst, src, len);
 #else
         bcopy(src, dst, len);
+#endif
+}
+
+
+int is_this_windows()
+{
+#ifdef _WINDOWS
+    return 1;
+#else
+    return 0;
 #endif
 }
 

@@ -1,7 +1,7 @@
-/* $Id: Imakefile,v 4.0 1998/03/18 15:15:24 bert Exp $ */
+/* $Id: Imakefile,v 4.1 2000/07/16 17:59:11 bert Exp $ */
 
 #include "Local.config"
 
-TEXTURES = *.xpm
+TEXTURES = *.xpm *.ppm
 
 InstallMultiple($(TEXTURES),$(INSTLIBDIR)/textures/)

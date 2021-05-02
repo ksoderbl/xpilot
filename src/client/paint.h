@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 4.11 2000/03/21 09:54:00 bert Exp $
+/* $Id: paint.h,v 4.12 2000/09/26 16:44:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -231,5 +231,10 @@ void Paint_recording(void);
 void Paint_frame(void);
 int Handle_time_left(long sec);
 void Game_over_action(u_byte stat);
+
+/*
+ * Prototype from blockbitmaps.c
+ */
+int Block_bitmaps_create(void);
 
 #endif

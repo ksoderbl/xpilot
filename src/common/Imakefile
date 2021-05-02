@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.7 1999/11/07 11:57:30 bert Exp $ */
+/* $Id: Imakefile,v 4.8 2000/04/02 09:13:00 bert Exp $ */
 
 TOP=../..
 
@@ -29,11 +29,13 @@ depend:: includes
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = checknames.c config.c cmw.c error.c list.c math.c net.c \
-	portability.c shipshape.c socklib.c strcasecmp.c strdup.c
+	portability.c randommt.c \
+	shipshape.c socklib.c strcasecmp.c strdup.c
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = checknames.o config.o cmw.o error.o list.o math.o net.o \
-	portability.o shipshape.o socklib.o strcasecmp.o strdup.o
+	portability.o randommt.o \
+	shipshape.o socklib.o strcasecmp.o strdup.o
 
 NormalLibraryTarget(xpcommon,$(OBJS))
 

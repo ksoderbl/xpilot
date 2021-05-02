@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 4.7 2000/03/22 17:44:16 bert Exp $
+/* $Id: dbuff.c,v 4.8 2000/10/15 15:46:38 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
  *
@@ -58,7 +58,7 @@ char dbuff_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 4.7 2000/03/22 17:44:16 bert Exp $";
+    "@(#)$Id: dbuff.c,v 4.8 2000/10/15 15:46:38 bert Exp $";
 #endif
 
 
@@ -182,7 +182,7 @@ dbuff_state_t *start_dbuff(Display *display, Colormap xcolormap,
 	    return NULL;
 	}
 #else
-	printf("multibuffering support was not configured during compilation.\n");
+	printf("Support for multibuffering was not configured.\n");
 	dbuff_release(state);
 	return NULL;
 #endif
