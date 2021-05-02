@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 3.76 1994/04/11 16:58:40 bert Exp $
+/* $Id: netserver.c,v 3.77 1994/04/16 08:44:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -2194,7 +2194,10 @@ static void Handle_talk(int ind, char *str)
     char		*cp,
 			msg[MSG_LEN * 2]; 
 
-    if ((cp = strchr (str, ':')) == NULL || cp == str) {
+    if ((cp = strchr (str, ':')) == NULL
+	|| cp == str
+	|| strchr("-)/}", cp[1])	/* smileys are smileys */
+	) {
 	sprintf(msg, "%s [%s]", str, Players[ind]->name);
 	Set_message(msg);
 	return;

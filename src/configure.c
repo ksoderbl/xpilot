@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.30 1994/03/30 16:53:02 bert Exp $
+/* $Id: configure.c,v 3.31 1994/04/23 16:58:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -1296,7 +1296,7 @@ void Config_destroy(void)
 
 void Config_resize(void)
 {
-    bool		mapped = config_created;
+    bool		mapped = config_mapped;
 
     if (config_created == true) {
 	Config_destroy();

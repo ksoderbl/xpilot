@@ -1,10 +1,10 @@
 Followup-To: poster
 Reply-To: bert@mc.bio.uva.nl
 Archive-name: xpilot-faq
-Expires: Fri, 15 Apr 1994 00:00:00 GMT
+Expires: Fri, 29 Apr 1994 00:00:00 GMT
 Summary: XPilot, a multi-player tactical manouvring game for X and Unix.
-Last-modified: 1994/04/07
-Version: 2.4.0
+Last-modified: 1994/04/20
+Version: 2.4.1
 
 This is the Frequently Asked Questions list With Answers for XPilot.
 Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
@@ -93,13 +93,13 @@ New features are added every month.
 
 2) What is the latest version?
 
-3.1.0.  Which is XPilot release 3.1, patchlevel 0.
+3.1.2.  Which is XPilot release 3.1, patchlevel 2.
 
 3) Where can I get it as soon as possible?
 
 Anonymous ftp to ftp.cs.uit.no (129.242.16.93) in /pub/games/xpilot.
 Use as login name anonymous or ftp and use as password your email address.
-Look for the file named xpilot-3.1.0.tar.gz, which is the already fully
+Look for the file named xpilot-3.1.2.tar.gz, which is the already fully
 patched up version.  Some patches for older versions are also available.
 Other anonymous ftp sites may have it as well, for example:
 ftp.x.org (198.112.44.100) in /contrib
@@ -118,7 +118,7 @@ much faster anyway.
 You will get a dozen mails with XPilot in gzipped uuencoded format.
 Strip the mail headers and concatenate these files in the right order
 into one big file.  The last line of this file should read: "end".
-Then uudecode this file to get xpilot-3.1.0.tar.gz.
+Then uudecode this file to get xpilot-3.1.2.tar.gz.
 This is the XPilot distribution file as found on ftp.cs.uit.no.
 
 4) Sound?  Does it really have sound?
@@ -155,11 +155,11 @@ prep.ai.mit.edu (18.71.0.38).  The last one in the pub/gnu directory.
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.1.0.tar.gz > xpilot-3.1.0.tar
+    gzip -d < xpilot-3.1.2.tar.gz > xpilot-3.1.2.tar
 
 or even better :
 
-    gzip -d < xpilot-3.1.0.tar.gz | tar xvf -
+    gzip -d < xpilot-3.1.2.tar.gz | tar xvf -
 
 6) I do not have the patch program on my system, so how can I upgrade?
 
@@ -743,8 +743,8 @@ b) ERASE mode is bad in erasing weapon modifiers and mine names.
 c) The modifier banks are not properly tested for server options.
 d) For some keys the X resources and help is missing.
 
-Important bug: kicking a player still might terminate a server.
-Hopefully fixed in 3.1.2.
+Important bug: kicking a player terminates the server.
+Fixed in 3.1.2.
 
 24) What if I'm having trouble installing XPilot on Platform XYZ?
 

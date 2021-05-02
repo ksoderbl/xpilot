@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.42 1994/04/07 16:29:16 bert Exp $
+/* $Id: const.h,v 3.43 1994/04/22 01:52:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -71,6 +71,7 @@
 
 #define NELEM(a)	((int)(sizeof(a) / sizeof((a)[0])))
 
+#undef ABS
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
 #ifndef VMS
 #ifndef MAX

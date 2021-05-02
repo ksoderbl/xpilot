@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.80 1994/04/14 11:46:39 bert Exp $
+/* $Id: server.c,v 3.81 1994/04/20 15:11:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -76,7 +76,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.80 1994/04/14 11:46:39 bert Exp $";
+    "@(#)$Id: server.c,v 3.81 1994/04/20 15:11:24 bert Exp $";
 #endif
 
 
@@ -1214,13 +1214,7 @@ static bool Owner(char *name, char *in_host)
 
 void Handle_signal(int sig_no)
 {
-    /* Tell meta serve that we are gone */
-    if (reportToMetaServer) {
-	char	string[80];
-	sprintf(string,"server %s\nremove",Server.host);
-	DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
-	DgramSend(Socket, meta_address_two, META_PORT, string, strlen(string)+1);
-    }    
+    int			i;
 
     errno = 0;
     switch (sig_no) {
@@ -1243,27 +1237,23 @@ void Handle_signal(int sig_no)
 	End_game();
 	break;
 
-    case SIGUSR1: {
-	int	i;
-
+    case SIGUSR1:
 	error("Caught SIGUSR1, checking teams.");
-
 	for (i = 0; i < MAX_TEAMS; i++) {
 	    Check_team_members (i);
 	    Check_team_treasures (i);
 	}
 	signal (SIGUSR1, Handle_signal);	/* Some o/s require this */
 	return;
-    }
 
     default:
 	error("Caught unkown signal: %d", sig_no);
 	break;
     }
 
-    Log_game("END");			    /* Log end */
+    End_game();
 
-    exit(sig_no);
+    exit(sig_no);	/* just in case */
 }
 
 

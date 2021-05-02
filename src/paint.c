@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.87 1994/04/13 18:34:37 bert Exp $
+/* $Id: paint.c,v 3.89 1994/04/23 16:59:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -703,7 +703,7 @@ static void Paint_meter(int x, int y, char *title, int val, int max)
 
     Rectangle_add(RED,
 		  x+2, y+2,
-		  (int)(((METER_WIDTH-3)*val)/max), METER_HEIGHT-3);
+		  (int)(((METER_WIDTH-3)*val)/(max?max:1)), METER_HEIGHT-3);
     SET_FG(colors[WHITE].pixel);
     XDrawRectangle(dpy, p_draw, gc,
 		   x, y, METER_WIDTH, METER_HEIGHT);
@@ -1440,7 +1440,7 @@ static void Paint_meters(void)
     if (BIT(instruments, SHOW_PACKET_DROP_METER))
 	Paint_meter(10, 120, "Drop", packet_drop, FPS);
 
-    if (thrusttime >= 0)
+    if (thrusttime >= 0 && thrusttimemax > 0)
 	Paint_meter((view_width-300)/2 -32, 2*view_height/3,
 		    "Thrust Left",
 		    (thrusttime >= thrusttimemax ? thrusttimemax : thrusttime),
@@ -2527,8 +2527,10 @@ static void Paint_world(void)
 		s[1] = '\0'; s[0] = '0' + type - SETUP_TREASURE;
 		XDrawString(dpy, p_draw, gc,
 			    X(x+BLOCK_SZ/2),
-			    Y(y+BLOCK_SZ/2), s, 1);
-		Erase_rectangle(X(x+BLOCK_SZ/2) - 1, Y(y+BLOCK_SZ/2),
+			    Y(y+BLOCK_SZ/2),
+			    s, 1);
+		Erase_rectangle(X(x+BLOCK_SZ/2) - 1,
+				Y(y+BLOCK_SZ/2) - gameFont->ascent,
 				XTextWidth(gameFont, s, 1) + 2,
 				gameFont->ascent + gameFont->descent);
 		break;

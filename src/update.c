@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.37 1994/03/30 17:07:31 bert Exp $
+/* $Id: update.c,v 3.38 1994/04/20 18:23:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -33,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.37 1994/03/30 17:07:31 bert Exp $";
+    "@(#)$Id: update.c,v 3.38 1994/04/20 18:23:21 bert Exp $";
 #endif
 
 
@@ -98,12 +98,6 @@ void Emergency_thrust (int ind, int on)
     } else {
 	CLR_BIT(pl->used, OBJ_EMERGENCY_THRUST);
 	if (pl->emergency_thrust_left <= 0) {
-	    /*
-	     * If we have no emergency thrust left we also turn off autopilot
-	     * as that meant we were doing an emergency brake.
-	     */
-	    if (BIT(pl->used, OBJ_AUTOPILOT))
-		Autopilot(ind, 0);
 	    if (pl->emergency_thrusts <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
 	}

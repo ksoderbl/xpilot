@@ -25,8 +25,11 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.31 1994/04/14 09:44:19 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.32 1994/04/15 15:33:40 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.32  1994/04/15  15:33:40  bert
+ * Fixed Sun problems.
+ *
  * Revision 3.31  1994/04/14  09:44:19  bert
  * Commented out _res usage for Solaris.
  *
@@ -1235,32 +1238,34 @@ int	flag;
 # endif
 #endif
 
+    char buf[128];
+
 #ifdef USE_FCNTL_FNDELAY
     if (fcntl(fd, F_SETFL, (flag != 0) ? FNDELAY : 0) != -1)
 	return 0;
-    fprintf(stderr, "fcntl FNDELAY failed in file \"%s\", line %d: %s\n",
-	    __FILE__, __LINE__, strerror(errno));
+    sprintf(buf, "fcntl FNDELAY failed in socklib.c line %d", __LINE__);
+    perror(buf);
 #endif
  
 #ifdef USE_IOCTL_FIONBIO
     if (ioctl(fd, FIONBIO, &flag) != -1)
 	return 0;
-    fprintf(stderr, "ioctl FIONBIO failed in file \"%s\", line %d: %s\n",
-	    __FILE__, __LINE__, strerror(errno));
+    sprintf(buf, "ioctl FIONBIO failed in socklib.c line %d", __LINE__);
+    perror(buf);
 #endif
  
 #ifdef USE_FCNTL_O_NONBLOCK
     if (fcntl(fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1)
 	return 0;
-    fprintf(stderr, "fcntl O_NONBLOCK failed in file \"%s\", line %d: %s\n",
-	    __FILE__, __LINE__, strerror(errno));
+    sprintf(buf, "fcntl O_NONBLOCK failed in socklib.c line %d", __LINE__);
+    perror(buf);
 #endif
  
 #ifdef USE_FCNTL_O_NDELAY
     if (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1)
 	return 0;
-    fprintf(stderr, "fcntl O_NDELAY failed in file \"%s\", line %d: %s\n",
-	    __FILE__, __LINE__, strerror(errno));
+    sprintf(buf, "fcntl O_NDELAY failed in socklib.c line %d", __LINE__);
+    perror(buf);
 #endif
  
     return (-1);
@@ -2344,6 +2349,8 @@ void GetLocalHostName(name, size)
     if ((he = gethostbyname(name)) == NULL) {
 	return;
     }
+    strncpy(name, he->h_name, size);
+    name[size - 1] = '\0';
     /*
      * If there are no dots in the name then we don't have the FQDN,
      * and if the address is of the normal Internet type
@@ -2357,18 +2364,24 @@ void GetLocalHostName(name, size)
 	memcpy((void *)&a, he->h_addr_list[0], 4);
 	if ((he = gethostbyaddr((char *)&a, 4, AF_INET)) == NULL
 	    || strchr(he->h_name, '.') == NULL) {
-#if defined(__sun__) && !defined(__svr4__) && !defined(SVR4)
-	    /* bah.  play it dirty then, sun asks for it. */
-	    if (_res.defdname[0] != '\0') {
-		sprintf(name + strlen(name), "%s%s",
-			(_res.defdname[0] == '.') ? "" : ".",
-			_res.defdname);
+#if !defined(VMS)
+	    FILE *fp = fopen("/etc/resolv.conf", "r");
+	    if (fp) {
+		char *s, buf[128];
+		while (fgets(buf, sizeof buf, fp)) {
+		    if ((s = strtok(buf, " \t\r\n"))
+			&& !strcmp(s, "domain")
+			&& (s = strtok(NULL, " \t\r\n"))) {
+			sprintf(name + strlen(name), ".%s", s);
+			break;
+		    }
+		}
+		fclose(fp);
 	    }
 #endif
 	    return;
 	}
     }
-    strncpy(name, he->h_name, size);
 } /* GetLocalHostName */
 
 

@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.45 1994/03/30 19:41:58 bert Exp $
+/* $Id: frame.c,v 3.46 1994/04/24 11:58:28 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -45,7 +45,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.45 1994/03/30 19:41:58 bert Exp $";
+    "@(#)$Id: frame.c,v 3.46 1994/04/24 11:58:28 bert Exp $";
 #endif
 
 
@@ -848,10 +848,11 @@ static void Frame_radar(int conn, int ind)
 	}
     }
 #endif
-    if (playersOnRadar) {
+    if (playersOnRadar || BIT(World.rules->mode, TEAM_PLAY)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    if (i == ind
 		|| BIT(Players[i]->status, PLAYING|GAME_OVER) != PLAYING
+		|| !playersOnRadar && !TEAM_IMMUNE(i, ind)
 		|| !pl->visibility[i].canSee) {
 		continue;
 	    }

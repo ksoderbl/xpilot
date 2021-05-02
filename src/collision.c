@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 3.88 1994/04/10 13:08:17 bert Exp $
+/* $Id: collision.c,v 3.90 1994/04/23 16:56:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -24,8 +24,8 @@
 #define SERVER
 #include <stdlib.h>
 #include <assert.h>
-#include "global.h"
 #include <time.h>
+#include "global.h"
 #include "map.h"
 #include "object.h"
 #include "score.h"
@@ -44,7 +44,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.88 1994/04/10 13:08:17 bert Exp $";
+    "@(#)$Id: collision.c,v 3.90 1994/04/23 16:56:59 bert Exp $";
 #endif
 
 #define FLOAT_TO_INT(F)		((F) < 0 ? -(int)(0.5f-(F)) : (int)((F)+0.5f))
@@ -1109,25 +1109,29 @@ static void LaserCollision(void)
 
 		x = x1 + (i * dx) / max;
 		y = y1 + (i * dy) / max;
-		if (BIT(World.rules->mode, WRAP_PLAY)) {
-		    if (x < 0) {
-			x += World.width;
-		    }
-		    else if (x >= World.width) {
-			x -= World.width;
-		    }
-		    if (y < 0) {
-			y += World.height;
-		    }
-		    else if (y >= World.height) {
-			y -= World.height;
-		    }
-		}
-		obj->vel.x = x - obj->prevpos.x;
-		obj->vel.y = y - obj->prevpos.y;
+		obj->vel.x = x - obj->pos.x;
+		obj->vel.y = y - obj->pos.y;
 		Move_object(objnum);
 		if (obj->life == 0) {
 		    break;
+		}
+		if (BIT(World.rules->mode, WRAP_PLAY)) {
+		    if (x < 0) {
+			x += World.width;
+			x1 += World.width;
+		    }
+		    else if (x >= World.width) {
+			x -= World.width;
+			x1 -= World.width;
+		    }
+		    if (y < 0) {
+			y += World.height;
+			y1 += World.height;
+		    }
+		    else if (y >= World.height) {
+			y -= World.height;
+			y1 -= World.height;
+		    }
 		}
 		for (j = 0; j < num_victims; j++) {
 		    dist = Wrap_length(x - victims[j].pos.x,
