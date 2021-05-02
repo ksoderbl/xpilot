@@ -1,10 +1,11 @@
-/* $Id: map.h,v 3.26 1996/10/06 00:01:13 bjoerns Exp $
+/* $Id: map.h,v 3.34 1998/01/23 13:02:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,7 +110,7 @@ typedef struct {
 
 typedef struct {
     ipos	pos;
-    float	force;
+    DFLOAT	force;
 } grav_t;
 
 typedef struct {
@@ -120,7 +121,7 @@ typedef struct {
 
 typedef struct {
     int		base_idx;	/* Index in World.base[] */
-    float	dist;		/* Distance to first checkpoint */
+    DFLOAT	dist;		/* Distance to first checkpoint */
 } baseorder_t;
 
 typedef struct {
@@ -133,13 +134,14 @@ typedef struct {
 } cannon_t;
 
 typedef struct {
-    float	prob;		/* Probility [0..1] for item to appear */
+    DFLOAT	prob;		/* Probility [0..1] for item to appear */
     int		max;		/* Max on world at a given time */
     int		num;		/* Number active right now */
     int		chance;		/* Chance [0..127] for this item to appear */
     int		min_per_pack;	/* minimum number of elements per item. */
     int		max_per_pack;	/* maximum number of elements per item. */
     int		initial;	/* initial number of elements per player. */
+    int		limit;		/* max number of elements per player. */
 } item_t;
 
 typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;
@@ -188,7 +190,9 @@ typedef struct {
     char	name[MAX_CHARS];
     char	author[MAX_CHARS];
 
-    u_byte	**block;
+    u_byte	**block;        /* type of item in each block */
+    u_short	**itemID;       /* index into cannon/fuel/targets/treasure/itemConcentrator/bases/grav/wormhole, depending on value of corresponding block, -1 for space, walls, etc */
+
     vector	**gravity;
 
     item_t	items[NUM_ITEMS];

@@ -1,10 +1,11 @@
-/* $Id: sched.c,v 3.11 1996/10/13 19:30:51 bert Exp $
+/* $Id: sched.c,v 3.20 1997/11/27 20:09:35 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,78 +22,61 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include "../contrib/NT/xpilots/winSvrThread.h"
+#include <signal.h>
+#include <time.h>
+#else
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
+#endif
 
+#define	SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
 #include "error.h"
 #include "types.h"
 #include "sched.h"
+#include "global.h"
+
+#include "portability.h"
 
 char sched_version[] = VERSION;
 
-#ifdef sony_news
-/*
- * Sony NEWS doesn't have the sigset family.
- */
-typedef unsigned int    sigset_t;
+int sched_running = false;
 
-#define sigemptyset(set)        (*(set) = 0)
-#define sigfillset(set)         (*(set) = ~(sigset_t)0, 0)
-#define sigaddset(set,signo)    (*(set) |= sigmask(signo), 0)
-#define sigdelset(set,signo)    (*(set) &= ~sigmask(signo), 0)
-#define sigismember(set,signo)  ((*(set) & sigmask(signo)) != 0)
-
-#define SIG_BLOCK		1
-#define SIG_UNBLOCK		2
-#define SIG_SETMASK		3
-
-int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
-{
-    int			mask;
-
-    if (how == SIG_BLOCK) {
-	mask = sigblock(0) | *set;
-    }
-    else if (how == SIG_UNBLOCK) {
-	mask = sigblock(0) & ~(*set);
-    }
-    else if (how == SIG_SETMASK) {
-	mask = *set;
-    }
-    else {
-	mask = sigblock(0);
-    }
-    mask = sigsetmask(mask);
-    if (oset != NULL) {
-	*oset = mask;
-    }
-
-    return 0;
-}
-
-/*
- * Sony NEWS doesn't have sigaction(), using sigvec() instead.
- */
-#define sigaction	sigvec
-#define sa_handler	sv_handler
-#define sa_mask		sv_mask
-#define sa_flags	sv_flags
+volatile long	timer_ticks;	/* SIGALRMs that have occurred */
+static long		timers_used;	/* SIGALRMs that have been used */
+static long		timer_freq;	/* rate at which timer ticks. (in FPS) */
+#ifndef	_WINDOWS
+static void		(*timer_handler)(void);
+#else
+static	TIMERPROC	timer_handler;
 #endif
+static time_t		current_time;
+static int		ticks_till_second;
 
+/* Windows incorrectly uses u_int in FD_CLR */
+#ifdef	_WINDOWS
+typedef	u_int	FDTYPE;
+#else
+typedef	int		FDTYPE;
+#endif
 
 /*
  * Block or unblock a single signal.
  */
 static void sig_ok(int signum, int flag)
 {
+#if !defined(_WINDOWS)
     sigset_t    sigset;
 
     sigemptyset(&sigset);
@@ -101,6 +85,7 @@ static void sig_ok(int signum, int flag)
 	error("sigprocmask(%d,%d)", signum, flag);
 	exit(1);
     }
+#endif
 }
 
 /*
@@ -109,7 +94,9 @@ static void sig_ok(int signum, int flag)
  */
 void block_timer(void)
 {
+#ifndef	_WINDOWS
     sig_ok(SIGALRM, 0);
+#endif
 }
 
 /*
@@ -118,15 +105,10 @@ void block_timer(void)
  */
 void allow_timer(void)
 {
+#ifndef	_WINDOWS
     sig_ok(SIGALRM, 1);
+#endif
 }
-
-static volatile long	timer_ticks;	/* SIGALRMs that have occurred */
-static long		timers_used;	/* SIGALRMs that have been used */
-static long		timer_freq;	/* rate at which timer ticks. */
-static void		(*timer_handler)(void);
-static time_t		current_time;
-static int		ticks_till_second;
 
 /*
  * Catch SIGALRM.
@@ -142,6 +124,7 @@ static void catch_timer(int signum)
  */
 static void setup_timer(void)
 {
+#ifndef	_WINDOWS
     struct itimerval itv;
     struct sigaction act;
 
@@ -180,7 +163,14 @@ static void setup_timer(void)
     timers_used = timer_ticks;
     time(&current_time);
     ticks_till_second = timer_freq;
-
+#else
+/*
+	UINT cr = SetTimer(NULL, 0, 1000/timer_freq, timer_handler);
+	UINT cr = SetTimer(NULL, 0, 20, (TIMERPROC)ServerThreadTimerProc);
+	if (!cr)
+		error("Can't create timer");
+*/
+#endif
     /*
      * Allow the real-time timer to generate SIGALRM signals.
      */
@@ -190,12 +180,21 @@ static void setup_timer(void)
 /*
  * Configure timer tick callback.
  */
+#ifndef	_WINDOWS
 void install_timer_tick(void (*func)(void), int freq)
 {
     timer_handler = func;
     timer_freq = freq;
     setup_timer();
+} 
+#else
+void install_timer_tick(void (__stdcall *func)(void *,unsigned int ,unsigned int ,unsigned long ), int freq)
+{
+    timer_handler = (TIMERPROC)func;
+    timer_freq = freq;
+    setup_timer();
 }
+#endif
 
 /*
  * Linked list of timeout callbacks.
@@ -317,32 +316,72 @@ static void timeout_chime(void)
     }
 }
 
-#define NUM_SELECT_FD		(sizeof(int) * 8)
+#ifndef	_WINDOWS
+#define NUM_SELECT_FD		((int)sizeof(int) * 8)
+#else
+/*
+	Windoze:
+	The first call to socket() returns 560ish.  Successive calls keep bumping
+	up the SOCKET returned until about 880 when it wraps back to 8.
+	(It seems to increment by 8 with each connect - but that's not important)
+	I can't find a manifest constant to tell me what the upper limit will be *sigh*
+
+	--- Now, the Windoze gurus tell me that SOCKET is an opaque data type.  So i need
+	to make a lookup array for the lookup array :(
+*/
+#define	NUM_SELECT_FD		1000
+#endif
 
 struct io_handler {
+    int			fd;
     void		(*func)(int, void *);
     void		*arg;
 };
 
-static struct io_handler input_handlers[NUM_SELECT_FD];
-static int		input_mask;
-static int		max_fd;
+static struct io_handler	input_handlers[NUM_SELECT_FD];
+static fd_set			input_mask;
+static int			max_fd, min_fd;
+static int			input_inited = false;
+
+static void io_dummy(int fd, void *arg)
+{
+    xpprintf("io_dummy called!  (%d, %p)\n", fd, arg);
+}
 
 void install_input(void (*func)(int, void *), int fd, void *arg)
 {
-    int read_bit = (1 << fd);
+    int i;
 
-    if (fd < 0 || fd >= NUM_SELECT_FD) {
-	error("install illegal input handler fd %d", fd);
-	exit(1);
+    if (input_inited == false) {
+	input_inited = true;
+	FD_ZERO(&input_mask);
+#ifndef	_WINDOWS
+	min_fd = fd;
+#else
+	min_fd = 0;
+#endif
+	max_fd = fd;
+	for (i = 0; i < NELEM(input_handlers); i++) {
+	    input_handlers[i].fd = -1;
+	    input_handlers[i].func = io_dummy;
+	    input_handlers[i].arg = 0;
+	}
     }
-    if ((input_mask & read_bit) != 0) {
+#ifdef	_WINDOWS
+	xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);
+#endif
+    if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
+	error("install illegal input handler fd %d (%d)", fd, min_fd);
+	ServerExit();
+    }
+    if (FD_ISSET(fd, &input_mask)) {
 	error("input handler %d busy", fd);
-	exit(1);
+	ServerExit();
     }
-    input_handlers[fd].func = func;
-    input_handlers[fd].arg = arg;
-    input_mask |= read_bit;
+    input_handlers[fd - min_fd].fd = fd;
+    input_handlers[fd - min_fd].func = func;
+    input_handlers[fd - min_fd].arg = arg;
+    FD_SET(fd, &input_mask);
     if (fd > max_fd) {
 	max_fd = fd;
     }
@@ -350,20 +389,20 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
 
 void remove_input(int fd)
 {
-    int read_bit = (1 << fd);
-
-    if (fd < 0 || fd >= NUM_SELECT_FD) {
-	error("remove illegal input handler fd %d", fd);
-	exit(1);
+    if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
+	error("remove illegal input handler fd %d (%d)", fd, min_fd);
+	ServerExit();
     }
-    if ((input_mask & read_bit) != 0) {
-	input_handlers[fd].func = 0;
-	input_mask &= ~read_bit;
+    if (FD_ISSET(fd, &input_mask)) {
+	input_handlers[fd - min_fd].fd = -1;
+	input_handlers[fd - min_fd].func = io_dummy;
+	input_handlers[fd - min_fd].arg = 0;
+	FD_CLR((FDTYPE)fd, &input_mask);
 	if (fd == max_fd) {
-	    int i;
-	    max_fd = 0;
-	    for (i = fd; --i >= 0; ) {
-		if ((input_mask & (1 << i)) != 0) {
+	    int i = fd;
+	    max_fd = -1;
+	    while (--i >= min_fd) {
+		if (FD_ISSET(i, &input_mask)) {
 		    max_fd = i;
 		    break;
 		}
@@ -377,8 +416,6 @@ extern int NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
 extern int login_in_progress;
 #endif
 
-static int		sched_running;
-
 void stop_sched(void)
 {
     sched_running = 0;
@@ -386,36 +423,42 @@ void stop_sched(void)
 
 /*
  * I/O + timer dispatcher.
+ * Windows pumps this one time 
  */
 void sched(void)
 {
     int			i, n, io_todo = 3;
     struct timeval	tv, *tvp = &tv;
 
+#ifndef	_WINDOWS
     if (sched_running) {
 	error("sched already running");
 	exit(1);
     }
+
     sched_running = 1;
 
     while (sched_running) {
-#ifdef VMS
-        if (NumPlayers > NumRobots + NumPseudoPlayers
-            || login_in_progress != 0
-            || NumQueuedPlayers > 0) {
+#endif
+#if defined(VMS) || defined(_WINDOWS)
+	if (NumPlayers > NumRobots + NumPseudoPlayers
+	    || login_in_progress != 0
+	    || NumQueuedPlayers > 0) {
 
-            /* need fast I/O checks now! (2 or 3 times per frames) */
-            tv.tv_sec = 0;
-            tv.tv_usec = 1000000 / (3 * timer_freq + 1); 
-        }
-        else {
-            /* slow I/O checks are possible here... (2 times per second) */ ; 
-            tv.tv_sec = 0;
-            tv.tv_usec = 500000;
-        }
+	    /* need fast I/O checks now! (2 or 3 times per frames) */
+	    tv.tv_sec = 0;
+	    /* KOERBER */
+	    /*	tv.tv_usec = 1000000 / (3 * timer_freq + 1); */
+	    tv.tv_usec = 1000000 / (10 * timer_freq + 1); 
+	}
+	else {
+	    /* slow I/O checks are possible here... (2 times per second) */ ; 
+	    tv.tv_sec = 0;
+	    tv.tv_usec = 500000;
+	}
 #else
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
 #endif
 
 	if (io_todo == 0 && timers_used < timer_ticks) {
@@ -434,7 +477,8 @@ void sched(void)
 	    } while (timers_used + 1 < timer_ticks);
 	}
 	else {
-	    int readmask = input_mask;
+	    fd_set readmask;
+	    readmask = input_mask;
 	    n = select(max_fd + 1, &readmask, 0, 0, tvp);
 	    if (n <= 0) {
 		if (n == -1 && errno != EINTR) {
@@ -444,9 +488,11 @@ void sched(void)
 		io_todo = 0;
 	    }
 	    else {
-		for (i = max_fd; i >= 0; i--) {
-		    if ((readmask & (1 << i)) != 0) {
-			(*input_handlers[i].func)(i, input_handlers[i].arg);
+		for (i = max_fd; i >= min_fd; i--) {
+		    if (FD_ISSET(i, &readmask)) {
+			struct io_handler *ioh;
+			ioh = &input_handlers[i - min_fd];
+			(*(ioh->func))(ioh->fd, ioh->arg);
 			if (--n == 0) {
 			    break;
 			}
@@ -462,6 +508,8 @@ void sched(void)
 	    }
 #endif
 	}
+#ifndef	_WINDOWS
     }
+#endif
 }
 

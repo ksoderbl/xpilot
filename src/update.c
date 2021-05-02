@@ -1,10 +1,11 @@
-/* $Id: update.c,v 3.75 1997/01/16 20:25:05 bert Exp $
+/* $Id: update.c,v 3.82 1998/01/08 19:28:53 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#include <stdio.h>
+#else
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -40,7 +47,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.75 1997/01/16 20:25:05 bert Exp $";
+    "@(#)$Id: update.c,v 3.82 1998/01/08 19:28:53 bert Exp $";
 #endif
 
 
@@ -70,7 +77,7 @@ static void Transport_to_home(int ind)
      * This results in a visually pleasing take off and landing.
      */
     player		*pl = Players[ind];
-    float		bx, by, dx, dy,	t, m;
+    DFLOAT		bx, by, dx, dy,	t, m;
     const int		T = RECOVERY_DELAY;
 
     if (BIT(World.rules->mode, TIMING) && pl->round) {
@@ -201,14 +208,14 @@ static void do_Autopilot (player *pl)
     int		dir;
     int		afterburners;
     int		ix, iy;
-    float	gx, gy;
-    float	acc, vel;
-    float	delta;
-    float	turnspeed, power;
-    const float	emergency_thrust_settings_delta = 150.0 / FPS;
-    const float	auto_pilot_settings_delta = 15.0 / FPS;
-    const float	auto_pilot_turn_factor = 2.5;
-    const float	auto_pilot_dead_velocity = 0.5;
+    DFLOAT	gx, gy;
+    DFLOAT	acc, vel;
+    DFLOAT	delta;
+    DFLOAT	turnspeed, power;
+    const DFLOAT	emergency_thrust_settings_delta = 150.0 / FPS;
+    const DFLOAT	auto_pilot_settings_delta = 15.0 / FPS;
+    const DFLOAT	auto_pilot_turn_factor = 2.5;
+    const DFLOAT	auto_pilot_dead_velocity = 0.5;
 
     /*
      * If the last movement touched a wall then we shouldn't
@@ -236,8 +243,8 @@ static void do_Autopilot (player *pl)
 	afterburners = pl->item[ITEM_AFTERBURNER];
     }
 
-    ix = (int)(pl->pos.x / BLOCK_SZ);
-    iy = (int)(pl->pos.y / BLOCK_SZ);
+    ix = OBJ_X_IN_BLOCKS(pl);
+    iy = OBJ_Y_IN_BLOCKS(pl);
     gx = World.gravity[ix][iy].x;
     gy = World.gravity[ix][iy].y;
 
@@ -268,9 +275,9 @@ static void do_Autopilot (player *pl)
 	if (gx == 0 && gy == 0)
 	    vad = pl->dir;
 	else
-	    vad = findDir(-gx, -gy);
+	    vad = (int)findDir(-gx, -gy);
     } else {
-	vad = findDir(-pl->vel.x, -pl->vel.y);
+	vad = (int)findDir(-pl->vel.x, -pl->vel.y);
     }
     vad = MOD2(vad - pl->dir, RES);
     if (vad > RES/2) {
@@ -284,7 +291,7 @@ static void do_Autopilot (player *pl)
      * Calculate turnspeed needed to change direction instataneously by
      * above direction change.
      */
-    turnspeed = ((float)vad) / pl->turnresistance - pl->turnvel;
+    turnspeed = ((DFLOAT)vad) / pl->turnresistance - pl->turnvel;
     if (turnspeed < 0) {
 	turnspeed = -turnspeed;
 	dir = -dir;
@@ -362,10 +369,10 @@ static void do_Autopilot (player *pl)
 static void Tractor_beam (player *pl)
 {
     player		*victim;
-    float		maxdist, maxforce, percent;
-    float		xd, yd;
-    float		dvx, dvy;
-    float		force, mass;
+    DFLOAT		maxdist, maxforce, percent;
+    DFLOAT		xd, yd;
+    DFLOAT		dvx, dvy;
+    DFLOAT		force, mass;
     long		cost;
     int			theta;
 
@@ -380,7 +387,7 @@ static void Tractor_beam (player *pl)
 
     maxforce = TRACTOR_MAX_FORCE(pl);
     percent = TRACTOR_PERCENT(pl, maxdist);
-    cost = TRACTOR_COST(percent);
+    cost = (long)TRACTOR_COST(percent);
     force = TRACTOR_FORCE(pl, percent, maxforce);
 
     if (pl->fuel.sum < -cost) {
@@ -399,7 +406,7 @@ static void Tractor_beam (player *pl)
     xd = WRAP_DX(pl->pos.x - victim->pos.x);
     yd = WRAP_DY(pl->pos.y - victim->pos.y);
 
-    theta = findDir(xd, yd);
+    theta = (int)findDir(xd, yd);
     mass = pl->mass + victim->mass;
 
     dvx = tcos(theta) * (force / pl->mass);
@@ -458,7 +465,7 @@ void Update_objects(void)
      * Let the fuel stations regenerate some fuel.
      */
     if (NumPlayers > 0) {
-	int fuel = NumPlayers * STATION_REGENERATION;
+	int fuel = (int)(NumPlayers * STATION_REGENERATION);
 	int frames_per_update = MAX_STATION_FUEL / (fuel * BLOCK_SZ);
 	for (i=0; i<World.NumFuels; i++) {
 	    if (World.fuel[i].fuel == MAX_STATION_FUEL) {
@@ -586,6 +593,9 @@ void Update_objects(void)
 	LIMIT(pl->turnresistance, MIN_PLAYER_TURNRESISTANCE,
 				  MAX_PLAYER_TURNRESISTANCE);
 
+	if (pl->damaged > 0)
+	    pl->damaged--;
+
 	if (pl->count > 0) {
 	    pl->count--;
 	    if (!BIT(pl->status, PLAYING)) {
@@ -614,6 +624,11 @@ void Update_objects(void)
 
 	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
 	    continue;
+
+	if (!cloakedShield && BIT(pl->used, OBJ_CLOAKING_DEVICE)) {
+	    CLR_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	    CLR_BIT(pl->used, OBJ_SHIELD);
+	}
 
 	if (pl->shield_time > 0) {
 	    if (--pl->shield_time == 0) {
@@ -687,10 +702,10 @@ void Update_objects(void)
 	 * Compute energy drainage
 	 */
 	if (BIT(pl->used, OBJ_SHIELD))
-	    Add_fuel(&(pl->fuel), ED_SHIELD);
+	    Add_fuel(&(pl->fuel), (long)ED_SHIELD);
 
 	if (BIT(pl->used, OBJ_CLOAKING_DEVICE))
-	    Add_fuel(&(pl->fuel), ED_CLOAKING_DEVICE);
+	    Add_fuel(&(pl->fuel), (long)ED_CLOAKING_DEVICE);
 
 #define UPDATE_RATE 100
 
@@ -749,8 +764,8 @@ void Update_objects(void)
 	/* target repair */
 	if (BIT(pl->used, OBJ_REPAIR)) {
 	    target_t *targ = &World.targets[pl->repair_target];
-	    float x = (targ->pos.x + 0.5) * BLOCK_SZ;
-	    float y = (targ->pos.y + 0.5) * BLOCK_SZ;
+	    DFLOAT x = (targ->pos.x + 0.5) * BLOCK_SZ;
+	    DFLOAT y = (targ->pos.y + 0.5) * BLOCK_SZ;
 	    if (Wrap_length(pl->pos.x - x, pl->pos.y - y) > 90.0
 		|| targ->damage >= TARGET_DAMAGE
 		|| targ->dead_time > 0) {
@@ -792,12 +807,12 @@ void Update_objects(void)
 	 * Update acceleration vector etc.
 	 */
 	if (BIT(pl->status, THRUSTING)) {
-	    float power = pl->power;
-	    float f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
+	    DFLOAT power = pl->power;
+	    DFLOAT f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
 	    int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST)
 		     ? MAX_AFTERBURNER
 		     : pl->item[ITEM_AFTERBURNER]);
-	    float inert = pl->mass;
+	    DFLOAT inert = pl->mass;
 
 	    if (a) {
 		power = AFTER_BURN_POWER(power, a);
@@ -805,7 +820,7 @@ void Update_objects(void)
 	    }
 	    pl->acc.x = power * tcos(pl->dir) / inert;
 	    pl->acc.y = power * tsin(pl->dir) / inert;
-	    Add_fuel(&(pl->fuel), -f * FUEL_SCALE_FACT); /* Decrement fuel */
+	    Add_fuel(&(pl->fuel), (long)(-f * FUEL_SCALE_FACT)); /* Decrement fuel */
 	} else {
 	    pl->acc.x = pl->acc.y = 0.0;
 	}
@@ -842,7 +857,7 @@ void Update_objects(void)
 		    wx = WRAP_DX(wx);
 		    wy = WRAP_DX(wy);
 
-		    proximity = pl->vel.y * wx + pl->vel.x * wy;
+		    proximity = (int)(pl->vel.y * wx + pl->vel.x * wy);
 		    proximity = ABS(proximity);
 
 		    if (pl->vel.x * wx + pl->vel.y * wy < 0) {
@@ -943,7 +958,7 @@ void Update_objects(void)
 	    if (necm < MAX_PLAYER_ECMS) {
 		pl->ecmInfo.pos[necm].x = pl->pos.x;
 		pl->ecmInfo.pos[necm].y = pl->pos.y;
-		pl->ecmInfo.size[necm] = ECM_DISTANCE;
+		pl->ecmInfo.size[necm] = (int)ECM_DISTANCE;
 		pl->ecmInfo.count++;
 	    }
 	    CLR_BIT(pl->used, OBJ_ECM);
@@ -958,7 +973,9 @@ void Update_objects(void)
 	}
 
 	if (BIT(pl->status, THRUSTING)) {
-	    Thrust(i);
+	    if (!BIT(pl->used, OBJ_CLOAKING_DEVICE) || cloakedExhaust) {
+  		Thrust(i);
+	    }
 	}
 #ifdef TURN_FUEL
 	if (tf)

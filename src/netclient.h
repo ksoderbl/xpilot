@@ -1,10 +1,11 @@
-/* $Id: netclient.h,v 3.36 1996/10/06 00:01:18 bjoerns Exp $
+/* $Id: netclient.h,v 3.41 1997/11/27 20:09:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +46,7 @@ int Net_fd(void);
 int Net_start(void);
 void Net_init_measurement(void);
 int Net_input(void);
+/* void Net_measurement(long loop, int status);*/
 int Receive_start(void);
 int Receive_end(void);
 int Receive_message(void);
@@ -87,12 +89,12 @@ int Receive_reply(int *replyto, int *result);
 int Send_ack(long rel_loops);
 int Send_keyboard(u_byte *);
 int Send_shape(char *);
-int Send_power(float power);
-int Send_power_s(float power_s);
-int Send_turnspeed(float turnspeed);
-int Send_turnspeed_s(float turnspeed_s);
-int Send_turnresistance(float turnresistance);
-int Send_turnresistance_s(float turnresistance_s);
+int Send_power(DFLOAT power);
+int Send_power_s(DFLOAT power_s);
+int Send_turnspeed(DFLOAT turnspeed);
+int Send_turnspeed_s(DFLOAT turnspeed_s);
+int Send_turnresistance(DFLOAT turnresistance);
+int Send_turnresistance_s(DFLOAT turnresistance_s);
 int Send_pointer_move(int movement);
 int Receive_audio(void);
 int Receive_talk_ack(void);

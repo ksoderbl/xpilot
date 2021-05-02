@@ -31,23 +31,20 @@ $   prefix="/prefix=(ALL,EXCEPT=(ioctl))"
 $   if cpu .eqs. "VAX" 
 $   then
 $     defines="/define=(VMS,VAX)"
-$     include=""
 $     debug="/optimize=(disjoint,inline)"
 $!    debug="/debug/nooptimize"
 $   else
 $     defines="/define=(VMS)"
-$     include=""
 $     debug="/optimize=(level=4)"
 $!    debug="/debug/nooptimize"
 $   endif
 $ else
 $   options="GCC/standard=ansi/nocasehack"
 $   defines="/define=(ALPHA,NO_X_GBLS)"
-$   include="/include=[.vms_include]"
 $   debug="/optimize"
 $!  debug="/debug"
 $ endif
-$ cc_options=options+defines+include+debug+prefix
+$ cc_options=options+defines+debug+prefix
 $!
 $SERVER:
 $ !!! XP-SERVER needs STRNCASECMP from DECC$SHR !!!
@@ -87,6 +84,10 @@ $ CALL MAKE IOCTL.OBJ	     "''cc_options' IOCTL.C" 	        IOCTL.C
 $ CALL MAKE USERNAME.OBJ     "''cc_options' USERNAME.C"	        USERNAME.C
 $ CALL MAKE TRNLNM.OBJ       "''cc_options' TRNLNM.C"           TRNLNM.C
 $ CALL MAKE SCHED.OBJ	     "''cc_options' SCHED.C" 	        SCHED.C
+$ CALL MAKE CONTACT.OBJ	     "''cc_options' CONTACT.C" 	        CONTACT.C
+$ CALL MAKE METASERVER.OBJ   "''cc_options' METASERVER.C" 	METASERVER.C
+$ CALL MAKE ID.OBJ	     "''cc_options' ID.C" 	        ID.C
+$ CALL MAKE OBJPOS.OBJ	     "''cc_options' OBJPOS.C" 	        OBJPOS.C
 $!
 $ write sys$output "Building XPILOTS Server Image"
 $ CALL MAKE XPILOTS.EXE "LINK/EXE=XPILOTS.exe XPILOTS.opt/OPT" *.OBJ

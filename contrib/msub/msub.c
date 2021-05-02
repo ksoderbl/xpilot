@@ -292,6 +292,7 @@ ReadMake (f)
 FILE	*f;
 {
 struct stat	st;
+size_t	mfSize;
 int	fd;
 char	*p, *s;
 char	*sNext;
@@ -300,13 +301,14 @@ char	*mfBuf;		/* makefile buffer */
 	fd = fileno (f);
 	if (fstat (fd, &st) != 0)
 		Panic ("cannot stat Makefile");
-	mfBuf = Malloc (st.st_size + 1);
-	if (read (fd, mfBuf, st.st_size) != st.st_size)
+	mfSize = st.st_size;
+	mfBuf = Malloc (mfSize + 1);
+	if (read (fd, mfBuf, mfSize) != mfSize)
 		Panic ("cannot read Makefile");
-	mfBuf[st.st_size] = '\0';	/* make sure it's null-terminated */
+	mfBuf[mfSize] = '\0';	/* make sure it's null-terminated */
 
 	p = s = mfBuf;
-	while (s <= mfBuf + st.st_size)
+	while (s <= mfBuf + mfSize)
 	{
 		if (*s == '\\' && *(s+1) == '\n')
 		{

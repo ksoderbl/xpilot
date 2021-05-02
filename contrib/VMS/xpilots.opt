@@ -22,6 +22,10 @@ saudio.obj
 username.obj
 trnlnm.obj
 ioctl.obj
+contact.obj
+metaserver.obj
+id.obj
+objpos.obj
 sys$share:decc$shr/share
 sys$share:ucx$ipc_shr/share
 sys$share:decw$xlibshr/share

@@ -1,10 +1,11 @@
-/* $Id: types.h,v 3.17 1996/10/06 21:21:08 bert Exp $
+/* $Id: types.h,v 3.23 1997/11/27 20:09:38 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +30,9 @@
 #ifdef VMS
 typedef char byte;
 #else
+#ifndef	_WINDOWS
 typedef signed char	byte;
+#endif
 #endif
 typedef unsigned char	u_byte;
 
@@ -59,16 +62,28 @@ typedef unsigned short	u_short;
  */
 #define false	0
 #define true	1
-#define bool	int
 
-typedef struct { float x, y; }	vector;
+#ifndef	_XPMONNT_
+#define bool	int
+#endif
+
+/*
+ * Windows does all its FPU work in doubles.  Using floats gives warnings
+ * and causes everything to be promoted to doubles anyway...
+ */
+#ifndef	_WINDOWS
+typedef	float	DFLOAT;
+#else
+typedef	double	DFLOAT;
+#endif
+
+typedef struct { DFLOAT x, y; }	vector;
 typedef vector			position;
 typedef struct { int x, y; }	ivec;
 typedef ivec			ipos;
 
-#if !defined(select) && defined(__linux__)
-#define select(N, R, W, E, T)	select((N),		\
-	(fd_set*)(R), (fd_set*)(W), (fd_set*)(E), (T))
+#ifdef	_WINDOWS
+#define	strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
+#define	strcasecmp(__s, __t)	stricmp(__s, __t)
 #endif
-
 #endif

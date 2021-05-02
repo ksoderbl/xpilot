@@ -1,10 +1,11 @@
-/* $Id: frame.c,v 3.69 1996/11/25 09:10:27 bert Exp $
+/* $Id: frame.c,v 3.77 1998/01/08 19:28:46 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <time.h>
+#include <limits.h>
+#else
 #include <unistd.h>
 #include <sys/types.h>
-#ifndef  VMS
+#if !defined(VMS)
 #include <sys/param.h>
 #endif
 #include <stdlib.h>
@@ -31,6 +37,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -47,7 +54,7 @@ char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.69 1996/11/25 09:10:27 bert Exp $";
+    "@(#)$Id: frame.c,v 3.77 1998/01/08 19:28:46 bert Exp $";
 #endif
 
 
@@ -91,10 +98,10 @@ static int		view_width,
 			debris_colors,
 			spark_rand;
 static debris_t		*debris_ptr[DEBRIS_TYPES];
-static int		debris_num[DEBRIS_TYPES],
+static unsigned int		debris_num[DEBRIS_TYPES],
 			debris_max[DEBRIS_TYPES];
 static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
-static int		fastshot_num[DEBRIS_TYPES * 2],
+static unsigned int		fastshot_num[DEBRIS_TYPES * 2],
 			fastshot_max[DEBRIS_TYPES * 2];
 
 #define inview(x_, y_) 								\
@@ -119,7 +126,7 @@ static int block_inview(block_visibility_t *bv, int x, int y)
     if (yd < 0) {							  \
 	yd += World.height;						  \
     }									  \
-    if ((unsigned) xd >= view_width || (unsigned) yd >= view_height) {	  \
+    if ((unsigned) xd >= (unsigned)view_width || (unsigned) yd >= (unsigned)view_height) {	  \
 	/*								  \
 	 * There's some rounding error or so somewhere.			  \
 	 * Should be possible to resolve it.				  \
@@ -131,45 +138,45 @@ static int block_inview(block_visibility_t *bv, int x, int y)
 	+ (((yd >> 8) % debris_y_areas) * debris_x_areas)		  \
 	+ ((xd >> 8) % debris_x_areas);					  \
 									  \
-    if (num >= 255) {							  \
+    if (num_ >= 255) {							  \
 	return;								  \
     }									  \
-    if (num >= max) {							  \
-	if (num == 0) {							  \
-	    ptr = (debris_t *) malloc((max = 16) * sizeof(*ptr));	  \
+    if (num_ >= max_) {							  \
+	if (num_ == 0) {							  \
+	    ptr_ = (debris_t *) malloc((max_ = 16) * sizeof(*ptr_));	  \
 	} else {							  \
-	    ptr = (debris_t *) realloc(ptr, (max += max) * sizeof(*ptr)); \
+	    ptr_ = (debris_t *) realloc(ptr_, (max_ += max_) * sizeof(*ptr_)); \
 	}								  \
-	if (ptr == 0) {							  \
+	if (ptr_ == 0) {							  \
 	    error("No memory for debris");				  \
-	    num = 0;							  \
+	    num_ = 0;							  \
 	    return;							  \
 	}								  \
     }									  \
-    ptr[num].x = (unsigned char) xd;					  \
-    ptr[num].y = (unsigned char) yd;					  \
-    num++;
+    ptr_[num_].x = (unsigned char) xd;					  \
+    ptr_[num_].y = (unsigned char) yd;					  \
+    num_++;
 
 static void fastshot_store(int xf, int yf, int color, int offset)
 {
-#define ptr		(fastshot_ptr[i])
-#define num		(fastshot_num[i])
-#define max		(fastshot_max[i])
+#define ptr_		(fastshot_ptr[i])
+#define num_		(fastshot_num[i])
+#define max_		(fastshot_max[i])
     DEBRIS_STORE(xf, yf, color, offset);
-#undef ptr
-#undef num
-#undef max
+#undef ptr_
+#undef num_
+#undef max_
 }
 
 static void debris_store(int xf, int yf, int color)
 {
-#define ptr		(debris_ptr[i])
-#define num		(debris_num[i])
-#define max		(debris_max[i])
+#define ptr_		(debris_ptr[i])
+#define num_		(debris_num[i])
+#define max_		(debris_max[i])
     DEBRIS_STORE(xf, yf, color, 0);
-#undef ptr
-#undef num
-#undef max
+#undef ptr_
+#undef num_
+#undef max_
 }
 
 static void fastshot_end(int conn)
@@ -262,9 +269,9 @@ static int Frame_status(int conn, int ind)
 		|| inview(Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
 	    && pl->lock.distance != 0) {
 	    SET_BIT(pl->lock.tagged, LOCK_VISIBLE);
-	    lock_dir = Wrap_findDir((int)(Players[lock_ind]->pos.x - pl->pos.x),
+	    lock_dir = (int)Wrap_findDir((int)(Players[lock_ind]->pos.x - pl->pos.x),
 				    (int)(Players[lock_ind]->pos.y - pl->pos.y));
-	    lock_dist = pl->lock.distance;
+	    lock_dist = (int)pl->lock.distance;
 	}
     }
 
@@ -422,7 +429,7 @@ static void Frame_shots(int conn, int ind)
 	    continue;
 	}
 	if ((color = shot->color) == BLACK) {
-	    printf("black %d,%d\n", shot->type, shot->id);
+	    xpprintf("black %d,%d\n", shot->type, shot->id);
 	    color = WHITE;
 	}
 	switch (shot->type) {
@@ -464,8 +471,8 @@ static void Frame_shots(int conn, int ind)
 		}
 	    }
 
-	    debris_store(shot->pos.x - pv.world.x,
-			 shot->pos.y - pv.world.y,
+	    debris_store((int)(shot->pos.x - pv.world.x),
+			 (int)(shot->pos.y - pv.world.y),
 			 color);
 	    break;
 	case OBJ_SHOT:
@@ -481,8 +488,8 @@ static void Frame_shots(int conn, int ind)
 		teamshot = 0;
 	    }
 
-	    fastshot_store(shot->pos.x - pv.world.x,
-			   shot->pos.y - pv.world.y,
+	    fastshot_store((int)(shot->pos.x - pv.world.x),
+			   (int)(shot->pos.y - pv.world.y),
 			   color, teamshot);
 	    break;
 
@@ -545,7 +552,7 @@ static void Frame_ships(int conn, int ind)
 			*pl_i;
     pulse_t		*pulse;
     int			i, j, color, dir;
-    float		x, y;
+    DFLOAT		x, y;
 
     for (i = 0; i < NumPlayers; i++) {
 	pl_i = Players[i];
@@ -607,7 +614,7 @@ static void Frame_ships(int conn, int ind)
 	    } else {
 		color = RED;
 	    }
-	    Send_laser(conn, color, x, y, pulse->len, dir);
+	    Send_laser(conn, color, (int)x, (int)y, pulse->len, dir);
 	}
 	if (!inview(pl_i->pos.x, pl_i->pos.y)) {
 	    continue;
@@ -621,8 +628,8 @@ static void Frame_ships(int conn, int ind)
 	}
 	for (j = 0; j < pl_i->ecmInfo.count; j++) {
 	    Send_ecm(conn,
-		     pl_i->ecmInfo.pos[j].x,
-		     pl_i->ecmInfo.pos[j].y,
+		     (int)pl_i->ecmInfo.pos[j].x,
+		     (int)pl_i->ecmInfo.pos[j].y,
 		     pl_i->ecmInfo.size[j]);
 	}
 	if (pl_i->transInfo.count) {
@@ -655,15 +662,15 @@ static void Frame_ships(int conn, int ind)
 	    if (inview(World.fuel[pl_i->fs].pix_pos.x,
 		       World.fuel[pl_i->fs].pix_pos.y)) {
 		Send_refuel(conn,
-			    World.fuel[pl_i->fs].pix_pos.x,
-			    World.fuel[pl_i->fs].pix_pos.y,
+			    (int)World.fuel[pl_i->fs].pix_pos.x,
+			    (int)World.fuel[pl_i->fs].pix_pos.y,
 			    pl_i->pos.x,
 			    pl_i->pos.y);
 	    }
 	}
 	if (BIT(pl_i->used, OBJ_REPAIR)) {
-	    float x = (World.targets[pl_i->repair_target].pos.x + 0.5) * BLOCK_SZ;
-	    float y = (World.targets[pl_i->repair_target].pos.y + 0.5) * BLOCK_SZ;
+	    DFLOAT x = (DFLOAT)(World.targets[pl_i->repair_target].pos.x + 0.5) * BLOCK_SZ;
+	    DFLOAT y = (DFLOAT)(World.targets[pl_i->repair_target].pos.y + 0.5) * BLOCK_SZ;
 	    if (inview(x, y)) {
 		/* same packet as refuel */
 		Send_refuel(conn, pl_i->pos.x, pl_i->pos.y, (int) x, (int) y);
@@ -677,8 +684,8 @@ static void Frame_ships(int conn, int ind)
 
 	    for (j = 0; j < 3; j++) {
 		Send_connector(conn,
-			       t->pos.x + t->ship->pts[j][t->dir].x,
-			       t->pos.y + t->ship->pts[j][t->dir].y,
+			       (int)(t->pos.x + t->ship->pts[j][t->dir].x),
+			       (int)(t->pos.y + t->ship->pts[j][t->dir].y),
 			       pl_i->pos.x,
 			       pl_i->pos.y, 1);
 	    }
@@ -697,10 +704,10 @@ static void Frame_ships(int conn, int ind)
 
 static void Frame_radar(int conn, int ind)
 {
-    register int	i, mask, shownuke, s;
+    int			i, mask, shownuke, s;
     player		*pl = Players[ind];
     object		*shot;
-    float		x, y;
+    DFLOAT		x, y;
 
 #ifndef NO_SMART_MIS_RADAR
     if (nukesOnRadar) {
@@ -744,7 +751,7 @@ static void Frame_radar(int conn, int ind)
 	    y = shot->pos.y;
 	    if (Wrap_length(pl->pos.x - x,
 			    pl->pos.y - y) <= pl->sensor_range) {
-		Send_radar(conn, x, y, s);
+		Send_radar(conn, (int)x, (int)y, s);
 	    }
 	}
     }
@@ -777,7 +784,7 @@ static void Frame_radar(int conn, int ind)
 		&& frame_loops % 5 >= 3) {
 		continue;
 	    }
-	    Send_radar(conn, x, y, 3);
+	    Send_radar(conn, (int)x, (int)y, 3);
 	}
     }
 }
@@ -850,7 +857,7 @@ void Frame_update(void)
 	     * Lower the frame rate for non-playing players
 	     * to reduce network load.
 	     */
-	    if (BIT(pl->status, PAUSE)
+	    if ((BIT(pl->status, PAUSE))
 		? ((frame_loops & 0x03) != 0)
 		: ((frame_loops & 0x01) != 0)) {
 		continue;
@@ -886,10 +893,11 @@ void Frame_update(void)
 	 */
 	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
 	    if ((BIT(pl->status, (GAME_OVER|PLAYING)) == (GAME_OVER|PLAYING))
-		|| (BIT(pl->status, PAUSE)
-		    && BIT(World.rules->mode, TEAM_PLAY)
-		    && pl->team != TEAM_NOT_SET
-		    && pl->team == Players[GetInd[pl->lock.pl_id]]->team)) {
+		|| (BIT(pl->status, PAUSE) &&
+		    ((BIT(World.rules->mode, TEAM_PLAY)
+		     && pl->team != TEAM_NOT_SET
+		     && pl->team == Players[GetInd[pl->lock.pl_id]]->team)
+		    ))) {
 		ind = GetInd[pl->lock.pl_id];
 	    } else {
 		ind = i;
@@ -899,7 +907,6 @@ void Frame_update(void)
 	}
 	if (Players[ind]->damaged > 0) {
 	    Send_damaged(conn, Players[ind]->damaged);
-	    Players[ind]->damaged--;
 	} else {
 	    Frame_parameters(conn, ind);
 	    if (Frame_status(conn, ind) <= 0) {

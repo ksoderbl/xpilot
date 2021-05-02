@@ -11,6 +11,12 @@ The new map format is as follows:
 	q			Lower right half filled
 	a			Upper right half filled
 
+	b			Completely filled decoration block
+	h			Upper left half filled
+	y			Lower left half filled
+	t			Lower right half filled
+	g			Upper right half filled
+
 	#			Fuel block
 
 	r			Upwards cannon

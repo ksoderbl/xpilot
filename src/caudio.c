@@ -1,10 +1,11 @@
-/* $Id: caudio.c,v 3.18 1996/10/06 00:00:49 bjoerns Exp $
+/* $Id: caudio.c,v 3.23 1997/11/27 20:09:03 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +30,12 @@
 
 #define	MAX_RANDOM_SOUNDS	6
 
+#ifdef _WINDOWS
+#include "../contrib/NT/xpilot/winClient.h"
+#include "../contrib/NT/xpilot/winAudio.h"
+#define SOUNDDIR snddir
+#endif
+
 #ifndef SOUNDDIR
 #define SOUNDDIR LIBDIR "sound/"
 #endif
@@ -45,6 +52,7 @@
 #include "types.h"
 #include "audio.h"
 #include "client.h"
+#include "error.h"
 
 char caudio_version[] = VERSION;
 
@@ -62,9 +70,27 @@ void audioInit(char *display)
     FILE           *fp;
     char            buf[512], *file, *sound, *ifile, *p;
     int             i, j;
+#ifdef _WINDOWS
+	char		    snddir[MAX_CHARS];
+#endif
 
     if (!maxVolume || !(fp = fopen(sounds, "r")))
 	return;
+
+#ifdef _WINDOWS
+	strcpy(snddir, sounds);
+	p = strrchr(snddir, '\\');
+	if (p != NULL)
+		*++p = '\0';
+	else
+	{
+		p = strrchr(snddir, '/');
+		if (snddir != NULL)
+			*++p = '\0';
+		else
+			snddir[0] = '\0';
+	}
+#endif
 
     while (fgets(buf, sizeof(buf), fp)) {
 	/* ignore comments */

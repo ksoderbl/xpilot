@@ -30,23 +30,20 @@ $   prefix="/prefix=(ALL,EXCEPT=(ioctl,strcasecmp,strncasecmp,strdup,gettimeofda
 $   if cpu .eqs. "VAX" 
 $   then
 $     defines="/define=(VMS,VAX)"
-$     include=""
 $     debug="/optimize=(disjoint,inline)"
 $!    debug="/debug/nooptimize"
 $   else
 $     defines="/define=(VMS)"
-$     include=""
 $     debug="/optimize=(level=4)"
 $!    debug="/debug/nooptimize"
 $   endif
 $ else
 $   options="GCC/standard=ansi/nocasehack"
 $   defines="/define=(ALPHA,NO_X_GBLS)"
-$   include="/include=[.vms_include]"
 $   debug="/optimize"
 $!  debug="/debug"
 $ endif
-$ cc_options=options+defines+include+debug+prefix
+$ cc_options=options+defines+debug+prefix
 $!
 $CLIENT:
 $ !!! DECC < 5.2 do not have STRNCASECMP !!!
@@ -68,6 +65,12 @@ $ CALL MAKE JOIN.OBJ	   "''cc_options' JOIN.C"	   JOIN.C
 $ CALL MAKE NET.OBJ	   "''cc_options' NET.C"	   NET.C
 $ CALL MAKE NETCLIENT.OBJ  "''cc_options' NETCLIENT.C"     NETCLIENT.C
 $ CALL MAKE PAINT.OBJ	   "''cc_options' PAINT.C"	   PAINT.C
+$ CALL MAKE PAINTDATA.OBJ  "''cc_options' PAINTDATA.C"	   PAINTDATA.C
+$ CALL MAKE PAINTHUD.OBJ   "''cc_options' PAINTHUD.C"	   PAINTHUD.C
+$ CALL MAKE PAINTMAP.OBJ   "''cc_options' PAINTMAP.C"      PAINTMAP.C
+$ CALL MAKE PAINTOBJECTS.OBJ "''cc_options' PAINTOBJECTS.C" PAINTOBJECTS.C
+$ CALL MAKE PAINTRADAR.OBJ "''cc_options' PAINTRADAR.C"	   PAINTRADAR.C
+$ CALL MAKE QUERY.OBJ	   "''cc_options' QUERY.C"	   QUERY.C
 $ CALL MAKE DBUFF.OBJ	   "''cc_options' DBUFF.C"	   DBUFF.C
 $ CALL MAKE XINIT.OBJ	   "''cc_options' XINIT.C"	   XINIT.C
 $ CALL MAKE DEFAULT.OBJ	   "''cc_options' DEFAULT.C"	   DEFAULT.C
@@ -88,6 +91,9 @@ $ CALL MAKE TRNLNM.OBJ     "''cc_options' TRNLNM.C"        TRNLNM.C
 $ CALL MAKE IOCTL.OBJ	   "''cc_options' IOCTL.C"	   IOCTL.C
 $ CALL MAKE STRCASECMP.OBJ "''cc_options' STRCASECMP.C"    STRCASECMP.C
 $ CALL MAKE STRDUP.OBJ	   "''cc_options' STRDUP.C"	   STRDUP.C
+$ CALL MAKE ABOUT.OBJ	   "''cc_options' ABOUT.C"	   ABOUT.C
+$ CALL MAKE COLORS.OBJ	   "''cc_options' COLORS.C"	   COLORS.C
+$ CALL MAKE TALK.OBJ	   "''cc_options' TALK.C"	   TALK.C
 $!
 $ write sys$output "Building XPILOT Client Image"
 $ CALL MAKE XPILOT.EXE "LINK/EXE=XPILOT.exe XPILOT.opt/OPT" *.OBJ

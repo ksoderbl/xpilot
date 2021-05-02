@@ -1,10 +1,11 @@
-/* $Id: map.c,v 3.49 1997/01/16 20:24:20 bert Exp $
+/* $Id: map.c,v 3.58 1998/01/08 19:28:47 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +22,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -44,7 +50,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.49 1997/01/16 20:24:20 bert Exp $";
+    "@(#)$Id: map.c,v 3.58 1998/01/08 19:28:47 bert Exp $";
 #endif
 
 
@@ -103,14 +109,42 @@ void Init_map(void)
 
 void Free_map(void)
 {
-    if (World.block) free(World.block);
-    if (World.gravity) free(World.gravity);
-    if (World.grav) free(World.grav);
-    if (World.base) free(World.base);
-    if (World.cannon) free(World.cannon);
-    if (World.fuel) free(World.fuel);
-    if (World.wormHoles) free(World.wormHoles);
-    if (World.itemConcentrators) free(World.itemConcentrators);
+    if (World.block) {
+	free(World.block);
+	World.block = NULL;
+    }
+    if (World.itemID) {
+	free(World.itemID);
+	World.itemID = NULL;
+    }
+    if (World.gravity) {
+	free(World.gravity);
+	World.gravity = NULL;
+    }
+    if (World.grav) {
+	free(World.grav);
+	World.grav = NULL;
+    }
+    if (World.base) {
+	free(World.base);
+	World.base = NULL;
+    }
+    if (World.cannon) {
+	free(World.cannon);
+	World.cannon = NULL;
+    }
+    if (World.fuel) {
+	free(World.fuel);
+	World.fuel = NULL;
+    }
+    if (World.wormHoles) {
+	free(World.wormHoles);
+	World.wormHoles = NULL;
+    }
+    if (World.itemConcentrators) {
+	free(World.itemConcentrators);
+	World.itemConcentrators = NULL;
+    }
 }
 
 
@@ -124,6 +158,9 @@ void Alloc_map(void)
     World.block =
 	(unsigned char **)malloc(sizeof(unsigned char *)*World.x
 				 + World.x*sizeof(unsigned char)*World.y);
+    World.itemID =
+	(u_short **)malloc(sizeof(u_short *)*World.x
+				 + World.x*sizeof(u_short)*World.y);
     World.gravity =
 	(vector **)malloc(sizeof(vector *)*World.x
 			  + World.x*sizeof(vector)*World.y);
@@ -133,7 +170,7 @@ void Alloc_map(void)
     World.cannon = NULL;
     World.wormHoles = NULL;
     World.itemConcentrators = NULL;
-    if (World.block == NULL || World.gravity == NULL) {
+    if (World.block == NULL || World.itemID == NULL || World.gravity == NULL) {
 	Free_map();
 	error("Couldn't allocate memory for map (%d bytes)",
 	      World.x * (World.y * (sizeof(unsigned char) + sizeof(vector))
@@ -143,11 +180,15 @@ void Alloc_map(void)
     } else {
 	unsigned char *map_line;
 	unsigned char **map_pointer;
+	u_short *item_line;
+	u_short **item_pointer;
 	vector *grav_line;
 	vector **grav_pointer;
 
 	map_pointer = World.block;
 	map_line = (unsigned char*) ((unsigned char**)map_pointer + World.x);
+	item_pointer = World.itemID;
+	item_line = (u_short*) ((u_short**)item_pointer + World.x);
 	grav_pointer = World.gravity;
 	grav_line = (vector*) ((vector**)grav_pointer + World.x);
 
@@ -155,6 +196,9 @@ void Alloc_map(void)
 	    *map_pointer = map_line;
 	    map_pointer += 1;
 	    map_line += World.y;
+	    *item_pointer = item_line;
+	    item_pointer += 1;
+	    item_line += World.y;
 	    *grav_pointer = grav_line;
 	    grav_pointer += 1;
 	    grav_line += World.y;
@@ -172,10 +216,10 @@ static void Map_error(int line_num)
     if (line_num > prev_line_num) {
 	prev_line_num = line_num;
 	if (++error_count <= max_error) {
-	    printf("Not enough map data on map data line %d\n", line_num);
+	    xpprintf("Not enough map data on map data line %d\n", line_num);
 	}
 	else if (error_count - max_error == 1) {
-	    printf("And so on...\n");
+	    xpprintf("And so on...\n");
 	}
     }
 #endif
@@ -418,9 +462,13 @@ void Grok_map(void)
 
 	for (x=0; x<World.x; x++) {
 	    u_byte *line = World.block[x];
+	    u_short *itemID = World.itemID[x];
 
 	    for (y=0; y<World.y; y++) {
 		char c = line[y];
+
+		itemID[y] = (u_short) -1;
+
 		switch (c) {
 		case ' ':
 		case '.':
@@ -446,6 +494,7 @@ void Grok_map(void)
 
 		case 'r':
 		    line[y] = CANNON;
+		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_UP;
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
@@ -457,6 +506,7 @@ void Grok_map(void)
 		    break;
 		case 'd':
 		    line[y] = CANNON;
+		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_LEFT;
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
@@ -468,6 +518,7 @@ void Grok_map(void)
 		    break;
 		case 'f':
 		    line[y] = CANNON;
+		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_RIGHT;
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
@@ -479,6 +530,7 @@ void Grok_map(void)
 		    break;
 		case 'c':
 		    line[y] = CANNON;
+		    itemID[y] = World.NumCannons;
 		    World.cannon[World.NumCannons].dir = DIR_DOWN;
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
@@ -491,6 +543,7 @@ void Grok_map(void)
 
 		case '#':
 		    line[y] = FUEL;
+		    itemID[y] = World.NumFuels;
 		    World.fuel[World.NumFuels].blk_pos.x = x;
 		    World.fuel[World.NumFuels].blk_pos.y = y;
 		    World.fuel[World.NumFuels].pix_pos.x = (x+0.5f)*BLOCK_SZ;
@@ -503,6 +556,7 @@ void Grok_map(void)
 
 		case '*':
 		    line[y] = TREASURE;
+		    itemID[y] = World.NumTreasures;
 		    World.treasures[World.NumTreasures].pos.x = x;
 		    World.treasures[World.NumTreasures].pos.y = y;
 		    World.treasures[World.NumTreasures].have = false;
@@ -516,6 +570,7 @@ void Grok_map(void)
 		    break;
 		case '!':
 		    line[y] = TARGET;
+		    itemID[y] = World.NumTargets;
 		    World.targets[World.NumTargets].pos.x = x;
 		    World.targets[World.NumTargets].pos.y = y;
 		    /*
@@ -532,6 +587,7 @@ void Grok_map(void)
 		    break;
 		case '%':
 		    line[y] = ITEM_CONCENTRATOR;
+		    itemID[y] = World.NumItemConcentrators;
 		    World.itemConcentrators[World.NumItemConcentrators].pos.x = x;
 		    World.itemConcentrators[World.NumItemConcentrators].pos.y = y;
 		    World.NumItemConcentrators++;
@@ -551,6 +607,7 @@ void Grok_map(void)
 		case '8':
 		case '9':
 		    line[y] = BASE;
+		    itemID[y] = World.NumBases;
 		    World.base[World.NumBases].pos.x = x;
 		    World.base[World.NumBases].pos.y = y;
 		    /*
@@ -577,6 +634,7 @@ void Grok_map(void)
 
 		case '+':
 		    line[y] = POS_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = -GRAVS_POWER;
@@ -584,6 +642,7 @@ void Grok_map(void)
 		    break;
 		case '-':
 		    line[y] = NEG_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = GRAVS_POWER;
@@ -591,6 +650,7 @@ void Grok_map(void)
 		    break;
 		case '>':
 		    line[y]= CWISE_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = GRAVS_POWER;
@@ -598,6 +658,7 @@ void Grok_map(void)
 		    break;
 		case '<':
 		    line[y] = ACWISE_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = -GRAVS_POWER;
@@ -605,6 +666,7 @@ void Grok_map(void)
 		    break;
 	        case 'i':
 		    line[y] = UP_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = GRAVS_POWER;
@@ -612,6 +674,7 @@ void Grok_map(void)
 		    break;
 	        case 'm':
 		    line[y] = DOWN_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = -GRAVS_POWER;
@@ -619,6 +682,7 @@ void Grok_map(void)
 		    break;
 	        case 'k':
 		    line[y] = RIGHT_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = GRAVS_POWER;
@@ -626,6 +690,7 @@ void Grok_map(void)
 		    break;
                 case 'j':
 		    line[y] = LEFT_GRAV;
+		    itemID[y] = World.NumGravs;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = -GRAVS_POWER;
@@ -651,6 +716,7 @@ void Grok_map(void)
 			worm_out++;
 		    }
 		    line[y] = WORMHOLE;
+		    itemID[y] = World.NumWormholes;
 		    World.NumWormholes++;
 		    break;
 
@@ -699,17 +765,22 @@ void Grok_map(void)
 
 	    int i;
 
-	    printf("Inconsistent use of wormholes, removing them.\n");
+	    xpprintf("Inconsistent use of wormholes, removing them.\n");
 	    for (i=0; i<World.NumWormholes; i++)
-		World.block
-		    [World.wormHoles[i].pos.x]
-		    [World.wormHoles[i].pos.y] = SPACE;
+		{
+			World.block
+				[World.wormHoles[i].pos.x]
+				[World.wormHoles[i].pos.y] = SPACE;
+			World.itemID
+				[World.wormHoles[i].pos.x]
+				[World.wormHoles[i].pos.y] = (u_short) -1;
+		}
 	    World.NumWormholes = 0;
 	}
 
 	if (BIT(World.rules->mode, TIMING) && World.NumChecks == 0) {
-	    printf("No checkpoints found while race mode (timing) was set.\n");
-	    printf("Turning off race mode.\n");
+	    xpprintf("No checkpoints found while race mode (timing) was set.\n");
+	    xpprintf("Turning off race mode.\n");
 	    CLR_BIT(World.rules->mode, TIMING);
 	}
 
@@ -749,17 +820,17 @@ void Grok_map(void)
 	}
     }
     if (BIT(World.rules->mode, TIMING)) {
-	WantedNumRobots = 0;
+	/* WantedNumRobots = 0; /* new robots can race */
 	Find_base_order();
     }
 
 #ifndef	SILENT
-    printf("World....: %s\nBases....: %d\nMapsize..: %dx%d\nTeam play: %s\n",
+    xpprintf("World....: %s\nBases....: %d\nMapsize..: %dx%d\nTeam play: %s\n",
 	   World.name, World.NumBases, World.x, World.y,
 	   BIT(World.rules->mode, TEAM_PLAY) ? "on" : "off");
 #endif
 
-    D( Print_map() );
+    D( Print_map(); )
 }
 
 
@@ -915,7 +986,7 @@ static u_short Find_closest_team(int posx, int posy)
 {
     u_short team = TEAM_NOT_SET;
     int i;
-    float closest = FLT_MAX, l;
+    DFLOAT closest = FLT_MAX, l;
 
     for (i=0; i<World.NumBases; i++) {
 	if (World.base[i].team == TEAM_NOT_SET)
@@ -941,7 +1012,7 @@ static u_short Find_closest_team(int posx, int posy)
 static void Find_base_order(void)
 {
     int			i, j, k, n;
-    float		cx, cy, dist;
+    DFLOAT		cx, cy, dist;
 
     if (!BIT(World.rules->mode, TIMING)) {
 	World.baseorder = NULL;
@@ -977,7 +1048,7 @@ static void Find_base_order(void)
 }
 
 
-float Wrap_findDir(float dx, float dy)
+DFLOAT Wrap_findDir(DFLOAT dx, DFLOAT dy)
 {
     dx = WRAP_DX(dx);
     dy = WRAP_DY(dy);
@@ -985,7 +1056,7 @@ float Wrap_findDir(float dx, float dy)
 }
 
 
-float Wrap_length(float dx, float dy)
+DFLOAT Wrap_length(DFLOAT dx, DFLOAT dy)
 {
     dx = WRAP_DX(dx);
     dy = WRAP_DY(dy);
@@ -996,7 +1067,7 @@ float Wrap_length(float dx, float dy)
 static void Compute_global_gravity(void)
 {
     int			xi, yi, dx, dy;
-    float		xforce, yforce, strength;
+    DFLOAT		xforce, yforce, strength;
     double		theta;
     vector		*grav;
 
@@ -1068,7 +1139,7 @@ static void Compute_local_gravity(void)
     int			xi, yi, g, gx, gy, ax, ay, dx, dy, gtype;
     int			first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi;
     int			min_xi, max_xi, min_yi, max_yi;
-    float		force, fx, fy;
+    DFLOAT		force, fx, fy;
     vector		*v, *grav, *tab, grav_tab[GRAV_RANGE+1][GRAV_RANGE+1];
 
 

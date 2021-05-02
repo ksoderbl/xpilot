@@ -1,10 +1,11 @@
-/* $Id: math.c,v 3.38 1997/01/24 17:32:53 bert Exp $
+/* $Id: math.c,v 3.46 1997/11/27 20:09:17 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,23 +26,39 @@
  * Actually used by SERVER and CLIENT but define SERVER
  * so to avoid X11 dependencies for the server
  */
+#if defined(_WINDOWS)
+#	ifdef	_XPILOTNTSERVER_
+#		include "../contrib/NT/xpilots/winServer.h"
+#		include <math.h>
+#	elif !defined(_XPMONNT_)
+#		include "../contrib/NT/xpilot/winX.h"
+#		include "../contrib/NT/xpilot/winClient.h"
+#		include <math.h>
+#	endif
+#else
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
 
-#define SERVER
+#endif
+
+/* #define SERVER */
 #include "version.h"
 #include "config.h"
 #include "const.h"
 #include "draw.h"
 #include "error.h"
 
+#ifdef	WINDOWSCALING
+#include "client.h"
+#endif
+
 char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.38 1997/01/24 17:32:53 bert Exp $";
+    "@(#)$Id: math.c,v 3.46 1997/11/27 20:09:17 bert Exp $";
 #endif
 
 
@@ -51,8 +68,8 @@ static int	shapeLimits;
 
 static int	Get_shape_keyword(char *keyw);
 
-float		tbl_sin[TABLE_SIZE];
-float		tbl_cos[TABLE_SIZE];
+DFLOAT		tbl_sin[TABLE_SIZE];
+DFLOAT		tbl_cos[TABLE_SIZE];
 
 
 int ON(char *optval)
@@ -83,14 +100,14 @@ int mod(int x, int y)
 }
 
 
-int f2i(float f)
+int f2i(DFLOAT f)
 {
     return (f < 0) ? -(int)(0.5f - f) : (int)(f + 0.5f);
 }
 
-float findDir(float x, float y)
+DFLOAT findDir(DFLOAT x, DFLOAT y)
 {
-    float angle;
+    DFLOAT angle;
 
     if (x != 0.0 || y != 0.0)
 	angle = atan2(y, x) / (2 * PI);
@@ -103,13 +120,13 @@ float findDir(float x, float y)
 }
 
 
-float rfrac()
+DFLOAT rfrac(void)
 {
     /*
      * Return a pseudo-random value in the range { 0 <= x < 1 }.
      * Assume all RAND_MAXs are at least 32767 and divide by 32768.
      */
-    return (float)((double)(rand() & 0x7FFF) * 0.000030517578125);
+    return (DFLOAT)((double)(rand() & 0x7FFF) * 0.000030517578125);
 }
 
 void Make_table(void)
@@ -273,9 +290,13 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
     w->num_l_light = 0;
     w->num_r_light = 0;
     w->num_m_rack  = 0;
+#ifdef	_NAMEDSHIPS
+    w->name = NULL;
+    w->author = NULL;
+#endif
 
     if (debugShapeParsing) {
-	printf("parsing shape: %s\n", ship_shape_str);
+	xpprintf("parsing shape: %s\n", ship_shape_str);
     }
 
     for (str = ship_shape_str; (str = strchr(str, '(' )) != NULL; ) {
@@ -286,7 +307,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    if (isdigit(*str)) {
 		shape_version = 0x3100;
 		if (verboseShapeParsing) {
-		    printf("ship shape is in old format\n");
+		    xpprintf("ship shape is in old format\n");
 		}
 		break;
 	    }
@@ -307,7 +328,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	}
 	if (str[i] != ':') {
 	    if (verboseShapeParsing) {
-		printf("Missing colon in ship shape: %s\n", keyw);
+		xpprintf("Missing colon in ship shape: %s\n", keyw);
 	    }
 	    continue;
 	}
@@ -326,14 +347,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing ship shape coordinate in: \"%s\"\n",
+			xpprintf("Missing ship shape coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_points >= MAX_SHIP_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many ship shape coordinates\n");
+			xpprintf("Too many ship shape coordinates\n");
 		    }
 		}
 		else {
@@ -341,7 +362,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    pt[w->num_points].y = iny;
 		    w->num_points++;
 		    if (debugShapeParsing) {
-			printf("ship point at %d,%d\n", inx, iny);
+			xpprintf("ship point at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -351,7 +372,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	case 1:		/* Keyword is 'mainGun' */
 	    if (mainGunSet) {
 		if (verboseShapeParsing) {
-		    printf("Ship shape keyword \"%s\" multiple defined\n",
+		    xpprintf("Ship shape keyword \"%s\" multiple defined\n",
 			   keyw);
 		}
 		break;
@@ -359,7 +380,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    while (*teststr == ' ') teststr++;
 	    if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		if (verboseShapeParsing) {
-		    printf("Missing main gun coordinate in: \"%s\"\n",
+		    xpprintf("Missing main gun coordinate in: \"%s\"\n",
 			   teststr);
 		}
 	    }
@@ -368,7 +389,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		m_gun.y = iny;
 		mainGunSet = true;
 		if (debugShapeParsing) {
-		    printf("main gun at %d,%d\n", inx, iny);
+		    xpprintf("main gun at %d,%d\n", inx, iny);
 		}
 	    }
 	    break;
@@ -378,14 +399,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing left gun coordinate in: \"%s\"\n",
+			xpprintf("Missing left gun coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_l_gun >= MAX_GUN_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many left gun coordinates\n");
+			xpprintf("Too many left gun coordinates\n");
 		    }
 		}
 		else {
@@ -393,7 +414,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    l_gun[w->num_l_gun].y = iny;
 		    w->num_l_gun++;
 		    if (debugShapeParsing) {
-			printf("left gun at %d,%d\n", inx, iny);
+			xpprintf("left gun at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -405,14 +426,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d" ,&inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing right gun coordinate in: \"%s\"\n",
+			xpprintf("Missing right gun coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_r_gun >= MAX_GUN_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many right gun coordinates\n");
+			xpprintf("Too many right gun coordinates\n");
 		    }
 		}
 		else {
@@ -420,7 +441,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    r_gun[w->num_r_gun].y = iny;
 		    w->num_r_gun++;
 		    if (debugShapeParsing) {
-			printf("right gun at %d,%d\n", inx, iny);
+			xpprintf("right gun at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -432,14 +453,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing left light coordinate in: \"%s\"\n",
+			xpprintf("Missing left light coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_l_light >= MAX_LIGHT_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many left light coordinates\n");
+			xpprintf("Too many left light coordinates\n");
 		    }
 		}
 		else {
@@ -447,7 +468,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    l_light[w->num_l_light].y = iny;
 		    w->num_l_light++;
 		    if (debugShapeParsing) {
-			printf("left light at %d,%d\n", inx, iny);
+			xpprintf("left light at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -459,14 +480,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing right light coordinate in: \"%s\"\n",
+			xpprintf("Missing right light coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_r_light >= MAX_LIGHT_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many right light coordinates\n");
+			xpprintf("Too many right light coordinates\n");
 		    }
 		}
 		else {
@@ -474,7 +495,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    r_light[w->num_r_light].y = iny;
 		    w->num_r_light++;
 		    if (debugShapeParsing) {
-			printf("right light at %d,%d\n", inx, iny);
+			xpprintf("right light at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -484,7 +505,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	case 6:		/* Keyword is 'engine' */
 	    if (engineSet) {
 		if (verboseShapeParsing) {
-		    printf("Ship shape keyword \"%s\" multiple defined\n",
+		    xpprintf("Ship shape keyword \"%s\" multiple defined\n",
 			   keyw);
 		}
 		break;
@@ -492,7 +513,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    while (*teststr == ' ') teststr++;
 	    if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		if (verboseShapeParsing) {
-		    printf("Missing engin coordinate in: \"%s\"\n",
+		    xpprintf("Missing engine coordinate in: \"%s\"\n",
 			   teststr);
 		}
 	    }
@@ -501,7 +522,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		engine.y = iny;
 		engineSet = true;
 		if (debugShapeParsing) {
-		    printf("engine at %d,%d\n", inx, iny);
+		    xpprintf("engine at %d,%d\n", inx, iny);
 		}
 	    }
 	    break;
@@ -511,14 +532,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing missile rack coordinate in: \"%s\"\n",
+			xpprintf("Missing missile rack coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_m_rack >= MAX_RACK_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many missile rack coordinates\n");
+			xpprintf("Too many missile rack coordinates\n");
 		    }
 		}
 		else {
@@ -526,7 +547,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    m_rack[w->num_m_rack].y = iny;
 		    w->num_m_rack++;
 		    if (debugShapeParsing) {
-			printf("missile rack at %d,%d\n", inx, iny);
+			xpprintf("missile rack at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -534,9 +555,19 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    break;
 
 	case 8:		/* Keyword is 'name' */
+#ifdef	_NAMEDSHIPS
+	    w->name = (char*)malloc(strlen(teststr)+1);
+	    strcpy(w->name, teststr);
+	    w->name[strlen(w->name)-1] = '\0';
+#endif
 	    break;
 
 	case 9:		/* Keyword is 'author' */
+#ifdef	_NAMEDSHIPS
+	    w->author = (char*)malloc(strlen(teststr)+1);
+	    strcpy(w->author, teststr);
+	    w->author[strlen(w->author)-1] = '\0';
+#endif
 	    break;
 
 	case 10:		/* Keyword is 'leftRearGun' */
@@ -544,14 +575,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d", &inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing left rear gun coordinate in: \"%s\"\n",
+			xpprintf("Missing left rear gun coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_l_rgun >= MAX_GUN_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many left rear gun coordinates\n");
+			xpprintf("Too many left rear gun coordinates\n");
 		    }
 		}
 		else {
@@ -559,7 +590,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    l_rgun[w->num_l_rgun].y = iny;
 		    w->num_l_rgun++;
 		    if (debugShapeParsing) {
-			printf("left rear gun at %d,%d\n", inx, iny);
+			xpprintf("left rear gun at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -571,14 +602,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		while (*teststr == ' ') teststr++;
 		if (sscanf(teststr, "%d,%d" ,&inx, &iny) != 2) {
 		    if (verboseShapeParsing) {
-			printf("Missing right rear gun coordinate in: \"%s\"\n",
+			xpprintf("Missing right rear gun coordinate in: \"%s\"\n",
 			       teststr);
 		    }
 		    break;
 		}
 		if (w->num_r_rgun >= MAX_GUN_PTS) {
 		    if (verboseShapeParsing) {
-			printf("Too many right rear gun coordinates\n");
+			xpprintf("Too many right rear gun coordinates\n");
 		    }
 		}
 		else {
@@ -586,7 +617,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		    r_rgun[w->num_r_rgun].y = iny;
 		    w->num_r_rgun++;
 		    if (debugShapeParsing) {
-			printf("right rear gun at %d,%d\n", inx, iny);
+			xpprintf("right rear gun at %d,%d\n", inx, iny);
 		    }
 		}
 		teststr = strchr(teststr, ' ');
@@ -595,7 +626,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
 	default:
 	    if (verboseShapeParsing) {
-		printf("Invalid ship shape keyword: \"%s\"\n", keyw);
+		xpprintf("Invalid ship shape keyword: \"%s\"\n", keyw);
 	    }
 	    /* the good thing about this format is that we can just ignore
 	     * this.  it is likely to be a new extension we don't know
@@ -616,7 +647,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    || ofRight >= ofNum
 	    ) {
 	    if (verboseShapeParsing) {
-		printf("Invalid ship shape header: \"%s\"\n", str);
+		xpprintf("Invalid ship shape header: \"%s\"\n", str);
 	    }
 	    return -1;
 	}
@@ -625,7 +656,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    str = strchr(str + 1, '(');
 	    if (!str) {
 		if (verboseShapeParsing) {
-		    printf("Bad ship shape: "
+		    xpprintf("Bad ship shape: "
 			   "only %d points defined, %d expected\n",
 			   i, ofNum);
 		}
@@ -633,7 +664,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    }
 	    if (sscanf(str, "(%d,%d)", &inx, &iny) != 2) {
 		if (verboseShapeParsing) {
-		    printf("Bad ship shape: format error in point %d\n",
+		    xpprintf("Bad ship shape: format error in point %d\n",
 			   i);
 		}
 		return -1;
@@ -662,7 +693,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
     if (w->num_points < 3) {
 	if (verboseShapeParsing) {
-	    printf("not enough ship points defined\n");
+	    xpprintf("not enough ship points defined\n");
 	}
 	return -1;
     }
@@ -759,20 +790,20 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    || right < minRight
 	    || count < minCount) {
 	    if (verboseShapeParsing) {
-		printf("Ship shape does not meet size requirements (%d,%d,%d,%d,%d)\n",
+		xpprintf("Ship shape does not meet size requirements (%d,%d,%d,%d,%d)\n",
 		       low, hi, left, right, count);
 	    }
 	    return -1;
 	}
 	if (max != 0) {
 	    if (verboseShapeParsing) {
-		printf("Ship shape exceeds size maxima.\n");
+		xpprintf("Ship shape exceeds size maxima.\n");
 	    }
 	    return -1;
 	}
 	if (leftmost - rightmost + highest - lowest < minSize) {
 	    if (verboseShapeParsing) {
-		printf("Ship shape is not big enough.\n"
+		xpprintf("Ship shape is not big enough.\n"
 		       "The ship's width and height added together should\n"
 		       "be at least %d.\n", minSize);
 	    }
@@ -927,14 +958,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 
 	if (GRID_CHK(m_gun.x, m_gun.y)) {
 	    if (verboseShapeParsing) {
-		printf("Main gun outside ship\n");
+		xpprintf("Main gun outside ship\n");
 	    }
 	    invalid++;
 	}
 	for (i = 0; i < w->num_l_gun; i++) {
 	    if (GRID_CHK(l_gun[i].x, l_gun[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Left gun %d outside ship\n", i);
+		    xpprintf("Left gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -942,7 +973,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_r_gun; i++) {
 	    if (GRID_CHK(r_gun[i].x, r_gun[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Right gun %d outside ship\n", i);
+		    xpprintf("Right gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -950,7 +981,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_l_rgun; i++) {
 	    if (GRID_CHK(l_rgun[i].x, l_rgun[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Left rear gun %d outside ship\n", i);
+		    xpprintf("Left rear gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -958,7 +989,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_r_rgun; i++) {
 	    if (GRID_CHK(r_rgun[i].x, r_rgun[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Right rear gun %d outside ship\n", i);
+		    xpprintf("Right rear gun %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -966,7 +997,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_m_rack; i++) {
 	    if (GRID_CHK(m_rack[i].x, m_rack[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Missile rack %d outside ship\n", i);
+		    xpprintf("Missile rack %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -974,7 +1005,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_l_light; i++) {
 	    if (GRID_CHK(l_light[i].x, l_light[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Left light %d outside ship\n", i);
+		    xpprintf("Left light %d outside ship\n", i);
 		}
 		invalid++;
 	    }
@@ -982,14 +1013,14 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	for (i = 0; i < w->num_r_light; i++) {
 	    if (GRID_CHK(r_light[i].x, r_light[i].y)) {
 		if (verboseShapeParsing) {
-		    printf("Right light %d outside ship\n", i);
+		    xpprintf("Right light %d outside ship\n", i);
 		}
 		invalid++;
 	    }
 	}
 	if (GRID_CHK(engine.x, engine.y)) {
 	    if (verboseShapeParsing) {
-		printf("Engine outside of ship\n");
+		xpprintf("Engine outside of ship\n");
 	    }
 	    invalid++;
 	    /* this could happen in case of an old format ship shape. */
@@ -1042,7 +1073,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	|| (w->num_m_rack
 	    && !(w->m_rack[0] = (position*)malloc(w->num_m_rack * i)))
 	) {
-	error("Not enoug memory for ship shape");
+	error("Not enough memory for ship shape");
 	if (w->pts[0]) {
 	    free(w->pts[0]);
 	    if (w->l_gun[0]) {
@@ -1146,7 +1177,7 @@ static wireobj *do_parse_shape(char *str)
 
     if (!str || !*str) {
 	if (debugShapeParsing) {
-	    printf("shape str not set\n");
+	    xpprintf("shape str not set\n");
 	}
 	return Default_ship();
     }
@@ -1157,12 +1188,12 @@ static wireobj *do_parse_shape(char *str)
     if (shape2wire(str, w) != 0) {
 	free(w);
 	if (debugShapeParsing) {
-	    printf("shape2wire failed\n");
+	    xpprintf("shape2wire failed\n");
 	}
 	return Default_ship();
     }
     if (debugShapeParsing) {
-	printf("shape2wire succeeded\n");
+	xpprintf("shape2wire succeeded\n");
     }
 
     return(w);
@@ -1179,6 +1210,10 @@ void Free_ship_shape(wireobj *w)
 	if (w->num_l_light > 0 && w->l_light[0]) free(w->l_light[0]);
 	if (w->num_r_light > 0 && w->r_light[0]) free(w->r_light[0]);
 	if (w->num_m_rack > 0 && w->m_rack[0]) free(w->m_rack[0]);
+#ifdef	_NAMEDSHIPS
+	if (w->name) free(w->name);
+	if (w->author) free(w->author);
+#endif
 	free(w);
     }
 }
@@ -1417,7 +1452,7 @@ void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 	error("BUG: convert ship: buffer overflow (%d,%d)", buflen, extlen);
     }
     if (debugShapeParsing) {
-	printf("ship 2 str: %s %s\n", buf, ext);
+	xpprintf("ship 2 str: %s %s\n", buf, ext);
     }
 }
 
@@ -1484,12 +1519,12 @@ void Calculate_shield_radius(wireobj *w)
     int			radius2, max_radius = 0;
 
     for (i = 0; i < w->num_points; i++) {
-	radius2 = sqr(w->pts[i][0].x) + sqr(w->pts[i][0].y);
+	radius2 = (int)(sqr(w->pts[i][0].x) + sqr(w->pts[i][0].y));
 	if (radius2 > max_radius) {
 	    max_radius = radius2;
 	}
     }
-    max_radius = 2.0 * sqrt((double) max_radius);
+    max_radius = (int)(2.0 * sqrt(max_radius));
     w->shield_radius = (max_radius + 2 <= 34)
 			? 34
 			: (max_radius + 2 - (max_radius & 1));

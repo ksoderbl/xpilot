@@ -1,10 +1,11 @@
-/* $Id: paintdata.c,v 3.3 1996/12/17 12:25:58 bert Exp $
+/* $Id: paintdata.c,v 3.10 1997/11/27 20:09:25 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -38,6 +43,7 @@
 #include "paintdata.h"
 #include "record.h"
 #include "xinit.h"
+#include "protoclient.h"
 
 char paintdata_version[] = VERSION;
 
@@ -307,10 +313,11 @@ int Rectangle_add(int color, int x, int y, int width, int height)
 {
     XRectangle		t;
 
-    t.x = x;
-    t.y = y;
-    t.width = width;
-    t.height = height;
+    t.x = WINSCALE(x);
+    t.y = WINSCALE(y);
+    t.width = WINSCALE(width);
+    t.height = WINSCALE(height);
+
     STORE(XRectangle, rect_ptr[color], num_rect[color], max_rect[color], t);
     return 0;
 }
@@ -345,10 +352,10 @@ int Arc_add(int color,
 {
     XArc t;
 
-    t.x = x;
-    t.y = y;
-    t.width = width;
-    t.height = height;
+    t.x = WINSCALE(x);
+    t.y = WINSCALE(y);
+    t.width = WINSCALE(width);
+    t.height = WINSCALE(height);
     t.angle1 = angle1;
     t.angle2 = angle2;
     STORE(XArc, arc_ptr[color], num_arc[color], max_arc[color], t);
@@ -383,10 +390,10 @@ int Segment_add(int color, int x1, int y1, int x2, int y2)
 {
     XSegment t;
 
-    t.x1 = x1;
-    t.y1 = y1;
-    t.x2 = x2;
-    t.y2 = y2;
+    t.x1 = WINSCALE(x1);
+    t.y1 = WINSCALE(y1);
+    t.x2 = WINSCALE(x2);
+    t.y2 = WINSCALE(y2);
     STORE(XSegment, seg_ptr[color], num_seg[color], max_seg[color], t);
     return 0;
 }
@@ -640,49 +647,49 @@ int Handle_item(int x, int y, int type)
     return 0;
 }
 
-#define STORE_DEBRIS(_type, _p, _n) \
-    if (_n > max) {						\
-	if (max == 0) {						\
-	    ptr = (debris_t *)malloc(n * sizeof(*ptr));		\
+#define STORE_DEBRIS(typ_e, _p, _n) \
+    if (_n > max_) {						\
+	if (max_ == 0) {						\
+	    ptr_ = (debris_t *)malloc(n * sizeof(*ptr_));		\
 	} else {						\
-	    ptr = (debris_t *)realloc(ptr, _n * sizeof(*ptr));	\
+	    ptr_ = (debris_t *)realloc(ptr_, _n * sizeof(*ptr_));	\
 	}							\
-	if (ptr == NULL) {					\
+	if (ptr_ == NULL) {					\
 	    error("No memory for debris");			\
-	    num = max = 0;					\
+	    num_ = max_ = 0;					\
 	    return -1;						\
 	}							\
-	max = _n;						\
+	max_ = _n;						\
     }								\
     else if (_n <= 0) {						\
 	printf("debris %d < 0\n", _n);				\
 	return 0;						\
     }								\
-    num = _n;							\
-    memcpy(ptr, _p, _n * sizeof(*ptr));				\
+    num_ = _n;							\
+    memcpy(ptr_, _p, _n * sizeof(*ptr_));				\
     return 0;
 
 
 int Handle_fastshot(int type, u_byte *p, int n)
 {
-#define num		(num_fastshot[type])
-#define max		(max_fastshot[type])
-#define ptr		(fastshot_ptr[type])
+#define num_		(num_fastshot[type])
+#define max_		(max_fastshot[type])
+#define ptr_		(fastshot_ptr[type])
     STORE_DEBRIS(type, p, n);
-#undef num
-#undef max
-#undef ptr
+#undef num_
+#undef max_
+#undef ptr_
 }
 
 int Handle_debris(int type, u_byte *p, int n)
 {
-#define num		(num_debris[type])
-#define max		(max_debris[type])
-#define ptr		(debris_ptr[type])
+#define num_		(num_debris[type])
+#define max_		(max_debris[type])
+#define ptr_		(debris_ptr[type])
     STORE_DEBRIS(type, p, n);
-#undef num
-#undef max
-#undef ptr
+#undef num_
+#undef max_
+#undef ptr_
 }
 
 int Handle_ecm(int x, int y, int size)
@@ -794,3 +801,117 @@ int Handle_vdecor(int x, int y, int xi, int yi, int type)
     return 0;
 }
 
+void paintdataCleanup(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_COLORS; i++) {
+	if (max_rect[i] > 0 && rect_ptr[i]) {
+	    max_rect[i] = 0;
+	    free(rect_ptr[i]);
+	}
+	if (max_arc[i] > 0 && arc_ptr[i]) {
+	    max_arc[i] = 0;
+	    free(arc_ptr[i]);
+	}
+	if (max_seg[i] > 0 && seg_ptr[i]) {
+	    max_seg[i] = 0;
+	    free(seg_ptr[i]);
+	}
+    }
+    if (max_refuel > 0 && refuel_ptr) {
+	max_refuel = 0;
+	free(refuel_ptr);
+	refuel_ptr = 0;
+    }
+    if (max_connector > 0 && connector_ptr) {
+	max_connector = 0;
+	free(connector_ptr);
+	connector_ptr = 0;
+    }
+    if (max_laser > 0 && laser_ptr) {
+	max_laser = 0;
+	free(laser_ptr);
+	laser_ptr = 0;
+    }
+    if (max_missile > 0 && missile_ptr) {
+	max_missile = 0;
+	free(missile_ptr);
+	missile_ptr = 0;
+    }
+    if (max_ball > 0 && ball_ptr) {
+	max_ball = 0;
+	free(ball_ptr);
+	ball_ptr = 0;
+    }
+    if (max_ship > 0 && ship_ptr) {
+	max_ship = 0;
+	free(ship_ptr);
+	ship_ptr = 0;
+    }
+    if (max_mine > 0 && mine_ptr) {
+	max_mine = 0;
+	free(mine_ptr);
+	mine_ptr = 0;
+    }
+    if (max_ecm > 0 && ecm_ptr) {
+	max_ecm = 0;
+	free(ecm_ptr);
+	ecm_ptr = 0;
+    }
+    if (max_trans > 0 && trans_ptr) {
+	max_trans = 0;
+	free(trans_ptr);
+	trans_ptr = 0;
+    }
+    if (max_paused > 0 && paused_ptr) {
+	max_paused = 0;
+	free(paused_ptr);
+	paused_ptr = 0;
+    }
+    if (max_radar > 0 && radar_ptr) {
+	max_radar = 0;
+	free(radar_ptr);
+	radar_ptr = 0;
+    }
+    if (max_vcannon > 0 && vcannon_ptr) {
+	max_vcannon = 0;
+	free(vcannon_ptr);
+	vcannon_ptr = 0;
+    }
+    if (max_vfuel > 0 && vfuel_ptr) {
+	max_vfuel = 0;
+	free(vfuel_ptr);
+	vfuel_ptr = 0;
+    }
+    if (max_vbase > 0 && vbase_ptr) {
+	max_vbase = 0;
+	free(vbase_ptr);
+	vbase_ptr = 0;
+    }
+    if (max_vdecor > 0 && vdecor_ptr) {
+	max_vdecor = 0;
+	free(vdecor_ptr);
+	vdecor_ptr = 0;
+    }
+    if (max_itemtype > 0 && itemtype_ptr) {
+	max_itemtype = 0;
+	free(itemtype_ptr);
+	itemtype_ptr = 0;
+    }
+}
+
+#ifdef	WINDOWSCALING
+int	scaleArray[MAX_TOP_WIDTH*2];
+
+void init_ScaleArray()
+{
+	int	i;
+	if (scaleFactor == 0.0)
+		scaleFactor = 1.0;
+	for (i=0; i<MAX_TOP_WIDTH*2; i++)
+	{
+		scaleArray[i] = (int)(i/scaleFactor);
+	}
+}
+#endif

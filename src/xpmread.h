@@ -1,10 +1,11 @@
-/* $Id: xpmread.h,v 3.3 1996/10/12 08:37:21 bert Exp $
+/* $Id: xpmread.h,v 3.9 1997/11/27 20:09:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,10 +34,11 @@
 /* 
  * Public interface to xpmread.c.
  */
-extern Pixmap xpm_pixmap_from_data(char **data);
+extern Pixmap xpm_pixmap_from_data(const char **data);
 extern Pixmap xpm_pixmap_from_file(char *filename);
+#ifndef	_WINDOWS
 extern XImage *xpm_image_from_pixmap(Pixmap pixmap);
-
+#endif
 #ifdef XPM_READ_C
 /*
  * The rest are private implementation details.
@@ -80,7 +82,7 @@ typedef struct XPM_struct {
 typedef struct XPM_read_struct {
     char		*filename;
     char		*data;
-    char		**static_data;
+    const char		**static_data;
     unsigned		data_size;
     char		*ptr;
     char		*token;

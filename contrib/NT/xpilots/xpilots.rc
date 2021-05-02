@@ -1,0 +1,607 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\xpilots.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\xpilots.ico"
+IDI_XPILOT              ICON    DISCARDABLE     "res\\icon1.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 287, 94
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About XPilot-server"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,18,20
+    LTEXT           "version x",IDC_VERSION,40,23,119,8,SS_NOPREFIX
+    DEFPUSHBUTTON   "OK",IDOK,248,7,32,14,WS_GROUP
+    LTEXT           "XPilot is copyright © 1991-97 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
+                    IDC_STATIC,10,41,270,22
+    PUSHBUTTON      "www.xpilot.org",IDC_BUTTON_WWW_XPILOT_ORG,32,73,103,14
+    PUSHBUTTON      "www.buckosoft.com/xpilot/",IDC_BUTTON_WWW_BUCKOSOFT_COM,
+                    151,73,103,14
+END
+
+IDD_XPILOTS_DIALOG DIALOGEX 0, 0, 237, 143
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | 
+    WS_THICKFRAME
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_CONTEXTHELP | WS_EX_APPWINDOW
+CAPTION "XPilot-server"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    PUSHBUTTON      "&Start Server",IDC_START_SERVER,7,7,50,14
+    PUSHBUTTON      "&Configure",IDC_CONFIGURE,7,26,50,14
+    LTEXT           "Map:",IDC_STATIC,62,9,19,8
+    LTEXT           "Active Map Here",IDC_MAPNAME,112,9,118,8
+    GROUPBOX        "",IDC_STATIC,107,4,123,16
+    EDITTEXT        IDC_EDIT1,7,71,223,65,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Player count",IDC_STATIC,62,28,40,8
+    LTEXT           "0",IDC_PLAYERCOUNT,112,28,11,8
+    GROUPBOX        "",IDC_STATIC,107,22,19,16
+END
+
+IDD_CONFIG_DLG DIALOG DISCARDABLE  0, 0, 270, 222
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Configure"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_COMMANDLINE,7,25,204,70,ES_MULTILINE | WS_VSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,213,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,213,24,50,14
+    LTEXT           "Command line",IDC_STATIC,7,14,45,8
+    PUSHBUTTON      "&Set Options",IDC_SETOPTIONS,213,44,50,14
+END
+
+IDD_EXITXPILOTS DIALOG DISCARDABLE  0, 0, 185, 94
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Exit xpilots?"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Yes, Exit",IDOK,16,73,68,14
+    PUSHBUTTON      "No, Keep Playing",IDCANCEL,100,73,68,14
+    CTEXT           "Game is in progress, exit anyways?",IDC_STATIC,34,22,
+                    114,8
+END
+
+IDD_REALLYSHUTDOWN DIALOG DISCARDABLE  0, 0, 186, 58
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Really Shutdown the Server?"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Cancel",IDCANCEL,129,24,50,14
+    EDITTEXT        IDC_EDIT1,75,11,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    LTEXT           "Number of seconds\nbefore Shutdown",IDC_STATIC,7,9,70,
+                    19
+    DEFPUSHBUTTON   "OK",IDOK,129,7,50,14
+END
+
+IDD_CONF_GENERAL DIALOGEX 0, 0, 259, 213
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "General"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_CHECK_REPORTTOMETA,"Button",BS_AUTO3STATE | 
+                    WS_TABSTOP,244,8,8,8,WS_EX_RIGHT
+    CONTROL         "Slider1",IDC_SLIDER_FPS,"msctls_trackbar32",
+                    TBS_AUTOTICKS | TBS_TOP | WS_TABSTOP,7,62,100,19
+    EDITTEXT        IDC_EDIT1,60,7,52,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Map",IDC_BUTTON1,8,6,47,14
+    EDITTEXT        IDC_EDIT_FPS,81,46,22,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_EDIT2,60,21,52,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "defaultsFile",IDC_BUTTON2,8,21,47,14
+    PUSHBUTTON      "reportToMeta",IDC_BUTTON_REPORTTOMETA,169,7,71,12,
+                    BS_FLAT
+    PUSHBUTTON      "noQuit",IDC_BUTTON_NOQUIT,169,22,71,12,BS_FLAT
+    CONTROL         "",IDC_CHECK_NOQUIT,"Button",BS_AUTO3STATE | WS_TABSTOP,
+                    244,24,8,8,WS_EX_RIGHT
+    PUSHBUTTON      "framesPerSecond",IDC_BUTTON_FRAMESPERSECOND,7,46,71,12,
+                    BS_FLAT
+END
+
+IDD_CONF_ITEMS DIALOG DISCARDABLE  0, 0, 371, 271
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Items"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "maxMissilesPerPack",IDC_CHECK_MAXMISSILESPERPACK,
+                    "Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,20,
+                    86,13
+    EDITTEXT        IDC_EDIT_MAXMISSILESPERPACK,96,20,40,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "nukeMinSmarts",IDC_CHECK_NUKEMINSMARTS,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,35,86,13
+    EDITTEXT        IDC_EDIT_NUKEMINSMARTS,96,35,40,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "nukeMinMines",IDC_CHECK_NUKEMINMINES,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,50,86,13
+    EDITTEXT        IDC_EDIT_NUKEMINMINES,96,50,40,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "mineFuseTime",IDC_CHECK_MINEFUSETIME,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,65,86,13
+    EDITTEXT        IDC_EDIT_MINEFUSETIME,96,65,40,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "nukeClusterDamage",IDC_CHECK_NUKECLUSTERDAMAGE,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,80,86,13
+    CONTROL         "Slider1",IDC_SLIDER_NUKECLUSTERDAMAGE,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    94,80,100,14
+    CONTROL         "movingItemProb",IDC_CHECK_MOVINGITEMPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,95,86,13
+    CONTROL         "Slider1",IDC_SLIDER_MOVINGITEMPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,94,95,100,15
+    CONTROL         "dropItemOnKillProb",IDC_CHECK_DROPITEMONKILLPROB,
+                    "Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,
+                    110,86,13
+    CONTROL         "Slider1",IDC_SLIDER_DROPITEMONKILLPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    94,110,100,15
+    CONTROL         "destroyItemInCollisionProb",
+                    IDC_CHECK_DESTROYITEMINCOLLISIONPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,125,86,13
+    CONTROL         "Slider1",IDC_SLIDER_DESTROYITEMINCOLLISIONPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    94,125,100,15
+    CONTROL         "itemProbMult",IDC_CHECK_ITEMPROBMULT,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,234,86,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMPROBMULT,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,94,234,100,15
+    CONTROL         "maxItemDensity",IDC_CHECK_MAXITEMDENSITY,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,249,86,13
+    CONTROL         "Slider1",IDC_SLIDER_MAXITEMDENSITY,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,94,249,100,15
+    CONTROL         "itemConcentratorRadius",
+                    IDC_CHECK_ITEMCONCENTRATORRADIUS,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,170,86,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMCONCENTRATORRADIUS,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    94,170,100,15
+    CONTROL         "itemConcentratorProb",IDC_CHECK_ITEMCONCENTRATORPROB,
+                    "Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,
+                    185,86,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMCONCENTRATORPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    94,185,100,15
+    CONTROL         "rogueHeatProb",IDC_CHECK_ROGUEHEATPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,140,86,13
+    CONTROL         "Slider1",IDC_SLIDER_ROGUEHEATPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,94,140,100,15
+    CONTROL         "rogueMineProb",IDC_CHECK_ROGUEMINEPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,7,155,86,13
+    CONTROL         "Slider1",IDC_SLIDER_ROGUEMINEPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,94,155,100,15
+    LTEXT           "Probability of items appearing",IDC_STATIC,199,7,92,8
+    CONTROL         "EnergyPack",IDC_CHECK_ITEMENERGYPACK,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,21,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMENERGYPACK,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,20,100,15
+    CONTROL         "Tank",IDC_CHECK_ITEMTANKPROB,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,199,35,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMTANKPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,35,100,15
+    CONTROL         "ECM",IDC_CHECK_ITEMECMPROB,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,199,50,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMECMPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,50,100,15
+    CONTROL         "Mine",IDC_CHECK_ITEMMINEPROB,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,199,65,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMMINEPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,65,100,15
+    CONTROL         "Missile",IDC_CHECK_ITEMMISSILEPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,80,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMMISSILEPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,80,100,15
+    CONTROL         "Cloak",IDC_CHECK_ITEMCLOAKPROB,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,199,95,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMCLOAKPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,95,100,15
+    CONTROL         "Sensor",IDC_CHECK_ITEMSENSORPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,110,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMSENSORPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,110,100,15
+    CONTROL         "Wideangle",IDC_CHECK_ITEMWIDEANGLEPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,125,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMWIDEANGLEPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,125,100,15
+    CONTROL         "Rearshot",IDC_CHECK_ITEMREARSHOTPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,140,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMREARSHOTPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,140,100,15
+    CONTROL         "Afterburner",IDC_CHECK_ITEMAFTERBURNERPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,155,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMAFTERBURNERPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,155,100,15
+    CONTROL         "Transporter",IDC_CHECK_ITEMTRANSPORTERPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,170,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMTRANSPORTERPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,170,100,15
+    CONTROL         "Laser",IDC_CHECK_ITEMLASERPROB,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,199,185,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMLASERPROB,"msctls_trackbar32",
+                    TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,264,185,100,15
+    CONTROL         "EmergencyThrust",IDC_CHECK_ITEMEMERGENCYTHRUSTPROB,
+                    "Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,
+                    200,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMEMERGENCYTHRUSTPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,200,100,15
+    CONTROL         "TractorBeam",IDC_CHECK_ITEMTRACTORBEAMPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,215,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMTRACTORBEAMPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,215,100,15
+    CONTROL         "Autopilot",IDC_CHECK_ITEMAUTOPILOTPROB,"Button",
+                    BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,230,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMAUTOPILOTPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,230,100,15
+    CONTROL         "EmergencyShield",IDC_CHECK_ITEMEMERGENCYSHIELDPROB,
+                    "Button",BS_AUTOCHECKBOX | BS_PUSHLIKE | WS_TABSTOP,199,
+                    245,60,13
+    CONTROL         "Slider1",IDC_SLIDER_ITEMEMERGENCYSHIELDPROB,
+                    "msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,
+                    264,245,100,15
+END
+
+IDD_EXPIRED DIALOG DISCARDABLE  0, 0, 274, 126
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Uh-oh"
+FONT 10, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,112,105,50,14
+    CTEXT           "This version of XPilotNT-Server has expired",IDC_STATIC,
+                    7,17,260,8
+    CTEXT           "Information about updates can be obtained at",
+                    IDC_STATIC,7,34,260,8
+    CTEXT           "www.buckosoft.com",IDC_STATIC,7,52,260,8
+    CTEXT           "or",IDC_STATIC,99,66,75,8
+    CTEXT           "news:rec.computer.games.xpilot",IDC_STATIC,7,85,260,8
+    ICON            IDR_MAINFRAME,IDC_STATIC,66,60,20,20
+    ICON            IDI_XPILOT,IDC_STATIC,186,60,20,20
+END
+
+IDD_EXPIRE_SOON DIALOG DISCARDABLE  0, 0, 272, 91
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Dialog"
+FONT 12, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,111,70,50,14
+    CTEXT           "This version of XPilotNT-Server will expire soon.\nInformation about updates can be obtained from\nwww.buckosoft.com\nor\nnews:rec.games.computer.xpilot",
+                    IDC_STATIC,7,17,258,45
+END
+
+IDD_CONF_BOUNCE DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Bounce"
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+IDD_CONF_PLAYERS DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Players"
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+IDD_CONF_TEAMS DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Teams"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,129,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,129,24,50,14
+END
+
+IDD_CONF_ROBOTS DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Robots"
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+IDD_CONF_SHIPSSHOTS DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ships&Shots"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "shipMass",IDC_CHECK_SHIPMASS,"Button",BS_AUTOCHECKBOX | 
+                    BS_PUSHLIKE | WS_TABSTOP,7,7,86,13
+    EDITTEXT        IDC_EDIT_SHIPMASS,96,7,40,14,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+IDD_CONF_WORLD DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "World"
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "BuckoSoft, Inc.\0"
+            VALUE "FileDescription", "XPILOTS MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "XPILOTS\0"
+            VALUE "LegalCopyright", "Copyright © 1996-1997 BuckoSoft, Inc.\0"
+            VALUE "OriginalFilename", "XPILOTS.EXE\0"
+            VALUE "ProductName", "XPilotNT Server\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 280
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_XPILOTS_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 136
+    END
+
+    IDD_CONFIG_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 263
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 215
+    END
+
+    IDD_EXITXPILOTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 178
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_REALLYSHUTDOWN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    IDD_CONF_GENERAL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 252
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 206
+    END
+
+    IDD_CONF_ITEMS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 364
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 264
+    END
+
+    IDD_EXPIRED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 267
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_EXPIRE_SOON, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 265
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_CONF_BOUNCE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_CONF_PLAYERS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_CONF_TEAMS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_CONF_ROBOTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_CONF_SHIPSSHOTS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_CONF_WORLD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About XPilot-server..."
+    IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDD_CONFIG_DLG          "Configure Server Parameters"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\xpilots.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

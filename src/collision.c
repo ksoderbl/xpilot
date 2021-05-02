@@ -1,10 +1,11 @@
-/* $Id: collision.c,v 3.147 1996/12/12 20:43:46 bert Exp $
+/* $Id: collision.c,v 3.157 1998/01/23 13:02:53 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +22,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -45,7 +51,7 @@ char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.147 1996/12/12 20:43:46 bert Exp $";
+    "@(#)$Id: collision.c,v 3.157 1998/01/23 13:02:53 bert Exp $";
 #endif
 
 #if 0
@@ -143,14 +149,8 @@ static void Cell_objects_init(void)
 	if (obj->life <= 0) {
 	    continue;
 	}
-	x = obj->pos.x / BLOCK_SZ;
-	y = obj->pos.y / BLOCK_SZ;
-#if 0
-	if (x < 0 || x > World.x || y < 0 || y > World.y) {
-	    printf("Object cell bad pos (%d,%d)\n", x, y);
-	    continue;
-	}
-#endif
+	x = OBJ_X_IN_BLOCKS(obj);
+	y = OBJ_Y_IN_BLOCKS(obj);
 	cell = &Cells[x][y];
 	if (!(obj->cell_list = *cell)) {
 	    CellsUsed[cells_used_count++] = cell;
@@ -277,10 +277,12 @@ static void Score_players(int winner, int winner_score, char *winner_msg,
 	    loser_score = -loser_score;
     }
     SCORE(winner, winner_score,
-	  Players[winner]->pos.x/BLOCK_SZ, Players[winner]->pos.y/BLOCK_SZ,
+	  OBJ_X_IN_BLOCKS(Players[winner]),
+	  OBJ_Y_IN_BLOCKS(Players[winner]),
 	  winner_msg);
     SCORE(loser, loser_score,
-	  Players[loser]->pos.x/BLOCK_SZ, Players[loser]->pos.y/BLOCK_SZ,
+	  OBJ_X_IN_BLOCKS(Players[loser]),
+	  OBJ_Y_IN_BLOCKS(Players[loser]),
 	  loser_msg);
 }
 
@@ -310,8 +312,8 @@ static void PlayerCollision(void)
 	    Set_message(msg);
 		sc = Rate(WALL_SCORE, pl->score);
 	    SCORE(i, -sc,
-		  (int) pl->pos.x/ BLOCK_SZ,
-		  (int) pl->pos.y/BLOCK_SZ,
+		  OBJ_X_IN_BLOCKS(pl),
+		  OBJ_Y_IN_BLOCKS(pl),
 		  pl->name);
 	    continue;
 	}
@@ -351,13 +353,13 @@ static void PlayerCollision(void)
 		if (BIT(World.rules->mode, BOUNCE_WITH_PLAYER)) {
 		    if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) !=
 			(OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-			Add_fuel(&(pl->fuel), ED_PL_CRASH);
+			Add_fuel(&(pl->fuel), (long)ED_PL_CRASH);
 			Item_damage(i, destroyItemInCollisionProb);
 		    }
 		    if (BIT(Players[j]->used, (OBJ_SHIELD|
 					       OBJ_EMERGENCY_SHIELD)) !=
 			(OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-			Add_fuel(&(Players[j]->fuel), ED_PL_CRASH);
+			Add_fuel(&(Players[j]->fuel), (long)ED_PL_CRASH);
 			Item_damage(j, destroyItemInCollisionProb);
 		    }
 		    pl->forceVisible = 20;
@@ -452,7 +454,7 @@ static void PlayerCollision(void)
 	    if (ball->life <= 0 || ball->id != -1)
 		pl->ball = NULL;
 	    else {
-		float distance = Wrap_length(pl->pos.x - ball->pos.x,
+		DFLOAT distance = Wrap_length(pl->pos.x - ball->pos.x,
 					     pl->pos.y - ball->pos.y);
 		if (distance >= BALL_STRING_LENGTH) {
 		    ball->id = pl->id;
@@ -529,8 +531,8 @@ static void PlayerCollision(void)
 				"%s finished the race. Last lap time: %.2fs. "
 				"Personal race best lap time: %.2fs.",
 				pl->name,
-				(float) pl->last_lap_time / FPS,
-				(float) pl->best_lap / FPS);
+				(DFLOAT) pl->last_lap_time / FPS,
+				(DFLOAT) pl->best_lap / FPS);
 		    }
 		    else if (pl->round > 1) {
 			sprintf(msg,
@@ -538,8 +540,8 @@ static void PlayerCollision(void)
 				"Personal race best lap time: %.2fs.",
 				pl->name,
 				pl->round-1,
-				(float) pl->last_lap_time / FPS,
-				(float) pl->best_lap / FPS);
+				(DFLOAT) pl->last_lap_time / FPS,
+				(DFLOAT) pl->best_lap / FPS);
 		    }
 		    else {
 			sprintf(msg, "%s starts lap 1 of %d", pl->name,
@@ -599,6 +601,8 @@ static void PlayerObjectCollision(int ind)
     long	drain;
     player	*pl = Players[ind];
     object	*obj, **obj_list;
+    DFLOAT   	rel_velocity, drainfactor;
+    enum Item	item_index;
 
 
     /*
@@ -607,7 +611,7 @@ static void PlayerObjectCollision(int ind)
     if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING)
 	return;
 
-    Cell_objects_get(pl->pos.x / BLOCK_SZ, pl->pos.y / BLOCK_SZ, 4,
+    Cell_objects_get(OBJ_X_IN_BLOCKS(pl), OBJ_Y_IN_BLOCKS(pl), 4,
 		     &obj_list, &obj_count);
 
     for (j=0; j<obj_count; j++) {
@@ -655,6 +659,7 @@ static void PlayerObjectCollision(int ind)
 	 */
 	radius = SHIP_SZ + obj->pl_radius;
 	hit = (radius >= range || in_range((object *)pl, obj, radius));
+	rel_velocity = LENGTH(pl->vel.x - obj->vel.x, pl->vel.y - obj->vel.y);
 
 	/*
 	 * Object collision.
@@ -672,7 +677,7 @@ static void PlayerObjectCollision(int ind)
 	    Obj_repel((object *)pl, obj, radius);
 	    if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		!= (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-		Add_fuel(&(pl->fuel), ED_BALL_HIT);
+		Add_fuel(&(pl->fuel), (long)ED_BALL_HIT);
 		if (treasureCollisionDestroys) {
 		    obj->life = 0;
 		}
@@ -685,8 +690,8 @@ static void PlayerObjectCollision(int ind)
 	    if (obj->owner == -1) {
 		sprintf(msg, "%s was killed by a ball.", pl->name);
 		SCORE(ind, PTS_PR_PL_SHOT,
-		      (int) pl->pos.x/BLOCK_SZ,
-		      (int) pl->pos.y/BLOCK_SZ,
+		      OBJ_X_IN_BLOCKS(pl),
+		      OBJ_Y_IN_BLOCKS(pl),
 		      "Ball");
 	    } else {
 		killer = GetInd[obj->owner];
@@ -697,8 +702,8 @@ static void PlayerObjectCollision(int ind)
 		if (killer == ind) {
 		    strcat(msg, "  How strange!");
 		    SCORE(ind, PTS_PR_PL_SHOT,
-			  (int) pl->pos.x/BLOCK_SZ,
-			  (int) pl->pos.y/BLOCK_SZ,
+			  OBJ_X_IN_BLOCKS(pl),
+			  OBJ_Y_IN_BLOCKS(pl),
 			  Players[killer]->name);
 		} else {
 		    Players[killer]->kills++;
@@ -737,42 +742,53 @@ static void PlayerObjectCollision(int ind)
 		}
 	    }
 
-	    switch ((enum Item) obj->info) {
+	    item_index = (enum Item) obj->info;
+
+	    switch (item_index) {
 	    case ITEM_WIDEANGLE:
-		pl->item[ITEM_WIDEANGLE] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   WIDEANGLE_SHOT_PICKUP_SOUND);
 		break;
 	    case ITEM_ECM:
-		pl->item[ITEM_ECM] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, ECM_PICKUP_SOUND);
 		break;
 	    case ITEM_TRANSPORTER:
-		pl->item[ITEM_TRANSPORTER] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, TRANSPORTER_PICKUP_SOUND);
 		break;
 	    case ITEM_SENSOR:
-		pl->item[ITEM_SENSOR] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		pl->updateVisibility = 1;
 		sound_play_sensors(pl->pos.x, pl->pos.y, SENSOR_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_AFTERBURNER:
-		SET_BIT(pl->have, OBJ_AFTERBURNER);
-		if ((pl->item[ITEM_AFTERBURNER] += obj->count) > MAX_AFTERBURNER)
-		    pl->item[ITEM_AFTERBURNER] = MAX_AFTERBURNER;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_AFTERBURNER);
 		sound_play_sensors(pl->pos.x, pl->pos.y, AFTERBURNER_PICKUP_SOUND);
 		break;
 	    case ITEM_REARSHOT:
-		pl->item[ITEM_REARSHOT] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, BACK_SHOT_PICKUP_SOUND);
 		break;
 	    case ITEM_MISSILE:
-		pl->item[ITEM_MISSILE] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, ROCKET_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_CLOAK:
-		SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
-		pl->item[ITEM_CLOAK] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
 		pl->updateVisibility = 1;
 		sound_play_sensors(pl->pos.x, pl->pos.y, CLOAKING_DEVICE_PICKUP_SOUND);
 		break;
@@ -781,25 +797,29 @@ static void PlayerObjectCollision(int ind)
 		sound_play_sensors(pl->pos.x, pl->pos.y, ENERGY_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_MINE:
-		pl->item[ITEM_MINE] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, MINE_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_LASER:
-		if ((pl->item[ITEM_LASER] += obj->count) > MAX_LASERS) {
-		    pl->item[ITEM_LASER] = MAX_LASERS;
-		}
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
 		sound_play_sensors(pl->pos.x, pl->pos.y, LASER_PICKUP_SOUND);
 		break;
 	    case ITEM_EMERGENCY_THRUST:
-		SET_BIT(pl->have, OBJ_EMERGENCY_THRUST);
-		pl->item[ITEM_EMERGENCY_THRUST] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_EMERGENCY_THRUST);
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   EMERGENCY_THRUST_PICKUP_SOUND);
 		break;
 	    case ITEM_EMERGENCY_SHIELD:
 		old_have = pl->have;
-		SET_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
-		pl->item[ITEM_EMERGENCY_SHIELD]++;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   EMERGENCY_SHIELD_PICKUP_SOUND);
 	        /*
@@ -814,22 +834,24 @@ static void PlayerObjectCollision(int ind)
 		}
 		break;
 	    case ITEM_TRACTOR_BEAM:
-		SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
-		if ((pl->item[ITEM_TRACTOR_BEAM] += obj->count) > MAX_TRACTORS) {
-		    pl->item[ITEM_TRACTOR_BEAM] = MAX_TRACTORS;
-		}
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   TRACTOR_BEAM_PICKUP_SOUND);
 		break;
 	    case ITEM_AUTOPILOT:
-		SET_BIT(pl->have, OBJ_AUTOPILOT);
-		pl->item[ITEM_AUTOPILOT] += obj->count;
+		pl->item[item_index] += obj->count;
+		LIMIT(pl->item[item_index], 0, World.items[item_index].limit);
+		if (pl->item[item_index] > 0)
+		    SET_BIT(pl->have, OBJ_AUTOPILOT);
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   AUTOPILOT_PICKUP_SOUND);
 		break;
 
 	    case ITEM_TANK:
-		if (pl->fuel.num_tanks < MAX_TANKS) {
+		if (pl->fuel.num_tanks < World.items[ITEM_TANK].limit) {
 		    Player_add_tank(ind, TANK_FUEL(pl->fuel.num_tanks + 1));
 		} else {
 		    Add_fuel(&(pl->fuel), TANK_FUEL(MAX_TANKS));
@@ -896,7 +918,7 @@ static void PlayerObjectCollision(int ind)
 	    break;
 
 	case OBJ_DEBRIS: {
-		float		v = VECTOR_LENGTH(obj->vel);
+		DFLOAT		v = VECTOR_LENGTH(obj->vel);
 		long		tmp = (long) (2 * obj->mass * v);
 		long		cost = ABS(tmp);
 
@@ -918,8 +940,8 @@ static void PlayerObjectCollision(int ind)
 		    Set_message(msg);
 		    if (killer == -1 || killer == ind) {
 			SCORE(ind, PTS_PR_PL_SHOT,
-			      (int) pl->pos.x/BLOCK_SZ,
-			      (int) pl->pos.y/BLOCK_SZ,
+			      OBJ_X_IN_BLOCKS(pl),
+			      OBJ_Y_IN_BLOCKS(pl),
 			      (killer == -1) ? "[Explosion]" : pl->name);
 		    } else {
 			Players[killer]->kills++;
@@ -985,8 +1007,8 @@ static void PlayerObjectCollision(int ind)
 			    Describe_shot(obj->type, obj->status,
 					  obj->mods, 1),
 			    Players[ killer=GetInd[obj->id] ]->name);
-		drain = ED_SMART_SHOT_HIT /
-		    ((obj->mods.mini + 1) * (obj->mods.power + 1));
+		drain = (long)(ED_SMART_SHOT_HIT /
+		    ((obj->mods.mini + 1) * (obj->mods.power + 1)));
 		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		    Add_fuel(&(pl->fuel), drain);
@@ -998,13 +1020,17 @@ static void PlayerObjectCollision(int ind)
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   PLAYER_EAT_SHOT_SOUND);
 		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
-		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
-		    Add_fuel(&(pl->fuel), (ED_SHOT_HIT * SHOT_MULT(obj)));
-		pl->forceVisible += SHOT_MULT(obj);
+		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
+		    drainfactor = (rel_velocity * rel_velocity * obj->mass)
+				/ (ShotsSpeed * ShotsSpeed * ShotsMass);
+		    drain = (long)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
+		    Add_fuel(&(pl->fuel), drain);
+		}
+		pl->forceVisible = (int)(pl->forceVisible + SHOT_MULT(obj));
 		break;
 
 	    default:
-		printf("You were hit by what?\n");
+		xpprintf("%s You were hit by what?\n", showtime());
 		break;
 	    }
 	    if (pl->fuel.sum <= 0) {
@@ -1023,8 +1049,9 @@ static void PlayerObjectCollision(int ind)
 		    Set_message(msg);
 		    sc = Rate(CANNON_SCORE, pl->score)/4;
 		    SCORE(ind, -sc,
-			  (int) pl->pos.x/BLOCK_SZ,
-			  (int) pl->pos.y/BLOCK_SZ, "Cannon");
+			  OBJ_X_IN_BLOCKS(pl),
+			  OBJ_Y_IN_BLOCKS(pl),
+			  "Cannon");
 		    SET_BIT(pl->status, KILLED);
 		    return;
 		}
@@ -1034,8 +1061,9 @@ static void PlayerObjectCollision(int ind)
 			    Describe_shot(obj->type, obj->status,
 					  obj->mods, 1));
 		    SCORE(ind, PTS_PR_PL_SHOT,
-			  (int) pl->pos.x/BLOCK_SZ,
-			  (int) pl->pos.y/BLOCK_SZ, "N/A");
+			  OBJ_X_IN_BLOCKS(pl),
+			  OBJ_Y_IN_BLOCKS(pl),
+			  "N/A");
 		    killer = ind;
 		} else {
 		    sprintf(msg, "%s was killed by %s from %s.", pl->name,
@@ -1047,8 +1075,8 @@ static void PlayerObjectCollision(int ind)
 					   PLAYER_SHOT_THEMSELF_SOUND);
 			strcat(msg, "  How strange!");
 			SCORE(ind, PTS_PR_PL_SHOT,
-			      (int) pl->pos.x/BLOCK_SZ,
-			      (int) pl->pos.y/BLOCK_SZ,
+			      OBJ_X_IN_BLOCKS(pl),
+			      OBJ_Y_IN_BLOCKS(pl),
 			      Players[killer]->name);
 		    } else {
 			Players[killer]->kills++;
@@ -1071,21 +1099,24 @@ static void PlayerObjectCollision(int ind)
 
 int wormXY(int x, int y)
 {
-    static int cache;
-    int i;
-
-    if (World.wormHoles[cache].pos.x == x &&
-	World.wormHoles[cache].pos.y == y)
-	return cache;
-
-    for (i = 0; i < World.NumWormholes; i++)
-	if (World.wormHoles[i].pos.x == x &&
-	    World.wormHoles[i].pos.y == y)
-	    break;
-
-    cache = i;
-
-    return i;
+/*-BA Faster way to do this
+ *    static int cache;
+ *    int i;
+ *
+ *    if (World.wormHoles[cache].pos.x == x &&
+ *	World.wormHoles[cache].pos.y == y)
+ *	return cache;
+ *
+ *    for (i = 0; i < World.NumWormholes; i++)
+ *	if (World.wormHoles[i].pos.x == x &&
+ *	    World.wormHoles[i].pos.y == y)
+ *	    break;
+ *
+ *    cache = i;
+ *
+ *    return i;
+ */
+    return World.itemID[x][y];
 }
 
 
@@ -1094,7 +1125,7 @@ static void LaserCollision(void)
     typedef struct victim {
 	int			ind;	/* player index */
 	position		pos;
-	float			prev_dist;
+	DFLOAT			prev_dist;
     } victim_t;
 
     int				ind, i, j, k, max, hits, sc,
@@ -1103,7 +1134,7 @@ static void LaserCollision(void)
 				objnum = -1;
     unsigned			size;
     victim_t			*victims = NULL;
-    float			x, y, x1, x2, y1, y2, dx, dy, dist;
+    DFLOAT			x, y, x1, x2, y1, y2, dx, dy, dist;
     player			*pl, *vic;
     pulse_t			*pulse;
     object			*obj = NULL;
@@ -1150,7 +1181,7 @@ static void LaserCollision(void)
 		    if (pulse->pos.x >= 0 && pulse->pos.x < World.width
 			&& pulse->pos.y >= 0 && pulse->pos.y < World.height) {
 			pl->num_pulses++;
-			Add_fuel(&(pl->fuel), ED_LASER);
+			Add_fuel(&(pl->fuel), (long)ED_LASER);
 			sound_play_sensors(pulse->pos.x, pulse->pos.y,
 					   FIRE_LASER_SOUND);
 		    }
@@ -1208,23 +1239,23 @@ static void LaserCollision(void)
 		}
 		x2 = x1 + tcos(pulse->dir) * pulse->len;
 		if (x2 < 0) {
-		    pulse->len = pulse->len * (0 - x1) / (x2 - x1);
+		    pulse->len = (int)(pulse->len * (0 - x1) / (x2 - x1));
 		    x2 = x1 + tcos(pulse->dir) * pulse->len;
 		}
 		if (x2 >= World.width) {
-		    pulse->len = pulse->len * (World.width - 1 - x1)
-			/ (x2 - x1);
+		    pulse->len = (int)(pulse->len * (World.width - 1 - x1)
+			/ (x2 - x1));
 		    x2 = x1 + tcos(pl->dir) * pulse->len;
 		}
 		y2 = y1 + tsin(pl->dir) * pulse->len;
 		if (y2 < 0) {
-		    pulse->len = pulse->len * (0 - y1) / (y2 - y1);
+		    pulse->len = (int)(pulse->len * (0 - y1) / (y2 - y1));
 		    x2 = x1 + tcos(pl->dir) * pulse->len;
 		    y2 = y1 + tsin(pl->dir) * pulse->len;
 		}
 		if (y2 > World.height) {
-		    pulse->len = pulse->len * (World.height - 1 - y1)
-			/ (y2 - y1);
+		    pulse->len = (int)(pulse->len * (World.height - 1 - y1)
+			/ (y2 - y1));
 		    x2 = x1 + tcos(pl->dir) * pulse->len;
 		    y2 = y1 + tsin(pl->dir) * pulse->len;
 		}
@@ -1264,7 +1295,7 @@ static void LaserCollision(void)
 
 	    dx = x2 - x1;
 	    dy = y2 - y1;
-	    max = MAX(ABS(dx), ABS(dy));
+	    max = (int)MAX(ABS(dx), ABS(dy));
 	    if (max == 0) {
 		continue;
 	    }
@@ -1334,7 +1365,7 @@ static void LaserCollision(void)
 			    vic->damaged += (FPS+6);
 			    vic->forceVisible += (FPS+6);
 			} else {
-			    Add_fuel(&(vic->fuel), ED_LASER_HIT);
+			    Add_fuel(&(vic->fuel), (long)ED_LASER_HIT);
 			    if (BIT(vic->used, OBJ_SHIELD) == 0) {
 				SET_BIT(vic->status, KILLED);
 				sc = Rate(pl->score, vic->score);

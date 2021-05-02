@@ -17,15 +17,20 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
  *	Changed usleep into micro_delay to forego any possible prototype clashes.
  */
 
+#if defined(_WINDOWS)
+#include <time.h>
+#include "../contrib/NT/xpilot/winNet.h"
+#else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#endif
 
 #include "types.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.10 1996/05/02 16:06:02 bert Exp $";
+    "@(#)$Id: usleep.c,v 3.11 1997/07/13 21:09:40 bert Exp $";
 #endif
 
 

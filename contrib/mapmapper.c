@@ -1,6 +1,6 @@
 /*
  * Name: mapmapper
- * Author: Bert Gÿsbers <bert@xpilot.org>
+ * Author: Bert Gijsbers <bert@xpilot.org>
  * Date: 28 March 93
  * Version: 1.2
  * Description: Maps the Xpilot 1.2 maps to Xpilot 2.0 format.
@@ -19,7 +19,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: mapmapper.c,v 3.3 1996/10/06 00:00:36 bjoerns Exp $";
+    "@(#)$Id: mapmapper.c,v 3.4 1997/11/25 18:11:38 bert Exp $";
 static char versionid[] =
     "@(#)Version 1.2";
 #endif

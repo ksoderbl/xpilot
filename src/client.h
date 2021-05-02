@@ -1,10 +1,11 @@
-/* $Id: client.h,v 3.67 1996/10/12 22:38:04 bert Exp $
+/* $Id: client.h,v 3.75 1998/01/08 19:28:42 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +24,17 @@
 
 #ifndef CLIENT_H
 #define CLIENT_H
+
+#ifdef	_WINDOWS
+#ifndef	_WINSOCKAPI_
+#include <winsock.h>
+#endif
+
+#ifndef	_WINX_H_
+#include "../contrib/NT/xpilot/winX.h"
+#endif
+#endif
+
 
 #ifndef DRAW_H
 /* need wireobj */
@@ -58,6 +70,7 @@
 #define SHOW_TEXTURED_DECOR	(1L << 23)
 #define SHOW_CLOCK_AMPM_FORMAT	(1L << 24)
 #define SHOW_TEXTURED_BALLS	(1L << 25)
+#define SHOW_REVERSE_SCROLL	(1L << 26)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -78,7 +91,7 @@
 #define MAX_SHOW_ITEMS_TIME	10.0
 
 typedef struct {
-    float	ratio;
+    DFLOAT	ratio;
     short	id;
     short	team;
     short	score;
@@ -148,7 +161,7 @@ extern short	nextCheckPoint;
 extern u_byte	numItems[NUM_ITEMS];
 extern u_byte	lastNumItems[NUM_ITEMS];
 extern int	numItemsTime[NUM_ITEMS];
-extern float	showItemsTime;
+extern DFLOAT	showItemsTime;
 extern short	autopilotLight;
 
 
@@ -185,17 +198,17 @@ extern int	fuelLevel2;		/* Fuel warning level */
 extern int	fuelLevel3;		/* Fuel notify level */
 
 extern char	*shipShape;		/* Shape of player's ship */
-extern float	power;			/* Force of thrust */
-extern float	power_s;		/* Saved power fiks */
-extern float	turnspeed;		/* How fast player acc-turns */
-extern float	turnspeed_s;		/* Saved turnspeed */
-extern float	turnresistance;		/* How much is lost in % */
-extern float	turnresistance_s;	/* Saved (see above) */
-extern float	spark_prob;		/* Sparkling effect configurable */
+extern DFLOAT	power;			/* Force of thrust */
+extern DFLOAT	power_s;		/* Saved power fiks */
+extern DFLOAT	turnspeed;		/* How fast player acc-turns */
+extern DFLOAT	turnspeed_s;		/* Saved turnspeed */
+extern DFLOAT	turnresistance;		/* How much is lost in % */
+extern DFLOAT	turnresistance_s;	/* Saved (see above) */
+extern DFLOAT	spark_prob;		/* Sparkling effect configurable */
 extern int	charsPerSecond;		/* Message output speed (config) */
 
-extern float	hud_move_fact;		/* scale the hud-movement (speed) */
-extern float	ptr_move_fact;		/* scale the speed pointer length */
+extern DFLOAT	hud_move_fact;		/* scale the hud-movement (speed) */
+extern DFLOAT	ptr_move_fact;		/* scale the speed pointer length */
 extern char	mods[MAX_CHARS];	/* Current modifiers in effect */
 extern long	instruments;		/* Instruments on screen (bitmask) */
 extern int	packet_size;		/* Current frame update packet size */
@@ -214,12 +227,17 @@ extern int	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
 extern int	auto_shield;            /* drops shield for fire */
 extern int	initialPointerControl;	/* Start by using mouse for control? */
+extern int	pointerControl;			/* current state of mouse ship flying */
 
 extern int	maxFPS;			/* Client's own FPS */
 extern int 	oldMaxFPS;
 
 extern byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */
+
+#ifdef	WINDOWSCALING
+extern DFLOAT	scaleFactor;		/* scale the draw (main playfield) window */
+#endif
 
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -266,10 +284,24 @@ int Client_wrap_mode(void);
 void Reset_shields(void);
 void Set_toggle_shield(int onoff);
 void Set_auto_shield(int onoff);
+
+#ifdef XlibSpecificationRelease
+void Key_event(XEvent *event);
+#endif
+#ifndef	_WINDOWS
 int xevent(int);
+#else
+int xevent(XEvent event);
+void MarkPlayersForRedraw(void);
+#endif
+
 int Key_init(void);
 int Key_update(void);
 int Check_client_fps(void);
+
+#ifdef	SOUND
+extern	void audioEvents();
+#endif
 
 #endif
 

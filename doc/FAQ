@@ -1,17 +1,19 @@
+From: faq@xpilot.org (XPilot FAQ)
 Newsgroups: rec.games.computer.xpilot,rec.answers,news.answers
 Subject: XPilot multi-player Internet game FAQ
+Approved: news-answers-request@MIT.EDU
+Distribution: world
+Expires: Sun, 23 Nov 1997 23:59:59 GMT
 Summary: Frequently Asked Questions about XPilot with Answers
 Keywords: xpilot,games,Internet,faq
-Distribution: world
-Expires: Fri, 28 Feb 1997 23:59:59 GMT
 
 Archive-name: games/xpilot-faq
-Last-modified: 1997/01/14
-Version: 3.4.0
+Last-modified: 1997/11/03
+Version: 3.4.4
 Submitted-By: faq@xpilot.org
 
 This is the Frequently Asked Questions list With Answers for XPilot.
-Copyright (C) 1993-97 by the XPilot Team (faq@xpilot.org).
+Copyright (C) 1993-97 by the XPilot FAQ Group (faq@xpilot.org).
 This FAQ is posted in rec.games.computer.xpilot on irregular intervals.
 It is also part of the XPilot distribution.
 It can also be obtained from URL: telnet://meta.xpilot.org:4402/
@@ -20,8 +22,8 @@ Or by mailing the following message to mail-server@rtfm.mit.edu:
     send usenet/rec.games.computer.xpilot/XPilot_multi-player_Internet_game_FAQ
 
 New questions in this release: none
-Questions changed in this release: 2, 3, 16, 26
-Questions changed in the previous release:
+Questions changed in this release: 4, 14
+Questions changed in the previous release: none
 
 Questions:
 
@@ -68,7 +70,7 @@ Pay special attention to the two manual pages in the man6 directory
 and to the four README files.
 
 More, many more questions are answered in the WWW XPilot Newbie Manual
-    http://bau2.uibk.ac.at/erwin/NM/www
+    http://www.xpilot.org/NM/
 
 1) What is this wonderful game called XPilot everybody is talking about?
 
@@ -105,26 +107,27 @@ The XPilot home page on World-Wide Web is:
     http://www.xpilot.org/
 
 There is a large and entertaining Newbie Manual on WWW which encompasses
-more than 160 articles.  Its URL is:
-    http://bau2.uibk.ac.at/erwin/NM/www
+more than 160 articles.  Its URL is http://www.xpilot.org/NM/
 
 2) What is the latest version?
 
-3.6.1.  Which is XPilot release 3.6, patchlevel 1.
+3.7.0.  Which is XPilot release 3.7, patchlevel 0.
 
 3) Where can I get it as soon as possible?
 
 Anonymous ftp to ftp.xpilot.org (145.18.160.22).  Use as login name
 anonymous or ftp and supply your email address as password.
-Go to the directory /pub and look for the file named xpilot-3.6.1.tar.gz.
+Go to the directory /pub and look for the file named xpilot-3.6.2.tar.gz.
 Some patches for older versions are also available.
 Other anonymous ftp sites may have it as well, the most up to date is
-ftp.x.org (198.112.44.100) in /contrib/games/multiplayer/.
+ftp.x.org (130.105.100.3) in /contrib/games/multiplayer/.
 
 4) Where can I get precompiled XPilot executables?
 
 The Liverpool Archives distribute binaries for HP 700 series workstations.
 Go to hpux.csc.liv.ac.uk (138.253.42.172) in /hpux/Games/Networking/.
+Note that the binaries in the xpilot-3.6.2 directory will only work on HP-UX 10.10,
+not on HP-UX 10.01 or 10.20.
 
 5) Sound?  Does it really have sound?
 
@@ -163,16 +166,16 @@ The files are in GNU zip format.  Older versions of GNU zip use
 the .z extension, newer versions of GNU zip use the .gz extension.
 GNU zip is available from your favorite local ftp site.  Look for gzip.
 Two of the many ftp sites having gzip are ftp.uu.net (192.48.96.9) and
-prep.ai.mit.edu (18.71.0.38).  The last one in the pub/gnu directory.
+prep.ai.mit.edu (18.159.0.42).  The last one in the pub/gnu directory.
 
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.6.1.tar.gz > xpilot-3.6.1.tar
+    gzip -d < xpilot-3.6.2.tar.gz > xpilot-3.6.2.tar
 
 or even better :
 
-    gzip -d < xpilot-3.6.1.tar.gz | tar xvf -
+    gzip -d < xpilot-3.6.2.tar.gz | tar xvf -
 
 7) I do not have the patch program on my system, so how can I upgrade?
 
@@ -329,13 +332,10 @@ make the game run more smoothly and evenly, and perhaps make
 the game more fair.  Users joining across the Internet really appreciate
 a slightly lower frame rate (try values like: 14, 12 or 10).
 
-If you have achieved any success with speeding up graphics performance
-then send a note to xpilot@xpilot.org telling how and for which hardware,
-X server, XPilot version, compile time options and frames per second.
-
 14) Where can I get new maps?
 
 anonymous ftp:
+        ftp.xpilot.org:/pub/maps
         xpilot.sdsu.edu:/pub/xpilot-maps
 gopher:
         Name=xpilot-maps
@@ -345,55 +345,6 @@ gopher:
         Host=xpilot.sdsu.edu
         (Note that you can only retrieve maps with gopher...)
 
-You can also use the new xpmtp program which is in the contrib directory
-of the distribution.  Xpmtp is an abbreviation of XPilot Map Transfer
-Protocol and provides an easy way to upload, download and preview maps
-from xpilot.sdsu.edu.  Xpmtp was made by Andrew Scherpbier.
-
-Questions and comments about this map server should go to Andrew@SDSU.Edu
-
-You can also receive or send maps by e-mail.  Mark Boyns has setup a nifty
-map mailing and submitting service on xpilot.sdsu.edu.  The map mailing
-program can be activated by mailing to xpilot-maps@xpilot.sdsu.edu.
-The command you want it to perform should be specified as the Subject.
-The body of the mail command is ignored except for the submit command.
-The xpilot map mailer supports the following commands:
-
-allmaps           - Retrieve all the maps from the archive.
-                    The returned message will consist of a uuencoded
-                    tar.gz file of all the maps.  WARNING this might
-                    fill up your mailbox.
-
-get <mapname>     - Retrieve <mapname> from the archive.
-                    This command ignores the body of the message.
-                    <mapname> should include the .map extension.
-
-uuget <mapname>   - Same as "get" but the map data will be uuencoded.
-
-help              - This message.
-                    This command ignores the body of the message.
-
-index             - Retrieve and index of all the maps in the archive.
-                    This command ignores the body of the message.
-
-submit <mapname>  - Submit <mapname> to the map archive.
-                    The body of the message is assumed to contain the map
-                    data that will be stored in the archive.
-                    <mapname> should include the .map extension.
-
-All commands must be specified on the "Subject:" line of the mail message.
-Here's an example:
-
-% Mail -s "get doggy.map" xpilot-maps@xpilot.sdsu.edu < /dev/null
-
-Where "Mail" is the BSD mail program.  On some System V machines like HP-UX
-this is installed as the mailx program.
-Send questions & comments & suggestions to boyns@sdsu.edu (DR.DEATH).
-
-
-There is also a world writeable map directory on ftp.xpilot.org in
-/pub/maps where you can find a lot of maps also.
-
 15) How can I distribute my own carefully crafted maps?
 
 See the previous question.  The sites mentioned in the previous question
@@ -401,19 +352,17 @@ are eager to add your map to their set of maps, but it is perhaps also
 a good idea to post an announcement in rec.games.computer.xpilot or on
 the mailing list explaining some ideas behind and properties of your map.
 
-For easy uploading of maps to xpilot.sdsu.edu you can use the xpmtp
-program which is in the contrib directory of the distribution.
-
 16) How can I design my own maps easily?
 
-Use the XMapEdit program, which was made
-by Aaron Averila (averila@oes.orst.edu).
+Use the XMapEdit program, which was made by Aaron Averila.
 You can get it by ftp from ftp.xpilot.org in /pub/xmapedit/.
 The map format is in ASCII so you can also make or change maps
 with your standard text editor (vi, emacs).  And everybody did
 it that way before XMapEdit, but that seems hopelessly complex
-and tedious now.
-Special thanks to Aaron for making XMapEdit.
+and tedious now.  Special thanks go to Aaron for making XMapEdit.
+
+A new updated version by William Docter is available from
+ftp://ftp.xpilot.org/pub/xmapedit/xmapedit-3.5.1d.tar.gz
 
 17) How can I design my own ship?
 
@@ -425,8 +374,6 @@ Or from ftp.xpilot.org in the /pub/contrib directory.
 
 Make sure you use the latest `officially released' version.
 You will be most cooperative if you try to fix it yourself first.
-If you find the cause of the problems mail any solutions/bugfixes
-to xpilot@xpilot.org.
 If you tried everything and you still cannot solve it then post
 a help request to rec.games.computer.xpilot.
 There are some things that are generally helpful to mention, when relevant:
@@ -473,8 +420,6 @@ Help is available online.  Example session:
     4403:   Nick-name port.  This will give you the current nick name list.
 
     Type "help" to list possible commands.
-
-    E-mail problems to xpilot@xpilot.org.
 
     >list
     3.2.9          :144.168.23.100           :15345    :0   :2.51      :Team-combat
@@ -541,7 +486,7 @@ The XPilot Page on the World-Wide Web can be found on URL
 
 Highly recommended is the online XPilot Newbie Manual, the creation
 of Karen Gould and Erwin Zierler with the help of many contributors:
-    http://bau2.uibk.ac.at/erwin/NM/www
+    http://www.xpilot.org/NM/
 
 Other WWW pages related to XPilot are:
     http://heron.met.nps.navy.mil/~forsythe/index.html
@@ -562,7 +507,7 @@ The Newbie Manual is a World Wide Web (WWW) book (not page, it is made
 up of many many pages all linked together) which you access using programs
 like Mosaic or Netscape by opening the Newbie Manual address which is:
 
-    http://bau2.uibk.ac.at/erwin/NM/www
+    http://www.xpilot.org/NM/
 
 This will connect you to the Manual which you read through by clicking on
 the highlighted links.
@@ -618,35 +563,14 @@ found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
 
 26) What are the Well Known Problems for the latest version?
 
-Hitting autopilot while touching a wall crashes your ship.
+None.
 
-The new gravity currents don't work inside the symbol itself.
+27) Is there a XPilot version available for DOS, Windows or the Mac?
 
-27) What if I'm having trouble installing XPilot on Platform XYZ?
-
-Below is a list of people who are willing to help others install XPilot
-on various platforms. Please feel free to mail these people about any
-difficulties you are having but keep in mind that they are doing this
-voluntarily.  Please specify the operating system and compiler you are
-using when describing your difficulties as well as the version of XPilot.
-
-Platform                Person              Email
------------------------ ------------------- ---------------------------------
-DEC Ultrix 4.2          David Chatterton    davidc@bruce.cs.monash.edu.au
-
-SGI Irix 4.0.5          David Chatterton    davidc@bruce.cs.monash.edu.au
-
-Trusted Solaris CMW     Steve Marsden       marsdens@logica.co.uk
-
-VMS                     Jens Koerber        koerber@itt.uni-stuttgart.d400.de
-
-28) Is there a XPilot version available for DOS, Windows or the Mac?
-
-No.  For PCs the best solution is to install the Linux operating system,
-which is free, on the PC.  Linux is a supported platform for XPilot.
-
-Work is in progress on a Windows version.  See http://www.buckosoft.com/xpilot/
+Yes!!!  Dick Balaska <dick@buckosoft.com> has accomplished a tremendous
+feat with a version for Windows.  See http://www.buckosoft.com/xpilot/
 
 For the Mac the only solution is to run Mklinux, xpilot even runs on it.
 
-EOFAQ $Id: FAQ,v 3.36 1997/01/16 15:14:18 bert Exp $
+EOFAQ
+

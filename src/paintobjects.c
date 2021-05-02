@@ -1,10 +1,11 @@
-/* $Id: paintobjects.c,v 3.3 1996/12/17 12:25:58 bert Exp $
+/* $Id: paintobjects.c,v 3.10 1998/01/23 14:32:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winClient.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +36,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -45,14 +52,13 @@
 #include "paintdata.h"
 #include "record.h"
 #include "xinit.h"
+#include "protoclient.h"
 
 char paintobjects_version[] = VERSION;
 
 #define X(co)  ((int) ((co) - world.x))
 #define Y(co)  ((int) (world.y + view_height - (co)))
 
-extern float		tbl_sin[];
-extern float		tbl_cos[];
 extern setup_t		*Setup;
 
 u_byte	debris_colors;		/* Number of debris intensities from server */
@@ -88,8 +94,14 @@ static int wrap(int *xp, int *yp)
     return 1;
 }
 
-void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y)
+
+/*db960828 added color parameter cause Windows needs to blt a different
+         bitmap based on the color. Unix ignores this parameter*/
+void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y, int color)
 {
+#ifdef	_WINDOWS
+    rd.paintItemSymbol(type, d, mygc, x, y, color);
+#else
     gcv.stipple = itemBitmaps[type];
     gcv.fill_style = FillStippled;
     gcv.ts_x_origin = x;
@@ -97,10 +109,11 @@ void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y)
     XChangeGC(dpy, mygc,
 	      GCStipple|GCFillStyle|GCTileStipXOrigin|GCTileStipYOrigin,
 	      &gcv);
-    rd.paintItemSymbol(type, d, mygc, x, y);
+    rd.paintItemSymbol(type, d, mygc, x, y, color);
     XFillRectangle(dpy, d, mygc, x, y, ITEM_SIZE, ITEM_SIZE);
     gcv.fill_style = FillSolid;
     XChangeGC(dpy, mygc, GCFillStyle, &gcv);
+#endif
 }
 
 
@@ -130,14 +143,16 @@ void Paint_item(u_byte type, Drawable d, GC mygc, int x, int y)
 		y + SIZE - 1,
 		str, 1);
 #endif
-    Paint_item_symbol(type, d, mygc, x - ITEM_SIZE/2, y - SIZE + 2);
+    Paint_item_symbol(type, d, mygc, 
+		x - ITEM_SIZE/2, 
+		y - SIZE + 2, ITEM_PLAYFIELD);
 }
 
 
 void Paint_shots(void)
 {
-    int		color, i, j, id, x, y, xs, ys, x1, x2, y1, y2, len, dir;
-    int		x_areas, y_areas, areas, max;
+    int		color, i, j, t_, id, x, y, xs, ys, x1, x2, y1, y2, len, dir;
+    int		x_areas, y_areas, areas, max_;
 
     if (num_itemtype > 0) {
 	SET_FG(colors[RED].pixel);
@@ -145,7 +160,8 @@ void Paint_shots(void)
 	    x = itemtype_ptr[i].x;
 	    y = itemtype_ptr[i].y;
 	    if (wrap(&x, &y)) {
-		Paint_item(itemtype_ptr[i].type, p_draw, gc, X(x), Y(y));
+		Paint_item((u_byte)itemtype_ptr[i].type, p_draw, gc, 
+			WINSCALE(X(x)), WINSCALE(Y(y)));
 		Erase_rectangle(X(x) - ITEM_TRIANGLE_SIZE,
 				Y(y) - ITEM_TRIANGLE_SIZE,
 				2*ITEM_TRIANGLE_SIZE + 1,
@@ -170,6 +186,9 @@ void Paint_shots(void)
 		XSetFillStyle(dpy, gc, FillTiled);
 	    }
 	}
+	else
+		ballTile = None;
+
 	for (i = 0; i < num_ball; i++) {
 	    x = ball_ptr[i].x;
 	    y = ball_ptr[i].y;
@@ -178,8 +197,8 @@ void Paint_shots(void)
 		x = X(x);
 		y = Y(y);
 		if (ballTile != None) {
-		    XSetTSOrigin(dpy, gc, x - BALL_RADIUS, y - BALL_RADIUS);
-		    rd.fillArc(dpy, p_draw, gc, x - BALL_RADIUS, y - BALL_RADIUS,
+		    XSetTSOrigin(dpy, gc, WINSCALE(x - BALL_RADIUS), WINSCALE(y - BALL_RADIUS));
+		    rd.fillArc(dpy, p_draw, gc, WINSCALE(x - BALL_RADIUS), WINSCALE(y - BALL_RADIUS),
 			     2*BALL_RADIUS, 2*BALL_RADIUS, 0, 64*360);
 		    Erase_rectangle(x - BALL_RADIUS, y - BALL_RADIUS,
 				    2*BALL_RADIUS, 2*BALL_RADIUS);
@@ -245,11 +264,12 @@ void Paint_shots(void)
 	    if (wrap(&x, &y)) {
 		x = X(x);
 		y = Y(y);
-		mine_points[0].x = x - 8;
-		mine_points[0].y = y - 1;
+		mine_points[0].x = WINSCALE(x - 8);
+		mine_points[0].y = WINSCALE(y - 1);
 		if (mine_ptr[i].teammine == 0) {
 			SET_FG(colors[BLUE].pixel);
-			rd.fillRectangle(dpy, p_draw, gc, x - 7, y - 2, 15, 5);
+			rd.fillRectangle(dpy, p_draw, gc, WINSCALE(x - 7), WINSCALE(y - 2), 
+				WINSCALE(15), WINSCALE(5));
 		}
 		SET_FG(colors[WHITE].pixel);
 		rd.drawLines(dpy, p_draw, gc,
@@ -300,8 +320,8 @@ void Paint_shots(void)
 		    }
 		    if (name!=NULL) {
 			rd.drawString(dpy, p_draw, gc,
-				    x - name_width / 2,
-				    y + gameFont->ascent + 4,
+				    WINSCALE(x - name_width / 2),
+				    WINSCALE(y + gameFont->ascent + 4),
 				    name, name_len);
 			Erase_rectangle(x - name_width / 2 - 1, y + 4,
 					name_width + 2,
@@ -316,7 +336,7 @@ void Paint_shots(void)
     x_areas = (view_width + 255) >> 8;
     y_areas = (view_height + 255) >> 8;
     areas = x_areas * y_areas;
-    max = areas * (debris_colors >= 3 ? debris_colors : 4);
+    max_ = areas * (debris_colors >= 3 ? debris_colors : 4);
 
 #define BASE_X(i)	((i % x_areas) << 8)
 #define BASE_Y(i)	(view_height - 1 - (((i / x_areas) % y_areas) << 8))
@@ -336,7 +356,7 @@ void Paint_shots(void)
 	  (color))
 #endif
 
-    for (i = 0; i < max; i++) {
+    for (i = 0; i < max_; i++) {
 	if (num_debris[i] > 0) {
 	    x = BASE_X(i);
 	    y = BASE_Y(i);
@@ -356,8 +376,8 @@ void Paint_shots(void)
     /*
      * Draw fastshots
      */
-    for (i = 0; i < max; i++) {
-	int t = i + DEBRIS_TYPES;
+    for (i = 0; i < max_; i++) {
+	t_ = i + DEBRIS_TYPES;
 
 	if (num_fastshot[i] > 0) {
 	    x = BASE_X(i);
@@ -378,23 +398,28 @@ void Paint_shots(void)
 	/*
 	 * Teamshots are in range DEBRIS_TYPES to DEBRIS_TYPES*2-1 in fastshot.
 	 */
-	if (num_fastshot[t] > 0) {
+	/* IFWINDOWS( Trace("t_=%d\n", t_); )*/
+	if (num_fastshot[t_] > 0) {
 	    x = BASE_X(i);
 	    y = BASE_Y(i);
 	    color = COLOR(i);
-	    for (j = 0; j < num_fastshot[t]; j++) {
+	    for (j = 0; j < num_fastshot[t_]; j++) {
 		Rectangle_add(color,
-			      x + fastshot_ptr[t][j].x - teamshot_size/2,
-			      y - fastshot_ptr[t][j].y - teamshot_size/2,
+			      x + fastshot_ptr[t_][j].x - teamshot_size/2,
+			      y - fastshot_ptr[t_][j].y - teamshot_size/2,
 			      teamshot_size, teamshot_size);
 	    }
-	    RELEASE(fastshot_ptr[t], num_fastshot[t], max_fastshot[t]);
+	    RELEASE(fastshot_ptr[t_], num_fastshot[t_], max_fastshot[t_]);
 	}
     }
 
     if (num_missile > 0) {
 	int len;
+#if defined(_WINDOWS) && !defined(PENS_OF_PLENTY)
+	SET_FG(MISSILECOLOR);
+#else
 	SET_FG(colors[WHITE].pixel);
+#endif
 	XSetLineAttributes(dpy, gc, 4,
 			   LineSolid, CapButt, JoinMiter);
 	for (i = 0; i < num_missile; i++) {
@@ -409,7 +434,8 @@ void Paint_shots(void)
 		y1 = Y(y);
 		x2 = (int)(x1 - tcos(missile_ptr[i].dir) * len);
 		y2 = (int)(y1 + tsin(missile_ptr[i].dir) * len);
-		rd.drawLine(dpy, p_draw, gc, x1, y1, x2, y2);
+		rd.drawLine(dpy, p_draw, gc, 
+			WINSCALE(x1), WINSCALE(y1), WINSCALE(x2), WINSCALE(y2));
 		Erase_segment(4, x1, y1, x2, y2);
 	    }
 	}
@@ -432,10 +458,14 @@ void Paint_shots(void)
 		if ((unsigned)(color = laser_ptr[i].color) >= NUM_COLORS) {
 		    color = WHITE;
 		}
+#if !defined(_WINDOWS) || defined(PENS_OF_PLENTY)
 		SET_FG(colors[color].pixel);
+#else
+		SET_FG((unsigned)(color == BLUE ? LASERTEAMCOLOR : LASERCOLOR));
+#endif
 		rd.drawLine(dpy, p_draw, gc,
-			  X(x1), Y(y1),
-			  X(x2), Y(y2));
+			  WINSCALE(X(x1)), WINSCALE(Y(y1)),
+			  WINSCALE(X(x2)), WINSCALE(Y(y2)));
 		Erase_segment(3, X(x1), Y(y1), X(x2), Y(y2));
 	    }
 	}
@@ -471,18 +501,18 @@ void Paint_ships(void)
 		x0 = X(x - half_pause_size);
 		y0 = Y(y + half_pause_size);
 		rd.fillRectangle(dpy, p_draw, gc,
-			       x0, y0,
-			       2*half_pause_size+1, 2*half_pause_size+1);
+			       WINSCALE(x0), WINSCALE(y0),
+			       WINSCALE(2*half_pause_size+1), WINSCALE(2*half_pause_size+1));
 		if (paused_ptr[i].count <= 0 || loops % 10 >= 5) {
 		    SET_FG(colors[mono?BLACK:WHITE].pixel);
 		    rd.drawRectangle(dpy, p_draw, gc,
-				   x0 - 1,
-				   y0 - 1,
-				   2*(half_pause_size+1),
-				   2*(half_pause_size+1));
+				   WINSCALE(x0 - 1),
+				   WINSCALE(y0 - 1),
+				   WINSCALE(2*(half_pause_size+1)),
+				   WINSCALE(2*(half_pause_size+1)));
 		    rd.drawString(dpy, p_draw, gc,
-				X(x - pauseCharWidth/2),
-				Y(y - gameFont->ascent/2),
+				WINSCALE(X(x - pauseCharWidth/2)),
+				WINSCALE(Y(y - gameFont->ascent/2)),
 				"P", 1);
 		}
 		Erase_rectangle(x0 - 1, y0 - 1,
@@ -516,8 +546,8 @@ void Paint_ships(void)
 		dir = ship_ptr[i].dir;
 		ship = Ship_by_id(ship_ptr[i].id);
 		for (cnt = 0; cnt < ship->num_points; cnt++) {
-		    points[cnt].x = X(x + ship->pts[cnt][dir].x);
-		    points[cnt].y = Y(y + ship->pts[cnt][dir].y);
+		    points[cnt].x = WINSCALE(X(x + ship->pts[cnt][dir].x));
+		    points[cnt].y = WINSCALE(Y(y + ship->pts[cnt][dir].y));
 		}
 		points[cnt++] = points[0];
 
@@ -532,8 +562,8 @@ void Paint_ships(void)
 		    FIND_NAME_WIDTH(other);
 		    SET_FG(colors[WHITE].pixel);
 		    rd.drawString(dpy, p_draw, gc,
-				X(x - other->name_width / 2),
-				Y(y - gameFont->ascent - 15),
+				WINSCALE(X(x - other->name_width / 2)),
+				WINSCALE(Y(y - gameFont->ascent - 15)),
 				other->name, other->name_len);
 		    Erase_rectangle(X(x - other->name_width / 2) - 1,
 				    Y(y - gameFont->ascent - 15)
@@ -630,7 +660,11 @@ void Paint_ships(void)
 #endif
 			XChangeGC(dpy, gc, mask, &gcv);
 		    }
+#if !defined(_WINDOWS) || defined(PENS_OF_PLENTY)
 		    SET_FG(colors[ship_color].pixel);
+#else
+			SET_FG(colors[ship_color].pixel+(ship_ptr[i].cloak ? CLOAKCOLOROFS : 0));
+#endif
 		    if (ship_ptr[i].cloak) {
 #if ERASE
 			int j;
@@ -650,14 +684,18 @@ void Paint_ships(void)
 			int half_radius = radius >> 1;
 			int half_e_radius = e_radius >> 1;
 
-			rd.drawArc(dpy, p_draw, gc, X(x - half_radius), Y(y + half_radius),
-				   radius, radius, 0, 64 * 360);
+			rd.drawArc(dpy, p_draw, gc, 
+				WINSCALE(X(x - half_radius)), 
+				WINSCALE(Y(y + half_radius)),
+				   WINSCALE(radius), WINSCALE(radius), 0, 64 * 360);
 			Erase_arc(X(x - half_radius), Y(y + half_radius),
 				  radius, radius, 0, 64 * 360);
 
 			if (ship_ptr[i].eshield) {	/* Emergency Shield */
-			    rd.drawArc(dpy, p_draw, gc, X(x - half_e_radius), Y(y + half_e_radius),
-				       e_radius, e_radius, 0, 64 * 360);
+			    rd.drawArc(dpy, p_draw, gc, 
+					WINSCALE(X(x - half_e_radius)), 
+					WINSCALE(Y(y + half_e_radius)),
+				    WINSCALE(e_radius), WINSCALE(e_radius), 0, 64 * 360);
 			    Erase_arc(X(x - half_e_radius), Y(y + half_e_radius),
 				      e_radius, e_radius, 0, 64 * 360);
 			}
@@ -679,6 +717,9 @@ void Paint_ships(void)
 	    XChangeGC(dpy, gc, mask, &gcv);
 	}
 	if (num_refuel > 0) {
+#ifdef _WINDOWS
+	    SET_FG(colors[WHITE].pixel+CLOAKCOLOROFS);	/* dashed line */
+#endif
 	    for (i = 0; i < num_refuel; i++) {
 		x0 = refuel_ptr[i].x0;
 		y0 = refuel_ptr[i].y0;
@@ -687,8 +728,8 @@ void Paint_ships(void)
 		if (wrap(&x0, &y0)
 		    && wrap(&x1, &y1)) {
 		    rd.drawLine(dpy, p_draw, gc,
-			      X(x0), Y(y0),
-			      X(x1), Y(y1));
+			      WINSCALE(X(x0)), WINSCALE(Y(y0)),
+			      WINSCALE(X(x1)), WINSCALE(Y(y1)));
 		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 		}
 	    }
@@ -702,13 +743,22 @@ void Paint_ships(void)
 		y0 = connector_ptr[i].y0;
 		x1 = connector_ptr[i].x1;
 		y1 = connector_ptr[i].y1;
+#ifdef _WINDOWS
+		SET_FG(colors[WHITE].pixel+CLOAKCOLOROFS);	/* dashed line */
+#endif
 		if (connector_ptr[i].tractor) {
 		    if (!cdashing) {
+#ifdef _WINDOWS
+			SET_FG(colors[WHITE].pixel);
+#endif
 			rd.setDashes(dpy, gc, 0, cdashes, NUM_CDASHES);
 			cdashing = 1;
 		    }
 		} else {
 		    if (cdashing) {
+#ifdef _WINDOWS
+			SET_FG(colors[WHITE].pixel+CLOAKCOLOROFS);	/* dashed line */
+#endif
 			rd.setDashes(dpy, gc, 0, dashes, NUM_DASHES);
 			cdashing = 0;
 		    }
@@ -716,8 +766,8 @@ void Paint_ships(void)
 		if (wrap(&x0, &y0)
 		    && wrap(&x1, &y1)) {
 		    rd.drawLine(dpy, p_draw, gc,
-			      X(x0), Y(y0),
-			      X(x1), Y(y1));
+			      WINSCALE(X(x0)), WINSCALE(Y(y0)),
+			      WINSCALE(X(x1)), WINSCALE(Y(y1)));
 		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 		}
 	    }
@@ -726,6 +776,9 @@ void Paint_ships(void)
 		rd.setDashes(dpy, gc, 0, dashes, NUM_DASHES);
 	}
 	if (num_trans > 0) {
+#ifdef _WINDOWS
+	    SET_FG(colors[WHITE].pixel+CLOAKCOLOROFS);	/* dashed line */
+#endif
 	    for (i = 0; i < num_trans; i++) {
 		x0 = trans_ptr[i].x1;
 		y0 = trans_ptr[i].y1;
@@ -733,7 +786,8 @@ void Paint_ships(void)
 		y1 = trans_ptr[i].y2;
 		if (wrap(&x0, &y0) && wrap(&x1, &y1)) {
 		    rd.drawLine(dpy, p_draw, gc,
-			      X(x0), Y(y0), X(x1), Y(y1));
+			      WINSCALE(X(x0)), WINSCALE(Y(y0)), 
+				  WINSCALE(X(x1)), WINSCALE(Y(y1)));
 		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 		}
 	    }

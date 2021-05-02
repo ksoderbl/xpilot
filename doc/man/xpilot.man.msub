@@ -413,7 +413,7 @@ efficiently.
 .TP 12
 .B Rockets
 Pack of rockets.  These may be used as smart missiles, heat
-seaking missiles, or just plain dumb torpedos.  Usually these
+seeking missiles, or just plain dumb torpedos.  Usually these
 explode on impact with a small debris explosion.  However, if
 enabled, nuclear and/or cluster variants of each may be possible.
 See the description of \fIkeyToggleNuclear\fP, \fIkeyToggleCluster\fP
@@ -1384,7 +1384,7 @@ set the loginname and hostname as reported to the xpilots server.
 \fBXPilot\fP was developed by
 Bjørn Stabell <bjoern@xpilot.org> and
 Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, and
-Bert Gÿsbers <bert@xpilot.org> from the University of Amsterdam.
+Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam.
 
 
 .SH BUG REPORTS

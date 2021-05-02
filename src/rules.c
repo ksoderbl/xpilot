@@ -1,10 +1,11 @@
-/* $Id: rules.c,v 3.45 1997/02/25 14:04:24 bert Exp $
+/* $Id: rules.c,v 3.52 1998/01/23 13:02:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +22,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include <windows.h>
+#else
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -38,7 +43,7 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.45 1997/02/25 14:04:24 bert Exp $";
+    "@(#)$Id: rules.c,v 3.52 1998/01/23 13:02:54 bert Exp $";
 #endif
 
 
@@ -62,7 +67,7 @@ long	USED_KILL =
  */
 static void Set_item_chance(int item)
 {
-    float	max = itemProbMult * maxItemDensity * World.x * World.y;
+    DFLOAT	max = itemProbMult * maxItemDensity * World.x * World.y;
 
     if (itemProbMult * World.items[item].prob > 0) {
 	World.items[item].chance = (int)(1.0
@@ -136,6 +141,29 @@ static void Init_item(int item, int minpp, int maxpp)
  */
 void Set_initial_resources(void)
 {
+    int			i;
+
+    LIMIT(World.items[ITEM_FUEL].limit, 0, 10000);
+    LIMIT(World.items[ITEM_WIDEANGLE].limit, 0, 10);
+    LIMIT(World.items[ITEM_REARSHOT].limit, 0, 10);
+    LIMIT(World.items[ITEM_AFTERBURNER].limit, 0, MAX_AFTERBURNER);
+    LIMIT(World.items[ITEM_CLOAK].limit, 0, 10);
+    LIMIT(World.items[ITEM_SENSOR].limit, 0, 10);
+    LIMIT(World.items[ITEM_TRANSPORTER].limit, 0, 10);
+    LIMIT(World.items[ITEM_TANK].limit, 0, MAX_TANKS);
+    LIMIT(World.items[ITEM_MINE].limit, 0, 10);
+    LIMIT(World.items[ITEM_MISSILE].limit, 0, 10);
+    LIMIT(World.items[ITEM_ECM].limit, 0, 10);
+    LIMIT(World.items[ITEM_LASER].limit, 0, MAX_LASERS);
+    LIMIT(World.items[ITEM_EMERGENCY_THRUST].limit, 0, 10);
+    LIMIT(World.items[ITEM_TRACTOR_BEAM].limit, 0, MAX_TRACTORS);
+    LIMIT(World.items[ITEM_AUTOPILOT].limit, 0, 10);
+    LIMIT(World.items[ITEM_EMERGENCY_SHIELD].limit, 0, 10);
+
+    for (i = 0; i < NUM_ITEMS; i++) {
+	LIMIT(World.items[i].initial, 0, World.items[i].limit);
+    }
+
     CLR_BIT(DEF_HAVE,
 	OBJ_CLOAKING_DEVICE |
 	OBJ_EMERGENCY_THRUST |
@@ -153,10 +181,6 @@ void Set_initial_resources(void)
 	SET_BIT(DEF_HAVE, OBJ_TRACTOR_BEAM);
     if (World.items[ITEM_AUTOPILOT].initial > 0)
 	SET_BIT(DEF_HAVE, OBJ_AUTOPILOT);
-    LIMIT(World.items[ITEM_TANK].initial, 0, MAX_TANKS);
-    LIMIT(World.items[ITEM_LASER].initial, 0, MAX_LASERS);
-    LIMIT(World.items[ITEM_AFTERBURNER].initial, 0, MAX_AFTERBURNER);
-    LIMIT(World.items[ITEM_TRACTOR_BEAM].initial, 0, MAX_TRACTORS);
 }
 
 
@@ -180,8 +204,8 @@ void Set_world_items(void)
     Init_item(ITEM_FUEL, 0, 0);
     Init_item(ITEM_TANK, 1, 1);
     Init_item(ITEM_ECM, 1, 1);
-    Init_item(ITEM_MINE, 1, 2);
-    Init_item(ITEM_MISSILE, maxMissilesPerPack, maxMissilesPerPack);
+    Init_item(ITEM_MINE, 1, maxMinesPerPack);
+    Init_item(ITEM_MISSILE, 1, maxMissilesPerPack);
     Init_item(ITEM_CLOAK, 1, 1);
     Init_item(ITEM_SENSOR, 1, 1);
     Init_item(ITEM_WIDEANGLE, 1, 1);

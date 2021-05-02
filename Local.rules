@@ -1,4 +1,4 @@
-/* $Id: Local.rules,v 3.19 1995/08/08 14:00:33 bjoerns Exp $
+/* $Id: Local.rules,v 3.21 1998/01/28 08:50:00 bert Exp $
  *
  * NO NEED TO EDIT THIS FILE; ONLY EDIT Local.config.
  */
@@ -7,7 +7,7 @@
 #ifndef XCOMM
 #define XCOMM #
 #endif
-/* And some doesn't have NullParameter either, double shame */
+/* And some don't have NullParameter either, double shame */
 #ifndef NullParameter
 #define NullParameter
 #endif

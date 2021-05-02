@@ -1,10 +1,11 @@
-/* $Id: about.c,v 3.1 1996/10/13 19:30:45 bert Exp $
+/* $Id: about.c,v 3.11 1998/01/22 11:43:08 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#else
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,12 +36,12 @@
 #include <errno.h>
 
 #include <X11/Xlib.h>
+#endif
 
 #include "version.h"
 #include "config.h"
 #include "const.h"
 #include "keys.h"
-#include "icon.h"
 #include "paint.h"
 #include "xinit.h"
 #include "widget.h"
@@ -50,7 +55,7 @@ char about_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: about.c,v 3.1 1996/10/13 19:30:45 bert Exp $";
+    "@(#)$Id: about.c,v 3.11 1998/01/22 11:43:08 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -74,9 +79,10 @@ static bool		about_created;
  */
 static int itemsplit = -1;
 
-extern int About_callback(int, void *, const char **);
-extern int Keys_callback(int, void *, const char **);
-extern int Motd_callback(int, void *, const char **);
+/* extern int About_callback(int, void *, const char **);
+   extern int Keys_callback(int, void *, const char **);
+   extern int Motd_callback(int, void *, const char **);
+*/
 extern const char* Item_get_text(int i);
 
 /*
@@ -202,7 +208,7 @@ void Expose_about_window(void)
 			   BORDER, box_start,
 			   2*ITEM_SIZE+2*BORDER, box_end - box_start);
 	    XSetForeground(dpy, textGC, colors[RED].pixel);
-	    Paint_item(i, about_w, textGC, 2*BORDER + ITEM_SIZE,
+	    Paint_item((u_byte)i, about_w, textGC, 2*BORDER + ITEM_SIZE,
 		       old_y + ITEM_TRIANGLE_SIZE);
 	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
 
@@ -245,7 +251,7 @@ void Expose_about_window(void)
 	"\n"
 	"XPilot is a multi-player 2D space game.  "
 	"Some features are borrowed from classics like the Atari coin-ups "
-	"Asteriods and Gravitar, and the home-computer games "
+	"Asteroids and Gravitar, and the home-computer games "
 	"Thrust (Commdore 64) and Gravity Force, but XPilot has many "
 	"new features as well.\n"
 	"\n"
@@ -275,9 +281,12 @@ void Expose_about_window(void)
 	"The game was conceived in its orignal form at the "
 	"University of Tromsø (Norway) by Ken Ronny Schouten and "
 	"Bjørn Stabell during the fall of 1991, but much of the game today "
-	"is the result of hard efforts by Bert Gÿsbers of the "
+	"is the result of hard efforts by Bert Gijsbers of the "
 	"molecular cytology lab at the University of Amsterdam (The Netherlands).  "
 	"Bert joined the team in the spring of 1993.\n"
+	"\n"
+	"Dick Balaska (Connecticut, USA) ported XPilot to Windows 95 and NT "
+	"in the summer of 1996.\n"
 	"\n"
 	"A large number of features have been contributed by XPilot fans from "
 	"all around the world.  See the CREDITS file for details.\n"
@@ -289,7 +298,7 @@ void Expose_about_window(void)
 	"Bugs should be reported to <xpilot@xpilot.org>.\n"
 	"\n\n"
 	"Good luck as a future xpilot,\n"
-	"Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers",
+	"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",
 	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;
 
@@ -442,6 +451,7 @@ void About(Window w)
 	    about_page = NUM_ABOUT_PAGES-1;
 	Expose_about_window();
     }
+	WinXFlush(about_w);
 }
 
 
@@ -455,16 +465,16 @@ int About_callback(int widget_desc, void *data, const char **str)
     return 0;
 }
 
+	   int		keys_viewer = NO_WIDGET;
+static bool		keys_created = false;
 
 int Keys_callback(int widget_desc, void *data, const char **unused)
 {
-    static bool		keys_created = false;
-    static int		keys_viewer;
 
     if (keys_created == false) {
-	unsigned	bufsize = 1;
-	char		*buf = (char *)calloc(1, 1),
-			*end,
+	unsigned	bufsize = (maxKeyDefs * 64);
+	char		*buf = calloc(bufsize, 1),
+			*end = buf,
 			*help,
 			*str;
 	int		i,
@@ -483,17 +493,19 @@ int Keys_callback(int widget_desc, void *data, const char **unused)
 		|| !(help = Get_keyHelpString(keyDefs[i].key))) {
 		continue;
 	    }
-	    bufsize += strlen(str) + strlen(help) + maxkeylen + 4;
-	    if (!(buf = (char *)realloc(buf, bufsize))) {
-		error("No memory for key list");
-		return 0;
+	    if ((end - buf) + (maxkeylen + strlen(help) + 4) >= bufsize) {
+		bufsize += 4096;
+		if (!(buf = (char *)realloc(buf, bufsize))) {
+		    error("No memory for key list");
+		    return 0;
+		}
 	    }
-	    end = &buf[strlen(buf)];
 	    sprintf(end, "%-*s  %s\n", maxkeylen, str, help);
+	    end += strlen(end);
 	}
 	keys_viewer =
 	    Widget_create_viewer(buf,
-				 strlen(buf),
+				 end - buf,
 				 2*DisplayWidth(dpy, DefaultScreen(dpy))/3,
 				 4*DisplayHeight(dpy, DefaultScreen(dpy))/5,
 				 2,
@@ -513,12 +525,19 @@ int Keys_callback(int widget_desc, void *data, const char **unused)
     return 0;
 }
 
+void Keys_destroy()
+{
+    Widget_destroy(keys_viewer);
+    keys_viewer = NO_WIDGET;
+    keys_created = false;
+}
+
 
 #define MAX_MOTD_SIZE	(30*1024)
 
-static char		*motd_buf;
+static char		*motd_buf = NULL;
 static int		motd_size;
-static int		motd_viewer = NO_WIDGET;
+       int		motd_viewer = NO_WIDGET;
 static int		motd_auto_popup;
 
 int Motd_callback(int widget_desc, void *data, const char **str)
@@ -534,6 +553,15 @@ int Motd_callback(int widget_desc, void *data, const char **str)
     return 0;
 }
 
+void Motd_destroy()
+{
+    Widget_destroy(motd_viewer);
+    motd_viewer = NO_WIDGET;
+    if (motd_buf) {
+	free(motd_buf);
+	motd_buf = NULL;
+    }
+}
 
 int Handle_motd(long off, char *buf, int len, long filesize)
 {
@@ -607,3 +635,21 @@ int Startup_server_motd(void)
     }
     return 0;
 }
+
+void aboutCleanup(void)
+{
+    if (motd_buf) {
+	free(motd_buf);
+	motd_buf = NULL;
+    }
+}
+
+#ifdef	_WINDOWS
+int Credits_callback(int widget_desc, void *data, const char **unused)
+{
+    extern	void DoWinAboutBox();
+    DoWinAboutBox();
+    return(0);
+}
+#endif
+

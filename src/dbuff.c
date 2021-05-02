@@ -1,10 +1,11 @@
-/* $Id: dbuff.c,v 3.18 1996/10/06 00:00:59 bjoerns Exp $
+/* $Id: dbuff.c,v 3.24 1997/11/27 20:09:10 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +35,12 @@
 #include "bit.h"
 #include "dbuff.h"
 
-#ifdef MBX
+/* Favor DBE over MBX */
+#if defined(DBE) && defined(MBX)
+#undef	MBX
+#endif
+
+#if defined(MBX) || defined(DBE)
 /* Needed for windows ... */
 # include "paint.h"
 #endif
@@ -53,7 +59,7 @@ char dbuff_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.18 1996/10/06 00:00:59 bjoerns Exp $";
+    "@(#)$Id: dbuff.c,v 3.24 1997/11/27 20:09:10 bert Exp $";
 #endif
 
 #ifdef SPARC_CMAP_HACK
@@ -64,7 +70,7 @@ extern char   frameBuffer[MAX_CHARS]; /* frame buffer */
 dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
 
-static void release(register dbuff_state_t *state)
+static void release(dbuff_state_t *state)
 {
     if (state != NULL) {
 	if (state->colormaps[0] != NULL) free(state->colormaps[0]);
@@ -76,14 +82,21 @@ static void release(register dbuff_state_t *state)
 	    XmbufDestroyBuffers(state->display, draw);
 	}
 #endif
+/* #ifdef DBE
+	if (state->type == MULTIBUFFER
+	    && state->buffer != 2) {
+	    printf("release() for DBE?\n");
+	}
+   #endif */
+
 	free(state);
     }
 }
 
 
-static long color(register dbuff_state_t *state, register long simple_color)
+static long color(dbuff_state_t *state, long simple_color)
 {
-    register long i, plane, computed_color;
+    long i, plane, computed_color;
 
     computed_color = state->pixel;
     for (plane=1, i=0; simple_color != 0; plane <<= 1, i++) {
@@ -100,8 +113,8 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 			   dbuff_t type,
 			   unsigned long planes, XColor *colors)
 {
-    register dbuff_state_t *state;
-    register i, high_mask, low_mask;
+    dbuff_state_t *state;
+    int i, high_mask, low_mask;
 
 
     state = (dbuff_state_t *) calloc(sizeof(dbuff_state_t), 1);
@@ -140,9 +153,20 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 	state->buffer = 2;
 	if (!XmbufQueryExtension(display, &state->ev_base, &state->err_base)) {
 	    release(state);
+	    fprintf(stderr, "XmbufQueryExtension failed\n");
 	    return(NULL);
 	}
-#else
+#endif
+#ifdef DBE
+	state->buffer = 2;
+	if (!XdbeQueryExtension(display, &state->dbe_major, &state->dbe_minor)) {
+	    release(state);
+	    fprintf(stderr, "XdbeQueryExtension failed\n");
+	    return (NULL);
+	}
+#endif
+
+#if !defined(MBX) && !defined(DBE)
 	printf("multibuffering support was not configured during compilation.\n");
 	release(state);
 	return(NULL);
@@ -193,6 +217,7 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
     }
 
     state->drawing_planes = state->masks[state->buffer];
+
     if (state->type == COLOR_SWITCH)
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
@@ -228,6 +253,19 @@ void dbuff_init(dbuff_state_t *state)
 	    }
 	}
 	p_draw = state->draw[state->buffer];
+    }
+#endif
+#ifdef DBE
+    if (state->type == MULTIBUFFER) {
+	if (state->buffer == 2) {
+	    state->buffer = 0;
+	    if (!(state->back_buffer = 
+		  XdbeAllocateBackBufferName(state->display, draw, XdbeBackground))) {
+		perror("Couldn't create double buffering back buffer");
+		exit(1);
+	    }
+	}
+	p_draw = state->back_buffer;
     }
 #endif
 }
@@ -272,7 +310,17 @@ void dbuff_switch(dbuff_state_t *state)
 			    0, 200);
     }
 #endif
-
+#ifdef DBE
+    else if (state->type == MULTIBUFFER) {
+	XdbeSwapInfo	swap;
+	swap.swap_window	= draw;
+	swap.swap_action	= XdbeBackground;
+	if (!XdbeSwapBuffers(state->display, &swap, 1)) {
+	    perror("XdbeSwapBuffers failed");
+	    exit(1);
+	}
+    }
+#endif
 
     state->drawing_planes = state->masks[state->buffer];
 }

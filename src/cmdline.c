@@ -1,10 +1,11 @@
-/* $Id: cmdline.c,v 3.90 1997/02/25 14:04:19 bert Exp $
+/* $Id: cmdline.c,v 3.99 1998/01/23 13:02:52 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,9 +23,13 @@
  */
 /* Options parsing code contributed by Ted Lemon <mellon@ncd.com> */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#else
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -39,13 +44,13 @@ char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.90 1997/02/25 14:04:19 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.99 1998/01/23 13:02:52 bert Exp $";
 #endif
 
-float		Gravity;		/* Power of gravity */
-float		ShipMass;		/* Default mass of ship */
-float		ShotsMass;		/* Default mass of shots */
-float		ShotsSpeed;		/* Default speed of shots */
+DFLOAT		Gravity;		/* Power of gravity */
+DFLOAT		ShipMass;		/* Default mass of ship */
+DFLOAT		ShotsMass;		/* Default mass of shots */
+DFLOAT		ShotsSpeed;		/* Default speed of shots */
 int		ShotsLife;		/* Default number of ticks */
 					/* each shot will live */
 int		WantedNumRobots;	/* How many robots should enter */
@@ -84,20 +89,23 @@ bool		missilesWallBounce;	/* Do missiles bounce off walls? */
 bool		sparksWallBounce;	/* Do sparks bounce off walls? */
 bool		debrisWallBounce;	/* Do sparks bounce off walls? */
 bool		ballsWallBounce;	/* Do balls bounce off walls? */
+bool		cloakedExhaust;		/* Generate exhaust when cloaked? */
+bool		cloakedShield;		/* Allowed to use shields when cloaked? */
 bool		ecmsReprogramMines;	/* Do ecms reprogram mines? */
-float		maxObjectWallBounceSpeed;	/* max object bounce speed */
-float		maxShieldedWallBounceSpeed;	/* max shielded bounce speed */
-float		maxUnshieldedWallBounceSpeed; /* max unshielded bounce speed */
-float		maxShieldedWallBounceAngle;	/* max angle for landing */
-float		maxUnshieldedWallBounceAngle;	/* max angle for landing */
-float		playerWallBrakeFactor;	/* wall lowers speed if less than 1 */
-float		objectWallBrakeFactor;	/* wall lowers speed if less than 1 */
-float		objectWallBounceLifeFactor;	/* reduce object life */
-float		wallBounceFuelDrainMult;/* Wall bouncing fuel drain factor */
-float		wallBounceDestroyItemProb;/* Wall bouncing item destroy prob */
+bool		ecmsReprogramRobots;	/* Do ecms reprogram robots? */
+DFLOAT		maxObjectWallBounceSpeed;	/* max object bounce speed */
+DFLOAT		maxShieldedWallBounceSpeed;	/* max shielded bounce speed */
+DFLOAT		maxUnshieldedWallBounceSpeed; /* max unshielded bounce speed */
+DFLOAT		maxShieldedWallBounceAngle;	/* max angle for landing */
+DFLOAT		maxUnshieldedWallBounceAngle;	/* max angle for landing */
+DFLOAT		playerWallBrakeFactor;	/* wall lowers speed if less than 1 */
+DFLOAT		objectWallBrakeFactor;	/* wall lowers speed if less than 1 */
+DFLOAT		objectWallBounceLifeFactor;	/* reduce object life */
+DFLOAT		wallBounceFuelDrainMult;/* Wall bouncing fuel drain factor */
+DFLOAT		wallBounceDestroyItemProb;/* Wall bouncing item destroy prob */
 bool		limitedVisibility;	/* Is visibility limited? */
-float		minVisibilityDistance;	/* Minimum visibility when starting */
-float		maxVisibilityDistance;	/* Maximum visibility */
+DFLOAT		minVisibilityDistance;	/* Minimum visibility when starting */
+DFLOAT		maxVisibilityDistance;	/* Maximum visibility */
 bool		limitedLives;		/* Are lives limited? */
 int		worldLives;		/* If so, what's the max? */
 bool		endOfRoundReset;	/* Reset the world when round ends? */
@@ -110,34 +118,42 @@ bool		edgeBounce;		/* Do objects bounce when they hit
 					   the edge of the Universe? */
 bool		extraBorder;		/* Give map an extra border? */
 ipos		gravityPoint;		/* Where does gravity originate? */
-float		gravityAngle;		/* If gravity is along a uniform line,
+DFLOAT		gravityAngle;		/* If gravity is along a uniform line,
 					   at what angle is that line? */
 bool		gravityPointSource;	/* Is gravity a point source? */
 bool		gravityClockwise;	/* If so, is it clockwise? */
 bool		gravityAnticlockwise;	/* If not clockwise, anticlockwise? */
+bool		gravityVisible;		/* Is gravity visible? */
+bool		wormholeVisible;	/* Are wormholes visible? */
+bool		itemConcentratorVisible;/* Are itemconcentrators visible? */
 char		*defaultsFileName;	/* Name of defaults file... */
 char		*scoreTableFileName;	/* Name of score table file */
 
 int		nukeMinSmarts;		/* minimum smarts for a nuke */
 int		nukeMinMines;		/* minimum number of mines for nuke */
-float		nukeClusterDamage;	/* multiplier for damage from nuke */
+DFLOAT		nukeClusterDamage;	/* multiplier for damage from nuke */
 					/* cluster debris, reduces number */
 					/* of particles by similar amount */
 int		mineFuseTime;		/* Length of time mine is fused */
+int		mineLife;		/* lifetime of mines */
+int		missileLife;		/* lifetime of missiles */
 
-float 		movingItemProb;		/* Probability for moving items */
-float		dropItemOnKillProb;	/* Probability for players items to */
+DFLOAT 		movingItemProb;		/* Probability for moving items */
+DFLOAT		dropItemOnKillProb;	/* Probability for players items to */
 					/* drop when player is killed */
-float		detonateItemOnKillProb;	/* Probaility for remaining items to */
+DFLOAT		detonateItemOnKillProb;	/* Probaility for remaining items to */
 					/* detonate when player is killed */
-float		destroyItemInCollisionProb;
-float           rogueHeatProb;          /* prob. that unclaimed rocketpack */
-float           rogueMineProb;          /* or minepack will "activate" */
-float		itemProbMult;
-float		maxItemDensity;
+DFLOAT		destroyItemInCollisionProb;
+DFLOAT           rogueHeatProb;          /* prob. that unclaimed rocketpack */
+DFLOAT           rogueMineProb;          /* or minepack will "activate" */
+DFLOAT		itemProbMult;
+DFLOAT		maxItemDensity;
 int		itemConcentratorRadius;
-float		itemConcentratorProb;
+DFLOAT		itemConcentratorProb;
 
+bool		allowSmartMissiles;
+bool		allowHeatSeekers;
+bool		allowTorpedoes;
 bool		allowNukes;
 bool		allowClusters;
 bool		allowModifiers;
@@ -151,13 +167,14 @@ bool		nukesOnRadar;		/* Are nuke weapons radar visible? */
 bool		treasuresOnRadar;	/* Are treasure balls radar visible? */
 bool		distinguishMissiles;	/* Smarts, heats & torps look diff.? */
 int		maxMissilesPerPack;	/* Number of missiles per item. */
+int		maxMinesPerPack;	/* Number of mines per item. */
 bool		identifyMines;		/* Mines have names displayed? */
 bool		shieldedItemPickup;	/* Pickup items with shields up? */
 bool		shieldedMining;		/* Detach mines with shields up? */
 bool		laserIsStunGun;		/* Is the laser a stun gun? */
 bool		reportToMetaServer;	/* Send status to meta-server? */
 char		*denyHosts;		/* Computers which are denied service */
-float		gameDuration;		/* total duration of game in minutes */
+DFLOAT		gameDuration;		/* total duration of game in minutes */
 
 bool		teamAssign;		/* Assign player to team if not set? */
 bool		teamImmunity;		/* Is team immune from player action */
@@ -169,8 +186,8 @@ bool		treasureKillTeam;	/* die if treasure is destroyed? */
 bool		treasureCollisionDestroys;
 bool		treasureCollisionMayKill;
 
-float		friction;		/* friction only affects ships */
-float		checkpointRadius;      	/* in blocks */
+DFLOAT		friction;		/* friction only affects ships */
+DFLOAT		checkpointRadius;      	/* in blocks */
 int		raceLaps;		/* how many laps per race */
 bool		lockOtherTeam;		/* lock ply from other teams when dead? */
 bool		loseItemDestroys; 	/* destroy or drop when player */
@@ -360,7 +377,11 @@ static optionDesc options[] = {
     {
 	"noQuit",
 	"noQuit",
+#ifdef	_WINDOWS
+	"true",
+#else
 	"false",
+#endif
 	&NoQuit,
 	valBool,
 	tuner_dummy,
@@ -537,6 +558,24 @@ static optionDesc options[] = {
 	valBool,
 	Move_init,
 	"Do explosion debris particles bounce off walls?\n"
+    },
+    {
+	"cloakedExhaust",
+	"cloakedExhaust",
+	"yes",
+	&cloakedExhaust,
+	valBool,
+	tuner_none,
+	"Do engines of cloaked ships generate exhaust?\n"
+    },
+    {
+	"cloakedShield",
+	"cloakedShield",
+	"yes",
+	&cloakedShield,
+	valBool,
+	tuner_none,
+	"Can players use shields when cloaked?\n"
     },
     {
 	"maxObjectWallBounceSpeed",
@@ -745,6 +784,15 @@ static optionDesc options[] = {
 	"Is it possible to reprogram mines with ECMs?\n"
     },
     {
+	"ecmsReprogramRobots",
+	"ecmsReprogramRobots",
+	"yes",
+	&ecmsReprogramRobots,
+	valBool,
+	tuner_dummy,
+	"Are robots reprogrammed by ECMs instead of blinded?\n"
+    },
+    {
 	"targetKillTeam",
 	"targetKillTeam",
 	"no",
@@ -890,6 +938,33 @@ static optionDesc options[] = {
 	"If the gravity is a point source, is it anticlockwise?\n"
     },
     {
+	"gravityVisible",
+	"gravityVisible",
+	"true",
+	&gravityVisible,
+	valBool,
+	tuner_none,
+	"Are gravity mapsymbols visible to players?\n"
+    },
+    {
+	"wormholeVisible",
+	"wormholeVisible",
+	"true",
+	&wormholeVisible,
+	valBool,
+	tuner_none,
+	"Are wormhole mapsymbols visible to players?\n"
+    },
+    {
+	"itemConcentratorVisible",
+	"itemConcentratorVisible",
+	"true",
+	&itemConcentratorVisible,
+	valBool,
+	tuner_none,
+	"Are itemconcentrator mapsymbols visible to players?\n"
+    },
+    {
 	"defaultsFileName",
 	"defaults",
 	"",
@@ -915,6 +990,33 @@ static optionDesc options[] = {
 	valInt,
 	tuner_none,
 	"The number of frames per second the server should strive for.\n"
+    },
+    {
+	"allowSmartMissiles",
+	"allowSmarts",
+	"True",
+	&allowSmartMissiles,
+	valBool,
+	tuner_dummy,
+	"Should smart missiles be allowed?\n"
+    },
+    {
+	"allowHeatSeekers",
+	"allowHeats",
+	"True",
+	&allowHeatSeekers,
+	valBool,
+	tuner_dummy,
+	"Should heatseekers be allowed?\n"
+    },
+    {
+	"allowTorpedoes",
+	"allowTorps",
+	"True",
+	&allowTorpedoes,
+	valBool,
+	tuner_dummy,
+	"Should torpedoes be allowed?\n"
     },
     {
 	"allowNukes",
@@ -1025,6 +1127,15 @@ static optionDesc options[] = {
 	"The number of missiles gotten by picking up one missile item.\n"
     },
     {
+	"maxMinesPerPack",
+	"maxMinesPerPack",
+	"2",
+	&maxMinesPerPack,
+	valInt,
+	tuner_none,
+	"The number of mines gotten by picking up one mine item.\n"
+    },
+    {
 	"identifyMines",
 	"identifyMines",
 	"True",
@@ -1097,6 +1208,24 @@ static optionDesc options[] = {
 	valSec,
 	tuner_dummy,
 	"Time after which owned mines become deadly, zero means never.\n"
+    },
+    {
+	"mineLife",
+	"mineLife",
+	"0",
+	&mineLife,
+	valInt,
+	tuner_none,
+	"Life of mines in ticks, zero means use default.\n"
+    },
+    {
+	"missileLife",
+	"missileLife",
+	"0",
+	&missileLife,
+	valInt,
+	tuner_none,
+	"Life of missiles in ticks, zero means use default.\n"
     },
     {
 	"movingItemProb",
@@ -1485,6 +1614,150 @@ static optionDesc options[] = {
 	"How many emergency shields players start with.\n"
     },
     {
+	"maxFuel",
+	"maxFuel",
+	"10000",
+	&World.items[ITEM_FUEL].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the amount of fuel per player.\n"
+    },
+    {
+	"maxTanks",
+	"maxTanks",
+	"8",
+	&World.items[ITEM_TANK].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of tanks per player.\n"
+    },
+    {
+	"maxECMs",
+	"maxECMs",
+	"10",
+	&World.items[ITEM_ECM].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of ECMs per player.\n"
+    },
+    {
+	"maxMines",
+	"maxMines",
+	"10",
+	&World.items[ITEM_MINE].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of mines per player.\n"
+    },
+    {
+	"maxMissiles",
+	"maxMissiles",
+	"10",
+	&World.items[ITEM_MISSILE].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of missiles per player.\n"
+    },
+    {
+	"maxCloaks",
+	"maxCloaks",
+	"10",
+	&World.items[ITEM_CLOAK].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of cloaks per player.\n"
+    },
+    {
+	"maxSensors",
+	"maxSensors",
+	"10",
+	&World.items[ITEM_SENSOR].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of sensors per player.\n"
+    },
+    {
+	"maxWideangles",
+	"maxWideangles",
+	"10",
+	&World.items[ITEM_WIDEANGLE].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of wides per player.\n"
+    },
+    {
+	"maxRearshots",
+	"maxRearshots",
+	"10",
+	&World.items[ITEM_REARSHOT].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of rearshots per player.\n"
+    },
+    {
+	"maxAfterburners",
+	"maxAfterburners",
+	"10",
+	&World.items[ITEM_AFTERBURNER].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of afterburners per player.\n"
+    },
+    {
+	"maxTransporters",
+	"maxTransporters",
+	"10",
+	&World.items[ITEM_TRANSPORTER].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of transporters per player.\n"
+    },
+    {
+	"maxEmergencyThrusts",
+	"maxEmergencyThrusts",
+	"10",
+	&World.items[ITEM_EMERGENCY_THRUST].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of emergency thrusts per player.\n"
+    },
+    {
+	"maxLasers",
+	"maxLasers",
+	"5",
+	&World.items[ITEM_LASER].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of lasers per player.\n"
+    },
+    {
+	"maxTractorBeams",
+	"maxTractorBeams",
+	"4",
+	&World.items[ITEM_TRACTOR_BEAM].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of tractorbeams per player.\n"
+    },
+    {
+	"maxAutopilots",
+	"maxAutopilots",
+	"10",
+	&World.items[ITEM_AUTOPILOT].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of autopilots per player.\n"
+    },
+    {
+	"maxEmergencyShields",
+	"maxEmergencyShields",
+	"10",
+	&World.items[ITEM_EMERGENCY_SHIELD].limit,
+	valInt,
+	Set_initial_resources,
+	"Upper limit on the number of emergency shields per player.\n"
+    },
+    {
 	"gameDuration",
 	"time",
 	"0.0",
@@ -1577,17 +1850,17 @@ static void Parse_help(char *progname)
     int			j;
     const char		*str;
 
-    printf("Usage: %s [ options ]\n"
+    xpprintf("Usage: %s [ options ]\n"
 	   "Where options include:\n"
 	   "\n",
 	   progname);
     for (j = 0; j < NELEM(options); j++) {
-	printf("    %s%s",
+	xpprintf("    %s%s",
 	       options[j].type == valBool ? "-/+" : "-",
 	       options[j].name);
 	if (strcasecmp(options[j].commandLineOption, options[j].name))
-	    printf(" or %s", options[j].commandLineOption);
-	printf(" %s\n",
+	    xpprintf(" or %s", options[j].commandLineOption);
+	xpprintf(" %s\n",
 	       options[j].type == valInt ? "<integer>" :
 	       options[j].type == valReal ? "<real>" :
 	       options[j].type == valString ? "<string>" :
@@ -1606,7 +1879,7 @@ static void Parse_help(char *progname)
 	}
 	putchar('\n');
     }
-    printf(
+    xpprintf(
 "    \n"
 "    The probabilities are in the range [0.0-1.0] and they refer to the\n"
 "    probability that an event will occur in a block per second.\n"
@@ -1621,26 +1894,26 @@ static void Parse_dump(char *progname)
 {
     int			j;
 
-    printf("\n");
-    printf("# %s option dump\n", progname);
-    printf("# \n");
-    printf("# LIBDIR = %s\n", LIBDIR);
-    printf("# DEFAULTS_FILE_NAME = %s\n", DEFAULTS_FILE_NAME);
-    printf("# MAPDIR = %s\n", MAPDIR);
-    printf("# DEFAULT_MAP = %s\n", DEFAULT_MAP);
-    printf("# SERVERMOTDFILE = %s\n", SERVERMOTDFILE);
-    printf("# \n");
+    xpprintf("\n");
+    xpprintf("# %s option dump\n", progname);
+    xpprintf("# \n");
+    xpprintf("# LIBDIR = %s\n", LIBDIR);
+    xpprintf("# DEFAULTS_FILE_NAME = %s\n", DEFAULTS_FILE_NAME);
+    xpprintf("# MAPDIR = %s\n", MAPDIR);
+    xpprintf("# DEFAULT_MAP = %s\n", DEFAULT_MAP);
+    xpprintf("# SERVERMOTDFILE = %s\n", SERVERMOTDFILE);
+    xpprintf("# \n");
     for (j = 0; j < NELEM(options); j++) {
 	if (options[j].type != valVoid) {
 	    int len = strlen(options[j].name);
-	    printf("%s:%*s%s\n", options[j].name,
+	    xpprintf("%s:%*s%s\n", options[j].name,
 		   (len < 40) ? (40 - len) : 1, "",
 		   (options[j].defaultValue != NULL)
 		       ? options[j].defaultValue
 		       : "");
 	}
     }
-    printf("\n");
+    xpprintf("\n");
 }
 
 int Parse_list(int *index, char *buf)
@@ -1662,7 +1935,7 @@ int Parse_list(int *index, char *buf)
     case valReal:
     case valPerSec:
 	sprintf(buf, "%s:%g", options[i].name,
-		*(float *)options[i].variable);
+		*(DFLOAT *)options[i].variable);
 	break;
     case valBool:
 	sprintf(buf, "%s:%s", options[i].name,
@@ -1692,15 +1965,21 @@ void Parser(int argc, char *argv[])
     for (i=1; i<argc; i++) {
 	if (strncmp("-help", argv[i], 2) == 0) {
 	    Parse_help(*argv);
+#ifndef	_WINDOWS
 	    exit(0);
+#endif
 	}
 	if (strcmp("-dump", argv[i]) == 0) {
 	    Parse_dump(*argv);
+#ifndef	_WINDOWS
 	    exit(0);
+#endif
 	}
 	if (strcmp("-version", argv[i]) == 0 || strcmp("-v", argv[i]) == 0) {
 	    puts(TITLE);
+#ifndef	_WINDOWS
 	    exit(0);
+#endif
 	}
 
 	if (argv[i][0] == '-' || argv[i][0] == '+') {
@@ -1712,7 +1991,9 @@ void Parser(int argc, char *argv[])
 			    addOption(options[j].name, "true", 1, NULL);
 			else
 			    addOption(options[j].name, "false", 1, NULL);
-		    } else {
+		    } else if (options[j].type == valVoid) {
+				break;
+			} else {
 			if (i + 1 == argc) {
 			    errno = 0;
 			    error("Option '%s' needs an argument",
@@ -1738,15 +2019,15 @@ void Parser(int argc, char *argv[])
     if (!(fname = getOption("mapData"))) {
 	if (!(fname = getOption("mapFileName"))) {
 #ifndef SILENT
-	    printf("Map not specified, trying to open " DEFAULT_MAP "\n");
+	    xpprintf("Map not specified, trying to open " DEFAULT_MAP "\n");
 #endif
 	    if (!parseDefaultsFile(DEFAULT_MAP))
-		error("Unable to read " DEFAULT_MAP);
+		xpprintf("Unable to read " DEFAULT_MAP);
 	} else {
 	    if (!parseDefaultsFile(fname)) {
-		error("Unable to read %s, trying to open " DEFAULT_MAP, fname);
+		xpprintf("Unable to read %s, trying to open " DEFAULT_MAP, fname);
 		if (!parseDefaultsFile(DEFAULT_MAP))
-		    error("Unable to read " DEFAULT_MAP);
+		    xpprintf("Unable to read " DEFAULT_MAP);
 	    }
 	}
     }
@@ -1777,7 +2058,7 @@ void Parser(int argc, char *argv[])
 int Tune_option(char *opt, char *val)
 {
     int			ival;
-    float		fval;
+    DFLOAT		fval;
     int			j;
 
     for (j = 0; j < NELEM(options); j++) {
@@ -1812,7 +2093,7 @@ int Tune_option(char *opt, char *val)
 	    if (sscanf(val, "%f", &fval) != 1) {
 		return 0;
 	    }
-	    *(float *)options[j].variable = fval;
+	    *(DFLOAT *)options[j].variable = fval;
 	    (*options[j].tuner)();
 	    return 1;
 	case valString:
@@ -1831,5 +2112,19 @@ int Tune_option(char *opt, char *val)
 	}
     }
     return -2;	/* Can't find variable */
+}
+
+optionDesc*	findOption(const char* name)
+{
+	int	j;
+    for (j = 0; j < NELEM(options); j++) 
+	{
+		if (!strcasecmp(options[j].commandLineOption, name)
+			|| !strcasecmp(options[j].name, name))
+		{
+			return(&options[j]);
+		}
+	}
+	return(NULL);
 }
 

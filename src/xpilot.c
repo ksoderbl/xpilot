@@ -1,10 +1,11 @@
-/* $Id: xpilot.c,v 3.82 1996/10/23 16:09:53 bert Exp $
+/* $Id: xpilot.c,v 3.90 1997/11/27 20:09:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +22,25 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <unistd.h>
+#ifndef	_WINDOWS
+# include <unistd.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <netdb.h>
-#ifdef VMS
-# include "username.h"
-#else
-# include <pwd.h>
+#ifndef	_WINDOWS
 # include <sys/types.h>
 # include <sys/param.h>
+#endif
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winNet.h"
+#include "../contrib/NT/xpilot/winClient.h"
+#include <time.h>
+#else
+# include <netdb.h>
 # include <sys/time.h>
 #endif
 
@@ -49,13 +57,14 @@
 #ifdef SUNCMW
 # include "cmw.h"
 #endif /* SUNCMW */
+#include "portability.h"
 
 char xpilot_version[] = VERSION;
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.82 1996/10/23 16:09:53 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.90 1997/11/27 20:09:44 bert Exp $";
 #endif
 
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */
@@ -292,9 +301,12 @@ static bool Process_commands(sockbuf_t *ibuf)
     time_t		qsent = 0;
     static char		localhost[] = "127.0.0.1";
 
+#ifdef	_WINDOWS
+	auto_connect = TRUE;	/* I want to join */
+#endif
 
     if (auto_connect && !list_servers && !auto_shutdown) {
-	printf("*** Connected to %s\n", server_name);
+	xpprintf("*** Connected to %s\n", server_name);
     }
 
     for (;;) {
@@ -366,7 +378,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		exit(1);
 	    }
 	    if (DgramConnect(ibuf->sock, server_addr, server_port) == -1 && !onesock) {
-		error("Can't connect %s on port %d\n",
+		error("Can't connect to server %s on port %d\n",
 		      server_addr, server_port);
 		return (false);
 	    }
@@ -824,8 +836,10 @@ static bool Contact_servers(int count, char **servers)
 	    }
 	    if (retries == 0) {
 		printf("Searching for a \"xpilots\" server on the local net...\n");
+		IFWINDOWS( Progress("Searching for a \"xpilots\" server on the local net..."); )
 	    } else {
 		printf("Searching once more...\n");
+		IFWINDOWS( Progress("Searching once more..."); )
 	    }
 	    while (Get_contact_message(&sbuf)) {
 		contacted++;
@@ -840,6 +854,7 @@ static bool Contact_servers(int count, char **servers)
 	    retries = 0;
 	    contacted = 0;
 	    do {
+		IFWINDOWS( Progress("Contacting server %s", servers[i]); )
 		Sockbuf_clear(&sbuf);
 		Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
 			      real_name, GetPortNum(sbuf.sock), CONTACT_pack);
@@ -847,6 +862,7 @@ static bool Contact_servers(int count, char **servers)
 			      sbuf.buf, sbuf.len) == -1) {
 		    if (sl_errno == SL_EHOSTNAME) {
 			printf("Can't find %s\n", servers[i]);
+			IFWINDOWS( Progress("Can't find %s", servers[i]); )
 			break;
 		    }
 		    error("Can't contact %s on port %d",
@@ -854,9 +870,11 @@ static bool Contact_servers(int count, char **servers)
 		}
 		if (retries) {
 		    printf("Retrying %s...\n", servers[i]);
+		    IFWINDOWS( Progress("Retrying %s...", servers[i]); )
 		}
 		if (Get_contact_message(&sbuf)) {
 		    contacted++;
+		    IFWINDOWS( Progress("Contacted %s", servers[i]); )
 		    if ((connected = Connect_to_server()) != 0) {
 			break;
 		    }
@@ -899,8 +917,12 @@ int main(int argc, char *argv[])
     cmw_priv_init();
 #endif /* CMW */
     init_error(argv[0]);
+#ifdef	_WINDOWS
+	srand( (unsigned)time( NULL ) );
+#else
     srand(time((time_t *)0) * getpid());
     Check_client_versions();
+#endif
     if (getenv("XPILOTHOST")) {
 	strncpy(hostname, getenv("XPILOTHOST"), sizeof(hostname) - 1);
     }
@@ -915,17 +937,7 @@ int main(int argc, char *argv[])
 	strncpy(real_name, getenv("XPILOTUSER"), sizeof(real_name) - 1);
     }
     else {
-#ifdef VMS
-	getusername(real_name);
-#else
-	struct passwd	*pwent;
-        if ((pwent = getpwuid(geteuid())) == NULL
-	    || pwent->pw_name[0] == '\0') {
-	    error("Can't get user info for user id %d", geteuid());
-	    exit(1);
-        }
-        strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
-#endif
+	Get_login_name(real_name, sizeof real_name - 1);
     }
 
     nick_name[0] = '\0';
@@ -973,9 +985,9 @@ int main(int argc, char *argv[])
     }
 #endif
     if (result == 1) {
-	Join(server_addr, server_name, login_port,
+	return(Join(server_addr, server_name, login_port,
 	     real_name, nick_name, team,
-	     display, server_version);
+	     display, server_version));
 	return 0;
     }
     return 1;
@@ -986,6 +998,7 @@ int main(int argc, char *argv[])
  * compiled for the same version.  Too often bugs have been reported
  * for incorrectly compiled programs.
  */
+#ifndef	_WINDOWS	/* gotta put this back in before source released */
 static void Check_client_versions(void)
 {
 #ifdef SOUND
@@ -1068,4 +1081,4 @@ static void Check_client_versions(void)
 	exit(1);
     }
 }
-
+#endif

@@ -1,10 +1,11 @@
-/* $Id: paintradar.c,v 3.2 1996/10/13 19:30:50 bert Exp $
+/* $Id: paintradar.c,v 3.8 1997/11/27 20:09:27 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +32,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -43,8 +48,8 @@
 
 char paintradar_version[] = VERSION;
 
-extern float		tbl_sin[];
-extern float		tbl_cos[];
+extern DFLOAT		tbl_sin[];
+extern DFLOAT		tbl_cos[];
 extern setup_t		*Setup;
 extern int		RadarHeight;
 
@@ -72,6 +77,7 @@ void Paint_radar(void)
     if (radar_exposures == 0) {
 	return;
     }
+#ifndef	_WINDOWS
     if (s_radar != p_radar) {
 	/* Draw static radar onto radar */
 	XCopyArea(dpy, s_radar, p_radar, gc,
@@ -82,6 +88,10 @@ void Paint_radar(void)
 	XFillRectangle(dpy, p_radar,
 		       radarGC, 0, 0, 256, RadarHeight);
     }
+#else
+	WinXBltPixToWin(s_radar, radar, 0, 0, 256, RadarHeight, 0, 0);
+	p_radar = radar;
+#endif
 
     XSetForeground(dpy, radarGC, colors[WHITE].pixel);
 
@@ -211,6 +221,10 @@ void Paint_world_radar(void)
 
     radar_exposures = 2;
 
+#ifdef	_WINDOWS
+    XSetForeground(dpy, s_radar, colors[BLACK].pixel);
+    XFillRectangle(dpy, s_radar, radarGC, 0, 0, 256, RadarHeight);
+#else
     if (s_radar == p_radar)
 	XSetPlaneMask(dpy, radarGC,
 		      AllPlanes&(~(dpl_1[0]|dpl_1[1])));
@@ -221,7 +235,7 @@ void Paint_world_radar(void)
     } else {
 	XClearWindow(dpy, radar);
     }
-
+#endif
     memset(visible, 0, sizeof visible);
     visible[SETUP_FILLED] = 1;
     visible[SETUP_FILLED_NO_DRAW] = 1;
@@ -307,7 +321,11 @@ void Paint_world_radar(void)
 			}
 			start = end = yp;
 			currColor = visibleColor[type];
+#ifdef	_WINDOWS
+			XSetForeground(dpy, s_radar, currColor);
+#else
 			XSetForeground(dpy, radarGC, colors[currColor].pixel);
+#endif
 		    } else {
 			end = yp;
 			visibleColorChange = visibleColor[type] != currColor;
@@ -389,7 +407,11 @@ void Paint_world_radar(void)
 			}
 			start = end = yp;
 			currColor = visibleColor[type];
+#ifdef	_WINDOWS
+			XSetForeground(dpy, s_radar, currColor);
+#else
 			XSetForeground(dpy, radarGC, colors[currColor].pixel);
+#endif
 		    } else {
 			end = yp;
 			visibleColorChange = visibleColor[type] != currColor;
@@ -434,7 +456,11 @@ void Paint_world_radar(void)
 		    }
 		    start = end = yp;
 		    currColor = visibleColor[type];
+#ifdef	_WINDOWS
+		    XSetForeground(dpy, s_radar, currColor);
+#else
 		    XSetForeground(dpy, radarGC, colors[currColor].pixel);
+#endif
 		}
 	    }
 	}

@@ -1,10 +1,11 @@
-/* $Id: colors.c,v 3.2 1996/10/13 19:30:45 bert Exp $
+/* $Id: colors.c,v 3.8 1997/11/27 20:09:07 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,6 +37,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -48,37 +53,13 @@ char colors_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: colors.c,v 3.2 1996/10/13 19:30:45 bert Exp $";
+    "@(#)$Id: colors.c,v 3.8 1997/11/27 20:09:07 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
 #if defined(__cplusplus)
 #define class c_class
 #endif
-
-#define MAX_VISUAL_CLASS	6
-
-char			visualName[MAX_VISUAL_NAME];
-Visual			*visual;
-int			dispDepth;
-bool			mono;
-bool			colorSwitch;
-bool			multibuffer;
-
-/*
- * Visual names.
- */
-static struct visual_class_name {
-    int		visual_class;
-    const char	*visual_name;
-} visual_class_names[MAX_VISUAL_CLASS] = {
-    { StaticGray,	"StaticGray"  },
-    { GrayScale,	"GrayScale"   },
-    { StaticColor,	"StaticColor" },
-    { PseudoColor,	"PseudoColor" },
-    { TrueColor,	"TrueColor"   },
-    { DirectColor,	"DirectColor" }
-};
 
 /*
  * Default colors.
@@ -97,6 +78,30 @@ static const char	*gray_defaults[MAX_COLORS] = {
     "#9f9f9f", "#5f5f5f", "#dfdfdf", "#202020"
 };
 
+#define MAX_VISUAL_CLASS	6
+
+char			visualName[MAX_VISUAL_NAME];
+Visual			*visual;
+int			dispDepth;
+bool			mono;
+bool			colorSwitch;
+bool			multibuffer;
+
+#ifndef	_WINDOWS
+/*
+ * Visual names.
+ */
+static struct visual_class_name {
+    int		visual_class;
+    const char	*visual_name;
+} visual_class_names[MAX_VISUAL_CLASS] = {
+    { StaticGray,	"StaticGray"  },
+    { GrayScale,	"GrayScale"   },
+    { StaticColor,	"StaticColor" },
+    { PseudoColor,	"PseudoColor" },
+    { TrueColor,	"TrueColor"   },
+    { DirectColor,	"DirectColor" }
+};
 
 /*
  * Parse the user configurable color definitions.
@@ -414,6 +419,7 @@ int Colors_init(void)
      * Initialize the double buffering routine.
      */
     dbuf_state = NULL;
+    
     if (multibuffer) {
 	dbuf_state = start_dbuff(dpy,
 				 (colormap != 0)
@@ -425,7 +431,7 @@ int Colors_init(void)
 				 colors);
     }
     if (dbuf_state == NULL) {
-	multibuffer = false;
+/*	multibuffer = false;   XXX: why is this commented out??? */
 	dbuf_state = start_dbuff(dpy,
 				 (colormap != 0)
 				     ? colormap
@@ -446,10 +452,18 @@ int Colors_init(void)
 	/*
 	 * Try to initialize the double buffering again.
 	 */
-	dbuf_state = start_dbuff(dpy, colormap,
-				 ((colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY),
-				 num_planes,
-				 colors);
+
+	if (multibuffer) 
+	    dbuf_state = start_dbuff(dpy, colormap,
+				     MULTIBUFFER,
+				     num_planes,
+				     colors);
+
+	if (dbuf_state == NULL)
+	    dbuf_state = start_dbuff(dpy, colormap,
+				     ((colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY),
+				     num_planes,
+				     colors);
     }
 
     if (dbuf_state == NULL) {
@@ -460,9 +474,28 @@ int Colors_init(void)
 	return -1;
     }
 
+    switch (dbuf_state->type) {
+    case COLOR_SWITCH:
+	printf("Using color switching\n");
+	break;
+    case MULTIBUFFER:
+#ifdef	DBE
+	printf("Using double-buffering\n");
+#else
+#ifdef	MBX
+	printf("Using multi-buffering\n");
+#endif
+#endif
+	break;
+    case PIXMAP_COPY:
+	printf("Using pixmap copying\n");
+	break;
+    }
+
     for (i = maxColors; i < MAX_COLORS; i++) {
 	colors[i] = colors[i % maxColors];
     }
+
 
     /*
      * A little hack that enables us to draw on both sets of double buffering
@@ -494,3 +527,4 @@ void Colors_cleanup(void)
     }
 }
 
+#endif

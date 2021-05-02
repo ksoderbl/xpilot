@@ -1,10 +1,11 @@
-/* $Id: metaserver.c,v 3.7 1996/10/13 15:01:09 bert Exp $
+/* $Id: metaserver.c,v 3.12 1997/11/27 20:09:17 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <time.h>
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +35,10 @@
 #if !defined(__hpux)
 #include <sys/time.h>
 #endif
+#endif
 
 #define SERVER
+#include "config.h"
 #include "version.h"
 #include "const.h"
 #include "types.h"
@@ -43,9 +50,12 @@
 #include "metaserver.h"
 #include "saudio.h"
 #include "error.h"
+#include "netserver.h"
 
 #ifdef VMS
 #define META_VERSION	VERSION "-VMS"
+#elif defined(_WINDOWS)
+#define	META_VERSION	TITLE
 #else
 #define META_VERSION	VERSION
 #endif
@@ -54,7 +64,7 @@ char metaserver_version[] = VERSION;
 
 #ifndef	lint
 char sourceid[] =
-    "@(#)$Id: metaserver.c,v 3.7 1996/10/13 15:01:09 bert Exp $";
+    "@(#)$Id: metaserver.c,v 3.12 1997/11/27 20:09:17 bert Exp $";
 #endif
 
 struct MetaServer {
@@ -127,7 +137,7 @@ void Meta_init(int fd)
     }
 
 #ifndef SILENT
-    printf("Locating Meta... "); fflush(stdout);
+    xpprintf("%s Locating Meta... ", showtime()); fflush(stdout);
 #endif
     for (i = 0; i < NELEM(meta_servers); i++) {
 	addr = GetAddrByName(meta_servers[i].name);
@@ -138,14 +148,14 @@ void Meta_init(int fd)
 	}
 #ifndef SILENT
 	if (addr) {
-	    printf("found %d", i + 1);
+	    xpprintf("found %d", i + 1);
 	} else {
-	    printf("%d not found", i + 1);
+	    xpprintf("%d not found", i + 1);
 	}
 	if (i + 1 == NELEM(meta_servers)) {
-	    printf("\n");
+	    xpprintf("\n");
 	} else {
-	    printf("... ");
+	    xpprintf("... ");
 	}
 	fflush(stdout);
 #endif
@@ -219,7 +229,7 @@ void Meta_update(int change)
 		: (game_lock && ShutdownServer != -1) ? "locked and shutting down"
 		: "ok", World.NumTeamBases,
 	    BIT(World.rules->mode, TIMING) ? 1:0,
-	    time(NULL) - serverTime,
+	    (long)(time(NULL) - serverTime),
 	    queue_length);
 
 

@@ -1,10 +1,11 @@
-/* $Id: net.c,v 3.34 1996/10/13 15:01:10 bert Exp $
+/* $Id: net.c,v 3.39 1997/11/27 20:09:18 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,22 +22,40 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	_WINDOWS
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#if defined(__hpux)
+#if defined(__hpux) || defined(_WINDOWS)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
+
+#if defined(_WINDOWS)
+#include "../contrib/NT/xpilot/winClient.h"
+#include "../contrib/NT/xpilot/winNet.h"
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
+
+#ifndef	_WINDOWS
 #include <netdb.h>
+#endif
+
 #ifdef __sgi
 #include <bstring.h>
+#endif
+
+#ifdef	_WINDOWS
+#undef	va_start		/* there are bad versions in windows.h's "stdarg.h" */
+#undef	va_end
+#include <varargs.h>
 #endif
 
 #include "version.h"
@@ -123,7 +142,7 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
 	sbuf->len = 0;
 	sbuf->ptr = sbuf->buf;
     } else {
-#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV)
+#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
 	memmove(sbuf->buf, sbuf->buf + len, sbuf->len - len);
 #else
 	bcopy(sbuf->buf + len, sbuf->buf, sbuf->len - len);
@@ -151,6 +170,9 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    sbuf->sock);
 	return -1;
     }
+	/*Trace("Sockbuf_flush: state=%02x,buf=%08x,ptr=%08x,size=%d,len=%d,sock=%d\n",
+	    sbuf->state, sbuf->buf, sbuf->ptr, sbuf->size, sbuf->len,
+	    sbuf->sock); */
     if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
 	errno = 0;
 	error("No flush on locked socket buffer (0x%02x)", sbuf->state);
@@ -314,6 +336,9 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    if (len == 0) {
 		return 0;
 	    }
+#ifdef	_WINDOWS
+		errno = WSAGetLastError();
+#endif
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;
@@ -328,6 +353,10 @@ int Sockbuf_read(sockbuf_t *sbuf)
 		return -1;
 	    }
 #endif
+/*
+		Trace("errno=%d (%s) len = %d during DgramRead\n", 
+			errno, _GetWSockErrText(errno), len);
+*/			
 	    if (++i > MAX_SOCKBUF_RETRIES) {
 		error("Can't recv on socket");
 		return -1;
@@ -361,6 +390,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    }
 	    return 0;
 	}
+/*	IFWINDOWS( Trace("Read stream %d bytes from %d\n", len, sbuf->sock); )*/
 	sbuf->len += len;
     }
 
@@ -484,12 +514,12 @@ int Packet_printf(va_alist)
 		case 'd':
 		    sval = va_arg(ap, int);
 		    *buf++ = sval >> 8;
-		    *buf++ = sval;
+		    *buf++ = (char)sval;
 		    break;
 		case 'u':
 		    usval = va_arg(ap, unsigned);
 		    *buf++ = usval >> 8;
-		    *buf++ = usval;
+		    *buf++ = (char)usval;
 		    break;
 		default:
 		    failure = PRINTF_FMT;
@@ -504,17 +534,17 @@ int Packet_printf(va_alist)
 		switch (fmt[++i]) {
 		case 'd':
 		    lval = va_arg(ap, long);
-		    *buf++ = lval >> 24;
-		    *buf++ = lval >> 16;
-		    *buf++ = lval >> 8;
-		    *buf++ = lval;
+		    *buf++ = (char)(lval >> 24);
+		    *buf++ = (char)(lval >> 16);
+		    *buf++ = (char)(lval >> 8);
+		    *buf++ = (char)lval;
 		    break;
 		case 'u':
 		    ulval = va_arg(ap, unsigned long);
-		    *buf++ = ulval >> 24;
-		    *buf++ = ulval >> 16;
-		    *buf++ = ulval >> 8;
-		    *buf++ = ulval;
+		    *buf++ = (char)(ulval >> 24);
+		    *buf++ = (char)(ulval >> 16);
+		    *buf++ = (char)(ulval >> 8);
+		    *buf++ = (char)ulval;
 		    break;
 		default:
 		    failure = PRINTF_FMT;

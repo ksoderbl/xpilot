@@ -1,10 +1,11 @@
-/* $Id: widget.h,v 3.13 1996/10/12 08:37:15 bert Exp $
+/* $Id: widget.h,v 3.18 1997/11/27 20:09:41 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,17 +105,17 @@ typedef struct widget_arrow {
 
 typedef struct widget_int {
     int				*val,		/* Integer pointer */
-				min,		/* Minimum value */
-				max;		/* Maximum value */
+					min,		/* Minimum value */
+					max;		/* Maximum value */
     int				(*callback)(int, void *, int *);
     void			*user_data;
 } widget_int_t;
 
 typedef struct widget_float {
-    float			*val,		/* Float pointer */
-				min,		/* Minimum value */
-				max;		/* Maximum value */
-    int				(*callback)(int, void *, float *);
+    DFLOAT			*val,		/* Float pointer */
+					min,		/* Minimum value */
+					max;		/* Maximum value */
+    int				(*callback)(int, void *, DFLOAT *);
     void			*user_data;
 } widget_float_t;
 
@@ -183,8 +184,8 @@ int Widget_create_int(int parent_desc,
 		      void *user_data);
 int Widget_create_float(int parent_desc,
 			int x, int y, int width, int height,
-			int border, float *val, float min, float max,
-			int (*callback)(int, void *, float *),
+			int border, DFLOAT *val, DFLOAT min, DFLOAT max,
+			int (*callback)(int, void *, DFLOAT *),
 			void *user_data);
 int Widget_create_label(int parent_desc,
 			int x, int y,

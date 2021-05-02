@@ -1,10 +1,11 @@
-/* $Id: robot.h,v 3.18 1996/10/12 08:37:08 bert Exp $
+/* $Id: robot.h,v 3.24 1997/11/27 20:09:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,11 +28,16 @@
 
 /*
  * We should have these configurable for experimentation.
- */
+
 #define	NORMAL_ROBOT_SPEED	3.0
 #define	ATTACK_ROBOT_SPEED	12.0
 #define MAX_ROBOT_SPEED		20.0
+ */
 
+#define	NORMAL_ROBOT_SPEED	10.0
+#define	ATTACK_ROBOT_SPEED	20.0
+#define MAX_ROBOT_SPEED		20.0
+ 
 #define ROB_LOOK_AH		2
 
 /*
@@ -145,8 +151,12 @@ typedef struct robot_default_data {
     int		robot_count;		/* Misc timings, minimizes rand()use */
     int		attack;			/* how aggressive (1-99) */
     int		defense;		/* how defensive (1-99) */
-    float	robot_normal_speed;
-    float	robot_attack_speed;
-    float	robot_max_speed;
+    DFLOAT	robot_normal_speed;
+    DFLOAT	robot_attack_speed;
+    DFLOAT	robot_max_speed;
+    int		last_used_ecm;          /* relative to robot_count */
+    int		last_dropped_mine;      /* relative to robot_count */
+    int		last_fired_missile;     /* relative to robot_count */
 } robot_default_data_t;
+
 #endif

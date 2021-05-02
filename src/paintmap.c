@@ -1,10 +1,11 @@
-/* $Id: paintmap.c,v 3.3 1996/10/20 21:23:15 bert Exp $
+/* $Id: paintmap.c,v 3.11 1998/01/23 14:32:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +32,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -43,6 +48,7 @@
 #include "paintdata.h"
 #include "record.h"
 #include "xinit.h"
+#include "protoclient.h"
 
 char paintmap_version[] = VERSION;
 
@@ -61,8 +67,6 @@ int	decorColor;		/* Color index for decoration drawing */
 char	*wallTextureFile;	/* Filename of wall texture */
 char	*decorTextureFile;	/* Filename of decor texture */
 
-extern float		tbl_sin[];
-extern float		tbl_cos[];
 extern setup_t		*Setup;
 
 void Paint_vcannon(void)
@@ -78,36 +82,36 @@ void Paint_vcannon(void)
 	    y = vcannon_ptr[i].y;
 	    switch (type) {
 	    case SETUP_CANNON_UP:
-		points[0].x = X(x);
-		points[0].y = Y(y);
-		points[1].x = X(x+BLOCK_SZ);
-		points[1].y = Y(y);
-		points[2].x = X(x+BLOCK_SZ/2);
-		points[2].y = Y(y+BLOCK_SZ/3);
+		points[0].x = WINSCALE(X(x));
+		points[0].y = WINSCALE(Y(y));
+		points[1].x = WINSCALE(X(x+BLOCK_SZ));
+		points[1].y = WINSCALE(Y(y));
+		points[2].x = WINSCALE(X(x+BLOCK_SZ/2));
+		points[2].y = WINSCALE(Y(y+BLOCK_SZ/3));
 		break;
 	    case SETUP_CANNON_DOWN:
-		points[0].x = X(x);
-		points[0].y = Y(y+BLOCK_SZ);
-		points[1].x = X(x+BLOCK_SZ);
-		points[1].y = Y(y+BLOCK_SZ);
-		points[2].x = X(x+BLOCK_SZ/2);
-		points[2].y = Y(y+2*BLOCK_SZ/3);
+		points[0].x = WINSCALE(X(x));
+		points[0].y = WINSCALE(Y(y+BLOCK_SZ));
+		points[1].x = WINSCALE(X(x+BLOCK_SZ));
+		points[1].y = WINSCALE(Y(y+BLOCK_SZ));
+		points[2].x = WINSCALE(X(x+BLOCK_SZ/2));
+		points[2].y = WINSCALE(Y(y+2*BLOCK_SZ/3));
 		break;
 	    case SETUP_CANNON_RIGHT:
-		points[0].x = X(x);
-		points[0].y = Y(y);
-		points[1].x = X(x);
-		points[1].y = Y(y+BLOCK_SZ);
-		points[2].x = X(x+BLOCK_SZ/3);
-		points[2].y = Y(y+BLOCK_SZ/2);
+		points[0].x = WINSCALE(X(x));
+		points[0].y = WINSCALE(Y(y));
+		points[1].x = WINSCALE(X(x));
+		points[1].y = WINSCALE(Y(y+BLOCK_SZ));
+		points[2].x = WINSCALE(X(x+BLOCK_SZ/3));
+		points[2].y = WINSCALE(Y(y+BLOCK_SZ/2));
 		break;
 	    case SETUP_CANNON_LEFT:
-		points[0].x = X(x+BLOCK_SZ);
-		points[0].y = Y(y);
-		points[1].x = X(x+BLOCK_SZ);
-		points[1].y = Y(y+BLOCK_SZ);
-		points[2].x = X(x+2*BLOCK_SZ/3);
-		points[2].y = Y(y+BLOCK_SZ/2);
+		points[0].x = WINSCALE(X(x+BLOCK_SZ));
+		points[0].y = WINSCALE(Y(y));
+		points[1].x = WINSCALE(X(x+BLOCK_SZ));
+		points[1].y = WINSCALE(Y(y+BLOCK_SZ));
+		points[2].x = WINSCALE(X(x+2*BLOCK_SZ/3));
+		points[2].y = WINSCALE(Y(y+BLOCK_SZ/2));
 		break;
 	    default:
 		errno = 0;
@@ -140,13 +144,16 @@ void Paint_vfuel(void)
 #if ERASE
 	    /* speedup for slow old cheap graphics cards like cg3. */
 	    rd.drawLine(dpy, p_draw, gc,
-		      X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
-		      X(x + FUEL_BORDER + (BLOCK_SZ - 2*FUEL_BORDER)),
-		      Y(y + FUEL_BORDER + size));
+		      WINSCALE(X(x + FUEL_BORDER)),
+			  WINSCALE(Y(y + FUEL_BORDER + size)),
+		      WINSCALE(X(x + FUEL_BORDER + (BLOCK_SZ - 2*FUEL_BORDER))),
+		      WINSCALE(Y(y + FUEL_BORDER + size)));
 #else
 	    rd.fillRectangle(dpy, p_draw, gc,
-			  X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
-			  BLOCK_SZ - 2*FUEL_BORDER + 1, size + 1);
+			  WINSCALE(X(x + FUEL_BORDER)),
+			  WINSCALE(Y(y + FUEL_BORDER + size)),
+			  WINSCALE(BLOCK_SZ - 2*FUEL_BORDER + 1),
+			  WINSCALE(size + 1));
 #endif
 	    Erase_rectangle(X(x + FUEL_BORDER),
 			    Y(y - FUEL_BORDER + BLOCK_SZ),
@@ -161,8 +168,8 @@ void Paint_vfuel(void)
 	    x = vfuel_ptr[i].x;
 	    y = vfuel_ptr[i].y;
 	    rd.drawString(dpy, p_draw, gc,
-			X(x + BLOCK_SZ/2 - XTextWidth(gameFont, s, 1)/2),
-			Y(y + BLOCK_SZ/2 - gameFont->ascent/2),
+			WINSCALE(X(x + BLOCK_SZ/2 - XTextWidth(gameFont, s, 1)/2)),
+			WINSCALE(Y(y + BLOCK_SZ/2 - gameFont->ascent/2)),
 			s, 1);
 	}
 	XSetFunction(dpy, gc, GXcopy);
@@ -232,7 +239,7 @@ void Paint_vbase(void)
 		    x -= size;
 		}
 		rd.drawString(dpy, p_draw, gc,
-			    X(x), Y(y),
+			    WINSCALE(X(x)), WINSCALE(Y(y)),
 			    s, 2);
 		Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
 				size + 2,
@@ -250,7 +257,7 @@ void Paint_vbase(void)
 		    x -= other->name_width;
 		}
 		rd.drawString(dpy, p_draw, gc,
-			    X(x), Y(y),
+			    WINSCALE(X(x)), WINSCALE(Y(y)),
 			    other->name, other->name_len);
 		Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
 				other->name_width + 2,
@@ -414,14 +421,14 @@ void Paint_vdecor(void)
 		    fill_bottom_right = x + BLOCK_SZ;
 		}
 		if (fill_top_right != -1) {
-		    points[0].x = X(fill_bottom_left);
-		    points[0].y = Y(y);
-		    points[1].x = X(fill_top_left);
-		    points[1].y = Y(y + BLOCK_SZ);
-		    points[2].x = X(fill_top_right);
-		    points[2].y = Y(y + BLOCK_SZ);
-		    points[3].x = X(fill_bottom_right);
-		    points[3].y = Y(y);
+		    points[0].x = WINSCALE(X(fill_bottom_left));
+		    points[0].y = WINSCALE(Y(y));
+		    points[1].x = WINSCALE(X(fill_top_left));
+		    points[1].y = WINSCALE(Y(y + BLOCK_SZ));
+		    points[2].x = WINSCALE(X(fill_top_right));
+		    points[2].y = WINSCALE(Y(y + BLOCK_SZ));
+		    points[3].x = WINSCALE(X(fill_bottom_right));
+		    points[3].y = WINSCALE(Y(y));
 		    points[4] = points[0];
 		    rd.fillPolygon(dpy, p_draw, gc,
 				   points, 5,
@@ -592,15 +599,15 @@ void Paint_world(void)
 		    break;
 
 		case SETUP_CHECK:
-		    SET_FG(colors[BLUE].pixel);
-		    points[0].x = X(x+(BLOCK_SZ/2));
-		    points[0].y = Y(y);
-		    points[1].x = X(x);
-		    points[1].y = Y(y+BLOCK_SZ/2);
-		    points[2].x = X(x+BLOCK_SZ/2);
-		    points[2].y = Y(y+BLOCK_SZ);
-		    points[3].x = X(x+BLOCK_SZ);
-		    points[3].y = Y(y+(BLOCK_SZ/2));
+			SET_FG(colors[BLUE].pixel);
+		    points[0].x = WINSCALE(X(x+(BLOCK_SZ/2)));
+		    points[0].y = WINSCALE(Y(y));
+		    points[1].x = WINSCALE(X(x));
+		    points[1].y = WINSCALE(Y(y+BLOCK_SZ/2));
+		    points[2].x = WINSCALE(X(x+BLOCK_SZ/2));
+		    points[2].y = WINSCALE(Y(y+BLOCK_SZ));
+		    points[3].x = WINSCALE(X(x+BLOCK_SZ));
+		    points[3].y = WINSCALE(Y(y+(BLOCK_SZ/2)));
 		    points[4] = points[0];
 
 		    if (Check_index_by_pos(xi, yi) == nextCheckPoint) {
@@ -804,22 +811,29 @@ void Paint_world(void)
 			    }
 			}
 			for (i = 0; i < NELEM(tris); i++) {
+			    /* I'll bet you didn't know that floating point math
+			       is faster than integer math on a pentium 
+			       (and for some reason the UNIX way rounds off too much) */
 			    rdir = MOD2(rot_dir + tris[i].dir_off, RES);
-			    cx = X(x + BLOCK_SZ / 2)
-				+ tris[i].displ * tcos(rdir);
-			    cy = Y(y + BLOCK_SZ / 2)
-				+ tris[i].displ * tsin(rdir);
+			    cx = (int)(X(x + BLOCK_SZ / 2)
+				+ tris[i].displ * tcos(rdir));
+			    cy = (int)(Y(y + BLOCK_SZ / 2)
+				+ tris[i].displ * tsin(rdir));
 			    tdir = MOD2(tris[i].rot_dir, RES);
-			    pts[0].x = cx + tris[i].radius * tcos(tdir);
-			    pts[0].y = cy + tris[i].radius * tsin(tdir);
-			    pts[1].x = cx + tris[i].radius
-					  * tcos(MOD2(tdir + RES/3, RES));
-			    pts[1].y = cy + tris[i].radius
-					  * tsin(MOD2(tdir + RES/3, RES));
-			    pts[2].x = cx + tris[i].radius
-					  * tcos(MOD2(tdir + 2*RES/3, RES));
-			    pts[2].y = cy + tris[i].radius
-					  * tsin(MOD2(tdir + 2*RES/3, RES));
+			    pts[0].x = WINSCALE(cx + (int)(tris[i].radius * tcos(tdir)));
+			    pts[0].y = WINSCALE(cy + (int)(tris[i].radius * tsin(tdir)));
+			    pts[1].x = WINSCALE(cx + (int)(tris[i].radius
+					  * tcos(MOD2(tdir + RES/3, RES))));
+			    pts[1].y = WINSCALE(cy + (int)(tris[i].radius
+					  * tsin(MOD2(tdir + RES/3, RES))));
+			    pts[2].x = WINSCALE(cx + (int)(tris[i].radius
+					  * tcos(MOD2(tdir + 2*RES/3, RES))));
+			    pts[2].y = WINSCALE(cy + (int)(tris[i].radius
+					  * tsin(MOD2(tdir + 2*RES/3, RES))));
+			    /* Trace("DC: %d cx=%d/%d %d/%d %d/%d %d/%d %d/%d\n", 
+				    i, cx, cy, pts[0].x, pts[0].y, 
+				    pts[1].x, pts[1].y, pts[2].x, pts[2].y, pts[3].x, pts[3].y); */
+
 			    pts[3] = pts[0];
 			    rd.drawLines(dpy, p_draw, gc,
 					 pts, NELEM(pts), CoordModeOrigin);
@@ -902,9 +916,10 @@ void Paint_world(void)
 		    Segment_add(color, a1, b2, a2, b2);
 
 		    rd.drawRectangle(dpy, p_draw, gc,
-				     X(x+(BLOCK_SZ+2)/4),
-				     Y(y+3*BLOCK_SZ/4),
-				     BLOCK_SZ/2, BLOCK_SZ/2);
+				     WINSCALE(X(x+(BLOCK_SZ+2)/4)),
+				     WINSCALE(Y(y+3*BLOCK_SZ/4)),
+				     WINSCALE(BLOCK_SZ/2),
+				     WINSCALE(BLOCK_SZ/2));
 		    Erase_4point(X(x+(BLOCK_SZ+2)/4),
 				 Y(y+3*BLOCK_SZ/4),
 				 BLOCK_SZ/2, BLOCK_SZ/2);
@@ -913,8 +928,8 @@ void Paint_world(void)
 			s[0] = '0' + type - SETUP_TARGET; s[1] = '\0';
 			size = XTextWidth(gameFont, s, 1);
 			rd.drawString(dpy, p_draw, gc,
-				      X(x + BLOCK_SZ/2 - size/2),
-				      Y(y + BLOCK_SZ/2 - gameFont->ascent/2),
+				      WINSCALE(X(x + BLOCK_SZ/2 - size/2)),
+				      WINSCALE(Y(y + BLOCK_SZ/2 - gameFont->ascent/2)),
 				      s, 1);
 			Erase_rectangle(X(x + BLOCK_SZ/2 - size/2) - 1,
 					Y(y + BLOCK_SZ/2 - gameFont->ascent/2)
@@ -973,8 +988,8 @@ void Paint_world(void)
 			    BLOCK_SZ, BLOCK_SZ, 0, 64*180);
 		    s[1] = '\0'; s[0] = '0' + type - SETUP_TREASURE;
 		    rd.drawString(dpy, p_draw, gc,
-				  X(x+BLOCK_SZ/2),
-				  Y(y+BLOCK_SZ/2),
+				  WINSCALE(X(x+BLOCK_SZ/2)),
+				  WINSCALE(Y(y+BLOCK_SZ/2)),
 				  s, 1);
 		    Erase_rectangle(X(x+BLOCK_SZ/2) - 1,
 				    Y(y+BLOCK_SZ/2) - gameFont->ascent,
@@ -1067,14 +1082,14 @@ void Paint_world(void)
 			fill_top_left = fill_bottom_left = x;
 		    }
 		    if (fill_top_right != -1) {
-			points[0].x = X(fill_bottom_left);
-			points[0].y = Y(y);
-			points[1].x = X(fill_top_left);
-			points[1].y = Y(y + BLOCK_SZ);
-			points[2].x = X(fill_top_right);
-			points[2].y = Y(y + BLOCK_SZ);
-			points[3].x = X(fill_bottom_right);
-			points[3].y = Y(y);
+			points[0].x = WINSCALE(X(fill_bottom_left));
+			points[0].y = WINSCALE(Y(y));
+			points[1].x = WINSCALE(X(fill_top_left));
+			points[1].y = WINSCALE(Y(y + BLOCK_SZ));
+			points[2].x = WINSCALE(X(fill_top_right));
+			points[2].y = WINSCALE(Y(y + BLOCK_SZ));
+			points[3].x = WINSCALE(X(fill_bottom_right));
+			points[3].y = WINSCALE(Y(y));
 			points[4] = points[0];
 			if (wallTileDoit) {
 			    XSetFillStyle(dpy, gc, FillTiled);
@@ -1105,14 +1120,14 @@ void Paint_world(void)
 	}
 
 	if (fill_top_left != -1) {
-	    points[0].x = X(fill_bottom_left);
-	    points[0].y = Y(y);
-	    points[1].x = X(fill_top_left);
-	    points[1].y = Y(y + BLOCK_SZ);
-	    points[2].x = X(x);
-	    points[2].y = Y(y + BLOCK_SZ);
-	    points[3].x = X(x);
-	    points[3].y = Y(y);
+	    points[0].x = WINSCALE(X(fill_bottom_left));
+	    points[0].y = WINSCALE(Y(y));
+	    points[1].x = WINSCALE(X(fill_top_left));
+	    points[1].y = WINSCALE(Y(y + BLOCK_SZ));
+	    points[2].x = WINSCALE(X(x));
+	    points[2].y = WINSCALE(Y(y + BLOCK_SZ));
+	    points[3].x = WINSCALE(X(x));
+	    points[3].y = WINSCALE(Y(y));
 	    points[4] = points[0];
 	    if (wallTileDoit) {
 		XSetFillStyle(dpy, gc, FillTiled);

@@ -1,10 +1,11 @@
-/* $Id: client.c,v 3.81 1996/10/13 15:01:05 bert Exp $
+/* $Id: client.c,v 3.89 1998/01/28 08:50:02 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,16 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winClient.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+
 #if defined(__hpux)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
+#endif	/* _WINDOWS */
 
 #include "version.h"
 #include "config.h"
@@ -42,6 +49,8 @@
 #include "netclient.h"
 #include "paint.h"
 #include "xinit.h"
+#include "protoclient.h"
+#include "portability.h"
 
 char client_version[] = VERSION;
 
@@ -60,7 +69,7 @@ short	nextCheckPoint;
 u_byte	numItems[NUM_ITEMS];	/* Count of currently owned items */
 u_byte	lastNumItems[NUM_ITEMS];/* Last item count shown */
 int	numItemsTime[NUM_ITEMS];/* Number of frames to show this item count */
-float	showItemsTime;		/* How long to show changed item count for */
+DFLOAT	showItemsTime;		/* How long to show changed item count for */
 
 short	autopilotLight;
 
@@ -95,17 +104,17 @@ int	fuelLevel2;			/* Fuel warning level */
 int	fuelLevel3;			/* Fuel notify level */
 
 char	*shipShape;		/* Shape of player's ship */
-float	power;			/* Force of thrust */
-float	power_s;		/* Saved power fiks */
-float	turnspeed;		/* How fast player acc-turns */
-float	turnspeed_s;		/* Saved turnspeed */
-float	turnresistance;		/* How much is lost in % */
-float	turnresistance_s;	/* Saved (see above) */
-float	spark_prob;		/* Sparkling effect user configurable */
+DFLOAT	power;			/* Force of thrust */
+DFLOAT	power_s;		/* Saved power fiks */
+DFLOAT	turnspeed;		/* How fast player acc-turns */
+DFLOAT	turnspeed_s;		/* Saved turnspeed */
+DFLOAT	turnresistance;		/* How much is lost in % */
+DFLOAT	turnresistance_s;	/* Saved (see above) */
+DFLOAT	spark_prob;		/* Sparkling effect user configurable */
 int     charsPerSecond;         /* Message output speed (configurable) */
 
-float	hud_move_fact;		/* scale the hud-movement (speed) */
-float	ptr_move_fact;		/* scale the speed pointer length */
+DFLOAT	hud_move_fact;		/* scale the hud-movement (speed) */
+DFLOAT	ptr_move_fact;		/* scale the speed pointer length */
 long	instruments;		/* Instruments on screen (bitmask) */
 char	mods[MAX_CHARS];	/* Current modifiers in effect */
 int	packet_size;		/* Current frame update packet size */
@@ -129,6 +138,10 @@ int	oldMaxFPS;
 
 byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */
+
+#ifdef	WINDOWSCALING
+DFLOAT scaleFactor;
+#endif
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -919,6 +932,13 @@ static int Map_cleanup(void)
 	}
 	num_targets = 0;
     }
+    if (num_cannons > 0) {
+	if (cannons != NULL) {
+	    free(cannons);
+	    cannons = NULL;
+	}
+	num_cannons = 0;
+	}
     return 0;
 }
 
@@ -1057,7 +1077,7 @@ int Handle_war(int robot_id, int killer_id)
 
     if ((robot = Other_by_id(robot_id)) == NULL) {
 	errno = 0;
-	error("Can't update war for non-existing player (%d,%d)", robot_id, killer_id);
+	IFNWINDOWS(error("Can't update war for non-existing player (%d,%d)", robot_id, killer_id);)
 	return 0;
     }
     if (killer_id == -1) {
@@ -1069,7 +1089,7 @@ int Handle_war(int robot_id, int killer_id)
     }
     if ((killer = Other_by_id(killer_id)) == NULL) {
 	errno = 0;
-	error("Can't update war against non-existing player (%d,%d)", robot_id, killer_id);
+	IFNWINDOWS(error("Can't update war against non-existing player (%d,%d)", robot_id, killer_id);)
 	return 0;
     }
     robot->war_id = killer_id;
@@ -1111,7 +1131,9 @@ int Handle_score(int id, int score, int life, int mychar)
 
     if ((other = Other_by_id(id)) == NULL) {
 	errno = 0;
+#ifndef	_WINDOWS
 	error("Can't update score for non-existing player %d,%d,%d", id, score, life);
+#endif
 	return 0;
     }
     else if (other->score != score
@@ -1188,19 +1210,22 @@ void Client_score_table(void)
     other_t		*other,
 			**order;
     int			i, j, k, best = -1;
-    float		ratio, best_ratio = -1e7;
+    DFLOAT		ratio, best_ratio = -1e7;
 
     if (scoresChanged == 0) {
 	return;
     }
+
     if (players_exposed == false) {
 	return;
     }
+
     if (num_others < 1) {
 	Paint_score_start();
 	scoresChanged = 0;
 	return;
     }
+
     if ((order = (other_t **)malloc(num_others * sizeof(other_t *))) == NULL) {
 	error("No memory for score");
 	return;
@@ -1329,6 +1354,9 @@ void Client_score_table(void)
     }
 
     free(order);
+#ifdef _WINDOWS
+	MarkPlayersForRedraw();
+#endif
     scoresChanged = 0;
 }
 
@@ -1339,7 +1367,9 @@ int Client_init(char *server, unsigned server_version)
     version = server_version;
 
     Make_table();
-
+#ifdef	WINDOWSCALING
+	init_ScaleArray();
+#endif
     strncpy(servername, server, sizeof(servername) - 1);
 
     return 0;
@@ -1402,32 +1432,50 @@ int Client_start(void)
 
 void Client_cleanup(void)
 {
+	int		i;
+
     Quit();
     if (max_others > 0) {
-	free(Others);
-	num_others = max_others = 0;
+		for (i=0; i<num_others; i++)
+		{
+			other_t* other = &Others[i];
+			Free_ship_shape(other->ship);
+		}
+		free(Others);
+		num_others = max_others = 0;
     }
     Map_cleanup();
 }
 
 int Client_fd(void)
 {
+#ifndef	_WINDOWS
     return ConnectionNumber(dpy);
+#else
+	return(0);
+#endif
 }
 
 int Client_input(int new_input)
 {
+#ifndef	_WINDOWS
     return xevent(new_input);
+#else
+	return(0);
+#endif
 }
-
 void Client_flush(void)
 {
+#ifndef	_WINDOWS
     XFlush(dpy);
+#endif
 }
 
 void Client_sync(void)
 {
+#ifndef	_WINDOWS
     XSync(dpy, False);
+#endif
 }
 
 int Client_wrap_mode(void)

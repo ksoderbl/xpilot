@@ -1,10 +1,11 @@
-/* $Id: netserver.c,v 3.136 1997/02/25 14:18:27 bert Exp $
+/* $Id: netserver.c,v 3.143 1998/01/08 19:28:48 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +89,15 @@
  * if the acknowledgement timer expires.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <io.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#else
+
+#include "types.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -95,7 +105,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#ifndef  VMS
+#if !defined(VMS)
 # include <sys/param.h>
 #endif
 #if defined(__hpux)
@@ -110,17 +120,27 @@
 # ifdef sco
 #  include <time.h>
 # endif
+#ifndef	_WINDOWS
 # include <sys/time.h>
 #endif
+#endif
+#ifdef	_WINDOWS
+#include "winNet.h"
+#include <io.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#endif
+#endif
+
 #include <ctype.h>
 
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "global.h"
 #include "proto.h"
@@ -236,6 +256,29 @@ static int Init_setup(void)
 	for (y = 0; y < World.y; y++, mapptr++) {
 	    type = World.block[x][y];
 	    switch (type) {
+	    case ACWISE_GRAV:
+	    case CWISE_GRAV:
+	    case POS_GRAV:
+	    case NEG_GRAV:
+	    case UP_GRAV:
+	    case DOWN_GRAV:
+	    case RIGHT_GRAV:
+	    case LEFT_GRAV:
+		if (!gravityVisible)
+		    type = SETUP_SPACE;
+		break;
+	    case WORMHOLE:
+		if (!wormholeVisible)
+		    type = SETUP_SPACE;
+		break;
+	    case ITEM_CONCENTRATOR:
+		if (!itemConcentratorVisible)
+		    type = SETUP_SPACE;
+		break;
+	    default:
+		break;
+	    }
+	    switch (type) {
 	    case SPACE:		*mapptr = SETUP_SPACE; break;
 	    case FILLED:	*mapptr = SETUP_FILLED; break;
 	    case REC_RU:	*mapptr = SETUP_REC_RU; break;
@@ -345,7 +388,7 @@ static int Init_setup(void)
 
 #ifndef SILENT
     if (type != SETUP_MAP_UNCOMPRESSED) {
-	printf("Map compression ratio is %-4.2f%%\n",
+	xpprintf("%s Map compression ratio is %-4.2f%%\n", showtime(),
 	    100.0 * size / (World.x * World.y));
     }
 #endif
@@ -537,7 +580,7 @@ void Destroy_connection(int ind, const char *reason)
 	DgramWrite(sock, pkt, len);
     }
 #ifndef SILENT
-    printf("%s: Goodbye %s=%s@%s|%s (\"%s\")\n",
+    xpprintf("%s Goodbye %s=%s@%s|%s (\"%s\")\n",
 	   showtime(),
 	   connp->nick ? connp->nick : "",
 	   connp->real ? connp->real : "",
@@ -649,9 +692,9 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 
     if (free_conn_index >= max_connections) {
 #ifndef SILENT
-	printf("Full house for %s(%s)@%s(%s)\n", real, nick, host, dpy);
+		xpprintf("%s Full house for %s(%s)@%s(%s)\n", showtime(), real, nick, host, dpy);
 #endif
-	return -1;
+		return -1;
     }
     connp = &Conn[free_conn_index];
 
@@ -659,6 +702,8 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	error("Cannot create datagram socket (%d)", sl_errno);
 	return -1;
     }
+#if 0
+	/* this shouldn't be an issue with the newfangled use of select */
     if (sock >= MAX_SELECT_FD) {
 	/* Not handled with our current oldfashioned use of select(2). */
 	errno = 0;
@@ -666,6 +711,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	DgramClose(sock);
 	return -1;
     }
+#endif
     if ((my_port = GetPortNum(sock)) == 0) {
 	error("Cannot get port from socket");
 	DgramClose(sock);
@@ -791,11 +837,12 @@ static int Handle_listening(int ind)
 	}
     }
 #ifndef SILENT
-    printf("%s: Welcome %s=%s@%s|%s (%s/%d)", showtime(), connp->nick,
+    xpprintf("%s Welcome %s=%s@%s|%s (%s/%d)", showtime(), connp->nick,
 	   connp->real, connp->host, connp->dpy, connp->addr, connp->his_port);
     if (connp->version != MY_VERSION)
-	printf(" (version %04x)", connp->version);
-    printf("\n");
+		xpprintf(" (version %04x)\n", connp->version);
+	else
+		xpprintf("\n");
 #endif
     if (connp->r.ptr[0] != PKT_VERIFY) {
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
@@ -812,8 +859,8 @@ static int Handle_listening(int ind)
     }
     if (strcmp(real, connp->real)) {
 #ifndef SILENT
-	printf("Client verified incorrectly (%s,%s)(%s,%s)",
-	       real, nick, connp->real, connp->nick);
+		xpprintf("%s Client verified incorrectly (%s,%s)(%s,%s)\n",
+	       showtime(), real, nick, connp->real, connp->nick);
 #endif
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
 	Send_reliable(ind);
@@ -981,7 +1028,7 @@ static int Handle_login(int ind)
     }
 
 #ifndef	SILENT
-    printf("%s (%d) starts at startpos %d.\n",
+    xpprintf("%s %s (%d) starts at startpos %d.\n", showtime(),
 	   pl->name, NumPlayers, pl->home_base);
 #endif
 
@@ -1240,7 +1287,7 @@ int Send_self(int ind,
 {
     connection_t	*connp = &Conn[ind];
     int			n;
-    u_byte		stat = status;
+    u_byte		stat = (u_byte)status;
     int			sbuf_len = connp->w.len;
 
     n = Packet_printf(&connp->w,
@@ -1866,7 +1913,7 @@ static int Receive_power(int ind)
     unsigned char	ch;
     short		tmp;
     int			n;
-    float		power;
+    DFLOAT		power;
 
     if ((n = Packet_scanf(&connp->r, "%c%hd", &ch, &tmp)) <= 0) {
 	if (n == -1) {
@@ -1874,7 +1921,7 @@ static int Receive_power(int ind)
 	}
 	return n;
     }
-    power = (float) tmp / 256.0F;
+    power = (DFLOAT) tmp / 256.0F;
     pl = Players[GetInd[connp->id]];
     switch (ch) {
     case PKT_POWER:
@@ -2268,7 +2315,8 @@ static void Handle_talk(int ind, char *str)
 {
     connection_t	*connp = &Conn[ind];
     player		*pl = Players[GetInd[connp->id]];
-    int			i, sent, team, len;
+    int			i, sent, team;
+	unsigned int	len;
     char		*cp,
 			msg[MSG_LEN * 2];
 
@@ -2306,7 +2354,7 @@ static void Handle_talk(int ind, char *str)
 	FILE *fp = fopen(LOGFILE, "a");
 	if (fp) {
 	    fprintf(fp,
-		    "%s:[%s]{%s@%s(%s)|%s}:\n"
+		    "%s[%s]{%s@%s(%s)|%s}:\n"
 		    "\t%s\n",
 		    showtime(),
 		    pl->name,
@@ -2574,6 +2622,9 @@ static int Receive_motd(int ind)
  * If this MOTD buffer hasn't been accessed for a while
  * then on the next access the MOTD file is checked for changes.
  */
+#ifdef	_WINDOWS
+#define	close(__a)	_close(__a)
+#endif
 int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)
 {
     static int		motd_size;
@@ -2700,7 +2751,7 @@ static int Receive_pointer_move(int ind)
     unsigned char	ch;
     short		movement;
     int			n;
-    float		turnspeed, turndir;
+    DFLOAT		turnspeed, turndir;
 
     if ((n = Packet_scanf(&connp->r, "%c%hd", &ch, &movement)) <= 0) {
 	if (n == -1) {
@@ -2713,11 +2764,11 @@ static int Receive_pointer_move(int ind)
 	Autopilot(ind, 0);
     turnspeed = movement * pl->turnspeed / MAX_PLAYER_TURNSPEED;
     if (turnspeed < 0) {
-	turndir = -1;
+	turndir = -1.0;
 	turnspeed = -turnspeed;
     }
     else {
-	turndir = 1;
+	turndir = 1.0;
     }
     LIMIT(turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
     pl->turnvel -= turndir * turnspeed;

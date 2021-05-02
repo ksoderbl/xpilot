@@ -1,10 +1,11 @@
-/* $Id: netclient.c,v 3.99 1996/12/14 20:32:01 bert Exp $
+/* $Id: netclient.c,v 3.107 1998/01/28 08:50:06 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +22,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winclient.h"
+#include "../contrib/NT/xpilot/winNet.h"
+#include "../contrib/NT/xpilot/winAudio.h"
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winXThread.h"
+#endif
+
+#include "types.h"
+
+#ifndef	_WINDOWS
 #include <unistd.h>
 #ifndef VMS
 #include <sys/param.h>
 #endif
-#if defined(__hpux)
+#endif
+#if defined(__hpux) || defined(_WINDOWS)
 #include <time.h>
 #else
 #include <sys/time.h>
@@ -39,14 +53,17 @@
 #include <socket.h>
 #include <in.h>
 #else
+#ifndef	_WINDOWS
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
+#endif
+#ifndef	_WINDOWS
 #include <netdb.h>
+#endif
 
 #include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "error.h"
 #include "net.h"
@@ -59,11 +76,16 @@
 #include "pack.h"
 #include "socklib.h"
 #include "protoclient.h"
+#include "portability.h"
+
+#ifdef	SOUND
+#include "audio.h"
+#endif
 
 char netclient_version[] = VERSION;
 
 #define TALK_RETRY	2
-
+#define MAX_MAP_ACK_LEN	500
 
 /*
  * Type definitions.
@@ -79,7 +101,9 @@ typedef struct {
 setup_t			*Setup;
 int			receive_window_size;
 long			last_loops;
-
+#ifdef	_WINDOWS
+int			received_self = FALSE;
+#endif
 /*
  * Local variables.
  */
@@ -256,6 +280,8 @@ int Net_setup(void)
     long	todo = sizeof(setup_t);
     char	*ptr;
 
+/*	IFWINDOWS( Trace("Net_setup:\n"); )
+*/
     if ((Setup = (setup_t *) malloc(sizeof(setup_t))) == NULL) {
 	error("No memory for setup data");
 	return -1;
@@ -390,6 +416,7 @@ int Net_setup(void)
  * is from the right UDP connection, it already has
  * this info from the ENTER_GAME_pack.
  */
+#define	MAX_VERIFY_RETRIES	5
 int Net_verify(char *real, char *nick, char *disp, int my_team)
 {
     int		n,
@@ -403,12 +430,13 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
     for (retries = 0;;) {
 	if (retries == 0
 	    || time(NULL) - last >= 3) {
-	    if (retries++ >= 10) {
+	    if (retries++ >= MAX_VERIFY_RETRIES) {
 		errno = 0;
 		error("Can't connect to server after %d retries", retries);
 		return -1;
 	    }
 	    Sockbuf_clear(&wbuf);
+/*		IFWINDOWS( Trace("Verifying to sock=%d\n", wbuf.sock); ) */
 	    n = Packet_printf(&wbuf, "%c%s%s%s", PKT_VERIFY, real, nick, disp);
 	    if (n <= 0
 		|| Sockbuf_flush(&wbuf) <= 0) {
@@ -419,6 +447,7 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 #ifndef SILENT
 	    if (retries > 1) {
 		printf("Waiting for verify response\n");
+		IFWINDOWS( Progress("Waiting for verify response"); )
 	    }
 #endif
 	}
@@ -478,6 +507,7 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 #ifndef SILENT
     if (retries > 1) {
 	printf("Verified correctly\n");
+	IFWINDOWS( Progress("Verified correctly"); )
     }
 #endif
     return 0;
@@ -498,7 +528,9 @@ int Net_init(char *server, int port)
 			sock;
     unsigned		size;
 
+#ifndef	_WINDOWS
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     Receive_init();
 
@@ -952,6 +984,7 @@ static int Net_read(frame_buf_t *frame)
 	    Sockbuf_clear(&frame->sbuf);
 	    return 0;
 	}
+	/*IFWINDOWS( Trace("Net_read: read %d bytes type=%d\n", frame->sbuf.len, frame->sbuf.ptr[0]); ) */
 	if (frame->sbuf.ptr[0] != PKT_START) {
 	    /*
 	     * Don't know which type of packet this is
@@ -962,6 +995,7 @@ static int Net_read(frame_buf_t *frame)
 	}
 	/* Peek at the frame loop number. */
 	n = Packet_scanf(&frame->sbuf, "%c%ld", &ch, &loop);
+	/*IFWINDOWS( Trace("Net_read: frame # %d\n", loop); )*/
 	frame->sbuf.ptr = frame->sbuf.buf;
 	if (n <= 0) {
 	    if (n == -1) {
@@ -982,6 +1016,7 @@ static int Net_read(frame_buf_t *frame)
 	     */
 	}
     }
+	/*IFWINDOWS( Trace("Net_read: wbuf->len=%d\n", wbuf.len); )*/
 }
 
 /*
@@ -1003,6 +1038,8 @@ int Net_input(void)
 
     for (i = 0; i < receive_window_size; i++) {
 	frame = &Frames[i];
+	if (!frame)
+		continue;
 	if (frame->loops != 0) {
 	    /*
 	     * Already contains a frame.
@@ -1069,7 +1106,13 @@ int Net_input(void)
 		}
 	    }
 	}
-	if (i == receive_window_size - 1 && i > 0) {
+	if ((i == receive_window_size - 1 && i > 0)
+#ifdef	_WINDOWS
+		|| drawPending
+		|| (ThreadedDraw && 
+				!WaitForSingleObject(dinfo.eventNotDrawing, 0) == WAIT_OBJECT_0)
+#endif
+		) {
 	    /*
 	     * Drop oldest packet.
 	     */
@@ -1426,6 +1469,9 @@ int Receive_self(void)
 		num_items,
 		currentTank, fuelSum, fuelMax, rbuf.len);
 
+#ifdef	_WINDOWS
+	received_self = TRUE;
+#endif
     return 1;
 }
 
@@ -1898,7 +1944,9 @@ int Receive_fuel(void)
     if ((n = Handle_fuel(num, fuel << FUEL_SCALE_BITS)) == -1) {
 	return -1;
     }
-    Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_FUEL, last_loops, num);
+    if (wbuf.len < MAX_MAP_ACK_LEN) {
+	Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_FUEL, last_loops, num);
+    }
     return 1;
 }
 
@@ -1914,7 +1962,9 @@ int Receive_cannon(void)
     if ((n = Handle_cannon(num, dead_time)) == -1) {
 	return -1;
     }
-    Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_CANNON, last_loops, num);
+    if (wbuf.len < MAX_MAP_ACK_LEN) {
+	Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_CANNON, last_loops, num);
+    }
     return 1;
 }
 
@@ -1933,7 +1983,9 @@ int Receive_target(void)
     if ((n = Handle_target(num, dead_time, damage)) == -1) {
 	return -1;
     }
-    Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_TARGET, last_loops, num);
+    if (wbuf.len < MAX_MAP_ACK_LEN) {
+	Packet_printf(&wbuf, "%c%ld%hu", PKT_ACK_TARGET, last_loops, num);
+    }
     return 1;
 }
 
@@ -2072,7 +2124,7 @@ int Receive_reliable(void)
 	return 1;
     }
     if (rel < reliable_offset) {
-	len -= reliable_offset - rel;
+	len -= (short)(reliable_offset - rel);
 	rbuf.ptr += reliable_offset - rel;
 	rel = reliable_offset;
     }
@@ -2153,7 +2205,7 @@ int Send_shape(char *str)
     return 0;
 }
 
-int Send_power(float power)
+int Send_power(DFLOAT power)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_POWER,
 		      (int) (power * 256.0)) == -1) {
@@ -2162,7 +2214,7 @@ int Send_power(float power)
     return 0;
 }
 
-int Send_power_s(float power_s)
+int Send_power_s(DFLOAT power_s)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_POWER_S,
 		      (int) (power_s * 256.0)) == -1) {
@@ -2171,7 +2223,7 @@ int Send_power_s(float power_s)
     return 0;
 }
 
-int Send_turnspeed(float turnspeed)
+int Send_turnspeed(DFLOAT turnspeed)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_TURNSPEED,
 		      (int) (turnspeed * 256.0)) == -1) {
@@ -2180,7 +2232,7 @@ int Send_turnspeed(float turnspeed)
     return 0;
 }
 
-int Send_turnspeed_s(float turnspeed_s)
+int Send_turnspeed_s(DFLOAT turnspeed_s)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_TURNSPEED_S,
 		      (int) (turnspeed_s * 256.0)) == -1) {
@@ -2189,7 +2241,7 @@ int Send_turnspeed_s(float turnspeed_s)
     return 0;
 }
 
-int Send_turnresistance(float turnresistance)
+int Send_turnresistance(DFLOAT turnresistance)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_TURNRESISTANCE,
 		      (int) (turnresistance * 256.0)) == -1) {
@@ -2198,7 +2250,7 @@ int Send_turnresistance(float turnresistance)
     return 0;
 }
 
-int Send_turnresistance_s(float turnresistance_s)
+int Send_turnresistance_s(DFLOAT turnresistance_s)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_TURNRESISTANCE_S,
 		      (int) (turnresistance_s * 256.0)) == -1) {
@@ -2294,7 +2346,13 @@ int Send_talk(void)
 int Send_display(void)
 {
     if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
+#ifndef	WINDOWSCALING
 		      draw_width, draw_height, num_spark_colors, spark_rand) == -1) {
+#else
+		      (int)(draw_width*scaleFactor), (int)(draw_height*scaleFactor), num_spark_colors, spark_rand) == -1) {
+	draw_width  = (int)(draw_width*scaleFactor);
+	draw_height = (int)(draw_height*scaleFactor);
+#endif
 	return -1;
     }
     return 0;

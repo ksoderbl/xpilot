@@ -1,10 +1,11 @@
-/* $Id: paint.h,v 3.54 1996/10/12 22:35:16 bert Exp $
+/* $Id: paint.h,v 3.60 1998/01/08 19:28:49 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +25,13 @@
 #ifndef PAINT_H
 #define PAINT_H
 
+#ifndef	_WINDOWS
 #include <X11/Xlib.h>
+#endif
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#endif
 
 #ifndef TYPES_H
 /* need u_byte */
@@ -70,7 +77,7 @@ int Handle_vbase(int x, int y, int xi, int yi, int type);
 int Handle_vdecor(int x, int y, int xi, int yi, int type);
 int Handle_message(char *msg);
 int Handle_eyes(int id);
-void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y);
+void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y, int color);
 void Paint_item(u_byte type, Drawable d, GC mygc, int x, int y);
 void Paint_shots(void);
 void Paint_ships(void);
@@ -95,6 +102,8 @@ int Handle_time_left(long sec);
 void Game_over_action(u_byte stat);
 
 #define MAX_COLORS		16	/* Max. color switched colors ever */
+
+#define MAX_MSGS		15	/* Max. messages displayed ever */
 
 #define NUM_DASHES	    2
 #define NUM_CDASHES	    2
@@ -145,12 +154,23 @@ extern int	radar_exposures;	/* Is radar window exposed? */
 
 #define MAX_COLOR_LEN		32
 
+								/* windows has 2 sets of item bitmaps */
+#define	ITEM_HUD		0		/* one color for the HUD */
+#define	ITEM_PLAYFIELD	1		/* and one color for the playfield */
+#ifdef	_WINDOWS
+extern Pixmap	itemBitmaps[][2];
+#else
+extern Pixmap	itemBitmaps[];
+#endif
+
 extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
 extern GC	motdGC;
 extern XGCValues gcv;
 extern Window	top, draw, keyboard, radar, players;
+#ifdef	_WINDOWS				/* see paint.c for details */
+extern Window	textWindow, msgWindow, buttonWindow;
+#endif
 extern Pixmap	p_draw, p_radar, s_radar;
-extern Pixmap	itemBitmaps[];
 extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
 extern Window	about_w, about_close_b, about_next_b, about_prev_b, talk_w;
 extern XColor	colors[MAX_COLORS];		/* Colors */
@@ -168,7 +188,7 @@ extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */
 extern u_byte	debris_colors;		/* Number of debris intensities */
 extern u_byte	spark_rand;		/* Sparkling effect */
-extern float	charsPerTick;		/* Output speed of messages */
+extern DFLOAT	charsPerTick;		/* Output speed of messages */
 extern bool	markingLights;		/* Marking lights on ships */
 extern int	titleFlip;		/* Do special titlebar flipping? */
 extern int	shieldDrawMode;		/* How to draw players shield */
@@ -184,5 +204,6 @@ extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 
 extern int	maxKeyDefs;
 extern long	loops;
+extern int	maxMessages;
 
 #endif

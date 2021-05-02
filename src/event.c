@@ -1,10 +1,11 @@
-/* $Id: event.c,v 3.72 1996/10/21 21:40:33 bert Exp $
+/* $Id: event.c,v 3.79 1997/11/27 20:09:13 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +22,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#else
 #include <stdlib.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 
@@ -41,10 +47,10 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.72 1996/10/21 21:40:33 bert Exp $";
+    "@(#)$Id: event.c,v 3.79 1997/11/27 20:09:13 bert Exp $";
 #endif
 
-#define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
+#define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}
 
 /*
  * Globals.
@@ -57,7 +63,7 @@ static void Refuel(int ind)
 {
     player *pl = Players[ind];
     int i;
-    float l, dist = 1e9;
+    DFLOAT l, dist = 1e9;
 
 
     if (!BIT(pl->have, OBJ_REFUEL))
@@ -84,8 +90,8 @@ static void Repair(int ind)
 {
     player *pl = Players[ind];
     int i;
-    float l, dist = 1e9;
-    float x, y;
+    DFLOAT l, dist = 1e9;
+    DFLOAT x, y;
     target_t *targ = World.targets;
 
     if (!BIT(pl->have, OBJ_REPAIR))
@@ -126,7 +132,7 @@ int Player_lock_closest(int ind, int next)
 {
     player *pl = Players[ind];
     int lock, i, newpl;
-    float dist, best, l;
+    DFLOAT dist, best, l;
 
     if (!next)
 	CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
@@ -227,7 +233,7 @@ int Handle_keyboard(int ind)
 {
     player  	*pl = Players[ind];
     int	    	i, j, k, key, pressed, xi, yi;
-    float  	minv;
+    DFLOAT  	minv;
 
 
     for (key = 0; key < NUM_KEYS; key++) {
@@ -374,8 +380,8 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_CHANGE_HOME:
-		xi = (int)pl->pos.x / BLOCK_SZ;
-		yi = (int)pl->pos.y / BLOCK_SZ;
+		xi = OBJ_X_IN_BLOCKS(pl);
+		yi = OBJ_Y_IN_BLOCKS(pl);
 		if (World.block[xi][yi] == BASE) {
 		    msg[0] = '\0';
 		    for (i=0; i<World.NumBases; i++) {
@@ -448,7 +454,6 @@ int Handle_keyboard(int ind)
 	    case KEY_FIRE_TORPEDO:
 		if (pl->item[ITEM_MISSILE] > 0)
 		    Fire_shot(ind, OBJ_TORPEDO, pl->dir);
-
 		break;
 
 	    case KEY_FIRE_LASER:
@@ -626,8 +631,8 @@ int Handle_keyboard(int ind)
 		    i = HOVERPAUSE;
 		}
 		else {
-		    xi = (int)pl->pos.x / BLOCK_SZ;
-		    yi = (int)pl->pos.y / BLOCK_SZ;
+		    xi = OBJ_X_IN_BLOCKS(pl);
+		    yi = OBJ_Y_IN_BLOCKS(pl);
 		    j = World.base[pl->home_base].pos.x;
 		    k = World.base[pl->home_base].pos.y;
 		    if (j == xi && k == yi) {

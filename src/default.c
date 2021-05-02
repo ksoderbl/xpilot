@@ -1,10 +1,11 @@
-/* $Id: default.c,v 3.118 1996/12/15 21:31:22 bert Exp $
+/* $Id: default.c,v 3.127 1998/01/28 08:50:04 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,19 +22,32 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+extern	char	**Argv;
+extern	int		Argc;
+#endif
+
+#include "types.h"
+
+#ifndef	_WINDOWS
 #include <X11/Xos.h>
 #include <X11/keysym.h>
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
+#include <sys/types.h>
+#endif
 #ifdef	__apollo
 #    include <X11/ap_keysym.h>
 #endif
-#include <sys/types.h>
-#include <unistd.h>
 #ifdef VMS
 #include "strcasecmp.h"
 #else
+#ifndef	_WINDOWS
+#include <unistd.h>
 #include <sys/param.h>
+#endif
 #endif
 #include <string.h>
 #include <ctype.h>
@@ -43,7 +57,6 @@
 
 #include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "paint.h"
 #include "pack.h"
@@ -53,12 +66,13 @@
 #include "xinit.h"
 #include "error.h"
 #include "protoclient.h"
+#include "audio.h"
 
 char default_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.118 1996/12/15 21:31:22 bert Exp $";
+    "@(#)$Id: default.c,v 3.127 1998/01/28 08:50:04 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -85,16 +99,23 @@ static char sourceid[] =
 #define TEXT_FONT	"-*-*-bold-i-*-*-14-*-*-*-p-*-iso8859-1"
 #define TALK_FONT	"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
 #define KEY_LIST_FONT	"-*-fixed-medium-r-*-*-10-*-*-*-c-*-iso8859-1"
+
+#ifndef	_WINDOWS
 #define MOTD_FONT	"-*-courier-bold-r-*--14-*-*-*-*-*-iso8859-1"
+#else
+#define MOTD_FONT	"-*-courier-bold-r-*-*-14-*-*-*-*-*-iso8859-1"
+#endif
 
 char			myName[] = "xpilot";
 char			myClass[] = "XPilot";
-
 
 #ifdef SPARC_CMAP_HACK
 char  frameBuffer[MAX_CHARS]; /* frame buffer */
 #endif
 
+#ifdef	_WINDOWS
+const char*	winHelpFile;
+#endif
 
 keys_t buttonDefs[MAX_POINTER_BUTTONS];
 
@@ -152,7 +173,11 @@ struct option {
     {
 	"autoServerMotdPopup",
 	NULL,
+#ifdef	_WINDOWS
+	"No",			/* temporary till i straighten out the motd woes. */
+#else
 	"Yes",
+#endif
 	KEY_DUMMY,
 	"Automatically popup the MOTD of the server on startup.\n"
     },
@@ -220,7 +245,7 @@ struct option {
 	"Define the ship shape to use.  Because the argument to this option\n"
 	"is rather large (up to 500 bytes) the recommended way to set\n"
 	"this option is in the .xpilotrc file in your home directory.\n"
-	"The exact format is defined in the file README.ships in the XPilot\n"
+	"The exact format is defined in the file doc/README.SHIPS in the XPilot\n"
 	"distribution.  Note that there is a nifty tool called editss for\n"
 	"easy ship creation.  See the XPilot FAQ for details.\n"
 	"See also the \"shipShapeFile\" option below.\n"
@@ -556,6 +581,20 @@ struct option {
 	MESSAGE_FONT,
 	KEY_DUMMY,
 	"The font used for drawing messages.\n"
+    },
+    {
+	"maxMessages",
+	NULL,
+	"8",
+	KEY_DUMMY,
+	"The maximum number of messages to display.\n"
+    },
+    {
+	"reverseScroll",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Reverse scroll direction of messages.\n"
     },
     {
 	"shotSize",
@@ -1045,7 +1084,7 @@ struct option {
 	NULL,
 	"semicolon",
 	KEY_FIRE_HEAT,
-	"Fire heat seaking missile.\n"
+	"Fire heatseeking missile.\n"
     },
     {
 	"keyFireLaser",
@@ -1506,6 +1545,31 @@ struct option {
 	"An optional file where a recording of a game can be made.\n"
 	"If this file is undefined then recording isn't possible.\n"
     },
+#ifdef _WINDOWS
+    {
+	"threadedDraw",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Tell Windows to do the heavy BitBlt in another thread\n"
+	},
+    {
+	"radarDivisor",
+	NULL,
+	"1",
+	KEY_DUMMY,
+	"Specifies how many frames between radar window updates.\n"
+	},
+#endif
+#ifdef	WINDOWSCALING
+    {
+	"scaleFactor",
+	NULL,
+	"1.0",
+	KEY_DUMMY,
+	"Specifies scaling factor for the drawing window.\n"
+	},
+#endif
 #ifdef SOUND
     {
 	"sounds",
@@ -1637,30 +1701,46 @@ static void Usage(void)
     exit(1);
 }
 
+#ifdef	_WINDOWS
+void	GetWindowsProfileString(const char* section, const char* key,
+								const char* def, char* result, int size)
+{
+	int		i;
+
+	for (i=0; i<3; i++)
+	{
+		GetPrivateProfileString("Settings", key, "", result, size, 
+			Get_xpilotini_file(i));
+		if (result[0] != '\0')
+			return;
+	}
+	strncpy(result, def, size);
+}
+#endif
 
 static int Find_resource(XrmDatabase db, const char *resource,
 			 char *result, unsigned size, int *index)
 {
-    int			i,
-			len;
+    int			i;
+#ifndef	_WINDOWS
+	int		len;
     char		str_name[80],
 			str_class[80],
 			*str_type[10];
     XrmValue		rmValue;
-    unsigned		hash = String_hash(resource);
 
-    for (i = 0;;) {
+   unsigned		hash = String_hash(resource);
+   for (i = 0;;) {
 	if (hash == options[i].hash && !strcmp(resource, options[i].name)) {
 	    *index = i;
 	    break;
 	}
 	if (++i >= NELEM(options)) {
 	    errno = 0;
-	    error("BUG: Can't find option %s", resource);
+	    error("BUG: Can't find option \"%s\"", resource);
 	    exit(1);
 	}
     }
-
     sprintf(str_name, "%s.%s", myName, resource);
     sprintf(str_class, "%s.%c%s", myClass,
 	    isupper(*resource) ? toupper(*resource) : *resource, resource + 1);
@@ -1678,6 +1758,36 @@ static int Find_resource(XrmDatabase db, const char *resource,
     strncpy(result, options[*index].fallback, size);
     result[size - 1] = '\0';
     return 0;
+#else	/* _WINDOWS */
+	unsigned		hash = String_hash(resource);
+	for (i = 0;;)
+	{
+		if (!strcmp(resource, options[i].name)) 
+		{
+			*index = i;
+			break;
+		}
+		if (++i >= NELEM(options)) 
+		{
+			errno = 0;
+			error("BUG: Can't find option \"%s\"", resource);
+			exit(1);
+		}
+    }
+	GetWindowsProfileString("Settings", resource, options[*index].fallback, result, size);
+#if 0
+	GetPrivateProfileString("Settings", resource, "", result, size, 
+		Get_xpilotini_file(1));
+	if (result[0] == '\0')
+	{
+		GetPrivateProfileString("Settings", resource, "", result, size, 
+			Get_xpilotini_file(2));
+		if (result[0] == '\0')
+		strncpy(result, options[*index].fallback, size);
+	}
+#endif
+	return(1);
+#endif
 }
 
 
@@ -1727,17 +1837,25 @@ static void Get_int_resource(XrmDatabase db,
 
 
 static void Get_float_resource(XrmDatabase db,
-			       const char *resource, float *result)
+			       const char *resource, DFLOAT *result)
 {
     int			index;
     char		resValue[MAX_CHARS];
 
     Find_resource(db, resource, resValue, sizeof resValue, &index);
+#ifndef	_WINDOWS
     if (sscanf(resValue, "%f", result) <= 0) {
+#else
+    if (sscanf(resValue, "%lf", result) <= 0) {
+#endif
 	errno = 0;
 	error("Bad value \"%s\" for option \"%s\", using default...",
 	      resValue, resource);
+#ifndef	_WINDOWS
 	sscanf(options[index].fallback, "%f", result);
+#else
+	sscanf(options[index].fallback, "%lf", result);
+#endif
     }
 }
 
@@ -1764,7 +1882,7 @@ static void Get_bit_resource(XrmDatabase db, const char *resource,
     }
 }
 
-
+#ifndef	_WINDOWS
 void Get_xpilotrc_file(char *path, unsigned size)
 {
     const char		*home = getenv("HOME");
@@ -1786,7 +1904,73 @@ void Get_xpilotrc_file(char *path, unsigned size)
 	path[size - 1] = '\0';
     }
 }
+#else
+/* Get the name for XPilot.ini .  Hopefully, this will be the fully qualified
+path to where XPilot.exe started from.  Right now, we guess that is the location
+of the default help file.
+the parameter level is used to determine which ini file to use.  This allows us
+to cascade through a series of default ini files.
+level = 0 = current directory, XPilot.host.ini  (currently returns defini)
+level = 1 = current directory, XPilot.ini
+level = 2 = Windows directory, XPilot.ini
+*/
+char* Get_xpilotini_file(int level)
+{
+	static	char*	xpini = NULL;
+	static	char*	winxpini = NULL;
+	static	char*	defini = "XPilot.ini";
 
+	char*	end;
+	int		size;
+
+	switch(level)
+	{
+	case 0:
+	case 1:
+		if (xpini)
+			return(xpini);
+		if (!winHelpFile)			/* do we have the help default to build from? */
+			return(defini);			/* no, return generic name (wherever that is) */
+
+		end = strrchr(winHelpFile, '\\');
+		if (!end)
+			return(defini);			/* no backslash? bail out */
+		size = (end-winHelpFile) + 13;
+		xpini = malloc(size+1);
+		memset(xpini, 0, size);
+		strncpy(xpini, winHelpFile, end-winHelpFile);
+		strcat(xpini, "\\");
+		strcat(xpini, defini);
+		return(xpini);
+	case 2:
+		if (winxpini)
+			return(winxpini);
+		size = GetWindowsDirectory(winxpini, 0);	/* returns size needed */
+		winxpini = malloc(size+15);
+		GetWindowsDirectory(winxpini, size+13);
+		if (winxpini[strlen(winxpini)] != '\\')
+			strcat(winxpini, "\\");
+		strcat(winxpini, defini);
+		return(winxpini);
+	case -1:
+		if (xpini)
+		{
+			free(xpini);
+			xpini = NULL;
+		}
+		if (winxpini)
+		{
+			free(winxpini);
+			winxpini = NULL;
+		}
+		return(NULL);
+	}
+	error("BUG: bad level in Get_xpilotini_file");
+	return(defini);
+}
+#endif
+
+#ifndef	_WINDOWS
 
 static void Get_file_defaults(XrmDatabase *rDBptr)
 {
@@ -1880,27 +2064,33 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
     }
 #endif
 }
-
+#endif	/* _WINDOWS*/
 
 void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		   int *my_team, int *list, int *join, int *noLocalMotd,
 		   char *nickName, char *dispName, char *shut_msg)
 {
-    int			i,
-			j,
-			firstKeyDef,
-			size,
-			num;
+    char		*ptr;
+	char		*str;
+    int			i;
+	int			j;
+	int			num;
+	int			firstKeyDef;
     keys_t		key;
     KeySym		ks;
-    char		*ptr,
-			*str,
-#ifdef VMS
-			resValue[PATH_MAX + 1];
-#else
-			resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
+#ifndef	_WINDOWS
+	int		size;
+
 #endif
-    XrmDatabase		argDB = 0, rDB;
+#ifdef VMS
+	char		resValue[PATH_MAX + 1];
+#else
+	char		resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
+#endif
+    XrmDatabase		argDB = 0, rDB = 0;
+
+    extern void		Record_init(char *filename);
+#ifndef	_WINDOWS
     XrmOptionDescRec	*xopt;
 
     XrmInitialize();
@@ -2017,6 +2207,11 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
     Get_string_resource(rDB, "geometry", resValue, sizeof resValue);
     geometry = strdup(resValue);
+#else	/* _WINDOWS */
+	/* Windows needs to know about -serverIni first */
+
+
+#endif	/* _WINDOWS */
 
     Get_resource(rDB, "name", nickName, MAX_NAME_LEN);
     if (!nickName[0]) {
@@ -2040,7 +2235,19 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     strncpy(realname, realName, sizeof(realname) - 1);
     strncpy(name, nickName, sizeof(name) - 1);
 
+#ifdef	_WINDOWS
+	if (*name == '\0')	/* Windows can have no default name */
+		strcpy(name, "NoName");
+	if (Argc >2)
+	{
+		if (Argv[2] && !strncmp(Argv[2], "-team", 5))		/* oh, it's those fixed pos variables again! */
+			*my_team = Argv[2][6] & 0x0f;					/* i've really got to fix that... */
+	}
+	else
+		Get_int_resource(rDB, "team", my_team);
+#else
     Get_int_resource(rDB, "team", my_team);
+#endif
     if (*my_team < 0 || *my_team > 9) {
 	*my_team = TEAM_NOT_SET;
     }
@@ -2084,7 +2291,9 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		    }
 		}
 	    }
+#ifndef	_WINDOWS
 	    fclose(fp);
+#endif
 	}
     }
     Validate_shape_str(shipShape);
@@ -2136,7 +2345,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     colorSwitch = (i != 0) ? true : false;
     Get_bool_resource(rDB, "multibuffer", &i);
     multibuffer = (i != 0) ? true : false;
+#ifndef	_WINDOWS
+	/* Windows already derived maxColors in InitWinX */
     Get_int_resource(rDB, "maxColors", &maxColors);
+#endif
     Get_string_resource(rDB, "black", color_names[0], sizeof(color_names[0]));
     Get_string_resource(rDB, "white", color_names[1], sizeof(color_names[1]));
     Get_string_resource(rDB, "blue", color_names[2], sizeof(color_names[2]));
@@ -2186,6 +2398,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "filledDecor", &instruments, SHOW_FILLED_DECOR);
     Get_bit_resource(rDB, "texturedDecor", &instruments, SHOW_TEXTURED_DECOR);
     Get_bit_resource(rDB, "texturedBalls", &instruments, SHOW_TEXTURED_BALLS);
+    Get_bit_resource(rDB, "reverseScroll", &instruments, SHOW_REVERSE_SCROLL);
 
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
@@ -2205,6 +2418,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_resource(rDB, "talkFont", talkFontName, sizeof talkFontName);
     Get_resource(rDB, "motdFont", motdFontName, sizeof motdFontName);
 
+    Get_int_resource(rDB, "maxMessages", &maxMessages);
+
     Get_int_resource(rDB, "receiveWindowSize", &receive_window_size);
     LIMIT(receive_window_size, MIN_RECEIVE_WINDOW_SIZE, MAX_RECEIVE_WINDOW_SIZE);
 
@@ -2222,6 +2437,22 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_int_resource(rDB, "maxFPS", &maxFPS);
     oldMaxFPS = maxFPS;
 
+#ifdef _WINDOWS
+	/*
+	 * Windows specific things
+	 */
+	{
+		Get_int_resource(rDB, "radarDivisor", &RadarDivisor);
+	    Get_bool_resource(rDB, "threadedDraw", &ThreadedDraw);
+	}
+#endif	
+#ifdef	WINDOWSCALING
+
+		Get_float_resource(rDB, "scaleFactor", &scaleFactor);
+		if (scaleFactor == 0.0)
+			scaleFactor = 1.0;
+		/* init_ScaleArray(); */
+#endif
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
     Get_int_resource(rDB, "maxVolume", &maxVolume);
@@ -2314,12 +2545,39 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	}
     }
 
+#ifndef	_WINDOWS
     XrmDestroyDatabase(rDB);
 
     free(xopt);
+#endif
 
 #ifdef SOUND
     audioInit(dispName);
 #endif /* SOUND */
+}
+
+void	defaultCleanup(void)
+{
+#ifdef	_WINDOWS
+	Get_xpilotini_file(-1);
+#endif
+	if (keyDefs)
+		free(keyDefs);
+	keyDefs = NULL;
+	if (texturePath)
+		free(texturePath);
+	texturePath = NULL;
+	if (wallTextureFile)
+		free(wallTextureFile);
+	wallTextureFile = NULL;
+	if (decorTextureFile)
+		free(decorTextureFile);
+	decorTextureFile = NULL;
+	if (ballTextureFile)
+		free(ballTextureFile);
+	ballTextureFile = NULL;
+	if (shipShape)
+		free(shipShape);
+	shipShape = NULL;
 }
 

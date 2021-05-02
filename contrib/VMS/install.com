@@ -4,18 +4,18 @@ $! A VMS Command procedure to install the XPilot server and client program.
 $! Keep this command proc in the [.CONTRIB.VMS] directory and it will get 
 $! the pointers setup correctly.
 $!
-$! Written by Jens Koerber (koerber@ttkax1.ciw.uni-karlsruhe.de) 18-NOV-1995
+$! Written by Jens Koerber (koerber@ttkax1.ciw.uni-karlsruhe.de) 29-MAR-1997
 $!
 $!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 $!
 $ SAVED_VERIFY='F$VERIFY(0)
 $ SET NOVERIFY
-$ ON CONTROL_Y THEN GOTO EXIT
+$! ON CONTROL_Y THEN GOTO EXIT
 $ SET NOON
 $ SAY = "WRITE SYS$OUTPUT"
 $!
 $ SAY " "
-$ SAY " INSTALLING XPILOT V3.5.0 ..."
+$ SAY " INSTALLING XPILOT V3.6.3 ..."
 $!
 $! ---------------------------------------------------------------------------
 $! CPU type (VAX, Alpha)
@@ -84,9 +84,6 @@ $ COPY *.H                         [-.-.SRC]*.*
 $ COPY M*.COM                      [-.-.SRC]*.*
 $ COPY *.OPT                       [-.-.SRC]*.*
 $ COPY *.MMS                       [-.-.SRC]*.*
-$ CREATE/DIR                       [-.-.SRC.VMS_INCLUDE]
-$ COPY [.VMS_INCLUDE]*.H           [-.-.SRC.VMS_INCLUDE]*.*
-$ COPY [.VMS_INCLUDE.SYS]*.H       [-.-.SRC.VMS_INCLUDE]*.*
 $ CREATE/DIR                       [-.-.START]
 $ COPY X*.COM                      [-.-.START]*.*
 $!
@@ -118,7 +115,7 @@ $   THEN
 $     SAY " "
 $     SAY " "
 $     SAY "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-$     SAY "          Can't build the XPilot 3.5.0 server !                 "
+$     SAY "          Can't build the XPilot 3.6.3 server !                 "
 $     SAY "   ''VMS_VERS' doesn't have the sigset family, *sigh* !         "
 $     SAY "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 $     SAY " "
@@ -161,7 +158,7 @@ $     IF IC2 .LE. 1
 $     THEN
 $       SAY " "
 $       SAY "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-$       SAY "          Can't build the XPilot 3.5.0 server !              "
+$       SAY "          Can't build the XPilot 3.6.3 server !              "
 $       SAY "   DEC C ''VERS' doesn't have the sigset family, *sigh* !    "
 $       SAY "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 $       SAY " "

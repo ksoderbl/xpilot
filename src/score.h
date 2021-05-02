@@ -1,10 +1,11 @@
-/* $Id: score.h,v 3.24 1996/10/06 00:01:41 bjoerns Exp $
+/* $Id: score.h,v 3.29 1998/01/16 08:57:27 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +41,7 @@
 #define ED_LASER_HIT		(-100.0*FUEL_SCALE_FACT)
 /* was 120 -> 80 -> 40 -> 50 -> 60 -> 100 */
 
-#define PTS_PR_PL_SHOT	    	-2    	/* Points if you get shot by a player */
+#define PTS_PR_PL_SHOT	    	-5    	/* Points if you get shot by a player */
 
 #define CANNON_SCORE	    	-1436
 #define WALL_SCORE	    	2000

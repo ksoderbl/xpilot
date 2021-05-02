@@ -1,10 +1,11 @@
-/* $Id: draw.h,v 3.34 1996/10/06 00:01:03 bjoerns Exp $
+/* $Id: draw.h,v 3.39 1997/11/27 20:09:13 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,15 @@
 #define WHITE		    1
 #define BLUE		    2
 #define RED		    3
+
+
+#if defined(_WINDOWS) && !defined(PENS_OF_PLENTY)
+#define	CLOAKCOLOROFS	15		/* colors 16 and 17 are dashed white/blue */
+#define	MISSILECOLOR	18		/* wide white pen */
+#define	LASERCOLOR		19		/* wide red pen */
+#define	LASERTEAMCOLOR	20		/* wide blue pen */
+#define	FUNKCOLORS		5		/* 4 funky colors here */
+#endif
 
 /*
  * The minimum and maximum playing window sizes supported by the server.
@@ -100,6 +110,10 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
     int		num_m_rack;		/* Number of missile racks */
     position	*m_rack[MAX_RACK_PTS];
     int		shield_radius;		/* Radius of shield used by client. */
+#ifdef	_NAMEDSHIPS
+	char*	name;
+	char*	author;
+#endif
 } wireobj;
 
 extern wireobj *Default_ship(void);
@@ -111,7 +125,7 @@ extern int Validate_shape_str(char *str);
 extern void Convert_ship_2_string(wireobj *w, char *buf, char *ext,
 				  unsigned shape_version);
 
-extern float rfrac(void);
+extern DFLOAT rfrac(void);
 extern int mod(int x, int y);
 
 #endif

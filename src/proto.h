@@ -1,10 +1,11 @@
-/* $Id: proto.h,v 3.63 1996/10/12 22:38:14 bert Exp $
+/* $Id: proto.h,v 3.68 1997/11/27 20:09:29 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,8 +73,8 @@ void Grok_map(void);
 void Generate_random_map(void);
 void Find_base_direction(void);
 void Compute_gravity(void);
-float Wrap_findDir(float dx, float dy);
-float Wrap_length(float dx, float dy);
+DFLOAT Wrap_findDir(DFLOAT dx, DFLOAT dy);
+DFLOAT Wrap_length(DFLOAT dx, DFLOAT dy);
 
 /*
  * Prototypes for math.c
@@ -81,9 +82,9 @@ float Wrap_length(float dx, float dy);
 int ON(char *optval);
 int OFF(char *optval);
 int mod(int x, int y);
-int f2i(float f);
-float findDir(float x, float y);
-float rfrac(void);
+int f2i(DFLOAT f);
+DFLOAT findDir(DFLOAT x, DFLOAT y);
+DFLOAT rfrac(void);
 void Make_table(void);
 
 
@@ -105,7 +106,7 @@ void Recoil(object *ship, object *shot);
 void Record_shove(player *pl, player *pusher, long time);
 void Delta_mv(object *ship, object *obj);
 void Obj_repel(object *obj1, object *obj2, int repel_dist);
-void Item_damage(int ind, float prob);
+void Item_damage(int ind, DFLOAT prob);
 void Alloc_shots(int number);
 void Free_shots(void);
 void Tank_handle_detach(player*);
@@ -114,16 +115,16 @@ void Update_tanks(pl_fuel_t *);
 void Place_item(int type, player *pl);
 void Place_mine(int ind);
 void Place_moving_mine(int ind);
-void Place_general_mine(int ind, long status, float x, float y,
-  			float vx, float vy, modifiers mods);
+void Place_general_mine(int ind, long status, DFLOAT x, DFLOAT y,
+  			DFLOAT vx, DFLOAT vy, modifiers mods);
 void Detonate_mines(int ind);
 void Cannon_fire(int ind);
 char *Describe_shot(int type, long status, modifiers mods, int hit);
 void Fire_ecm(int ind);
 void Move_ball(int ind);
 void Fire_shot(int ind, int type, int dir);
-void Fire_general_shot(int ind, float x, float y, int type, int dir,
-		       float speed, modifiers mods);
+void Fire_general_shot(int ind, DFLOAT x, DFLOAT y, int type, int dir,
+		       DFLOAT speed, modifiers mods);
 void Fire_normal_shots(int ind);
 void Fire_main_shot(int ind, int type, int dir);
 void Fire_shot(int ind, int type, int dir);
@@ -139,17 +140,17 @@ void do_lose_item(player *pl);
 void Move_smart_shot(int ind);
 void Move_mine(int ind);
 void Make_debris(
-	    /* pos.x, pos.y   */ float  x,          float y,
-	    /* vel.x, vel.y   */ float  velx,       float vely,
+	    /* pos.x, pos.y   */ DFLOAT  x,          DFLOAT y,
+	    /* vel.x, vel.y   */ DFLOAT  velx,       DFLOAT vely,
 	    /* owner id       */ int    id,
 	    /* type           */ int    type,
-	    /* mass           */ float  mass,
+	    /* mass           */ DFLOAT  mass,
 	    /* status         */ long   status,
 	    /* color          */ int    color,
 	    /* radius         */ int    radius,
 	    /* min,max debris */ int    min_debris, int    max_debris,
 	    /* min,max dir    */ int    min_dir,    int    max_dir,
-	    /* min,max speed  */ float  min_speed,  float  max_speed,
+	    /* min,max speed  */ DFLOAT  min_speed,  DFLOAT  max_speed,
 	    /* min,max life   */ int    min_life,   int    max_life
 	    );
 void Explode(int ind);
@@ -211,6 +212,8 @@ void Log_game(const char *heading);
 void Game_Over(void);
 int plock_server(int onoff);
 void tuner_plock(void);
+void Main_loop(void);
+
 
 /*
  * Prototypes for contact.c

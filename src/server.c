@@ -1,10 +1,11 @@
-/* $Id: server.c,v 3.142 1996/10/23 15:57:54 bert Exp $
+/* $Id: server.c,v 3.149 1997/11/27 20:09:36 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include "../contrib/NT/xpilots/winSvrThread.h"
+#include <time.h>
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,16 +34,17 @@
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
-#if !defined(__hpux)
+#if !defined(__hpux) && !defined(_WINDOWS)
 #include <sys/time.h>
 #endif
-#ifdef sony_news
-#define setvbuf(A,B,C,D)	setlinebuf(A)
-#endif
 #include <pwd.h>
-#ifndef VMS
+
+#if !defined(VMS)
 #include <sys/param.h>
 #endif
+
+#endif	/* _WINDOWS */
+
 #ifdef PLOCKSERVER
 # if defined(__linux__)
 #  include <sys/mman.h>
@@ -46,7 +53,7 @@
 # endif
 #endif
 
-#define SERVER
+#define	SERVER
 #include "version.h"
 #include "config.h"
 #include "types.h"
@@ -59,16 +66,14 @@
 #include "sched.h"
 #include "netserver.h"
 #include "error.h"
-#ifdef SUNCMW
-#include "cmw.h"
-#endif /* SUNCMW */
+#include "portability.h"
 
 char server_version[] = VERSION;
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.142 1996/10/23 15:57:54 bert Exp $";
+    "@(#)$Id: server.c,v 3.149 1997/11/27 20:09:36 bert Exp $";
 #endif
 
 /*
@@ -85,8 +90,10 @@ char			ShutdownReason[MAX_CHARS];
 int 			framesPerSecond = 18;
 long			main_loops = 0;		/* needed in events.c */
 
-static int		Socket;
+static int		serverSocket;
+#ifdef LOG
 static bool		Log = true;
+#endif
 static bool		NoPlayersEnteredYet = true;
 int			game_lock = false;
 time_t			gameOverTime = 0;
@@ -96,14 +103,12 @@ extern int		login_in_progress;
 extern int		NumQueuedPlayers;
 
 static void Check_server_versions(void);
-static void Main_loop(void);
+extern void Main_loop(void);
 static void Handle_signal(int sig_no);
 
 
 int main(int argc, char *argv[])
 {
-    struct passwd *pwent;
-
     /*
      * Make output always linebuffered.  By default pipes
      * and remote shells cause stdout to be fully buffered.
@@ -114,7 +119,10 @@ int main(int argc, char *argv[])
     /*
      * --- Output copyright notice ---
      */
-    printf("  " COPYRIGHT ".\n"
+    xpprintf("  " COPYRIGHT ".\n"
+#ifdef	_WINDOWS
+	   "  " COPYRIGHTNT ".\n"
+#endif
 	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
@@ -123,7 +131,7 @@ int main(int argc, char *argv[])
     cmw_priv_init();
 #endif /* SUNCMW */
     init_error(argv[0]);
-    srand(time((time_t *)0) * getpid());
+    srand(time((time_t *)0) * Get_process_id());
     Check_server_versions();
     Parser(argc, argv);
     plock_server(pLockServer);           /* Lock the server into memory */
@@ -153,29 +161,21 @@ int main(int argc, char *argv[])
      */
     GetLocalHostName(Server.host, sizeof Server.host);
 
-    /*
-     * Get owner's login name.
-     */
-    pwent = getpwuid(geteuid());
-    strcpy(Server.name, pwent->pw_name);
-    
+    Get_login_name(Server.name, sizeof Server.name);
 
     /*
      * Log, if enabled.
      */
-    if ((strcmp(Server.name, "kenrsc") == 0) ||
-	(strcmp(Server.name, "bjoerns") == 0))
-	Log = false;
-    Log_game("START");			/* Log start */
+    Log_game("START");
 
-    Socket = Contact_init();
+    serverSocket = Contact_init();
 
-    Meta_init(Socket);
+    Meta_init(serverSocket);
 
     if (Setup_net_server() == -1) {
 	End_game();
     }
-
+#ifndef	_WINDOWS
     if (NoQuit) {
 	signal(SIGHUP, SIG_IGN);
     } else {
@@ -187,24 +187,31 @@ int main(int argc, char *argv[])
 #ifdef IGNORE_FPE
     signal(SIGFPE, SIG_IGN);
 #endif
-
+#endif	/* _WINDOWS */
     /*
      * Set the time the server started
      */
     serverTime = time(NULL);
 
 #ifndef SILENT
-    printf("Server runs at %d frames per second\n", framesPerSecond);
+    xpprintf("%s Server runs at %d frames per second\n", showtime(), framesPerSecond);
 #endif
 
+#ifdef	_WINDOWS
+    /* Windows returns here, we let the worker thread call sched() */
+    install_timer_tick(ServerThreadTimerProc, FPS);
+#else
     install_timer_tick(Main_loop, FPS);
+
     sched();
-    printf("sched returned!?");
+    xpprintf("sched returned!?");
     End_game();
+#endif
+
     return 1;
 }
 
-static void Main_loop(void)
+void Main_loop(void)
 {
     main_loops++;
 
@@ -234,7 +241,7 @@ static void Main_loop(void)
 	    if (NumPlayers > NumRobots + NumPseudoPlayers) {
 		NoPlayersEnteredYet = false;
 		if (gameDuration > 0.0) {
-		    printf("Server will stop in %g minutes.\n", gameDuration);
+		    xpprintf("%s Server will stop in %g minutes.\n", showtime(), gameDuration);
 		    gameOverTime = (time_t)(gameDuration * 60) + time((time_t *)NULL);
 		}
 	    }
@@ -302,7 +309,9 @@ void End_game(void)
     Free_cells();
     Log_game("END");			    /* Log end */
 
+#ifndef	_WINDOWS
     exit (0);
+#endif
 }
 
 /*
@@ -410,7 +419,7 @@ void Server_info(char *str, unsigned max_size)
 {
     int			i, j, k;
     player		*pl, **order, *best = NULL;
-    float		ratio, best_ratio = -1e7;
+    DFLOAT		ratio, best_ratio = -1e7;
     char		name[MAX_CHARS];
     char		lblstr[MAX_CHARS];
     char		msg[MSG_LEN];
@@ -455,9 +464,9 @@ void Server_info(char *str, unsigned max_size)
     for (i=0; i<NumPlayers; i++) {
 	pl = Players[i];
 	if (BIT(pl->mode, LIMITED_LIVES)) {
-	    ratio = (float) pl->score;
+	    ratio = (DFLOAT) pl->score;
 	} else {
-	    ratio = (float) pl->score / (pl->life + 1);
+	    ratio = (DFLOAT) pl->score / (pl->life + 1);
 	}
 	if ((best == NULL
 		|| ratio > best_ratio)
@@ -507,6 +516,7 @@ static void Handle_signal(int sig_no)
 {
     errno = 0;
 
+#ifndef	_WINDOWS
     switch (sig_no) {
 
     case SIGHUP:
@@ -531,7 +541,7 @@ static void Handle_signal(int sig_no)
 	End_game();
 	break;
     }
-
+#endif
     _exit(sig_no);	/* just in case */
 }
 
@@ -618,13 +628,13 @@ void Game_Over(void)
 	if (win != -1) {
 	    sprintf(msg,"Best team (%ld Pts): Team %d", maxsc, win);
 	    Set_message(msg);
-	    printf("%s\n", msg);
+	    xpprintf("%s\n", msg);
 	}
 
 	if (loose != -1 && loose != win) {
 	    sprintf(msg,"Worst team (%ld Pts): Team %d", minsc, loose);
 	    Set_message(msg);
-	    printf("%s\n", msg);
+	    xpprintf("%s\n", msg);
 	}
     }
 
@@ -648,12 +658,12 @@ void Game_Over(void)
     if (win != -1) {
 	sprintf(msg,"Best human player: %s", Players[win]->name);
 	Set_message(msg);
-	printf("%s\n", msg);
+	xpprintf("%s\n", msg);
     }
     if (loose != -1 && loose != win) {
 	sprintf(msg,"Worst human player: %s", Players[loose]->name);
 	Set_message(msg);
-	printf("%s\n", msg);
+	xpprintf("%s\n", msg);
     }
 }
 
@@ -679,6 +689,7 @@ static void Check_server_versions(void)
 			option_version[],
 			play_version[],
 			player_version[],
+			portability_version[],
 			robot_version[],
 			rules_version[],
 			saudio_version[],
@@ -705,6 +716,7 @@ static void Check_server_versions(void)
 	{ "option", option_version },
 	{ "play", play_version },
 	{ "player", player_version },
+	{ "portability", portability_version },
 	{ "robot", robot_version },
 	{ "rules", rules_version },
 	{ "saudio", saudio_version },
@@ -781,7 +793,7 @@ int plock_server(int onoff)
     return onoff;
 #else
     if (onoff) {
-	printf("Can't plock: Server was not compiled with plock support\n");
+	xpprintf("Can't plock: Server was not compiled with plock support\n");
     }
     return 0;
 #endif

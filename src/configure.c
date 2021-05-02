@@ -1,10 +1,11 @@
-/* $Id: configure.c,v 3.54 1996/10/12 08:36:50 bert Exp $
+/* $Id: configure.c,v 3.61 1998/01/28 08:50:03 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,13 +54,20 @@
  *    xpilot@xpilot.org.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winClient.h"
+#else
+#include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
 
-#include <unistd.h>
 #ifdef VMS
 #include "strcasecmp.h"
+#else
+#include <unistd.h>
+#include <pwd.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +75,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -80,6 +89,8 @@
 #include "configure.h"
 #include "setup.h"
 #include "error.h"
+#include "protoclient.h"
+#include "portability.h"
 
 char configure_version[] = VERSION;
 
@@ -131,6 +142,8 @@ static int Config_create_filledDecor(int widget_desc, int *height);
 static int Config_create_texturedDecor(int widget_desc, int *height);
 static int Config_create_texturedBalls(int widget_desc, int *height);
 static int Config_create_maxFPS(int widget_desc, int *height);
+static int Config_create_maxMessages(int widget_desc, int *height);
+static int Config_create_reverseScroll(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
 #endif
@@ -145,24 +158,34 @@ static int Config_create_packetDropMeter(int widget_desc, int *height);
 static int Config_create_clock(int widget_desc, int *height);
 static int Config_create_clockAMPM(int widget_desc, int *height);
 static int Config_create_markingLights(int widget_desc, int *height);
+#ifdef	_WINDOWS
+static int Config_create_threadedDraw(int widget_desc, int *height);
+#endif
+#ifdef	WINDOWSCALING
+static int Config_create_scaleFactor(int widget_desc, int *height);
+#endif
+
 static int Config_create_save(int widget_desc, int *height);
 
 static int Config_update_bool(int widget_desc, void *data, bool *val);
 static int Config_update_instruments(int widget_desc, void *data, bool *val);
 static int Config_update_dots(int widget_desc, void *data, int *val);
-static int Config_update_altPower(int widget_desc, void *data, float *val);
+static int Config_update_altPower(int widget_desc, void *data, DFLOAT *val);
 static int Config_update_altTurnResistance(int widget_desc, void *data,
-					   float *val);
-static int Config_update_altTurnSpeed(int widget_desc, void *data, float *val);
-static int Config_update_power(int widget_desc, void *data, float *val);
+					   DFLOAT *val);
+static int Config_update_altTurnSpeed(int widget_desc, void *data, DFLOAT *val);
+static int Config_update_power(int widget_desc, void *data, DFLOAT *val);
 static int Config_update_turnResistance(int widget_desc, void *data,
-					float *val);
-static int Config_update_turnSpeed(int widget_desc, void *data, float *val);
-static int Config_update_sparkProb(int widget_desc, void *data, float *val);
+					DFLOAT *val);
+static int Config_update_turnSpeed(int widget_desc, void *data, DFLOAT *val);
+static int Config_update_sparkProb(int widget_desc, void *data, DFLOAT *val);
 static int Config_update_charsPerSecond(int widget_desc, void *data, int *val);
 static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
 static int Config_update_autoShield(int widget_desc, void *data, bool *val);
 static int Config_update_maxFPS(int widget_desc, void *data, int *val);
+#ifdef	WINDOWSCALING
+static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val);
+#endif
 
 static int Config_close(int widget_desc, void *data, const char **strptr);
 static int Config_next(int widget_desc, void *data, const char **strptr);
@@ -209,6 +232,8 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_altTurnSpeed,
     Config_create_altTurnResistance,
     Config_create_showMessages,
+    Config_create_maxMessages,
+    Config_create_reverseScroll,
     Config_create_showHUD,
     Config_create_horizontalHUDLine,
     Config_create_verticalHUDLine,
@@ -257,6 +282,12 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_packetDropMeter,
     Config_create_clock,
     Config_create_clockAMPM,
+#ifdef	_WINDOWS
+	Config_create_threadedDraw,
+#endif
+#ifdef	WINDOWSCALING
+	Config_create_scaleFactor,
+#endif
     Config_create_save			/* must be last */
 };
 
@@ -522,8 +553,8 @@ static int Config_create_int(int widget_desc, int *height,
 }
 
 static int Config_create_float(int widget_desc, int *height,
-			       const char *str, float *val, float min, float max,
-			       int (*callback)(int, void *, float *),
+			       const char *str, DFLOAT *val, DFLOAT min, DFLOAT max,
+			       int (*callback)(int, void *, DFLOAT *),
 			       void *data)
 {
     int			offset,
@@ -627,6 +658,22 @@ static int Config_create_showMessages(int widget_desc, int *height)
 				? true : false,
 			    Config_update_instruments,
 			    (void *) SHOW_MESSAGES);
+}
+
+static int Config_create_maxMessages(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "maxMessages", &maxMessages, 1, MAX_MSGS,
+			   NULL, NULL);
+}
+
+static int Config_create_reverseScroll(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "reverseScroll",
+			    BIT(instruments, SHOW_REVERSE_SCROLL)
+				? true : false,
+			    Config_update_instruments,
+			    (void *) SHOW_REVERSE_SCROLL);
 }
 
 static int Config_create_showHUD(int widget_desc, int *height)
@@ -1009,6 +1056,24 @@ static int Config_create_clockAMPM(int widget_desc, int *height)
 			      (void *) SHOW_CLOCK_AMPM_FORMAT);
 }
 
+#ifdef	_WINDOWS
+static int Config_create_threadedDraw(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "threadedDraw",
+			      ThreadedDraw, Config_update_bool, &ThreadedDraw);
+}
+#endif
+
+#ifdef	WINDOWSCALING
+static int Config_create_scaleFactor(int widget_desc, int *height)
+{
+    return Config_create_float(widget_desc, height,
+			       "scaleFactor", &scaleFactor,
+			       0.1, 2.0,
+			       Config_update_scaleFactor, NULL);
+}
+#endif
+
 static int Config_create_markingLights(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "markingLights",
@@ -1102,45 +1167,45 @@ static int Config_update_dots(int widget_desc, void *data, int *val)
     return 0;
 }
 
-static int Config_update_power(int widget_desc, void *data, float *val)
+static int Config_update_power(int widget_desc, void *data, DFLOAT *val)
 {
     Send_power(*val);
     control_count = CONTROL_DELAY;
     return 0;
 }
 
-static int Config_update_turnSpeed(int widget_desc, void *data, float *val)
+static int Config_update_turnSpeed(int widget_desc, void *data, DFLOAT *val)
 {
     Send_turnspeed(*val);
     control_count = CONTROL_DELAY;
     return 0;
 }
 
-static int Config_update_turnResistance(int widget_desc, void *data, float *val)
+static int Config_update_turnResistance(int widget_desc, void *data, DFLOAT *val)
 {
     Send_turnresistance(*val);
     return 0;
 }
 
-static int Config_update_altPower(int widget_desc, void *data, float *val)
+static int Config_update_altPower(int widget_desc, void *data, DFLOAT *val)
 {
     Send_power_s(*val);
     return 0;
 }
 
-static int Config_update_altTurnSpeed(int widget_desc, void *data, float *val)
+static int Config_update_altTurnSpeed(int widget_desc, void *data, DFLOAT *val)
 {
     Send_turnspeed_s(*val);
     return 0;
 }
 
-static int Config_update_altTurnResistance(int widget_desc, void *data, float *val)
+static int Config_update_altTurnResistance(int widget_desc, void *data, DFLOAT *val)
 {
     Send_turnresistance_s(*val);
     return 0;
 }
 
-static int Config_update_sparkProb(int widget_desc, void *data, float *val)
+static int Config_update_sparkProb(int widget_desc, void *data, DFLOAT *val)
 {
     spark_rand = (int)(spark_prob * MAX_SPARK_RAND + 0.5f);
     Send_display();
@@ -1149,7 +1214,7 @@ static int Config_update_sparkProb(int widget_desc, void *data, float *val)
 
 static int Config_update_charsPerSecond(int widget_desc, void *data, int *val)
 {
-    charsPerTick = (float)charsPerSecond / FPS;
+    charsPerTick = (DFLOAT)charsPerSecond / FPS;
     Send_display();
     return 0;
 }
@@ -1172,6 +1237,15 @@ static int Config_update_maxFPS(int widget_desc, void *data, int *val)
     return 0;
 }
 
+#ifdef	WINDOWSCALING
+static int Config_update_scaleFactor(int widget_desc, void *data, DFLOAT *val)
+{
+	init_ScaleArray();
+	Resize(top, top_width, top_height);
+    return 0;
+}
+#endif
+
 static void Config_save_failed(const char *reason, const char **strptr)
 {
     if (config_save_confirm_desc != NO_WIDGET) {
@@ -1185,6 +1259,7 @@ static void Config_save_failed(const char *reason, const char **strptr)
     *strptr = "Saving failed...";
 }
 
+#ifndef	_WINDOWS
 static int Xpilotrc_add(char *line)
 {
     int			size;
@@ -1259,17 +1334,23 @@ static void Xpilotrc_use(char *line)
 	}
     }
 }
+#endif
 
 static void Config_save_resource(FILE *fp, const char *resource, char *value)
 {
+#ifndef	_WINDOWS
     char		buf[256];
 
     sprintf(buf, "xpilot.%s:\t\t%s\n", resource, value);
     Xpilotrc_use(buf);
     fprintf(fp, "%s", buf);
+#else
+	WritePrivateProfileString("Settings", resource, value, Get_xpilotini_file(1));
+#endif
+
 }
 
-static void Config_save_float(FILE *fp, const char *resource, float value)
+static void Config_save_float(FILE *fp, const char *resource, DFLOAT value)
 {
     char		buf[40];
 
@@ -1298,11 +1379,13 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     int			i;
     KeySym		ks;
     keys_t		key, prev_key;
-    FILE		*fp;
+    FILE		*fp = NULL;
     const char		*str,
 			*res;
 #ifdef VMS
-    static char		base[] = "DECW$USER_DEFAULTS:xpilot.dat";
+	static char	base[] = "DECW$USER_DEFAULTS:xpilot.dat";
+#elif defined(_WINDOWS)
+	static char	base[] = "XPilot.ini";
 #endif
     char		buf[512],
 			oldfile[PATH_MAX + 1],
@@ -1312,6 +1395,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Widget_draw(widget_desc);
     Client_flush();
 
+#ifndef	_WINDOWS	/* Windows does no file handling on its own.  fp=undefined */
 #ifndef VMS
     Get_xpilotrc_file(oldfile, sizeof(oldfile));
     if (oldfile[0] == '\0') {
@@ -1337,6 +1421,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 	Config_save_failed("Can't open file to save to.", strptr);
 	return 1;
     }
+#endif		/* _WINDOWS */
     Config_save_resource(fp, "name", name);
     Config_save_float(fp, "power", power);
     Config_save_float(fp, "turnSpeed", turnspeed);
@@ -1346,12 +1431,14 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_float(fp, "altTurnResistance", turnresistance_s);
     Config_save_float(fp, "speedFactHUD", hud_move_fact);
     Config_save_float(fp, "speedFactPTR", ptr_move_fact);
-    Config_save_float(fp, "fuelNotify", fuelLevel3);
-    Config_save_float(fp, "fuelWarning", fuelLevel2);
-    Config_save_float(fp, "fuelCritical", fuelLevel1);
+    Config_save_float(fp, "fuelNotify", (DFLOAT)fuelLevel3);
+    Config_save_float(fp, "fuelWarning", (DFLOAT)fuelLevel2);
+    Config_save_float(fp, "fuelCritical", (DFLOAT)fuelLevel1);
     Config_save_bool(fp, "showShipName", BIT(instruments, SHOW_SHIP_NAME));
     Config_save_bool(fp, "showMineName", BIT(instruments, SHOW_MINE_NAME));
     Config_save_bool(fp, "showMessages", BIT(instruments, SHOW_MESSAGES));
+    Config_save_int(fp, "maxMessages", maxMessages);
+    Config_save_bool(fp, "reverseScroll", BIT(instruments, SHOW_REVERSE_SCROLL));
     Config_save_bool(fp, "showHUD", BIT(instruments, SHOW_HUD_INSTRUMENTS));
     Config_save_bool(fp, "verticalHUDLine", BIT(instruments, SHOW_HUD_VERTICAL));
     Config_save_bool(fp, "horizontalHUDLine", BIT(instruments, SHOW_HUD_HORIZONTAL));
@@ -1393,6 +1480,12 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
+#ifdef	_WINDOWS
+    Config_save_bool(fp, "threadedDraw", ThreadedDraw);
+#endif
+#ifdef	WINDOWSCALING
+    Config_save_float(fp, "scaleFactor", scaleFactor);
+#endif
     /* don't save this one: Config_save_int(fp, "maxFPS", maxFPS); */
     buf[0] = '\0';
     for (i = 0, prev_key = KEY_DUMMY; i < maxKeyDefs; i++, prev_key = key) {
@@ -1416,14 +1509,42 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 	sprintf(buf, "modifierBank%d", i + 1);
 	Config_save_resource(fp, buf, modBankStr[i]);
     }
+#ifndef	_WINDOWS
     Xpilotrc_end(fp);
     fclose(fp);
+#endif
 #ifndef VMS
     sprintf(newfile, "%s.bak", oldfile);
     rename(oldfile, newfile);
     unlink(oldfile);
     sprintf(newfile, "%s.new", oldfile);
     rename(newfile, oldfile);
+#endif
+
+#ifdef	_WINDOWS
+	/* save our window's position */
+	{
+		WINDOWPLACEMENT	wp;
+		Window w;
+		RECT rect;
+		char	s[50];
+		w = WinXGetParent(top);
+		WinXGetWindowRect(w, &rect);
+		WinXGetWindowPlacement(w, &wp);
+		if (wp.showCmd != SW_SHOWMINIMIZED)
+		{
+			extern	const char* s_WindowMet;
+			extern	const char* s_L;
+			extern	const char* s_T;
+			extern	const char* s_R;
+			extern	const char* s_B;
+			itoa(rect.left, s, 10);
+			WritePrivateProfileString(s_WindowMet, s_L, itoa(rect.left, s, 10), Get_xpilotini_file(1));
+			WritePrivateProfileString(s_WindowMet, s_T, itoa(rect.top, s, 10), Get_xpilotini_file(1));
+			WritePrivateProfileString(s_WindowMet, s_R, itoa(rect.right, s, 10), Get_xpilotini_file(1));
+			WritePrivateProfileString(s_WindowMet, s_B, itoa(rect.bottom, s, 10), Get_xpilotini_file(1));
+		}
+	}
 #endif
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy(config_save_confirm_desc);
@@ -1445,6 +1566,7 @@ static int Config_save_confirm_callback(int widget_desc, void *popup_desc, const
 
 int Config(bool doit)
 {
+	IFWINDOWS( Trace("***Config %d\n", doit); )
     if (config_created == false) {
 	if (doit == false) {
 	    return 0;

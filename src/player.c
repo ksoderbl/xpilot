@@ -1,10 +1,11 @@
-/* $Id: player.c,v 3.101 1997/01/16 20:25:04 bert Exp $
+/* $Id: player.c,v 3.110 1998/01/08 19:28:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -43,7 +49,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.101 1997/01/16 20:25:04 bert Exp $";
+    "@(#)$Id: player.c,v 3.110 1998/01/08 19:28:51 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -131,7 +137,7 @@ void Go_home(int ind)
 {
     player		*pl = Players[ind];
     int			i, x, y, dir, check;
-    float		vx, vy, velo;
+    DFLOAT		vx, vy, velo;
 
     if (IS_TANK_PTR(pl)) {
 	/*NOTREACHED*/
@@ -161,7 +167,8 @@ void Go_home(int ind)
 	vx = vy = velo = 0;
     }
 
-    pl->dir = pl->float_dir = dir;
+    pl->dir = dir;
+	pl->float_dir = dir;
     Player_position_init_pixels(pl,
 				(x + 0.5) * BLOCK_SZ + vx,
 				(y + 0.5) * BLOCK_SZ + vy);
@@ -201,7 +208,7 @@ void Go_home(int ind)
 void Compute_sensor_range(player *pl)
 {
     static int		init = 0;
-    static float	EnergyRangeFactor;
+    static DFLOAT	EnergyRangeFactor;
 
     if (!init) {
 	if (minVisibilityDistance <= 0.0)
@@ -216,7 +223,7 @@ void Compute_sensor_range(player *pl)
 	if (World.items[ITEM_FUEL].initial > 0.0) {
 	    EnergyRangeFactor = minVisibilityDistance /
 		(World.items[ITEM_FUEL].initial
-		    * (1.0 + ((float)World.items[ITEM_SENSOR].initial * 0.25)));
+		    * (1.0 + ((DFLOAT)World.items[ITEM_SENSOR].initial * 0.25)));
 	    EnergyRangeFactor /= FUEL_SCALE_FACT;
 	} else {
 	    EnergyRangeFactor = ENERGY_RANGE_FACTOR;
@@ -225,7 +232,7 @@ void Compute_sensor_range(player *pl)
     }
 
     pl->sensor_range = pl->fuel.sum * EnergyRangeFactor;
-    pl->sensor_range *= (1.0 + ((float)pl->item[ITEM_SENSOR] * 0.25));
+    pl->sensor_range *= (1.0 + ((DFLOAT)pl->item[ITEM_SENSOR] * 0.25));
     if (pl->sensor_range < minVisibilityDistance)
 	pl->sensor_range = minVisibilityDistance;
     if (pl->sensor_range > maxVisibilityDistance)
@@ -314,7 +321,7 @@ int Init_player(int ind, wireobj *ship)
 
     pl->vel.x	= pl->vel.y	= 0.0;
     pl->acc.x	= pl->acc.y	= 0.0;
-    pl->dir	= pl->float_dir = DIR_UP;
+    pl->float_dir = pl->dir	= DIR_UP;
     pl->turnvel		= 0.0;
 #ifdef	TURN_FUEL
     pl->oldturnvel	= 0.0;
@@ -546,6 +553,9 @@ void Update_score_table(void)
 	}
     }
     updateScores = false;
+#ifdef	_WINDOWS
+    SendDialogUpdate();
+#endif
 }
 
 
@@ -713,16 +723,16 @@ void Check_team_treasures(int team)
 
 static void Compute_end_of_round_values(int *average_score,
 					int *num_best_players,
-					float *best_ratio,
+					DFLOAT *best_ratio,
 					int best_players[])
 {
     int			i;
-    float		ratio;
+    DFLOAT		ratio;
 
     /* Initialize everything */
     *average_score = 0;
     *num_best_players = 0;
-    *best_ratio = -1;
+    *best_ratio = -1.0;
 
     /* Figure out what the average score is and who has the best kill/death */
     /* ratio for this round */
@@ -733,7 +743,7 @@ static void Compute_end_of_round_values(int *average_score,
 	    continue;
 	}
 	*average_score += Players[i]->score;
-	ratio = (float) Players[i]->kills / (Players[i]->deaths + 1);
+	ratio = (DFLOAT) Players[i]->kills / (Players[i]->deaths + 1);
 	if (ratio > *best_ratio) {
 	    *best_ratio = ratio;
 	    best_players[0] = i;
@@ -749,7 +759,7 @@ static void Compute_end_of_round_values(int *average_score,
 
 static void Give_best_player_bonus(int average_score,
 				   int num_best_players,
-				   float best_ratio,
+				   DFLOAT best_ratio,
 				   int best_players[])
 {
     int			i;
@@ -769,8 +779,8 @@ static void Give_best_player_bonus(int average_score,
 		bp->kills, bp->deaths);
 	points = (int) (best_ratio * Rate(bp->score, average_score));
 	SCORE(best_players[0], points,
-	      (int) bp->pos.x/BLOCK_SZ,
-	      (int) bp->pos.y/BLOCK_SZ,
+	      OBJ_X_IN_BLOCKS(bp),
+	      OBJ_Y_IN_BLOCKS(bp),
 	      "[Deadliest]");
     }
     else {
@@ -778,7 +788,7 @@ static void Give_best_player_bonus(int average_score,
 	for (i = 0; i < num_best_players; i++) {
 	    player	*bp = Players[best_players[i]];
 	    int		ratio = Rate(bp->score, average_score);
-	    float	score = (float) (ratio + num_best_players)
+	    DFLOAT	score = (DFLOAT) (ratio + num_best_players)
 				/ num_best_players;
 
 	    if (msg[0]) {
@@ -794,8 +804,8 @@ static void Give_best_player_bonus(int average_score,
 	    strcat(msg, bp->name);
 	    points = (int) (best_ratio * score);
 	    SCORE(best_players[i], points,
-		  (int) bp->pos.x/BLOCK_SZ,
-		  (int) bp->pos.y/BLOCK_SZ,
+		  OBJ_X_IN_BLOCKS(bp),
+		  OBJ_Y_IN_BLOCKS(bp),
 		  "[Deadly]");
 	}
 	if (strlen(msg) + 64 >= sizeof(msg)) {
@@ -812,14 +822,14 @@ static void Give_best_player_bonus(int average_score,
 
 static void Give_individual_bonus(int ind, int average_score)
 {
-    float		ratio;
+    DFLOAT		ratio;
     int			points;
 
-    ratio = (float) Players[ind]->kills / (Players[ind]->deaths + 1);
+    ratio = (DFLOAT) Players[ind]->kills / (Players[ind]->deaths + 1);
     points = (int) (ratio * Rate(Players[ind]->score, average_score));
     SCORE(ind, points,
-	  (int) Players[ind]->pos.x/BLOCK_SZ,
-	  (int) Players[ind]->pos.y/BLOCK_SZ,
+	  OBJ_X_IN_BLOCKS(Players[ind]),
+	  OBJ_Y_IN_BLOCKS(Players[ind]),
 	  "[Winner]");
 }
 
@@ -829,7 +839,7 @@ static void Team_game_over(int winning_team, const char *reason)
     int			average_score;
     int			num_best_players;
     int			*best_players;
-    float		best_ratio;
+    DFLOAT		best_ratio;
     char		msg[MSG_LEN];
 
     if (!(best_players = (int *)malloc(NumPlayers * sizeof(int)))) {
@@ -897,7 +907,7 @@ static void Individual_game_over(int winner)
     int			average_score;
     int			num_best_players;
     int			*best_players;
-    float		best_ratio;
+    DFLOAT		best_ratio;
     char		msg[MSG_LEN];
 
     if (!(best_players = (int *)malloc(NumPlayers * sizeof(int)))) {
@@ -1068,11 +1078,11 @@ static void Race_game_over(void)
 			"%s %s the best lap time of %.2fs",
 			pl->name,
 			(num_best_players == 1) ? "had" : "shares",
-			(float) bestlap / FPS);
+			(DFLOAT) bestlap / FPS);
 		Set_message(msg);
 		SCORE(i, 5 + num_active_players,
-		      (int) pl->pos.x / BLOCK_SZ,
-		      (int) pl->pos.y / BLOCK_SZ,
+		      OBJ_X_IN_BLOCKS(pl),
+		      OBJ_Y_IN_BLOCKS(pl),
 		      (num_best_players == 1) ? "[Fastest lap]" : "[Joint fastest lap]");
 	    }
 	}
@@ -1203,8 +1213,9 @@ void Compute_game_status(void)
 			sprintf(msg, "[Position %d%s]", position,
 				(num_finished_players == 1) ? "" : " (jointly)");
 			SCORE(i, pts,
-			      (int) pl->pos.x/BLOCK_SZ,
-			      (int) pl->pos.y/BLOCK_SZ, msg);
+			      OBJ_X_IN_BLOCKS(pl),
+			      OBJ_Y_IN_BLOCKS(pl),
+			      msg);
 		    }
 		    else {
 			sprintf(msg,
@@ -1687,7 +1698,7 @@ void Player_death_reset(int ind)
     pl->damaged 	= 0;
     pl->lock.distance	= 0;
 
-    pl->fuel.sum       	*= 0.90;		/* Loose 10% of fuel */
+    pl->fuel.sum       	= (long)(pl->fuel.sum*0.90);		/* Loose 10% of fuel */
     minfuel		= (World.items[ITEM_FUEL].initial * FUEL_SCALE_FACT);
     minfuel		+= (rand() % (1 + minfuel) / 5);
     pl->fuel.sum	= MAX(pl->fuel.sum, minfuel);
@@ -1701,16 +1712,37 @@ void Player_death_reset(int ind)
 	pl->max_pulses = 0;
     }
 
-    if (BIT(pl->mode, LIMITED_LIVES))
-	pl->life--;
-    else
-	pl->life++;
+    /*-BA Handle the combination of limited life games and
+     *-BA robotLeaveLife by making a robot leave iff it gets
+     *-BA eliminated in any round.  Means that robotLeaveLife
+     *-BA is ignored, but that robotsLeave is still respected.
+     *-BD Added check on race mode. Since in race mode everyone
+     *-BD gets killed at the end of the round, all robots would
+     *-BD be replaced in the next round. I don't think that's
+     *-BD the Right Thing to do.
+     *-BD Also, only check a robot's score at the end of the round.
+     */
 
-    if (pl->life == -1) {
-	pl->life = 0;
-	SET_BIT(pl->status, GAME_OVER);
-	Player_lock_closest(ind, 0);
-	pl->mychar = 'D';
+    if (BIT(pl->mode, LIMITED_LIVES)) { 
+	pl->life--;
+
+	if (pl->life == -1) {
+	    if(!IS_ROBOT_PTR(pl) ||
+	       (BIT(World.rules->mode, TIMING) &&
+		(pl->score >= robotLeaveScore || !robotsLeave))) {
+		pl->life = 0;
+		SET_BIT(pl->status, GAME_OVER);
+		Player_lock_closest(ind, 0);
+		pl->mychar = 'D';
+	    }
+	    else {
+		Robot_delete(ind,false);
+		return ;
+	    }
+	}
+    }
+    else {
+	pl->life++;
     }
 
     pl->deaths++;

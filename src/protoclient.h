@@ -1,10 +1,11 @@
-/* $Id: protoclient.h,v 3.2 1996/10/13 15:01:13 bert Exp $
+/* $Id: protoclient.h,v 3.8 1997/11/27 20:09:29 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,19 +30,70 @@
 #endif
 
 /*
+ * about.c
+ */
+extern int Handle_motd(long off, char *buf, int len, long filesize);
+extern void aboutCleanup(void);
+
+#ifdef	_WINDOWS
+extern	void Motd_destroy();
+extern	void Keys_destroy();
+#endif
+
+extern int motd_viewer;		/* so Windows can clean him up */
+extern int keys_viewer;
+
+/*
+ * colors.c
+ */
+void List_visuals(void);
+int Colors_init(void);
+void Colors_cleanup(void);
+
+/*
  * default.c
  */
 extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 			  int *my_team, int *list, int *join, int *noLocalMotd,
 			  char *nickName, char *dispName, char *shut_msg);
-extern void Get_xpilotrc_file(char *, unsigned);
+extern void defaultCleanup(void);				/* memory cleanup */
 
+#ifndef	_WINDOWS
+extern void Get_xpilotrc_file(char *, unsigned);
+#else
+extern	char* Get_xpilotini_file(int level);
+#endif
 /*
  * join.c
  */
 extern int Join(char *server_addr, char *server_name, int port,
 		char *real, char *nick, int my_team,
 		char *display, unsigned version);
+
+/*
+ * metaclient.c
+ */
+extern int metaclient(int, char **);
+
+/*
+ * math.c
+ */
+extern int ON(char *optval);
+extern int OFF(char *optval);
+
+/*
+ * paintdata.c
+ */
+extern void paintdataCleanup(void);		/* memory cleanup */
+
+#ifdef	WINDOWSCALING
+extern int	scaleArray[];
+extern void	init_ScaleArray();
+#define	WINSCALE(__n)	(__n >= 0 ? scaleArray[__n] : -scaleArray[-__n])
+#else
+#define	WINSCALE(__n)	(__n)
+#endif
+
 
 /*
  * query.c
@@ -53,32 +105,38 @@ extern bool		Is_allowed(char *);
 #endif
 
 /*
- * usleep.c
- */
-extern int micro_delay(unsigned usec);
-
-/*
- * metaclient.c
- */
-extern int metaclient(int, char **);
-
-/*
  * record.c
  */
 extern void Record_cleanup(void);
 extern void Record_init(char *filename);
 
 /*
- * math.c
+ * usleep.c
  */
-extern int ON(char *optval);
-extern int OFF(char *optval);
+extern int micro_delay(unsigned usec);
 
 /*
- * colors.c
+ * widget.c
  */
-void List_visuals(void);
-int Colors_init(void);
-void Colors_cleanup(void);
+void Widget_cleanup(void);
 
+/*
+ * xinit.c
+ */
+#ifdef	_WINDOWS
+extern	void WinXCreateItemBitmaps();
 #endif
+
+/*
+ * winX - The Windows X emulator
+ */
+#ifdef	_WINDOWS
+#define	WinXFlush(__w)	WinXFlush(__w)
+#else
+#define	WinXFlush(__w)
+#endif
+
+
+#endif	/* PROTOCLIENT_H */
+
+

@@ -3,6 +3,241 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 3.7.0 compared to release 3.6.2:
+
+Dick Balaska ported XPilot to the Windows NT and 95 platforms.
+	(Supporting roles by Martin Sandiford and E. Hugh Woods)
+
+    Also added a new client option "WindowScaling".  
+    It's purpose is to display the whole playfield on an 800x600 display.
+    scaleFactor will appear at the end of the client config list (if enabled).
+    The default value is 1.0 which displays a normal size playfield. 
+    A value of 2.0 displays twice as much playfield.
+    See Local.config to enable this option.  
+    
+Ben Aveling submitted a big patch containing several changes:
+    Ones which change the way the games works are:
+	- allowing ECMs to "redirect missiles to team mates" 
+	- allowing "munitions to continue to exist" after robots 
+	    have left the game
+	- "Handle the combination of limited life games and 
+	    robotLeaveLife by making a robot leave if it gets eliminated 
+	    in any round"
+    One which makes the game run faster without changing physics:
+	- "added itemID array for extra speed" when doing look-ups of map 
+	    features (only noticable on certain maps.)
+    Also lots of changes to robot behaviour:
+	- making robots "keep doing whatever we are already doing"
+	    if heading in roughly, but not exactly, the right direction
+	- "Be more agressive, esp if lots of ammo"
+	- suffer "Neural overload - if NumObjs too high" which means that
+	    if there are a lot of objects around, only a few are considered.
+	    This basicaly means that when a Nuke goes off robots give up
+	    instead of processing every bit of debris, which makes things
+	    noticably faster in the few seconds after a big nuke
+	- moved some code which "shouldn't be executed for `friendly` shots"
+	- increased accuracy of robots - "allow for our own momentum"
+	    (also sent seperately)
+
+Santeri Paavolainen provided a patch for DOUBLE-BUFFER extension support:
+    Here's a patch to add DOUBLE-BUFFER extension support to dbuff.c (and
+    assorted files). It's different from multi-buffering -- some servers
+    have definitions for the multibuffer client side code in Xext but will
+    then fail in XmbufQueryExtension as the server doesn't contain that
+    extension. XFree86 is one example.
+
+    You should look over the code before merging it, as there is a lot of
+    my personal codings (surrounded by #if(n)def ALTL and won't compile in
+    without ALTL being defined). 
+
+    Ah, in colors.c where it calls start_dbuff, if the colormap was full
+    in the first try it wouldn't use multibuffering after colormap
+    allocation even if multibuffering was requested by user .. I think it
+    is a bug .. or is it a feature? (There's a fix in the patch for that)
+
+The speed of dropped items is now reduced so that a player won't pick
+them up again so easily anymore.
+
+David Leonard submitted a workaround patch for msub to make it work
+on NetBSD and OpenBSD.
+
+Three new server options:
+    +/-allowSmartMissiles controls the use of smart missiles,
+	the default is -allowSmartMissiles to allow smart missiles.
+    +/-allowHeatSeekers controls the use of heat seeking missiles,
+	the default is -allowHeatSeekers to allow heat seeksers.
+    +/-allowTorpedoes controls the use of torpedo missiles,
+	the default is -allowTorpedoes to allow torpedoes.
+
+    If a player tries to a fire a smart or heatseeker and
+    that is not allowed according to these options, but it
+    is allowed to fire torpedoes then a torpedo is launched instead.
+
+On HP-UX 10.20 with CDE strange things happen sometimes when closing
+xpilot via the window manager.  Keypresses may result in funny characters
+after the client exits.  The remedy to this seems to be to explicitly
+destroy the top window with XDestroyWindow when the window manager asks
+the client to quit and then wait for the resulting DestroyNotify event
+before closing the connection with the X server.
+
+Some slow clients had trouble to login.  Some of the server timeouts
+have been increased to enable slow clients to join the game too.
+
+On maps where a lot map objects change (like lots of targets or cannons)
+some clients would lock up.  To remedy this the outgoing packet size
+for clients has been limited to 512 bytes.
+
+Guido Koopman contributed a patch for new cloak functionality:
+    - a new server option: cloakedExhaust
+      When turned off, this option makes cloaked ships even more invisible by
+      not generating engine exhaust for them. Default is "yes", which does
+      generate exhaust.
+    - a new server option: cloakedShield
+      When turned off, this option turns off your shields whenever you turn on
+      a cloaking device. It doesn't turn them back on again when you turn off
+      the cloaking device. This makes for the infamous "Turn off cloaking
+      device. Raise shields!" delay. Default is "yes", which allows you to use
+      cloaks and shields at the same time.
+    - This patch doesn't affect the client, so it's not necessary to recompile
+      it.
+      
+Guido Koopman contributed a patch to hide some map symbols:
+    - a new server option: gravityVisible
+      When turned on, this option makes all gravity mapsymbols invisible to
+      clients by replacing them with space blocks. The server retains the
+      full map info, so, technically, gameplay is not affected.
+    - a new server option: wormholeVisible
+      The same as above, but for all wormhole mapsymbols.
+    - a new server option: itemConcentratorVisible
+      For itemconcentrator mapsymbols.
+    - Since this patch only alters the server, it is not necessary to recompile
+      the client.
+  
+Guido Koopman contributed a patch to tune the way messages are displayed:
+    - a new client option: maxMessages
+      With this option, you can specify the maximum number of messages (both
+      server- and talkmessages) to display. The minimum is 1 and the maximum
+      is 15, which (in my setup at least) blocks everything but the HUD. The
+      default value for this option is 8, which is the number of messages
+      v3.6.2 displays.
+    - a new client option: reverseScroll
+      With this option turned on, the scroll direction of both server- and
+      talkmessages is reversed, i.e. the most recent messages are nearest the
+      HUD. The default is No, which scrolls messages just like v3.6.2 does.
+    - although this patch changes const.h, it is not necessary to recompile
+      the server after applying this patch
+      It just deletes the MAX_MSG define from const.h, which is not used by
+      the server anyway.
+  
+Guido Koopman contributed a patch for some new mine & missile options:
+    - a new server option: mineLife
+      Sets the lifetime of mines in ticks. If the value 0 is given, the old
+      value of (5000+(rand()&255)) is used. The default is 0.
+    - a new server option: missileLife
+      The same, but for missiles. The default value 0 gives
+      (rand()%(64*FPS-1)+(128*FPS)).
+    - the behaviour of the maxMissilesPerPack server option is changed so
+      you get a random amount of missiles between 1 and the value of this
+      option, inclusive. The default is still 4.
+    - a new server option maxMinesPerPack
+      The same, but for mines. The default is 2.
+  
+Guido Koopman contributed a patch to refine shot collision damage effects:
+    - the fuel drain due to bullets hitting your ship varies with the square
+      of the relative velocity of the bullets and your ship
+      If one ship is not moving and fires a bullet at another non-moving ship
+      and the velocity of the bullet is not altered by gravity between the two
+      ships, the damage it does to the second ship is equal to that in the
+      situation before this patch. If it impacts with a velocity twice as high
+      (eg. if the two ships are moving towards eachother), the damage done is
+      four times as big. If the bullet impacts with half the velocity, the
+      damage is one quarter of the original damage. You get the idea, I hope.
+    - the fuel drain due to bullets hitting your ship varies with the mass of
+      the bullets
+      Previously, the fuel drain was the same, whatever the mass of the bullets.
+    - the same goes for bullets hitting a target
+    - the damage for ships colliding with eachother, walls, balls or other stuff
+      is not changed, because:
+      - unlike for bullets, there is no default speed for ships or balls.
+      - there is also no default mass for ships (it could be calculated from the
+	initial items and fuel however).
+      - the damage done by missiles and mines comes not from impact, but from
+	the explosion itself, which is the same whatever the relative velocity
+	of the ship and the projectile is.
+      
+Guido Koopman contributed a patch for improved robot functionality:
+    - a new server option: ecmsReprogramRobots
+      This option chooses between ECMs that reprogram robots (change the war lock
+      id) and ECMs that affect robots the same way as human players (blinding).
+      The default is "yes", which lets robots be reprogrammed by ECM blasts. A
+      side-effect from this option is that robots are now always blinded by LB
+      lasers.
+    - robots are no longer excluded from race mode
+      If you don't want robots in race mode (why?), just set the maxRobots server
+      option to 0.
+    - robots can race
+      Of course, racing with robots that don't know how to do so would be rather
+      boring. This code is not perfected yet however. On maps where there are no
+      or only small obstacles between checkpoints, they manage pretty well and
+      as long as the obstacles are convex (not U-shaped in any way) they
+      eventually get to the next checkpoint, but with concave obstacles they can
+      easily get stuck. To get an idea of what I mean, try racing on
+      "Eight - Race!" and "The Continent/Race" (eight.map and race.map, both
+      available from ftp.xpilot.org:/pub/maps).
+    - robots try to dodge bullets
+      Makes robots harder to kill.
+    - robots use tanks to divert heatseekers
+    - robots no longer pick especially on human players
+    - robots stop attacking other players when low on fuel
+    - robots use self-destruct when even lower on/out of fuel
+    - robot fuel levels and speeds are dependend on attack/defense parameters
+    - robots use emergency thrusts
+      Implementation is rather clumsy: turn on em. thrust when available.
+    - robots always ignore autopilot items
+      Not useful to them.
+    - robots ignore some items in race mode
+      Namely:
+      - lasers
+	Cost too much fuel and there is no time to aim them properly anyway.
+      - tanks
+	Extra weight slows you down.
+      - cloaks and sensors
+	Invisibility is not important in race mode.
+      - tractorbeams
+	Pull you from the right track.
+      - missiles
+	Players go too fast and make too many turns for smarts and heatseekers
+	are more likely to target yourself.
+    - robots consider some items more important than others in race mode
+      Namely:
+      - fuel
+      - afterburners
+      - emergency thrusts
+	No comment needed, I think.
+      - transporters
+	Easy to use, lots of fun.
+      - rears
+	Handy for shooting racers behind you.
+      - mines
+	Drop them and watch our competitors be blown off the track.
+      - ECMs
+	At those high speeds players can crash into walls easily when blinded.
+    - other changes to the default robot code
+    - robots 'undeclare' war
+      A robot's war declaration is dropped when the robot succeeds in killing
+      the player it declared war on. This makes life easier for both of them.
+
+The penalty for shooting yourself has been changed from -2 to -5.
+
+All items have new options to set their upper limits, according
+to a suggestion made by Greg Crawley.  The options are:
+    maxFuel, maxTanks, maxECMs, maxMines, maxMissiles, maxCloaks,
+    maxSensors, maxWideangles, maxRearshots, maxAfterburners,
+    maxTransporters, maxEmergencyThrusts, maxLasers,
+    maxTractorBeams, maxAutopilots, maxEmergencyShields.
+
+===============================================================================
+
 This is a summary of changes of release 3.6.2 compared to release 3.6.1:
 
 Tim Auckland provided a patch to make gravity work inside gravity currents.

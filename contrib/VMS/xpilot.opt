@@ -4,6 +4,12 @@ join.obj
 net.obj
 netclient.obj
 paint.obj
+paintdata.obj
+painthud.obj
+paintmap.obj
+paintobjects.obj
+paintradar.obj
+query.obj
 dbuff.obj
 xinit.obj
 default.obj
@@ -24,6 +30,9 @@ trnlnm.obj
 ioctl.obj
 strcasecmp.obj
 strdup.obj
+about.obj
+colors.obj
+talk.obj
 sys$share:decc$shr/share
 sys$share:ucx$ipc_shr/share
 sys$share:decw$xlibshr/share

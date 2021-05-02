@@ -1,10 +1,11 @@
-/* $Id: join.c,v 3.34 1996/10/20 21:23:14 bert Exp $
+/* $Id: join.c,v 3.41 1998/01/28 08:50:05 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,26 +22,39 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include <winsock.h>
+#include "../contrib/NT/xpilot/winClient.h"
+#endif
+
+#include "types.h"
+#ifndef	_WINDOWS
 #include <unistd.h>
+#endif
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
+
+#ifndef	_WINDOWS
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
 #if !defined(__hpux) 
 #include <sys/time.h>
+#endif
 #endif
 
 #include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "error.h"
 #include "client.h"
 #include "netclient.h"
 #include "protoclient.h"
+#include "portability.h"
 
 char join_version[] = VERSION;
 
@@ -48,12 +62,17 @@ char join_version[] = VERSION;
 # define SCORE_UPDATE_DELAY	4
 #endif
 
+void xpilotShutdown(void);
 
+extern void Record_cleanup(void);
+
+
+#ifndef	_WINDOWS
 static void Input_loop(void)
 {
-    int			rfds,
-			tfds,
-			max,
+    fd_set		rfds;
+    fd_set		tfds;
+    int			max,
 			n,
 			netfd,
 			result,
@@ -79,9 +98,9 @@ static void Input_loop(void)
 	return;
     }
     Net_key_change();
-    rfds = 0;
-    rfds |= (1 << clientfd);
-    rfds |= (1 << netfd);
+    FD_ZERO(&rfds);
+    FD_SET(clientfd, &rfds);
+    FD_SET(netfd, &rfds);
     max = (clientfd > netfd) ? clientfd : netfd;
     for (tfds = rfds; ; rfds = tfds) {
 	if ((scoresChanged != 0 && ++scoresChanged > SCORE_UPDATE_DELAY)
@@ -119,7 +138,7 @@ static void Input_loop(void)
 		continue;
 	    }
 	}
-	if ((rfds & (1 << clientfd)) != 0) {
+	if (FD_ISSET(clientfd, &rfds)) {
 	    if (Client_input(1) == -1) {
 		return;
 	    }
@@ -128,10 +147,10 @@ static void Input_loop(void)
 		return;
 	    }
 	}
-	if ((rfds & (1 << netfd)) != 0 || result > 1) {
+	if (FD_ISSET(netfd, &rfds) || result > 1) {
 	    if ((result = Net_input()) == -1) {
 		errno = 0;
-		error("Have a nice day!");
+		error("Bad net input.  Have a nice day!");
 		return;
 	    }
 	    if (result > 0) {
@@ -164,13 +183,23 @@ static void Input_loop(void)
 	}
     }
 }
+#endif	/* _WINDOWS */
+
+void xpilotShutdown()
+{
+    Net_cleanup();
+    Client_cleanup();
+    Record_cleanup();
+    defaultCleanup();
+    aboutCleanup();
+    paintdataCleanup();
+}
 
 static void sigcatch(int signum)
 {
     signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
-    Net_cleanup();
-    Client_cleanup();
+    xpilotShutdown();
     error("Got signal %d\n", signum);
     exit(1);
 }
@@ -180,31 +209,40 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 {
     signal(SIGINT, sigcatch);
     signal(SIGTERM, sigcatch);
+#ifndef	_WINDOWS
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
+#endif
 
+    IFWINDOWS( received_self = FALSE; )
+    IFWINDOWS( Progress("Client_init"); )
     if (Client_init(server_name, version) == -1) {
 	return -1;
     }
+    IFWINDOWS( Progress("Net_init %s", server_addr); )
     if (Net_init(server_addr, port) == -1) {
 	Client_cleanup();
 	return -1;
     }
+    IFWINDOWS( Progress("Net_verify '%s'= '%s'", nick, real); )
     if (Net_verify(real, nick, display, my_team) == -1) {
 	Net_cleanup();
 	Client_cleanup();
 	return -1;
     }
+    IFWINDOWS( Progress("Net_setup"); )
     if (Net_setup() == -1) {
 	Net_cleanup();
 	Client_cleanup();
 	return -1;
     }
+    IFWINDOWS( Progress("Client_setup"); )
     if (Client_setup() == -1) {
 	Net_cleanup();
 	Client_cleanup();
 	return -1;
     }
+    IFWINDOWS( Progress("Net_start"); )
     if (Net_start() == -1) {
 	errno = 0;
 	error("Network start failed");
@@ -212,6 +250,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 	Client_cleanup();
 	return -1;
     }
+    IFWINDOWS( Progress("Client_start"); )
     if (Client_start() == -1) {
 	errno = 0;
 	error("Window init failed");
@@ -220,11 +259,11 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 	return -1;
     }
 
+#ifndef	_WINDOWS	/* windows continues to run at this point */
     Input_loop();
-
-    Net_cleanup();
-    Client_cleanup();
-    Record_cleanup();
+    xpilotShutdown();
+#endif
 
     return 0;
 }
+

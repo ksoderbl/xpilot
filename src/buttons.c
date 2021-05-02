@@ -1,10 +1,10 @@
-/* $Id: buttons.c,v 3.11 1996/10/06 00:00:47 bjoerns Exp $
+/* $Id: buttons.c,v 3.15 1997/11/27 20:09:03 bert Exp $
  *
- * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
+ * XP-Replay, playback an XPilot session.  Copyright (C) 1994-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
  *      Steven Singer        (S.Singer@ph.surrey.ac.uk)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	_WINDOWS
 #include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

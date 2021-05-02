@@ -1,10 +1,11 @@
-/* $Id: contact.c,v 3.7 1997/01/25 17:01:59 bert Exp $
+/* $Id: contact.c,v 3.12 1997/11/27 20:09:10 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <time.h>
+#include <process.h>
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +35,7 @@
 #include <time.h>
 #if !defined(__hpux)
 #include <sys/time.h>
+#endif
 #endif
 
 #define SERVER
@@ -51,7 +58,7 @@ char contact_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: contact.c,v 3.7 1997/01/25 17:01:59 bert Exp $";
+    "@(#)$Id: contact.c,v 3.12 1997/11/27 20:09:10 bert Exp $";
 #endif
 
 /*
@@ -61,7 +68,7 @@ int			NumQueuedPlayers = 0;
 int			MaxQueuedPlayers = 20;
 int			NumPseudoPlayers = 0;
 
-static int		Socket;
+static int		contactSocket;
 static sockbuf_t	ibuf;
 static char		msg[MSG_LEN];
 extern int		game_lock;
@@ -82,10 +89,14 @@ static int Queue_player(char *real, char *nick, char *disp, int team,
 void Contact(int fd, void *arg);
 static int Check_address(char *addr);
 
+#ifdef	_WINDOWS
+#define	getpid()	_getpid()
+#endif
+
 void Contact_cleanup(void)
 {
-    DgramClose(Socket);
-    Socket = -1;
+    DgramClose(contactSocket);
+    contactSocket = -1;
 }
 
 int Contact_init(void)
@@ -94,23 +105,23 @@ int Contact_init(void)
      * Create a socket which we can listen on.
      */
     SetTimeout(0, 0);
-    if ((Socket = CreateDgramSocket(contactPort)) == -1) {
-	error("Could not create Dgram socket");
+    if ((contactSocket = CreateDgramSocket(contactPort)) == -1) {
+	error("Could not create Dgram contactSocket");
 	End_game();
     }
-    if (SetSocketNonBlocking(Socket, 1) == -1) {
+    if (SetSocketNonBlocking(contactSocket, 1) == -1) {
 	error("Can't make contact socket non-blocking");
 	End_game();
     }
-    if (Sockbuf_init(&ibuf, Socket, SERVER_SEND_SIZE,
+    if (Sockbuf_init(&ibuf, contactSocket, SERVER_SEND_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for contact buffer");
 	End_game();
     }
 
-    install_input(Contact, Socket, 0);
+    install_input(Contact, contactSocket, 0);
 
-    return Socket;
+    return contactSocket;
 }
 
 /*
@@ -223,8 +234,8 @@ void Contact(int fd, void *arg)
 			login_port,
 			max_robots,
     			qpos,
-			status,
-			reply_to;
+			status;
+	char	reply_to;
     unsigned		magic,
 			version,
 			my_magic;
@@ -241,7 +252,7 @@ void Contact(int fd, void *arg)
      * Someone connected to us, now try and decipher the message :)
      */
     Sockbuf_clear(&ibuf);
-    if ((bytes = DgramReceiveAny(Socket, ibuf.buf, ibuf.size)) <= 8) {
+    if ((bytes = DgramReceiveAny(contactSocket, ibuf.buf, ibuf.size)) <= 8) {
 	if (bytes < 0
 	    && errno != EWOULDBLOCK
 	    && errno != EAGAIN
@@ -249,7 +260,7 @@ void Contact(int fd, void *arg)
 	    /*
 	     * Clear the error condition for the contact socket.
 	     */
-	    GetSocketError(Socket);
+	    GetSocketError(contactSocket);
 	}
 	return;
     }
@@ -394,8 +405,8 @@ void Contact(int fd, void *arg)
 	 */
 
 #ifndef	SILENT
-	printf("%s@%s asked for info about current game.\n",
-	       real_name, host_addr);
+	xpprintf("%s %s@%s asked for info about current game.\n",
+	       showtime(), real_name, host_addr);
 #endif
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, SUCCESS);
@@ -564,8 +575,8 @@ void Contact(int fd, void *arg)
 	bool		bad = false, full, change;
 
 #ifndef	SILENT
-	printf("%s@%s asked for an option list.\n",
-	       real_name, host_addr);
+	xpprintf("%s %s@%s asked for an option list.\n",
+	       showtime(), real_name, host_addr);
 #endif
 	i = 0;
 	do {

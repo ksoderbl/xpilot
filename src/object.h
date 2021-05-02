@@ -1,10 +1,11 @@
-/* $Id: object.h,v 3.64 1997/01/16 20:25:03 bert Exp $
+/* $Id: object.h,v 3.72 1998/01/19 10:35:21 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,10 +46,14 @@
 #include "click.h"
 #endif
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winNet.h"
+#endif
+
 /*
  * Different types of objects, including player.
  * Robots and tanks are players but have an additional bit.
- * Smart missile, heat seaker and torpedoe can be merged into missile.
+ * Smart missile, heatseeker and torpedoe can be merged into missile.
  * ECM doesn't really need an object type.
  * Lasers and pulses can be merged.
  */
@@ -143,6 +148,12 @@ struct _objposition {
     int		x, y;			/* object position in pixels. */
     int		bx, by;			/* object position in blocks. */
 };
+#define OBJ_X_IN_CLICKS(obj)	((obj)->pos.cx)
+#define OBJ_Y_IN_CLICKS(obj)	((obj)->pos.cy)
+#define OBJ_X_IN_PIXELS(obj)	((obj)->pos.x)
+#define OBJ_Y_IN_PIXELS(obj)	((obj)->pos.y)
+#define OBJ_X_IN_BLOCKS(obj)	((obj)->pos.bx)
+#define OBJ_Y_IN_BLOCKS(obj)	((obj)->pos.by)
 
 typedef struct _object object;
 struct _object {
@@ -153,8 +164,8 @@ struct _object {
     ipos	prevpos;		/* Object's previous position... */
     vector	vel;
     vector	acc;
-    float	max_speed;
-    float	mass;
+    DFLOAT	max_speed;
+    DFLOAT	mass;
     int		type;
     long	info;			/* Miscellaneous info */
     long	life;			/* No of ticks left to live */
@@ -164,7 +175,7 @@ struct _object {
 
     /* up to here all object types (including players!) should be the same. */
 
-    float	turnspeed;		/* for missiles only */
+    DFLOAT	turnspeed;		/* for missiles only */
     long	fuselife;		/* Ticks left when considered fused */
 
     object	*cell_list;		/* linked list for cell lookup */
@@ -173,11 +184,15 @@ struct _object {
 					/* (spare for id)*/
     int		treasure;		/* Which treasure does ball belong */
     int		new_info;		/* smart re-lock id after confusion */
-    float	length;			/* Distance between ball and player */
-    float	ecm_range;		/* Range from last ecm center */
+    DFLOAT	length;			/* Distance between ball and player */
+    DFLOAT	ecm_range;		/* Range from last ecm center */
     int		spread_left;		/* how much spread time left */
     int		pl_range;		/* distance to player for collision. */
     int		pl_radius;		/* distance to player for hit. */
+
+#ifdef __cplusplus
+		_object() {}
+#endif
 };
 
 
@@ -258,8 +273,8 @@ struct player {
     ipos	prevpos;		/* Previous position... */
     vector	vel;			/* Velocity of object */
     vector	acc;			/* Acceleration constant */
-    float	max_speed;		/* Maximum speed of object */
-    float	mass;			/* Mass of object (incl. cargo) */
+    DFLOAT	max_speed;		/* Maximum speed of object */
+    DFLOAT	mass;			/* Mass of object (incl. cargo) */
     int		type;			/* Type of object */
     long	info;			/* Miscellaneous info */
     int		life;			/* Zero is dead. One is alive */
@@ -271,8 +286,8 @@ struct player {
 
     int		type_ext;		/* extended type info (tank, robot) */
 
-    float	turnspeed;		/* How fast player acc-turns */
-    float	velocity;		/* Absolute speed */
+    DFLOAT	turnspeed;		/* How fast player acc-turns */
+    DFLOAT	velocity;		/* Absolute speed */
 
     int		kills;			/* Number of kills this round */
     int		deaths;			/* Number of deaths this round */
@@ -282,24 +297,24 @@ struct player {
 
     int		shield_time;		/* Shields if no playerShielding */
     pl_fuel_t	fuel;			/* ship tanks and the stored fuel */
-    float	emptymass;		/* Mass of empty ship */
-    float	float_dir;		/* Direction, in float var */
-    float	turnresistance;		/* How much is lost in % */
-    float	turnvel;		/* Current velocity of turn (right) */
+    DFLOAT	emptymass;		/* Mass of empty ship */
+    DFLOAT	float_dir;		/* Direction, in float var */
+    DFLOAT	turnresistance;		/* How much is lost in % */
+    DFLOAT	turnvel;		/* Current velocity of turn (right) */
 #ifdef TURN_FUEL
-    float	oldturnvel;		/* Last velocity of turn (right) */
+    DFLOAT	oldturnvel;		/* Last velocity of turn (right) */
 #endif
-    float	turnacc;		/* Current acceleration of turn */
+    DFLOAT	turnacc;		/* Current acceleration of turn */
     long	mode;			/* Player mode, currently */
     long	score;			/* Current score of player */
     long	prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
     wireobj	*ship;			/* wire model of ship shape */
-    float	power;			/* Force of thrust */
-    float	power_s;		/* Saved power fiks */
-    float	turnspeed_s;		/* Saved turnspeed */
-    float	turnresistance_s;	/* Saved (see above) */
-    float	sensor_range;		/* Range of sensors (radar) */
+    DFLOAT	power;			/* Force of thrust */
+    DFLOAT	power_s;		/* Saved power fiks */
+    DFLOAT	turnspeed_s;		/* Saved turnspeed */
+    DFLOAT	turnresistance_s;	/* Saved (see above) */
+    DFLOAT	sensor_range;		/* Range of sensors (radar) */
     int		shots;			/* Number of active shots by player */
     int		missile_rack;		/* Next missile rack to be active */
 
@@ -316,17 +331,17 @@ struct player {
     int		lose_item;		/* which item to drop */
     int		lose_item_state;	/* lose item key state, 2=up,1=down */
 
-    float	auto_power_s;		/* autopilot saves of current */
-    float	auto_turnacc_s;		/* power, turnacc, turnspeed and */
-    float	auto_turnspeed_s;	/* turnresistance settings. Restored */
-    float	auto_turnresistance_s;	/* when autopilot turned off */
+    DFLOAT	auto_power_s;		/* autopilot saves of current */
+    DFLOAT	auto_turnacc_s;		/* power, turnacc, turnspeed and */
+    DFLOAT	auto_turnspeed_s;	/* turnresistance settings. Restored */
+    DFLOAT	auto_turnresistance_s;	/* when autopilot turned off */
     modifiers	modbank[NUM_MODBANKS];	/* useful modifier settings */
     int		tractor_pressor;	/* non-zero if tractor is pressor */
     player	*tractor;		/* target of tractor beam */
     int		shot_max;		/* Maximum number of shots active */
     int		shot_life;		/* Number of ticks shot will live */
-    float	shot_speed;		/* Speed of shots fired by player */
-    float	shot_mass;		/* Mass of shots fired by player */
+    DFLOAT	shot_speed;		/* Speed of shots fired by player */
+    DFLOAT	shot_mass;		/* Mass of shots fired by player */
     long	shot_time;		/* Time of last shot fired by player */
     int		repair_target;		/* Repairing this target */
     int		fs;			/* Connected to fuel station fs */
@@ -346,7 +361,7 @@ struct player {
 	int	    tagged;		/* Flag, what is tagged? */
 	int	    pl_id;		/* Tagging player id */
 	position    pos;		/* Position of locked object */
-	float	    distance;		/* Distance to object */
+	DFLOAT	    distance;		/* Distance to object */
     } lock;
     int		lockbank[LOCKBANK_MAX]; /* Saved player locks */
 
@@ -391,6 +406,10 @@ struct player {
     int		player_fps;		/* FPS that this player can do */
     int		player_round;		/* Divisor for player FPS calculation */
     int		player_count;		/* Player's current frame count */
+
+#ifdef __cplusplus
+		player() {}
+#endif
 };
 
 #endif

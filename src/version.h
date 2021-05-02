@@ -1,10 +1,11 @@
-/* $Id: version.h.msub,v 3.4 1996/10/06 00:01:50 bjoerns Exp $
+/* $Id: version.h.msub,v 3.9 1997/11/27 20:09:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-96 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-1998 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,14 +26,20 @@
 #define	VERSION_H
 
 #if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-96"
-#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-#   pragma VERSIONID		"XPilot 3.6.2"
+#   pragma COPYRIGHT_DATE	"1991-1998"
+#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
+#   pragma VERSIONID		"XPilot 3.7.1"
 #endif
 
-#define VERSION			"3.6.2"
-#define TITLE			"XPilot 3.6.2"
-#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-#define COPYRIGHT		"Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
+#define VERSION			"3.7.1"
+#ifdef	_WINDOWS
+#define	TITLE			"3.7.1-NT11"
+#define	COPYRIGHTNT		""
+#define	VERSION_WINDOWS	"11"
+#else
+#define TITLE			"XPilot 3.7.1"
+#endif
+#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
+#define COPYRIGHT		"Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
 
 #endif /* VERSION_H */

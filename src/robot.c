@@ -1,10 +1,11 @@
-/* $Id: robot.c,v 3.65 1996/10/23 15:57:55 bert Exp $
+/* $Id: robot.c,v 3.71 1998/01/08 19:28:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,11 +23,16 @@
  */
 /* Robot code originally submitted by Maurice Abraham. */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <limits.h>
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -628,13 +634,14 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"Hey %s, go play chess instead. [%s]",
 	"I think Darwin would've said you're too unfit to survive %s :) [%s]",
 	"Oh my, what colourful explosions you make %s. :) [%s]",
+	"Hey %s, maybe its time you upgraded that old 386. [%s]",
     };
     static const char *war_msgs[] = {
 	"UNBELIEVABLE, me shot down by %s?!?!  This means war [%s]",
 	"People like %s just piss me off. [%s]",
 	"Nice %s.  But now its my turn. [%s]",
 	"Red alert... target: %s. [%s]",
-	"$%#^@#$^#$%  That's the last time you did that %s! [%s]",
+	"$%#^@#$^#$%  That's the last time you do that %s! [%s]",
 	"Enough's enough!  It's only room enough for one of us %s here. [%s]",
 	"I'm sorry %s, but you must... DIE!!!!! [%s]",
 	"Jihad!  Die %s!  Die! [%s]",
@@ -766,6 +773,7 @@ static void Robot_create(void)
     robot->turnresistance_s = 0.12;
     robot->power = MAX_PLAYER_POWER;
     robot->power_s = MAX_PLAYER_POWER;
+    robot->check = 0;
     if (BIT(World.rules->mode, TEAM_PLAY))
 	robot->team = 0;		/* Robots are on their own team */
     if (robot->mychar != 'W')
@@ -801,8 +809,8 @@ static void Robot_create(void)
     Robot_talks(ROBOT_TALK_ENTER, robot->name, "");
 
 #ifndef	SILENT
-    printf("%s (%d, %s) starts at startpos %d.\n",
-	   robot->name, NumPlayers, robot->realname, robot->home_base);
+    xpprintf("%s %s (%d, %s) starts at startpos %d.\n",
+	   showtime(), robot->name, NumPlayers, robot->realname, robot->home_base);
 #endif
 
     updateScores = true;
@@ -919,17 +927,27 @@ void Robot_war(int ind, int killer)
 
     if (IS_ROBOT_PTR(kp)) {
 	Robot_talks(ROBOT_TALK_KILL, kp->name, pl->name);
+
+	if (Robot_war_on_player(killer) == pl->id)
+	    for (i = 0; i < NumPlayers; i++) {
+		if (Players[i]->conn != NOT_CONNECTED) {
+		    Send_war(Players[i]->conn, kp->id, -1);
+		}
+	    }
+	Robot_set_war(killer, -1);
     }
 
     if (IS_ROBOT_PTR(pl)
-	&& rand()%100 < kp->score - pl->score) {
+	&& rand()%100 < kp->score - pl->score
+	&& !(BIT(World.rules->mode, TEAM_PLAY) && pl->team == kp->team)) {
 
 	Robot_talks(ROBOT_TALK_WAR, pl->name, kp->name);
 
 	/*
 	 * Give fuel for offensive.
+	 * BD: unfair advantage.
 	 */
-	pl->fuel.sum = MAX_PLAYER_FUEL;
+	/* pl->fuel.sum = MAX_PLAYER_FUEL; */
 
 	if (Robot_war_on_player(ind) != kp->id) {
 	    for (i = 0; i < NumPlayers; i++) {
@@ -1025,6 +1043,13 @@ void Robot_update(void)
 	    continue;
 	}
 
+	/* Bucko sez: I had a server crash here as i was exiting play.  Seems the type_ext for me
+	   was 0 (?) so it defaulted to robot handling, which is a bad thing (robot_data_ptr == NULL)
+	   so i added this check for real robots.  I'm not sure if the Player[ind] will clean up
+	   or just leak.
+	*/
+	if (!IS_ROBOT_PTR(pl))
+		continue;
 	/*
 	 * So it is a genuine robot...
 	 * Check if it is still considered good enough to continue playing...

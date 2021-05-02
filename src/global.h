@@ -1,10 +1,11 @@
-/* $Id: global.h,v 3.77 1997/02/25 14:04:21 bert Exp $
+/* $Id: global.h,v 3.85 1998/01/19 10:35:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,11 +39,12 @@
 #define MIN(a,b)  ((a) < (b) ? (a) : (b))
 #endif
 
-typedef struct {
-    char name[80];
-    char host[80];
-} server;
+#define	STR80	(80)
 
+typedef struct {
+    char name[STR80];
+    char host[STR80];
+} server;
 
 /*
  * Global data.
@@ -54,22 +56,25 @@ extern object		*Obj[];
 extern long		frame_loops;
 extern int		NumPlayers;
 extern int		NumPseudoPlayers;
+extern int		NumQueuedPlayers;
 extern int		NumObjs;
 extern int		NumRobots, WantedNumRobots;
+extern int		login_in_progress;
+
 extern char		*robotFile;
 extern int		robotsTalk, robotsLeave, robotLeaveLife;
 extern int		robotLeaveScore, robotLeaveRatio;
 extern World_map	World;
 extern server		Server;
-extern float		ShotsMass, ShipMass, ShotsSpeed, Gravity;
+extern DFLOAT		ShotsMass, ShipMass, ShotsSpeed, Gravity;
 extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
 extern int		GetInd[];
 #endif
-extern float		tbl_sin[];
-extern float		tbl_cos[];
+extern DFLOAT		tbl_sin[];
+extern DFLOAT		tbl_cos[];
 #ifdef SERVER
 extern int		ShutdownServer, ShutdownDelay;
 extern bool		RawMode;
@@ -96,21 +101,24 @@ extern bool		itemsWallBounce;
 extern bool		missilesWallBounce;
 extern bool		sparksWallBounce;
 extern bool		debrisWallBounce;
+extern bool		cloakedExhaust;
+extern bool		cloakedShield;
 extern bool		ecmsReprogramMines;
-extern float		maxObjectWallBounceSpeed;
-extern float		maxShieldedWallBounceSpeed;
-extern float		maxUnshieldedWallBounceSpeed;
-extern float		maxShieldedWallBounceAngle;
-extern float		maxUnshieldedWallBounceAngle;
-extern float		playerWallBrakeFactor;
-extern float		objectWallBrakeFactor;
-extern float		objectWallBounceLifeFactor;
-extern float		wallBounceFuelDrainMult;
-extern float		wallBounceDestroyItemProb;
+extern bool		ecmsReprogramRobots;
+extern DFLOAT		maxObjectWallBounceSpeed;
+extern DFLOAT		maxShieldedWallBounceSpeed;
+extern DFLOAT		maxUnshieldedWallBounceSpeed;
+extern DFLOAT		maxShieldedWallBounceAngle;
+extern DFLOAT		maxUnshieldedWallBounceAngle;
+extern DFLOAT		playerWallBrakeFactor;
+extern DFLOAT		objectWallBrakeFactor;
+extern DFLOAT		objectWallBounceLifeFactor;
+extern DFLOAT		wallBounceFuelDrainMult;
+extern DFLOAT		wallBounceDestroyItemProb;
 
 extern bool		limitedVisibility;
-extern float		minVisibilityDistance;
-extern float		maxVisibilityDistance;
+extern DFLOAT		minVisibilityDistance;
+extern DFLOAT		maxVisibilityDistance;
 extern bool		limitedLives;
 extern int		worldLives;
 extern bool		endOfRoundReset;
@@ -123,17 +131,25 @@ extern bool		edgeWrap;
 extern bool		edgeBounce;
 extern bool		extraBorder;
 extern ipos		gravityPoint;
-extern float		gravityAngle;
+extern DFLOAT		gravityAngle;
 extern bool		gravityPointSource;
 extern bool		gravityClockwise;
 extern bool		gravityAnticlockwise;
+extern bool		gravityVisible;
+extern bool		wormholeVisible;
+extern bool		itemConcentratorVisible;
 extern int		nukeMinSmarts;
 extern int		nukeMinMines;
-extern float		nukeClusterDamage;
+extern DFLOAT		nukeClusterDamage;
 extern int		mineFuseTime;
+extern int		mineLife;
+extern int		missileLife;
 
-extern float		destroyItemInCollisionProb;
+extern DFLOAT		destroyItemInCollisionProb;
 extern bool		updateScores;
+extern bool 		allowSmartMissiles;
+extern bool 		allowHeatSeekers;
+extern bool 		allowTorpedoes;
 extern bool 		allowNukes;
 extern bool		allowClusters;
 extern bool		allowModifiers;
@@ -156,27 +172,28 @@ extern bool		treasuresOnRadar;
 extern bool 		identifyMines;
 extern bool		distinguishMissiles;
 extern int		maxMissilesPerPack;
+extern int		maxMinesPerPack;
 extern bool		targetTeamCollision;
 extern bool		treasureKillTeam;
 extern bool		treasureCollisionDestroys;
 extern bool		treasureCollisionMayKill;
 
-extern float 		dropItemOnKillProb;
-extern float		detonateItemOnKillProb;
-extern float 		movingItemProb;
-extern float            rogueHeatProb;
-extern float            rogueMineProb;
-extern float		itemProbMult;
-extern float		maxItemDensity;
+extern DFLOAT 		dropItemOnKillProb;
+extern DFLOAT		detonateItemOnKillProb;
+extern DFLOAT 		movingItemProb;
+extern DFLOAT            rogueHeatProb;
+extern DFLOAT            rogueMineProb;
+extern DFLOAT		itemProbMult;
+extern DFLOAT		maxItemDensity;
 extern int		itemConcentratorRadius;
-extern float		itemConcentratorProb;
-extern float		gameDuration;
+extern DFLOAT		itemConcentratorProb;
+extern DFLOAT		gameDuration;
 extern time_t		gameOverTime;
 
 extern char	       	*scoreTableFileName;
 
-extern float		friction;
-extern float		checkpointRadius;
+extern DFLOAT		friction;
+extern DFLOAT		checkpointRadius;
 extern int		raceLaps;
 extern bool		lockOtherTeam;
 extern bool 		loseItemDestroys;

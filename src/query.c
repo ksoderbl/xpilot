@@ -1,10 +1,11 @@
-/* $Id: query.c,v 3.1 1996/10/12 22:36:30 bert Exp $
+/* $Id: query.c,v 3.7 1997/11/27 20:09:30 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +22,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winclient.h"
+#include "../contrib/NT/xpilot/winNet.h"
+#define	QUERY_FUDGED
+
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+
 #ifdef VMS
 # include <socket.h>
 # include <in.h>
@@ -46,6 +54,7 @@
 # include <net/if.h>
 #endif
 #include <netdb.h>
+#endif		/* _WINDOWS */
 
 #include "version.h"
 #include "config.h"
@@ -57,7 +66,7 @@ char query_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: query.c,v 3.1 1996/10/12 22:36:30 bert Exp $";
+    "@(#)$Id: query.c,v 3.7 1997/11/27 20:09:30 bert Exp $";
 #endif
 
 #if defined(LINUX0) || defined(VMS)
@@ -176,7 +185,7 @@ static int Query_fudged(int sockfd, int port, char *msg, int msglen)
     for (i = 0; h->h_addr_list[i]; i++) {
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
+	addr.sin_port = (u_short)htons((u_short)port);
 	p = (unsigned char *) h->h_addr_list[i];
 	addrmask = p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
 	addr.sin_addr.s_addr = htonl(addrmask);
@@ -210,10 +219,17 @@ static int Query_fudged(int sockfd, int port, char *msg, int msglen)
  * on one of the other interfaces in order to reduce the chance that
  * we get multiple responses from the same server.
  */
+
+/* KOERBER */
+#ifdef VMS
+#include "pack.h"
+static int		contact_port = SERVER_PORT;
+#endif
+
 int Query_all(int sockfd, int port, char *msg, int msglen)
 {
 #ifdef QUERY_FUDGED
-    return Query_fudged(sockfd, contact_port, msg, msglen);
+    return Query_fudged(sockfd, port, msg, msglen);
 #else
 
     int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;

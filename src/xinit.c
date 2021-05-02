@@ -1,10 +1,11 @@
-/* $Id: xinit.c,v 3.99 1996/12/15 21:31:24 bert Exp $
+/* $Id: xinit.c,v 3.107 1998/01/28 08:50:09 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +22,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	_WINDOWS
 #include <unistd.h>
-#include <stdlib.h>
+#include <X11/Xlib.h>
+#include <X11/Xos.h>
+#include <X11/Xutil.h>
+#else
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winclient.h"
+#endif
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #ifndef	__apollo
 #    include <string.h>
 #endif
 #include <errno.h>
-
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
 
 #include "version.h"
 #include "config.h"
@@ -47,10 +53,14 @@
 #include "netclient.h"
 #include "dbuff.h"
 #include "protoclient.h"
+#include "portability.h"
 
 /*
  * Item structures
  */
+#ifdef	_WINDOWS
+#pragma warning(disable : 4305)
+#endif
 #include "items/itemRocketPack.xbm"
 #include "items/itemCloakingDevice.xbm"
 #include "items/itemEnergyPack.xbm"
@@ -72,7 +82,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.99 1996/12/15 21:31:24 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.107 1998/01/28 08:50:09 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -102,7 +112,7 @@ char			sparkColors[MSG_LEN];
 int			spark_color[MAX_COLORS];
 int			num_spark_colors;
 
-static message_t	*MsgBlock;
+static message_t	*MsgBlock = NULL;
 
 
 /*
@@ -157,7 +167,7 @@ static struct {
     {
 	itemRocketPack_bits,
 	"Rocket; can be utilized as smart missile, "
-	"heat seaking missile, nuclear missile or just a "
+	"heatseeking missile, nuclear missile or just a "
 	"plain unguided missile (torpedo)"
     },
     {
@@ -165,7 +175,7 @@ static struct {
 	"ECM (Electronic Counter Measures); "
 	"can be used to disturb electronic equipment, for instance "
 	"can it be used to confuse smart missiles and reprogram "
-	"robots to seak certain players"
+	"robots to seek certain players"
     },
     {
 	itemLaser_bits,
@@ -197,7 +207,11 @@ static struct {
 	"gives emergency shield capabilities for a limited period"
     },
 };
+#ifdef	_WINDOWS
+Pixmap	itemBitmaps[NUM_ITEMS][2];	/* Bitmaps for the items in 2 colors */
+#else
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
+#endif
 
 char dashes[NUM_DASHES] = { 8, 4 };
 char cdashes[NUM_CDASHES] = { 3, 9 };
@@ -206,6 +220,9 @@ static int Quit_callback(int, void *, const char **);
 static int Config_callback(int, void *, const char **);
 static int Score_callback(int, void *, const char **);
 static int Player_callback(int, void *, const char **);
+
+static int button_form;
+static int menu_button;
 
 const char *Item_get_text(int i)
 {
@@ -223,12 +240,17 @@ static XFontStruct* Set_font(Display* dpy, GC gc,
 {
     XFontStruct*	font;
 
+#ifndef	_WINDOWS
     if ((font = XLoadQueryFont(dpy, fontName)) == NULL) {
 	error("Couldn't find font '%s' for %s, using default font",
 	      fontName, resName);
 	font = XQueryFont(dpy, XGContextFromGC(gc));
     } else
 	XSetFont(dpy, gc, font->fid);
+#else
+	font = WinXLoadFont(fontName);
+	XSetFont(dpy, gc, font->fid);
+#endif
 
     return font;
 }
@@ -259,7 +281,7 @@ static void Init_spark_colors(void)
 	    *dst = '\0';
 	    src--;
 	    if (sscanf(buf, "%u", &col) == 1) {
-		if (col < maxColors) {
+		if (col < (unsigned)maxColors) {
 		    spark_color[num_spark_colors++] = col;
 		}
 	    }
@@ -286,10 +308,10 @@ static void Init_spark_colors(void)
     }
 }
 
-
 /*
  * Initialize miscellaneous window hints and properties.
  */
+#ifndef	_WINDOWS
 static void Init_disp_prop(Display *d, Window win,
 			   int w, int h, int x, int y,
 			   int flags)
@@ -357,7 +379,7 @@ static void Init_disp_prop(Display *d, Window win,
     XSetWMProtocols(d, win, &KillAtom, 1);
     XSetIOErrorHandler(FatalError);
 }
-
+#endif
 /*
  * The following function initializes a toplevel window.
  * It returns 0 if the initialization was successful,
@@ -365,19 +387,44 @@ static void Init_disp_prop(Display *d, Window win,
  */
 int Init_top(void)
 {
-    int				i, values,
-				top_flags,
-				top_x, top_y,
-				x, y;
-    unsigned			w, h;
-    XGCValues			xgc;
-    XSetWindowAttributes	sattr;
-    unsigned long		mask;
+#ifndef	_WINDOWS
+    int					i;
+    int					top_x, top_y;
+    int					x, y;
+    unsigned				w, h;
+    int					values;
+    int					top_flags;
+    XGCValues				xgc;
+    XSetWindowAttributes		sattr;
+    unsigned long			mask;
 
     if (Colors_init() == -1) {
 	return -1;
     }
 
+    if (shieldDrawMode == -1) {
+	shieldDrawMode = 0;
+	/*
+	 * Default is solid for NCD X11 servers.  My NCD mono 19 inch
+	 * terminal, vendor release 2002 suffers from terrible slowness
+	 * when drawing dashed arcs with thick lines.
+	 */
+	if (strcmp (ServerVendor (dpy),
+		    "DECWINDOWS (Compatibility String) "
+		    "Network Computing Devices Inc.") == 0
+	    && ProtocolVersion (dpy) == 11)
+	    shieldDrawMode = 1;
+
+#ifdef ERASE
+	/*
+	 * The NeWS X server doesn't orrectly erase shields.
+	 */
+	if (!strcmp(ServerVendor(dpy), "X11/NeWS - Sun Microsystems Inc."))
+	    shieldDrawMode = 1;
+#endif
+    }
+
+#endif
     if (hudColor >= maxColors || hudColor <= 0) {
 	hudColor = BLUE;
     }
@@ -403,34 +450,13 @@ int Init_top(void)
 	decorRadarColor = 2;
     }
 
-    if (shieldDrawMode == -1) {
-	shieldDrawMode = 0;
-	/*
-	 * Default is solid for NCD X11 servers.  My NCD mono 19 inch
-	 * terminal, vendor release 2002 suffers from terrible slowness
-	 * when drawing dashed arcs with thick lines.
-	 */
-	if (strcmp (ServerVendor (dpy),
-		    "DECWINDOWS (Compatibility String) "
-		    "Network Computing Devices Inc.") == 0
-	    && ProtocolVersion (dpy) == 11)
-	    shieldDrawMode = 1;
-
-#ifdef ERASE
-	/*
-	 * The NeWS X server doesn't orrectly erase shields.
-	 */
-	if (!strcmp(ServerVendor(dpy), "X11/NeWS - Sun Microsystems Inc."))
-	    shieldDrawMode = 1;
-#endif
-    }
-
     shieldDrawMode = shieldDrawMode ? LineSolid : LineOnOffDash;
     radarPlayerRectFN = (mono ? XDrawRectangle : XFillRectangle);
 
     /*
      * Get toplevel geometry.
      */
+#ifndef	_WINDOWS
     top_flags = 0;
     if (geometry != NULL && geometry[0] != '\0') {
 	mask = XParseGeometry(geometry, &x, &y, &w, &h);
@@ -515,7 +541,19 @@ int Init_top(void)
 	Init_disp_prop(kdpy, keyboard, top_width, top_height,
 		       top_x, top_y, top_flags);
     }
+#else	/* _WINDOWS */
+	/* MFC already gave us a nice top window...use it */
+	{
+		XRectangle	rect;
+		WinXGetWindowRectangle(0, &rect);
+		top_x = rect.x;
+		top_y = rect.y;
+		top_width = rect.width;
+		top_height = rect.height;
+	}
+#endif	/* _WINDOWS */
 
+#ifndef	_WINDOWS
     /*
      * Create item bitmaps
      */
@@ -597,6 +635,8 @@ int Init_top(void)
     if (dbuf_state->type == COLOR_SWITCH)
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 
+#endif
+
     if (mono) {
 	buttonColor = BLACK;
 	windowColor = BLACK;
@@ -616,11 +656,13 @@ int Init_top(void)
  */
 int Init_windows(void)
 {
+#ifndef	_WINDOWS
     unsigned			w, h;
-    int				button_form,
-				menu_button;
     Pixmap			pix;
     GC				cursorGC;
+#else
+	int				i;
+#endif
 
     if (!top) {
 	if (Init_top()) {
@@ -630,17 +672,68 @@ int Init_windows(void)
 
     draw_width = top_width - (256 + 2);
     draw_height = top_height;
+	/* poor code.  WinX needs to know beforehand if its dealing with draw
+	   because it might want to create 2 bitmaps for it.  Since i know draw
+	   is the first window created (after top), i can cheat it.
+	*/
+	draw = 1;
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
 			       draw_width, draw_height,
 			       0, 0, colors[BLACK].pixel);
+    IFWINDOWS( if (draw != 1) error("draw != 1"); )
     radar = XCreateSimpleWindow(dpy, top, 0, 0,
 				256, RadarHeight, 0, 0,
 				colors[BLACK].pixel);
 
+#ifdef	_WINDOWS
+	WinXSetEventMask(draw, NoEventMask);
+	radar_exposures = 1;
+    radarGC = WinXCreateWinDC(radar);
+    gc = WinXCreateWinDC(draw);
+
+    textWindow = XCreateSimpleWindow(dpy, top, 0, 0,
+				0, 0, 0, 0,
+				colors[BLACK].pixel);
+    textGC = WinXCreateWinDC(textWindow);
+
+    msgWindow = XCreateSimpleWindow(dpy, top, 0, 0,
+				0, 0, 0, 0,
+				colors[BLACK].pixel);
+	messageGC = WinXCreateWinDC(msgWindow);
+    motdGC = WinXCreateWinDC(top);
+
+	for (i=0; i<MAX_COLORS; i++)
+		colors[i].pixel = i;
+	players_exposed = 1;
+	/* p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth); */
+	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+    /*
+     * Create item bitmaps AFTER the windows
+     */
+	WinXCreateItemBitmaps();
+	/* create the fonts AFTER the windows */
+    gameFont
+	= Set_font(dpy, gc, gameFontName, "gameFont");
+    messageFont
+	= Set_font(dpy, messageGC, messageFontName, "messageFont");
+    textFont
+	= Set_font(dpy, textGC, textFontName, "textFont");
+    motdFont
+	= Set_font(dpy, motdGC, motdFontName, "motdFont");
+
+    buttonWindow = XCreateSimpleWindow(dpy, top, 0, 0,
+				0, 0, 0, 0,
+				colors[BLACK].pixel);
+    buttonGC = WinXCreateWinDC(buttonWindow);
+    buttonFont
+	= Set_font(dpy, buttonGC, buttonFontName, "buttonFont");
+
+
+#endif
+
     /* Create buttons */
 #define BUTTON_WIDTH	84
-    ButtonHeight
-	= buttonFont->ascent + buttonFont->descent + 2*BTN_BORDER;
+    ButtonHeight = buttonFont->ascent + buttonFont->descent + 2*BTN_BORDER;
 
     button_form
 	= Widget_create_form(0, top,
@@ -672,6 +765,10 @@ int Init_windows(void)
 			      "PLAYER", Player_callback, NULL);
     Widget_add_pulldown_entry(menu_button,
 			      "MOTD", Motd_callback, NULL);
+#ifdef _WINDOWS
+    Widget_add_pulldown_entry(menu_button,
+			      "CREDITS", Credits_callback, NULL);
+#endif
     Widget_map_sub(button_form);
 
     /* Create score list window */
@@ -681,6 +778,11 @@ int Init_windows(void)
 				  - (RadarHeight + ButtonHeight + 2),
 			      0, 0,
 			      colors[windowColor].pixel);
+#ifdef	_WINDOWS
+    scoreListGC = WinXCreateWinDC(players);
+    scoreListFont
+	= Set_font(dpy, scoreListGC, scoreListFontName, "scoreListFont");
+#endif
 
     /*
      * Selecting the events we can handle.
@@ -689,6 +791,7 @@ int Init_windows(void)
     XSelectInput(dpy, players, ExposureMask);
     XSelectInput(dpy, draw, 0);
 
+#ifndef	_WINDOWS
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
@@ -744,12 +847,34 @@ int Init_windows(void)
 	XMapWindow(kdpy, keyboard);
 	XSync(kdpy, False);
     }
+#else
+	/* WinXSetEvent(players, WM_PAINT, WinXPaintPlayers); */
+	pointerControlCursor = !None;
+#endif
 
     Init_spark_colors();
 
     return 0;
 }
 
+#ifdef	_WINDOWS
+void WinXCreateItemBitmaps()
+{
+	int		i;
+
+    for (i=0; i<NUM_ITEMS; i++)
+	{
+		itemBitmaps[i][ITEM_HUD]
+		    = WinXCreateBitmapFromData(dpy, draw,
+					    (char *)itemBitmapData[i].data,
+					    ITEM_SIZE, ITEM_SIZE, colors[hudColor].pixel);
+		itemBitmaps[i][ITEM_PLAYFIELD]
+		    = WinXCreateBitmapFromData(dpy, draw,
+					    (char *)itemBitmapData[i].data,
+					    ITEM_SIZE, ITEM_SIZE, colors[RED].pixel);
+	}
+}
+#endif
 
 int Alloc_msgs(void)
 {
@@ -778,7 +903,9 @@ int Alloc_msgs(void)
 
 void Free_msgs(void)
 {
-    free(MsgBlock);
+    if (MsgBlock) {
+	free(MsgBlock);
+    }
 }
 
 
@@ -826,8 +953,12 @@ void Resize(Window w, int width, int height)
     /* ignore illegal resizes */
     LIMIT(width, MIN_TOP_WIDTH, MAX_TOP_WIDTH);
     LIMIT(height, MIN_TOP_HEIGHT, MAX_TOP_HEIGHT);
+	/* Window scaling needs to recalculate sizes, even when they're the same */
     if (width == top_width && height == top_height) {
-	return;
+#ifdef	WINDOWSCALING
+		Send_display();
+#endif
+		return;
     }
     top_width = width;
     top_height = height;
@@ -836,12 +967,17 @@ void Resize(Window w, int width, int height)
     Send_display();
     Net_flush();
     XResizeWindow(dpy, draw, draw_width, draw_height);
+#ifndef _WINDOWS
     if (dbuf_state->type == PIXMAP_COPY) {
 	XFreePixmap(dpy, p_draw);
 	p_draw = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
     }
+#endif
     XResizeWindow(dpy, players,
 		  256, top_height - (RadarHeight + ButtonHeight + 2));
+#ifdef	_WINDOWS
+	WinXResize();
+#endif
     Talk_resize();
     Config_resize();
 }
@@ -852,6 +988,7 @@ void Resize(Window w, int width, int height)
  */
 void Quit(void)
 {
+#ifndef	_WINDOWS
     if (dpy != NULL) {
 	XAutoRepeatOn(dpy);
 	Colors_cleanup();
@@ -863,6 +1000,14 @@ void Quit(void)
 	    kdpy = NULL;
 	}
     }
+#else
+    if (button_form) {
+	Widget_destroy(button_form);
+	button_form = 0;
+    }
+#endif
+    Free_msgs();
+    Widget_cleanup();
 }
 
 

@@ -1,10 +1,11 @@
-/* $Id: afaudio.c,v 3.11 1996/10/06 00:00:45 bjoerns Exp $
+/* $Id: afaudio.c,v 3.17 1997/11/27 20:09:02 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +71,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef	_WINDOWS
 #include <sys/file.h>
+#endif
 #include <AF/AFlib.h>
 
 #include "version.h"
@@ -86,10 +89,10 @@ char audio_version[] = VERSION;
 #define SOUND_DELAY 50 /* delay playing a sound for 50msec for slow machines */
 
 struct SoundCache {
-  char *fn;
-  unsigned char *sound;
-  struct timeval when;
-  int length;
+    char		*fn;
+    unsigned char	*sound;
+    struct timeval	when;
+    int			length;
 };
 
 typedef struct

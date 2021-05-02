@@ -1,10 +1,11 @@
-/* $Id: objpos.c,v 1.4 1996/12/15 21:31:41 bert Exp $
+/* $Id: objpos.c,v 1.9 1997/11/27 20:09:22 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +22,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include <windows.h>
+#else
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -38,7 +43,7 @@ char objpos_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: objpos.c,v 1.4 1996/12/15 21:31:41 bert Exp $";
+    "@(#)$Id: objpos.c,v 1.9 1997/11/27 20:09:22 bert Exp $";
 #endif
 
 void Object_position_set_clicks(object *obj, int cx, int cy)
@@ -61,12 +66,12 @@ void Object_position_set_clicks(object *obj, int cx, int cy)
     pos->by = pos->y / BLOCK_SZ;
 }
 
-void Object_position_set_pixels(object *obj, float x, float y)
+void Object_position_set_pixels(object *obj, DFLOAT x, DFLOAT y)
 {
     Object_position_set_clicks(obj, FLOAT_TO_CLICK(x), FLOAT_TO_CLICK(y));
 }
 
-void Object_position_init_pixels(object *obj, float x, float y)
+void Object_position_init_pixels(object *obj, DFLOAT x, DFLOAT y)
 {
     Object_position_set_clicks(obj, FLOAT_TO_CLICK(x), FLOAT_TO_CLICK(y));
     Object_position_remember(obj);
@@ -97,12 +102,12 @@ void Player_position_set_clicks(player *pl, int cx, int cy)
     pos->by = pos->y / BLOCK_SZ;
 }
 
-void Player_position_set_pixels(player *pl, float x, float y)
+void Player_position_set_pixels(player *pl, DFLOAT x, DFLOAT y)
 {
     Player_position_set_clicks(pl, FLOAT_TO_CLICK(x), FLOAT_TO_CLICK(y));
 }
 
-void Player_position_init_pixels(player *pl, float x, float y)
+void Player_position_init_pixels(player *pl, DFLOAT x, DFLOAT y)
 {
     Player_position_set_clicks(pl, FLOAT_TO_CLICK(x), FLOAT_TO_CLICK(y));
     Player_position_remember(pl);

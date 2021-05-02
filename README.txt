@@ -1,6 +1,6 @@
-This is the README file for XPilot 3.6.2.
+This is the README file for XPilot 3.7.1.
 
-Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers.
+Copyright © 1991-1998 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
 Please see the LICENSE file for further details.  You may not
 distribute this project without all the documentation,
@@ -9,6 +9,9 @@ source code, and the LICENSE file.
 
 
 Installation instructions are in the INSTALL file.
+
+NT and Win95 users should examine the contrib/NT subdirectory and read
+the README.txt which is there.
 
 VMS users should examine the contrib/VMS subdirectory and read the
 README.VMS which is in there.
@@ -29,6 +32,8 @@ XPilot FAQ: telnet meta.xpilot.org 4402
 
 XPilot Page on WWW: http://www.xpilot.org/
 
+XPilot for Windows info on WWW: http://www.buckosoft.com/xpilot/
+
 XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
 
 XPilot FTP archive: ftp.xpilot.org:/pub/
@@ -41,21 +46,20 @@ XPilot announcement mailing list: xpilot-announce@list.uit.no
 
 CONTRIBUTED SOFTWARE
 
-Check out the contrib directory and the contrib/xpmtp subdirectory for
-some extra nifty programs.  Especially TkXpInterface is a very convenient
-program for starting the xpilots and xpilot programs.
-Don't forget to get xmapedit from ftp.xpilot.org in the directory
-/pub/contrib.  It allows you to create and modify XPilot maps.
-Look in the same place for more XPilot contributed tools.
+Check out the contrib directory subdirectory for some extra nifty programs.
+Especially TkXpInterface is a very convenient program for starting the
+xpilots and xpilot programs.  Don't forget to get xmapedit from
+ftp.xpilot.org in the directory /pub/contrib.  It allows you to create and
+modify XPilot maps.  Look in the same place for more XPilot contributed tools.
 
 
 REPORTING BUGS
 
-If you're completely stuck, found a bug, e-mail us at:
+If you're completely stuck, found a bug, or want to say Hi! e-mail us at:
 
         xpilot@xpilot.org
 
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
 
-$Id: README,v 3.36 1997/02/25 14:18:18 bert Exp $
+$Id: README.txt,v 1.7 1998/01/28 08:53:29 bert Exp $

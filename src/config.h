@@ -1,10 +1,11 @@
-/* $Id: config.h,v 3.26 1996/10/08 11:22:38 bert Exp $
+/* $Id: config.h,v 3.32 1997/11/27 20:09:08 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,14 +39,20 @@
 #endif
 
 #ifndef	DEFAULT_MAP
-#    define DEFAULT_MAP		"globe.map"
+#	ifdef	_WINDOWS
+#		define DEFAULT_MAP		"default.map"
+#	else
+#		define DEFAULT_MAP		"globe.map"
+#	endif
 #endif
 
 #ifndef LIBDIR
 #    ifdef VMS
 #        define LIBPREFIX	"lib_disk:[lib.xgames.xpilot341.lib"
 #        define LIBDIR		LIBPREFIX "]"
-#    else
+#    elif defined(_WINDOWS)
+#        define LIBDIR		"lib/"
+#	 else
 #        define LIBDIR		"/usr/local/games/lib/xpilot/"
 #    endif
 #endif
@@ -53,6 +60,8 @@
 #ifndef DEFAULTS_FILE_NAME
 #    ifdef VMS
 #        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
+#    elif defined(_WINDOWS)
+#        define DEFAULTS_FILE_NAME	LIBDIR "defaults.txt"
 #    else
 #        define DEFAULTS_FILE_NAME	LIBDIR "/defaults"
 #    endif
@@ -60,6 +69,8 @@
 #ifndef ROBOTFILE
 #    ifdef VMS
 #        define ROBOTFILE	LIBDIR "robots"
+#    elif defined(_WINDOWS)
+#		 define	ROBOTFILE	LIBDIR "robots.txt"
 #    else
 #        define ROBOTFILE	LIBDIR "/robots"
 #    endif
@@ -67,13 +78,17 @@
 #ifndef SERVERMOTDFILE
 #    ifdef VMS
 #        define SERVERMOTDFILE	LIBDIR "servermotd"
-#    else
+#    elif defined(_WINDOWS)
+#		 define	SERVERMOTDFILE	LIBDIR "servermotd.txt"
+#	 else
 #        define SERVERMOTDFILE	LIBDIR "/servermotd"
 #    endif
 #endif
 #ifndef LOCALMOTDFILE
 #    ifdef VMS
 #        define LOCALMOTDFILE	LIBDIR "localmotd"
+#    elif defined(_WINDOWS)
+#		 define	LOCALMOTDFILE	LIBDIR "localmotd.txt"
 #    else
 #        define LOCALMOTDFILE	LIBDIR "/localmotd"
 #    endif
@@ -81,6 +96,8 @@
 #ifndef LOGFILE
 #    ifdef VMS
 #        define LOGFILE		LIBDIR "log"
+#	 elif defined(_WINDOWS)
+#		define	LOGFILE		LIBDIR "log.txt"
 #    else
 #        define LOGFILE		LIBDIR "/log"
 #    endif
@@ -95,7 +112,9 @@
 #ifndef SHIP_FILE
 #    ifdef VMS
 #        define SHIP_FILE       LIBDIR "tkxpi.shp"
-#    else
+#    elif defined(_WINDOWS)
+#		 define SHIP_FILE		"XPilot.shp"
+#	 else
 #        define SHIP_FILE       ""
 #    endif
 #endif
@@ -109,6 +128,8 @@
 #ifndef SOUNDFILE
 #    ifdef VMS
 #        define SOUNDFILE	LIBDIR "sounds"
+#    elif defined(_WINDOWS)
+#        define SOUNDFILE	LIBDIR "sounds.txt"
 #    else
 #        define SOUNDFILE	LIBDIR "/sounds"
 #    endif
@@ -137,7 +158,7 @@
  * ZCAT_EXT should define the proper compressed file extension.
  */
 
-#ifdef VMS
+#if defined(VMS) || defined(_WINDOWS)
 #    ifdef COMPRESSED_MAPS
 	/*
 	 * Couldn't find a popen(), also compress and gzip don't exist.
@@ -161,10 +182,33 @@
  */
 #define REPORT_ADDRESS	"xpilot@xpilot.org"
 
-#ifdef	DEBUG
-#    define D(x)	{ {x}; fflush(stdout); }
+#ifdef	_WINDOWS
+#	ifdef	_DEBUG
+#		define	DEBUG	1
+#		define	D(x)	{x;}
+#	else
+#		define	D(x)
+#	endif
 #else
-#    define D(x)
+#	ifdef	DEBUG
+#		define D(x)	{ {x}; fflush(stdout); }
+#	else
+#		define D(x)
+#	endif
+#endif
+
+/* Windows doesn't play with stdin/out well at all... */
+/* So for the client i route the "debug" printfs to the debug stream */
+/* The server gets 'real' messages routed to the messages window */
+#ifdef	_WINDOWS
+#	ifdef	_XPILOTNTSERVER_
+#	define	xpprintf	xpprintfW
+/*#	define	xpprintf	_Trace */
+#	else
+#	define	xpprintf	_Trace
+#	endif
+#else
+#	define	xpprintf	printf
 #endif
 
 #endif /* CONFIG_H */

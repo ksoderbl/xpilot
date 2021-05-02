@@ -1,10 +1,10 @@
-/* $Id: xp-replay.c,v 3.27 1996/10/12 08:37:18 bert Exp $
+/* $Id: xp-replay.c,v 3.30 1997/11/27 20:09:43 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
  *      Steven Singer        (S.Singer@ph.surrey.ac.uk)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -619,7 +619,7 @@ static char *RReadString(FILE *fp)
 {
     char		*s;
     int			i;
-    size_t		len;
+    int			len;
 
     len = RReadUShort(fp);
     s = (char *) MyMalloc(len + 1, MEM_STRING);
@@ -2267,12 +2267,12 @@ static void ScalePPM(unsigned char *rgbdata, int cols, int rows,
 	BuildGamma(gammatbl, gamma);
     }
 
-    newcols = cols * scale + 0.999;
-    newrows = rows * scale + 0.999;
+    newcols = (int) (cols * scale + 0.999);
+    newrows = (int) (rows * scale + 0.999);
     xscale = (double) newcols / (double) cols;
     yscale = (double) newrows / (double) rows;
-    sxscale = xscale * SCALE;
-    syscale = yscale * SCALE;
+    sxscale = (long) (xscale * SCALE);
+    syscale = (long) (yscale * SCALE);
     size_newxelrow = 3 * newcols;
     size_tempxelrow = 3 * cols;
     size_rsgsbs = cols * sizeof(long);
@@ -3217,12 +3217,15 @@ static void dox(struct xui *ui, struct xprc *rc)
 	    long	frame_rate = 1000000L / rc->fps;
 
 	    if (delta_time + 1000 < frame_rate) {
+		fd_set	rset;
 		int	rfd = ConnectionNumber(dpy);
 		int	num;
 
 		tv1.tv_sec = 0;
 		tv1.tv_usec = frame_rate - delta_time;
-		num = select(rfd + 1, &rfd, NULL, NULL, &tv1);
+		FD_ZERO(&rset);
+		FD_SET(rfd, &rset);
+		num = select(rfd + 1, &rset, NULL, NULL, &tv1);
 		if (num == 1) {
 		    continue;
 		}

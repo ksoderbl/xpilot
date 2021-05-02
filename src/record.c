@@ -1,10 +1,11 @@
-/* $Id: record.c,v 3.11 1996/10/06 00:01:32 bjoerns Exp $
+/* $Id: record.c,v 3.16 1997/11/27 20:09:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +22,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	_WINDOWS
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
 
+#ifndef	_WINDOWS
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
+#else
+#include "winX.h"
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -79,7 +86,7 @@ static int		record_dash_dirty = 0;	/* Has dashes list changed? */
 static void Dummy_newFrame(void) {}
 static void Dummy_endFrame(void) {}
 static void Dummy_paintItemSymbol(unsigned char type, Drawable drawable,
-				  GC mygc, int x, int y) {}
+				  GC mygc, int x, int y, int color) {}
 
 /*
  * Miscellaneous recording functions.
@@ -641,7 +648,7 @@ static int RFillPolygon(Display *display, Drawable drawable, GC gc,
 }
 
 static void RPaintItemSymbol(unsigned char type, Drawable drawable, GC mygc,
-			     int x, int y)
+			     int x, int y, int color)
 {
     if (drawable == p_draw) {
 	putc(RC_PAINTITEMSYMBOL, recordFP);

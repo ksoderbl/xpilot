@@ -1,10 +1,11 @@
-/* $Id: dbuff.h,v 3.14 1996/12/17 13:48:40 bert Exp $
+/* $Id: dbuff.h,v 3.19 1997/11/27 20:09:11 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,8 +37,12 @@
 # endif
 #endif
 
-#ifdef MBX
-# include <X11/extensions/multibuf.h>
+#ifdef DBE
+# include <X11/extensions/Xdbe.h>
+#else
+# ifdef MBX
+#  include <X11/extensions/multibuf.h>
+# endif
 #endif
 
 
@@ -58,9 +63,14 @@ typedef struct {
     unsigned long	masks[2];
     unsigned long	*planes;
     unsigned long	pixel;
+#ifdef DBE
+    XdbeBackBuffer	back_buffer;
+    int			dbe_major, dbe_minor;
+#else
 #ifdef MBX
     Multibuffer		draw[2];
     int			ev_base, err_base;
+#endif
 #endif
 #ifdef SPARC_CMAP_HACK
     int			fbfd;

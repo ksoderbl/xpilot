@@ -1,10 +1,11 @@
-/* $Id: widget.c,v 3.24 1996/10/12 08:37:13 bert Exp $
+/* $Id: widget.c,v 3.31 1998/01/28 08:50:08 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winClient.h"
+#else
+
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
@@ -31,15 +37,19 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#endif
 
 #include "version.h"
 #include "config.h"
 #include "const.h"
 #include "paint.h"
+#include "paintdata.h"
 #include "xinit.h"
 #include "bit.h"
 #include "error.h"
 #include "widget.h"
+#include "protoclient.h"
+#include "portability.h"
 
 char widget_version[] = VERSION;
 
@@ -114,12 +124,15 @@ void Widget_destroy(int widget_desc)
     widget_t		*w,
 			*parent;
     widget_form_t	*form;
+    widget_type_t	w_type;
 
     if ((w = Widget_pointer(widget_desc)) != NULL) {
-	w->type = WIDGET_DUMMY;
 	w->name = NULL;
+	w_type = w->type;
+	w->type = WIDGET_DUMMY;
+
 	if (w->sub != NULL) {
-	    if (w->type == WIDGET_FORM) {
+	    if (w_type == WIDGET_FORM) {
 		form = (widget_form_t *) w->sub;
 		if (form->children != NULL) {
 		    for (i = 0; i < form->num_children; i++) {
@@ -130,7 +143,7 @@ void Widget_destroy(int widget_desc)
 		    form->num_children = 0;
 		}
 	    }
-	    else if (w->type == WIDGET_VIEWER) {
+	    else if (w_type == WIDGET_VIEWER) {
 		Widget_destroy_viewer(w);
 	    }
 	    free(w->sub);
@@ -359,6 +372,7 @@ static void Widget_draw_button(widget_t *widget, bool inverse, const char *label
 static void Widget_draw_input(widget_t *widget, const char *str)
 {
     XClearWindow(dpy, widget->window);
+	IFWINDOWS( Trace("Widget_draw_input: w=%d <%s>\n", widget->window, str); )
     XDrawString(dpy, widget->window, textGC,
 		(widget->width
 		 - XTextWidth(textFont, str, strlen(str))) / 2,
@@ -629,6 +643,9 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	    break;
 	intw = (widget_int_t *) widget->sub;
 	sprintf(buf, "%d", *intw->val);
+#ifdef	_WINDOWS
+	SET_FG(WHITE);
+#endif
 	Widget_draw_input(widget, buf);
 	break;
 
@@ -644,6 +661,9 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	} else {
 	    sprintf(buf, "%d", (int) *floatw->val);
 	}
+#ifdef	_WINDOWS
+	SET_FG(WHITE);
+#endif
 	Widget_draw_input(widget, buf);
 	break;
 
@@ -671,6 +691,7 @@ static void Widget_draw_expose(int widget_desc, XExposeEvent *expose)
 	break;
 #endif
     }
+
 }
 
 void Widget_draw(int widget_desc)
@@ -840,7 +861,7 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
     int				i,
 				ival,
 				sub_widget_desc;
-    float			fval,
+    DFLOAT			fval,
 				delta,
 				fmin,
 				offset,
@@ -1039,6 +1060,15 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 			    Widget_draw(sub_widget_desc);
 			}
 		    }
+#ifdef	_WINDOWS
+		    {
+			widget_t* widget = Widget_pointer(sub_widget_desc);
+			WinXFlush(widget->window);
+			widget = Widget_pointer(widget_desc);
+			WinXFlush(widget->window);
+		    }
+#endif
+
 		}
 		break;
 	    default:
@@ -1122,6 +1152,11 @@ int Widget_event(XEvent *event)
     widget_arrow_t	*arroww;
     widget_slider_t	*sliderw;
 
+	/* xpprintf("Widget_event type=%d w=%d\n", event->type, event->xany.window); */
+
+	if (!widgets)
+		return(0);
+
     if (event->type == ButtonRelease) {
 	if (event->xbutton.button == Button1) {
 	    count = 0;
@@ -1135,6 +1170,7 @@ int Widget_event(XEvent *event)
 		    if (boolw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
+			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_ACTIVATE:
@@ -1142,6 +1178,7 @@ int Widget_event(XEvent *event)
 		    if (activw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
+			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_MENU:
@@ -1149,6 +1186,7 @@ int Widget_event(XEvent *event)
 		    if (menuw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
+			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_ARROW_RIGHT:
@@ -1165,6 +1203,7 @@ int Widget_event(XEvent *event)
 		    if (sliderw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
+			WinXFlush(event->xany.window);
 		    }
 		    break;
 		default:
@@ -1189,6 +1228,7 @@ int Widget_event(XEvent *event)
 		case ButtonPress:
 		    if (event->xbutton.button == Button1) {
 			Widget_button(event, i, true);
+			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case MotionNotify:
@@ -1196,9 +1236,11 @@ int Widget_event(XEvent *event)
 		    break;
 		case EnterNotify:
 		    Widget_inside(event, i, true);
+			WinXFlush(event->xany.window);
 		    break;
 		case LeaveNotify:
 		    Widget_inside(event, i, false);
+			WinXFlush(event->xany.window);
 		    break;
 		case ConfigureNotify:
 		    if (widgets[i].name != NULL
@@ -1572,8 +1614,8 @@ int Widget_create_int(int parent_desc,
 
 int Widget_create_float(int parent_desc,
 			int x, int y, int width, int height,
-			int border, float *val, float min, float max,
-			int (*callback)(int, void *, float *),
+			int border, DFLOAT *val, DFLOAT min, DFLOAT max,
+			int (*callback)(int, void *, DFLOAT *),
 			void *user_data)
 {
     int			widget_desc;
@@ -1743,11 +1785,14 @@ int Widget_create_popup(int width, int height, int border,
 	sattr.colormap = colormap;
 	mask |= CWColormap;
     }
+#ifdef	_WINDOWS
+    border = 3;			/* make it a popup w/title window */
+#endif
     window = XCreateWindow(dpy,
 			   DefaultRootWindow(dpy),
 			   x, y,
 			   width, height,
-			   0, dispDepth,
+			   border, dispDepth,
 			   InputOutput, visual,
 			   mask, &sattr);
     popup_desc
@@ -2313,3 +2358,12 @@ int Widget_update_viewer(int popup_desc, const char *buf, int len)
     Widget_draw(formw->children[2]);
     return 0;
 }
+
+void Widget_cleanup(void)
+{
+    if (widgets) {
+	free(widgets);
+	widgets = NULL;
+    }
+}
+

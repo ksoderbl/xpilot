@@ -14,10 +14,10 @@ new features, etc.
 
 The XPilot-for-VMS guru is Jens Koerber <koerber@ttkax1.ciw.uni-karlsruhe.de>.
 
-VMS port for XPilot (Version 3.5.0, Jens Koerber)
+VMS port for XPilot (Version 3.6.3, Jens Koerber)
 ==================================================
 
-This is a patch to xpilot 3.5.0 so that it will run under 
+This is a patch to xpilot 3.6.3 so that it will run under 
 OpenVMS 7.0 or higher (VAX and Alpha). The compilation was 
 done by the DECC 5.2 compiler. 
 

@@ -1,10 +1,11 @@
-/* $Id: paint.c,v 3.159 1996/12/15 21:30:57 bert Exp $
+/* $Id: paint.c,v 3.167 1998/01/08 19:28:49 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +22,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winClient.h"
+#include "netclient.h"
+#else
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <time.h>
 #include <limits.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#endif
+
+#include <time.h>
 
 #include "version.h"
 #include "config.h"
@@ -88,10 +97,19 @@ XGCValues	gcv;
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
 Window	keyboard;		/* Keyboard window */
+#ifdef	_WINDOWS		/* Windows needs some dummy windows (size 0,0) */
+				/* so we can store the active fonts.  Windows only */
+				/* supports 1 active font per window */
+Window	textWindow;		/* for the GC into the config window */
+Window	msgWindow;		/* for meesages into the playfield */
+Window	buttonWindow;		/* to calculate size of buttons */
+#endif
+
 Pixmap	p_draw;			/* Saved pixmap for the drawing */
 					/* area (monochromes use this) */
 Window	players;		/* Player list window */
 				/* monochromes) */
+int	maxMessages;		/* Max. number of messages to display */
 Window	about_w;		/* About window */
 Window	about_close_b;		/* About window's close button */
 Window	about_next_b;		/* About window's next button */
@@ -108,14 +126,15 @@ u_byte	spark_rand;		/* Sparkling effect */
 int	titleFlip;		/* Do special title bar flipping? */
 int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
 char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
-char	*texturePath;		/* Path list of texture directories */
+char	*texturePath = NULL;		/* Path list of texture directories */
 
 int		maxKeyDefs;
-keydefs_t	*keyDefs;
+keydefs_t	*keyDefs = NULL;
 
-other_t		*self;			/* player info */
+other_t     *self;          /* player info */
 
-long		loops = 0;
+long        loops = 0;
+
 
 static void Paint_clock(int redraw);
 
@@ -127,6 +146,7 @@ void Game_over_action(u_byte stat)
 	&& !BIT(stat,PAUSE)) {
 	XMapRaised(dpy, top);
     }
+    /* GAME_OVER -> PLAYING */
     if (BIT(old_stat, PLAYING|PAUSE|GAME_OVER) != PLAYING) {
 	if (BIT(stat, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
 	    Reset_shields();
@@ -141,6 +161,10 @@ void Paint_frame(void)
     static long		scroll_i = 0;
     static int		prev_damaged = 0;
     static int		prev_prev_damaged = 0;
+
+#ifdef	_WINDOWS	/* give any outgoing data a head start to the server */
+    Net_flush();	/* send anything to the server before returning to Windows */
+#endif
 
     if (start_loops != end_loops) {
 	errno = 0;
@@ -159,6 +183,15 @@ void Paint_frame(void)
 	    XStoreName(dpy, top, TITLE);
 
     }
+    /* This seems to have a bug (in Windows) 'cause last frame we ended
+       with an XSetForeground(white) confusing SET_FG */
+    SET_FG(colors[BLACK].pixel);
+
+#ifdef	_WINDOWS
+    p_draw = draw;		/* let's try this */
+    XSetForeground(dpy, gc, colors[BLACK].pixel);
+    XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
+#endif
 
     rd.newFrame();
 
@@ -236,8 +269,13 @@ void Paint_frame(void)
     if (p_radar != radar && radar_exposures > 0) {
 	if (BIT(instruments, SHOW_SLIDING_RADAR) == 0
 	    || BIT(Setup->mode, WRAP_PLAY) == 0) {
+#ifndef	_WINDOWS
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      0, 0, 256, RadarHeight, 0, 0);
+#else
+	    WinXBltPixToWin(p_radar, radar, 
+			  0, 0, 256, RadarHeight, 0, 0);
+#endif
 	} else {
 	    int x, y, w, h;
 	    float xp, yp, xo, yo;
@@ -272,6 +310,7 @@ void Paint_frame(void)
     else if (radar_exposures > 2) {
 	Paint_world_radar();
     }
+#ifndef _WINDOWS
     if (dbuf_state->type == PIXMAP_COPY) {
 	XCopyArea(dpy, p_draw, draw, gc,
 		  0, 0, view_width, view_height, 0, 0);
@@ -283,17 +322,28 @@ void Paint_frame(void)
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 	XSetPlaneMask(dpy, messageGC, dbuf_state->drawing_planes);
     }
-
+#endif
     if (!damaged) {
 	/* Prepare invisible buffer for next frame by clearing. */
 #if ERASE
 	Erase_end();
 #else
+	/* DBE's XdbeBackground switch option is probably faster than
+	   XFillRectangle */
+#ifdef DBE
+	if (dbuf_state->type != MULTIBUFFER) {
+#endif
 	SET_FG(colors[BLACK].pixel);
+#ifndef	_WINDOWS
 	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
+#endif
+#ifdef DBE
+	}
+#endif
 #endif
     }
 
+#ifndef	_WINDOWS
     if (talk_mapped == true) {
 	static bool toggle;
 	static long last_toggled;
@@ -304,6 +354,13 @@ void Paint_frame(void)
 	}
 	Talk_cursor(toggle);
     }
+#endif
+
+#ifdef	_WINDOWS
+    Client_score_table();
+    PaintWinClient();
+#endif
+
     Paint_clock(0);
 
     XFlush(dpy);

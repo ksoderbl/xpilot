@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.74 1996/12/08 15:57:04 bert Exp $ */
+/* $Id: Imakefile,v 3.77 1997/07/16 18:20:04 bert Exp $ */
 
 #include "Local.config"
 
@@ -65,13 +65,18 @@ DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
 #ifdef MultibufferExtension
 DEFS_MBX = -DMBX
 #endif
+#ifdef DoublebufferExtension
+DEFS_DBE = -DDBE
+#endif
 #ifdef Joystick
 DEFS_JOYSTICK = -DJOYSTICK
 #endif
 #ifdef PlockServer
 DEFS_PLOCKSERVER = -DPLOCKSERVER
 #endif
-
+#ifdef WindowScaling
+DEFS_SCALING = -DWINDOWSCALING
+#endif
 
 /*
  * Assemble defines and includes.
@@ -86,8 +91,9 @@ DEFS_PLOCKSERVER = -DPLOCKSERVER
 DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
        -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
        $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
-       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_JOYSTICK) \
-       $(DEFS_PLOCKSERVER) $(DEFS_OTHER) $(AUDIODEF)
+       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
+       $(DEFS_JOYSTICK) $(DEFS_PLOCKSERVER) $(DEFS_OTHER) \
+       $(AUDIODEF) $(DEFS_SCALING)
 INCLUDES = $(AUDIOINC) -I../lib/
 
 
@@ -104,11 +110,11 @@ depend:: includes
  */
 OBJS1 = server.o metaserver.o netserver.o contact.o event.o map.o math.o cmdline.o \
 	net.o play.o player.o rules.o update.o collision.o walls.o objpos.o error.o \
-        id.o frame.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
+        id.o frame.o portability.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
         $(STRCASECMP_OBJ) $(STRDUP_OBJ)
 SRCS1 = server.c metaserver.c netserver.c contact.c event.c map.c math.c cmdline.c \
 	net.c play.c player.c rules.c update.c collision.c walls.c objpos.c error.c \
-        id.c frame.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
+        id.c frame.c portability.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
 DEPLIBS1 = 
 
 /*
@@ -118,7 +124,7 @@ OBJS2 = \
 	xpilot.o client.o join.o net.o netclient.o \
 	xinit.o colors.o dbuff.o default.o xevent.o \
 	paint.o paintdata.o painthud.o paintmap.o \
-	paintobjects.o paintradar.o \
+	paintobjects.o paintradar.o portability.o \
 	record.o talk.o about.o configure.o widget.o \
 	math.o syslimit.o error.o socklib.o query.o \
 	caudio.o usleep.o texture.o xpmread.o \
@@ -127,7 +133,7 @@ SRCS2 = \
 	xpilot.c client.c join.c net.c netclient.c \
 	xinit.c colors.c dbuff.c default.c xevent.c \
 	paint.c paintdata.c painthud.c paintmap.c \
-	paintobjects.c paintradar.c \
+	paintobjects.c paintradar.c portability.c \
 	record.c talk.c about.c configure.c widget.c \
 	math.c syslimit.c error.c socklib.c query.c \
 	caudio.c usleep.c texture.c xpmread.c \

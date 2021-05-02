@@ -3,6 +3,19 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@xpilot.org.
 
+Release 3.7 credits:
+
+	Dick Balaska			Port to Windows NT & 95.
+	Martin Sandiford		Windows port debugging + fixes.
+	E. Hugh Woods III		Windows installation script.
+	Mark Boyns			Ideas and discussions.
+	Jens Koerber			VMS patches.
+	Ben Aveling			Several speed improvements + meaner robots.
+	Santeri Paavolainen		X11 Double Buffering extension.
+	David Leonard			msub fix for BSD.
+	Michael Driscoll		Diff for README.MAPS2
+	Guido Koopman			Several new patches.
+
 Release 3.6 credits:
 
 	Tim Auckland			Gravity currents
@@ -82,7 +95,7 @@ Release 3.0 credits:
 
 Version 2.0 credits:	(Never released)
 
-	Bert Gÿsbers			Too much to mention really.
+	Bert Gijsbers			Too much to mention really.
 	Robert Blum + more from Aachen	Lots of features.
 	Andy Skinner			Target code and maps.
 	Paul Gardner			Random map generator + optimisations.

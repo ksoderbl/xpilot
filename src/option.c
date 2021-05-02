@@ -1,10 +1,11 @@
-/* $Id: option.c,v 3.37 1996/10/21 21:40:40 bert Exp $
+/* $Id: option.c,v 3.42 1997/11/27 20:09:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,22 +22,32 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include <windows.h>
+#else
+#include "types.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#endif
 
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "types.h"
 #include "const.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
 #include "defaults.h"
 #include "error.h"
+
+#ifdef	_WINDOWS
+#include <io.h>
+#define	read(__a, __b, __c)	_read(__a, __b, __c)
+#endif
+
 
 char option_version[] = VERSION;
 
@@ -711,7 +722,7 @@ void parseOptions(void)
 
 		    case valReal:
 			{
-			    float     *ptr = (float *)desc->variable;
+			    DFLOAT     *ptr = (DFLOAT *)desc->variable;
 
 			    *ptr = atof(tmp->value);
 			    break;
@@ -770,9 +781,9 @@ void parseOptions(void)
 
 		    case valPerSec:
 			{
-			    float	*ptr = (float *)desc->variable;
+			    DFLOAT	*ptr = (DFLOAT *)desc->variable;
 
-			    *ptr = (float)(atof(tmp->value) / FPS);
+			    *ptr = (DFLOAT)(atof(tmp->value) / FPS);
 			    break;
 			}
 		    }
@@ -791,3 +802,15 @@ void parseOptions(void)
 }
 
 
+#ifdef	_WINDOWS
+/* clear the hashArray in case we're restarted */
+void	FreeOptions()
+{
+	int		i;
+    /* valPair    *tmp, *next; */
+
+	for (i=0; i<NHASH; i++) {
+	}
+
+}
+#endif

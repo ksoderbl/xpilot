@@ -10,7 +10,7 @@ $!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 $!
 $  SAY = "WRITE SYS$OUTPUT"
 $  SAY " "
-$  SAY " SETTING UP XPILOT (v 3.5.0)..."
+$  SAY " SETTING UP XPILOT (v 3.6.3)..."
 $!
 $  SET NOON
 $  SET PROCESS/PRIV=ALL

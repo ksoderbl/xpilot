@@ -1,9 +1,9 @@
-/* $Id: Imakefile,v 3.8 1995/07/17 10:53:03 bjoerns Exp $ */
+/* $Id: Imakefile,v 3.14 1997/12/30 15:11:32 bert Exp $ */
 
 #include "Local.config"
 
-MsubTargetPersistent(README,README.msub)
-AllTarget(README)
+MsubTargetPersistent(README.txt,README.txt.msub)
+AllTarget(README.txt)
 
 /*
  * Note that we provide our own *Subdirs calls, so there's no need
@@ -22,7 +22,6 @@ INSTALLMANSUBDIRS = doc					/* make install.man */
 
 MakeSubdirs($(SUBDIRS))
 DependSubdirs($(DEPSUBDIRS))
-
 CleanSubdirs($(CLEANSUBDIRS))
 MakefileSubdirs($(MAKEFILESUBDIRS))
 IncludesSubdirs($(INCLUDESSUBDIRS))

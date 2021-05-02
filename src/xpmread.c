@@ -1,10 +1,11 @@
-/* $Id: xpmread.c,v 3.5 1996/10/12 08:37:20 bert Exp $
+/* $Id: xpmread.c,v 3.10 1997/11/27 20:09:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -405,7 +406,7 @@ static int xpm_read_xpm_from_file(char *filename, XPM *xpm)
     return 0;
 }
 
-static int xpm_read_xpm_from_data(char **data, XPM *xpm)
+static int xpm_read_xpm_from_data(const char **data, XPM *xpm)
 {
     XPM_read		xpmr;
 
@@ -567,7 +568,7 @@ static Pixmap xpm_convert_to_pixmap(XPM *xpm)
     return pixmap;
 }
 
-Pixmap xpm_pixmap_from_data(char **data)
+Pixmap xpm_pixmap_from_data(const char **data)
 {
     XPM			xpm;
     Pixmap		pixmap;

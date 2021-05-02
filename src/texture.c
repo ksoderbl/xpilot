@@ -1,10 +1,11 @@
-/* $Id: texture.c,v 3.10 1996/10/12 08:37:12 bert Exp $
+/* $Id: texture.c,v 3.16 1997/11/27 20:09:37 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,17 +21,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+#ifndef	_WINDOWS
 #ifdef VMS
 #include <unixio.h>
 #endif
 #include <unistd.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
 
+#ifndef	_WINDOWS
 #include <X11/Xlib.h>
+#else
+#include "../contrib/NT/xpilot/winX.h"
+#include <io.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -56,7 +65,7 @@ enum TextureStatus {
 typedef struct texture_info {
     const char		*name;
     char		**filename_ptr;
-    char		**data;
+    const char		**data;
     Pixmap		pixmap;
     enum TextureStatus	status;
 } texture_info_t;
@@ -64,8 +73,10 @@ typedef struct texture_info {
 /*
  * XPM format pixmap data.
  */
+#define static const
 #include "../lib/textures/rock4.xpm"
 #include "../lib/textures/ball.xpm"
+#undef static
 
 static texture_info_t wall_texture_info = {
     "wall",
@@ -97,6 +108,7 @@ static texture_info_t ball_texture_info = {
  */
 static Pixmap Texture_load_from_file(char *filename)
 {
+#ifndef	_WINDOWS
     char		*dir, *colon;
     int			len;
     char		path[PATH_MAX + 1];
@@ -135,7 +147,7 @@ static Pixmap Texture_load_from_file(char *filename)
     }
 
     error("Can't find texture \"%s\"", filename);
-
+#endif
     return None;
 }
 
@@ -146,6 +158,7 @@ static Pixmap Texture_load(texture_info_t *ti)
 {
     Pixmap		pixmap = None;
 
+#ifndef	_WINDOWS
     if (ti->status == TextureLoaded) {
 	pixmap = ti->pixmap;
     }
@@ -160,7 +173,7 @@ static Pixmap Texture_load(texture_info_t *ti)
 	}
 	ti->status = (pixmap == None) ? TextureError : TextureLoaded;
     }
-
+#endif
     return pixmap;
 }
 

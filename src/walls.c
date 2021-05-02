@@ -1,10 +1,11 @@
-/* $Id: walls.c,v 3.17 1997/01/16 20:25:06 bert Exp $
+/* $Id: walls.c,v 3.26 1998/01/22 11:43:13 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +22,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef	_WINDOWS
+#include "../contrib/NT/xpilots/winServer.h"
+#include <math.h>
+#include <limits.h>
+#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -60,7 +67,7 @@ unsigned SPACE_BLOCKS = (
     );
 
 static struct move_parameters mp;
-static float wallBounceExplosionMult;
+static DFLOAT wallBounceExplosionMult;
 static char msg[MSG_LEN];
 
 /*
@@ -286,8 +293,8 @@ void Move_init(void)
     LIMIT(wallBounceFuelDrainMult, 0, 1000);
     wallBounceExplosionMult = sqrt(wallBounceFuelDrainMult);
 
-    mp.max_shielded_angle = maxShieldedWallBounceAngle * RES / 360;
-    mp.max_unshielded_angle = maxUnshieldedWallBounceAngle * RES / 360;
+    mp.max_shielded_angle = (int)(maxShieldedWallBounceAngle * RES / 360);
+    mp.max_unshielded_angle = (int)(maxUnshieldedWallBounceAngle * RES / 360);
 
     mp.obj_bounce_mask = 0;
     if (sparksWallBounce) {
@@ -700,8 +707,8 @@ static void Move_segment(move_state_t *ms)
 	    break;
 	}
 	if (mi->pl) {
-	    blk2.x = mi->pl->pos.x / BLOCK_SZ;
-	    blk2.y = mi->pl->pos.y / BLOCK_SZ;
+	    blk2.x = OBJ_X_IN_BLOCKS(mi->pl);
+	    blk2.y = OBJ_Y_IN_BLOCKS(mi->pl);
 	    if (BIT(mi->pl->status, WARPED)) {
 		if (World.block[blk2.x][blk2.y] == WORMHOLE) {
 		    int oldhole = wormXY(blk2.x, blk2.y);
@@ -733,8 +740,8 @@ static void Move_segment(move_state_t *ms)
 		&& last < World.NumWormholes
 		&& World.wormHoles[last].type != WORM_IN
 		&& last != hole
-		&& (mi->obj->pos.x / BLOCK_SZ != block.x
-		 || mi->obj->pos.y / BLOCK_SZ != block.y) ) {
+		&& (OBJ_X_IN_BLOCKS(mi->obj) != block.x
+		 || OBJ_Y_IN_BLOCKS(mi->obj) != block.y) ) {
 		ms->done.x += (World.wormHoles[last].pos.x
 		    - World.wormHoles[hole].pos.x) * BLOCK_CLICKS;
 		ms->done.y += (World.wormHoles[last].pos.y
@@ -841,7 +848,7 @@ static void Move_segment(move_state_t *ms)
 		if (3 * todo.y != 2 * todo.x) {
 		    d = (3 * start.y - 2 * start.x) / (2 - 3 * w);
 		    a.x = DOUBLE_TO_INT(d);
-		    a.y = a.x * w;
+		    a.y = (int)(a.x * w);
 		    if (dir.x * a.x < dir.x * done.x && dir.x * a.x >= 0) {
 			if (start.y + a.y <= BLOCK_CLICKS/3) {
 			    done = a;
@@ -856,7 +863,7 @@ static void Move_segment(move_state_t *ms)
 		    d = (2 * BLOCK_CLICKS - 2 * start.x - 3 * start.y) /
 			(2 + 3 * w);
 		    b.x = DOUBLE_TO_INT(d);
-		    b.y = b.x * w;
+		    b.y = (int)(b.x * w);
 		    if (dir.x * b.x < dir.x * done.x && dir.x * b.x >= 0) {
 			if (start.y + b.y <= BLOCK_CLICKS/3) {
 			    done = b;
@@ -872,7 +879,7 @@ static void Move_segment(move_state_t *ms)
 		w = (double) todo.x / todo.y;
 		d = (2 * start.x - 3 * start.y) / (3 - 2 * w);
 		a.y = DOUBLE_TO_INT(d);
-		a.x = a.y * w;
+		a.x = (int)(a.y * w);
 		if (dir.y * a.y < dir.y * done.y && dir.y * a.y >= 0) {
 		    if (start.y + a.y <= BLOCK_CLICKS/3) {
 			done = a;
@@ -885,7 +892,7 @@ static void Move_segment(move_state_t *ms)
 		d = (2 * BLOCK_CLICKS - 2 * start.x - 3 * start.y) /
 		    (3 + 2 * w);
 		b.y = DOUBLE_TO_INT(d);
-		b.x = b.y * w;
+		b.x = (int)(b.y * w);
 		if (dir.y * b.y < dir.y * done.y && dir.y * b.y >= 0) {
 		    if (start.y + b.y <= BLOCK_CLICKS/3) {
 			done = b;
@@ -911,7 +918,7 @@ static void Move_segment(move_state_t *ms)
 		 * If this is the case then we test if 3 samples
 		 * are not hitting the treasure.
 		 */
-		const float r = 0.5f * BLOCK_CLICKS;
+		const DFLOAT r = 0.5f * BLOCK_CLICKS;
 		off2.x = offset.x + delta.x;
 		off2.y = offset.y + delta.y;
 		mid.x = (offset.x + off2.x) / 2;
@@ -995,13 +1002,19 @@ static void Move_segment(move_state_t *ms)
     case TARGET:
 	if (block_type == TARGET) {
 	    if (mi->target_crashes) {
-		for (i = 0; ; i++) {
-		    if (World.targets[i].pos.x == block.x
-			&& World.targets[i].pos.y == block.y) {
-			break;
-		    }
-		}
-		ms->target = i;
+		/*-BA This can be slow for large number of targets.
+		 *     added itemID array for extra speed, (at cost of some memory.)
+		 *     
+		 *for (i = 0; ; i++) {
+		 *    if (World.targets[i].pos.x == block.x
+		 *	&& World.targets[i].pos.y == block.y) {
+		 *	break;
+		 *     }
+		 * }
+		 *
+		 * ms->target = i;
+		 */
+		ms->target = i = World.itemID[block.x][block.y];
 
 		if (!targetTeamCollision) {
 		    int team;
@@ -1114,11 +1127,11 @@ static void Move_segment(move_state_t *ms)
 	 */
 	if (sign.x * ms->todo.x >= sign.y * ms->todo.y) {
 	    double w = (double) ms->todo.y / ms->todo.x;
-	    delta.x = (BLOCK_CLICKS - offset.x - offset.y) / (1 + w);
-	    delta.y = delta.x * w;
+	    delta.x = (int)((BLOCK_CLICKS - offset.x - offset.y) / (1 + w));
+	    delta.y = (int)(delta.x * w);
 	    if (offset.x + delta.x + offset.y + delta.y < BLOCK_CLICKS) {
 		delta.x++;
-		delta.y = delta.x * w;
+		delta.y = (int)(delta.x * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1129,11 +1142,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	else {
 	    double w = (double) ms->todo.x / ms->todo.y;
-	    delta.y = (BLOCK_CLICKS - offset.x - offset.y) / (1 + w);
-	    delta.x = delta.y * w;
+	    delta.y = (int)((BLOCK_CLICKS - offset.x - offset.y) / (1 + w));
+	    delta.x = (int)(delta.y * w);
 	    if (offset.x + delta.x + offset.y + delta.y < BLOCK_CLICKS) {
 		delta.y++;
-		delta.x = delta.y * w;
+		delta.x = (int)(delta.y * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1173,11 +1186,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	if (sign.x * ms->todo.x >= sign.y * ms->todo.y) {
 	    double w = (double) ms->todo.y / ms->todo.x;
-	    delta.x = (offset.y - offset.x) / (1 - w);
-	    delta.y = delta.x * w;
+	    delta.x = (int)((offset.y - offset.x) / (1 - w));
+	    delta.y = (int)(delta.x * w);
 	    if (offset.x + delta.x < offset.y + delta.y) {
 		delta.x++;
-		delta.y = delta.x * w;
+		delta.y = (int)(delta.x * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1188,11 +1201,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	else {
 	    double w = (double) ms->todo.x / ms->todo.y;
-	    delta.y = (offset.x - offset.y) / (1 - w);
-	    delta.x = delta.y * w;
+	    delta.y = (int)((offset.x - offset.y) / (1 - w));
+	    delta.x = (int)(delta.y * w);
 	    if (offset.x + delta.x < offset.y + delta.y) {
 		delta.y--;
-		delta.x = delta.y * w;
+		delta.x = (int)(delta.y * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1232,11 +1245,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	if (sign.x * ms->todo.x >= sign.y * ms->todo.y) {
 	    double w = (double) ms->todo.y / ms->todo.x;
-	    delta.x = (offset.y - offset.x) / (1 - w);
-	    delta.y = delta.x * w;
+	    delta.x = (int)((offset.y - offset.x) / (1 - w));
+	    delta.y = (int)(delta.x * w);
 	    if (offset.x + delta.x > offset.y + delta.y) {
 		delta.x--;
-		delta.y = delta.x * w;
+		delta.y = (int)(delta.x * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1247,11 +1260,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	else {
 	    double w = (double) ms->todo.x / ms->todo.y;
-	    delta.y = (offset.x - offset.y) / (1 - w);
-	    delta.x = delta.y * w;
+	    delta.y = (int)((offset.x - offset.y) / (1 - w));
+	    delta.x = (int)(delta.y * w);
 	    if (offset.x + delta.x > offset.y + delta.y) {
 		delta.y++;
-		delta.x = delta.y * w;
+		delta.x = (int)(delta.y * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1291,11 +1304,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	if (sign.x * ms->todo.x >= sign.y * ms->todo.y) {
 	    double w = (double) ms->todo.y / ms->todo.x;
-	    delta.x = (BLOCK_CLICKS - offset.x - offset.y) / (1 + w);
-	    delta.y = delta.x * w;
+	    delta.x = (int)((BLOCK_CLICKS - offset.x - offset.y) / (1 + w));
+	    delta.y = (int)(delta.x * w);
 	    if (offset.x + delta.x + offset.y + delta.y > BLOCK_CLICKS) {
 		delta.x--;
-		delta.y = delta.x * w;
+		delta.y = (int)(delta.x * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1306,11 +1319,11 @@ static void Move_segment(move_state_t *ms)
 	}
 	else {
 	    double w = (double) ms->todo.x / ms->todo.y;
-	    delta.y = (BLOCK_CLICKS - offset.x - offset.y) / (1 + w);
-	    delta.x = delta.y * w;
+	    delta.y = (int)((BLOCK_CLICKS - offset.x - offset.y) / (1 + w));
+	    delta.x = (int)(delta.y * w);
 	    if (offset.x + delta.x + offset.y + delta.y > BLOCK_CLICKS) {
 		delta.y--;
-		delta.x = delta.y * w;
+		delta.x = (int)(delta.y * w);
 	    }
 	    leave.x = enter.x + delta.x;
 	    leave.y = enter.y + delta.y;
@@ -1519,7 +1532,7 @@ static void Cannon_dies(move_state_t *ms)
 	/* color          */ RED,
 	/* radius         */ 6,
 	/* min,max debris */ 40, 80,
-	/* min,max dir    */ cannon->dir - (RES * 0.2), cannon->dir + (RES * 0.2),
+	/* min,max dir    */ (int)(cannon->dir - (RES * 0.2)), (int)(cannon->dir + (RES * 0.2)),
 	/* min,max speed  */ 20, 50,
 	/* min,max life   */ 8, 68
 	);
@@ -1549,6 +1562,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 			somebody_flag = 0,
 			targets_remaining = 0,
 			targets_total = 0;
+    DFLOAT 	drainfactor;
 
     /* a normal shot or a direct mine hit work, cannons don't */
     /* also players suiciding on target will cause damage */
@@ -1565,10 +1579,12 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     switch(obj->type) {
     case OBJ_SHOT:
-	targ->damage += (ED_SHOT_HIT * SHOT_MULT(obj));
+	drainfactor = LENGTH(obj->vel.x, obj->vel.y);
+    	drainfactor = (drainfactor * drainfactor * obj->mass) / (ShotsSpeed * ShotsSpeed * ShotsMass);
+	targ->damage += (int)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
 	break;
     case OBJ_PULSE:
-	targ->damage += ED_LASER_HIT;
+	targ->damage += (int)(ED_LASER_HIT);
 	break;
     case OBJ_SMART_SHOT:
     case OBJ_TORPEDO:
@@ -1581,7 +1597,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 	    targ->damage = 0;
 	}
 	else {
-	    targ->damage += ED_SMART_SHOT_HIT / (obj->mods.mini + 1);
+	    targ->damage += (int)(ED_SMART_SHOT_HIT / (obj->mods.mini + 1));
 	}
 	break;
     case OBJ_MINE:
@@ -1789,11 +1805,11 @@ void Move_object(int ind)
     if (dist > 2) {
 	int max = ((dist - 2) * BLOCK_SZ) >> 1;
 	if (sqr(max) >= sqr(obj->vel.x) + sqr(obj->vel.y)) {
-	    float x = obj->pos.cx + FLOAT_TO_CLICK(obj->vel.x);
-	    float y = obj->pos.cy + FLOAT_TO_CLICK(obj->vel.y);
+	    DFLOAT x = obj->pos.cx + FLOAT_TO_CLICK(obj->vel.x);
+	    DFLOAT y = obj->pos.cy + FLOAT_TO_CLICK(obj->vel.y);
 	    x = WRAP_XCLICK(x);
 	    y = WRAP_YCLICK(y);
-	    Object_position_set_clicks(obj, x, y);
+	    Object_position_set_clicks(obj, (int)(x), (int)(y));
 	    return;
 	}
     }
@@ -1823,7 +1839,7 @@ void Move_object(int ind)
 		break;
 	    }
 	    if (ms.bounce && ms.bounce != BounceEdge) {
-		obj->life *= objectWallBounceLifeFactor;
+		obj->life = (long)(obj->life * objectWallBounceLifeFactor);
 		if (obj->life <= 0) {
 		    break;
 		}
@@ -1845,8 +1861,8 @@ void Move_object(int ind)
 		}
 		ms.vel.x *= objectWallBrakeFactor;
 		ms.vel.y *= objectWallBrakeFactor;
-		ms.todo.x *= objectWallBrakeFactor;
-		ms.todo.y *= objectWallBrakeFactor;
+		ms.todo.x = (int)(ms.todo.x * objectWallBrakeFactor);
+		ms.todo.y = (int)(ms.todo.y * objectWallBrakeFactor);
 	    }
 	    if (++nothing_done >= 5) {
 		ms.crash = CrashUnknown;
@@ -1998,8 +2014,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	if (num_pushers == 0) {
 	    sc = Rate(WALL_SCORE, pl->score);
 	    SCORE(ind, -sc,
-		  (int) pl->pos.x / BLOCK_SZ,
-		  (int) pl->pos.y / BLOCK_SZ,
+		  OBJ_X_IN_BLOCKS(pl),
+		  OBJ_Y_IN_BLOCKS(pl),
 		  hudmsg);
 	    strcat(msg, ".");
 	    Set_message(msg);
@@ -2029,15 +2045,15 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		sc = cnt[i] * Rate(pusher->score, pl->score)
 		     / (2 * total_pusher_count);
 		SCORE(GetInd[pusher->id], sc,
-		      (int) pl->pos.x / BLOCK_SZ,
-		      (int) pl->pos.y / BLOCK_SZ,
+		      OBJ_X_IN_BLOCKS(pl),
+		      OBJ_Y_IN_BLOCKS(pl),
 		      pl->name);
 	    }
 	    sc = Rate(average_pusher_score, pl->score) / 2;
 	    SCORE(ind, -sc,
-		    (int) pl->pos.x/BLOCK_SZ,
-		    (int) pl->pos.y/BLOCK_SZ,
-		    "[Shove]");
+		  OBJ_X_IN_BLOCKS(pl),
+		  OBJ_Y_IN_BLOCKS(pl),
+		  "[Shove]");
 	    strcpy(msg_ptr, ".");
 	    Set_message(msg);
 	}
@@ -2120,8 +2136,8 @@ void Move_player(int ind)
     todo.x = FLOAT_TO_CLICK(vel.x);
     todo.y = FLOAT_TO_CLICK(vel.y);
     for (i = 0; i < pl->ship->num_points; i++) {
-	float x = pl->ship->pts[i][pl->dir].x;
-	float y = pl->ship->pts[i][pl->dir].y;
+	DFLOAT x = pl->ship->pts[i][pl->dir].x;
+	DFLOAT y = pl->ship->pts[i][pl->dir].y;
 	ms[i].pos.x = pl->pos.cx + FLOAT_TO_CLICK(x);
 	ms[i].pos.y = pl->pos.cy + FLOAT_TO_CLICK(y);
 	ms[i].vel = vel;
@@ -2225,15 +2241,15 @@ void Move_player(int ind)
 	    worst = bounce;
 	    pl->last_wall_touch = frame_loops;
 	    if (ms[worst].bounce != BounceEdge) {
-		float	speed = VECTOR_LENGTH(ms[worst].vel);
+		DFLOAT	speed = VECTOR_LENGTH(ms[worst].vel);
 		int	v = (int) speed >> 2;
 		int	m = (int) (pl->mass - pl->emptymass * 0.75f);
-		float	b = 1 - 0.5f * playerWallBrakeFactor;
+		DFLOAT	b = 1 - 0.5f * playerWallBrakeFactor;
 		long	cost = (long) (b * m * v);
 		int	delta_dir,
 			abs_delta_dir,
 			wall_dir;
-		float	max_speed = BIT(pl->used, OBJ_SHIELD)
+		DFLOAT	max_speed = BIT(pl->used, OBJ_SHIELD)
 				    ? maxShieldedWallBounceSpeed
 				    : maxUnshieldedWallBounceSpeed;
 		int	max_angle = BIT(pl->used, OBJ_SHIELD)
@@ -2248,8 +2264,8 @@ void Move_player(int ind)
 
 		ms[worst].vel.x *= playerWallBrakeFactor;
 		ms[worst].vel.y *= playerWallBrakeFactor;
-		ms[worst].todo.x *= playerWallBrakeFactor;
-		ms[worst].todo.y *= playerWallBrakeFactor;
+		ms[worst].todo.x = (int)(ms[worst].todo.x * playerWallBrakeFactor);
+		ms[worst].todo.y = (int)(ms[worst].todo.y * playerWallBrakeFactor);
 
 		if (speed > max_speed) {
 		    crash = worst;
@@ -2304,8 +2320,8 @@ void Move_player(int ind)
 		cost = (cost * (RES/2 + abs_delta_dir)) / RES;
 		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-		    Add_fuel(&pl->fuel, -((cost << FUEL_SCALE_BITS)
-					  * wallBounceFuelDrainMult));
+		    Add_fuel(&pl->fuel, (long)(-((cost << FUEL_SCALE_BITS)
+					  * wallBounceFuelDrainMult)));
 		    Item_damage(ind, wallBounceDestroyItemProb);
 		}
 		if (!pl->fuel.sum && wallBounceFuelDrainMult != 0) {
@@ -2315,7 +2331,7 @@ void Move_player(int ind)
 		    break;
 		}
 		if (cost) {
-		    int intensity = cost * wallBounceExplosionMult;
+		    int intensity = (int)(cost * wallBounceExplosionMult);
 		    Make_debris(
 			/* pos.x, pos.y   */ pl->pos.x, pl->pos.y,
 			/* vel.x, vel.y   */ pl->vel.x, pl->vel.y,
@@ -2334,7 +2350,7 @@ void Move_player(int ind)
 				       PLAYER_BOUNCED_SOUND);
 		    if (ms[worst].target >= 0) {
 			cost <<= FUEL_SCALE_BITS;
-			cost *= (wallBounceFuelDrainMult / 4.0);
+			cost = (long)(cost * (wallBounceFuelDrainMult / 4.0));
 			Object_hits_target(&ms[worst], cost);
 		    }
 		}
@@ -2342,8 +2358,8 @@ void Move_player(int ind)
 	}
 	else {
 	    for (i = 0; i < pl->ship->num_points; i++) {
-		r[i].x = (vel.x) ? (float) ms[i].todo.x / vel.x : 0;
-		r[i].y = (vel.y) ? (float) ms[i].todo.y / vel.y : 0;
+		r[i].x = (vel.x) ? (DFLOAT) ms[i].todo.x / vel.x : 0;
+		r[i].y = (vel.y) ? (DFLOAT) ms[i].todo.y / vel.y : 0;
 		r[i].x = ABS(r[i].x);
 		r[i].y = ABS(r[i].y);
 	    }
@@ -2538,7 +2554,7 @@ void Turn_player(int ind)
     }
 
     if (blocked) {
-	pl->float_dir = (float) pl->dir;
+	pl->float_dir = (DFLOAT) pl->dir;
 	pl->last_wall_touch = frame_loops;
     }
 

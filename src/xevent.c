@@ -1,10 +1,11 @@
-/* $Id: xevent.c,v 3.60 1996/10/06 00:01:54 bjoerns Exp $
+/* $Id: xevent.c,v 3.73 1998/01/28 08:50:08 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-97 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gÿsbers         <bert@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,12 +25,18 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifndef	_WINDOWS
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #ifdef	__apollo
 #    include <X11/ap_keysym.h>
+#endif
+#else
+#include "../contrib/NT/xpilot/winX.h"
+#include "../contrib/NT/xpilot/winAudio.h"
+#include "../contrib/NT/xpilot/winClient.h"
 #endif
 
 #include "version.h"
@@ -45,6 +52,7 @@
 #include "widget.h"
 #include "error.h"
 #include "record.h"
+#include "portability.h"
 
 char xevent_version[] = VERSION;
 
@@ -150,6 +158,8 @@ static keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
 	    i++;
 	}
     }
+	IFWINDOWS( Trace("Lookup_key: got key ks=%04X ret=%d\n", ks, ret); )
+
 #ifdef DEVELOPMENT
     if (reset && ret == KEY_DUMMY) {
 	static XComposeStatus	compose;
@@ -196,6 +206,7 @@ static void Pointer_control_set_state(int onoff)
 
 static void Talk_set_state(bool onoff)
 {
+#ifndef	_WINDOWS
     if (onoff) {
 	/* Enable talking, disable pointer control if it is enabled. */
 	if (pointerControl) {
@@ -212,6 +223,14 @@ static void Talk_set_state(bool onoff)
 	    Pointer_control_set_state(true);
 	}
     }
+#else
+    {
+	char* wintalkstr;
+	wintalkstr = (char*)mfcDoTalkWindow();
+	if (*wintalkstr)
+	    Net_talk(wintalkstr);
+    }
+#endif
 }
 
 int Key_init(void)
@@ -413,7 +432,7 @@ static bool Key_release(keys_t key)
     return true;
 }
 
-static void Key_event(XEvent *event)
+void Key_event(XEvent *event)
 {
     KeySym 		ks;
     keys_t		key;
@@ -491,17 +510,26 @@ static void Talk_event(XEvent *event)
     }
 }
 
+#ifndef	_WINDOWS
 int xevent(int new_input)
+#else
+int xevent(XEvent event)
+#endif
 {
     static ipos		mouse;		/* position of mouse pointer. */
     int			movement = 0;	/* horizontal mouse movement. */
-    int			i, n, type;
     ipos		delta;
+#ifndef	_WINDOWS
+    int			i, n, type;
     XEvent		event;
     XClientMessageEvent	*cmev;
     XConfigureEvent	*conf;
+#endif
     static int		talk_key_repeat_count;
     static XEvent	talk_key_repeat_event;
+#ifdef DEVELOPMENT
+    static time_t	back_in_play_since;
+#endif
 
 #ifdef SOUND
     audioEvents();
@@ -511,6 +539,7 @@ int xevent(int new_input)
     Joystick_event();
 #endif /* JOYSTICK */
 
+#ifndef	_WINDOWS
     switch (new_input) {
     case 0: type = QueuedAlready; break;
     case 1: type = QueuedAfterReading; break;
@@ -523,21 +552,49 @@ int xevent(int new_input)
     n = XEventsQueued(dpy, type);
     for (i = 0; i < n; i++) {
 	XNextEvent(dpy, &event);
+#endif
 
 	switch (event.type) {
 
+#ifndef	_WINDOWS
 	case ClientMessage:
 	    cmev = (XClientMessageEvent *)&event;
 	    if (cmev->message_type == ProtocolAtom
+		&& cmev->format == 32
 		&& cmev->data.l[0] == KillAtom) {
+		/*
+		 * On HP-UX 10.20 with CDE strange things happen
+		 * sometimes when closing xpilot via the window
+		 * manager.  Keypresses may result in funny characters
+		 * after the client exits.  The remedy to this seems
+		 * to be to explicitly destroy the top window with
+		 * XDestroyWindow when the window manager asks the
+		 * client to quit and then wait for the resulting
+		 * DestroyNotify event before closing the connection
+		 * with the X server.
+		 */
+		XDestroyWindow(dpy, top);
+		XSync(dpy, True);
 		printf("Quit\n");
 		return -1;
 	    }
 	    break;
+#endif
 
 	case KeyPress:
 	    talk_key_repeat_count = 0;
 	case KeyRelease:
+#ifdef DEVELOPMENT
+	    if (back_in_play_since) {
+		time_t now = time(NULL);
+		if (now - back_in_play_since > 0) {
+		    back_in_play_since = 0;
+		} else {
+		    /* after popup ignore key events for 1 seconds. */
+		    break;
+		}
+	    }
+#endif
 	    if (event.xkey.window == top) {
 		Key_event(&event);
 	    }
@@ -659,8 +716,14 @@ int xevent(int new_input)
 	    Widget_event(&event);
 	    break;
 
+#ifndef	_WINDOWS
 	    /* Back in play */
 	case FocusIn:
+#ifdef DEVELOPMENT
+	    if (!gotFocus) {
+		time(&back_in_play_since);
+	    }
+#endif
 	    if (initialPointerControl && !talk_mapped) {
 		initialPointerControl = false;
 		Pointer_control_set_state(true);
@@ -683,7 +746,9 @@ int xevent(int new_input)
 	case MappingNotify:
 	    XRefreshKeyboardMapping(&event.xmapping);
 	    break;
+#endif
 
+#ifndef	_WINDOWS
 	case ConfigureNotify:
 	    conf = &event.xconfigure;
 	    if (conf->window == top) {
@@ -693,11 +758,14 @@ int xevent(int new_input)
 		Widget_event(&event);
 	    }
 	    break;
+#endif
 
 	default:
 	    break;
 	}
+#ifndef	_WINDOWS
     }
+#endif
     if (talk_key_repeat_count > 0) {
 	if (++talk_key_repeat_count >= FPS
 	    && (talk_key_repeat_count - FPS) % ((FPS + 2) / 3) == 0) {
@@ -707,6 +775,7 @@ int xevent(int new_input)
 	}
     }
 
+#ifndef	_WINDOWS
     if (kdpy) {
 	n = XEventsQueued(kdpy, type);
 	for (i = 0; i < n; i++) {
@@ -736,6 +805,7 @@ int xevent(int new_input)
 	    }
 	}
     }
+#endif
 
     if (pointerControl) {
 	if (!talk_mapped) {
@@ -744,23 +814,26 @@ int xevent(int new_input)
 		delta.x = draw_width / 2 - mouse.x;
 		delta.y = draw_height / 2 - mouse.y;
 		if (ABS(delta.x) > 3 * draw_width / 8
-		    || ABS(delta.y) > 3 * draw_height / 8) {
+		    || ABS(delta.y) > 1 * draw_height / 8) {
 
+#ifndef	_WINDOWS
 		    event.type = MotionNotify;
 		    event.xmotion.display = dpy;
 		    event.xmotion.window = draw;
 		    event.xmotion.x = draw_width/2;
 		    event.xmotion.y = draw_height/2;
 		    XSendEvent(dpy, draw, False, PointerMotionMask, &event);
+#endif
 		    XWarpPointer(dpy, None, draw,
 				 0, 0, 0, 0,
 				 draw_width/2, draw_height/2);
+		    IFWINDOWS( Trace("Recovering mouse m=%d/%d delta=%d/%d\n",
+		    			mouse.x, mouse.y, delta.x, delta.y); )
 		    XFlush(dpy);
 		}
 	    }
 	}
     }
-
     return 0;
 }
 

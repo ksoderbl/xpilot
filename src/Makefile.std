@@ -1,10 +1,11 @@
-# $Id: Makefile.std,v 3.66 1997/02/25 14:18:25 bert Exp $
+# $Id: Makefile.std,v 3.74 1998/01/27 11:38:22 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993-95 by
 #
 #      Bjørn Stabell        <bjoern@xpilot.org>
 #      Ken Ronny Schouten   <ken@xpilot.org>
-#      Bert Gÿsbers         <bert@xpilot.org>
+#      Bert Gijsbers        <bert@xpilot.org>
+#      Dick Balaska         <dick@xpilot.org>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.6.2
+VERSION=3.7.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -44,7 +45,7 @@ XLIB = -L/usr/local/X11/lib -lX11
 #
 # Flags for Apollo's running Domain/OS 10.4 and using Apollo's C compiler 6.9.
 # Note that you MUST specify `-W0,-natural' to the Apollo C compiler.
-# Boy, how that cost me a LOT of trouble to discover (Bert Gÿsbers).
+# Boy, how that cost me a LOT of trouble to discover (Bert Gijsbers).
 # Apollo's don't need any of the normal system libraries as they are shared :)
 #
 APOLLO_CC = cc
@@ -190,6 +191,8 @@ ULTRIX_XLIB = -lX11-mit
 #                    equivalent to reducing the nice value a few points.
 #                    Note that both require special system privileges.
 #                    Sofar this feature has only been tested on HP-UX.
+#  DBE             - To enable support for the X doublebuffer extension.
+#                    This needs an extra -lXext somewhere.
 #  MBX             - To enable support for the X multibuffer extension.
 #                    This needs an extra -lXext somewhere.
 #
@@ -254,10 +257,10 @@ INCS = $(AUDIOINC)
 #
 OBJS1 = server.o metaserver.o netserver.o contact.o event.o map.o math.o cmdline.o \
 	net.o play.o player.o rules.o update.o collision.o walls.o objpos.o error.o \
-        id.o frame.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
+        id.o frame.o portability.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
         $(STRCASECMP_OBJ) $(STRDUP_OBJ)
 SRCS1 = server.c metaserver.c netserver.c contact.c event.c map.c math.c cmdline.c \
-	net.c play.c player.c rules.c update.c collision.c walls.c objpos.c error.c \
+	net.c play.c portability.c player.c rules.c update.c collision.c walls.c objpos.c error.c \
         id.c frame.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
 
 #
@@ -267,7 +270,7 @@ OBJS2 = \
 	xpilot.o client.o join.o net.o netclient.o \
 	xinit.o colors.o dbuff.o default.o xevent.o \
 	paint.o paintdata.o painthud.o paintmap.o \
-	paintobjects.o paintradar.o \
+	paintobjects.o paintradar.o portability.o \
 	record.o talk.o about.o configure.o widget.o \
 	math.o syslimit.o error.o socklib.o query.o \
 	caudio.o usleep.o texture.o xpmread.o \
@@ -276,7 +279,7 @@ SRCS2 = \
 	xpilot.c client.c join.c net.c netclient.c \
 	xinit.c colors.c dbuff.c default.c xevent.c \
 	paint.c paintdata.c painthud.c paintmap.c \
-	paintobjects.c paintradar.c \
+	paintobjects.c paintradar.c portability.c \
 	record.c talk.c about.c configure.c widget.c \
 	math.c syslimit.c error.c socklib.c query.c \
 	caudio.c usleep.c texture.c xpmread.c \
@@ -506,80 +509,85 @@ ctags:
 ###
 server.o: server.c version.h config.h types.h const.h global.h \
  object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
- socklib.h sched.h netserver.h error.h
-metaserver.o: metaserver.c version.h const.h types.h global.h object.h \
- keys.h bit.h draw.h item.h click.h map.h rules.h proto.h socklib.h \
- pack.h metaserver.h saudio.h error.h
-netserver.o: netserver.c version.h config.h types.h const.h global.h \
+ socklib.h sched.h netserver.h error.h portability.h
+metaserver.o: metaserver.c config.h version.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
+ socklib.h pack.h metaserver.h saudio.h error.h netserver.h
+netserver.o: netserver.c types.h version.h config.h const.h global.h \
  object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  pack.h socklib.h sched.h net.h error.h netserver.h packet.h setup.h \
  saudio.h
 contact.o: contact.c version.h config.h types.h const.h global.h \
  object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  socklib.h pack.h net.h netserver.h sched.h error.h
-event.o: event.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
+event.o: event.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h score.h \
  saudio.h netserver.h
-map.o: map.c version.h config.h const.h global.h object.h keys.h bit.h \
- draw.h types.h item.h click.h map.h rules.h proto.h error.h
-math.o: math.c version.h config.h const.h draw.h types.h error.h
-cmdline.o: cmdline.c version.h config.h const.h global.h object.h \
- keys.h bit.h draw.h types.h item.h click.h map.h rules.h proto.h \
+map.o: map.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h error.h
+math.o: math.c version.h config.h const.h types.h draw.h error.h
+cmdline.o: cmdline.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  defaults.h error.h
-net.o: net.c version.h config.h const.h error.h net.h packet.h bit.h \
- socklib.h
-play.o: play.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
+net.o: net.c version.h config.h const.h types.h error.h net.h packet.h \
+ bit.h socklib.h
+play.o: play.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h score.h \
  saudio.h netserver.h error.h objpos.h
-player.o: player.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
- netserver.h saudio.h error.h objpos.h
-rules.o: rules.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h
-update.o: update.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
- saudio.h objpos.h
-collision.o: collision.c version.h config.h const.h global.h object.h \
- keys.h bit.h draw.h types.h item.h click.h map.h rules.h proto.h \
+player.o: player.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
+ score.h netserver.h saudio.h error.h objpos.h
+rules.o: rules.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h
+update.o: update.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
+ score.h saudio.h objpos.h
+collision.o: collision.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  score.h saudio.h netserver.h pack.h error.h objpos.h
-walls.o: walls.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
+walls.o: walls.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h score.h \
  saudio.h netserver.h pack.h error.h walls.h objpos.h
-objpos.o: objpos.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h objpos.h
-error.o: error.c version.h config.h const.h error.h
-id.o: id.c version.h const.h global.h object.h keys.h bit.h draw.h \
- types.h item.h click.h map.h rules.h proto.h error.h
-frame.o: frame.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h netserver.h \
+objpos.o: objpos.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
+ objpos.h
+error.o: error.c version.h config.h const.h types.h error.h
+id.o: id.c version.h const.h types.h global.h object.h keys.h bit.h \
+ draw.h item.h click.h map.h rules.h proto.h error.h
+frame.o: frame.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h netserver.h \
  saudio.h error.h
-robot.o: robot.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h score.h \
+portability.o: portability.c version.h config.h portability.h
+robot.o: robot.c version.h config.h const.h types.h global.h object.h \
+ keys.h bit.h draw.h item.h click.h map.h rules.h proto.h score.h \
  saudio.h netserver.h pack.h robot.h error.h
-robotdef.o: robotdef.c version.h config.h const.h global.h object.h \
- keys.h bit.h draw.h types.h item.h click.h map.h rules.h proto.h \
+robotdef.o: robotdef.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  score.h saudio.h netserver.h pack.h robot.h error.h
-option.o: option.c version.h config.h types.h const.h global.h \
+option.o: option.c types.h version.h config.h const.h global.h \
  object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
  defaults.h error.h
 socklib.o: socklib.c version.h socklib.h
-sched.o: sched.c version.h config.h const.h error.h types.h sched.h
-saudio.o: saudio.c version.h config.h const.h global.h object.h keys.h \
- bit.h draw.h types.h item.h click.h map.h rules.h proto.h netserver.h \
- saudio.h
+sched.o: sched.c version.h config.h const.h types.h error.h sched.h \
+ global.h object.h keys.h bit.h draw.h item.h click.h map.h rules.h \
+ portability.h
+saudio.o: saudio.c version.h config.h const.h types.h global.h \
+ object.h keys.h bit.h draw.h item.h click.h map.h rules.h proto.h \
+ netserver.h saudio.h
 xpilot.o: xpilot.c version.h config.h const.h types.h pack.h bit.h \
- error.h socklib.h net.h protoclient.h
-client.o: client.c version.h config.h const.h setup.h error.h rules.h \
- bit.h netclient.h types.h paint.h client.h draw.h item.h xinit.h
-join.o: join.c version.h config.h types.h const.h error.h client.h \
+ error.h socklib.h net.h protoclient.h portability.h
+client.o: client.c version.h config.h const.h types.h setup.h error.h \
+ rules.h bit.h netclient.h paint.h client.h draw.h item.h xinit.h \
+ protoclient.h
+join.o: join.c types.h version.h config.h const.h error.h client.h \
  draw.h item.h netclient.h protoclient.h
-net.o: net.c version.h config.h const.h error.h net.h packet.h bit.h \
- socklib.h
-netclient.o: netclient.c version.h config.h types.h const.h error.h \
+net.o: net.c version.h config.h const.h types.h error.h net.h packet.h \
+ bit.h socklib.h
+netclient.o: netclient.c types.h version.h config.h const.h error.h \
  net.h netclient.h setup.h packet.h bit.h paint.h client.h draw.h \
  item.h xinit.h pack.h socklib.h protoclient.h
-xinit.o: xinit.c version.h config.h const.h keys.h icon.h paint.h \
- types.h client.h draw.h item.h xinit.h widget.h configure.h error.h \
+xinit.o: xinit.c version.h config.h const.h types.h keys.h icon.h \
+ paint.h client.h draw.h item.h xinit.h widget.h configure.h error.h \
  netclient.h dbuff.h protoclient.h items/itemRocketPack.xbm \
  items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
  items/itemWideangleShot.xbm items/itemRearShot.xbm \
@@ -590,55 +598,57 @@ xinit.o: xinit.c version.h config.h const.h keys.h icon.h paint.h \
  items/itemEmergencyShield.xbm
 colors.o: colors.c version.h config.h const.h types.h paint.h client.h \
  draw.h item.h xinit.h error.h dbuff.h protoclient.h
-dbuff.o: dbuff.c version.h config.h const.h draw.h types.h bit.h \
+dbuff.o: dbuff.c version.h config.h const.h types.h draw.h bit.h \
  dbuff.h
-default.o: default.c version.h config.h types.h const.h paint.h \
+default.o: default.c types.h version.h config.h const.h paint.h \
  client.h draw.h item.h pack.h bit.h keys.h netclient.h xinit.h \
- error.h protoclient.h
-xevent.o: xevent.c version.h config.h const.h paint.h types.h client.h \
+ error.h protoclient.h audio.h
+xevent.o: xevent.c version.h config.h const.h types.h paint.h client.h \
  draw.h item.h xinit.h keys.h packet.h bit.h setup.h netclient.h \
  widget.h error.h record.h
-paint.o: paint.c version.h config.h const.h error.h bit.h types.h \
+paint.o: paint.c version.h config.h const.h types.h error.h bit.h \
  keys.h rules.h setup.h dbuff.h texture.h paint.h client.h draw.h \
  item.h paintdata.h record.h xinit.h
-paintdata.o: paintdata.c version.h config.h const.h error.h bit.h \
- client.h draw.h types.h item.h setup.h rules.h paint.h paintdata.h \
- record.h xinit.h
-painthud.o: painthud.c version.h config.h const.h error.h bit.h \
- types.h keys.h rules.h setup.h texture.h paint.h client.h draw.h \
- item.h paintdata.h record.h xinit.h
-paintmap.o: paintmap.c version.h config.h const.h error.h bit.h \
- types.h keys.h rules.h setup.h texture.h paint.h client.h draw.h \
- item.h paintdata.h record.h xinit.h
-paintobjects.o: paintobjects.c version.h config.h const.h error.h \
- bit.h types.h keys.h rules.h setup.h texture.h paint.h client.h \
- draw.h item.h paintdata.h record.h xinit.h
-paintradar.o: paintradar.c version.h config.h const.h error.h bit.h \
- keys.h rules.h setup.h paint.h types.h client.h draw.h item.h \
+paintdata.o: paintdata.c version.h config.h const.h types.h error.h \
+ bit.h client.h draw.h item.h setup.h rules.h paint.h paintdata.h \
+ record.h xinit.h protoclient.h
+painthud.o: painthud.c version.h config.h const.h types.h error.h \
+ bit.h keys.h rules.h setup.h texture.h paint.h client.h draw.h item.h \
+ paintdata.h record.h xinit.h protoclient.h
+paintmap.o: paintmap.c version.h config.h const.h types.h error.h \
+ bit.h keys.h rules.h setup.h texture.h paint.h client.h draw.h item.h \
+ paintdata.h record.h xinit.h protoclient.h
+paintobjects.o: paintobjects.c version.h config.h const.h types.h \
+ error.h bit.h keys.h rules.h setup.h texture.h paint.h client.h \
+ draw.h item.h paintdata.h record.h xinit.h protoclient.h
+paintradar.o: paintradar.c version.h config.h const.h types.h error.h \
+ bit.h keys.h rules.h setup.h paint.h client.h draw.h item.h \
  paintdata.h xinit.h
-record.o: record.c version.h config.h error.h const.h client.h draw.h \
- types.h item.h paint.h setup.h record.h recordfmt.h xpmread.h
-talk.o: talk.c version.h config.h const.h paint.h types.h client.h \
+portability.o: portability.c version.h config.h portability.h
+record.o: record.c version.h config.h error.h const.h types.h client.h \
+ draw.h item.h paint.h setup.h record.h recordfmt.h xpmread.h
+talk.o: talk.c version.h config.h const.h types.h paint.h client.h \
  draw.h item.h xinit.h error.h netclient.h protoclient.h
-about.o: about.c version.h config.h const.h keys.h icon.h paint.h \
- types.h client.h draw.h item.h xinit.h widget.h configure.h error.h \
+about.o: about.c version.h config.h const.h types.h keys.h paint.h \
+ client.h draw.h item.h xinit.h widget.h configure.h error.h \
  netclient.h dbuff.h protoclient.h
-configure.o: configure.c version.h config.h const.h paint.h types.h \
+configure.o: configure.c version.h config.h const.h types.h paint.h \
  client.h draw.h item.h xinit.h bit.h keys.h netclient.h widget.h \
- configure.h setup.h error.h
-widget.o: widget.c version.h config.h const.h paint.h types.h client.h \
- draw.h item.h xinit.h bit.h error.h widget.h
-math.o: math.c version.h config.h const.h draw.h types.h error.h
+ configure.h setup.h error.h protoclient.h
+widget.o: widget.c version.h config.h const.h types.h paint.h client.h \
+ draw.h item.h paintdata.h xinit.h bit.h error.h widget.h \
+ protoclient.h
+math.o: math.c version.h config.h const.h types.h draw.h error.h
 syslimit.o: syslimit.c
-error.o: error.c version.h config.h const.h error.h
+error.o: error.c version.h config.h const.h types.h error.h
 socklib.o: socklib.c version.h socklib.h
 query.o: query.c version.h config.h error.h socklib.h protoclient.h
 caudio.o: caudio.c version.h
 usleep.o: usleep.c types.h
-texture.o: texture.c version.h config.h const.h paint.h types.h \
+texture.o: texture.c version.h config.h const.h types.h paint.h \
  client.h draw.h item.h xinit.h error.h xpmread.h texture.h \
  ../lib/textures/rock4.xpm ../lib/textures/ball.xpm
-xpmread.o: xpmread.c version.h config.h const.h paint.h types.h \
+xpmread.o: xpmread.c version.h config.h const.h types.h paint.h \
  client.h draw.h item.h xinit.h error.h xpmread.h
 xp-replay.o: xp-replay.c recordfmt.h item.h buttons.h xp-replay.h \
  items/itemRocketPack.xbm items/itemCloakingDevice.xbm \
