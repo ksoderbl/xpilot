@@ -3,6 +3,111 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 3.5.1 compared to release 3.5.0:
+
+Claus Leth Gregersen provided code for textured balls and the miniature
+shipshape in the top right corner of the HUD.
+
+Andreas Sindermann added Imakefile support for the multibuffer code.
+
+Steve Payne add plock support for Linux and made it a command line option.
+
+The server now adds time information to the Welcome and Goodbye messages.
+
+Two bug fixes in the client networking code.  They were triggered on a new
+map by Robert Templeman when lots of targets exploded at once.
+
+===============================================================================
+
+This is a summary of changes of release 3.5.0 compared to release 3.4.2:
+
+A completely revamped I/O dispatcher.
+
+A new server option "-denyHosts" to deny service to one or more computers.
+It gives a list of computer addresses with optional net masks.
+For instance if you add a line like this to your defaults file:
+    denyHosts:  192.0.0.1  128.1.0.0/255.255.0.0
+your server will not respond to clients from computer 192.0.0.1, nor from
+the 128.1 network.
+
+There is now a player waiting queue for version 3.5.0 servers and clients.
+If the game is full and a new player wants to join he is put on the
+waiting queue until someone leaves.
+
+A new option "-robotFile" in the server.  It specifies an (optional) name
+of a file with parameter record for the robots.  There are 4 parameters:
+    name: gives the name to use for this robot.
+    ship: gives the shipshape.
+    type: gives the robot driver to use.  Currently only "default" is available.
+    para: gives robot driver specific parameters.  The "default" robot takes 2
+          numbers: the attack and the defence level, both in the range [0-100].
+Each robot record must be separated by one empty line.
+A sample robots file is provided.
+
+Steve Payne <srp20@cam.ac.uk> submitted a patch:
+    Here is a small patch for the ship checking in math.c. It checks a ship's 
+    width but does so against the length axis as it were. I.e. if someone has 
+    a long thin ship that is diagonal (eg Capt America) it will find the long 
+    axis and check the width _|_ to that.
+    We are assuming a width of about 12 which clobbers most people. Small ships 
+    can still get on though.
+
+Shorter timeouts for joining.  See netserver.h if you must change them.
+
+When the "NoQuit" server option is true then the SIGHUP signal will be ignored.
+This makes it possible to log out while keeping the server running.
+
+Claus Leth Gregersen (leth@daimi.aau.dk) contributed a patch for limiting
+the number of items a player can carry:
+    Btw i don't know how you feel about people that collect tons of equipment
+    and then goes to battle when they feel their guns are big enough.
+His solution is to make a limit for the number of offensive items a player
+can carry and a limit for the number of defensive items.  The new server
+options are -maxOffensiveItems and -maxDefensiveItems.
+
+Now when a player quits all his tanks will be removed from the game too.
+
+When a tank runs over a player the owner of the tank will get the points.
+
+Tanks are no longer counted when calculating if there is a homebase
+available for a player who wants to enter the game.
+
+Aleksi Suhonen (aka Metalite) added support for the X windows multibuffering
+extension:
+    This patch adds a new way of double buffering. If you just apply
+    this patch and recompile nothing will (==should) change. To make
+    the changes visible you have to compile with -DMBX and link with
+    -lXext. I've tried to make the changes in such a manner that the
+    old and the new dbuff-code can be used without recompiling the
+    game (at a slight expense on speed) such as by using command line
+    switches (currently it is fixed tho. See lines 769-786 in xinit.c).
+        What the new double buffering does is that it uses the Xserver's
+    Multibuffering Extension if it is available (It is actually very
+    common these days ...). It will probably be slower on most
+    machines with 8 bit video hardware than color map switching, but
+    on video hardware where multibuffering makes a difference it is
+    definately faster. (I've tested it on hpux-parisc, freebsd-p5 and
+    solaris-sparc. Solaris' Xsun -server seems to have a bug that
+    causes it (the Xserver) to crash every now and then. I haven't had
+    time to find out why, but I understand Sun has a patch that might
+    fix this.) We have some SS20's and SS5's here with SX - gfx cards
+    and the normal color map switching technique flickers a lot and
+    can't keep up with a 12 fps blood's music even using outline walls,
+    but with multibuffering the same SS20's can draw each frame on an
+    18 fps Tourmination with textured walls. (Ok so cluster mines cause
+    lost frames ;-)
+        This is still kind of unfinished code, but I would wish that others
+    would A) playtest it and B) contribute in how certain aspects should
+    be handled (read the diffs .. please ;-) Also .. I couldn't find
+    the niche where I should specify that libXext is needed in Local.config.
+
+A new client option "-multibuffer true/false" has been added to turn on
+or off the multibuffer support dynamically.
+
+Jens Koerber updated his VMS support for XPilot.  See contrib/README.VMS.
+
+===============================================================================
+
 This is a summary of changes of release 3.4.2 compared to release 3.4.1:
 
 Added extra checks to prevent players shooting more than the maximum

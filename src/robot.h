@@ -1,4 +1,4 @@
-/* $Id: robot.h,v 3.14 1995/01/28 16:15:47 bert Exp $
+/* $Id: robot.h,v 3.15 1996/04/07 17:05:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -20,7 +20,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-/* Robot code submitted by Maurice Abraham. */
+/* Robot code originally submitted by Maurice Abraham. */
 
 #ifndef ROBOT_H
 #define ROBOT_H
@@ -35,32 +35,20 @@
 #define ROB_LOOK_AH		2
 
 /*
- * Flags for the default robots being in different modes (or moods).
- */
-#define RM_ROBOT_IDLE         	(1 << 2)
-#define RM_EVADE_LEFT         	(1 << 3)
-#define RM_EVADE_RIGHT          (1 << 4)
-#define RM_ROBOT_CLIMB          (1 << 5)
-#define RM_HARVEST            	(1 << 6)
-#define RM_ATTACK             	(1 << 7)
-#define RM_TAKE_OFF           	(1 << 8)
-#define RM_CANNON_KILL		(1 << 9)
-#define RM_REFUEL		(1 << 10)
-#define RM_NAVIGATE		(1 << 11)
-
-/*
  * We would like to support several different robot types.
  * Each robot type is defined by one name and is accessed
  * by several functions or methods.
  * The name is used to enable configuration files to
  * specify which robot type to use for which robot name.
  * The functions are:
- *    1) The global initialization function for this specific
- *       robot type.  It is called once at startup to allow
- *       the robot type implementation to setup global static resources.
+ *
+ *    1) The global initialization function for this specific robot type.
+ *       It is called once at startup to initialise a structure with
+ *       function pointers to the robot type action routines.
+ *
  *    2) The initialization function to enable robot type
  *       specific adjustments and possible memory allocation
- *       of private data structures for this specific robot instance.
+ *       of private data structures for one specific robot instance.
  *       This function will be called with an extra string argument.
  *       The string argument may contain robot type specific
  *       configuration data, like attack and defend mode.
@@ -68,8 +56,10 @@
  *       for this string as it sees fit.  But when this string
  *       is empty the robot type initialization code will
  *       have to provide suitable default configuration values.
+ *
  *    3) The go home function which is called whenever the robot
  *       is placed at its homebase.
+ *
  *    4) The playing function which gets called each loop.
  *       The programming challenge here is to implement
  *       different characters per robot, while at the
@@ -77,20 +67,25 @@
  *       time this function is called.  i.e., try to give
  *       the robot some long term goals which are only
  *       recalculated once every couple of seconds or so.
+ *
  *    5) The war function which is called when the robot declares war.
  *       This function takes an extra killer argument, which is
  *       the player id of the player the robot has declared war against.
  *       If this id equals -1 then the routine should reset the war state.
+ *
  *    6) The war_on_player function returns the id of the player
  *       who the robot is in a state of war with.
  *       If the robot is not in war with another player
  *       then this function should return -1.
+ *
  *    7) The message function can accept any possible commands to the robot.
  *       The suggestion here is that if you plan to let the robot type
  *       be controllable by messages that you give feedback to all
  *       of the players what commands the robot has accepted.
+ *
  *    8) The cleanup function should free any allocated resources
  *       for this specific robot instance.
+ *
  * The recommended practice is to define your new robot types
  * in a separate file and to only declare your robot type
  * specific functionprototypes in robot.c and add one
@@ -98,7 +93,6 @@
  */
 typedef struct {
     char		*name;
-    void		(*setup)(void);
     void		(*create)(int ind, char *str);
     void		(*go_home)(int ind);
     void		(*play)(int ind);

@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.67 1995/12/04 14:47:22 bert Exp $
+/* $Id: xpilot.c,v 3.74 1996/05/02 16:06:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -24,12 +24,7 @@
 #ifdef _IBMESA
 # define _SOCKADDR_LEN
 #endif
-#ifdef VMS
-# include <unixio.h>
-# include <unixlib.h>
-#else
-# include <unistd.h>
-#endif
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -50,11 +45,7 @@
 #if defined(SVR4) || defined(__svr4__)
 # include <sys/sockio.h>
 #endif
-#ifdef VMS
-# include <time.h>
-#else
 # include <sys/time.h>
-#endif
 #ifndef LINUX0
 # include <net/if.h>
 #endif
@@ -79,7 +70,7 @@ char xpilot_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.67 1995/12/04 14:47:22 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.74 1996/05/02 16:06:05 bert Exp $";
 #endif
 
 #if defined(LINUX0) || defined(VMS)
@@ -324,12 +315,13 @@ static bool Process_commands(sockbuf_t *ibuf)
 {
     int			i, len, retries, delay, max_robots;
     char		c, status, reply_to, str[MAX_LINE];
-    unsigned short	port;
+    unsigned short	port, qpos;
     int			has_credentials = 0;
     int			cmd_credentials = 0;
     int			privileged_cmd;
     int			max_replies;
     long		key = 0;
+    time_t		qsent = 0;
     static char		localhost[] = "127.0.0.1";
 
 
@@ -368,6 +360,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		c = 'D';
 	    else
 		c = 'J';
+	    str[0] = str[1] = '\0';
 	}
 
 	/*
@@ -513,7 +506,11 @@ static bool Process_commands(sockbuf_t *ibuf)
 		 */
 
 	    case 'J':				/* Trying to enter game. */
-		if (str[1] >= '0' && str[1] <= '9') {
+		if (str[1] == '0') {
+		    printf("Team '0' is reserved for robots.");
+		    team = TEAM_NOT_SET;
+		}
+		else if (str[1] > '0' && str[1] <= '9') {
 		    team = str[1] - '0';
 		    printf("Joining team %d\n", team);
 		}
@@ -521,8 +518,17 @@ static bool Process_commands(sockbuf_t *ibuf)
 		    team = TEAM_NOT_SET;
 		    printf("Team set to unspecified\n");
 		}
-		Packet_printf(ibuf, "%c%s%s%s%d", ENTER_GAME_pack,
-			      nick_name, display, hostname, team);
+		else if (str[1] != '\0') {
+		    team = TEAM_NOT_SET;
+		}
+		if (server_version < 0x3430) {
+		    Packet_printf(ibuf, "%c%s%s%s%d", ENTER_GAME_pack,
+				  nick_name, display, hostname, team);
+		} else {
+		    Packet_printf(ibuf, "%c%s%s%s%d", ENTER_QUEUE_pack,
+				  nick_name, display, hostname, team);
+		    time(&qsent);
+		}
 		break;
 
 	    case 'S':				/* Report status. */
@@ -611,6 +617,8 @@ static bool Process_commands(sockbuf_t *ibuf)
 		return (false);
 	    }
 
+	    SetTimeout(0, 500*1000);
+
 	    /*
 	     * Now try and interpret the result.
 	     */
@@ -670,6 +678,33 @@ static bool Process_commands(sockbuf_t *ibuf)
 		    }
 		    break;
 
+		case ENTER_QUEUE_pack:
+		    if (Packet_scanf(ibuf, "%hu", &qpos) <= 0) {
+			errno = 0;
+			error("Incomplete queue reply from server");
+		    } else {
+			printf("... queued at position %2d\n", qpos);
+		    }
+		    /*
+		     * Acknowledge each 10 seconds that we are still
+		     * interested to be on the waiting queue.
+		     */
+		    if (qsent + 10 <= time(NULL)) {
+			Sockbuf_clear(ibuf);
+			Packet_printf(ibuf, "%u%s%hu", VERSION2MAGIC(server_version),
+				      real_name, GetPortNum(ibuf->sock));
+			Packet_printf(ibuf, "%c%s%s%s%d", ENTER_QUEUE_pack,
+				      nick_name, display, hostname, team);
+			if (DgramWrite(ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
+			    error("Couldn't send request to server.");
+			    exit(1);
+			}
+			time(&qsent);
+		    }
+		    SetTimeout(12, 0);
+		    max_replies = 2;
+		    break;
+
 		case CREDENTIALS_pack:
 		    if (Packet_scanf(ibuf, "%ld", &key) <= 0) {
 			errno = 0;
@@ -726,7 +761,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		error("Requested operation is undefined, says the server");
 		break;
 	    default:
-		error("Wrong status '%d'", status);
+		error("Server answers with unknown error status '%02x'", status);
 		break;
 	    }
 
@@ -751,7 +786,6 @@ static bool Process_commands(sockbuf_t *ibuf)
 		}
 	    }
 
-	    SetTimeout(0, 500*1000);
 	} while (--max_replies > 0 && SocketReadable(ibuf->sock));
 
 	/*

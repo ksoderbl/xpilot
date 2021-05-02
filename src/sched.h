@@ -1,6 +1,6 @@
-/* $Id: version.h.msub,v 3.3 1995/03/15 18:36:18 bjoerns Exp $
+/* $Id: sched.h,v 3.1 1996/04/07 17:05:16 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-96 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -21,18 +21,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	VERSION_H
-#define	VERSION_H
+#ifndef	SCHED_H
+#define	SCHED_H
 
-#if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-96"
-#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-#   pragma VERSIONID		"XPilot 3.5.1"
+void block_timer(void);
+void allow_timer(void);
+void install_timer_tick(void (*func)(void), int freq);
+void install_timeout(void (*func)(void *), int offset, void *arg);
+void remove_timeout(void (*func)(void *), void *arg);
+void install_input(void (*func)(int, void *), int fd, void *arg);
+void remove_input(int fd);
+void sched(void);
+void stop_sched(void);
+
 #endif
-
-#define VERSION			"3.5.1"
-#define TITLE			"XPilot 3.5.1"
-#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-#define COPYRIGHT		"Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-
-#endif /* VERSION_H */

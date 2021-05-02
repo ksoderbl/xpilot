@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.52 1995/01/16 16:45:54 bert Exp $
+$Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -119,6 +119,14 @@ $Id: BUGS,v 3.52 1995/01/16 16:45:54 bert Exp $
 <DESC>  941014: Karen Gould
 	Sometimes in some maps on some servers for some players the weapon modifiers
 	get cleared when reappearing on the homebase after a death.
+<REMARK>960430: Aleksi Suhonen
+	I think this is caused by the users' ClearModifiers-key
+	getting 'stuck'. (I.e. the draw-window gets the keypress
+	event, but not the keyrelease event.) If this is the case
+	then this bug is reduced into another (I don't know should
+	I call this a bug or a) feature, that when a new round
+	starts, the client sends a keypress event to the xpilot
+	server for each key that it thinks is depressed.
 
 <BUG>   31
 <STATUS>open/medium

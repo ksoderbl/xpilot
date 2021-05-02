@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.81 1995/11/12 22:14:44 bert Exp $
+/* $Id: cmdline.c,v 3.86 1996/05/13 19:28:15 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -25,6 +25,7 @@
 #define SERVER
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "version.h"
 #include "config.h"
@@ -32,12 +33,13 @@
 #include "global.h"
 #include "proto.h"
 #include "defaults.h"
+#include "error.h"
 
 char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.81 1995/11/12 22:14:44 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.86 1996/05/13 19:28:15 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -48,6 +50,7 @@ int		ShotsLife;		/* Default number of ticks */
 					/* each shot will live */
 int		WantedNumRobots;	/* How many robots should enter */
 					/* the game? */
+char		*robotFile;		/* Filename for robot parameters */
 int		robotsTalk;		/* Do robots talk? */
 int		robotsLeave;		/* Do robots leave at all? */
 int		robotLeaveLife;		/* Max life per robot (0=off)*/
@@ -152,6 +155,7 @@ bool		shieldedItemPickup;	/* Pickup items with shields up? */
 bool		shieldedMining;		/* Detach mines with shields up? */
 bool		laserIsStunGun;		/* Is the laser a stun gun? */
 bool		reportToMetaServer;	/* Send status to meta-server? */
+char		*denyHosts;		/* Computers which are denied service */
 float		gameDuration;		/* total duration of game in minutes */
 
 bool		teamAssign;		/* Assign player to team if not set? */
@@ -170,7 +174,14 @@ int		raceLaps;		/* how many laps per race */
 bool		lockOtherTeam;		/* lock ply from other teams when dead? */
 bool		loseItemDestroys; 	/* destroy or drop when player */
 					/* uses loseItem */
-static void tuner_none(void) {}
+
+int		maxOffensiveItems;	/* how many offensive and defensive */
+int		maxDefensiveItems;	/* items can player carry */
+
+bool		pLockServer;		/* Is server swappable out of memory?  */
+
+
+static void tuner_none(void)  {}
 static void tuner_dummy(void) {}
 
 static optionDesc options[] = {
@@ -263,6 +274,15 @@ static optionDesc options[] = {
 	valInt,
 	tuner_none,
 	"How many robots do you want?\n"
+    },
+    {
+	"robotFile",
+	"robotFile",
+	ROBOTFILE,
+	&robotFile,
+	valString,
+	tuner_none,
+	"The file containing parameters for robot details.\n"
     },
     {
 	"robotsTalk",
@@ -616,6 +636,16 @@ static optionDesc options[] = {
 	valBool,
 	tuner_none,
 	"Keep the meta server informed about our game?\n"
+    },
+    {
+	"denyHosts",
+	"denyHosts",
+	"",
+	&denyHosts,
+	valString,
+	Set_deny_hosts,
+	"List of network addresses of computers which are denied service.\n"
+	"Each address may optionally be followed by a slash and a network mask.\n"
     },
     {
 	"limitedVisibility",
@@ -1495,6 +1525,37 @@ static optionDesc options[] = {
 	tuner_none,
 	"Destroy item that player drops. Otherwise drop it.\n"
     },
+    {
+	"maxOffensiveItems",
+	"maxOffensiveItems",
+	"100",
+	&maxOffensiveItems,
+	valInt,
+	tuner_dummy,
+	"How many offensive items a player can carry.\n"
+    },
+    {
+	"maxDefensiveItems",
+	"maxDefensiveItems",
+	"100",
+	&maxDefensiveItems,
+	valInt,
+	tuner_dummy,
+	"How many defensive items a player can carry.\n"
+    },
+    {
+	"pLockServer",
+	"pLockServer",
+#ifdef PLOCKSERVER
+	"true",
+#else
+	"false",
+#endif
+	&pLockServer,
+	valBool,
+	tuner_plock,
+	"Whether the server is prevented from being swapped out of memory.\n"
+    },
 };
 
 
@@ -1741,6 +1802,17 @@ int Tune_option(char *opt, char *val)
 	    *(float *)options[j].variable = fval;
 	    (*options[j].tuner)();
 	    return 1;
+	case valString:
+	    /* this is dubious and results in unfreed memory: */
+	    {
+		char *s = strdup(val);
+		if (!s) {
+		    return 0;
+		}
+		*(char **)options[j].variable = s;
+		(*options[j].tuner)();
+		return 1;
+	    }
 	default:
 	    return -1;	/* Operation undefined */
 	}

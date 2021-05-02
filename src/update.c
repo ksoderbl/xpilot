@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.69 1995/11/30 21:48:08 bert Exp $
+/* $Id: update.c,v 3.70 1996/04/07 17:05:18 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -39,7 +39,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.69 1995/11/30 21:48:08 bert Exp $";
+    "@(#)$Id: update.c,v 3.70 1996/04/07 17:05:18 bert Exp $";
 #endif
 
 
@@ -397,13 +397,13 @@ static void Tractor_beam (player *pl)
     dvy = tsin(theta) * (force / pl->mass);
     pl->vel.x += dvx;
     pl->vel.y += dvy;
-    Record_shove(pl, victim, loops);
+    Record_shove(pl, victim, frame_loops);
 
     dvx = -(tcos(theta) * (force / victim->mass));
     dvy = -(tsin(theta) * (force / victim->mass));
     victim->vel.x += dvx;
     victim->vel.y += dvy;
-    Record_shove(victim, pl, loops);
+    Record_shove(victim, pl, frame_loops);
 }
 
 /********** **********
@@ -458,7 +458,7 @@ void Update_objects(void)
 	    if ((World.fuel[i].fuel += fuel) >= MAX_STATION_FUEL) {
 		World.fuel[i].fuel = MAX_STATION_FUEL;
 	    }
-	    else if (World.fuel[i].last_change + frames_per_update > loops) {
+	    else if (World.fuel[i].last_change + frames_per_update > frame_loops) {
 		/*
 		 * We don't send fuelstation info to the clients every frame
 		 * if it wouldn't change their display.
@@ -466,7 +466,7 @@ void Update_objects(void)
 		continue;
 	    }
 	    World.fuel[i].conn_mask = 0;
-	    World.fuel[i].last_change = loops;
+	    World.fuel[i].last_change = frame_loops;
 	}
     }
 
@@ -500,7 +500,7 @@ void Update_objects(void)
 		World.block[World.cannon[i].pos.x][World.cannon[i].pos.y]
 		    = CANNON;
 		World.cannon[i].conn_mask = 0;
-		World.cannon[i].last_change = loops;
+		World.cannon[i].last_change = frame_loops;
 	    }
 	    continue;
 	}
@@ -521,7 +521,7 @@ void Update_objects(void)
 		    = TARGET;
 		World.targets[i].conn_mask = 0;
 		World.targets[i].update_mask = (unsigned)-1;
-		World.targets[i].last_change = loops;
+		World.targets[i].last_change = frame_loops;
 
 		if (targetSync) {
 		    u_short team = World.targets[i].team;
@@ -532,7 +532,7 @@ void Update_objects(void)
 				       [World.targets[j].pos.y] = TARGET;
 			    World.targets[j].conn_mask = 0;
 			    World.targets[j].update_mask = (unsigned)-1;
-			    World.targets[j].last_change = loops;
+			    World.targets[j].last_change = frame_loops;
 			    World.targets[j].dead_time = 0;
 			    World.targets[j].damage = TARGET_DAMAGE;
 			}
@@ -548,7 +548,7 @@ void Update_objects(void)
 	if (World.targets[i].damage >= TARGET_DAMAGE) {
 	    World.targets[i].damage = TARGET_DAMAGE;
 	}
-	else if (World.targets[i].last_change + TARGET_UPDATE_DELAY < loops) {
+	else if (World.targets[i].last_change + TARGET_UPDATE_DELAY < frame_loops) {
 	    /*
 	     * We don't send target info to the clients every frame
 	     * if the latest repair wouldn't change their display.
@@ -556,7 +556,7 @@ void Update_objects(void)
 	    continue;
 	}
 	World.targets[i].conn_mask = 0;
-	World.targets[i].last_change = loops;
+	World.targets[i].last_change = frame_loops;
     }
 
     /* * * * * *
@@ -694,9 +694,9 @@ void Update_objects(void)
 	    else if (pl->updateVisibility
 		     || Players[j]->updateVisibility
 		     || rand() % UPDATE_RATE
-		     < ABS(loops - pl->visibility[j].lastChange)) {
+		     < ABS(frame_loops - pl->visibility[j].lastChange)) {
 
-		pl->visibility[j].lastChange = loops;
+		pl->visibility[j].lastChange = frame_loops;
 		pl->visibility[j].canSee
 		    = rand() % (pl->item[ITEM_SENSOR] + 1)
 			> (rand() % (Players[j]->item[ITEM_CLOAK] + 1));
@@ -718,13 +718,13 @@ void Update_objects(void)
 		    if (World.fuel[pl->fs].fuel > REFUEL_RATE) {
 			World.fuel[pl->fs].fuel -= REFUEL_RATE;
 			World.fuel[pl->fs].conn_mask = 0;
-			World.fuel[pl->fs].last_change = loops;
+			World.fuel[pl->fs].last_change = frame_loops;
 			Add_fuel(&(pl->fuel), REFUEL_RATE);
 		    } else {
 			Add_fuel(&(pl->fuel), World.fuel[pl->fs].fuel);
 			World.fuel[pl->fs].fuel = 0;
 			World.fuel[pl->fs].conn_mask = 0;
-			World.fuel[pl->fs].last_change = loops;
+			World.fuel[pl->fs].last_change = frame_loops;
 			CLR_BIT(pl->used, OBJ_REFUEL);
 			break;
 		    }
@@ -754,7 +754,7 @@ void Update_objects(void)
 		    if (pl->fuel.tank[pl->fuel.current] > REFUEL_RATE) {
 			targ->damage += TARGET_FUEL_REPAIR_PER_FRAME;
 			targ->conn_mask = 0;
-			targ->last_change = loops;
+			targ->last_change = frame_loops;
 			Add_fuel(&(pl->fuel), -REFUEL_RATE);
 			if (targ->damage > TARGET_DAMAGE) {
 			    targ->damage = TARGET_DAMAGE;
@@ -1023,7 +1023,7 @@ void Update_objects(void)
     /*
      * Now update labels if need be.
      */
-    if (updateScores && loops % UPDATE_SCORE_DELAY == 0)
+    if (updateScores && frame_loops % UPDATE_SCORE_DELAY == 0)
 	Update_score_table();
 }
 

@@ -1,4 +1,4 @@
-/* $Id: net.c,v 3.30 1995/06/09 18:00:18 bert Exp $
+/* $Id: net.c,v 3.31 1996/05/02 16:05:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -21,28 +21,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
-#if defined(__hpux) || defined(VMS)
+#if defined(__hpux)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
-#ifdef VMS
-#include <socket.h>
-#include <in.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
 #include <netdb.h>
 #ifdef __sgi
 #include <bstring.h>

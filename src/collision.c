@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 3.132 1995/12/04 14:47:10 bert Exp $
+/* $Id: collision.c,v 3.136 1996/04/10 15:14:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -23,6 +23,7 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -37,12 +38,13 @@
 #include "item.h"
 #include "netserver.h"
 #include "pack.h"
+#include "error.h"
 
 char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.132 1995/12/04 14:47:10 bert Exp $";
+    "@(#)$Id: collision.c,v 3.136 1996/04/10 15:14:50 bert Exp $";
 #endif
 
 #define in_range(o1, o2, r)			\
@@ -360,6 +362,13 @@ static void PlayerCollision(void)
 			Score_players(i, -sc, Players[j]->name,
 				      j, -sc2, pl->name);
 		    } else {
+			int i_tank_owner = i;
+			if (IS_TANK_IND(i)) {
+			    i_tank_owner = GetInd[Players[i]->lock.pl_id];
+			    if (i_tank_owner == j) {
+				i_tank_owner = i;
+			    }
+			}
 			sprintf(msg, "%s ran over %s.",
 				pl->name, Players[j]->name);
 			Set_message(msg);
@@ -368,12 +377,19 @@ static void PlayerCollision(void)
 					   PLAYER_RAN_OVER_PLAYER_SOUND);
 			pl->kills++;
 			sc = Rate(pl->score, Players[j]->score) / 3;
-			Score_players(i, sc, Players[j]->name,
+			Score_players(i_tank_owner, sc, Players[j]->name,
 				      j, -sc, pl->name);
 		    }
 
 		} else {
 		    if (BIT(pl->status, KILLED)) {
+			int j_tank_owner = j;
+			if (IS_TANK_IND(j)) {
+			    j_tank_owner = GetInd[Players[j]->lock.pl_id];
+			    if (j_tank_owner == i) {
+				j_tank_owner = j;
+			    }
+			}
 			sprintf(msg, "%s ran over %s.",
 				Players[j]->name, pl->name);
 			Set_message(msg);
@@ -381,7 +397,7 @@ static void PlayerCollision(void)
 					   PLAYER_RAN_OVER_PLAYER_SOUND);
 			Players[j]->kills++;
 			sc = Rate(Players[j]->score, pl->score) / 3;
-			Score_players(j, sc, pl->name,
+			Score_players(j_tank_owner, sc, pl->name,
 				      i, -sc, Players[j]->name);
 		    }
 		}
@@ -520,6 +536,40 @@ static void PlayerCollision(void)
     }
 }
 
+static int IsOffensiveItem(enum Item i)
+{
+    if (i == ITEM_WIDEANGLE || i == ITEM_REARSHOT || i == ITEM_MINE ||
+	i == ITEM_MISSILE || i == ITEM_LASER )
+	return true;
+    return false;
+}
+
+static int IsDefensiveItem(enum Item i)
+{
+    if (i == ITEM_CLOAK || i == ITEM_ECM || i == ITEM_TRANSPORTER || 
+	i == ITEM_TRACTOR_BEAM || i == ITEM_EMERGENCY_SHIELD || i == ITEM_TANK)
+	return true;
+    return false;
+}
+
+static int CountOffensiveItems(player *pl)
+{
+    return (pl->item[ITEM_WIDEANGLE] + pl->item[ITEM_REARSHOT] + 
+	    pl->item[ITEM_MINE] + pl->item[ITEM_MISSILE] + 
+	    pl->item[ITEM_LASER]); 
+}
+
+static int CountDefensiveItems(player *pl)
+{
+    int count;
+
+    count = pl->item[ITEM_CLOAK] + pl->item[ITEM_ECM] + 
+	    pl->item[ITEM_TRANSPORTER] + pl->item[ITEM_TRACTOR_BEAM] + 
+	    pl->item[ITEM_EMERGENCY_SHIELD] + pl->fuel.num_tanks;
+    if (pl->emergency_shield_left) 
+ 	count++;
+    return count;
+}
 
 static void PlayerObjectCollision(int ind)
 {
@@ -640,6 +690,31 @@ static void PlayerObjectCollision(int ind)
 	    return;
 
 	case OBJ_ITEM:
+	    if (IsOffensiveItem((enum Item) obj->info)) {
+		int off_items = CountOffensiveItems(pl);
+		if (off_items >= maxOffensiveItems) {
+		    /* Set_player_message(pl, "No space left for offensive items."); */
+		    Delta_mv((object *)pl, obj);
+		    continue;
+		} 
+		else if (obj->count > 1
+			 && off_items + obj->count > maxOffensiveItems) {
+		    obj->count = maxOffensiveItems - off_items;
+		}
+	    } 
+	    else if (IsDefensiveItem((enum Item) obj->info)) {
+		int def_items = CountDefensiveItems(pl);
+		if (def_items >= maxDefensiveItems) {
+		    /* Set_player_message(pl, "No space for left for defensive items."); */
+		    Delta_mv((object *)pl, obj);
+		    continue;
+		} 
+		else if (obj->count > 1
+			 && def_items + obj->count > maxDefensiveItems) {
+		    obj->count = maxDefensiveItems - def_items;
+		}
+	    }
+
 	    switch ((enum Item) obj->info) {
 	    case ITEM_WIDEANGLE:
 		pl->item[ITEM_WIDEANGLE] += obj->count;

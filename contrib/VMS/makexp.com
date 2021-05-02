@@ -3,7 +3,9 @@ $ on control_y then goto exit
 $!
 $ if p1 .eqs. "CLEAN" then goto clean
 $ if p1 .eqs. "CLOBBER" then goto clobber
+$inter:
 $ if p1 .eqs. "" then inquire p1 "DECC(D) or GCC(G) Compiler ?"
+$ if p1 .eqs. "" then goto inter
 $!
 $!      Compile the Xdaliclock Application, adapted for xpilot
 $!
@@ -24,6 +26,7 @@ $!
 $ if p1.eqs."D".or.p1.eqs."d"
 $ then
 $   options="CC/decc/standard=vaxc/precision=single"
+$   prefix="/prefix=(ALL,EXCEPT=(ioctl,strcasecmp,strncasecmp,strdup,gettimeofday))"
 $   if cpu .eqs. "VAX" 
 $   then
 $     defines="/define=(VMS,VAX)"
@@ -43,15 +46,22 @@ $   include="/include=[.vms_include]"
 $   debug="/optimize"
 $!  debug="/debug"
 $ endif
-$ cc_options=options+defines+include+debug
+$ cc_options=options+defines+include+debug+prefix
 $!
-$!      Compile the "C" files
+$CLIENT:
+$ !!! DECC < 5.2 do not have STRNCASECMP !!!
+$ IF  F$SEARCH("MATH.OBJ") THEN DELETE/NOLOG/NOCONFIRM MATH.OBJ;*  
+$!
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Compiling the XPilot client image (XPILOT_''CPU') ...   "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$ on error then goto replay
 $!
 $! procedure target	   command 			   depends upon
 $! CALL MAKE .OBJ	   "CC ''cc_options' .C"	   .C
 $!
-$ write sys$output " "
-$ write sys$output "Compiling XPILOT Client"
 $ CALL MAKE XPILOT.OBJ 	   "''cc_options' XPILOT.C"	   XPILOT.C
 $ CALL MAKE CLIENT.OBJ	   "''cc_options' CLIENT.C" 	   CLIENT.C
 $ CALL MAKE JOIN.OBJ	   "''cc_options' JOIN.C"	   JOIN.C
@@ -83,31 +93,53 @@ $ write sys$output "Building XPILOT Client Image"
 $ CALL MAKE XPILOT.EXE "LINK/EXE=XPILOT.exe XPILOT.opt/OPT" *.OBJ
 $ rename xpilot.exe xpilot_'cpu'.exe
 $!
-$ write sys$output "Compiling XPILOT Replay"
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Completed successfully ...                              "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$!
+$replay:
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Compiling the XPilot replay image (XP-REPLAY_''CPU') ..."
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$ on error then goto error
+$!
+$! procedure target	     command 			        depends upon
+$! CALL MAKE .OBJ   	     "CC ''cc_options' .C"	        .C
+$!
 $ CALL MAKE XP-REPLAY.OBJ    "''cc_options' XP-REPLAY.C"     XP-REPLAY.C
 $ CALL MAKE BUTTONS.OBJ      "''cc_options' BUTTONS.C"       BUTTONS.C
 $ CALL MAKE GETTIMEOFDAY.OBJ "''cc_options' GETTIMEOFDAY.C"  GETTIMEOFDAY.C
 $!
-$ write sys$output "Building XPILOT Replay Image"
 $ set message/notext/nofacility/noseverity/noidentification
 $ CALL MAKE XP-REPLAY.EXE "LINK/EXE=XP-REPLAY XP-REPLAY.opt/OPT" *.OBJ
 $ set message/text/facility/severity/identification
 $ rename xp-replay.exe xp-replay_'cpu'.exe
 $!
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Completed successfully ...                              "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$!
+$ Error:
 $ purge/noconfirm/nolog
 $ set noon
 $ set prot=(s:rwed,o:rwed,w:re,g:re) *.exe
 $ exit
 $!
 $ Clobber:	! Delete executables, Purge dir and clean up obj and lis
-$ delete/noconfirm/log *.'exe';*
+$ delete/noconfirm/nolog *.'exe';*
 $!
 $ Clean:	! Purge directory, clean up object files and listings
 $ purge/noconfirm/nolog
 $ set noon
-$ delete/noconfirm/log *.obj;*
-$ delete/noconfirm/log *.map;*
+$ delete/noconfirm/nolog *.obj;*
 $ set message/notext/nofacility/noseverity/noidentification
+$ delete/noconfirm/nolog *.map;*
 $ delete/noconfirm/nolog *.lis;*
 $ delete/noconfirm/nolog *.dia;*
 $ set message/text/facility/severity/identification
@@ -117,7 +149,7 @@ $exit:
 $ exit
 $!
 $MAKE: SUBROUTINE   !SUBROUTINE TO CHECK DEPENDENCIES
-$  V = 'F$Verify(0)
+$ V = 'F$Verify(0)
 $! P1 = What we are trying to make
 $! P2 = Command to make it
 $! P3 - P8  What it depends on

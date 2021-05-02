@@ -1,10 +1,10 @@
 .\" -*-Text-*-
 .\"
-.\" Copyright © 1991-95 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers & Steven Singer.
+.\" Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers & Steven Singer.
 .\"
 .TH XP-REPLAY  "Requires The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.4.2: Dec 7th, 1995
+.ds ]W XPilot 3.5.1: May 13th, 1996
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 

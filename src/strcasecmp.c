@@ -1,4 +1,4 @@
-/* $Id: strcasecmp.c,v 3.8 1995/01/11 19:58:54 bert Exp $
+/* $Id: strcasecmp.c,v 3.9 1996/04/08 19:52:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -27,13 +27,14 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: strcasecmp.c,v 3.8 1995/01/11 19:58:54 bert Exp $";
+    "@(#)$Id: strcasecmp.c,v 3.9 1996/04/08 19:52:02 bert Exp $";
 #endif
 
 /*
  * By Ian Malcom Brown.
  * Changes by BG: prototypes with const,
  * moved the ++ expressions out of the macro.
+ * Only test for the null byte in one string.
  */
 int strcasecmp(const char *str1, const char *str2)
 {
@@ -45,7 +46,7 @@ int strcasecmp(const char *str1, const char *str2)
 	c2 = *str2++;
 	c1 = tolower(c1);
 	c2 = tolower(c2);
-    } while (c1 != 0 && c2 != 0 && c1 == c2);
+    } while (c1 == c2 && c1 != 0);
 
     return (c1 - c2);
 }
@@ -65,7 +66,7 @@ int strncasecmp(const char *str1, const char *str2, size_t n)
 	c2 = *str2++;
 	c1 = tolower(c1);
 	c2 = tolower(c2);
-    } while (c1 != 0 && c2 != 0 && c1 == c2);
+    } while (c1 == c2 && c1 != 0);
 
     return (c1 - c2);
 }

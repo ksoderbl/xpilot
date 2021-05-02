@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.49 1995/11/12 22:11:50 bert Exp $
+/* $Id: configure.c,v 3.51 1996/05/04 21:43:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -56,11 +56,10 @@
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
+#ifdef VMS
+#include "strcasecmp.h"
+#else
 #include <pwd.h>
 #endif
 #include <stdio.h>
@@ -68,9 +67,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
-#ifdef VMS
-#include "strcasecmp.h"
-#endif
 #include <limits.h>
 
 #include "version.h"
@@ -131,6 +127,7 @@ static int Config_create_showDecor(int widget_desc, int *height);
 static int Config_create_outlineDecor(int widget_desc, int *height);
 static int Config_create_filledDecor(int widget_desc, int *height);
 static int Config_create_texturedDecor(int widget_desc, int *height);
+static int Config_create_texturedBalls(int widget_desc, int *height);
 static int Config_create_maxFPS(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
@@ -243,6 +240,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_outlineDecor,
     Config_create_filledDecor,
     Config_create_texturedDecor,
+    Config_create_texturedBalls,
     Config_create_maxFPS,
 #ifdef SOUND
     Config_create_maxVolume,
@@ -894,6 +892,15 @@ static int Config_create_texturedDecor(int widget_desc, int *height)
 			      (void *) SHOW_TEXTURED_DECOR);
 }
 
+static int Config_create_texturedBalls(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "texturedBalls",
+			      BIT(instruments, SHOW_TEXTURED_BALLS)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_TEXTURED_BALLS);
+}
+
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height)
 {
@@ -1383,6 +1390,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_bool(fp, "outlineDecor", BIT(instruments, SHOW_OUTLINE_DECOR));
     Config_save_bool(fp, "filledDecor", BIT(instruments, SHOW_FILLED_DECOR));
     Config_save_bool(fp, "texturedDecor", BIT(instruments, SHOW_TEXTURED_DECOR));
+    Config_save_bool(fp, "texturedBalls", BIT(instruments, SHOW_TEXTURED_BALLS));
     Config_save_int(fp, "receiveWindowSize", receive_window_size);
     Config_save_int(fp, "charsPerSecond", charsPerSecond);
     Config_save_bool(fp, "markingLights", markingLights);

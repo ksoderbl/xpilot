@@ -1,4 +1,4 @@
-/* $Id: xinit.h,v 3.36 1995/12/04 14:47:21 bert Exp $
+/* $Id: xinit.h,v 3.37 1996/04/27 18:39:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -47,6 +47,7 @@ extern Visual		*visual;
 extern int		dispDepth;
 extern bool		mono;
 extern bool		colorSwitch;
+extern bool		multibuffer;
 extern char		color_names[MAX_COLORS][MAX_COLOR_LEN];
 extern int		top_width, top_height;
 extern int		draw_width, draw_height;

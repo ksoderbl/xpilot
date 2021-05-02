@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.58 1995/12/04 14:47:12 bert Exp $
+/* $Id: const.h,v 3.59 1996/04/27 16:09:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -69,6 +69,9 @@
 #endif
 
 /* Not everyone has LINE_MAX either, *sigh* */
+#ifdef VMS
+#   undef LINE_MAX
+#endif
 #ifndef LINE_MAX
 #   define LINE_MAX 2048
 #endif

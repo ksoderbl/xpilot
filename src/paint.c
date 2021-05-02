@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.147 1995/12/04 14:47:14 bert Exp $
+/* $Id: paint.c,v 3.152 1996/05/04 22:25:11 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -21,12 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -148,6 +143,7 @@ char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
 char	*texturePath;		/* Path list of texture directories */
 char	*wallTextureFile;	/* Filename of wall texture */
 char	*decorTextureFile;	/* Filename of decor texture */
+char	*ballTextureFile;	/* Filename of ball texture */
 
 int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 	(Display *disp, Drawable d, GC gc,
@@ -850,6 +846,20 @@ static void Paint_shots(void)
     }
 
     if (num_ball > 0) {
+	static Pixmap		ballTile = None;
+
+	if (BIT(instruments, SHOW_TEXTURED_BALLS)) {
+	    if (ballTile == None) {
+		ballTile = Texture_ball();
+		if (ballTile == None) {
+		    CLR_BIT(instruments, SHOW_TEXTURED_BALLS);
+		}
+	    }
+	    if (ballTile != None) {
+		XSetTile(dpy, gc, ballTile);
+		XSetFillStyle(dpy, gc, FillTiled);
+	    }
+	}
 	for (i = 0; i < num_ball; i++) {
 	    x = ball_ptr[i].x;
 	    y = ball_ptr[i].y;
@@ -857,8 +867,15 @@ static void Paint_shots(void)
 	    if (wrap(&x, &y)) {
 		x = X(x);
 		y = Y(y);
-		Arc_add(WHITE, x - BALL_RADIUS, y - BALL_RADIUS,
-			2*BALL_RADIUS, 2*BALL_RADIUS, 0, 64*360);
+		if (ballTile != None) {
+		    XSetTSOrigin(dpy, gc, x - BALL_RADIUS, y - BALL_RADIUS);
+		    XFillArc(dpy, p_draw, gc, x - BALL_RADIUS, y - BALL_RADIUS,
+			     2*BALL_RADIUS, 2*BALL_RADIUS, 0, 64*360);
+		}
+		else {
+		    Arc_add(WHITE, x - BALL_RADIUS, y - BALL_RADIUS,
+			    2*BALL_RADIUS, 2*BALL_RADIUS, 0, 64*360);
+		}
 		if (ball_ptr[i].id == -1) {
 		    continue;
 		}
@@ -878,6 +895,9 @@ static void Paint_shots(void)
 		    Segment_add(WHITE, x, y, xs, ys);
 		}
 	    }
+	}
+	if (ballTile != None) {
+	    XSetFillStyle(dpy, gc, FillSolid);
 	}
 	RELEASE(ball_ptr, num_ball, max_ball);
     }
@@ -1494,7 +1514,10 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 {
     const int	BORDER = 2;
     int		x, y;
+    int		i, dir = 96;
+    int		hudShipColor = hudColor;
     other_t	*target;
+    wireobj	*ship;
     char	str[50];
     static int	warningCount;
     static int	mapdiag = 0;
@@ -1519,6 +1542,24 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			- BORDER - gameFont->ascent,
 		    target->name_width + 2,
 		    gameFont->ascent + gameFont->descent);
+
+    ship = Ship_by_id(lock_id);
+    for (i = 0; i < ship->num_points; i++) {
+	points[i].x = hud_pos_x + ship->pts[i][dir].x / 2 + 60;
+	points[i].y = hud_pos_y + ship->pts[i][dir].y / 2 - 80;
+    }
+    points[i++] = points[0];
+    SET_FG(colors[hudShipColor].pixel);
+#if ERASE
+    rd.drawLines(dpy, p_draw, gc, points, i, 0);
+    Erase_points(0, points, i);
+#else
+    rd.fillPolygon(dpy, p_draw, gc,
+		   points, i,
+		   Complex, CoordModeOrigin);
+#endif
+    SET_FG(colors[hudColor].pixel);
+
     if (lock_dist != 0) {
 	sprintf(str, "%03d", lock_dist / BLOCK_SZ);
 	rd.drawString(dpy, p_draw, gc,
@@ -3539,13 +3580,14 @@ void Paint_frame(void)
     else if (radar_exposures > 2) {
 	Paint_world_radar();
     }
-    if (p_draw != draw)
+    if (dbuf_state->type == PIXMAP_COPY) {
 	XCopyArea(dpy, p_draw, draw, gc,
 		  0, 0, view_width, view_height, 0, 0);
+    }
 
     dbuff_switch(dbuf_state);
 
-    if (colorSwitch) {
+    if (dbuf_state->type == COLOR_SWITCH) {
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 	XSetPlaneMask(dpy, messageGC, dbuf_state->drawing_planes);
     }

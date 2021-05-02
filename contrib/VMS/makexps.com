@@ -1,9 +1,11 @@
 $ SAVE_VERIFY='F$VERIFY(0)
-$ on control_y then goto exit
+$ ON CONTROL_Y THEN GOTO EXIT
 $!
 $ if p1 .eqs. "CLEAN" then goto clean
 $ if p1 .eqs. "CLOBBER" then goto clobber
+$inter:
 $ if p1 .eqs. "" then inquire p1 "DECC(D) or GCC(G) Compiler ?"
+$ if p1 .eqs. "" then goto inter
 $!
 $!      Compile the Xdaliclock Application, adapted for xpilot
 $!
@@ -25,6 +27,7 @@ $!
 $ if p1.eqs."D".or.p1.eqs."d"
 $ then
 $   options="CC/decc/standard=vaxc/precision=single"
+$   prefix="/prefix=(ALL,EXCEPT=(ioctl))"
 $   if cpu .eqs. "VAX" 
 $   then
 $     defines="/define=(VMS,VAX)"
@@ -44,15 +47,22 @@ $   include="/include=[.vms_include]"
 $   debug="/optimize"
 $!  debug="/debug"
 $ endif
-$ cc_options=options+defines+include+debug
+$ cc_options=options+defines+include+debug+prefix
 $!
-$!      Compile the "C" files
+$SERVER:
+$ !!! XP-SERVER needs STRNCASECMP from DECC$SHR !!!
+$ IF  F$SEARCH("MATH.OBJ") THEN DELETE/NOLOG/NOCONFIRM MATH.OBJ;*  
+$!
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Compiling the XPilot server image (XPILOTS_''CPU') ..."
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$ on error then goto replay
 $!
 $! procedure target	     command 			        depends upon
 $! CALL MAKE .OBJ   	     "CC ''cc_options' .C"	        .C
 $!
-$ write sys$output " "
-$ write sys$output "Compiling XPILOTS Server"
 $ CALL MAKE SERVER.OBJ	     "''cc_options' SERVER.C"	        SERVER.C
 $ CALL MAKE EVENT.OBJ	     "''cc_options' EVENT.C"	        EVENT.C
 $ CALL MAKE MAP.OBJ	     "''cc_options' MAP.C"	        MAP.C
@@ -69,35 +79,39 @@ $ CALL MAKE WALLS.OBJ        "''cc_options' WALLS.C"            WALLS.C
 $ CALL MAKE ERROR.OBJ	     "''cc_options' ERROR.C"	        ERROR.C
 $ CALL MAKE FRAME.OBJ	     "''cc_options' FRAME.C" 	        FRAME.C
 $ CALL MAKE ROBOT.OBJ	     "''cc_options' ROBOT.C" 	        ROBOT.C
+$ CALL MAKE ROBOTDEF.OBJ     "''cc_options' ROBOTDEF.C"         ROBOTDEF.C
 $ CALL MAKE OPTION.OBJ	     "''cc_options' OPTION.C"	        OPTION.C
 $ CALL MAKE SOCKLIB.OBJ	     "''cc_options' SOCKLIB.C"	        SOCKLIB.C
-$ CALL MAKE TIMER.OBJ	     "''cc_options' TIMER.C" 	        TIMER.C
-$ CALL MAKE GETTIMEOFDAY.OBJ "''cc_options' GETTIMEOFDAY.C"     GETTIMEOFDAY.C
 $ CALL MAKE SAUDIO.OBJ	     "''cc_options' SAUDIO.C"	        SAUDIO.C
 $ CALL MAKE IOCTL.OBJ	     "''cc_options' IOCTL.C" 	        IOCTL.C
 $ CALL MAKE USERNAME.OBJ     "''cc_options' USERNAME.C"	        USERNAME.C
 $ CALL MAKE TRNLNM.OBJ       "''cc_options' TRNLNM.C"           TRNLNM.C
-$ CALL MAKE USLEEP.OBJ       "''cc_options' USLEEP.C"	        USLEEP.C
-$ CALL MAKE STRCASECMP.OBJ   "''cc_options' STRCASECMP.C"	STRCASECMP.C
-$ CALL MAKE STRDUP.OBJ	     "''cc_options' STRDUP.C"	        STRDUP.C
+$ CALL MAKE SCHED.OBJ	     "''cc_options' SCHED.C" 	        SCHED.C
 $!
 $ write sys$output "Building XPILOTS Server Image"
 $ CALL MAKE XPILOTS.EXE "LINK/EXE=XPILOTS.exe XPILOTS.opt/OPT" *.OBJ
 $ rename xpilots.exe xpilots_'cpu'.exe
 $!
+$ write sys$output " "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " Completed successfully ...                              "
+$ write sys$output " --------------------------------------------------------"
+$ write sys$output " "
+$!
+$error:
 $ purge/noconfirm/nolog
 $ set noon
 $ set prot=(s:rwed,o:rwed,w:re,g:re) *.exe
 $ exit
 $!
 $ Clobber:	! Delete executables and clean up object files and listings
-$ delete/noconfirm/log *.'exe';*
+$ delete/noconfirm/nolog *.'exe';*
 $!
 $ Clean:	! Purge directory, clean up object files and listings
 $ purge/noconfirm/nolog
-$ delete/noconfirm/log *.obj;*
-$ delete/noconfirm/log *.map;*
+$ delete/noconfirm/nolog *.obj;*
 $ set message/notext/nofacility/noseverity/noidentification
+$ delete/noconfirm/nolog *.map;*
 $ delete/noconfirm/nolog *.lis;*
 $ delete/noconfirm/nolog *.dia;*
 $ set message/text/facility/severity/identification
@@ -107,7 +121,7 @@ $exit:
 $ exit
 $!
 $MAKE: SUBROUTINE   !SUBROUTINE TO CHECK DEPENDENCIES
-$  V = 'F$Verify(0)
+$ V = 'F$Verify(0)
 $! P1 = What we are trying to make
 $! P2 = Command to make it
 $! P3 - P8  What it depends on

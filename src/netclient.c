@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 3.86 1995/09/16 19:04:33 bert Exp $
+/* $Id: netclient.c,v 3.92 1996/05/13 12:16:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,14 +22,11 @@
  */
 
 #include "types.h"
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
+#ifndef VMS
 #include <sys/param.h>
 #endif
-#if defined(__hpux) || defined(VMS)
+#if defined(__hpux)
 #include <time.h>
 #else
 #include <sys/time.h>
@@ -817,6 +814,7 @@ void Net_init_measurement(void)
 static int Net_packet(void)
 {
     int		type,
+		prev_type = 0,
 		result,
 		replyto,
 		status;
@@ -825,7 +823,7 @@ static int Net_packet(void)
 	type = (*rbuf.ptr & 0xFF);
 	if (receive_tbl[type] == NULL) {
 	    errno = 0;
-	    error("Received unknown packet type (%d), dropping frame.", type);
+	    error("Received unknown packet type (%d, %d), dropping frame.", type, prev_type);
 	    Sockbuf_clear(&rbuf);
 	    break;
 	}
@@ -833,7 +831,7 @@ static int Net_packet(void)
 	    if (result == -1) {
 		if (type != PKT_QUIT) {
 		    errno = 0;
-		    error("Processing packet type (%d) failed", type);
+		    error("Processing packet type (%d, %d) failed", type, prev_type);
 		}
 		return -1;
 	    }
@@ -841,6 +839,7 @@ static int Net_packet(void)
 	    Sockbuf_clear(&rbuf);
 	    break;
 	}
+	prev_type = type;
     }
     while (cbuf.buf + cbuf.len > cbuf.ptr) {
 	type = (*cbuf.ptr & 0xFF);
@@ -1995,8 +1994,13 @@ int Receive_loseitem(void)
 
 int Send_ack(long rel_loops)
 {
-    if (Packet_printf(&wbuf, "%c%ld%ld", PKT_ACK,
-		      reliable_offset, rel_loops) <= 0) {
+    int			n;
+
+    if ((n = Packet_printf(&wbuf, "%c%ld%ld", PKT_ACK,
+			   reliable_offset, rel_loops)) <= 0) {
+	if (n == 0) {
+	    return 0;
+	}
 	error("Can't ack reliable data");
 	return -1;
     }
@@ -2018,7 +2022,7 @@ int Receive_reliable(void)
     if (n == 0) {
 	errno = 0;
 	error("Incomplete reliable data packet");
-	return -1;
+	return 0;
     }
 #if DEBUG
     if (reliable_offset >= rel + len) {
@@ -2111,9 +2115,8 @@ int Send_keyboard(u_byte *keyboard_vector)
     const int	size = KEYBOARD_SIZE;
 
     if (wbuf.size - wbuf.len < size + 1 + 4) {
-	errno = 0;
-	error("Not enough write buffer space for keyboard state");
-	return -1;
+	/* Not enough write buffer space for keyboard state */
+	return 0;
     }
     Packet_printf(&wbuf, "%c%ld", PKT_KEYBOARD, last_keyboard_change);
     memcpy(&wbuf.buf[wbuf.len], keyboard_vector, size);

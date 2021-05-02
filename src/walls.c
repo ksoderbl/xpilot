@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 3.4 1995/12/07 15:09:26 bert Exp $
+/* $Id: walls.c,v 3.6 1996/04/07 22:44:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -23,6 +23,7 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
@@ -38,6 +39,7 @@
 #include "item.h"
 #include "netserver.h"
 #include "pack.h"
+#include "error.h"
 #include "walls.h"
 
 char walls_version[] = VERSION;
@@ -1484,7 +1486,7 @@ static void Cannon_dies(move_state_t *ms)
     cannon->dead_time = CANNON_DEAD_TIME;
     cannon->active = false;
     cannon->conn_mask = 0;
-    cannon->last_change = loops;
+    cannon->last_change = frame_loops;
     World.block[x][y] = SPACE;
     sound_play_sensors((x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ, CANNON_EXPLOSION_SOUND);
     Make_debris(
@@ -1581,7 +1583,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     }
 
     targ->conn_mask = 0;
-    targ->last_change = loops;
+    targ->last_change = frame_loops;
     if (targ->damage > 0)
 	return;
 
@@ -1944,7 +1946,7 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	    if (shove->pusher_id == -1) {
 		continue;
 	    }
-	    if (shove->time < loops - 20) {
+	    if (shove->time < frame_loops - 20) {
 		continue;
 	    }
 	    for (j = 0; j < num_pushers; j++) {

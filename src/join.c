@@ -1,4 +1,4 @@
-/* $Id: join.c,v 3.28 1995/11/12 22:11:53 bert Exp $
+/* $Id: join.c,v 3.29 1996/05/02 16:05:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,25 +22,15 @@
  */
 
 #include "types.h"
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
-#ifdef VMS
-#include <socket.h>
-#include <in.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
 #include <netdb.h>
-#if !defined(__hpux) && !defined(VMS)
+#if !defined(__hpux) 
 #include <sys/time.h>
 #endif
 

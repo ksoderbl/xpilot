@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.49 1995/11/15 20:09:08 bert Exp $
+/* $Id: netserver.h,v 3.53 1996/04/27 18:39:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -34,7 +34,6 @@
 #define CONN_SETUP	0x02	/* after verification */
 #define CONN_LOGIN	0x04	/* after setup info transferred */
 #define CONN_PLAYING	0x08	/* when actively playing */
-#define CONN_CLOSING	0x10	/* closing down after output gone */
 #define CONN_DRAIN	0x20	/* wait for all reliable data to be acked */
 #define CONN_READY	0x40	/* draining after LOGIN and before PLAYING */
 
@@ -47,9 +46,11 @@
  * The timeout specifies the number of seconds each connection
  * state may last.
  */
-#ifndef CONNECTION_TIMEOUT
-#define CONNECTION_TIMEOUT	(FPS * 40)
-#endif
+#define LISTEN_TIMEOUT		4
+#define SETUP_TIMEOUT		15
+#define LOGIN_TIMEOUT		15
+#define READY_TIMEOUT		30
+#define IDLE_TIMEOUT		30
 
 /*
  * Maximum roundtrip time taken as serious for rountrip time calculations.
@@ -80,6 +81,7 @@ typedef struct {
     sockbuf_t		w;			/* output buffer */
     sockbuf_t		c;			/* reliable data buffer */
     long		start;			/* time of last state change */
+    long		timeout;		/* time when state timeouts */
     long		last_send_loops;	/* last update of reliable */
     long		reliable_offset;	/* amount of data acked */
     long		reliable_unsent;	/* next unsend reliable byte */
@@ -116,7 +118,8 @@ static int Init_setup(void);
 static int Handle_listening(int ind);
 static int Handle_setup(int ind);
 static int Handle_login(int ind);
-static int Handle_input(int ind);
+static void Handle_input(int fd, void *arg);
+
 
 static int Receive_keyboard(int ind);
 static int Receive_quit(int ind);
@@ -141,11 +144,11 @@ static int Send_motd(int ind);
 
 #endif	/* NETSERVER_C */
 
-void Init_receive(void);
-int Setup_net_server(int maxconn, int contact_socket);
+int Setup_net_server(void);
 void Destroy_connection(int ind, char *reason);
-int Setup_connection(char *real, char *nick, char *dpy,
-		     int team, char *addr, char *host, unsigned version);
+int Check_connection(char *real, char *nick, char *dpy, char *addr);
+int Setup_connection(char *real, char *nick, char *dpy, int team,
+		     char *addr, char *host, unsigned version);
 int Input(void);
 int Send_reply(int ind, int replyto, int result);
 int Send_self(int ind, player *pl,

@@ -2,110 +2,85 @@ README.VMS for XPilot
 =====================
 
 Since release 3.0.6 XPilot also supports VMS thanks to Curt Hjorring.
-The directory VMS contains extra code and MMS makefiles for VMS.
-Copy all of these files to the src directory and adapt them to your 
-environment.  Read the rest of this file for more info on how to compile 
-and install XPilot under VMS.
+The directory VMS contains extra code and makefiles for VMS. Read the 
+rest of this file for more info on how to compile and install XPilot 
+under VMS.
 
 The XPilot authors don't have access to VMS and don't know anything
-about VMS (and don't want to know anything about VMS :).  So please
-don't send us any mail about VMS related problems.  You are of course
-welcome to discuss XPilot ideas with us, contribute new features, etc.
-The XPilot-for-VMS guru is Jens Koerber <koerber@itt.uni-stuttgart.d400.de>.
+about VMS (and don't want to know anything about VMS :-(  
+So please don't send us any mail about VMS related problems.  
+You are of course welcome to discuss XPilot ideas with us, contribute 
+new features, etc. 
 
+The XPilot-for-VMS guru is Jens Koerber <koerber@ttkax1.ciw.uni-karlsruhe.de>.
 
-VMS port for XPilot (Version 3.0.5, Curt Hjorring)
+VMS port for XPilot (Version 3.5.0, Jens Koerber)
 ==================================================
 
-This is a patch to xpilot 3.0.5 so that it will run under VMS, on VAX
-machines and Alphas.  It requires the UCX library.  Not all VMS machines
-will have this.  To see if you have the UCX library look in sys$library:
-and see if you have either ucx$ipc.olb or ucx$ipc_shr.exe. If you have
-you're in luck!  If you are compiling for VAXes you will need a compiler
-that handles string concatenation. 
+This is a patch to xpilot 3.5.0 so that it will run under 
+OpenVMS 7.0 or higher (VAX and Alpha). The compilation was 
+done by the DECC 5.2 compiler. 
 
-Description of major changes in this patch:
+It requires the UCX library.  Not all VMS machines will have this.  
+To see if you have the UCX library look in sys$library: and see if 
+you have either ucx$ipc.olb or ucx$ipc_shr.exe. 
 
-The majority of changes are to the include statements.  VMS doesn't believe
-in subdirectories for includes (probably because path names are formed
-differently, e.g. [.dir1.dir2]file.txt instead of ./dir1/dir2/file.txt)
+If your system runs TGV-Multinet, you can find a patch on 
+ttkax1.ciw.uni-karlsruhe.de in [ANONYMOUS.PUB.XGAMES.XPILOT] 
 
-The keyboards on VAXstations and Alpha workstations do not supply correct
-key up events.  If you press and hold down say the 'A' key then a key up AND
-and key down event will be generated immediately.  This affects all
-alphanumeric keys and the spacebar.  Fortunately the function keys work
-properly.  This happens if xpilot is run locally or remotely (via X).  Because
-of this A and S will not turn the ship and the space bar will only turn the
-shield off.  My solution is to remap A and S to F1 and F2 and to change the
-server so that space bar toggles the shield.  I have added toggleShield as an
-option (the default is off).  If you are using a VAXstation as a display then
-to use your shield you need to either remap KEY_SHIELD to a function key, or
-else make sure the client is started up with toggleShield enabled.
 
-Added gettimeofday, ioctl, and username emulation.
-
-Removed X11 dependencies in the server.  It should no be possible to compile
-and link the server without needing any X11 headers or libraries.
-
-Added include files, to fix up GCC/CC incompatibilities.  These are stored
-in src/vms_include
-
-When creating a client/server connection I get errors when trying to set
-the socket buffer sizes, something like:
-  xpilots.exe;1: Can't set receive buffer size to 1040 (not owner)
-This is OK.
-
-VMS port for XPilot (Version 3.4.0, Jens Koerber)
-==================================================
-
-This is a patch to xpilot 3.4.0 so that it will run under OpenVMS (VAX 
-and Alpha). The compilation was done by the DECC 4.0 compiler.
-
-For timing purposes the server now uses the System Services SYS$SCHDWK and 
-SYS$HIBER. On VAX, this is just as precise as the system time 
-(resolution = 10 ms). The Alpha does provide a user-accessible high 
-precision timing facility, which returns a value that is, according to 
-the architecture specification, "suitable for timing intervals on the 
-order of nanoseconds". However, the VMS timing routines are, indeed, all 
-limited to a 10ms resolution.  If a specified absolute time value has 
-already passed and no repeat time is specified, the timer expires at the 
-next clock cycle (within 10 milliseconds). This is close enough for 
-timing purposes (example: 12 fps = 83,33 msec/per frame --> the timer 
-expires after 90 msec).
-                                                                         
 Instructions for the XPilot VMS patch
 =====================================
 
 To install:
-  - I used version 4.0 of DECC.  Other versions should work OK 
-    (The old VAXC Compiler doesn't work).
+
+  - To install xpilot run the command procedure @INSTALL.COM in
+    the Subdirectory [-.-.CONTRIB.VMS]. This command procedure will
+    change the configuration file CONFIG.H and will run the COM files
+    MAKEXP.COM and MAKEXPS.COM (originally supplied by Peter Chang).
+    These do some dependency checking.
+
   - If you use the GCC compiler, system header such as in.h need to be 
     compiled.  GCC will choke on the ones in sys$include 
     (they use #include file statements).  I have provided versions 
     that GCC can handle.  These should be in the directory vms_include.
-    (Best place to get GCC is ftp://ftp.vms.stacken.kth.se/gnu-vms !?!)
-  - To install xpilot run the command procedure @INSTALL.COM in
-    the Subdirectory [-.-.CONTRIB.VMS]. This command procedure will
-    ask you for your C Compiler (DECC or GCC) and run the COM files 
-    MAKEXP.COM and MAKEXPS.COM (originally supplied by Peter Chang).
-    These do some dependency checking.
-  - There is no make command supplied with VMS.  There is a similar 
-    program called MMS which can be purchased (part of DECSET).  If you have 
-    MMS you can also use the file DESCRIP.MMS. 
+
+  - When running under OpenVMS V6.2 INSTALL.COM does not install
+    the XPilot Server image. Compilation of sched.c gives multiple 
+    errors of the form (or similar to):
+
+        sigset_t    sigset;
+................^
+%CC-E-NOSEMI, Missing ";".
+at line number 103 in file TTKAX1$DKA100:[LIB.XGAMES.XPILOT.SRC]SCHED.C;31
+
+    sigemptyset(&sigset);
+.................^
+%CC-E-UNDECLARED, In this statement, "sigset" is not declared.
+
+    In order to receive this full fix, in addition to this kit you 
+    must also install XPILOT342-VMS-SERVER.TAR-GZ from
+    ftp://ttkax1.ciw.uni-karlsruhe.de/pub/xgames/xpilot/vms
+
   - Look at the standard XPilot installation instructions
 
+
 Running xpilot:
+
   - Added the startup file XP_STARTUP.COM. To use this command file run
     @XP_STARTUP in the subdirectory [-.XPILOT.START].
+
   - To give xpilot and xpilots command line arguments you will have to
     set up some symbol assigns, e.g.
     XPILOT :== "$LIB_DISK:[LIB.XGAMES.XPILOT.SRC]XPILOT.EXE
+
   - When you start up xpilot or xpilots you may get an error message like:
       Socket receive buffer size is 9000
       xpilots.exe;1: Can't set receive buffer size to 1040 (not owner)
       Socket send buffer size is 9000
       xpilots.exe;1: Can't set send buffer size to 4112 (not owner)
-    This is normal but please tell me what your errors look like.
+    This is OK.
+
   - The keyboards on our VAXstations (not the Alpha's) don't work very well 
     They don't give proper key up/down messages.  Because of this it is 
     impossible for xpilot to know if you are holding down one of the 
@@ -163,13 +138,88 @@ xpilot.shipShape:        Asteroids
 xpilot.turnSpeed:        50
 !--
   
-  - I have added SHIP_FILE in config.h as an optional file where shipshapes 
-    can be stored. If this resource is defined and it refers to an existing 
-    file then shipshapes can be referenced to by their name.
+  - I have added SHIP_FILE in config.h as an optional file ([.LIB]TKXPI.SHP) 
+    where shipshapes can be stored. If this resource is defined and it refers 
+    to an existing file then shipshapes can be referenced to by their name.
+
+Description of major changes in this patch:
+
+OpenVMS 7.0/DEC C 5.2 now supports the sigset family (mmh ...)
+
 
 Remaining problems/things to do:
 
-There is no VMS-style HELP library for xpilot. Anyone want to give it a go?
+   - Somehow the implementation of ioctl() on VMS is completely broken!
+     Without the compiler option /prefix=(ALL,EXCEPT=(ioctl)) the
+     server returns
+
+   > ioctl FIONBIO failed in socklib.c line 856: function not implemented
+   > xpilot_axp.exe;4: Can't make socket non-blocking (function not implemented)
+
+     Is there a implementation of fcntl() for VMS ? 
+
+     USE_FCNTL_O_NDELAY should be better than USE_IOCTL_FIONBIO
+     
+   - BUG in DEC C 5.2-003 with select()
+
+     On _real_ UNIX slow system calls return with the value -1 and
+     set the errno variable to EINTR.  VMS does _not_ do this and
+     therefore emulates UNIX _inadequate_.
+
+     VMS returns
+     -1                                     Indicates an error;  errno is set to
+                                            one of the following values:
+
+                                            ·   EBADF - One of the bit
+                                                  masks specified an invalid
+                                                  descriptor.
+                                            ·   EINVAL - The specified time
+                                                  limit is unacceptable. One of
+                                                  its components is negative or
+                                                 too large.
+     UNIX has also:
+                                            ·   EINTR - A signal was delivered
+                                                  before any of the selected
+                                                  four events occurred or before
+                                                  the time limit expired.
+
+     And this behavior is what we need in sched.c.
+
+     Workaround in sched.c:
+
+     Changed at line 454:
+            if (io_todo == 0) {
+                tvp = NULL;
+            }
+     to:
+            #ifndef VMS
+              if (io_todo == 0) {
+                  tvp = NULL;
+              }
+            #endif
+
+     And then at line 403:
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+     to:
+#ifdef (VMS)
+        if (NumPlayers > NumRobots + NumPseudoPlayers
+            || login_in_progress != 0
+            || NumQueuedPlayers > 0) {
+
+            /* need fast I/O checks now! (2 or 3 times per frames) */
+            tv.tv_sec = 0;
+            tv.tv_usec = 1000000 / (3 * timer_freq);
+        }
+        else {
+            /* slow I/O checks are possible here... (2 times per second) */ ;
+            tv.tv_sec = 0;
+            tv.tv_usec = 500000;
+        }
+#else
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+#endif
 
 Miscellaneous notes:
 
@@ -182,8 +232,7 @@ Let me know how you get on and GOOD LUCK!
 Jens.
 
 --
--- Jens Koerber      jens.koerber@ciw.uni-karlsruhe.de, 
---                   koerber@itt.uni-stuttgart.d400.de
+-- Jens Koerber    koerber@ttkax1.ciw.uni-karlsruhe.de
 -- Inst. f. Technische Thermodynamik und Kaeltetechnik,
 -- University Karlsruhe, Germany
 -- 

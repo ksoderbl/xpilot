@@ -1,4 +1,4 @@
-/* $Id: play.c,v 3.124 1995/11/30 21:48:05 bert Exp $
+/* $Id: play.c,v 3.126 1996/04/07 22:44:37 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -35,12 +36,13 @@
 #include "saudio.h"
 #include "bit.h"
 #include "netserver.h"
+#include "error.h"
 
 char play_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.124 1995/11/30 21:48:05 bert Exp $";
+    "@(#)$Id: play.c,v 3.126 1996/04/07 22:44:37 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -176,7 +178,7 @@ void Delta_mv(object *ship, object *obj)
 	player *pl = (player *)ship;
 	player *pusher = Players[GetInd[obj->id]];
 	if (pusher != pl) {
-	    Record_shove(pl, pusher, loops);
+	    Record_shove(pl, pusher, frame_loops);
 	}
     }
     ship->vel.x = vx;
@@ -216,7 +218,7 @@ void Obj_repel(object *obj1, object *obj2, int repel_dist)
 	player *pl = (player *)obj1;
 	player *pusher = Players[GetInd[obj2->id]];
 	if (pusher != pl) {
-	    Record_shove(pl, pusher, loops);
+	    Record_shove(pl, pusher, frame_loops);
 	}
     }
 
@@ -224,7 +226,7 @@ void Obj_repel(object *obj1, object *obj2, int repel_dist)
 	player *pl = (player *)obj2;
 	player *pusher = Players[GetInd[obj1->id]];
 	if (pusher != pl) {
-	    Record_shove(pl, pusher, loops);
+	    Record_shove(pl, pusher, frame_loops);
 	}
     }
 
@@ -1670,10 +1672,10 @@ void Fire_normal_shots(int ind)
     player		*pl = Players[ind];
     int			i, shot_angle;
 
-    if (loops < pl->shot_time + fireRepeatRate) {
+    if (frame_loops < pl->shot_time + fireRepeatRate) {
 	return;
     }
-    pl->shot_time = loops;
+    pl->shot_time = frame_loops;
 
     shot_angle = MODS_SPREAD_MAX - pl->mods.spread;
 
@@ -2388,7 +2390,7 @@ void do_ecm(player *pl)
 		/* player is blinded by light flashes. */
 		long duration = (int)(damage * pow(0.75, p->item[ITEM_SENSOR]));
 		p->damaged += duration;
-		Record_shove(p, pl, loops + duration);
+		Record_shove(p, pl, frame_loops + duration);
 	    } else {
 		if (BIT(pl->lock.tagged, LOCK_PLAYER)
 		    && (pl->lock.distance < pl->sensor_range
@@ -2673,7 +2675,7 @@ void Move_smart_shot(int ind)
     } else {
 
 	if (BIT(shot->status, CONFUSED)
-	    && (!(loops % CONFUSED_UPDATE_GRANULARITY)
+	    && (!(frame_loops % CONFUSED_UPDATE_GRANULARITY)
 		|| shot->count == CONFUSED_TIME)) {
 
 	    if (shot->count) {

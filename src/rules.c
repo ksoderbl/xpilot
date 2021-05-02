@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 3.41 1995/01/11 19:55:33 bert Exp $
+/* $Id: rules.c,v 3.42 1996/04/30 10:36:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -38,13 +38,13 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.41 1995/01/11 19:55:33 bert Exp $";
+    "@(#)$Id: rules.c,v 3.42 1996/04/30 10:36:22 bert Exp $";
 #endif
 
 
 long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
 long	DEF_BITS = 0;
-long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
+long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE|WARPING|WARPED);
 long	DEF_HAVE =
 	(OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR
 	|OBJ_SHOT|OBJ_LASER);

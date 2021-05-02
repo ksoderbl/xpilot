@@ -1,4 +1,4 @@
-/* $Id: option.c,v 3.30 1995/11/12 22:15:39 bert Exp $
+/* $Id: option.c,v 3.32 1996/05/02 16:05:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,13 +22,9 @@
  */
 
 #include "types.h"
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 
@@ -40,6 +36,7 @@
 #include "proto.h"
 #include "map.h"
 #include "defaults.h"
+#include "error.h"
 
 char option_version[] = VERSION;
 

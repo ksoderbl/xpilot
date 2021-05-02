@@ -1,4 +1,4 @@
-/* $Id: types.h,v 3.14 1995/03/04 20:11:12 bert Exp $
+/* $Id: types.h,v 3.15 1996/05/02 16:06:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -24,11 +24,7 @@
 #ifndef	TYPES_H
 #define	TYPES_H
 
-#ifdef VMS
-#include <types.h>
-#else
 #include <sys/types.h>
-#endif
 
 #ifdef VMS
 typedef char byte;

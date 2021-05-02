@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.66 1995/12/04 14:47:07 bert Exp $ */
+/* $Id: Imakefile,v 3.69 1996/05/06 08:48:46 bert Exp $ */
 
 #include "Local.config"
 
@@ -62,6 +62,9 @@ DEFS_ERASE = -DERASE=1
 #ifdef SparcCmapHack
 DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
 #endif
+#ifdef MultibufferExtension
+DEFS_MBX = -DMBX
+#endif
 #ifdef Joystick
 DEFS_JOYSTICK = -DJOYSTICK
 #endif
@@ -83,7 +86,7 @@ DEFS_PLOCKSERVER = -DPLOCKSERVER
 DEFINES = -DLOCALGURU=\"$(LOCALGURU)\" -DLIBDIR=\"$(INSTLIBDIR)/\" \
        -DCONTACTADDRESS=\"$(CONTACTADDRESS)\" \
        $(DEFS_LOG) $(DEFS_TURN_THRUST) $(DEFS_SILENT) $(DEFS_SERVER_SOUND) \
-       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_JOYSTICK) \
+       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_JOYSTICK) \
        $(DEFS_PLOCKSERVER) $(DEFS_OTHER) $(AUDIODEF)
 INCLUDES = $(AUDIOINC) -I../lib/
 
@@ -101,11 +104,11 @@ depend:: includes
  */
 OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
         play.o player.o rules.o update.o collision.o walls.o error.o \
-        frame.o robot.o option.o socklib.o timer.o saudio.o \
+        frame.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
         $(STRCASECMP_OBJ) $(STRDUP_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
         play.c player.c rules.c update.c collision.c walls.c error.c \
-        frame.c robot.c option.c socklib.c timer.c saudio.c
+        frame.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
 DEPLIBS1 = 
 
 /*
@@ -136,8 +139,12 @@ DEPLIBS3 = $(DEPXLIB)
 PROGRAMS = xpilot xpilots xp-replay
 
 #if !defined(sgiCCoptions)		/* A hack that should mack everyone */
-EXTENSIONLIB = 				/* that doesn't have XLIBONLY. */
+					/* that doesn't have XLIBONLY. */
+#if !defined(MultibufferExtension)	/* On the other hand you need the */
+					/* EXTENSIONLIB sometimes, though ;) */
+EXTENSIONLIB = 
 DEPEXTENSIONLIB = 
+#endif /* MultibufferExtension */
 X_LIB = $(XLIB)
 #else
 X_LIB = $(XLIBONLY)

@@ -1,18 +1,17 @@
 Subject: XPilot multi-player Internet game FAQ
 Summary: Frequently Asked Questions about XPilot with Answers
 Keywords: xpilot,games,Internet,faq
-Followup-To: poster
 Distribution: world
-Reply-To: bert@mc.bio.uva.nl
-Expires: Sun, 1 Oct 1995 00:00:00 GMT
+Expires: Sun, 31 Dec 1996 23:59:59 GMT
 
 Archive-name: games/xpilot-faq
-Last-modified: 1995/09/25
-Version: 3.2.6
+Last-modified: 1996/04/01
+Version: 3.2.7
+
+This FAQ is looking for a maintainer.
 
 This is the Frequently Asked Questions list With Answers for XPilot.
-Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
-This FAQ is posted in rec.games.computer.xpilot every couple of weeks.
+This FAQ is posted in rec.games.computer.xpilot on irregular intervals.
 It is part of the XPilot distribution.
 It can also be obtained by: telnet xpilot.cs.uit.no 4402.
 Or by anonymous ftp to xpilot.sdsu.edu in /pub/xpilot-maps/FAQ.
@@ -20,8 +19,8 @@ Or by sending the following message to mail-server@rtfm.mit.edu:
 send usenet/rec.games.computer.xpilot/XPilot_multi-player_Internet_game_FAQ
 
 New questions in this release: none
-Questions changed in this release: 2, 3, 6, 26
-Questions changed in the previous release: 18, 24
+Questions changed in this release: 2, 3, 4, 27
+Questions changed in the previous release: none
 
 Questions:
 
@@ -96,9 +95,10 @@ Since release 3.0 it is possible to play games across the Internet if
 the roundtrip times are below 150 milliseconds or so, depending on the
 frame rate of the XPilot server.
 
-XPilot is written by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
-Many people around the world have contributed ideas and code or helped in
-other ways to have XPilot run on a diverse set of Unix computers and VMS.
+XPilot is copyrighted by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
+Many people around the world have contributed a plethora of ideas and source
+code or helped in other ways to have XPilot run on a diverse set of UNIX
+computers and VMS.  See the CREDITS file for more details.
 
 The XPilot home page on World-Wide Web is:
     http://www.cs.uit.no/XPilot/
@@ -109,7 +109,7 @@ more than 160 articles.  Its URL is:
 
 2) What is the latest version?
 
-3.4.0.  Which is XPilot release 3.4, patchlevel 0.
+3.4.2.  Which is XPilot release 3.4, patchlevel 2.
 
 3) Where can I get it as soon as possible?
 
@@ -122,20 +122,9 @@ ftp.x.org (198.112.44.100) in /contrib/games/multiplayer/.
 Another important ftp site (especially for HP 700 series workstations) is
 hpux.csc.liv.ac.uk (138.253.42.172) in /hpux/Games/Networking/.
 
-If you have absolutely no FTP access then you can get it send to you by
-email.  Mail to bert@mc.bio.uva.nl with a Subject line of `mail xpilot'.
-Please be careful requesting it this way because if this service is
-taking too much time it will be stopped.  FTPing it yourself is
-much faster anyway.  You will get a 1 MB large mail which contains XPilot
-in gzipped uuencoded format.  Save this mail to a file then uudecode this
-file to get xpilot-3.4.0.tar.gz.  This is the XPilot distribution file as
-found on ftp.cs.uit.no.
-
 4) Where can I get precompiled XPilot executables?
 
-FTP to bigblue.pvv.unit.no.  In the directory /store/store/ernie/xpilot/
-there is a README explaining further details.
-Stig S. Bakken <ssb@pvv.unit.no> is responsible for this service.
+Nowhere.  This service has been stopped.
 
 5) Sound?  Does it really have sound?
 
@@ -516,7 +505,7 @@ Help is available online.  Example session:
     STATUS...........: ok
     MAX SPEED........: 12 fps
     WORLD (100x100)..: Blood's Music
-	  AUTHOR.....: Patrick Kenny - pkenny@eecs.umich.edu
+        AUTHOR.....: Patrick Kenny - pkenny@eecs.umich.edu
     PLAYERS ( 7/12)..:
 
     NO:  TM: NAME:             LIFE:   SC:    PLAYER:
@@ -690,7 +679,7 @@ and earlier versions:
        is false and `allowShields' is false.  This bugreport could not be repeated.
     d) A memory overwrite bug is triggered when a player gets her eighth tank.
 
-3.3.1 and 3.4.0 are stable recommended versions.
+3.4.2 has proven to be a stable recommended version.
 
 27) What if I'm having trouble installing XPilot on Platform XYZ?
 
@@ -709,10 +698,6 @@ SGI Irix 4.0.5          David Chatterton    davidc@bruce.cs.monash.edu.au
 Trusted Solaris CMW     Steve Marsden       marsdens@logica.co.uk
 
 VMS                     Jens Koerber        koerber@itt.uni-stuttgart.d400.de
-
-Linux                   Bert Gijsbers       bert@mc.bio.uva.nl
-
-HP-UX                   Bert Gijsbers       bert@mc.bio.uva.nl
 
 28) Is there a XPilot version available for DOS, Windows or the Mac?
 

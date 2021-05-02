@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.62 1995/11/16 00:13:47 bert Exp $
+/* $Id: frame.c,v 3.65 1996/05/02 16:05:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -21,17 +21,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <sys/types.h>
 #ifndef  VMS
 #include <sys/param.h>
 #endif
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
@@ -45,12 +41,13 @@
 #include "bit.h"
 #include "netserver.h"
 #include "saudio.h"
+#include "error.h"
 
 char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.62 1995/11/16 00:13:47 bert Exp $";
+    "@(#)$Id: frame.c,v 3.65 1996/05/02 16:05:46 bert Exp $";
 #endif
 
 
@@ -81,7 +78,7 @@ typedef struct {
 } debris_t;
 
 
-long			loops = 0;
+long			frame_loops = 1;
 
 static pixel_visibility_t pv;
 static int		view_width,
@@ -278,9 +275,9 @@ static int Frame_status(int conn, int ind)
     }
 
     if (BIT(pl->status, HOVERPAUSE))
-	showautopilot = (pl->count <= 0 || (loops % 8) < 4);
+	showautopilot = (pl->count <= 0 || (frame_loops % 8) < 4);
     else if (BIT(pl->used, OBJ_AUTOPILOT))
-	showautopilot = (loops % 8) < 4;
+	showautopilot = (frame_loops % 8) < 4;
     else
 	showautopilot = 0;
 
@@ -483,7 +480,7 @@ static void Frame_shots(int conn, int ind)
 		&& TEAM_IMMUNE(ind, GetInd[shot->id])) {
 		color = BLUE;
 		teamshot = DEBRIS_TYPES;
-	    } else if (shot->mods.nuclear && (loops & 2)) {
+	    } else if (shot->mods.nuclear && (frame_loops & 2)) {
 		color = RED;
 		teamshot = DEBRIS_TYPES;
 	    } else {
@@ -738,7 +735,7 @@ static void Frame_radar(int conn, int ind)
 		continue;
 
 	    shownuke = (nukesOnRadar && (shot)->mods.nuclear);
-	    if (shownuke && (loops & 2)) {
+	    if (shownuke && (frame_loops & 2)) {
 		s = 3;
 	    } else {
 		s = 0;
@@ -747,14 +744,14 @@ static void Frame_radar(int conn, int ind)
 	    if (BIT(shot->type, OBJ_MINE)) {
 		if (!minesOnRadar && !shownuke)
 		    continue;
-		if (loops % 8 >= 6)
+		if (frame_loops % 8 >= 6)
 		    continue;
 	    } else if (BIT(shot->type, OBJ_BALL)) {
 		s = 2;
 	    } else {
 		if (!missilesOnRadar && !shownuke)
 		    continue;
-		if (loops & 1)
+		if (frame_loops & 1)
 		    continue;
 	    }
 
@@ -792,7 +789,7 @@ static void Frame_radar(int conn, int ind)
 	    if (BIT(pl->used, OBJ_COMPASS)
 		&& BIT(pl->lock.tagged, LOCK_PLAYER)
 		&& GetInd[pl->lock.pl_id] == i
-		&& loops % 5 >= 3) {
+		&& frame_loops % 5 >= 3) {
 		continue;
 	    }
 	    Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5), 3);
@@ -841,8 +838,8 @@ void Frame_update(void)
     static time_t	oldTimeLeft;
     static bool		game_over_called = false;
 
-    if (++loops >= LONG_MAX)	/* Used for misc. timing purposes */
-	loops = 0;
+    if (++frame_loops >= LONG_MAX)	/* Used for misc. timing purposes */
+	frame_loops = 0;
 
     if (gameDuration > 0.0
 	&& game_over_called == false
@@ -869,8 +866,8 @@ void Frame_update(void)
 	     * to reduce network load.
 	     */
 	    if (BIT(pl->status, PAUSE)
-		? ((loops & 0x03) != 0)
-		: ((loops & 0x01) != 0)) {
+		? ((frame_loops & 0x03) != 0)
+		: ((frame_loops & 0x01) != 0)) {
 		continue;
 	    }
 	}

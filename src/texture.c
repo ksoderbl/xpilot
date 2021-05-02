@@ -1,4 +1,4 @@
-/* $Id: texture.c,v 3.6 1995/10/01 19:27:48 bert Exp $
+/* $Id: texture.c,v 3.8 1996/05/04 21:43:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,10 +22,8 @@
  */
 #ifdef VMS
 #include <unixio.h>
-#include <unixlib.h>
-#else
-#include <unistd.h>
 #endif
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,6 +65,7 @@ typedef struct texture_info {
  * XPM format pixmap data.
  */
 #include "../lib/textures/rock4.xpm"
+#include "../lib/textures/ball.xpm"
 
 static texture_info_t wall_texture_info = {
     "wall",
@@ -80,6 +79,14 @@ static texture_info_t decor_texture_info = {
     "decor",
     &decorTextureFile,
     rock4_xpm,
+    None,
+    TextureUnloaded
+};
+
+static texture_info_t ball_texture_info = {
+    "ball",
+    &ballTextureFile,
+    ball_xpm,
     None,
     TextureUnloaded
 };
@@ -171,5 +178,13 @@ Pixmap Texture_wall(void)
 Pixmap Texture_decor(void)
 {
     return Texture_load(&decor_texture_info);
+}
+
+/*
+ * Load a texture for ball drawing.
+ */
+Pixmap Texture_ball(void)
+{
+    return Texture_load(&ball_texture_info);
 }
 

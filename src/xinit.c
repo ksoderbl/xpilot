@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 3.92 1995/12/04 14:47:20 bert Exp $
+/* $Id: xinit.c,v 3.93 1996/04/27 18:39:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -74,7 +74,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.92 1995/12/04 14:47:20 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.93 1996/04/27 18:39:08 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
@@ -118,6 +118,7 @@ Visual			*visual;
 int			dispDepth;
 bool			mono;
 bool			colorSwitch;
+bool			multibuffer;
 int			top_width, top_height, top_x, top_y, top_posmask;
 int			draw_width, draw_height;
 char			*geometry;
@@ -769,15 +770,28 @@ int Init_top(void)
     /*
      * Initialize the double buffering routine.
      */
-    dbuf_state = start_dbuff(dpy,
-			     (colormap != 0)
-				 ? colormap
-				 : DefaultColormap(dpy,
-						   DefaultScreen(dpy)),
-			     (colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY,
-			     num_planes,
-			     colors);
-
+    dbuf_state = NULL;
+    if (multibuffer) {
+	dbuf_state = start_dbuff(dpy,
+				 (colormap != 0)
+				     ? colormap
+				     : DefaultColormap(dpy,
+						       DefaultScreen(dpy)),
+				 MULTIBUFFER,
+				 num_planes,
+				 colors);
+    }
+    if (dbuf_state == NULL) {
+	multibuffer = false;
+	dbuf_state = start_dbuff(dpy,
+				 (colormap != 0)
+				     ? colormap
+				     : DefaultColormap(dpy,
+						       DefaultScreen(dpy)),
+				 ((colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY),
+				 num_planes,
+				 colors);
+    }
     if (dbuf_state == NULL && colormap == 0) {
 
 	/*
@@ -790,7 +804,7 @@ int Init_top(void)
 	 * Try to initialize the double buffering again.
 	 */
 	dbuf_state = start_dbuff(dpy, colormap,
-				 (colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY,
+				 ((colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY),
 				 num_planes,
 				 colors);
     }
@@ -799,7 +813,7 @@ int Init_top(void)
 	/* Can't setup double buffering */
 	errno = 0;
 	error("Can't setup colors with visual %s and %d colormap entries",
-	    Visual_class_name(visual->class), visual->map_entries);
+	      Visual_class_name(visual->class), visual->map_entries);
 	return -1;
     }
 
@@ -997,7 +1011,7 @@ int Init_top(void)
 	      BlackPixel(dpy, DefaultScreen(dpy)),
 	      GXcopy, AllPlanes);
 
-    if (colorSwitch)
+    if (dbuf_state->type == COLOR_SWITCH)
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 
     /*
@@ -1110,17 +1124,28 @@ int Init_windows(void)
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
+     * (This could be in dbuff_init completely IMHO, -- Metalite)
      */
-    if (colorSwitch == false) {
+    switch (dbuf_state->type) {
+
+    case PIXMAP_COPY:
 	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
 	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
 	p_draw  = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
-    }
-    else {
+	break;
+
+    case MULTIBUFFER:
+	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+	dbuff_init(dbuf_state);
+	break;
+
+    case COLOR_SWITCH:
 	s_radar = radar;
 	p_radar = s_radar;
 	p_draw = draw;
 	Paint_sliding_radar();
+	break;
     }
 
     XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
@@ -2061,7 +2086,7 @@ void Resize(Window w, int width, int height)
     Send_display();
     Net_flush();
     XResizeWindow(dpy, draw, draw_width, draw_height);
-    if (p_draw != draw) {
+    if (dbuf_state->type == PIXMAP_COPY) {
 	XFreePixmap(dpy, p_draw);
 	p_draw = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
     }

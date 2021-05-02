@@ -1,4 +1,4 @@
-/* $Id: config.h,v 3.23 1995/11/20 17:39:00 bert Exp $
+/* $Id: config.h,v 3.24 1996/04/07 17:05:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -55,6 +55,13 @@
 #        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
 #    else
 #        define DEFAULTS_FILE_NAME	LIBDIR "/defaults"
+#    endif
+#endif
+#ifndef ROBOTFILE
+#    ifdef VMS
+#        define ROBOTFILE	LIBDIR "robots"
+#    else
+#        define ROBOTFILE	LIBDIR "/robots"
 #    endif
 #endif
 #ifndef SERVERMOTDFILE

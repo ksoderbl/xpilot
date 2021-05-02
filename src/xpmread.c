@@ -1,4 +1,4 @@
-/* $Id: xpmread.c,v 3.2 1995/02/01 19:34:12 bert Exp $
+/* $Id: xpmread.c,v 3.3 1996/05/02 16:06:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -20,12 +20,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

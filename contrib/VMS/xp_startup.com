@@ -9,7 +9,8 @@ $!
 $!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 $!
 $  SAY = "WRITE SYS$OUTPUT"
-$  SAY " SETTING UP XPILOT (v 3.4.2)..."
+$  SAY " "
+$  SAY " SETTING UP XPILOT (v 3.5.0)..."
 $!
 $  SET NOON
 $  SET PROCESS/PRIV=ALL
@@ -67,6 +68,7 @@ $   CPU="VAX"
 $  ENDIF
 $!
 $SERVER:
+$  SAY " "
 $  INQUIRE SERV " Start the XPilot server (Y/N) ? "
 $  IF SERV .EQS."N" .OR. SERV .EQS. "n" THEN GOTO CLIENT
 $! 

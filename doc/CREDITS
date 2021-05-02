@@ -3,6 +3,13 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@cs.uit.no.
 
+Release 3.5 credits:
+
+	Steve Payne                     ship checking, Linux plock + option
+	Claus Leth Gregersen            item limits, hud ship, textured balls
+	Aleksi Suhonen                  X multibuffer
+	Jens Koerber                    VMS changes
+
 Release 3.4 credits:
 
 	Mark Boyns			Map decorations + other things.

@@ -6,7 +6,7 @@ MATHLIB =
 SOCKLIB = [.lib]libsocklib.olb
 
 ############################################################################
-# DECC Compiler for OpenVMS/AXP 
+# DECC Compiler for OpenVMS/AXP 6.2 
 #
 CC = cc/decc/standard=vaxc/precision=single
 DEFINES = /define=(VMS)
@@ -14,7 +14,7 @@ CDEBUGFLAGS = /optimize=(level=4)
 CFLAGS = $(DEFINES) $(CDEBUGFLAGS) 
 
 ############################################################################
-# DECC Compiler for OpenVMS/VAX 
+# DECC Compiler for OpenVMS/VAX 6.2
 #
 #CC = cc/decc/standard=vaxc/precision=single
 #DEFINES = /define=(VMS,VAX)
@@ -51,12 +51,13 @@ TIME_OBJ = gettimeofday.obj
 #
 OBJS1 = server.obj, event.obj, map.obj, math.obj, cmdline.obj, net.obj, - 
         netserver.obj, play.obj, player.obj, rules.obj, update.obj, - 
-        collision.obj, error.obj, frame.obj, robot.obj, option.obj, -
-        socklib.obj, timer.obj, saudio.obj, ioctl.obj, username.obj, -
+        collision.obj, walls.obj, error.obj, frame.obj, robot.obj, robotdef.obj, -
+        option.obj, socklib.obj, sched.obj, saudio.obj, ioctl.obj, -
+        username.obj, -
         $(USLEEP_OBJ), $(STRCASECMP_OBJ), $(STRDUP_OBJ), $(TIME_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c -
-        play.c player.c rules.c update.c collision.c error.c frame.c -
-        robot.c option.c socklib.c timer.c saudio.c ioctl.c
+        play.c player.c rules.c update.c collision.c walls.c error.c frame.c -
+        robot.c robotdef.o option.c socklib.c sched.c saudio.c ioctl.c
 #
 # Client program, xpilot...
 #

@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 3.45 1995/11/05 17:01:58 bert Exp $
+/* $Id: pack.h,v 3.49 1996/05/13 12:16:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -90,8 +90,9 @@
  * 3.3.1.0: Different owner-only commands.
  * 3.3.2.0: Map decorations.
  * 3.4.0.0: Lose/drop item key.
+ * 3.5.0.0: Player waiting queue.
  */
-#define	MAGIC		0x3400F4ED
+#define	MAGIC		0x3500F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))
@@ -117,6 +118,7 @@
  * Different contact pack types.
  */
 #define	ENTER_GAME_pack		0x00
+#define	ENTER_QUEUE_pack	0x01
 #define	REPLY_pack		0x10
 #define	REPORT_STATUS_pack	0x21
 #define	OPTION_LIST_pack	0x28

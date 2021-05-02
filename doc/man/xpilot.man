@@ -1,10 +1,10 @@
 .\" -*-Text-*-
 .\"
-.\" Copyright © 1991-95 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers.
+.\" Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers.
 .\"
 .TH XPILOT  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.4.2: Dec 7th, 1995
+.ds ]W XPilot 3.5.1: May 13th, 1996
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1385,7 +1385,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of XPilot, i.e., 3.4.2
+\(bu The full version of XPilot, i.e., 3.5.1
 .TP
 \(bu What the bug looks like (symptoms)
 .TP
@@ -1404,17 +1404,17 @@ will be to install the GNU C compiler on your system.
 
 .SH COPYRIGHT & DISCLAIMER
 
-XPilot is Copyright © 1991-95 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers.  XPilot comes with ABSOLUTELY NO WARRANTY;
+XPilot is Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers.  XPilot comes with ABSOLUTELY NO WARRANTY;
 for details see the provided LICENSE file.
 
 
 .SH FILES
 .PD 0
 .TP 40
-.B /usr/remote/lib/X11/motd
+.B /usr/lib/X11/motd
 Message of the day.
 .TP
-.B /usr/remote/lib/X11/sounds
+.B /usr/lib/X11/sounds
 File containing the sound to sound-file mapping.
 .PD
 

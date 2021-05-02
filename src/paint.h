@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.51 1995/07/16 20:25:15 bert Exp $
+/* $Id: paint.h,v 3.52 1996/05/04 21:43:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -160,6 +160,7 @@ extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
 extern char	*texturePath;		/* Path list of texture directories */
 extern char	*wallTextureFile;	/* Filename of wall texture */
 extern char	*decorTextureFile;	/* Filename of decor texture */
+extern char	*ballTextureFile;	/* Filename of ball texture */
 
 extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 		(Display *disp, Drawable d, GC gc,

@@ -1,4 +1,4 @@
-/* $Id: default.c,v 3.107 1995/11/16 00:13:46 bert Exp $
+/* $Id: default.c,v 3.110 1996/05/04 21:43:44 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -30,12 +30,10 @@
 #    include <X11/ap_keysym.h>
 #endif
 #include <sys/types.h>
+#include <unistd.h>
 #ifdef VMS
 #include "strcasecmp.h"
-#include <unixio.h>
-#include <unixlib.h>
 #else
-#include <unistd.h>
 #include <sys/param.h>
 #endif
 #include <string.h>
@@ -59,7 +57,7 @@ char default_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.107 1995/11/16 00:13:46 bert Exp $";
+    "@(#)$Id: default.c,v 3.110 1996/05/04 21:43:44 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -688,6 +686,13 @@ struct option {
 	"Use color buffering or not.\n"
     },
     {
+	"multibuffer",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Use the X windows multibuffer extension if present.\n"
+    },
+    {
 	"maxColors",
 	NULL,
 	"4",
@@ -925,6 +930,20 @@ struct option {
 	"",
 	KEY_DUMMY,
 	"Specify a XPM format pixmap file to load the decor texture from.\n"
+    },
+    {
+	"texturedBalls",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draw the balls with a texture specified by the ballTextureFile option.\n"
+    },
+    {
+	"ballTextureFile",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Specify a XPM format pixmap file to load the ball texture from.\n"
     },
     {
 	"targetRadarColor",
@@ -2081,6 +2100,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     mono = (i != 0) ? true : false;
     Get_bool_resource(rDB, "colorSwitch", &i);
     colorSwitch = (i != 0) ? true : false;
+    Get_bool_resource(rDB, "multibuffer", &i);
+    multibuffer = (i != 0) ? true : false;
     Get_int_resource(rDB, "maxColors", &maxColors);
     Get_string_resource(rDB, "black", color_names[0], sizeof(color_names[0]));
     Get_string_resource(rDB, "white", color_names[1], sizeof(color_names[1]));
@@ -2130,6 +2151,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "outlineDecor", &instruments, SHOW_OUTLINE_DECOR);
     Get_bit_resource(rDB, "filledDecor", &instruments, SHOW_FILLED_DECOR);
     Get_bit_resource(rDB, "texturedDecor", &instruments, SHOW_TEXTURED_DECOR);
+    Get_bit_resource(rDB, "texturedBalls", &instruments, SHOW_TEXTURED_BALLS);
 
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
@@ -2160,6 +2182,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     wallTextureFile = strdup(resValue);
     Get_resource(rDB, "decorTextureFile", resValue, sizeof resValue);
     decorTextureFile = strdup(resValue);
+    Get_resource(rDB, "ballTextureFile", resValue, sizeof resValue);
+    ballTextureFile = strdup(resValue);
 
     Get_int_resource(rDB, "maxFPS", &maxFPS);
     oldMaxFPS = maxFPS;

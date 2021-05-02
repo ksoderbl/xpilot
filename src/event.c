@@ -1,4 +1,4 @@
-/* $Id: event.c,v 3.65 1995/11/30 21:48:04 bert Exp $
+/* $Id: event.c,v 3.68 1996/04/08 19:51:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -23,6 +23,7 @@
 
 #define SERVER
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "version.h"
@@ -40,7 +41,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.65 1995/11/30 21:48:04 bert Exp $";
+    "@(#)$Id: event.c,v 3.68 1996/04/08 19:51:56 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -170,16 +171,15 @@ void Pause_player(int ind, int onoff)
     player		*pl = Players[ind];
     int			i;
 
-    if (onoff) {
-	if (!BIT(pl->status, PAUSE)) { /* Turn pause mode on */
-	    pl->count = 10*FPS;
-	    pl->updateVisibility = 1;
-	    CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
-	    SET_BIT(pl->status, PAUSE);
-	    pl->mychar = 'P';
-	    updateScores = true;
-	}
-    } else {
+    if (onoff != 0 && !BIT(pl->status, PAUSE)) { /* Turn pause mode on */
+	pl->count = 10*FPS;
+	pl->updateVisibility = 1;
+	CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
+	SET_BIT(pl->status, PAUSE);
+	pl->mychar = 'P';
+	updateScores = true;
+    }
+    else if (onoff == 0 && BIT(pl->status, PAUSE)) { /* Turn pause mode off */
 	if (pl->count <= 0) {
 	    bool toolate = false;
 
@@ -870,7 +870,7 @@ int Handle_keyboard(int ind)
 		     * shields and firing in order to prevent macros
 		     * and hacked clients.
 		     */
-		    pl->shot_time = loops;
+		    pl->shot_time = frame_loops;
 		}
 		break;
 

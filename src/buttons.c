@@ -1,4 +1,4 @@
-/* $Id: buttons.c,v 3.8 1995/12/06 18:49:56 bert Exp $
+/* $Id: buttons.c,v 3.10 1996/05/02 16:05:39 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
@@ -22,12 +22,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
-#include <unistd.h>
-#endif
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>

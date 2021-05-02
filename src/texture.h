@@ -1,4 +1,4 @@
-/* $Id: texture.h,v 3.2 1995/07/16 16:27:22 bert Exp $
+/* $Id: texture.h,v 3.3 1996/05/04 21:43:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -28,5 +28,6 @@
  */
 extern Pixmap Texture_wall(void);
 extern Pixmap Texture_decor(void);
+extern Pixmap Texture_ball(void);
 
 #endif

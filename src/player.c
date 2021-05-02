@@ -1,4 +1,4 @@
-/* $Id: player.c,v 3.91 1995/11/30 21:48:07 bert Exp $
+/* $Id: player.c,v 3.95 1996/04/10 06:44:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #define SERVER
@@ -35,12 +36,13 @@
 #include "bit.h"
 #include "netserver.h"
 #include "saudio.h"
+#include "error.h"
 
 char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.91 1995/11/30 21:48:07 bert Exp $";
+    "@(#)$Id: player.c,v 3.95 1996/04/10 06:44:59 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -630,7 +632,7 @@ static void Reset_all_players(void)
 		    World.targets[i].damage = TARGET_DAMAGE;
 		    World.targets[i].conn_mask = 0;
 		    World.targets[i].update_mask = (unsigned)-1;
-		    World.targets[i].last_change = loops;
+		    World.targets[i].last_change = frame_loops;
 		}
 	    }
 	}
@@ -1029,7 +1031,7 @@ static void Race_game_over(void)
 	free(order);
     }
 
-    for (i = 0; i < NumPlayers; i++)  {
+    for (i = NumPlayers - 1; i >= 0; i--)  {
 	pl = Players[i];
 	CLR_BIT(pl->status, RACE_OVER | FINISH);
 	if (BIT(pl->status, PAUSE)
@@ -1562,12 +1564,18 @@ void Delete_player(int ind)
     Players[ind]	= pl;
     pl			= Players[NumPlayers];	/* Restore pointer. */
 
-    Check_team_members(Players[ind]->team);
-
     GetInd[Players[ind]->id] = ind;
     GetInd[Players[NumPlayers]->id] = NumPlayers;
 
-    for (i=0; i<NumPlayers; i++) {
+    Check_team_members(pl->team);
+
+    for (i = NumPlayers - 1; i >= 0; i--) {
+	if (IS_TANK_IND(i)
+	    && Players[i]->lock.pl_id == id) {
+	    /* remove tanks which were released by this player. */
+	    Delete_player(i);
+	    continue;
+	}
 	if (BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE)
 	    && (Players[i]->lock.pl_id == id || NumPlayers <= 1)) {
 	    CLR_BIT(Players[i]->lock.tagged, LOCK_PLAYER|LOCK_VISIBLE);
@@ -1591,9 +1599,14 @@ void Delete_player(int ind)
 	}
     }
 
-    for (i = 0; i < NumPlayers; i++) {
+    for (i = NumPlayers - 1; i >= 0; i--) {
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_leave(Players[i]->conn, id);
+	}
+	else if (IS_TANK_IND(i)) {
+	    if (Players[i]->lock.pl_id == id) {
+		Delete_player(i);
+	    }
 	}
     }
 
@@ -1642,7 +1655,6 @@ void Player_death_reset(int ind)
 
     if (IS_TANK_PTR(pl)) {
 	Delete_player(ind);
-	updateScores = true;
 	return;
     }
 

@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.42 1995/03/19 15:32:47 bert Exp $
+/* $Id: map.c,v 3.45 1996/05/02 16:05:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -24,11 +24,10 @@
 #define SERVER
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/file.h>
-#ifndef VMS
 #include <sys/stat.h>
-#endif
 
 #include "version.h"
 #include "config.h"
@@ -37,6 +36,7 @@
 #include "proto.h"
 #include "map.h"
 #include "bit.h"
+#include "error.h"
 
 char map_version[] = VERSION;
 
@@ -44,7 +44,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.42 1995/03/19 15:32:47 bert Exp $";
+    "@(#)$Id: map.c,v 3.45 1996/05/02 16:05:48 bert Exp $";
 #endif
 
 
@@ -447,7 +447,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].last_change = frame_loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
@@ -458,7 +458,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].last_change = frame_loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
@@ -469,7 +469,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].last_change = frame_loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
@@ -480,7 +480,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
 		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
-		    World.cannon[World.NumCannons].last_change = loops;
+		    World.cannon[World.NumCannons].last_change = frame_loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
 		    break;
@@ -493,7 +493,7 @@ void Grok_map(void)
 		    World.fuel[World.NumFuels].pix_pos.y = (y+0.5f)*BLOCK_SZ;
 		    World.fuel[World.NumFuels].fuel = START_STATION_FUEL;
 		    World.fuel[World.NumFuels].conn_mask = (unsigned)-1;
-		    World.fuel[World.NumFuels].last_change = loops;
+		    World.fuel[World.NumFuels].last_change = frame_loops;
 		    World.NumFuels++;
 		    break;
 
@@ -523,7 +523,7 @@ void Grok_map(void)
 		    World.targets[World.NumTargets].damage = TARGET_DAMAGE;
 		    World.targets[World.NumTargets].conn_mask = (unsigned)-1;
 		    World.targets[World.NumTargets].update_mask = 0;
-		    World.targets[World.NumTargets].last_change = loops;
+		    World.targets[World.NumTargets].last_change = frame_loops;
 		    World.NumTargets++;
 		    break;
 		case '%':

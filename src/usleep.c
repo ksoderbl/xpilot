@@ -17,22 +17,15 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
  *	Changed usleep into micro_delay to forego any possible prototype clashes.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#include <time.h>
-#include <socket.h>
-#else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#endif
 
 #include "types.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.9 1995/01/24 17:24:49 bert Exp $";
+    "@(#)$Id: usleep.c,v 3.10 1996/05/02 16:06:02 bert Exp $";
 #endif
 
 

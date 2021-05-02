@@ -1,4 +1,4 @@
-/* $Id: math.c,v 3.33 1995/11/24 21:19:12 bert Exp $
+/* $Id: math.c,v 3.34 1996/03/11 12:45:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -41,7 +41,7 @@ char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.33 1995/11/24 21:19:12 bert Exp $";
+    "@(#)$Id: math.c,v 3.34 1996/03/11 12:45:24 bert Exp $";
 #endif
 
 
@@ -727,6 +727,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 			count = 0, change, max = 0,
 			lowest = 0, highest = 0, leftmost = 0, rightmost = 0;
 	int		invalid = 0;
+	const int	checkWidthAgainstLongestAxis = 1;
 
 	for (i = 0; i < w->num_points; i++) {
 	    x = pt[i].x;
@@ -776,6 +777,81 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 		       "be at least %d.\n", minSize);
 	    }
 	    return -1;
+	}
+
+	if (checkWidthAgainstLongestAxis) {
+	    /*
+	     * For making sure the ship is the right width!
+	     */
+	    int pair[2];
+	    int dist = 0, tmpDist = 0;
+	    double vec[2], width, dTmp;
+	    const int minWidth = 12;
+
+	    /*
+	     * Loop over all the points and find the two furthest apart
+	     */
+	    for (i = 0; i < w->num_points; i++) {
+		for (j = i + 1; j < w->num_points; j++) {
+		    /*
+		     * Compare the points if they are not the same ones.
+		     * Get this distance -- doesn't matter about sqrting
+		     * it since only size is important.
+		     */
+		    if ((tmpDist = ((pt[i].x - pt[j].x) * (pt[i].x - pt[j].x) +
+				    (pt[i].y - pt[j].y) * (pt[i].y - pt[j].y)))
+			> dist) {
+			/*
+			 * Set new separation thingy.
+			 */
+			dist = tmpDist;
+			pair[0] = i;
+			pair[1] = j;
+		    }
+		}
+	    }
+
+	    /*
+	     * Now we know the vector that is _|_ to the one above
+	     * is simply found by (x,y) -> (y,-x) => dot-prod = 0
+	     */
+	    vec[0] = (double)(pt[pair[1]].y - pt[pair[0]].y);
+	    vec[1] = (double)(pt[pair[0]].x - pt[pair[1]].x);
+
+	    /*
+	     * Normalise
+	     */
+	    dTmp = sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
+	    vec[0] /= dTmp;
+	    vec[1] /= dTmp;
+
+	    /*
+	     * Now check the width _|_ to the ship main line.
+	     */
+	    for (i = 0, width = dTmp = 0.0; i < w->num_points; i++) {
+		for (j = i + 1; j < w->num_points; j++) {
+		    /*
+		     * Check the line if the points are not the same ones
+		     */
+		    if ((width = fabs(vec[0] * (double)(pt[i].x - pt[j].x) +
+				      vec[1] * (double)(pt[i].y - pt[j].y)))
+			> dTmp) {
+			dTmp = width;
+		    }
+		}
+	    }
+
+	    /*
+	     * And make sure it is nice and far away
+	     */
+	    if (((int)dTmp) < minWidth) {
+		if (verboseShapeParsing) {
+		    printf("Ship shape is not big enough.\n"
+			   "The ship's width should be at least %d.\n"
+			   "Player's is %d\n", minWidth, (int)dTmp);
+		}
+		return -1;
+	    }
 	}
 
 	/*

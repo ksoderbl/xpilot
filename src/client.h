@@ -1,4 +1,4 @@
-/* $Id: client.h,v 3.62 1995/11/16 00:13:46 bert Exp $
+/* $Id: client.h,v 3.65 1996/05/13 12:16:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -57,6 +57,7 @@
 #define SHOW_FILLED_DECOR	(1L << 22)
 #define SHOW_TEXTURED_DECOR	(1L << 23)
 #define SHOW_CLOCK_AMPM_FORMAT	(1L << 24)
+#define SHOW_TEXTURED_BALLS	(1L << 25)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1

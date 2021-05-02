@@ -1,4 +1,4 @@
-/* $Id: xp-replay.c,v 3.24 1995/12/06 18:49:55 bert Exp $
+/* $Id: xp-replay.c,v 3.25 1996/05/02 16:06:03 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
@@ -35,25 +35,18 @@
  */
 
 #ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
 #include <socket.h>
-#include <time.h>
-#include "gettimeofday.h"
-#else
-#include <unistd.h>
 #endif
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
 #include <math.h>
-#ifndef  VMS
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <stdarg.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

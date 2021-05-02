@@ -1,4 +1,4 @@
-/* $Id: record.c,v 3.9 1995/09/17 15:13:06 bert Exp $
+/* $Id: record.c,v 3.10 1996/05/02 16:05:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -21,12 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#else
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

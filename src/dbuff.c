@@ -1,4 +1,4 @@
-/* $Id: dbuff.c,v 3.16 1995/09/17 15:13:02 bert Exp $
+/* $Id: dbuff.c,v 3.17 1996/04/27 18:39:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -34,6 +34,11 @@
 #include "bit.h"
 #include "dbuff.h"
 
+#ifdef MBX
+/* Needed for windows ... */
+# include "paint.h"
+#endif
+
 #ifdef SPARC_CMAP_HACK
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -48,7 +53,7 @@ char dbuff_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.16 1995/09/17 15:13:02 bert Exp $";
+    "@(#)$Id: dbuff.c,v 3.17 1996/04/27 18:39:00 bert Exp $";
 #endif
 
 #ifdef SPARC_CMAP_HACK
@@ -65,6 +70,12 @@ static void release(register dbuff_state_t *state)
 	if (state->colormaps[0] != NULL) free(state->colormaps[0]);
 	if (state->colormaps[1] != NULL) free(state->colormaps[1]);
 	if (state->planes != NULL) free(state->planes);
+#ifdef MBX
+	if (state->type == MULTIBUFFER
+	    && state->buffer != 2) {
+	    XmbufDestroyBuffers(state->display, draw);
+	}
+#endif
 	free(state);
     }
 }
@@ -111,12 +122,32 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 
     state->type = type;
 
-    if (state->type == COLOR_SWITCH) {
+    switch (type) {
+
+    case COLOR_SWITCH:
 	if (XAllocColorCells(state->display, state->cmap, False,
 			     state->planes, 2*planes, &state->pixel, 1) == 0) {
 	    release(state);
 	    return NULL;
 	}
+
+    default:
+	state->buffer = 0;
+	break;
+
+    case MULTIBUFFER:
+#ifdef MBX
+	state->buffer = 2;
+	if (!XmbufQueryExtension(display, &state->ev_base, &state->err_base)) {
+	    release(state);
+	    return(NULL);
+	}
+#else
+	printf("multibuffering support was not configured during compilation.\n");
+	release(state);
+	return(NULL);
+#endif
+	break;
     }
 
     state->masks[0] = AllPlanes;
@@ -161,7 +192,6 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 	state->colormaps[1][i].pixel = color(state, i);
     }
 
-    state->buffer = 0;
     state->drawing_planes = state->masks[state->buffer];
     if (state->type == COLOR_SWITCH)
 	XStoreColors(state->display, state->cmap,
@@ -183,10 +213,33 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
     return (state);
 }
 
+void dbuff_init(dbuff_state_t *state)
+{
+#ifdef MBX
+    if (state->type == MULTIBUFFER) {
+	if (state->buffer == 2) {
+	    state->buffer = 0;
+	    if (XmbufCreateBuffers(state->display, draw, 2,
+				   MultibufferUpdateActionUndefined,
+				   MultibufferUpdateHintFrequent,
+				   state->draw) != 2) {
+		perror("Couldn't create double buffering buffers");
+		exit(1);
+	    }
+	}
+	p_draw = state->draw[state->buffer];
+    }
+#endif
+}
 
 
 void dbuff_switch(dbuff_state_t *state)
 {
+#ifdef MBX
+    if (state->type == MULTIBUFFER)
+	p_draw = state->draw[state->buffer];
+#endif
+
     state->buffer ^= 1;
 
     if (state->type == COLOR_SWITCH) {
@@ -213,6 +266,13 @@ void dbuff_switch(dbuff_state_t *state)
 	XStoreColors(state->display, state->cmap,
 		     state->colormaps[state->buffer], state->map_size);
     }
+#ifdef MBX
+    else if (state->type == MULTIBUFFER) {
+	XmbufDisplayBuffers(state->display, 1, &state->draw[state->buffer],
+			    0, 200);
+    }
+#endif
+
 
     state->drawing_planes = state->masks[state->buffer];
 }

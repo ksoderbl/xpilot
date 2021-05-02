@@ -1,4 +1,4 @@
-/* $Id: dbuff.h,v 3.11 1995/05/13 15:49:01 bert Exp $
+/* $Id: dbuff.h,v 3.12 1996/04/27 18:39:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
@@ -36,7 +36,16 @@
 # endif
 #endif
 
-typedef enum { PIXMAP_COPY, COLOR_SWITCH } dbuff_t;
+#ifdef MBX
+# include <X11/extensions/multibuf.h>
+#endif
+
+
+typedef enum {
+    PIXMAP_COPY,
+    COLOR_SWITCH,
+    MULTIBUFFER,
+} dbuff_t;
 
 typedef struct {
     Display		*display;
@@ -49,6 +58,10 @@ typedef struct {
     unsigned long	masks[2];
     unsigned long	*planes;
     unsigned long	pixel;
+#ifdef MBX
+    Multibuffer		draw[2];
+    int			ev_base, err_base;
+#endif
 #ifdef SPARC_CMAP_HACK
     int			fbfd;
     struct fbcmap	hardcmap;
@@ -61,6 +74,7 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 			   dbuff_t type,
 			   unsigned long planes, XColor *colors);
 void dbuff_switch(dbuff_state_t *state);
+void dbuff_init(dbuff_state_t *state);
 void end_dbuff(dbuff_state_t *state);
 
 #endif

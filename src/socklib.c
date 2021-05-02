@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 3.48 1995/11/24 20:56:41 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.49 1996/05/02 16:05:59 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 3.48 1995/11/24 20:56:41 bert Exp $";
+    "@(#)$Id: socklib.c,v 3.49 1996/05/02 16:05:59 bert Exp $";
 #endif
 
 #ifdef TERMNET
@@ -42,13 +42,11 @@ static char sourceid[] =
 #define _SOCKLIB_LIBSOURCE
 
 /* Include files */
-#ifdef VMS
-#include <unixio.h>
-#include <unixlib.h>
-#include <ucx$inetdef.h>
-#else
 #include <unistd.h>
 #include <sys/types.h>
+#ifdef VMS
+#include <ucx$inetdef.h>
+#else
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #endif
@@ -57,25 +55,18 @@ static char sourceid[] =
 #endif
 #if (_SEQUENT_)
 #include <sys/fcntl.h>
-#elif !defined(VMS)
+#else
 #include <fcntl.h>
 #endif
-#if defined(__hpux) || defined(VMS)
+#if defined(__hpux)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
-#ifdef VMS
-#include <socket.h>
-#include <in.h>
-#include <tcp.h>
-#include <inet.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
