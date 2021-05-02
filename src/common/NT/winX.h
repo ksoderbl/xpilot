@@ -1,4 +1,4 @@
-/* $Id: winX.h,v 5.1 2001/05/01 10:00:42 bertg Exp $
+/* $Id: winX.h,v 5.2 2001/10/19 17:52:56 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,7 +28,7 @@
 *  This file is the public interface to the Winodoze -> X11 translator.		*
 *  Any function that has a unix man page belongs in this file.				*
 *																			*
-*  $Id: winX.h,v 5.1 2001/05/01 10:00:42 bertg Exp $							*
+*  $Id: winX.h,v 5.2 2001/10/19 17:52:56 bertg Exp $							*
 \***************************************************************************/
 #ifndef	_WINX_H_
 #define	_WINX_H_
@@ -279,14 +279,19 @@ typedef	struct XColor XColor;
 #define Convex			2	/* wholly convex */
 
 
+#define GCFunction          (1L<<0)
+#define GCForeground        (1L<<2)
+#define GCBackground        (1L<<3)
 #define	GCLineWidth			(1L<<4)
 #define	GCLineStyle			(1L<<5)
 #define	GCCapStyle			(1L<<6)
 #define	GCJoinStyle			(1L<<7)
 #define GCFillStyle			(1L<<8)
+#define GCTile              (1L<<10)
 #define GCStipple			(1L<<11)
 #define GCTileStipXOrigin	(1L<<12)
 #define GCTileStipYOrigin	(1L<<13)
+#define GCFont              (1L<<14)
 #define	GCGraphicsExposures	(1L<<16)
 #define	GCDashOffset		(1L<<20)
 
@@ -493,6 +498,7 @@ extern	XFillRectangle(Display* dpy, Drawable d, GC gc, int x, int y,
 extern	XFillRectangles(Display* dpy, Drawable d, GC gc, 
 						XRectangle* rects, int nrectangles);
 extern	XChangeGC(Display* dpy, GC gc, unsigned long valuemask, XGCValues* values);
+extern	int XGetGCValues(Display *display, GC gc, unsigned long valuemask, XGCValues *values_return);
 extern	XSetLineAttributes(Display* dpy, GC gc, unsigned int line_width,
 						   int line_style, int cap_style, int join_style);
 extern	XCopyArea(Display* dpy, Drawable src, Drawable dest, GC gc,

@@ -1,4 +1,4 @@
-/* $Id: cannon.h,v 5.2 2001/08/26 19:27:25 gkoopman Exp $
+/* $Id: cannon.h,v 5.3 2002/01/27 22:58:55 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -6,7 +6,7 @@
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
- *  	Guido Koopman        <guido@xpilot.org>
+ *  	Kimiko Koopman       <kimiko@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,13 @@ extern long CANNON_USE_ITEM;
    uses one fuel pack. even bigger with emergency thrust. more afterburners
    only increase probability of use */
 #define CW_GASJET	7
+
+/* the different defenses a cannon can use.
+   used in communication between parts of defending code */
+/* for four seconds, absorbs any shot. uses one emergency shield */
+#define CD_EM_SHIELD	0
+/* for four seconds, lets any shot pass through. uses one phasing device */
+#define CD_PHASING	1
 
 /* base visibility distance (modified by sensors) */
 #define CANNON_DISTANCE		(VISIBILITY_DISTANCE * 0.5)

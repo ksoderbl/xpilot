@@ -1,4 +1,4 @@
-/* $Id: play.c,v 5.6 2001/05/24 11:26:56 bertg Exp $
+/* $Id: play.c,v 5.10 2001/12/11 12:45:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -35,7 +35,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "saudio.h"
@@ -55,7 +55,7 @@ int Punish_team(int ind, int t_destroyed, int t_target)
     int			win_score = 0,lose_score = 0;
     int			win_team_members = 0, lose_team_members = 0;
     int			somebody_flag = 0;
-    int			sc, por;
+    DFLOAT		sc, por;
 
     Check_team_members (td->team);
     if (td->team == pl->team)
@@ -200,11 +200,14 @@ void Make_debris(
     if (num_debris > MAX_TOTAL_SHOTS - NumObjs) {
 	num_debris = MAX_TOTAL_SHOTS - NumObjs;
     }
-    for (i = 0; i < num_debris; i++, NumObjs++) {
+    for (i = 0; i < num_debris; i++) {
 	DFLOAT		speed, dx, dy, diroff;
 	int		dir, dirplus;
 
-	debris = Obj[NumObjs];
+	if ((debris = Object_allocate()) == NULL) {
+	    break;
+	}
+
 	debris->color = color;
 	debris->id = id;
 	debris->team = team;
@@ -219,7 +222,14 @@ void Make_debris(
 	debris->vel.y = vely + dy * speed;
 	debris->acc.x = 0;
 	debris->acc.y = 0;
-	debris->mass = mass;
+	if (shotHitFuelDrainUsesKineticEnergy
+	    && type == OBJ_SHOT) {
+	    /* compensate so that m*v^2 is constant */
+	    DFLOAT sp_shotsp = speed / ShotsSpeed;
+	    debris->mass = mass / (sp_shotsp * sp_shotsp);
+	} else {
+	    debris->mass = mass;
+	}
 	debris->type = type;
 	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);
 	if (life * speed > World.hypotenuse) {

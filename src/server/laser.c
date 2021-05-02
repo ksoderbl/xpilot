@@ -1,4 +1,4 @@
-/* $Id: laser.c,v 5.6 2001/06/03 17:28:09 bertg Exp $
+/* $Id: laser.c,v 5.10 2002/01/21 22:04:03 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "list.h"
 #include "global.h"
 #include "proto.h"
@@ -145,10 +145,7 @@ static void Laser_pulse_find_victims(
 	    vic->lock.pl_id == pulse->id) {
 	    continue;
 	}
-	if (BIT(World.rules->mode, TEAM_PLAY)
-	    && teamImmunity
-	    && vic->team == pulse->team
-	    && vic->id != pulse->id) {
+	if (Team_immune(vic->id, pulse->id)) {
 	    continue;
 	}
 	if (vic->id == pulse->id && !pulse->refl) {
@@ -192,7 +189,7 @@ static void Laser_pulse_hits_player(
     player		*pl;
     player		*vicpl;
     int			ind;
-    int			sc;
+    DFLOAT		sc;
     char		msg[MSG_LEN];
 
     if (pulse->id != NO_ID) {
@@ -272,9 +269,9 @@ static void Laser_pulse_hits_player(
 			  vicpl->name);
 		    strcat(msg, " How strange!");
 		} else {
-		    sc = (int)floor(Rate(pl->score,
+		    sc = Rate(pl->score,
 					 vicpl->score)
-			 * laserKillScoreMult);
+			 * laserKillScoreMult;
 		    Score_players(ind, sc, vicpl->name,
 				  victim->ind, -sc,
 				  pl->name);
@@ -285,6 +282,9 @@ static void Laser_pulse_hits_player(
 		      OBJ_X_IN_BLOCKS(vicpl),
 		      OBJ_Y_IN_BLOCKS(vicpl),
 		      "Cannon");
+		if (BIT(World.rules->mode, TEAM_PLAY)
+		    && vicpl->team != pulse->team)
+		    TEAM_SCORE(pulse->team, sc);
 		sprintf(msg,
 		    "%s got roasted alive by cannonfire.",
 		    vicpl->name);
@@ -417,8 +417,7 @@ void Laser_pulse_collision(void)
 {
     int				ind, i;
     int				p;
-    int				max, hits, sc = 0;
-    int				objnum = -1;
+    int				max, hits;
     bool			refl;
     vicbuf_t			vicbuf;
     DFLOAT			x, y, x1, x2, y1, y2;
@@ -430,7 +429,11 @@ void Laser_pulse_collision(void)
     list_t			obj_list = NULL;
     list_iter_t			iter;
 
-    if (NumObjs >= MAX_TOTAL_SHOTS) {
+    /*
+     * Allocate one object with which we will
+     * do pulse wall bounce checking.
+     */
+    if ((obj = Object_allocate()) == NULL) {
 	/* overload.  we can't do bounce checking. */
 	Laser_pulse_destroy_all();
 	return;
@@ -440,13 +443,6 @@ void Laser_pulse_collision(void)
     vicbuf.num_vic = 0;
     vicbuf.max_vic = 0;
     vicbuf.vic_ptr = NULL;
-
-    /*
-     * Allocate one object with which we will
-     * do pulse wall bounce checking.
-     */
-    objnum = NumObjs++;
-    obj = Obj[objnum];
 
     for (p = NumPulses - 1; p >= 0; --p) {
 	pulse = Pulses[p];
@@ -553,6 +549,7 @@ void Laser_pulse_collision(void)
 	obj->id = pulse->id;
 	obj->team = pulse->team;
 	obj->count = 0;
+	obj->status = 0;
 	if (pulse->id == NO_ID) {
 	    obj->status = FROMCANNON;
 	}
@@ -611,9 +608,9 @@ void Laser_pulse_collision(void)
 			    ast->life = 0;
 			if (ast->life == 0
 			    && ind != -1
-			    && asteroidScoring) {
-			    sc = (int)Rate(Players[ind]->score, ASTEROID_SCORE);
-			    SCORE(ind, sc,
+			    && asteroidPoints > 0
+			    && Players[ind]->score <= asteroidMaxScore) {
+			    SCORE(ind, asteroidPoints,
 				  OBJ_X_IN_BLOCKS(ast), OBJ_Y_IN_BLOCKS(ast),
 				  "");
 			}
@@ -650,11 +647,11 @@ void Laser_pulse_collision(void)
     if (vicbuf.max_vic > 0 && vicbuf.vic_ptr != NULL) {
 	free(vicbuf.vic_ptr);
     }
-    if (objnum >= 0 && obj != NULL) {
-	obj->type = OBJ_DEBRIS;
-	obj->life = 0;
-	Cell_add_object(obj);
-    }
+
+    obj->type = OBJ_DEBRIS;
+    obj->life = 0;
+    Cell_add_object(obj);
+
     if (obj_list != NULL) {
 	List_delete(obj_list);
     }

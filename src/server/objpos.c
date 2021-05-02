@@ -1,4 +1,4 @@
-/* $Id: objpos.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
+/* $Id: objpos.c,v 5.2 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -32,7 +32,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"

@@ -1,4 +1,4 @@
-/* $Id: map.c,v 5.15 2001/07/08 10:30:00 bertg Exp $
+/* $Id: map.c,v 5.19 2002/01/18 22:34:26 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,7 +41,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -108,6 +108,7 @@ static void Init_map(void)
     World.NumTreasures	= 0;
     World.NumTargets	= 0;
     World.NumItemConcentrators	= 0;
+    World.NumAsteroidConcs	= 0;
 }
 
 
@@ -149,6 +150,10 @@ void Free_map(void)
 	free(World.itemConcentrators);
 	World.itemConcentrators = NULL;
     }
+    if (World.asteroidConcs) {
+	free(World.asteroidConcs);
+	World.asteroidConcs = NULL;
+    }
 }
 
 
@@ -174,6 +179,7 @@ static void Alloc_map(void)
     World.cannon = NULL;
     World.wormHoles = NULL;
     World.itemConcentrators = NULL;
+    World.asteroidConcs = NULL;
     if (World.block == NULL || World.itemID == NULL || World.gravity == NULL) {
 	Free_map();
 	error("Couldn't allocate memory for map (%d bytes)",
@@ -369,6 +375,9 @@ bool Grok_map(void)
 	case '%':
 	    World.NumItemConcentrators++;
 	    break;
+	case '&':
+	    World.NumAsteroidConcs++;
+	    break;
 	case '_':
 	case '0':
 	case '1':
@@ -458,6 +467,12 @@ bool Grok_map(void)
 	error("Out of memory - item concentrators");
 	exit(-1);
     }
+    if (World.NumAsteroidConcs > 0
+	&& (World.asteroidConcs = (asteroid_concentrator_t *)
+	    malloc(World.NumAsteroidConcs * sizeof(asteroid_concentrator_t))) == NULL) {
+	error("Out of memory - asteroid concentrators");
+	exit(-1);
+    }
     if (World.NumBases > 0) {
 	if ((World.base = (base_t *)
 	    malloc(World.NumBases * sizeof(base_t))) == NULL) {
@@ -481,6 +496,7 @@ bool Grok_map(void)
     World.NumTargets = 0;
     World.NumBases = 0;
     World.NumItemConcentrators = 0;
+    World.NumAsteroidConcs = 0;
 
     for (i = 0; i < MAX_TEAMS; i++) {
 	World.teams[i].NumMembers = 0;
@@ -490,6 +506,8 @@ bool Grok_map(void)
 	World.teams[i].NumEmptyTreasures = 0;
 	World.teams[i].TreasuresDestroyed = 0;
 	World.teams[i].TreasuresLeft = 0;
+	World.teams[i].score = 0;
+	World.teams[i].prev_score = 0;
     }
 
     /*
@@ -651,6 +669,13 @@ bool Grok_map(void)
 		    World.itemConcentrators[World.NumItemConcentrators].pos.y = y;
 		    World.NumItemConcentrators++;
 		    break;
+		case '&':
+		    line[y] = ASTEROID_CONCENTRATOR;
+		    itemID[y] = World.NumAsteroidConcs;
+		    World.asteroidConcs[World.NumAsteroidConcs].pos.x = x;
+		    World.asteroidConcs[World.NumAsteroidConcs].pos.y = y;
+		    World.NumAsteroidConcs++;
+		    break;
 		case '$':
 		    line[y] = BASE_ATTRACTOR;
 		    break;
@@ -763,8 +788,9 @@ bool Grok_map(void)
 		    World.wormHoles[World.NumWormholes].pos.y = y;
 		    World.wormHoles[World.NumWormholes].countdown = 0;
 		    World.wormHoles[World.NumWormholes].lastdest = -1;
-		    World.wormHoles[World.NumWormholes].lastplayer = -1;
 		    World.wormHoles[World.NumWormholes].temporary = 0;
+		    World.wormHoles[World.NumWormholes].lastblock = SPACE;
+		    World.wormHoles[World.NumWormholes].lastID = -1;
 		    if (c == '@') {
 			World.wormHoles[World.NumWormholes].type = WORM_NORMAL;
 			worm_norm++;
@@ -1305,7 +1331,7 @@ void Compute_gravity(void)
 }
 
 
-void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind)
+void add_temp_wormholes(int xin, int yin, int xout, int yout)
 {
     wormhole_t inhole, outhole, *wwhtemp;
 
@@ -1322,12 +1348,15 @@ void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind)
     inhole.pos.y = yin;
     outhole.pos.x = xout;
     outhole.pos.y = yout;
-    inhole.countdown = outhole.countdown = wormTime * FPS;
+    inhole.countdown = outhole.countdown = wormTime;
     inhole.lastdest = World.NumWormholes + 1;
-    inhole.lastplayer = outhole.lastplayer = ind;
     inhole.temporary = outhole.temporary = 1;
     inhole.type = WORM_IN;
     outhole.type = WORM_OUT;
+    inhole.lastblock = World.block[xin][yin];
+    outhole.lastblock = World.block[xout][yout];
+    inhole.lastID = World.itemID[xin][yin];
+    outhole.lastID = World.itemID[xout][yout];
     World.wormHoles[World.NumWormholes] = inhole;
     World.wormHoles[World.NumWormholes + 1] = outhole;
     World.block[xin][yin] = World.block[xout][yout] = WORMHOLE;
@@ -1341,8 +1370,8 @@ void remove_temp_wormhole(int ind)
     wormhole_t hole;
 
     hole = World.wormHoles[ind];
-    World.block[hole.pos.x][hole.pos.y] = SPACE;
-    World.itemID[hole.pos.x][hole.pos.y] = (unsigned short) -1;
+    World.block[hole.pos.x][hole.pos.y] = hole.lastblock;
+    World.itemID[hole.pos.x][hole.pos.y] = hole.lastID;
     World.NumWormholes--;
     if (ind != World.NumWormholes) {
 	World.wormHoles[ind] = World.wormHoles[World.NumWormholes];

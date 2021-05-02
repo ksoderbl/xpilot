@@ -1,4 +1,21 @@
 *********************************************************************
+Changes to xmapedit V4.4.2a to bring it up to V4.5.0
+
+Added 17 new options
+teamShareScore, allowAlliances, announceAlliances, maxPauseTime,
+asteroidConcentratorVisible, asteroidConcentratorRadius, asteroidConcentratorProb,
+ballrace, ballraceconnected, mineShotDetonateDistance, asteroidPoints,
+asteroidMaxScore, cannonPoints, cannonMaxScore, cannonsDefend, asteroidItemProb,
+asteroidMaxItems
+
+Removed asteroidScoring
+
+Added Asteroid Concentrator: &
+
+Misc. cleanup in the prefs pages.
+
+Daedlaes (jarrod@xpilot.org) February 25, 2002
+*********************************************************************
 Changes to xmapedit V4.4.1a to bring it up to V4.4.2a
 
 Completely reworked options dialog to make it useable.
@@ -157,5 +174,5 @@ Changes to xmapedit V1.00 to bring it up to V3.5.1b
 
   Robert Templeman, Jul 5, 1996.
 *********************************************************************
-$Id: README.UPDATE,v 5.4 2001/09/18 21:23:52 millerjl Exp $
+$Id: README.UPDATE,v 5.7 2002/02/26 00:41:18 millerjl Exp $
 

@@ -1,4 +1,4 @@
-/* $Id: robot.h,v 5.3 2001/07/08 10:09:06 bertg Exp $
+/* $Id: robot.h,v 5.6 2002/01/07 20:49:25 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,20 +25,6 @@
 
 #ifndef ROBOT_H
 #define ROBOT_H
-
-/*
- * We should have these configurable for experimentation.
-
-#define	NORMAL_ROBOT_SPEED	3.0
-#define	ATTACK_ROBOT_SPEED	12.0
-#define MAX_ROBOT_SPEED		20.0
- */
-
-#define	NORMAL_ROBOT_SPEED	10.0
-#define	ATTACK_ROBOT_SPEED	20.0
-#define MAX_ROBOT_SPEED		20.0
- 
-#define ROB_LOOK_AH		2
 
 /*
  * We would like to support several different robot types.
@@ -110,6 +96,7 @@ typedef struct {
     int			(*war_on_player)(int ind);
     void		(*message)(int ind, const char *str);
     void		(*destroy)(int ind);
+    void		(*invite)(int ind, int inv_ind);
 } robot_type_t;
 
 /*
@@ -129,7 +116,7 @@ enum robot_talk_t {
  * Configuration data for each robot available.
  */
 typedef struct {
-    char	driver[MAX_NAME_LEN];	/* which robot code controls robot? */
+    char	driver[MAX_NAME_LEN];	/* Which code controls robot? */
     char	name[MAX_NAME_LEN];	/* Name of this robot. */
     char	config[MAX_CHARS];	/* Attack + defense ~ 100 */
     unsigned	used;			/* How often has this robot been used */

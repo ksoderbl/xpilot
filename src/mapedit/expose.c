@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: expose.c,v 5.1 2001/05/19 23:08:37 millerjl Exp $
+ * $Id: expose.c,v 5.2 2002/02/26 00:41:18 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -31,7 +31,7 @@
 int                      smlmap_x, smlmap_y, smlmap_width, smlmap_height;
 float                    smlmap_xscale, smlmap_yscale;
 
-segment_t         mapicon_seg[34] = {
+segment_t         mapicon_seg[35] = {
    { 0, 5, {0.00,1.00,1.00,0.00,0.00}, {1.00,1.00,0.00,0.00,1.00} }, /*  0:x MAP_WALL */
    { 0, 4, {1.00,1.00,0.00,1.00,0.00}, {0.00,1.00,1.00,0.00,0.00} }, /*  1:q */
    { 0, 4, {0.00,0.00,1.00,0.00,0.00}, {0.00,1.00,1.00,0.00,0.00} }, /*  2:w */
@@ -72,15 +72,18 @@ segment_t         mapicon_seg[34] = {
    { 2, 5, {0.50,0.50,0.75,0.50,0.25}, {0.01,0.99,0.50,0.99,0.50} }, /* 31:m CURRENT DOWN*/
    { 2, 4, {0.05,0.05,0.95,0.95,0.00}, {0.50,0.95,0.95,0.50,0.00} }, /* 32:^ MAP_EMPTY_TREASURE*/
    { 0, 5, {0.00,1.00,1.00,0.00,0.00}, {1.00,1.00,0.00,0.00,1.00} }, /* 33:z MAP_FRICTION */
+   { 0, 5, {0.10,0.85,0.85,0.10,0.10}, {0.85,0.85,0.10,0.10,0.85} }, /* 34:& MAP_FRICTION */
 };
 
-segment_t       mapicondet_seg[2] = {
+segment_t       mapicondet_seg[4] = {
    { 0, 5, {0.25,0.75,0.75,0.25,0.25}, {0.75,0.75,0.25,0.25,0.75} }, /* 0:! TARGET (DETAIL)*/
    { 0, 5, {0.25,0.75,0.50,0.25,0.75}, {0.25,0.75,0.50,0.75,0.25} }, /* 1:! TARGET (DETAIL)*/
+   { 0, 5, {0.20,0.70,0.70,0.20,0.20}, {0.70,0.70,0.20,0.20,0.70} }, /* 2:& ASTEROID_CONC (DETAIL)*/
+   { 0, 5, {0.35,0.65,0.65,0.35,0.35}, {0.60,0.60,0.30,0.30,0.60} }, /* 3:& ASTEROID_CONC (DETAIL)*/
 };
 
 int mapicon_ptr[91] =        {20, 19,  0,  5, 26,  /* ascii char -32 */
-                              27,  0,  0, 15, 14,
+                              27,  34,  0, 15, 14,
                               16, 11,  0, 12,  0,
                                0, 10, 10, 10, 10,
                               10, 10, 10, 10, 10,
@@ -105,7 +108,7 @@ MAP_DEC_FLD     , MAP_DEC_RD    , MAP_DEC_LD    , MAP_DEC_RU      , MAP_DEC_LU  
 MAP_FUEL        , MAP_CAN_LEFT  , MAP_CAN_RIGHT , MAP_CAN_UP      , MAP_CAN_DOWN   ,
 MAP_TARGET      , MAP_TREASURE  , MAP_EMPTY_TREASURE , MAP_GRAV_ACWISE , MAP_GRAV_CWISE ,
 MAP_WORM_NORMAL , MAP_WORM_IN   , MAP_WORM_OUT  , MAP_GRAV_POS    , MAP_GRAV_NEG   ,
-MAP_CRNT_UP     , MAP_CRNT_LT   , MAP_CRNT_RT   , MAP_CRNT_DN     , MAP_SPACE      ,
+MAP_CRNT_UP     , MAP_CRNT_LT   , MAP_CRNT_RT   , MAP_CRNT_DN     , MAP_ASTEROID_CONC      ,
 MAP_BASE        , MAP_BASE_ORNT , MAP_ITEM_CONC , MAP_FRICTION       , MAP_SPACE
 };
  
@@ -363,6 +366,26 @@ void DrawMapPic(Window win, int x, int y, int picnum, int zoom)
      XDrawLines(display, win, Friction_GC, points,
            mapicon_seg[picnum].num_points, CoordModeOrigin);
       return;
+   }
+    else if (picnum ==34) {/* Asteroid Conc */
+      XDrawLines(display, win, Item_Conc_GC, points,
+           mapicon_seg[picnum].num_points, CoordModeOrigin);
+      picnum=2;
+      for (i=0;i<mapicondet_seg[picnum].num_points; i++) {
+         points[i].x = mapicondet_seg[picnum].x[i] * zoom + x + xo;
+         points[i].y = mapicondet_seg[picnum].y[i] * zoom + y + yo;
+      }
+      XDrawLines(display, win, Item_Conc_GC, points,
+           mapicondet_seg[picnum].num_points, CoordModeOrigin);
+
+      picnum=3;
+      for (i=0;i<mapicondet_seg[picnum].num_points; i++) {
+         points[i].x = mapicondet_seg[picnum].x[i] * zoom + x + xo;
+         points[i].y = mapicondet_seg[picnum].y[i] * zoom + y + yo;
+      }
+      XDrawLines(display, win, Item_Conc_GC, points,
+           mapicondet_seg[picnum].num_points, CoordModeOrigin);
+     return;
    }
    /*---------------------------------------------------------------*/
    arc = (int)(.7*zoom);

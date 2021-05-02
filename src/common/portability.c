@@ -1,4 +1,4 @@
-/* $Id: portability.c,v 5.2 2001/05/07 15:23:28 bertg Exp $
+/* $Id: portability.c,v 5.3 2002/01/13 16:18:20 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #if !defined(_WINDOWS)
 # include <unistd.h>
@@ -125,4 +126,15 @@ int is_this_windows()
     return 0;
 #endif
 }
+
+
+/*
+ * Round to nearest integer.
+ */
+#ifdef _WINDOWS
+double rint(double x)
+{
+    return floor((x < 0.0) ? (x - 0.5) : (x + 0.5));
+}
+#endif
 

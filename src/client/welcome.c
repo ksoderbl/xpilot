@@ -1,4 +1,4 @@
-/* $Id: welcome.c,v 5.4 2001/06/02 21:01:27 bertg Exp $
+/* $Id: welcome.c,v 5.5 2001/12/27 15:27:40 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -177,7 +177,7 @@ enum MetaState {
 
 /*
  * Structure describing a meta server.
- * Name, address, and filedescriptor.
+ * Hostname, IP address, and socket filedescriptor.
  */
 struct Meta {
     char		name[MAX_HOST_LEN];
@@ -186,9 +186,9 @@ struct Meta {
     enum MetaState	state;	/* connecting, readable, receiving */
 };
 static struct Meta	metas[NUM_METAS] = {
-			    { META_HOST,     META_IP,     { 0 }, MetaConnecting },
-			    { META_HOST_TWO, META_IP_TWO, { 0 }, MetaConnecting }
-			};
+			{ META_HOST,     META_IP,     { 0 }, MetaConnecting },
+			{ META_HOST_TWO, META_IP_TWO, { 0 }, MetaConnecting }
+		    };
 
 /*
  * Enum for different modes the welcome screen can be in.

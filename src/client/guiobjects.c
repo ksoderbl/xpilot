@@ -1,4 +1,4 @@
-/* $Id: guiobjects.c,v 5.11 2001/06/10 17:36:58 bertg Exp $
+/* $Id: guiobjects.c,v 5.14 2002/01/17 19:49:53 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,6 +65,8 @@
 #include "wreckshape.h"
 #include "astershape.h"
 #include "guiobjects.h"
+#include "pack.h"
+#include "commonproto.h"
 
 
 char guiobjects_version[] = VERSION;
@@ -627,6 +629,30 @@ static void Gui_paint_ship_name(int x , int y, other_t *other)
 }
 
 
+static int Gui_is_my_tank(other_t *other)
+{
+    char	tank_name[MAX_NAME_LEN];
+
+    if (self == NULL
+	|| other == NULL
+	|| other->mychar != 'T'
+	|| (BIT(Setup->mode, TEAM_PLAY)
+	&& self->team != other->team)) {
+	    return 0;
+    }
+
+    if (strlcpy(tank_name, self->name, MAX_NAME_LEN) < MAX_NAME_LEN) {
+	strlcat(tank_name, "'s tank", MAX_NAME_LEN);
+    }
+
+    if (strcmp(tank_name, other->name)) {
+	return 0;
+    }
+
+    return 1;
+}
+
+
 static int Gui_calculate_ship_color(int id, other_t *other)
 {
     int ship_color = WHITE;
@@ -648,6 +674,18 @@ static int Gui_calculate_ship_color(int id, other_t *other)
 	&& other != NULL
 	&& self->team == other->team) {
 	    ship_color = BLUE;
+    }
+
+    if (self != NULL
+	&& self->id != id
+	&& other != NULL
+	&& self->alliance != ' '
+	&& self->alliance == other->alliance) {
+	    ship_color = BLUE;
+    }
+
+    if (Gui_is_my_tank(other)) {
+	ship_color = BLUE;
     }
 #endif
     if (roundDelay > 0 && ship_color == WHITE) {

@@ -1,4 +1,4 @@
-/* 
+/* $Id: showtime.c,v 5.2 2002/01/13 14:58:05 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -22,23 +22,44 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	VERSION_H
-#define	VERSION_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
-#if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-2001"
-#   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#   pragma VERSIONID		"XPilot 4.5.0"
+#ifndef _WINDOWS
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
 #endif
 
-#define VERSION			"4.5.0"
-#ifdef	_WINDOWS
-#define	TITLE			"4.5.0-NT13"
-#define	VERSION_WINDOWS	"13"
-#else
-#define TITLE			"XPilot 4.5.0"
+#ifdef _WINDOWS
 #endif
-#define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
-#define COPYRIGHT		"Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska"
 
-#endif /* VERSION_H */
+#define SERVER
+#include "proto.h"
+
+
+char *showtime(void)
+{
+    time_t		now;
+    static time_t	past;
+    struct tm		*tmp;
+    static char		month_names[13][4] = {
+			    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+			    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+			    "Bug"
+			};
+    static char		buf[80];
+
+    time(&now);
+    if (now != past) {
+	tmp = localtime(&now);
+	sprintf(buf, "%02d %s %02d:%02d:%02d",
+		tmp->tm_mday, month_names[tmp->tm_mon],
+		tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+	past = now;
+    }
+
+    return buf;
+}
+

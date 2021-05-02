@@ -26,6 +26,10 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+MTL=midl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "XPilot - Win32 Release"
 
 OUTDIR=.\Release
@@ -98,8 +102,8 @@ CLEAN :
 	-@erase "$(INTDIR)\query.sbr"
 	-@erase "$(INTDIR)\randommt.obj"
 	-@erase "$(INTDIR)\randommt.sbr"
-	-@erase "$(INTDIR)\RecordDummy.obj"
-	-@erase "$(INTDIR)\RecordDummy.sbr"
+	-@erase "$(INTDIR)\record.obj"
+	-@erase "$(INTDIR)\record.sbr"
 	-@erase "$(INTDIR)\shipshape.obj"
 	-@erase "$(INTDIR)\shipshape.sbr"
 	-@erase "$(INTDIR)\sim.obj"
@@ -171,42 +175,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MD /W3 /GX /I "..\..\common" /I "..\..\common\NT" /D "NDEBUG" /D "_MBCS" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "X_SOUND" /D "WINDOWSCALING" /D PAINT_FREE=0 /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-MTL=midl.exe
 MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /win32 
-RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilot.res" /d "NDEBUG" /d "_AFXDLL" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilot.bsc" 
@@ -232,6 +202,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\paintobjects.sbr" \
 	"$(INTDIR)\paintradar.sbr" \
 	"$(INTDIR)\query.sbr" \
+	"$(INTDIR)\record.sbr" \
 	"$(INTDIR)\sim.sbr" \
 	"$(INTDIR)\syslimit.sbr" \
 	"$(INTDIR)\talkmacros.sbr" \
@@ -245,7 +216,6 @@ BSC32_SBRS= \
 	"$(INTDIR)\xpilot.sbr" \
 	"$(INTDIR)\BSString.sbr" \
 	"$(INTDIR)\MainFrm.sbr" \
-	"$(INTDIR)\RecordDummy.sbr" \
 	"$(INTDIR)\Splash.sbr" \
 	"$(INTDIR)\TalkWindow.sbr" \
 	"$(INTDIR)\winAbout.sbr" \
@@ -303,6 +273,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\paintobjects.obj" \
 	"$(INTDIR)\paintradar.obj" \
 	"$(INTDIR)\query.obj" \
+	"$(INTDIR)\record.obj" \
 	"$(INTDIR)\sim.obj" \
 	"$(INTDIR)\syslimit.obj" \
 	"$(INTDIR)\talkmacros.obj" \
@@ -316,7 +287,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpilot.obj" \
 	"$(INTDIR)\BSString.obj" \
 	"$(INTDIR)\MainFrm.obj" \
-	"$(INTDIR)\RecordDummy.obj" \
 	"$(INTDIR)\Splash.obj" \
 	"$(INTDIR)\TalkWindow.obj" \
 	"$(INTDIR)\winAbout.obj" \
@@ -436,8 +406,8 @@ CLEAN :
 	-@erase "$(INTDIR)\query.sbr"
 	-@erase "$(INTDIR)\randommt.obj"
 	-@erase "$(INTDIR)\randommt.sbr"
-	-@erase "$(INTDIR)\RecordDummy.obj"
-	-@erase "$(INTDIR)\RecordDummy.sbr"
+	-@erase "$(INTDIR)\record.obj"
+	-@erase "$(INTDIR)\record.sbr"
 	-@erase "$(INTDIR)\shipshape.obj"
 	-@erase "$(INTDIR)\shipshape.sbr"
 	-@erase "$(INTDIR)\sim.obj"
@@ -511,42 +481,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\common" /I "..\..\common\NT" /D "_DEBUG" /D "_MEMPOD" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "X_SOUND" /D "WINDOWSCALING" /D PAINT_FREE=0 /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-MTL=midl.exe
 MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /win32 
-RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilot.res" /d "_DEBUG" /d "_AFXDLL" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilot.bsc" 
@@ -572,6 +508,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\paintobjects.sbr" \
 	"$(INTDIR)\paintradar.sbr" \
 	"$(INTDIR)\query.sbr" \
+	"$(INTDIR)\record.sbr" \
 	"$(INTDIR)\sim.sbr" \
 	"$(INTDIR)\syslimit.sbr" \
 	"$(INTDIR)\talkmacros.sbr" \
@@ -585,7 +522,6 @@ BSC32_SBRS= \
 	"$(INTDIR)\xpilot.sbr" \
 	"$(INTDIR)\BSString.sbr" \
 	"$(INTDIR)\MainFrm.sbr" \
-	"$(INTDIR)\RecordDummy.sbr" \
 	"$(INTDIR)\Splash.sbr" \
 	"$(INTDIR)\TalkWindow.sbr" \
 	"$(INTDIR)\winAbout.sbr" \
@@ -643,6 +579,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\paintobjects.obj" \
 	"$(INTDIR)\paintradar.obj" \
 	"$(INTDIR)\query.obj" \
+	"$(INTDIR)\record.obj" \
 	"$(INTDIR)\sim.obj" \
 	"$(INTDIR)\syslimit.obj" \
 	"$(INTDIR)\talkmacros.obj" \
@@ -656,7 +593,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpilot.obj" \
 	"$(INTDIR)\BSString.obj" \
 	"$(INTDIR)\MainFrm.obj" \
-	"$(INTDIR)\RecordDummy.obj" \
 	"$(INTDIR)\Splash.obj" \
 	"$(INTDIR)\TalkWindow.obj" \
 	"$(INTDIR)\winAbout.obj" \
@@ -763,8 +699,8 @@ CLEAN :
 	-@erase "$(INTDIR)\query.sbr"
 	-@erase "$(INTDIR)\randommt.obj"
 	-@erase "$(INTDIR)\randommt.sbr"
-	-@erase "$(INTDIR)\RecordDummy.obj"
-	-@erase "$(INTDIR)\RecordDummy.sbr"
+	-@erase "$(INTDIR)\record.obj"
+	-@erase "$(INTDIR)\record.sbr"
 	-@erase "$(INTDIR)\shipshape.obj"
 	-@erase "$(INTDIR)\shipshape.sbr"
 	-@erase "$(INTDIR)\sim.obj"
@@ -836,42 +772,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /G5 /MD /W3 /GX /Zd /O2 /I "..\..\common" /I "..\..\common\NT" /D "NDEBUG" /D "_MBCS" /D "x_BETAEXPIRE" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "X_SOUND" /D "WINDOWSCALING" /D PAINT_FREE=0 /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-MTL=midl.exe
 MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /win32 
-RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilot.res" /d "NDEBUG" /d "_AFXDLL" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilot.bsc" 
@@ -897,6 +799,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\paintobjects.sbr" \
 	"$(INTDIR)\paintradar.sbr" \
 	"$(INTDIR)\query.sbr" \
+	"$(INTDIR)\record.sbr" \
 	"$(INTDIR)\sim.sbr" \
 	"$(INTDIR)\syslimit.sbr" \
 	"$(INTDIR)\talkmacros.sbr" \
@@ -910,7 +813,6 @@ BSC32_SBRS= \
 	"$(INTDIR)\xpilot.sbr" \
 	"$(INTDIR)\BSString.sbr" \
 	"$(INTDIR)\MainFrm.sbr" \
-	"$(INTDIR)\RecordDummy.sbr" \
 	"$(INTDIR)\Splash.sbr" \
 	"$(INTDIR)\TalkWindow.sbr" \
 	"$(INTDIR)\winAbout.sbr" \
@@ -968,6 +870,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\paintobjects.obj" \
 	"$(INTDIR)\paintradar.obj" \
 	"$(INTDIR)\query.obj" \
+	"$(INTDIR)\record.obj" \
 	"$(INTDIR)\sim.obj" \
 	"$(INTDIR)\syslimit.obj" \
 	"$(INTDIR)\talkmacros.obj" \
@@ -981,7 +884,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpilot.obj" \
 	"$(INTDIR)\BSString.obj" \
 	"$(INTDIR)\MainFrm.obj" \
-	"$(INTDIR)\RecordDummy.obj" \
 	"$(INTDIR)\Splash.obj" \
 	"$(INTDIR)\TalkWindow.obj" \
 	"$(INTDIR)\winAbout.obj" \
@@ -1030,6 +932,36 @@ $(DS_POSTBUILD_DEP) : ".\Release\xpilot.exe" "$(OUTDIR)\xpilot.bsc"
 	echo Helper for Post-build step > "$(DS_POSTBUILD_DEP)"
 
 !ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -1168,6 +1100,12 @@ SOURCE=..\query.c
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\record.c
+
+"$(INTDIR)\record.obj"	"$(INTDIR)\record.sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\sim.c
 
 "$(INTDIR)\sim.obj"	"$(INTDIR)\sim.sbr" : $(SOURCE) "$(INTDIR)"
@@ -1245,10 +1183,6 @@ SOURCE=.\MainFrm.cpp
 
 
 SOURCE=.\RecordDummy.c
-
-"$(INTDIR)\RecordDummy.obj"	"$(INTDIR)\RecordDummy.sbr" : $(SOURCE) "$(INTDIR)"
-
-
 SOURCE=.\Splash.cpp
 
 "$(INTDIR)\Splash.obj"	"$(INTDIR)\Splash.sbr" : $(SOURCE) "$(INTDIR)"

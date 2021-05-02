@@ -1,4 +1,4 @@
-/* $Id: setup.h,v 5.0 2001/04/07 20:00:59 dik Exp $
+/* $Id: setup.h,v 5.1 2001/10/11 20:27:35 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -90,6 +90,7 @@
 #define SETUP_DOWN_GRAV		122
 #define SETUP_RIGHT_GRAV	123
 #define SETUP_LEFT_GRAV		124
+#define SETUP_ASTEROID_CONCENTRATOR	125
 
 #define BLUE_UP			0x01
 #define BLUE_RIGHT		0x02

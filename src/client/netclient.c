@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 5.9 2001/06/22 05:27:42 dik Exp $
+/* $Id: netclient.c,v 5.15 2002/01/18 22:34:25 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -84,6 +84,7 @@ char netclient_version[] = VERSION;
 
 #define TALK_RETRY	2
 #define MAX_MAP_ACK_LEN	500
+#define KEYBOARD_STORE	20
 
 /*
  * Type definitions.
@@ -111,6 +112,7 @@ static sockbuf_t	rbuf,
 static frame_buf_t	*Frames;
 static int		(*receive_tbl[256])(void),
 			(*reliable_tbl[256])(void);
+static int		keyboard_delta;
 static unsigned		magic;
 static long		last_keyboard_change,
 			last_keyboard_ack,
@@ -120,6 +122,9 @@ static long		last_keyboard_change,
 			talk_pending,
 			talk_sequence_num,
 			talk_last_send;
+static long		keyboard_change[KEYBOARD_STORE],
+			keyboard_update[KEYBOARD_STORE],
+			keyboard_acktime[KEYBOARD_STORE];
 static char		talk_str[MAX_CHARS];
 
 
@@ -176,12 +181,14 @@ static void Receive_init(void)
     receive_tbl[PKT_LOSEITEM]	= Receive_loseitem;
     receive_tbl[PKT_WRECKAGE]	= Receive_wreckage;
     receive_tbl[PKT_ASTEROID]	= Receive_asteroid;
+    receive_tbl[PKT_WORMHOLE]	= Receive_wormhole;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	receive_tbl[PKT_DEBRIS + i] = Receive_debris;
     }
 
     reliable_tbl[PKT_MOTD]	= Receive_motd;
     reliable_tbl[PKT_MESSAGE]	= Receive_message;
+    reliable_tbl[PKT_TEAM_SCORE] = Receive_team_score;
     reliable_tbl[PKT_PLAYER]	= Receive_player;
     reliable_tbl[PKT_SCORE]	= Receive_score;
     reliable_tbl[PKT_TIMING]	= Receive_timing;
@@ -844,6 +851,7 @@ int Net_start(void)
     }
     packet_measure = NULL;
     Net_init_measurement();
+    Net_init_lag_measurement();
     errno = 0;
     return 0;
 }
@@ -867,6 +875,19 @@ void Net_init_measurement(void)
     else if (packet_measure != NULL) {
 	free(packet_measure);
 	packet_measure = NULL;
+    }
+}
+
+void Net_init_lag_measurement(void)
+{
+    int i;
+
+    packet_lag = 0;
+    keyboard_delta = 0;
+    for (i = 0; i < KEYBOARD_STORE; i++) {
+	keyboard_change[i] = -1;
+	keyboard_update[i] = -1;
+	keyboard_acktime[i] = -1;
     }
 }
 
@@ -947,6 +968,51 @@ static int Net_packet(void)
     return 0;
 }
 
+static void Net_keyboard_track() {
+    int i, ind = -1;
+    long maxtime = 0;
+
+    /* look for a match for the keyboard change */
+    for (i = 0; i < KEYBOARD_STORE; i++) {
+	if (keyboard_change[i] == last_keyboard_change) {
+	    return;
+	}
+    }
+
+    /* look for a keyboard_change of -1 or an acknowledged change */
+    if (ind == -1) {
+	for (i = 0; i < KEYBOARD_STORE; i++) {
+	    if (keyboard_change[i] == -1
+		|| keyboard_acktime[i] != -1) {
+		ind = i;
+		break;
+	    }
+	}
+    }
+
+    /* next, look for the oldest update */
+    if (ind == -1) {
+	for (i = 0; i < KEYBOARD_STORE; i++) {
+	    if (keyboard_update[i] > maxtime) {
+		ind = i;
+		maxtime = keyboard_update[i];
+	    }
+	}
+    }
+
+    if (ind == -1) {
+	return;
+    }
+
+    keyboard_change[ind] = last_keyboard_change;
+    keyboard_update[ind] = last_keyboard_update;
+    keyboard_acktime[ind] = -1;
+
+#if 0
+    printf("T;%d;%ld;%ld ", ind, last_keyboard_change, last_keyboard_update);
+#endif
+}
+
 /*
  * Do some (simple) packet loss/drop measurement
  * the results of which can be drawn on the display.
@@ -986,10 +1052,50 @@ static void Net_measurement(long loop, int status)
 	    packet_measure[i] = PACKET_LOSS;
 	}
 	delta = loop - packet_loop;
-    }
+   }
    if (packet_measure[(int)delta] != PACKET_DRAW) {
        packet_measure[(int)delta] = status;
    }
+}
+
+/* Do some lag measurement the results of which can
+ * be drawn on the display.  This is mainly for
+ * debugging and analysis.
+ */
+static void Net_lag_measurement(long key_ack)
+{
+    int		i, num;
+    long	sum;
+
+    for (i = 0; i < KEYBOARD_STORE; i++) {
+	if (keyboard_change[i] == key_ack
+	    && keyboard_acktime[i] == -1) {
+	    keyboard_acktime[i] = loops;
+#if 0
+	    printf("A;%d;%ld;%ld ", i, keyboard_change[i], keyboard_acktime[i]);
+#endif
+	    break;
+	}
+    }
+
+#if 0
+    if (i == KEYBOARD_STORE) {
+	printf("N ");
+    }
+#endif
+    
+    num = 0;
+    sum = 0;
+    for (i = 0; i < KEYBOARD_STORE; i++) {
+	if (keyboard_acktime[i] != -1L) {
+	    num++;
+	    sum += keyboard_acktime[i] - keyboard_update[i];
+	}
+    }
+
+    if (num != 0) {
+	packet_lag = (int) (sum / num);
+    }
 }
 
 /*
@@ -1290,6 +1396,7 @@ int Receive_start(void)
 	    last_keyboard_ack = key_ack;
 	}
     }
+    Net_lag_measurement(key_ack);
     if ((n = Handle_start(loops)) == -1) {
 	return -1;
     }
@@ -1947,6 +2054,22 @@ int Receive_asteroid(void)	/* since 4.4.0 */
     return 1;
 }
 
+int Receive_wormhole(void)	/* since 4.5.0 */
+{
+    int			n;
+    short		x, y;
+    u_byte		ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
+	return n;
+    }
+
+    if ((n = Handle_wormhole(x, y)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
 int Receive_ecm(void)
 {
     int			n;
@@ -2145,14 +2268,24 @@ int Receive_score_object(void)
 {
     int			n;
     unsigned short	x, y;
-    short		score;
+    DFLOAT		score = 0;
     char		msg[MAX_CHARS];
     u_byte		ch;
 
-    if ((n = Packet_scanf(&cbuf, "%c%hd%hu%hu%s",
-			  &ch, &score, &x, &y, msg)) <= 0) {
-	return n;
+    if (version < 0x4500) {
+	short	rcv_score;
+	n = Packet_scanf(&cbuf, "%c%hd%hu%hu%s",
+			 &ch, &rcv_score, &x, &y, msg);
+	score = rcv_score;
+    } else {
+	/* newer servers send scores with two decimals */
+	int	rcv_score;
+	n = Packet_scanf(&cbuf, "%c%d%hu%hu%s",
+			 &ch, &rcv_score, &x, &y, msg);
+	score = (DFLOAT)rcv_score / 100;
     }
+    if (n <= 0)
+	return n;
     if ((n = Handle_score_object(score, x, y, msg)) == -1) {
 	return -1;
     }
@@ -2163,15 +2296,45 @@ int Receive_score_object(void)
 int Receive_score(void)
 {
     int			n;
-    short		id, score, life;
-    u_byte		ch, mychar;
+    short		id, life;
+    DFLOAT		score = 0;
+    u_byte		ch, mychar, alliance = ' ';
 
-    n = Packet_scanf(&cbuf, "%c%hd%hd%hd%c", &ch,
-		     &id, &score, &life, &mychar);
+    if (version < 0x4500) {
+	short	rcv_score;
+	n = Packet_scanf(&cbuf, "%c%hd%hd%hd%c", &ch,
+			 &id, &rcv_score, &life, &mychar);
+	score = rcv_score;
+	alliance = ' ';
+    } else {
+	/* newer servers send scores with two decimals */
+	int	rcv_score;
+	n = Packet_scanf(&cbuf, "%c%hd%d%hd%c%c", &ch,
+			 &id, &rcv_score, &life, &mychar, &alliance);
+	score = (DFLOAT)rcv_score / 100;
+    }
     if (n <= 0) {
 	return n;
     }
-    if ((n = Handle_score(id, score, life, mychar)) == -1) {
+    if ((n = Handle_score(id, score, life, mychar, alliance)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_team_score(void)
+{
+    int			n;
+    u_byte		ch;
+    short		team;
+    int			rcv_score;
+    DFLOAT		score;
+
+    if ((n = Packet_scanf(&cbuf, "%c%hd%d", &ch, &team, &rcv_score)) <= 0) {
+	return n;
+    }
+    score = (DFLOAT)rcv_score / 100;
+    if ((n = Handle_team_score(team, score)) == -1) {
 	return -1;
     }
     return 1;
@@ -2447,6 +2610,7 @@ int Send_keyboard(u_byte *keyboard_vector)
     memcpy(&wbuf.buf[wbuf.len], keyboard_vector, size);
     wbuf.len += size;
     last_keyboard_update = last_loops;
+    Net_keyboard_track();
     Send_talk();
     if (Sockbuf_flush(&wbuf) == -1) {
 	error("Can't send keyboard update");

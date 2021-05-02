@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.29 2001/09/18 18:20:06 bertg Exp $
+/* $Id: proto.h,v 5.45 2002/03/05 22:49:32 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -24,6 +24,16 @@
 
 #ifndef	PROTO_H
 #define	PROTO_H
+
+#ifndef OBJECT_H
+/* need player */
+#include "object.h"
+#endif
+
+#ifndef LIST_H_INCLUDED
+/* need list_t */
+#include "list.h"
+#endif
 
 /*
  * Prototypes for cell.c
@@ -123,8 +133,6 @@ void Delta_mv(object *ship, object *obj);
 void Delta_mv_elastic(object *obj1, object *obj2);
 void Obj_repel(object *obj1, object *obj2, int repel_dist);
 void Item_damage(int ind, DFLOAT prob);
-void Alloc_shots(int number);
-void Free_shots(void);
 void Tank_handle_detach(player*);
 void Add_fuel(pl_fuel_t*, long);
 void Update_tanks(pl_fuel_t *);
@@ -204,7 +212,7 @@ void Explode(int ind);
 void Explode_fighter(int ind);
 void Throw_items(int ind);
 void Detonate_items(int ind);
-void add_temp_wormholes(int xin, int yin, int xout, int yout, int ind);
+void add_temp_wormholes(int xin, int yin, int xout, int yout);
 void remove_temp_wormhole(int ind);
 
 
@@ -224,10 +232,8 @@ list_t Asteroid_get_list(void);
 void Cannon_init(int ind);
 void Cannon_add_item(int ind, int item, int amount);
 void Cannon_throw_items(int ind);
+void Cannon_check_defense(int ind);
 void Cannon_check_fire(int ind);
-int Cannon_select_weapon(int ind);
-void Cannon_aim(int ind, int weapon, int *target, int *dir);
-void Cannon_fire(int ind, int weapon, int target, int dir);
 
 /*
  * Prototypes for command.c
@@ -243,13 +249,13 @@ void Compute_sensor_range(player *);
 void Player_add_tank(int ind, long tank_fuel);
 void Player_remove_tank(int ind, int which_tank);
 void Player_hit_armor(int ind);
+void Player_used_kill(int ind);
 int Init_player(int ind, shipobj *ship);
 void Alloc_players(int number);
 void Free_players(void);
 void Update_score_table(void);
 void Reset_all_players(void);
 void Check_team_members(int);
-void Check_team_treasures(int);
 void Compute_game_status(void);
 void Delete_player(int ind);
 void Detach_ball(int ind, int ball);
@@ -258,6 +264,7 @@ void Player_death_reset(int ind);
 void Team_game_over(int winning_team, const char *reason);
 void Individual_game_over(int winner);
 void Race_game_over(void);
+int Team_immune(int id1, int id2);
 
 /*
  * Prototypes for robot.c
@@ -267,6 +274,7 @@ void Robot_init(void);
 void Robot_delete(int ind, int kicked);
 void Robot_destroy(int ind);
 void Robot_update(void);
+void Robot_invite(int ind, int inv_ind);
 void Robot_war(int ind, int killer);
 void Robot_reset_war(int ind);
 int Robot_war_on_player(int ind);
@@ -294,6 +302,7 @@ int Pick_team(int pick_for_type);
 void Server_info(char *str, unsigned max_size);
 void Log_game(const char *heading);
 void Game_Over(void);
+void Server_log_admin_message(int ind, const char *str);
 int plock_server(int onoff);
 void Main_loop(void);
 
@@ -339,9 +348,12 @@ void Phasing(int ind, int on);
  * Prototypes for option.c
  */
 void Options_parse(void);
+void Options_free(void);
 bool Convert_string_to_int(const char *value_str, int *int_ptr);
 bool Convert_string_to_float(const char *value_str, DFLOAT *float_ptr);
 bool Convert_string_to_bool(const char *value_str, bool *bool_ptr);
+void Convert_list_to_string(list_t list, char **string);
+void Convert_string_to_list(const char *value, list_t *list_ptr);
 
 /*
  * Prototypes for parser.c
@@ -349,7 +361,7 @@ bool Convert_string_to_bool(const char *value_str, bool *bool_ptr);
 int Parser_list_option(int *index, char *buf);
 bool Parser(int argc, char **argv);
 int Tune_option(char *name, char *val);
-int Get_option_value(const char *name, char *value);
+int Get_option_value(const char *name, char *value, unsigned size);
 
 /*
  * Prototypes for fileparser.c
@@ -357,10 +369,40 @@ int Get_option_value(const char *name, char *value);
 bool parseDefaultsFile(const char *filename);
 bool parsePasswordFile(const char *filename);
 bool parseMapFile(const char *filename);
+void expandKeyword(const char *keyword);
 
 /*
  * Prototypes for laser.c
  */
 void Laser_pulse_collision(void);
+
+/*
+ * Prototypes for alliance.c
+ */
+int Invite_player(int ind, int ally_ind);
+int Cancel_invitation(int ind);
+int Refuse_alliance(int ind, int ally_ind);
+int Refuse_all_alliances(int ind);
+int Accept_alliance(int ind, int ally_ind);
+int Accept_all_alliances(int ind);
+int Get_alliance_member_count(int id);
+void Player_join_alliance(int ind, int ally_ind);
+void Dissolve_all_alliances(void);
+int Leave_alliance(int ind);
+void Alliance_player_list(int ind);
+
+/*
+ * Prototypes for object.c
+ */
+object *Object_allocate(void);
+void Object_free_ind(int ind);
+void Object_free_ptr(object *obj);
+void Alloc_shots(int number);
+void Free_shots(void);
+
+/*
+ * Prototypes for showtime.c
+ */
+char *showtime(void);
 
 #endif

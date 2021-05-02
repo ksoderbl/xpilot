@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.18 2001/08/26 19:27:26 gkoopman Exp $
+/* $Id: player.c,v 5.24 2002/03/05 22:49:32 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -35,7 +35,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -193,7 +193,7 @@ void Go_home(int ind)
     pl->turnacc = pl->turnvel = 0.0;
     memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
     memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
-    pl->used &= ~USED_KILL;
+    Player_used_kill(ind);
 
     if (playerStartsShielded != 0) {
 	SET_BIT(pl->used, HAS_SHIELD);
@@ -311,6 +311,16 @@ void Player_hit_armor(int ind)
 
     if (--pl->item[ITEM_ARMOR] <= 0)
 	CLR_BIT(pl->have, HAS_ARMOR);
+}
+
+void Player_used_kill(int ind)
+{
+    player		*pl = Players[ind];
+
+    pl->used &= ~USED_KILL;
+    if (!BIT(DEF_HAVE, HAS_SHIELD)) {
+	CLR_BIT(pl->have, HAS_SHIELD);
+    }
 }
 
 /*
@@ -474,7 +484,11 @@ int Init_player(int ind, shipobj *ship)
 	}
     }
 
-    pl->team = TEAM_NOT_SET;
+    pl->team		= TEAM_NOT_SET;
+
+    pl->alliance	= ALLIANCE_NOT_SET;
+    pl->prev_alliance	= ALLIANCE_NOT_SET;
+    pl->invite		= NO_ID;
 
     pl->lock.tagged	= LOCK_NONE;
     pl->lock.pl_id	= 0;
@@ -567,14 +581,17 @@ void Update_score_table(void)
 	pl = Players[j];
 	if (pl->score != pl->prev_score
 	    || pl->life != pl->prev_life
-	    || pl->mychar != pl->prev_mychar) {
+	    || pl->mychar != pl->prev_mychar
+	    || pl->alliance != pl->prev_alliance) {
 	    pl->prev_score = pl->score;
 	    pl->prev_life = pl->life;
 	    pl->prev_mychar = pl->mychar;
+	    pl->prev_alliance = pl->alliance;
 	    for (i = 0; i < NumPlayers; i++) {
 		if (Players[i]->conn != NOT_CONNECTED) {
 		    Send_score(Players[i]->conn, pl->id,
-			       pl->score, pl->life, pl->mychar);
+			       pl->score, pl->life,
+			       pl->mychar, pl->alliance);
 		}
 	    }
 	}
@@ -591,6 +608,20 @@ void Update_score_table(void)
 		for (i = 0; i < NumPlayers; i++) {
 		    if (Players[i]->conn != NOT_CONNECTED) {
 			Send_timing(Players[i]->conn, pl->id, check, pl->round);
+		    }
+		}
+	    }
+	}
+    }
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	team_t	*team;
+	for (j = 0; j < MAX_TEAMS; j++) {
+	    team = &(World.teams[j]);
+	    if (team->score != team->prev_score) {
+		team->prev_score = team->score;
+		for (i = 0; i < NumPlayers; i++) {
+		    if (Players[i]->conn != NOT_CONNECTED) {
+			Send_team_score(Players[i]->conn, j, team->score);
 		    }
 		}
 	    }
@@ -633,9 +664,9 @@ void Reset_all_players(void)
 	pl->best_lap = 0;
 	pl->last_lap = 0;
 	pl->last_lap_time = 0;
-	pl->frame_last_busy = frame_loops;
 	if (!BIT(pl->status, PAUSE)) {
 	    pl->mychar = ' ';
+	    pl->frame_last_busy = frame_loops;
 	    pl->life = World.rules->lives;
 	    if (BIT(World.rules->mode, TIMING)) {
 		pl->count = RECOVERY_DELAY;
@@ -759,37 +790,7 @@ void Check_team_members(int team)
 }
 
 
-void Check_team_treasures(int team)
-{
-    int 		i, j, ownerind, idind;
-    treasure_t		*t;
-    ballobject		*ball;
-
-    if (! BIT(World.rules->mode, TEAM_PLAY))
-	return;
-
-    for (i = 0; i < World.NumTreasures; i++) {
-	t = &(World.treasures[i]);
-
-	if (t->team != team)
-	    continue;
-
-	for (j = 0; j < NumObjs; j++) {
-	    if (! BIT(Obj[j]->type, OBJ_BALL))
-		continue;
-
-	    ball = BALL_IND(j);
-	    if (ball->treasure != i)
-		continue;
-
-	    ownerind = (ball->owner == NO_ID ? NO_ID : GetInd[ball->owner]);
-	    idind = (ball->id == NO_ID ? NO_ID : GetInd[ball->id]);
-	}
-    }
-}
-
-
-static void Compute_end_of_round_values(int *average_score,
+static void Compute_end_of_round_values(DFLOAT *average_score,
 					int *num_best_players,
 					DFLOAT *best_ratio,
 					int best_players[])
@@ -825,13 +826,13 @@ static void Compute_end_of_round_values(int *average_score,
 }
 
 
-static void Give_best_player_bonus(int average_score,
+static void Give_best_player_bonus(DFLOAT average_score,
 				   int num_best_players,
 				   DFLOAT best_ratio,
 				   int best_players[])
 {
     int			i;
-    int			points;
+    DFLOAT		points;
     char		msg[MSG_LEN];
 
 
@@ -845,7 +846,7 @@ static void Give_best_player_bonus(int average_score,
 		"%s is the Deadliest Player with a kill ratio of %d/%d.",
 		bp->name,
 		bp->kills, bp->deaths);
-	points = (int) (best_ratio * Rate(bp->score, average_score));
+	points = best_ratio * Rate(bp->score, average_score);
 	SCORE(best_players[0], points,
 	      OBJ_X_IN_BLOCKS(bp),
 	      OBJ_Y_IN_BLOCKS(bp),
@@ -855,8 +856,8 @@ static void Give_best_player_bonus(int average_score,
 	msg[0] = '\0';
 	for (i = 0; i < num_best_players; i++) {
 	    player	*bp = Players[best_players[i]];
-	    int		ratio = Rate(bp->score, average_score);
-	    DFLOAT	score = (DFLOAT) (ratio + num_best_players)
+	    DFLOAT	ratio = Rate(bp->score, average_score);
+	    DFLOAT	score = (ratio + num_best_players)
 				/ num_best_players;
 
 	    if (msg[0]) {
@@ -888,13 +889,13 @@ static void Give_best_player_bonus(int average_score,
     Set_message(msg);
 }
 
-static void Give_individual_bonus(int ind, int average_score)
+static void Give_individual_bonus(int ind, DFLOAT average_score)
 {
     DFLOAT		ratio;
-    int			points;
+    DFLOAT		points;
 
     ratio = (DFLOAT) Players[ind]->kills / (Players[ind]->deaths + 1);
-    points = (int) (ratio * Rate(Players[ind]->score, average_score));
+    points = ratio * Rate(Players[ind]->score, average_score);
     SCORE(ind, points,
 	  OBJ_X_IN_BLOCKS(Players[ind]),
 	  OBJ_Y_IN_BLOCKS(Players[ind]),
@@ -924,7 +925,7 @@ static void Count_rounds(void)
 void Team_game_over(int winning_team, const char *reason)
 {
     int			i, j;
-    int			average_score;
+    DFLOAT		average_score;
     int			num_best_players;
     int			*best_players;
     DFLOAT		best_ratio;
@@ -994,7 +995,7 @@ void Team_game_over(int winning_team, const char *reason)
 void Individual_game_over(int winner)
 {
     int			i, j;
-    int			average_score;
+    DFLOAT		average_score;
     int			num_best_players;
     int			*best_players;
     DFLOAT		best_ratio;
@@ -1245,7 +1246,8 @@ void Compute_game_status(void)
 			num_race_over_players = 0,
 			num_waiting_players = 0,
 			position = 1,
-			total_pts, pts;
+			total_pts;
+	DFLOAT		pts;
 
 	/* First count the players */
 	for (i = 0; i < NumPlayers; i++)  {
@@ -1316,7 +1318,7 @@ void Compute_game_status(void)
 		    if (pts > 0) {
 			sprintf(msg,
 				"%s finishes %sin position %d "
-				"scoring %d point%s.",
+				"scoring %.2f point%s.",
 				pl->name,
 				(num_finished_players == 1) ? "" : "jointly ",
 				position, pts,
@@ -1437,11 +1439,11 @@ void Compute_game_status(void)
 	    char	*bp;
 	    int		teams_with_treasure = 0;
 	    int		team_win[MAX_TEAMS];
-	    int		team_score[MAX_TEAMS];
+	    DFLOAT	team_score[MAX_TEAMS];
 	    int		winners;
 	    int		max_destroyed = 0;
 	    int		max_left = 0;
-	    int		max_score = 0;
+	    DFLOAT	max_score = 0;
 	    team_t	*team_ptr;
 
 	    /*
@@ -1544,7 +1546,7 @@ void Compute_game_status(void)
 	    }
 	    if (winners == 1) {
 		sprintf(msg, " by destroying %d treasures, saving %d, and "
-			"scoring %d points",
+			"scoring %.2f points",
 			max_destroyed, max_left, max_score);
 		Team_game_over(winning_team, msg);
 		return;
@@ -1641,6 +1643,9 @@ void Delete_player(int ind)
     int			i, j,
 			id = pl->id;
 
+    /* call before important player structures are destroyed */
+    Leave_alliance(ind);
+
     if (IS_ROBOT_PTR(pl)) {
 	Robot_destroy(ind);
     }
@@ -1722,6 +1727,8 @@ void Delete_player(int ind)
 
     if (pl->team != TEAM_NOT_SET && !IS_TANK_PTR(pl)) {
 	World.teams[pl->team].NumMembers--;
+	if (teamShareScore)
+	    TEAM_SCORE(pl->team, 0);	/* recalculate teamscores */
 	if (IS_ROBOT_PTR(pl))
 	    World.teams[pl->team].NumRobots--;
     }
@@ -1879,13 +1886,13 @@ void Player_death_reset(int ind)
      *-BA robotLeaveLife by making a robot leave iff it gets
      *-BA eliminated in any round.  Means that robotLeaveLife
      *-BA is ignored, but that robotsLeave is still respected.
-     *-BD Added check on race mode. Since in race mode everyone
-     *-BD gets killed at the end of the round, all robots would
-     *-BD be replaced in the next round. I don't think that's
-     *-BD the Right Thing to do.
-     *-BD Also, only check a robot's score at the end of the round.
-     *-BD 27-2-98 Check on team mode too. It's very confusing to
-     *-BD have different robots in your team every round.
+     *-KK Added check on race mode. Since in race mode everyone
+     *-KK gets killed at the end of the round, all robots would
+     *-KK be replaced in the next round. I don't think that's
+     *-KK the Right Thing to do.
+     *-KK Also, only check a robot's score at the end of the round.
+     *-KK 27-2-98 Check on team mode too. It's very confusing to
+     *-KK have different robots in your team every round.
      */
 
     if (BIT(World.rules->mode, LIMITED_LIVES)) { 
@@ -1915,3 +1922,38 @@ void Player_death_reset(int ind)
     pl->used	&= ~(USED_KILL);
     pl->used	&= pl->have;
 }
+
+/* determines if two players are immune to eachother */
+int Team_immune(int id1, int id2)
+{
+    int		ind1, ind2;
+
+    if (id1 == id2) {
+	/* owned stuff is never team immune */
+	return 0;
+    }
+    if (!teamImmunity) {
+	return 0;
+    }
+    if (id1 == NO_ID
+	|| id2 == NO_ID) {
+	/* can't find owner for cannon stuff */
+	return 0;
+    }
+
+    ind1 = GetInd[id1];
+    ind2 = GetInd[id2];
+
+    if (TEAM(ind1, ind2)) {
+	/* players are teammates */
+	return 1;
+    }
+
+    if (ALLIANCE(ind1, ind2)) {
+	/* players are allies */
+	return 1;
+    }
+
+    return 0;
+}
+

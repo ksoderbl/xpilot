@@ -1,4 +1,4 @@
-/* $Id: widget.c,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: widget.c,v 5.1 2001/12/28 13:26:10 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1889,7 +1889,7 @@ int Widget_create_confirm(const char *confirm_str,
 					 button_width, button_height,
 					 0, button_str,
 					 callback,
-					 (void *)popup_desc);
+					 (void *)(long)popup_desc);
     if (button_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	Widget_destroy(label_desc);
@@ -2039,7 +2039,7 @@ static int Widget_create_slider(int parent_desc, widget_type_t slider_type,
 static int Widget_viewer_save_callback(int widget_desc, void *data,
 				       const char **strptr)
 {
-    int			popup_desc = (int) data;
+    int			popup_desc = (int)(long)data;
     widget_t		*popup = Widget_pointer(popup_desc);
     widget_form_t	*formw;
     int			viewer_desc;
@@ -2062,7 +2062,7 @@ static int Widget_viewer_save_callback(int widget_desc, void *data,
 static int Widget_viewer_close_callback(int widget_desc, void *data,
 					const char **strptr)
 {
-    Widget_unmap((int) data);
+    Widget_unmap((int)(long)data);
     return 0;
 }
 
@@ -2348,7 +2348,7 @@ int Widget_create_viewer(const char *buf, int len,
 						       0,
 						       "SAVE",
 						       Widget_viewer_save_callback,
-						       (void *)popup_desc);
+						       (void *)(long)popup_desc);
     if (viewerw->save_button_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;
@@ -2363,7 +2363,7 @@ int Widget_create_viewer(const char *buf, int len,
 							0,
 							"CLOSE",
 							Widget_viewer_close_callback,
-							(void *)popup_desc);
+							(void *)(long)popup_desc);
     if (viewerw->close_button_desc == NO_WIDGET) {
 	Widget_destroy(popup_desc);
 	return NO_WIDGET;

@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 5.31 2001/09/18 18:20:06 bertg Exp $
+/* $Id: frame.c,v 5.40 2002/01/18 23:37:29 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,7 +43,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "bit.h"
@@ -409,7 +409,7 @@ static int Frame_status(int conn, int ind)
 	if ((!BIT(World.rules->mode, LIMITED_VISIBILITY)
 	     || pl->lock.distance <= pl->sensor_range)
 #ifndef SHOW_CLOAKERS_RANGE
-	    && (pl->visibility[lock_ind].canSee || TEAM(ind, lock_ind))
+	    && (pl->visibility[lock_ind].canSee || OWNS_TANK(ind, lock_ind) || TEAM(ind, lock_ind) || ALLIANCE(ind, lock_ind))
 #endif
 	    && BIT(Players[lock_ind]->status, PLAYING|GAME_OVER) == PLAYING
 	    && (playersOnRadar
@@ -564,6 +564,20 @@ static void Frame_map(int conn, int ind)
 	    || (BIT(targ->conn_mask, conn_bit) == 0
 		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
 	    Send_target(conn, i, targ->dead_time, targ->damage);
+	}
+    }
+
+    for (i = 0; i < World.NumWormholes; i++) {
+	wormhole_t	*worm = &World.wormHoles[i];
+	int		x = (worm->pos.x * BLOCK_SZ) + BLOCK_SZ / 2,
+			y = (worm->pos.y * BLOCK_SZ) + BLOCK_SZ / 2;
+
+	if (wormholeVisible
+	    && worm->temporary
+	    && (worm->type == WORM_IN
+		|| worm->type == WORM_NORMAL)
+	    && block_inview(&bv, worm->pos.x, worm->pos.y)) {
+	    Send_wormhole(conn, x, y);
 	}
     }
 }
@@ -745,10 +759,10 @@ static void Frame_shots(int conn, int ind)
 
 	case OBJ_SHOT:
 	case OBJ_CANNON_SHOT:
-	    if (BIT(World.rules->mode, TEAM_PLAY)
-		&& teamImmunity
-		&& shot->team == pl->team
-		&& shot->id != pl->id) {
+	    if (Team_immune(shot->id, pl->id)
+		|| (shot->id == NO_ID
+		    && BIT(World.rules->mode, TEAM_PLAY)
+		    && shot->team == pl->team)) {
 		color = BLUE;
 		teamshot = DEBRIS_TYPES;
 	    } else if (shot->id == pl->id
@@ -801,10 +815,7 @@ static void Frame_shots(int conn, int ind)
 		    if (BIT(mine->status, CONFUSED))
 			confused = 1;
 		}
-		laid_by_team = ((BIT(World.rules->mode, TEAM_PLAY)
-				 && teamImmunity
-				 && mine->team == pl->team
-				 && mine->id != pl->id)
+		laid_by_team = (Team_immune(mine->id, pl->id)
 				|| (BIT(mine->status, OWNERIMMUNE)
 				    && mine->owner == pl->id));
 		if (confused) {
@@ -889,10 +900,7 @@ static void Frame_ships(int conn, int ind)
 		continue;
 	    }
 	}
-	if (BIT(World.rules->mode, TEAM_PLAY)
-	    && teamImmunity
-	    && pulse->team == pl->team
-	    && pulse->id != pl->id) {
+	if (Team_immune(pulse->id, pl->id)) {
 	    color = BLUE;
 	} else if (pulse->id == pl->id
 	    && selfImmunity) {
@@ -954,7 +962,8 @@ static void Frame_ships(int conn, int ind)
 	/* Don't transmit information if fighter is invisible */
 	if (pl->visibility[i].canSee
 	    || i == ind
-	    || TEAM(i, ind)) {
+	    || TEAM(i, ind)
+	    || ALLIANCE(i, ind)) {
 	    /*
 	     * Transmit ship information
 	     */
@@ -1074,19 +1083,24 @@ static void Frame_radar(int conn, int ind)
     }
 #endif
 
-    if (playersOnRadar || BIT(World.rules->mode, TEAM_PLAY)) {
+    if (playersOnRadar
+	|| BIT(World.rules->mode, TEAM_PLAY)
+	|| NumPseudoPlayers > 0
+	|| NumAlliances > 0) {
 	for (k = 0; k < num_player_shuffle; k++) {
 	    i = player_shuffle_ptr[k];
 	    /*
 	     * Don't show on the radar:
 	     *		Ourselves (not necessarily same as who we watch).
 	     *		People who are not playing.
-	     *		People in other teams if;
+	     *		People in other teams or alliances if;
 	     *			no playersOnRadar or if not visible
 	     */
 	    if (Players[i]->conn == conn
 		|| BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
 		|| (!TEAM(i, ind)
+		    && !ALLIANCE(ind, i)
+		    && !OWNS_TANK(ind, i)
 		    && (!playersOnRadar || !pl->visibility[i].canSee))) {
 		continue;
 	    }
@@ -1104,7 +1118,7 @@ static void Frame_radar(int conn, int ind)
 		continue;
 	    }
 	    size = 3;
-	    if (TEAM(i, ind)) {
+	    if (TEAM(i, ind) || ALLIANCE(ind, i) || OWNS_TANK(ind, i)) {
 		size |= 0x80;
 	    }
 	    Frame_radar_buffer_add((int)x, (int)y, size);
@@ -1213,6 +1227,8 @@ void Frame_update(void)
 	}
 	if (newTimeLeft != oldTimeLeft) {
 	    Send_time_left(conn, newTimeLeft);
+	} else if (maxRoundTime > 0 && roundtime >= 0) {
+	    Send_time_left(conn, (roundtime + FPS - 1) / FPS);
 	}
 	/*
 	 * If status is GAME_OVER or PAUSE'd, the user may look through the

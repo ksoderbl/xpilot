@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 5.7 2001/06/03 17:21:49 bertg Exp $
+/* $Id: xpilot.c,v 5.8 2001/11/29 12:08:37 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
      */
     init_error(argv[0]);
 
-    srand( (unsigned)time((time_t *)0) ^ Get_process_id());
+    seedMT( (unsigned)time((time_t *)0) ^ Get_process_id());
 
     Check_client_versions();
 

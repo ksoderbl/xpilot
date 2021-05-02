@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Id: makeDistribution,v 5.6 2001/09/24 17:41:17 dik Exp $
+# $Id: makeDistribution,v 5.8 2002/02/15 06:10:26 dik Exp $
 # makeDistribution - a script to move things to a directory to make the build script
 #                    and then call makensis to build a Windows binary distribution for
 #                    XPilot, a multiplayer gravity war game.  
@@ -12,22 +12,26 @@
 
 # directory to stage the distribution.
 # You probably shouldn't make this C:\XPilot (The default installation dir)
-XDIR=//e/XPilot
+XDIR=/e/staged/XPilot
 
 # Some essential programs are built outside of the source tree.
 # These are built as siblings to our root parent.  C'est la vie.
 # So a build tree might look like this...
-#	//e/source/xpilot
-#	//e/source/xpilot/src
-#	//e/source/xpilot/src/common/NT/bindist	(YouAreHere)
-#	//e/source/xpwho
-#	//e/source/mapxpress
+#	/e/source/xpilot
+#	/e/source/xpilot/src
+#	/e/source/xpilot/src/common/NT/bindist	(YouAreHere)
+#	/e/source/xpwho
+#	/e/source/mapxpress
 
 XPWHODIR="xpwho"	# sibling of our parent's dirname
 #MAPXPRESSDIR="staged/mapxpress"
 MAPXPRESSDIR="mapxpress"
 XPREPLAYDIR="replay"
 XPSHIPEDITORDIR="staged/XPShipEditor"
+
+#!#!#!#!#!#!#!#!#!#!#!#!#!# END OF USER CONFIGURATION #!#!#!#!#!#!#!#!#!#!#!#!#!#
+
+PRODUCT="XPilot"
 
 ECHO_ON="set -x"
 ECHO_OFF="set +x"
@@ -215,7 +219,7 @@ if [ $QUICK = N -a $BUILDHELP = Y ]
 then
 	echo and go make mapxpress.chm
 	cd $BASE/../$MAPXPRESSDIR/html_help
-	//c/Program\ Files/HTML\ Help\ Workshop/hhc mapxpress
+	/c/Program\ Files/HTML\ Help\ Workshop/hhc mapxpress
 	RET=$?
 	if [ $RET != 1 ]
 	then
@@ -251,7 +255,8 @@ cp -p Release/XPilotServer.exe $XDIR
 cp -p Release/ServerOpts.txt $XDIR/doc
 
 cd $BASE/src/common/NT/bindist
-cp -p XPilot.nsi 		$XDIR		# don't install the NSI, but we use it there.
+#cp -p XPilot.nsi 		$XDIR		# don't install the NSI, but we use it there.
+sed "s/\[RELEASE\]/$XPilot$TITLE/g" <XPilot.nsi >$XDIR/XPilot.nsi
 cp -p xp_off.bmp 		$XDIR		# nsi helper bitmap
 cp -p xp_on.bmp 		$XDIR		# nsi helper bitmap
 cp -p READMEbin.txt		$XDIR/README.txt
@@ -317,6 +322,7 @@ cp -p war.xp			$XDIR/lib/maps
 
 cd $BASE/lib/textures
 cp -p allitems.ppm		$XDIR/lib/textures
+cp -p asteroidconcentrator.ppm $XDIR/lib/textures
 cp -p ball.ppm			$XDIR/lib/textures
 cp -p base_down.ppm		$XDIR/lib/textures
 cp -p base_left.ppm		$XDIR/lib/textures

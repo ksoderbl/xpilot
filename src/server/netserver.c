@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.20 2001/06/26 19:14:08 bertg Exp $
+/* $Id: netserver.c,v 5.30 2002/01/26 13:03:58 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -123,7 +123,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -138,12 +138,14 @@
 #include "netserver.h"
 #include "packet.h"
 #include "setup.h"
+#include "connection.h"
 #undef NETSERVER_C
 #include "saudio.h"
 #include "checknames.h"
 #include "server.h"
 #include "commonproto.h"
 #include "asteroid.h"
+#include "score.h"
 
 char netserver_version[] = VERSION;
 
@@ -164,24 +166,6 @@ int			compress_maps = 1;
 int			login_in_progress;
 static int		num_logins, num_logouts;
 
-char *showtime(void)
-{
-    time_t		now;
-    struct tm		*tmp;
-    static char		month_names[13][4] = {
-			    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-			    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-			    "Bug"
-			};
-    static char		buf[80];
-
-    time(&now);
-    tmp = localtime(&now);
-    sprintf(buf, "%02d %s %02d:%02d:%02d",
-	    tmp->tm_mday, month_names[tmp->tm_mon],
-	    tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
-    return buf;
-}
 
 /*
  * Compress the map data using a simple Run Length Encoding algorithm.
@@ -262,6 +246,10 @@ static int Init_setup(void)
 		if (!itemConcentratorVisible)
 		    type = SPACE;
 		break;
+	    case ASTEROID_CONCENTRATOR:
+		if (!asteroidConcentratorVisible)
+		    type = SPACE;
+		break;
 	    case FRICTION:
 		if (!blockFrictionVisible)
 		    type = SPACE;
@@ -288,6 +276,7 @@ static int Init_setup(void)
 	    case RIGHT_GRAV:	*mapptr = SETUP_RIGHT_GRAV; break;
 	    case LEFT_GRAV:	*mapptr = SETUP_LEFT_GRAV; break;
 	    case ITEM_CONCENTRATOR: *mapptr = SETUP_ITEM_CONCENTRATOR; break;
+	    case ASTEROID_CONCENTRATOR:	*mapptr = SETUP_ASTEROID_CONCENTRATOR; break;
 	    case DECOR_FILLED:	*mapptr = SETUP_DECOR_FILLED; break;
 	    case DECOR_RU:	*mapptr = SETUP_DECOR_RU; break;
 	    case DECOR_RD:	*mapptr = SETUP_DECOR_RD; break;
@@ -1036,6 +1025,8 @@ static int Handle_login(int ind, char *errmsg, int errsize)
     Go_home(NumPlayers);
     if (pl->team != TEAM_NOT_SET) {
 	World.teams[pl->team].NumMembers++;
+	if (teamShareScore)
+	    TEAM_SCORE(pl->team, 0);
     }
     NumPlayers++;
     request_ID();
@@ -1061,17 +1052,28 @@ static int Handle_login(int ind, char *errmsg, int errsize)
      * Tell him about himself first.
      */
     Send_player(pl->conn, pl->id);
-    Send_score(pl->conn, pl->id, pl->score, pl->life, pl->mychar);
+    Send_score(pl->conn, pl->id, pl->score,
+	       pl->life, pl->mychar, pl->alliance);
     Send_base(pl->conn, pl->id, pl->home_base);
     /*
      * And tell him about all the others.
      */
     for (i = 0; i < NumPlayers - 1; i++) {
 	Send_player(pl->conn, Players[i]->id);
-	Send_score(pl->conn, Players[i]->id,
-		   Players[i]->score, Players[i]->life, Players[i]->mychar);
+	Send_score(pl->conn, Players[i]->id, Players[i]->score,
+		   Players[i]->life, Players[i]->mychar, Players[i]->alliance);
 	if (!IS_TANK_IND(i)) {
 	    Send_base(pl->conn, Players[i]->id, Players[i]->home_base);
+	}
+    }
+    /*
+     * And about all the teams.
+     */
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	for (i = 0; i < MAX_TEAMS; i++) {
+	    if (World.teams[i].NumMembers > 0) {
+		Send_team_score(pl->conn, i, World.teams[i].score);
+	    }
 	}
     }
     /*
@@ -1081,7 +1083,7 @@ static int Handle_login(int ind, char *errmsg, int errsize)
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, pl->id);
 	    Send_score(Players[i]->conn, pl->id, pl->score,
-		       pl->life, pl->mychar);
+		       pl->life, pl->mychar, pl->alliance);
 	    Send_base(Players[i]->conn, pl->id, pl->home_base);
 	}
 	/*
@@ -1181,7 +1183,11 @@ static int Handle_login(int ind, char *errmsg, int errsize)
     /* if the next round is delayed, delay it again */
     if (round_delay > 0 || NumPlayers == 1) {
 	round_delay = roundDelaySeconds * FPS;
-	roundtime = -1;
+	if (maxRoundTime > 0 && roundDelaySeconds == 0) {
+	    roundtime = maxRoundTime * FPS;
+	} else {
+	    roundtime = -1;
+	}
 	sprintf(msg, "Player entered. Delaying %d seconds until next %s.",
 		roundDelaySeconds, (BIT(World.rules->mode, TIMING) ?
 			     "race" : "round"));
@@ -1640,7 +1646,8 @@ int Send_player(int ind, int id)
 /*
  * Send the new score for some player to a client.
  */
-int Send_score(int ind, int id, int score, int life, int mychar)
+int Send_score(int ind, int id, DFLOAT score,
+	       int life, int mychar, int alliance)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -1650,8 +1657,46 @@ int Send_score(int ind, int id, int score, int life, int mychar)
 	    connp->state, connp->id);
 	return 0;
     }
-    return Packet_printf(&connp->c, "%c%hd%hd%hd%c", PKT_SCORE,
-			 id, score, life, mychar);
+    if (connp->version < 0x4500) {
+	/* older clients don't get alliance info or decimals of the score */
+	return Packet_printf(&connp->c, "%c%hd%hd%hd%c", PKT_SCORE,
+			     id, (int)(score + (score > 0 ? 0.5 : -0.5)),
+			     life, mychar);
+    } else {
+	int allchar = ' ';
+	if (alliance != ALLIANCE_NOT_SET) {
+	    if (announceAlliances) {
+		allchar = alliance + '0';
+	    } else {
+		if (Players[GetInd[connp->id]]->alliance == alliance)
+		    allchar = '+';
+	    }
+	}
+	return Packet_printf(&connp->c, "%c%hd%d%hd%c%c", PKT_SCORE, id,
+			     (int)(score * 100 + (score > 0 ? 0.5 : -0.5)),
+			     life, mychar, allchar);
+    }
+}
+
+/*
+ * Send the new score for some team to a client.
+ */
+int Send_team_score(int ind, int team, DFLOAT score)
+{
+    connection_t	*connp = &Conn[ind];
+
+    if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
+	errno = 0;
+	error("Connection not ready for team score(%d,%d)",
+	      connp->state, connp->id);
+	return 0;
+    }
+    if (connp->version < 0x4500) {
+	/* older clients don't know about team scores */
+	return 0;
+    }
+    return Packet_printf(&connp->c, "%c%hd%d", PKT_TEAM_SCORE,
+		         team, (int)(score * 100 + (score > 0 ? 0.5 : -0.5)));
 }
 
 /*
@@ -1699,7 +1744,7 @@ int Send_fuel(int ind, int num, int fuel)
 			 num, fuel >> FUEL_SCALE_BITS);
 }
 
-int Send_score_object(int ind, int score, int x, int y, const char *string)
+int Send_score_object(int ind, DFLOAT score, int x, int y, const char *string)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -1709,8 +1754,16 @@ int Send_score_object(int ind, int score, int x, int y, const char *string)
 	    connp->state, connp->id);
 	return 0;
     }
-    return Packet_printf(&Conn[ind].c, "%c%hd%hu%hu%s",PKT_SCORE_OBJECT,
-			 score, x, y, string);
+    if (connp->version < 0x4500) {
+	/* older clients don't get decimals of the score */
+	return Packet_printf(&Conn[ind].c, "%c%hd%hu%hu%s",PKT_SCORE_OBJECT,
+			     (int)(score + (score > 0 ? 0.5 : -0.5)),
+			     x, y, string);
+    } else {
+	return Packet_printf(&Conn[ind].c, "%c%d%hu%hu%s",PKT_SCORE_OBJECT,
+			     (int)(score * 100 + (score > 0 ? 0.5 : -0.5)),
+			     x, y, string);
+    }
 }
 
 int Send_cannon(int ind, int num, int dead_time)
@@ -1866,6 +1919,28 @@ int Send_target(int ind, int num, int dead_time, int damage)
 {
     return Packet_printf(&Conn[ind].w, "%c%hu%hu%hu", PKT_TARGET,
 			 num, dead_time, damage);
+}
+
+int Send_wormhole(int ind, int x, int y)
+{
+    if (Conn[ind].version < 0x4501) {
+	const int wormStep = 5;
+	int wormAngle = (frame_loops & 7) * (RES / 8);
+
+	return Send_ecm(ind,
+			x,
+			y,
+			BLOCK_SZ - 2) +
+	       Send_ecm(ind,
+			(int) (x + wormStep * tcos(wormAngle)),
+			(int) (y + wormStep * tsin(wormAngle)),
+			BLOCK_SZ - 2 - 2 * wormStep) +
+	       Send_ecm(ind,
+			(int) (x + 2 * wormStep * tcos(wormAngle)),
+			(int) (y + 2 * wormStep * tsin(wormAngle)),
+			BLOCK_SZ - 2 - 4 * wormStep);
+    }
+    return Packet_printf(&Conn[ind].w, "%c%hd%hd", PKT_WORMHOLE, x, y);
 }
 
 int Send_item(int ind, int x, int y, int type)
@@ -2650,34 +2725,7 @@ static void Handle_talk(int ind, char *str)
 	}
     }
     else if (strcasecmp(str, "god") == 0) {
-	/*
-	 * Only log the message if logfile already exists,
-	 * is writable and less than some KBs in size.
-	 */
-	char		*logfilename = Conf_logfile();
-	const int	logfile_size_limit = 100*1024;
-	FILE		*fp;
-	struct stat	st;
-
-	if (access(logfilename, 2) == 0 &&
-	    stat(logfilename, &st) == 0 &&
-	    (st.st_size < logfile_size_limit) &&
-	    (fp = fopen(logfilename, "a")) != NULL)
-	{
-	    fprintf(fp,
-		    "%s[%s]{%s@%s(%s)|%s}:\n"
-		    "\t%s\n",
-		    showtime(),
-		    pl->name,
-		    pl->realname, connp->host, connp->addr, connp->dpy,
-		    cp);
-	    fclose(fp);
-	    sprintf(msg + strlen(msg), ":[%s]", "GOD");
-	    Set_player_message(pl, msg);
-	}
-	else {
-	    Set_player_message(pl, "Can't log to GOD.");
-	}
+	Server_log_admin_message(GetInd[connp->id], cp);
     }
     else {						/* Player message */
 	sent = -1;
@@ -2886,6 +2934,20 @@ int Get_conn_version(int ind)
     connection_t	*connp = &Conn[ind];
 
     return connp->version;
+}
+
+const char *Get_player_addr(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+
+    return connp->addr;
+}
+
+const char *Get_player_dpy(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+
+    return connp->dpy;
 }
 
 static int Receive_shape(int ind)

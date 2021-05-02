@@ -1,4 +1,4 @@
-/* $Id: item.c,v 5.17 2001/09/24 10:27:56 bertg Exp $
+/* $Id: item.c,v 5.23 2001/12/11 12:45:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "saudio.h"
@@ -321,6 +321,11 @@ void Place_item(int item, int ind)
 		    vx -= dvx * (vx / vl);
 		    vy -= dvy * (vy / vl);
 		}
+	    } else {
+		DFLOAT vel = rfrac() * 6;
+		int dir = (int)(rfrac() * RES);
+		vx += tcos(dir) * vel;
+		vy += tsin(dir) * vel;
 	    }
 	} else {
 	    vx -= Gravity * World.gravity[bx][by].x;
@@ -343,13 +348,12 @@ void Make_item(int px, int py,
 {
     object *obj;
 
-    if (NumObjs >= MAX_TOTAL_SHOTS)
-	return;
-
     if (World.items[item].num >= World.items[item].max)
 	return;
 
-    obj = Obj[NumObjs++];
+    if ((obj = Object_allocate()) == NULL)
+	return;
+
     obj->type = OBJ_ITEM;
     obj->info = item;
     obj->color = RED;
@@ -578,9 +582,7 @@ void Do_deflector(int ind)
 		|| selfImmunity)
 		continue;
 	} else {
-	    if (teamImmunity
-		&& BIT(World.rules->mode, TEAM_PLAY)
-		&& obj->team == pl->team)
+	    if (Team_immune(obj->id, pl->id))
 		continue;
 	}
 
@@ -633,7 +635,7 @@ void Do_transporter(int ind)
 	p = Players[i];
 	if (p == pl
 	    || BIT(p->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
-	    || TEAM_IMMUNE(ind, i)
+	    || Team_immune(pl->id, p->id)
 	    || IS_TANK_PTR(p)
 	    || BIT(p->used, HAS_PHASING_DEVICE))
 	    continue;
@@ -1009,9 +1011,9 @@ void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
 			continue;
 		    }
 		}
-	    } else if (BIT(World.rules->mode, TEAM_PLAY)
-		       && teamImmunity
-		       && shot->team == team) {
+	    } else if ((pl && Team_immune(pl->id, owner))
+		       || (BIT(World.rules->mode, TEAM_PLAY)
+			   && team == shot->team)) {
 		continue;
 	    }
 	}
@@ -1127,6 +1129,9 @@ void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
 	if (BIT(World.rules->mode, TEAM_PLAY) && p->team == team)
 	    continue;
 
+	if (pl && ALLIANCE(ind, i))
+	    continue;
+
 	if (BIT(p->used, HAS_PHASING_DEVICE))
 	    continue;
 
@@ -1191,7 +1196,7 @@ void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
 			|| !BIT(World.rules->mode, LIMITED_VISIBILITY))
 		    && pl->visibility[GetInd[pl->lock.pl_id]].canSee
 		    && pl->lock.pl_id != p->id
-		    && !TEAM_IMMUNE(ind, GetInd[pl->lock.pl_id])) {
+		    /*&& !TEAM_IMMUNE(ind, GetInd[pl->lock.pl_id])*/) {
 
 		    /*
 		     * Player programs robot to seek target.

@@ -1,4 +1,4 @@
-/* $Id: tuner.c,v 1.6 2001/08/26 19:27:26 gkoopman Exp $
+/* $Id: tuner.c,v 1.12 2002/01/18 22:34:26 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 #define	SERVER
 #include <stdlib.h>
 #include <time.h>
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "error.h"
@@ -201,7 +201,7 @@ void tuner_wormtime(void)
 
     if (wormTime) {
 	for (i = 0; i < World.NumWormholes; i++) {
-	    World.wormHoles[i].countdown = wormTime * FPS;
+	    World.wormHoles[i].countdown = wormTime;
 	}
     }
     else {
@@ -293,4 +293,19 @@ void tuner_racelaps(void)
 	if (gameDuration == -1)
 	    gameDuration = 0;
     }
+}
+
+void tuner_allowalliances(void)
+{
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	CLR_BIT(World.rules->mode, ALLIANCES);
+    }
+    if (!BIT(World.rules->mode, ALLIANCES) && NumAlliances > 0) {
+	Dissolve_all_alliances();
+    }
+}
+
+void tuner_announcealliances(void)
+{
+    updateScores = true;
 }

@@ -1,5 +1,5 @@
 # XPilot.nsi - the script to NSIS, the NullSoft Install System.
-# $Id: XPilot.nsi,v 5.5 2001/09/24 17:41:17 dik Exp $
+# $Id: XPilot.nsi,v 5.7 2002/02/15 06:09:43 dik Exp $
 #              Copyright 2001 Jarno van der Kolk <jarno@j-a-r-n-o.nl>
 #              Released under GNU General Public License Version 2 
 # The NullSoft Install System can be found here http://www.nullsoft.com/free/nsis/
@@ -19,10 +19,12 @@ InstType "Typical"
 InstType "Compact"
 EnabledBitmap "xp_on.bmp"
 DisabledBitmap "xp_off.bmp"
+ComponentText "This will install [RELEASE] on your computer."
 
 # Directory selection page configuration commands
-DirShow show
 InstallDir "C:\XPilot"
+DirText "Select the directory to install [RELEASE] in"
+DirShow show
 InstallDirRegKey HKEY_LOCAL_MACHINE SOFTWARE\XPilot "Install_Dir"
 
 # Install page configuration commands
@@ -51,12 +53,12 @@ File "XPwho.exe"
 File "XPreplay.exe"
 File "XPreplay.reg"
 SetOutPath "$INSTDIR\doc"
-File "doc\Bugs.txt"
+#File "doc\Bugs.txt"
 File "doc\ChangeLog.txt"
 #File "doc\ClientOpts.txt"
 File "doc\Credits.txt"
 File "doc\Faq.txt"
-File "doc\Fixed.txt"
+#File "doc\Fixed.txt"
 File "doc\README.MAPS.txt"
 File "doc\README.MAPS2.txt"
 File "doc\README.SHIPS.txt"
@@ -70,6 +72,7 @@ File "lib\defaults.txt"
 File "lib\robots.txt"
 SetOutPath "$INSTDIR\lib\textures"
 File "lib\textures\allitems.ppm"
+File "lib\textures\asteroidconcentrator.ppm"
 File "lib\textures\ball.ppm"
 File "lib\textures\base_down.ppm"
 File "lib\textures\base_left.ppm"
@@ -119,7 +122,9 @@ File "lib\textures\wall_ull.ppm"
 File "lib\textures\wall_ur.ppm"
 File "lib\textures\wall_url.ppm"
 File "lib\textures\wormhole.ppm"
+
 SetOutPath "$INSTDIR"
+WriteUninstaller "uninstall.exe"
 
 # Write the installation path into the registry
 WriteRegStr HKEY_LOCAL_MACHINE SOFTWARE\XPilot "Install_Dir" "$INSTDIR"
@@ -210,10 +215,8 @@ skipMapEditor:
 CreateShortCut "$SMPROGRAMS\XPilot\Uninstall.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd
 
+##############################################################################
 # Uninstall stuff. Sad but true, some people actually uninstall XPilot...
-
-UninstallText "This will uninstall XPilot. Hit next to continue."
-UninstallExeName "uninstall.exe"
 
 ; special uninstall section.
 Section "Uninstall"

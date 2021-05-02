@@ -1,4 +1,4 @@
-/* $Id: event.c,v 5.7 2001/07/09 09:32:13 bertg Exp $
+/* $Id: event.c,v 5.11 2002/03/05 22:49:32 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -34,7 +34,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "score.h"
@@ -204,7 +204,9 @@ int Player_lock_closest(int ind, int next)
 	if (i == lock
 	    || (BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING)
 	    || !Player_lock_allowed(ind, i)
-	    || TEAM(ind,i)) {
+	    || OWNS_TANK(ind, i)
+	    || TEAM(ind,i)
+	    || ALLIANCE(ind, i)) {
 	    continue;
 	}
 	l = Wrap_length(Players[i]->pos.x - pl->pos.x,
@@ -863,7 +865,7 @@ int Handle_keyboard(int ind)
 			 * tractor beams.  Other items are allowed (esp.
 			 * cloaking).
 			 */
-			pl->used &= ~USED_KILL;
+			Player_used_kill(ind);
 			if (BIT(pl->have, HAS_SHIELD))
 			    SET_BIT(pl->used, HAS_SHIELD);
 		    } else if (pl->count <= 0) {

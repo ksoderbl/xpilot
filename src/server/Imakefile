@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 5.6 2001/07/08 09:59:39 bertg Exp $ */
+/* $Id: Imakefile,v 5.10 2002/01/07 20:49:25 bertg Exp $ */
 
 TOP=../..
 COMMON = ../common/
@@ -38,30 +38,30 @@ INCLUDES = $(AUDIOINC) -I$(COMMON) -I../lib/
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 SRCS = \
-	asteroid.c cannon.c cell.c cmdline.c \
+	alliance.c asteroid.c cannon.c cell.c cmdline.c \
 	collision.c command.c contact.c \
 	event.c fileparser.c frame.c \
 	id.c item.c laser.c \
 	map.c metaserver.c netserver.c \
-	objpos.c option.c \
+	object.c objpos.c option.c \
 	parser.c play.c player.c \
 	robot.c robotdef.c rules.c \
-	saudio.c sched.c score.c \
-	server.c ship.c shot.c \
+	saudio.c sched.c score.c server.c \
+	ship.c shot.c showtime.c stratbot.c \
 	tuner.c update.c walls.c wildmap.c
 
 # keep this variable consistent with its counterpart in ../Makefile.std
 OBJS = \
-	asteroid.o cannon.o cell.o cmdline.o \
+	alliance.o asteroid.o cannon.o cell.o cmdline.o \
 	collision.o command.o contact.o \
 	event.o fileparser.o frame.o \
 	id.o item.o laser.o \
 	map.o metaserver.o netserver.o \
-	objpos.o option.o \
+	object.o objpos.o option.o \
 	parser.o play.o player.o \
 	robot.o robotdef.o rules.o \
-	saudio.o sched.o score.o \
-	server.o ship.o shot.o \
+	saudio.o sched.o score.o server.o \
+	ship.o shot.o showtime.o stratbot.o \
 	tuner.o update.o walls.o wildmap.o
 
 DEPLIBS = $(COMMON)libxpcommon.a 

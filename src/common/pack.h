@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 5.2 2001/05/25 13:00:43 bertg Exp $
+/* $Id: pack.h,v 5.4 2002/01/18 22:34:26 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -97,8 +97,10 @@
  * 4.3.0.0: transmit phasing separately from cloaking
  * 4.4.0.0: new object (asteroid)
  * 4.4.0.1: fast radar packet
+ * 4.5.0.0: new team score packet; score packet made larger to send decimals
+ * 4.5.0.1: temporary wormholes
  */
-#define	MAGIC		0x4401F4ED
+#define	MAGIC		0x4501F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))

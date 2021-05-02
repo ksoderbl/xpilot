@@ -1,4 +1,4 @@
-/* $Id: metaserver.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
+/* $Id: metaserver.c,v 5.5 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -44,7 +44,7 @@
 #define SERVER
 #include "config.h"
 #include "version.h"
-#include "const.h"
+#include "serverconst.h"
 #include "types.h"
 #include "global.h"
 #include "proto.h"
@@ -168,8 +168,7 @@ void Meta_update(int change)
 #define GIVE_META_SERVER_A_HINT	180
 
     char 		string[MAX_STR_LEN];
-    char 		status[MAX_STR_LEN];
-    int			i, j;
+    int			i, j, len;
     int			num_active_players;
     bool		first = true;
     time_t		currentTime;
@@ -194,8 +193,6 @@ void Meta_update(int change)
     }
     lastMetaSendTime = currentTime;
     queue_length = NumQueuedPlayers;
-
-    Server_info(status, sizeof(status));
 
     /* Find out the number of active players. */
     num_active_players = 0;
@@ -264,26 +261,45 @@ void Meta_update(int change)
 	    queue_length);
 
 
-    for (i=0; i < NumPlayers; i++) {
-	if (IS_HUMAN_IND(i) && !BIT(Players[i]->status, PAUSE)) {
-	    sprintf(string + strlen(string),
-		    "%s%s=%s@%s",
-		    (first) ? "add players " : ",",
-		    Players[i]->name,
-		    Players[i]->realname,
-		    Players[i]->hostname);
-	    if (BIT(World.rules->mode, TEAM_PLAY)) {
-		sprintf(status,"{%d}",Players[i]->team);
-		strcat(string,status);
-	    }
+    /*
+     * 'len' must always hold the exact number of
+     * non-zero bytes which are in string[].
+     */
+    len = strlen(string);
 
-	    first = false;
+    for (i = 0; i < NumPlayers; i++) {
+	if (IS_HUMAN_IND(i) && !BIT(Players[i]->status, PAUSE)) {
+	    if ((len + (4 * MAX_CHARS)) < sizeof(string)) {
+		sprintf(string + len,
+			"%s%s=%s@%s",
+			(first) ? "add players " : ",",
+			Players[i]->name,
+			Players[i]->realname,
+			Players[i]->hostname);
+		len += strlen(&string[len]);
+
+		if (BIT(World.rules->mode, TEAM_PLAY)) {
+		    sprintf(string + len,"{%d}",Players[i]->team);
+		    len += strlen(&string[len]);
+		}
+
+		first = false;
+	    }
 	}
     }
 
-    strlcat(string,"\nadd status ", sizeof(string));
-    strlcat(string, status, sizeof(string));
+    if (len + MSG_LEN < sizeof(string)) {
+	char status[MAX_STR_LEN];
 
-    Meta_send(string, strlen(string) + 1);
+	strlcpy(&string[len], "\nadd status ", sizeof(string) - len);
+	len += strlen(&string[len]);
+
+	Server_info(status, sizeof(status));
+
+	strlcpy(&string[len], status, sizeof(string) - len);
+	len += strlen(&string[len]);
+    }
+
+    Meta_send(string, len + 1);
 }
 

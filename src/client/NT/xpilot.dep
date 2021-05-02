@@ -176,12 +176,14 @@
 ..\guiobjects.c : \
 	"..\..\common\astershape.h"\
 	"..\..\common\bit.h"\
+	"..\..\common\commonproto.h"\
 	"..\..\common\config.h"\
 	"..\..\common\const.h"\
 	"..\..\common\draw.h"\
 	"..\..\common\item.h"\
 	"..\..\common\keys.h"\
 	"..\..\common\NT\winX.h"\
+	"..\..\common\pack.h"\
 	"..\..\common\portability.h"\
 	"..\..\common\rules.h"\
 	"..\..\common\setup.h"\
@@ -354,6 +356,7 @@
 	"..\client.h"\
 	"..\gfx2d.h"\
 	"..\gfx3d.h"\
+	"..\guimap.h"\
 	"..\guiobjects.h"\
 	"..\paint.h"\
 	"..\paintdata.h"\
@@ -390,6 +393,24 @@
 	"..\..\common\socklib.h"\
 	"..\protoclient.h"\
 	".\winClient.h"\
+	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	
+
+..\record.c : \
+	"..\..\common\commonproto.h"\
+	"..\..\common\config.h"\
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
+	"..\..\common\item.h"\
+	"..\..\common\NT\winX.h"\
+	"..\..\common\NT\winX_.h"\
+	"..\..\common\setup.h"\
+	"..\client.h"\
+	"..\paint.h"\
+	"..\record.h"\
+	"..\recordfmt.h"\
+	"..\xinit.h"\
+	"..\xpmread.h"\
 	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	
 
@@ -604,12 +625,6 @@
 	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	
 
-.\RecordDummy.c : \
-	"..\..\common\NT\winX.h"\
-	"..\record.h"\
-	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
-	
-
 .\Splash.cpp : \
 	".\Splash.h"\
 	".\stdafx.h"\
@@ -804,6 +819,8 @@
 	
 
 ..\..\common\NT\winX11.c : \
+	"..\..\common\const.h"\
+	"..\..\common\draw.h"\
 	"..\..\common\NT\winX.h"\
 	"..\..\common\NT\winX_.h"\
 	".\winClient.h"\

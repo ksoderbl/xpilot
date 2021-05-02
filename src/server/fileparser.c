@@ -1,4 +1,4 @@
-/* $Id: fileparser.c,v 5.3 2001/06/24 20:00:54 bertg Exp $
+/* $Id: fileparser.c,v 5.5 2001/11/29 20:31:36 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -43,7 +43,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "defaults.h"
@@ -320,17 +320,7 @@ static void parseLine(char **map_ptr, optOrigin opt_origin)
 
     /* Deal with `expand: MACRO'. */
     if (strcmp(name, "expand") == 0) {
-	optOrigin expand_origin;
-	p = Option_get_value(value, &expand_origin);
-	if (p == NULL) {
-	    error("Can't expand `%s' because it has not been defined.\n",
-		  value);
-	}
-	else {
-	    while (*p) {
-		parseLine(&p, expand_origin);
-	    }
-	}
+	expandKeyword(value);
     }
 #ifdef REGIONS /* not yet */
     /* Deal with `region: \multiline: TAG'. */
@@ -741,4 +731,21 @@ bool parseMapFile(const char *filename)
     return true;
 }
 
+
+void expandKeyword(const char *keyword)
+{
+    optOrigin	expand_origin;
+    char	*p;
+
+    p = Option_get_value(keyword, &expand_origin);
+    if (p == NULL) {
+	warn("Can't expand `%s' because it has not been defined.\n",
+	      keyword);
+    }
+    else {
+	while (*p) {
+	    parseLine(&p, expand_origin);
+	}
+    }
+}
 

@@ -1,4 +1,4 @@
-/* $Id: object.h,v 5.19 2001/08/26 19:27:26 gkoopman Exp $
+/* $Id: object.h,v 5.22 2001/11/30 17:56:06 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,6 +25,10 @@
 #ifndef	OBJECT_H
 #define	OBJECT_H
 
+#ifndef SERVERCONST_H
+/* need MAX_TANKS */
+#include "serverconst.h"
+#endif
 #ifndef KEYS_H
 /* need NUM_KEYS */
 #include "keys.h"
@@ -482,8 +486,8 @@ struct player {
     DFLOAT	turnvel;		/* Current velocity of turn (right) */
     DFLOAT	oldturnvel;		/* Last velocity of turn (right) */
     DFLOAT	turnacc;		/* Current acceleration of turn */
-    long	score;			/* Current score of player */
-    long	prev_score;		/* Last score that has been updated */
+    DFLOAT	score;			/* Current score of player */
+    DFLOAT	prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
     shipobj	*ship;			/* wire model of ship shape */
     DFLOAT	power;			/* Force of thrust */
@@ -544,6 +548,9 @@ struct player {
     char	realname[MAX_CHARS];	/* Real name of player */
     char	hostname[MAX_CHARS];	/* Hostname of client player uses */
     unsigned short	pseudo_team;	/* Which team for detaching tanks */
+    int		alliance;		/* Member of which alliance? */
+    int		prev_alliance;		/* prev. alliance for score */
+    int		invite;			/* Invitation for alliance */
     ballobject	*ball;
 
     /*

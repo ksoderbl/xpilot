@@ -3,30 +3,33 @@
 .\MainFrm.cpp : \
 	".\MainFrm.h"\
 	".\SliderBar.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	
 
 .\Properties.cpp : \
 	".\Properties.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	
 
 .\SliderBar.cpp : \
 	".\Properties.h"\
 	".\SliderBar.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	".\XPreplayDoc.h"\
 	
 
 .\StdAfx.cpp : \
 	".\StdAfx.h"\
-	"c:\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	
 
 .\XPreplay.cpp : \
 	".\MainFrm.h"\
 	".\Properties.h"\
 	".\SliderBar.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	".\XPreplayDoc.h"\
 	".\XPreplayView.h"\
@@ -44,6 +47,7 @@
 	".\MainFrm.h"\
 	".\Properties.h"\
 	".\SliderBar.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	".\XPreplayDoc.h"\
 	
@@ -74,6 +78,7 @@
 	".\MainFrm.h"\
 	".\Properties.h"\
 	".\SliderBar.h"\
+	".\StdAfx.h"\
 	".\XPreplay.h"\
 	".\XPreplayDoc.h"\
 	".\XPreplayView.h"\

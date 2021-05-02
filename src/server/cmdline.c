@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 5.33 2001/09/18 18:20:06 bertg Exp $
+/* $Id: cmdline.c,v 5.49 2002/01/27 22:58:55 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -35,7 +35,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "defaults.h"
@@ -48,6 +48,7 @@
 char cmdline_version[] = VERSION;
 
 
+list_t		expandList;		/* List of predefined settings. */
 DFLOAT		Gravity;		/* Power of gravity */
 DFLOAT		ShipMass;		/* Default mass of ship */
 DFLOAT		ballMass;		/* Default mass of balls */
@@ -55,6 +56,7 @@ DFLOAT		ShotsMass;		/* Default mass of shots */
 DFLOAT		ShotsSpeed;		/* Default speed of shots */
 int		ShotsLife;		/* Default number of ticks */
 					/* each shot will live */
+bool		shotHitFuelDrainUsesKineticEnergy;	/* see option name */
 int		maxRobots;		/* How many robots should enter */
 int		minRobots;		/* the game? */
 char		*robotFile;		/* Filename for robot parameters */
@@ -120,15 +122,21 @@ bool		limitedLives;		/* Are lives limited? */
 int		worldLives;		/* If so, what's the max? */
 bool		endOfRoundReset;	/* Reset the world when round ends? */
 int		resetOnHuman;		/* Last human to reset round for */
+bool		allowAlliances;		/* Are alliances allowed? */
+bool		announceAlliances;	/* Are changes in alliances broadcast? */
 bool		teamPlay;		/* Are teams allowed? */
 bool		teamFuel;		/* Do fuelstations belong to teams? */
 bool		teamCannons;		/* Do cannons belong to teams? */
 int		cannonSmartness;	/* Accuracy of cannonfire */
 bool		cannonsUseItems;	/* Do cannons use items? */
+bool		cannonsDefend;		/* Do cannons defend themselves? */
 bool		cannonFlak;		/* Do cannons fire flak? */
 int		cannonDeadTime;		/* How long do cannons stay dead? */
 bool		keepShots;		/* Keep shots when player leaves? */
 bool		timing;			/* Is this a race? */
+bool		ballrace;		/* Do we race with balls? */
+bool		ballrace_connect;	/* Need to be connected to ball to pass
+					   checkpoints? */
 bool		edgeWrap;		/* Do objects wrap when they cross
 					   the edge of the Universe? */
 bool		edgeBounce;		/* Do objects bounce when they hit
@@ -143,11 +151,14 @@ bool		gravityAnticlockwise;	/* If not clockwise, anticlockwise? */
 bool		gravityVisible;		/* Is gravity visible? */
 bool		wormholeVisible;	/* Are wormholes visible? */
 bool		itemConcentratorVisible;/* Are itemconcentrators visible? */
+bool		asteroidConcentratorVisible;	/* Are asteroid concentrators visible? */
 int		wormTime;
 char		*defaultsFileName;	/* Name of defaults file... */
 char		*passwordFileName;	/* Name of password file... */
 char		*motdFileName;		/* Name of motd file */
 char		*scoreTableFileName;	/* Name of score table file */
+char		*adminMessageFileName;	/* Name of admin message file */
+int		adminMessageFileSizeLimit;/* Limit on admin message file size */
 
 int		nukeMinSmarts;		/* minimum smarts for a nuke */
 int		nukeMinMines;		/* minimum number of mines for nuke */
@@ -159,6 +170,7 @@ int		mineLife;		/* lifetime of mines */
 DFLOAT		minMineSpeed;		/* minimum speed of mines */
 int		missileLife;		/* lifetime of missiles */
 int		baseMineRange;		/* Distance from base mines may be used */
+int		mineShotDetonateDistance; /* When does a shot trigger a mine? */
 
 DFLOAT		shotKillScoreMult;
 DFLOAT		torpedoKillScoreMult;
@@ -173,7 +185,10 @@ DFLOAT		explosionKillScoreMult;
 DFLOAT		shoveKillScoreMult;
 DFLOAT		crashScoreMult;
 DFLOAT		mineScoreMult;
-bool		asteroidScoring;
+DFLOAT		asteroidPoints;
+DFLOAT		cannonPoints;
+DFLOAT		asteroidMaxScore;
+DFLOAT		cannonMaxScore;
 
 DFLOAT 		movingItemProb;		/* Probability for moving items */
 DFLOAT		randomItemProb;		/* Probability for random-appearing items */
@@ -192,6 +207,8 @@ DFLOAT		maxItemDensity;
 DFLOAT		maxAsteroidDensity;
 int		itemConcentratorRadius;
 DFLOAT		itemConcentratorProb;
+int		asteroidConcentratorRadius;
+DFLOAT		asteroidConcentratorProb;
 
 bool		allowSmartMissiles;
 bool		allowHeatSeekers;
@@ -223,6 +240,7 @@ bool		allowViewing;		/* Are players allowed to watch others? */
 
 bool		teamAssign;		/* Assign player to team if not set? */
 bool		teamImmunity;		/* Is team immune from player action */
+bool		teamShareScore;		/* Are scores shared between members? */
 
 bool		targetKillTeam;		/* if your target explodes, you die? */
 bool		targetTeamCollision;	/* Does team collide with target? */
@@ -282,7 +300,10 @@ bool		selfImmunity;		/* Are players immune to their own weapons? */
 char		*defaultShipShape;	/* What ship shape is used for players */
 					/* who do not define their own? */
 char		*tankShipShape;		/* What ship shape is used for tanks? */
+int		maxPauseTime;		/* Max. time you can stay paused for */
 
+
+extern char	conf_logfile_string[];	/* Default name of log file */
 
 /*
 ** Two functions which can be used if an option
@@ -335,6 +356,18 @@ static option_desc options[] = {
 	tuner_none,
 	"Print all options with their default values in defaultsfile format.\n",
 	OPT_NONE
+    },
+    {
+	"expand",
+	"expand",
+	"",
+	&expandList,
+	valList,
+	tuner_none,
+	"Expand a comma separated list of predefined settings.\n"
+	"These settings can be defined in either the defaults file\n"
+	"or in a map file using the \"define:\" operator.\n",
+	OPT_COMMAND
     },
     {
 	"gravity",
@@ -395,6 +428,19 @@ static option_desc options[] = {
 	tuner_dummy,
 	"Life of bullets in ticks.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"shotHitFuelDrainUsesKineticEnergy",
+	"shotHitFuelDrainUsesKineticEnergy",
+	"yes",
+	&shotHitFuelDrainUsesKineticEnergy,
+	valBool,
+	tuner_dummy,
+	"Does the fuel drain from shot hits depend on their mass and speed?\n"
+	"This is a temporary option that will be removed in March 2002.\n",
+	/* we don't allow this option to be set from map files to discourage
+	   long term use of it */
+	OPT_DEFAULTS | OPT_COMMAND | OPT_VISIBLE
     },
     {
 	"fireRepeatRate",
@@ -698,7 +744,9 @@ static option_desc options[] = {
 	valString,
 	tuner_none,
 	"The filename of the map to use.\n"
-	"Or \"wild\" if you want a map by The Wild Map Generator.\n",
+	"Or \"wild\" if you want a map by The Wild Map Generator.\n"
+	"The geometry of a \"wild\" map is given by the -mapWidth\n"
+	"and the -mapHeight options.\n",
 	OPT_COMMAND | OPT_DEFAULTS
     },
     {
@@ -1145,6 +1193,41 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"allowAlliances",
+	"alliances",
+	"yes",
+	&allowAlliances,
+	valBool,
+	tuner_allowalliances,
+	"Are alliances between players allowed?\n"
+	"Alliances are like teams, except they can be formed and dissolved\n"
+	"at any time. Notably, teamImmunity and teamShareScore work for\n"
+	"alliances too. To manage alliances, use the '/ally' talk command:\n"
+	"'/ally invite <player name>' to invite another player to join you.\n"
+	"'/ally cancel' to cancel such an invitation.\n"
+	"'/ally refuse <player name>' to decline an invitation from a player.\n"
+	"'/ally refuse' to decline all the invitations you received.\n"
+	"'/ally accept <player name>' to join the other player.\n"
+	"'/ally accept' to accept all the invitations you received.\n"
+	"'/ally leave' to leave the alliance you are currently in.\n"
+	"'/ally list' lists the members of your current alliance.\n"
+	"If members from different alliances join, all their allies do so.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"announceAlliances",
+	"announceAlliances",
+	"no",
+	&announceAlliances,
+	valBool,
+	tuner_announcealliances,
+	"Are changes in alliances made public?\n"
+	"If this option is on, changes in alliances are sent to all players\n"
+	"and all alliances are shown in the score list. Invitations for\n"
+	"alliances are never sent to anyone but the invited players.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"teamPlay",
 	"teams",
 	"no",
@@ -1199,6 +1282,18 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"cannonsDefend",
+	"cannonsDefend",
+	"yes",
+	&cannonsDefend,
+	valBool,
+	tuner_none,
+	"Do cannons actively use defensive items like emergency shields and\n"
+	"phasing devices?\n"
+	"This only works if cannons are actually allowed to use items.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"cannonFlak",
 	"cannonAAA",
 	"yes",
@@ -1246,7 +1341,19 @@ static option_desc options[] = {
 	&teamImmunity,
 	valBool,
 	tuner_dummy,
-	"Should other team members be immune to various shots thrust etc.?\n",
+	"Should other team members be immune to various shots thrust etc.?\n"
+	"This works for alliances too.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"teamShareScore",
+	"teamShareScore",
+	"no",
+	&teamShareScore,
+	valBool,
+	tuner_dummy,
+	"Are points gained or lost divided equally over all team members?\n"
+	"This works for alliances too.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
@@ -1440,6 +1547,28 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"ballrace",
+	"ballrace",
+	"false",
+	&ballrace,
+	valBool,
+	tuner_dummy,
+	"Is timing done for balls (on) or players (off)?\n"
+	"Only used if timing is on.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"ballraceConnected",
+	"ballraceConnected",
+	"false",
+	&ballrace_connect,
+	valBool,
+	tuner_dummy,
+	"Should a player be connected to a ball to pass a checkpoint?\n"
+	"Only used if timing and ballrace are both on.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"edgeWrap",
 	"edgeWrap",
 	"no",
@@ -1551,6 +1680,16 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"asteroidConcentratorVisible",
+	"asteroidConcentratorVisible",
+	"true",
+	&asteroidConcentratorVisible,
+	valBool,
+	tuner_none,
+	"Are asteroidconcentrator mapsymbols visible to players?\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"wormTime",
 	"wormTime",
 	"0",
@@ -1597,7 +1736,31 @@ static option_desc options[] = {
 	&scoreTableFileName,
 	valString,
 	tuner_none,
-	"The filename for the score table to be dumped to.\n",
+	"The filename for the score table to be dumped to.\n"
+	"This is a placeholder option which doesn't do anything.\n",
+	OPT_COMMAND | OPT_DEFAULTS
+    },
+    {
+	"adminMessageFileName",
+	"adminMessage",
+	conf_logfile_string,
+	&adminMessageFileName,
+	valString,
+	tuner_none,
+	"The name of the file where player messages for the\n"
+	"server administrator will be saved.  For the messages\n"
+	"to be saved the file must already exist.  Players can\n"
+	"send these messages by writing to god.",
+	OPT_COMMAND | OPT_DEFAULTS
+    },
+    {
+	"adminMessageFileSizeLimit",
+	"adminMessageLimit",
+	"20202",
+	&adminMessageFileSizeLimit,
+	valInt,
+	tuner_none,
+	"The maximum size in bytes of the admin message file.\n",
 	OPT_COMMAND | OPT_DEFAULTS
     },
     {
@@ -1903,6 +2066,17 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
+	"mineShotDetonateDistance",
+	"mineShotDetonateDistance",
+	"0",
+	&mineShotDetonateDistance,
+	valInt,
+	tuner_dummy,
+	"How close must a shot be to detonate a mine?\n"
+	"Set this to 0 to turn it off.",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
 	"shotKillScoreMult",
 	"shotKillScoreMult",
 	"1.0",
@@ -2033,13 +2207,43 @@ static option_desc options[] = {
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
-	"asteroidScoring",
-	"asteroidScoring",
-	"yes",
-	&asteroidScoring,
-	valBool,
+	"asteroidPoints",
+	"asteroidPoints",
+	"1.0",
+	&asteroidPoints,
+	valReal,
 	tuner_dummy,
-	"Are points awarded for shooting asteroids?\n",
+	"Points awarded for breaking an asteroid.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"cannonPoints",
+	"cannonPoints",
+	"1.0",
+	&cannonPoints,
+	valReal,
+	tuner_dummy,
+	"Points awarded for killing a cannon.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"asteroidMaxScore",
+	"asteroidMaxScore",
+	"100.0",
+	&asteroidMaxScore,
+	valReal,
+	tuner_dummy,
+	"Maximum score to receive points for breaking an asteroid.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"cannonMaxScore",
+	"cannonMaxScore",
+	"100.0",
+	&cannonMaxScore,
+	valReal,
+	tuner_dummy,
+	"Maximum score to receive points for killing a cannon.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
@@ -2190,6 +2394,35 @@ static option_desc options[] = {
 	"The probability, if any item concentrators are present, that they will be\n"
 	"used.  This proportion of items will be placed near item concentrators,\n"
 	"within itemConcentratorRadius.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"asteroidConcentratorRadius",
+	"asteroidConcentratorRange",
+	"10",
+	&asteroidConcentratorRadius,
+	valInt,
+	Tune_asteroid_prob,
+	"The maximum distance from an asteroid concentrator for asteroids to\n"
+	"appear in.  Sensible values are in the range 1 to 20.\n"
+	"If no asteroid concentrators are defined in a map then asteroids can\n"
+	"popup anywhere.  If any are then asteroids popup in the vicinity of an\n"
+	"asteroid concentrator with probability asteroidConcentratorProb and anywhere\n"
+	"the remainder of the time.  An asteroid concentrator is drawn on the\n"
+	"screen as three rotating squares.  The map symbol is the ampersand\n"
+	"'&'.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
+    },
+    {
+	"asteroidConcentratorProb",
+	"asteroidConcentratorProb",
+	"1.0",
+	&asteroidConcentratorProb,
+	valReal,
+	Tune_asteroid_prob,
+	"The probability, if any asteroid concentrators are present, that they will\n"
+	"be used.  This proportion of asteroids will be placed near asteroid\n"
+	"concentrators, within asteroidConcentratorRadius.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
@@ -3071,6 +3304,18 @@ static option_desc options[] = {
 	tuner_dummy,
 	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
 	OPT_COMMAND | OPT_DEFAULTS | OPT_VISIBLE
+    },
+    {
+	"maxPauseTime",
+	"maxPauseTime",
+	"3600",		/* can pause 1 hour by default */
+	&maxPauseTime,
+	valSec,
+	tuner_dummy,
+	"The maximum time a player can stay paused for, in seconds.\n"
+	"After being paused this long, the player will be kicked off.\n"
+	"Setting this option to 0 disables the feature.\n",
+	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
 
 };

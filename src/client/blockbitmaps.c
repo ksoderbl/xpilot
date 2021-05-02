@@ -1,4 +1,4 @@
-/* $Id: blockbitmaps.c,v 5.3 2001/06/03 17:21:06 bertg Exp $
+/* $Id: blockbitmaps.c,v 5.4 2002/02/10 19:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -114,6 +114,7 @@ xp_pixmap_t xp_pixmaps[] = {
     { "minus.ppm"	    , 1, 35, 35},
     { "checkpoint.ppm"	    , -2, 35, 35},
     { "meter.ppm"	    , -2, 200, 11},
+    { "asteroidconcentrator.ppm"    , 32, 35, 35},
 };
 
 

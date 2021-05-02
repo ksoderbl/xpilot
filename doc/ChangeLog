@@ -3,25 +3,181 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
-This is a summary of changes of release 4.4.3 compared to release 4.4.2.
+This is a summary of changes of release 4.5.0 compared to release 4.4.2.
 
-A bug was fixed regarding asteroids wrapping beyond map_width.
+Kimiko Koopman submitted a patch which changes the way scores are kept
+and makes it possible for players to form alliances:
+    - scores are kept as floats (DFLOATs) in the server. The client
+      receives (if >= 4.5.0) an int with the score * 100, or a rounded
+      value otherwise. The client recalculates the float and displays
+      the score with 2 decimals.
+    - team scores are kept separately instead of just being calculated
+      for display. Cannons count to this score as well. I have not yet
+      made further changes, such as the distribution of points for
+      team gains/losses.
+    - new option: teamShareScore. If on, each player has a score equal
+      to teamscore/number of members (that's why). Points are divided
+      evenly over all team members this way.
+    - (this is the most important stuff) alliances are possible. These
+      are a sort of on-the-fly teams. The options teamShareScore (that's
+      why) and teamImmunity work for alliances too, except only the
+      changes in score are divided for the latter. The client displays
+      them in an extra column (instead of the team column) with '+' if
+      alliances are not public (see below) or with a number if they are.
+    - there is a new talk command: /ally. It has a number of possible
+      subcommands:
+        /ally invite <name> invites another player into an alliance
+        /ally cancel cancels such an invitation
+        /ally refuse [<name>] declines one or all invitation(s)
+        /ally accept [<name>] accepts one or all invitation(s)
+        /ally leave leaves the current alliance
+    - two new options: allowAlliances and announceAlliances. The latter
+      determines whether alliances are announced to other players than
+      the members themselves. Invitations are never made public, but
+      only sent as messages to the invited players. Robots refuse
+      invitations if there is also a human player in their alliance.
+    - packet version has been increased to 0x4500 because of the new
+      format of score packets and the new teamscore packets. Older
+      clients don't receive team scores (the only difference yet are
+      the cannon scores) or information about alliances (in the score
+      packets).
 
-Jude J Anthony submitted a bugfix for robots:
-    The problem appears to be a confusion between the global Obj[] array (object
-    *Obj[MAX_TOTAL_SHOTS], declared in server.c, and included through global.h)
-    and a local array of object pointers.  
+Austin Donnelly submitted a patch which adds an option to automatically
+kick players who have been paused too long:
+    So, I've introduced a new option: maxPauseTime.  If a player pauses
+    longer than maxPauseTime seconds, they are automatically kicked with a
+    message telling them they paused for too long.
+    By default, maxPauseTime is 1 hour.  So bona-fide pausers should have
+    nothing to worry about.  Especially if you're paused but viewing a
+    game, each time you switch to view a different player that counts as
+    activity, and the 1 hour timer is reset.  So this should only catch
+    players who have left their terminal for over an hour leaving
+    themselves playing.  The auto-pause feature should kick in after 1
+    minute, then an hour later they will be kicked.
 
-    Within Robot_default_play_check_objects(), at line 1874, we declare a local
-    array of object pointers (object **obj_list).  At line 1907, we get all
-    items within our visibility with Cell_get_objects(), placing them in the
-    obj_list.  At 1911, we loop j through all the items in obj_list, setting
-    shot to an object pointer within the list at 1913.  At line 1965, we run a
-    check for items of type OBJ_ITEM.  (Thus explaining why the error only
-    occurs with robots AND items.)
+Kimiko Koopman submitted a patch which changes the way fuel drain from
+shot hits is calculated:
+    Revived the old idea (originally from Bob Glickstein) to vary fuel
+    drain from shot hits according to their kinetic energy. This was
+    disabled in v4.0.0 because it made cluster debris either too
+    powerful (N) or too weak (V). This patch compensates for that
+    effect by changing the mass of each cluster shot so that its
+    kinetic energy remains the same.
+    Since this is actually more realistic than not varying shot damage,
+    the option that turns this feature off
+    (shotHitFuelDrainUsesKineticEnergy), will be removed in a future
+    version about March 2002.
 
-    On line 1973, try to find the Importance of Obj[j], but j is actually an
-    index into obj_list. 
+Jarno van der Kolk submitted a fix for the server under NT:
+    When using the "Choose Map"-button in the WinServer the "current path"
+    is altered.
+    This means that XpilotServer can't find the configfiles, like
+    defaults.txt and robots.txt anymore.
+
+Paul Alexander Drees submitted a patch which adds asteroid concentrators:
+    This patch puts asteroid-concentrators into the game.  The
+    function of an asteroid concentrator is to control where
+    asteroids appear.  They have parameters similar to those for
+    item concentrators: -asteroidConcVisible, -asteroidConcRadius,
+    and -asteroidConcProb.  There is a function in guimap.c
+    called Gui_paint_setup_asteroid_concentrator() to paint asteroid
+    concentrators; currently, it does nothing, as I do not really
+    know how to do client programming.  When this function is
+    filled in by someone, it should appear as three rotating
+    squares.
+
+Kimiko Koopman submitted a patch which allows use of balls in race mode:
+    Added two options: ballrace and ballraceConnected. With ballrace on,
+    balls are timed instead of players. With ballraceConnected also on,
+    a player has to be connected to a ball to pass a checkpoint. With
+    ballrace on, but ballraceConnected off, any ball owned by a player
+    can pass a checkpoint for that player. When a player finishes the
+    race, the balls owned by that player are disowned, but not destroyed.
+    That way, other players can still use those balls in the race.
+
+Jarno van der Kolk submitted a patch which adds replay recording for Windows:
+    This patch allows the Windowsclient to make xpr-recordings too.
+
+Paul Alexander Drees pointed out that blockFriction should not be
+applied to phased ships.
+
+Paul Alexander Drees submitted code to always announce when a server option
+is changed during play.
+
+A new client option -showScoreDecimals has been added, which has a useful
+range [0,2].  It gives the number of decimals to use when displaying scores.
+The default value for this option is 1.
+
+It is now possible to use the map file keyword "expand" on the command line
+too.  The "-expand" option takes as argument a comma separated list of words.
+These words must have been defined with the "define:" keyword in either
+the map file or the xpilots defaults file.  They are all expanded.
+This opens up powerful possibilities to predefine groups of settings
+which can be activated on the command line with only limited typing.
+
+Paul Alexander Drees submitted code to detect when shots are near mines.
+A new server option -mineShotDetonateDistance determines if these
+shots will detonate a mine or not.
+
+Paul Alexander Drees submitted patch to improve the handling of maxRoundTime:
+    I noticed a bug in the server today.  It caused maxRoundTime to be all
+    but disregarded unless gameDuration and roundDelay were set.  I have
+    fixed this bug, and also made it so that when maxRoundTime is set and
+    gameDuration isn't, the time left clock displays how much time is left
+    in the round.
+
+Paul Alexander Drees submitted a patch:
+    I made a couple fixes to the alliance system, pertaining to tanks.
+      - Tanks that belong to you are shown on your radar as green.
+      - When one of your shots intersects one of your tanks, teamImmunity
+	is checked, instead of selfImmunity.  This way, it works the same
+	whether alliances are on or not.
+      - You cannot use KEY_LOCK_CLOSE and KEY_LOCK_NEXT to lock onto your
+	tanks.
+      - Your tanks show on your screen as blue.
+
+Paul Alexander Drees submitted a patch which implements a lag meter:
+    Here is a patch for a client-based lag meter.  The code is a kludge,
+    but it works adequately well, that I know.
+
+Kimiko Koopman submitted a patch which changes the scoring of asteroids
+and cannons:
+    asteroidScoring has been replaced by asteroidPoints and asteroidMaxScore.
+    Players receive asteroidPoints points for every asteroid they break,
+    until their score is >= asteroidMaxScore. If no points are scored,
+    either because asteroidPoints is 0 or the player's score is too high,
+    no points are displayed on the HUD. cannonPoints and cannonMaxScore
+    work the same for cannons. The defaults are 1.0 and 100.0 for the
+    *Points and *MaxScore respectively, such that the scoring behaves
+    mostly the same as before.
+    BTW, I changed the displayed position of kill scores for the winner to
+    the position of the loser. This way, the displayed score reflects the
+    actual location of the kill.
+
+Two new server options were added to allow players to log messages
+to the server administrator.  The adminMessageFileName option gives
+the name of the file where player messages for the server administrator
+will be saved.  For the messages to be saved the file must already exist.
+Players can send these messages by writing to god.
+The adminMessageFileSizeLimit option gives the maximum size in bytes
+of the admin message file.
+
+Kimiko Koopman submitted a patch to make cannons defend themselves:
+    Cannons can now defend themselves using emergency shields and phasing
+    devices. This behavior is controlled by a new option cannonsDefend. The
+    default is true, but cannonsUseItems must also be true for this to have
+    an effect. There is a chance that a cannon will not use an available
+    em. shield or phasing dev., mostly to reduce the load on maps with many
+    cannons with defensive items.
+
+Thorsten Kroeger was getting sick of missing messages, so he hacked in
+some lines so that one can decide to have messages (with or without status
+messages) sent to standard output. You can change it in the config menu.
+
+Jarno van der Kolk submitted code to draw asteroid concentrators.
+
+Fixed two bugs which allowed one to obtain normal shields on maps where
+shields were not allowed, but emergency shield items were available.
 
 ===============================================================================
 
@@ -1531,6 +1687,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.38.2.1 2001/11/04 21:05:19 dik Exp $
+==== $Id: ChangeLog,v 5.62 2002/03/05 23:08:17 bertg Exp $
 ===============================================================================
 

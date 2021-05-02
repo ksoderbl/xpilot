@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 5.14 2001/08/26 19:27:26 gkoopman Exp $
+/* $Id: robot.c,v 5.21 2002/02/07 10:52:00 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,7 +41,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -61,15 +61,14 @@ char robot_version[] = VERSION;
 
 
 /*
- * Array of different robots.
- * Each robot has a name of a robot type determining
- * what robot code will control this robot,
- * its name as seen by the human players,
+ * Array of different robots which are used
+ * when we cannot read a robot configuration file.
+ *
+ * Each robot has a robot driver,
+ * a name as seen by the human players,
  * some optional configuration string,
  * a usage count,
  * and a shipshape.
- * In the future we may want to read in this data from
- * a configuration file.
  */
 static robot_t DefaultRobots[] = {
     {
@@ -417,13 +416,23 @@ static robot_t	*Robots;	/* array of robot parameters. */
  */
 extern int Robot_default_setup(robot_type_t *type_ptr);
 
+#if defined(DEVELOPMENT) || defined(ALLBOTS)
+extern int Stratbot_setup(robot_type_t *type_ptr);
+#endif
+
 /*
  * Array to store function pointers to robot type setup routines.
  * The default robot type should be first.
  * Add your own robot type setup routine here too.
  */
-static int (*robot_type_setups[])(robot_type_t *type_ptr) = {
-    Robot_default_setup,
+static struct robot_setup {
+    int		(*setup_func)(robot_type_t *type_ptr);
+} robot_type_setups[] = {
+    { Robot_default_setup },
+
+#if defined(DEVELOPMENT) || defined(ALLBOTS)
+    { Stratbot_setup },
+#endif
 };
 
 /*
@@ -569,16 +578,19 @@ void Parse_robot_file(void)
  */
 void Robot_init(void)
 {
-    int         	i;
+    int         	i, result;
     int			n;
+
+    /*
+     * For each robot driver call its initialization function.
+     * If this function returns 0 then remember this robot driver.
+     */
 
     n = 0;
     for (i = 0; i < num_robot_types; i++) {
 	memset(&robot_types[n], 0, sizeof(robot_type_t));
-	if ((*robot_type_setups[i])(&robot_types[n]) == 0) {
-
-	    /* maybe insert some checks about the result here */
-
+	result = (*robot_type_setups[i].setup_func)(&robot_types[n]);
+	if (result == 0) {
 	    n++;
 	}
     }
@@ -802,6 +814,9 @@ static void Robot_create(void)
     NumPlayers++;
     NumRobots++;
 
+    if (BIT(World.rules->mode, TEAM_PLAY) && teamShareScore)
+	TEAM_SCORE(robot->team, 0);
+
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, robot->id);
@@ -820,7 +835,11 @@ static void Robot_create(void)
     if (round_delay > 0 || NumPlayers == 1) {
 	round_delay = roundDelaySeconds * FPS;
 	round_delay_send = round_delay + FPS;  /* delay him an extra second */
-	roundtime = -1;
+	if (maxRoundTime > 0 && roundDelaySeconds == 0) {
+	    roundtime = maxRoundTime * FPS;
+	} else {
+	    roundtime = -1;
+	}
 	sprintf(msg, "Player entered. Delaying %d seconds until next %s.",
 		roundDelaySeconds,
 		(BIT(World.rules->mode, TIMING)? "race" : "round"));
@@ -844,8 +863,8 @@ void Robot_destroy(int ind)
 void Robot_delete(int ind, int kicked)
 {
     long		i,
-			low_score = LONG_MAX,
 			low_i = -1;
+    DFLOAT		low_score = (DFLOAT)LONG_MAX;
     char		msg[MSG_LEN];
 
     if (ind == -1) {
@@ -877,6 +896,15 @@ void Robot_delete(int ind, int kicked)
     }
 }
 
+/*
+ * Ask a robot for an alliance
+ */
+void Robot_invite(int ind, int inv_ind)
+{
+    player	*pl = Players[ind];
+
+    (*robot_types[pl->robot_data_ptr->robot_types_ind].invite)(ind, inv_ind);
+}
 
 /*
  * Turn on a war lock.
@@ -953,13 +981,14 @@ void Robot_war(int ind, int killer)
 
     if (IS_ROBOT_PTR(pl)
 	&& (int)(rfrac() * 100) < kp->score - pl->score
-	&& !(BIT(World.rules->mode, TEAM_PLAY) && pl->team == kp->team)) {
+	&& !TEAM(ind, killer)
+	&& !ALLIANCE(ind, killer)) {
 
 	Robot_talks(ROBOT_TALK_WAR, pl->name, kp->name);
 
 	/*
 	 * Give fuel for offensive.
-	 * BD: unfair advantage.
+	 * KK: unfair advantage.
 	 */
 	/* pl->fuel.sum = MAX_PLAYER_FUEL; */
 
@@ -1020,7 +1049,8 @@ static int Robot_check_leave(int ind)
 
     if (robotsLeave
 	&& pl->life > 0
-	&& !BIT(World.rules->mode, LIMITED_LIVES)) {
+	&& !BIT(World.rules->mode, LIMITED_LIVES)
+	&& (BIT(pl->status, PLAYING) || pl->count <= 0)) {
 	msg[0] = '\0';
 	if (robotLeaveLife > 0 && pl->life >= robotLeaveLife) {
 	    sprintf(msg, "%s retired.", pl->name);
@@ -1092,7 +1122,7 @@ void Robot_update(void)
 	     && World.teams[robotTeam].NumMembers >=
 		World.teams[robotTeam].NumBases)) {
 
-	if (++new_robot_delay >= RECOVERY_DELAY) {
+	if (++new_robot_delay >= ROBOT_CREATE_DELAY) {
 	    Robot_create();
 	    new_robot_delay = 0;
 	}

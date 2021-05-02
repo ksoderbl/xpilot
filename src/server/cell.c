@@ -1,4 +1,4 @@
-/* $Id: cell.c,v 5.1 2001/06/03 17:28:04 bertg Exp $
+/* $Id: cell.c,v 5.2 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "error.h"

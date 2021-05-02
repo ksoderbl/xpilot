@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 5.3 2001/06/02 21:00:50 bertg Exp $
+/* $Id: paint.c,v 5.7 2002/01/30 21:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -118,6 +118,7 @@ Pixmap	p_draw;			/* Saved pixmap for the drawing */
 Window	players;		/* Player list window */
 				/* monochromes) */
 int	maxMessages;		/* Max. number of messages to display */
+int	messagesToStdout;	/* Send messages to standard output */
 Window	about_w;		/* About window */
 Window	about_close_b;		/* About window's close button */
 Window	about_next_b;		/* About window's next button */
@@ -446,10 +447,12 @@ void Paint_score_start(void)
 		strcat(headingStr, "LAP ");
 	    }
 	}
-	else if (BIT(Setup->mode, TEAM_PLAY)) {
+	if (BIT(Setup->mode, TEAM_PLAY)) {
 	    strlcpy(headingStr, " TM ", sizeof(headingStr));
+	} else {
+	    strlcpy(headingStr, " AL ", sizeof(headingStr));
 	}
-	strcat(headingStr, "SCORE ");
+	strcat(headingStr, "  SCORE  ");
 	if (BIT(Setup->mode, LIMITED_LIVES)) {
 	    strlcat(headingStr, "LIFE", sizeof(headingStr));
 	}
@@ -483,6 +486,7 @@ void Paint_score_entry(int entry_num,
     static char		raceStr[8], teamStr[4], lifeStr[8], label[MSG_LEN];
     static int		lineSpacing = -1, firstLine;
     int			thisLine;
+    char		scoreStr[16];
 
     /*
      * First time we're here, set up miscellaneous strings for
@@ -526,21 +530,31 @@ void Paint_score_entry(int entry_num,
 		}
 	    }
 	}
-	else if (BIT(Setup->mode, TEAM_PLAY)) {
+	if (BIT(Setup->mode, TEAM_PLAY)) {
 	    teamStr[0] = other->team + '0';
+	} else {
+	    sprintf(teamStr, "%c", other->alliance);
 	}
 
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);
 
+	if (showScoreDecimals > 0 && version >= 0x4500) {
+	    sprintf(scoreStr, "%*.*f",
+		    8 - showScoreDecimals, showScoreDecimals,
+		    other->score);
+	}
+	else {
+	    sprintf(scoreStr, "%5d", (int) rint(other->score));
+	}
+	sprintf(label, "%c %s%s%s%s  %s",
+		other->mychar, raceStr, teamStr,
+		scoreStr, lifeStr,
+		other->name);
 	if (war) {
-	    sprintf(label, "%c %s%s%5d%s  %s (%s)",
-		    other->mychar, raceStr, teamStr, other->score, lifeStr,
-		    other->name, war->name);
-	} else {
-	    sprintf(label, "%c %s%s%5d%s  %s",
-		    other->mychar, raceStr, teamStr, other->score, lifeStr,
-		    other->name);
+	    if (strlen(label) + strlen(war->name) + 5 < sizeof(label)) {
+		sprintf(label + strlen(label), " (%s)", war->name);
+	    }
 	}
     }
 

@@ -1,4 +1,4 @@
-/* $Id: paintmap.c,v 5.2 2001/05/13 17:17:20 bertg Exp $
+/* $Id: paintmap.c,v 5.3 2001/10/11 20:27:35 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -299,6 +299,10 @@ void Paint_world(void)
 
 		case SETUP_ITEM_CONCENTRATOR:
 		    Gui_paint_setup_item_concentrator(x, y);
+		    break;
+
+		case SETUP_ASTEROID_CONCENTRATOR:
+		    Gui_paint_setup_asteroid_concentrator(x, y);
 		    break;
 
 		case SETUP_CANNON_UP:

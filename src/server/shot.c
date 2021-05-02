@@ -1,4 +1,4 @@
-/* $Id: shot.c,v 5.24 2001/09/09 17:13:30 bertg Exp $
+/* $Id: shot.c,v 5.29 2001/12/11 12:45:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "score.h"
@@ -66,37 +66,6 @@ char shot_version[] = VERSION;
 /***********************
  * Functions for shots.
  */
-
-static anyobject *objArray;
-
-void Alloc_shots(int number)
-{
-    anyobject		*x;
-    int			i;
-
-    x = (anyobject *) calloc(number, sizeof(anyobject));
-    if (!x) {
-	error("Not enough memory for shots.");
-	exit(1);
-    }
-
-    objArray = x;
-    for (i = 0; i < number; i++) {
-	Obj[i] = &(x->obj);
-	MINE_PTR(Obj[i])->owner = NO_ID;
-	Cell_init_object(Obj[i]);
-	x++;
-    }
-}
-
-
-void Free_shots(void)
-{
-    if (objArray != NULL) {
-	free(objArray);
-	objArray = NULL;
-    }
-}
 
 
 void Place_mine(int ind)
@@ -224,7 +193,7 @@ void Place_general_mine(int ind, unsigned short team, long status,
 	if (baseMineRange) {
 	    for (i = 0; i < NumPlayers; i++) {
 		if (i != ind
-		    && !TEAM_IMMUNE(i, ind)
+		    && !Team_immune(Players[i]->id, pl->id)
 		    && !IS_TANK_IND(i)) {
 		    int dx = (int)(x/BLOCK_SZ - World.base[Players[i]->home_base].pos.x);
 		    int dy = (int)(y/BLOCK_SZ - World.base[Players[i]->home_base].pos.y);
@@ -254,7 +223,12 @@ void Place_general_mine(int ind, unsigned short team, long status,
     SET_BIT(status, OWNERIMMUNE);
 
     for (i = 0; i < minis; i++) {
-	mineobject *mine = MINE_PTR(Obj[NumObjs]);
+
+	mineobject *mine;
+
+	if ((mine = MINE_PTR(Object_allocate())) == NULL) {
+	    break;
+	}
 
 	mine->type = OBJ_MINE;
 	mine->color = BLUE;
@@ -302,7 +276,6 @@ void Place_general_mine(int ind, unsigned short team, long status,
 	mine->pl_range = (int)(MINE_RANGE / minis);
 	mine->pl_radius = MINE_RADIUS;
 	Cell_add_object((object *) mine);
-	NumObjs++;
     }
 }
 
@@ -359,14 +332,16 @@ void Make_treasure_ball(int treasure)
     if (t->empty)
 	return;
     if (t->have) {
-	xpprintf ("%s Failed Make_treasure_ball(treasure=%d):\n", showtime(), treasure);
-	xpprintf ("\ttreasure: destroyed = %d, team = %d, have = %d\n",
-		t->destroyed, t->team, t->have);
+	xpprintf("%s Failed Make_treasure_ball(treasure=%d):\n",
+		 showtime(), treasure);
+	xpprintf("\ttreasure: destroyed = %d, team = %d, have = %d\n",
+		 t->destroyed, t->team, t->have);
 	return;
     }
-    t->have = true;
 
-    ball = BALL_IND(NumObjs);
+    if ((ball = BALL_PTR(Object_allocate())) == NULL) {
+	return;
+    }
 
     ball->length = ballConnectorLength;
     ball->life = LONG_MAX;
@@ -387,8 +362,9 @@ void Make_treasure_ball(int treasure)
     CLEAR_MODS(ball->mods);
     ball->status = RECREATE;
     ball->treasure = treasure;
-    Cell_add_object((object *) ball);
-    NumObjs++;
+    Cell_add_object(OBJ_PTR(ball));
+
+    t->have = true;
 }
 
 
@@ -549,9 +525,10 @@ void Fire_right_rshot(int ind, int type, int dir, int gun)
 
 }
 
-void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLOAT y,
-		       int type, int dir, modifiers mods,
-		       int target)
+void Fire_general_shot(int ind, unsigned short team, bool cannon,
+		       DFLOAT x, DFLOAT y,
+		       int type, int dir,
+		       modifiers mods, int target)
 {
     char		msg[MSG_LEN];
     player		*pl = (ind == -1 ? NULL : Players[ind]);
@@ -578,6 +555,7 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 			spread;
     vector		mv;
     position		shotpos;
+    object		*mini_objs[MODS_MINI_MAX + 1];
 
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
@@ -969,7 +947,11 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
     }
 
     for (r = 0, i = 0; i < minis; i++, r++) {
-	object *shot = Obj[NumObjs];
+	object *shot;
+	
+	if ((shot = Object_allocate()) == NULL) {
+	    break;
+	}
 
 	shot->life 	= life / minis;
 	shot->fuselife	= shot->life - fuse;
@@ -1070,8 +1052,9 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
 	shot->pl_range  = pl_range;
 	shot->pl_radius = pl_radius;
 	Cell_add_object(shot);
+
+	mini_objs[fired] = shot;
 	fired++;
-	NumObjs++;
     }
 
     /*
@@ -1079,8 +1062,9 @@ void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLO
      * firing each mini missile.
      */
     if (pl) {
-	for (i = 1; i <= fired; i++)
-	    Recoil((object *)pl, Obj[NumObjs - i]);
+	for (i = 0; i < fired; i++) {
+	    Recoil((object *)pl, mini_objs[i]);
+	}
     }
 }
 
@@ -1325,13 +1309,8 @@ void Delete_shot(int ind)
 	    /* min,max debris */ (int)(0.20f * intensity * num_modv),
 				 (int)(0.30f * intensity * num_modv),
 	    /* min,max dir    */ 0, RES-1,
-#ifdef DRAINFACTOR
-	    /* min,max speed  */ ShotsSpeed * speed_modv,
-				 ShotsSpeed * 5 * speed_modv,
-#else
 	    /* min,max speed  */ 20 * speed_modv,
 				 (intensity >> 2) * speed_modv,
-#endif
 	    /* min,max life   */ (int)(8 * life_modv),
 				 (int)((intensity >> 1) * life_modv)
 	    );
@@ -1394,9 +1373,7 @@ void Delete_shot(int ind)
     shot->type = 0;
     shot->mass = 0;
 
-    /* This should be the only place in the code which decrements NumObjs. */
-    Obj[ind] = Obj[--NumObjs];
-    Obj[NumObjs] = shot;
+    Object_free_ind(ind);
 
     if (addMine | addHeat) {
 	CLEAR_MODS(mods);

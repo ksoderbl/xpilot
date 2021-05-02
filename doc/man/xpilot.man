@@ -4,7 +4,7 @@
 .\"
 .TH XPILOT 6 "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.4.3: Nov 4, 2001
+.ds ]W XPilot 4.5.0: Mar 6, 2002
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -1247,6 +1247,13 @@ Should the name of the owner of the mine be drawn below the mine.
 .B showMessages
 Should messages appear on screen.
 .TP 12
+.B messagesToStdout
+Do you want messages to be sent to standard output?
+0: No, 1: Only player messages, 2: Player and status messages.
+.TP 12
+.B maxMessages
+The maximum number of messages to display.
+.TP 12
 .B showItems
 Should owned items be displayed permanently on the HUD,
 or only when their amount has changed?
@@ -1572,7 +1579,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of xpilot, i.e., 4.4.3
+\(bu The full version of xpilot, i.e., 4.5.0
 .TP
 \(bu What the bug looks like (symptoms)
 .TP
@@ -1598,10 +1605,10 @@ for details see the provided LICENSE file.
 .SH FILES
 .PD 0
 .TP 40
-.B /usr/local/games/lib/xpilot/motd
+.B /root/sf/xpilot/lib/motd
 Message of the day.
 .TP
-.B /usr/local/games/lib/xpilot/sounds
+.B /root/sf/xpilot/lib/sounds
 File containing the sound to sound-file mapping.
 .PD
 

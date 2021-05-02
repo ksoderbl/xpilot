@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.c,v 5.5 2001/09/18 21:23:52 millerjl Exp $
+ * $Id: main.c,v 5.8 2002/02/26 00:41:18 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -52,8 +52,8 @@ int                      prefssheet;
 map_data_t               clipdata;
 xpmap_t                    map;
 
-int                      num_default_settings=243;
-charlie                  default_settings[243] = {
+int                      num_default_settings=259;
+charlie                  default_settings[259] = {
 	{ "gravity","-0.14" },
 	{ "shipmass","20.0" },
 	{ "ballmass", "50.0" },
@@ -120,16 +120,20 @@ charlie                  default_settings[243] = {
 	{ "worldlives","0" },
 	{ "reset","yes" },
 	{ "resetonhuman","0" },
+	{ "allowalliances","yes" },
+	{ "announcealliances","no" },
 	{ "teamplay","no" },
 	{ "teamcannons","no" },
 	{ "teamfuel","no" },
 	{ "cannonsmartness","1" },
 	{ "cannonsuseitems","no" },
+	{ "cannonsdefend","yes" },
 	{ "cannonflak","yes" },
 	{ "cannondeadtime","72" },
 	{ "keepshots","no" },
 	{ "teamassign","yes" },
 	{ "teamimmunity","yes" },
+	{ "teamsharescore", "no" },
 	{ "ecmsreprogrammines","yes" },
 	{ "ecmsreprogramrobots","yes" },
 	{ "targetkillteam","no" },
@@ -148,6 +152,8 @@ charlie                  default_settings[243] = {
 	{ "wreckagecollisionmaykill","no" },
 	{ "asteroidcollisionmaykill","yes" },
 	{ "timing","no" },
+	{ "ballrace","no" },
+	{ "ballraceconnected","no" },
 	{ "edgewrap","no" },
 	{ "edgebounce","yes" },
 	{ "extraborder","no" },
@@ -159,6 +165,7 @@ charlie                  default_settings[243] = {
 	{ "gravityvisible","yes" },
 	{ "wormholevisible","yes" },
 	{ "itemconcentratorvisible","yes" },
+	{ "asteroidconcentratorvisible","yes" },
 	{ "wormtime","0" },
 	{ "framespersecond","14" },
 	{ "allowsmartmissiles","yes" },
@@ -190,6 +197,7 @@ charlie                  default_settings[243] = {
 	{ "minminespeed","0" },
 	{ "missilelife","0" },
 	{ "baseminerange","0" },
+	{ "mineshotdetonatedistance","0" },
 	{ "shotkillscoremult","1.0" },
 	{ "torpedokillscoremult","1.0" },
 	{ "smartkillscoremult","1.0" },
@@ -203,12 +211,17 @@ charlie                  default_settings[243] = {
 	{ "shovekillscoremult","0.5" },
 	{ "crashscoremult","0.33" },
 	{ "minescoremult","0.17" },
-	{ "asteroidscoring","yes" },
+	{ "asteroidpoints","1.0" },
+	{ "cannonpoints","1.0" },
+	{ "asteroidmaxscore","100.0" },
+	{ "cannonmaxscore","100.0" },
 	{ "movingitemprob","0.2" },
 	{ "dropitemonkillprob","0.5" },
 	{ "randomitemprob","0.0" },
 	{ "detonateitemonkillprob","0.5" },
 	{ "destroyitemincollisionprob","0.0" },
+	{ "asteroiditemprob","0.0" },
+	{ "asteroidmaxitems","0" },
 	{ "itemprobmult","1.0" },
 	{ "cannonitemprobmult","1.0" },
 	{ "maxitemdensity","0.00012" },
@@ -216,6 +229,8 @@ charlie                  default_settings[243] = {
 	{ "maxasteroiddensity","0" },
 	{ "itemconcentratorradius","10" },
 	{ "itemconcentratorprob","1.0" },
+	{ "asteroidconcentratorradius","10" },
+	{ "asteroidconcentratorprob","1.0" },
 	{ "rogueheatprob","1.0" },
 	{ "roguemineprob","1.0" },
 	{ "itemenergypackprob","1e-9" },
@@ -296,12 +311,13 @@ charlie                  default_settings[243] = {
 	{ "maxdefensiveitems","100" },
 	{ "rounddelay","0" },
 	{ "maxroundtime","0" },
-	{ "roundstoplay","0" }
+	{ "roundstoplay","0" },
+	{ "maxpausetime","3600" }
 };
 
 /* JLM Reorganized for new options */
-int                      numprefs = 244;
-prefs_t                  prefs[244] = {
+int                      numprefs = 260;
+prefs_t                  prefs[260] = {
 { "mapwidth"     ,"", "Width:"     ,3,MAPWIDTH, map.width_str,0,0,0,0,0 },
 { "mapheight"    ,"", "Height:"    ,3,MAPHEIGHT,map.height_str,0,1,0,0,0 },
 { "mapname"      ,"", "Name:"          ,255,STRING,map.mapName,0,2,0,0,0 },
@@ -379,6 +395,8 @@ prefs_t                  prefs[244] = {
 { "playerstartsshielded","playerstartshielded","Start Shielded?",0,YESNO,0,&map.playerStartsShielded,9,0,2,0},
 { "shieldeditempickup","shielditem","Shielded Pickup?",0,YESNO,0,&map.shieldedItemPickup,10,0,2,0},
 { "shieldedmining","shieldmine","Shielded Mining?",0,YESNO,0,&map.shieldedMining,11,0,2,0},
+{ "allowalliances","alliances","AllowAlliances?",0,YESNO,0,&map.allowAlliances,13,0,2,0},
+{ "announcealliances","","AnnounceAlliances?",0,YESNO,0,&map.announceAlliances,14,0,2,0},
 { "targetkillteam","","Target Kill Team?",0,YESNO,0,&map.targetKillTeam,0,1,2,0},
 { "targetteamcollision","targetcollision","Target Collision?",0,YESNO,0,&map.targetTeamCollision,1,1,2,0},
 { "targetsync","","Target Sync?",0,YESNO,0,&map.targetSync,2,1,2,0},
@@ -409,18 +427,20 @@ prefs_t                  prefs[244] = {
 { "cloakedshield","","Cloaked Shield?",6,YESNO,0,&map.cloakedShield,14,2,2,0},
 
 { "cannonsuseitems","cannonspickupitems","Cannons Use Items?",0,YESNO,0,&map.cannonsUseItems,0,0,3,0},
-{ "cannonsmartness","","Cannon Smartness:",19,POSINT,map.cannonSmartness,0,1,0,3,0},
-{ "cannondeadtime","","Cannon Dead Time:",19,POSINT,map.cannonDeadTime,0,2,0,3,0},
-{ "cannonflak","cannonaaa","Cannon Flak?",0,YESNO,0,&map.cannonFlak,3,0,3,0},
+{ "cannonsdefend","","Cannons Defend?",0,YESNO,0,&map.cannonsDefend,1,0,3,0},
+{ "cannonsmartness","","CannonSmartness:",19,POSINT,map.cannonSmartness,0,2,0,3,0},
+{ "cannondeadtime","","CannonDeadTime:",19,POSINT,map.cannonDeadTime,0,3,0,3,0},
+{ "cannonflak","cannonaaa","Cannon Flak?",0,YESNO,0,&map.cannonFlak,4,0,3,0},
 { "identifymines","","Identify Mines?",0,YESNO,0,&map.identifyMines,5,0,3,0},
 { "maxminesperpack","","Mines/Pac",19,POSINT, map.maxMinesPerPack,0,6,0,3,0},
 { "minelife","","Mine Life",19,POSFLOAT,map.mineLife,0,7,0,3,0},
 { "minefusetime","","Mine Fuse Time:",19,POSINT,map.mineFuseTime,0,8,0,3,0},
 { "baseminerange","","Base Mine Range:",19,POSINT,map.baseMineRange,0,9,0,3,0},
-{ "roguemineprob","","Rogue Mine Prob:",19,POSFLOAT,map.rogueMineProb,0,10,0,3,0},
-{ "nukeminmines","","Min Nuke Mines:",6,POSINT,map.nukeMinMines,0,11,0,3,0},
-{ "minminespeed","","Min Mine Speed:",19,POSFLOAT,map.minMineSpeed,0,12,0,3,0},
-{ "nukeclusterdamage","","Nuke Clust Dam:",19,POSFLOAT,map.nukeClusterDamage,0,13,0,3,0},
+{ "mineshotdetonatedistance","","MineShotDetDist:",19,POSINT,map.mineShotDetonateDistance,0,10,0,3,0},
+{ "roguemineprob","","Rogue Mine Prob:",19,POSFLOAT,map.rogueMineProb,0,11,0,3,0},
+{ "nukeminmines","","Min Nuke Mines:",6,POSINT,map.nukeMinMines,0,12,0,3,0},
+{ "minminespeed","","Min Mine Speed:",19,POSFLOAT,map.minMineSpeed,0,13,0,3,0},
+{ "nukeclusterdamage","","Nuke Clust Dam:",19,POSFLOAT,map.nukeClusterDamage,0,14,0,3,0},
 { "ecmsreprogramrobots","","EcmsReprgmRbts?",6,YESNO,0,&map.ecmsReprogramRobots,0,1,3,0},
 { "ecmsreprogrammines","","EcmsRprgMines?",0,YESNO,0,&map.ecmsReprogramMines,1,1,3,0},
 { "distinguishmissiles","","Distng Missiles?",0,YESNO,0,&map.distinguishMissiles,3,1,3,0},
@@ -431,6 +451,10 @@ prefs_t                  prefs[244] = {
 { "asteroidcollisionmaykill","asteroidunshieldedcollisionkills","Asteroid Col Kills?",0,YESNO,0,&map.asteroidCollisionMayKill,9,1,3,0},
 { "asteroidsonradar","asteroidsradar","Asteroids on Radar?",0,YESNO,0,&map.asteroidsOnRadar,10,1,3,0},
 { "maxasteroiddensity","","MaxAsteroidDnsty:",19,POSFLOAT,map.maxAsteroidDensity,0,11,1,3,0},
+{ "asteroidconcentratorvisible","","AsteroidConcVis?",0,YESNO,0,&map.asteroidConcentratorVisible,12,1,3,0},
+{ "asteroidconcentratorradius","asteroidconcentratorrange","AstrdConcRadius:",19,POSINT,map.asteroidConcentratorRadius,0,13,1,3,0},
+{ "asteroidmaxitems","","AstrdMaxItems:",19,POSINT,map.asteroidMaxItems,0,14,1,3,0},
+
 { "allowshipshapes","shipshapes","Ship Shapes?",0,YESNO,0,&map.allowShipShapes,0,2,3,0},
 { "allowsmartmissiles","allowsmarts","Allow Smarts?",6,YESNO,0,&map.allowSmartMissiles,1,2,3,0},
 { "allowheatseekers","allowheats","Allow Heats?",6,YESNO,0,&map.allowHeatSeekers,2,2,3,0},
@@ -451,10 +475,13 @@ prefs_t                  prefs[244] = {
 { "roundstoplay","","Rounds2Play:",19,POSINT,map.roundsToPlay,0,3,0,4,0},
 { "reset","","World Reset?",0,YESNO,0,&map.reset,5,0,4,0},
 { "resetonhuman","humanreset","ResetOnHuman:",6,POSINT,map.resetOnHuman,0,6,0,4,0},
+{ "maxpausetime","","MaxPauseTime:",19,POSINT,map.maxPauseTime,0,7,0,4,0},
 { "timing"     ,"race", "Race-Timing?"      ,0,YESNO   ,0,&map.timing,0,1,4,0},
 { "checkpointradius","","Checkpoint Rad:",19,POSFLOAT,map.checkpointRadius,0,1,1,4,0},
 { "racelaps","","Race Laps:",6,POSINT,map.raceLaps,0,2,1,4,0},
-{ "itemconcentratorradius","itemconcentratorrange","Item Con Radius:",19,POSFLOAT,map.itemConcentratorRadius,0,4,1,4,0},
+{ "ballrace"     ,"", "BallRace?"      ,0,YESNO   ,0,&map.ballrace,3,1,4,0},
+{ "ballraceconnected"     ,"", "BallRaceCnctd?"      ,0,YESNO   ,0,&map.ballraceConnected,4,1,4,0},
+{ "itemconcentratorradius","itemconcentratorrange","Item Con Radius:",19,POSFLOAT,map.itemConcentratorRadius,0,6,1,4,0},
 { "usewreckage","","Use Wreckage?",6,YESNO,0,&map.useWreckage,2,2,4,0},
 { "lockotherteam","","Lock Other Team?",0,YESNO,0,&map.lockOtherTeam,3,2,4,0},
 { "allowviewing","","Allow Viewing?",0,YESNO,0,&map.allowViewing,4,2,4,0},
@@ -538,6 +565,8 @@ prefs_t                  prefs[244] = {
 { "cannonitemprobmult","","Can.ItemProbMlt:",19,POSFLOAT,map.cannonItemProbMult,0,8,2,7,0},
 { "randomitemprob","","RandomItemProb:",19,POSFLOAT,map.randomItemProb,0,10,2,7,0},
 { "asteroidprob","","AsteroidProb:",19,POSFLOAT,map.asteroidProb,0,12,2,7,0},
+{ "asteroidconcentratorprob","","AstrdConcProb:",19,POSFLOAT,map.asteroidConcentratorProb,0,13,2,7,0},
+{ "asteroiditemprob","","AstrdItemProb:",19,POSFLOAT,map.asteroidItemProb,0,14,2,7,0},
 
 { "shotkillscoremult","","ShotKillScoreMlt:",19,POSFLOAT,map.shotKillScoreMult,0,0,0,8,0},
 { "torpedokillscoremult","","TorpKillScoreMlt:",19,POSFLOAT,map.torpedoKillScoreMult,0,1,0,8,0},
@@ -553,7 +582,11 @@ prefs_t                  prefs[244] = {
 { "crashscoremult","","CrashScoreMlt:",19,POSFLOAT,map.crashScoreMult,0,11,0,8,0},
 { "minescoremult","","MineScoreMlt:",19,POSFLOAT,map.mineScoreMult,0,12,0,8,0},
 { "tankscoredecrement","","Tank Decrement:",6,INT,map.tankScoreDecrement,0,0,1,8,0},
-{ "asteroidscoring","","Asteroid Scoring?",0,YESNO,0,&map.asteroidScoring,2,1,8,0},
+{ "asteroidpoints","","Asteroid Pts:",19,FLOAT,map.asteroidPoints,0,1,1,8,0},
+{ "asteroidmaxscore","","AsteroidMaxScore:",19,FLOAT,map.asteroidMaxScore,0,2,1,8,0},
+{ "cannonpoints","","Cannon Pts:",19,FLOAT,map.cannonPoints,0,3,1,8,0},
+{ "cannonmaxscore","","CannonMaxScore:",19,FLOAT,map.cannonMaxScore,0,4,1,8,0},
+{ "teamsharescore","","TeamShareScore?",0,YESNO,0,&map.teamShareScore,6,1,8,0},
 
 { "mapdata","",NULL,0,MAPDATA,NULL,0,0,0,0,0 }
 };

@@ -1,4 +1,4 @@
-/* $Id: contact.c,v 5.6 2001/06/10 17:36:58 bertg Exp $
+/* $Id: contact.c,v 5.8 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,7 +47,7 @@
 #include "version.h"
 #include "config.h"
 #include "types.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "socklib.h"
@@ -614,6 +614,14 @@ void Contact(int fd, void *arg)
 	    i = Tune_option(opt, val);
 	    if (i == 1) {
 		status = SUCCESS;
+		if (strcasecmp(opt, "password")) {
+		    char value[MAX_CHARS];
+
+		    Get_option_value(opt, value, sizeof(value));
+		    sprintf(msg, " < Option %s set to %s by %s FROM ABOVE. >",
+			opt, value, real_name);
+		    Set_message(msg);
+		}
 	    }
 	    else if (i == 0) {
 		status = E_INVAL;

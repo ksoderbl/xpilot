@@ -1,4 +1,4 @@
-/* $Id: option.c,v 5.17 2001/06/25 07:50:30 bertg Exp $
+/* $Id: option.c,v 5.19 2001/11/30 11:47:19 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "defaults.h"
@@ -706,6 +706,69 @@ bool Convert_string_to_bool(const char *value_str, bool *bool_ptr)
 }
 
 
+void Convert_list_to_string(list_t list, char **string)
+{
+    list_iter_t	iter;
+    size_t	size = 0;
+
+    for (iter = List_begin(list);
+	 iter != List_end(list);
+	 LI_FORWARD(iter)) {
+	size += 1 + strlen((const char *) LI_DATA(iter));
+    }
+    *string = (char *) xp_safe_malloc(size);
+    **string = '\0';
+    for (iter = List_begin(list);
+	 iter != List_end(list);
+	 LI_FORWARD(iter)) {
+	if (iter != List_begin(list)) {
+	    strlcat(*string, ",", size);
+	}
+	strlcat(*string, (const char *) LI_DATA(iter), size);
+    }
+}
+
+
+void Convert_string_to_list(const char *value, list_t *list_ptr)
+{
+    const char	*start, *end;
+    char	*str;
+
+    /* possibly allocate a new list. */
+    if (NULL == *list_ptr) {
+	*list_ptr = List_new();
+	if (NULL == *list_ptr) {
+	    fatal("Not enough memory for list");
+	}
+    }
+
+    /* make sure list is empty. */
+    List_clear(*list_ptr);
+
+    /* copy comma separated list elements from value to list. */
+    for (start = value; *start; start = end) {
+	/* skip comma separators. */
+	while (*start == ',') {
+	    start++;
+	}
+	/* search for end of list element. */
+	end = start;
+	while (*end && *end != ',') {
+	    end++;
+	}
+	/* copy non-zero results to list. */
+	if (start < end) {
+	    str = (char *) xp_safe_malloc((end - start) + 1);
+	    memcpy(str, start, (end - start));
+	    str[(end - start)] = '\0';
+	    if (NULL == List_push_back(*list_ptr, str)) {
+		fatal("Not enough memory for list element");
+	    }
+	}
+    }
+}
+
+
 /*
  * Set the option description variable.
  */
@@ -839,30 +902,53 @@ static void Option_parse_node(hash_node *np)
 	    *ptr = (DFLOAT)(seconds / FPS);
 	    break;
 	}
+
+    case valList:
+	{
+	    list_t	*list_ptr = (list_t *)desc->variable;
+
+	    Convert_string_to_list(value, list_ptr);
+	    break;
+	}
     }
 }
 
 
 /*
- * Go through the hash table looking for name-value pairs that have defaults
- * assigned to them.   Process the defaults and, if possible, set the
- * associated variables.
+ * Expand any "expand" arguments.
  */
-void Options_parse(void)
+static void Options_parse_expand(void)
 {
-    int		i;
     hash_node	*np;
+
+    np = Get_hash_node_by_name("expand");
+    if (np == NULL) {
+	dumpcore("Could not find option hash node for option '%s'.",
+		 "expand");
+    }
+    else {
+	Option_parse_node(np);
+    }
+
+    if (expandList != NULL) {
+	char *name;
+	while ((name = (char *) List_pop_front(expandList)) != NULL) {
+	    expandKeyword(name);
+	}
+	List_delete(expandList);
+	expandList = NULL;
+    }
+}
+
+
+/*
+ * Parse the -FPS option.
+ */
+static void Options_parse_FPS(void)
+{
     char	*fpsstr;
     optOrigin	value_origin;
-    option_desc	*options;
-    int		option_count;
 
-    options = Get_option_descs(&option_count);
-
-    /*
-     * This must be done in order that FPS will return the eventual
-     * frames per second for computing valSec and valPerSec.
-     */
     fpsstr = Option_get_value("framesPerSecond", &value_origin);
     if (fpsstr != NULL) {
 	int		frames;
@@ -881,6 +967,34 @@ void Options_parse(void)
 	    FPS);
     }
 
+}
+
+
+/*
+ * Go through the hash table looking for name-value pairs that have defaults
+ * assigned to them.   Process the defaults and, if possible, set the
+ * associated variables.
+ */
+void Options_parse(void)
+{
+    int		i;
+    hash_node	*np;
+    option_desc	*options;
+    int		option_count;
+
+    options = Get_option_descs(&option_count);
+
+    /*
+     * Expand a possible "-expand" option.
+     */
+    Options_parse_expand();
+
+    /*
+     * This must be done in order that FPS will return the eventual
+     * frames per second for computing valSec and valPerSec.
+     */
+    Options_parse_FPS();
+
     for (i = 0; i < option_count; i++) {
 	np = Get_hash_node_by_name(options[i].name);
 	if (np == NULL) {
@@ -891,7 +1005,14 @@ void Options_parse(void)
 	    Option_parse_node(np);
 	}
     }
+}
 
+
+/*
+ * Free the option database memory.
+ */
+void Options_free(void)
+{
     Options_hash_performance();
     Options_hash_free();
 }

@@ -1,4 +1,4 @@
-/* $Id: paintdata.c,v 5.4 2001/05/25 00:22:50 bertg Exp $
+/* $Id: paintdata.c,v 5.8 2002/01/30 21:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -97,6 +97,8 @@ wreckage_t	*wreckage_ptr;
 int		 num_wreckage, max_wreckage;
 asteroid_t	*asteroid_ptr;
 int		 num_asteroids, max_asteroids;
+wormhole_t	*wormhole_ptr;
+int		 num_wormholes, max_wormholes;
 
 long		time_left = -1;
 long		start_loops, end_loops;
@@ -768,6 +770,16 @@ int Handle_asteroid(int x, int y, int type, int size, int rotation)
     return 0;
 }
 
+int Handle_wormhole(int x, int y)
+{
+    wormhole_t	t;
+
+    t.x = x - BLOCK_SZ / 2;
+    t.y = y - BLOCK_SZ / 2;
+    STORE(wormhole_t, wormhole_ptr, num_wormholes, max_wormholes, t);
+    return 0;
+}
+
 int Handle_ecm(int x, int y, int size)
 {
     ecm_t	t;
@@ -816,6 +828,10 @@ int Handle_radar(int x, int y, int size)
 int Handle_message(char *msg)
 {
     Add_message(msg);
+    if (messagesToStdout == 2 ||
+	(messagesToStdout == 1 && strlen(msg) && msg[strlen(msg)-1] == ']')) {
+	xpprintf("%s\n", msg);
+    }
     return 0;
 }
 
@@ -985,10 +1001,16 @@ void paintdataCleanup(void)
 	free(asteroid_ptr);
 	asteroid_ptr = 0;
     }
+    if (max_wormholes > 0 && wormhole_ptr) {
+	max_wormholes = 0;
+	free(wormhole_ptr);
+	wormhole_ptr = 0;
+    }
 }
 
 #ifdef	WINDOWSCALING
-short	scaleArray[32768];
+#define SCALE_ARRAY_SIZE	32768
+short	scaleArray[SCALE_ARRAY_SIZE];
 
 void Init_scale_array(void)
 {
@@ -1031,5 +1053,21 @@ void Init_scale_array(void)
 	scaleArray[i] = (int)floor(i * scaleMultFactor + 0.5);
     }
 
+    /* verify correct calculations, because of reported gcc optimization bugs. */
+    for (i = 1; i < NELEM(scaleArray); i++) {
+	if (scaleArray[i] < 1) {
+	    break;
+	}
+    }
+
+    if (i != SCALE_ARRAY_SIZE) {
+	fprintf(stderr,
+		"Error: Illegal value %d in scaleArray[%d].\n"
+		"\tThis error may be due to a bug in your compiler.\n"
+		"\tEither try a lower optimization level,\n"
+		"\tor a different compiler version or vendor.\n",
+		scaleArray[i], i);
+	exit(1);
+    }
 }
 #endif

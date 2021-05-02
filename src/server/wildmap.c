@@ -1,4 +1,4 @@
-/* $Id: wildmap.c,v 5.7 2001/06/03 17:28:50 bertg Exp $
+/* $Id: wildmap.c,v 5.9 2001/11/29 16:31:47 bertg Exp $
  *
  * Wildmap, a random map generator for XPilot.  Copyright (C) 1993-2001 by
  *
@@ -27,6 +27,7 @@
 #include <limits.h>
 #include <time.h>
 #include <string.h>
+#include <math.h>
 
 #ifndef _WINDOWS
 # include <unistd.h>
@@ -153,7 +154,7 @@ static void Option_map(int argc, char **argv)
 	{ "seed", 0, &map.seed, 0, 0, MAX_FUZZ },
 	{ "seedRatio", 0, 0, &map.seed_ratio, 0.02, 0.22 },
 	{ "fillRatio", 0, 0, &map.fill_ratio, 0.02, 0.80 },
-	{ "numBases", &map.num_bases, 0, 0, 2, 50 },
+	{ "numBases", &map.num_bases, 0, 0, 2, 100 },
 	{ "numTeams", &map.num_teams, 0, 0, 3, 10 },
 	{ "cannonRatio", 0, 0, &map.cannon_ratio, 0.0, 0.2 },
 	{ "fuelRatio", 0, 0, &map.fuel_ratio, 0.0, 0.1 },
@@ -1337,7 +1338,7 @@ static int wildmain(int argc, char **argv)
 #define SERVER
 #undef NELEM
 #include "version.h"
-#include "const.h"
+#include "serverconst.h"
 #include "object.h"
 #include "proto.h"
 
@@ -1354,27 +1355,25 @@ int Wildmap(
 	int *width_ptr,
 	int *height_ptr)
 {
-    char	arg0[20];
-    char	arg1[20];
-    char	arg2[20];
-    char	arg3[20];
-    char	arg4[20];
-    char	*args[6];
-    int		result;
+#define NUM_ARG	7
+    char	arga[NUM_ARG][20];
+    char	*args[NUM_ARG + 1];
+    int		i, result;
 
-    sprintf(arg0, "%s", "xpilots.wildmap");
-    sprintf(arg1, "%s", "-mapWidth");
-    sprintf(arg2, "%d", width);
-    sprintf(arg3, "%s", "-mapHeight");
-    sprintf(arg4, "%d", height);
-    args[0] = arg0;
-    args[1] = arg1;
-    args[2] = arg2;
-    args[3] = arg3;
-    args[4] = arg4;
-    args[5] = NULL;
+    sprintf(arga[0], "%s", "xpilots.wildmap");
+    sprintf(arga[1], "%s", "-mapWidth");
+    sprintf(arga[2], "%d", width);
+    sprintf(arga[3], "%s", "-mapHeight");
+    sprintf(arga[4], "%d", height);
+    sprintf(arga[5], "%s", "-numBases");
+    sprintf(arga[6], "%d", 10 + (int) rint(sqrt(width * height) / 10.0));
 
-    result = wildmain(5, args);
+    for (i = 0; i < NUM_ARG; i++) {
+	args[i] = arga[i];
+    }
+    args[NUM_ARG] = NULL;
+
+    result = wildmain(NUM_ARG, args);
     Dump_map(name, author, data, width_ptr, height_ptr);
     Picture_map();
 

@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 5.3 2001/06/02 21:00:55 bertg Exp $
+/* $Id: paint.h,v 5.6 2002/01/30 21:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -52,6 +52,9 @@
 #define HUD_OFFSET		20	/* Hud line offset */
 #define FUEL_GAUGE_OFFSET	6
 #define HUD_FUEL_GAUGE_SIZE	(2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
+#define FUEL_NOTIFY		(3*FPS)
+
+#define WARNING_DISTANCE	(VISIBILITY_DISTANCE*0.8)
 /* constants end */
 
 
@@ -95,6 +98,7 @@ extern XFontStruct* talkFont;
 extern XFontStruct* motdFont;
 
 /* The name of the fonts used in the game */
+#define FONT_LEN	256
 extern char gameFontName[FONT_LEN];
 extern char messageFontName[FONT_LEN];
 extern char scoreListFontName[FONT_LEN];
@@ -173,6 +177,7 @@ extern int	(*radarDrawRectanglePtr)	/* Function to draw player on radar */
 extern int	maxKeyDefs;
 extern long	loops;
 extern int	maxMessages;
+extern int	messagesToStdout;
 extern bool	selectionAndHistory;
 
 #ifdef	WINDOWSCALING
@@ -219,6 +224,7 @@ int Handle_fastshot(int type, u_byte *p, int n);
 int Handle_debris(int type, u_byte *p, int n);
 int Handle_wreckage(int x, int y, int wrecktype, int size, int rotation);
 int Handle_asteroid(int x, int y, int type, int size, int rotation);
+int Handle_wormhole(int x, int y);
 int Handle_ecm(int x, int y, int size);
 int Handle_trans(int x1, int y1, int x2, int y2);
 int Handle_paused(int x, int y, int count);

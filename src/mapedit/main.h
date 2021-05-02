@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: main.h,v 5.5 2001/09/18 21:23:52 millerjl Exp $
+ * $Id: main.h,v 5.8 2002/02/26 00:41:18 millerjl Exp $
  */
 
 #include                 <X11/Xlib.h>
@@ -135,16 +135,20 @@ typedef struct {
    char         worldLives[4];
    int          reset;
    char         resetOnHuman[4];
+   int          allowAlliances;
+   int          announceAlliances;
    int          teamPlay;
    int          teamCannons;
    int          teamFuel;
    char         cannonSmartness[3];
    int          cannonsUseItems;
+   int          cannonsDefend;
    int          cannonFlak;
    char         cannonDeadTime[20];
    int          keepShots;
    int          teamAssign;
    int          teamImmunity;
+   int          teamShareScore;
    int          ecmsReprogramMines;
    int          ecmsReprogramRobots;
    int          targetKillTeam;
@@ -163,6 +167,8 @@ typedef struct {
    int          wreckageCollisionMayKill;
    int          asteroidCollisionMayKill;
    int          timing;
+   int          ballrace;
+   int          ballraceConnected;
    int          edgeWrap;
    int          edgeBounce;
    int          extraBorder;
@@ -174,6 +180,7 @@ typedef struct {
    int          gravityVisible;
    int          wormholeVisible;
    int          itemConcentratorVisible;
+   int          asteroidConcentratorVisible;
    char         wormTime[20];
    char         framesPerSecond[20];
    int          allowSmartMissiles;
@@ -205,6 +212,7 @@ typedef struct {
    char         mineLife[20];
    char         missileLife[20];
    char         baseMineRange[20];
+   char         mineShotDetonateDistance[20];
    char         shotKillScoreMult[20];
    char         torpedoKillScoreMult[20];
    char         smartKillScoreMult[20];
@@ -218,12 +226,17 @@ typedef struct {
    char         shoveKillScoreMult[20];
    char         crashScoreMult[20];
    char         mineScoreMult[20];
-   int          asteroidScoring;
+   char         asteroidPoints[20];
+   char         cannonPoints[20];
+   char         asteroidMaxScore[20];
+   char         cannonMaxScore[20];
    char         movingItemProb[20];
    char         randomItemProb[20];
    char         dropItemOnKillProb[20];
    char         detonateItemOnKillProb[20];
    char         destroyItemInCollisionProb[20];
+   char         asteroidItemProb[20];
+   char         asteroidMaxItems[20];
    char         itemProbMult[20];
    char         cannonItemProbMult[20];
    char         maxItemDensity[20];
@@ -231,6 +244,8 @@ typedef struct {
    char         maxAsteroidDensity[20];
    char         itemConcentratorRadius[20];
    char         itemConcentratorProb[20];
+   char         asteroidConcentratorRadius[20];
+   char         asteroidConcentratorProb[20];
    char         rogueHeatProb[20];
    char         rogueMineProb[20];
    char         itemEnergyPackProb[20];
@@ -312,6 +327,7 @@ typedef struct {
    char         roundDelay[20];
    char         maxRoundTime[20];
    char         roundsToPlay[20];
+   char         maxPauseTime[20];
 } xpmap_t;
 
 /* RTT */
@@ -350,7 +366,7 @@ typedef struct {
 } prefs_t;
 
 extern int               numprefs;
-extern prefs_t           prefs[244];
+extern prefs_t           prefs[260];
 
 
 

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: expose.h,v 5.1 2001/05/19 23:08:37 millerjl Exp $
+ * $Id: expose.h,v 5.2 2002/02/26 00:41:18 millerjl Exp $
  */
 
 typedef struct {
@@ -37,8 +37,8 @@ typedef struct {
    int                   start,end;
 } arc_t;
 
-extern segment_t         mapicon_seg[34];
-extern segment_t         mapicondet_seg[2];
+extern segment_t         mapicon_seg[35];
+extern segment_t         mapicondet_seg[4];
 extern int               mapicon_ptr[91];
 extern char              iconmenu[36];
 

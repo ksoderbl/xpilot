@@ -1,4 +1,4 @@
-/* $Id: netclient.h,v 5.2 2001/05/25 00:22:50 bertg Exp $
+/* $Id: netclient.h,v 5.5 2002/01/18 22:34:25 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -46,6 +46,7 @@ int Net_flush(void);
 int Net_fd(void);
 int Net_start(void);
 void Net_init_measurement(void);
+void Net_init_lag_measurement(void);
 int Net_input(void);
 /* void Net_measurement(long loop, int status);*/
 int Receive_start(void);
@@ -71,6 +72,7 @@ int Receive_rounddelay(void);
 int Receive_debris(void);
 int Receive_wreckage(void);
 int Receive_asteroid(void);
+int Receive_wormhole(void);
 int Receive_fastshot(void);
 int Receive_ecm(void);
 int Receive_trans(void);
@@ -84,6 +86,7 @@ int Receive_seek(void);
 int Receive_player(void);
 int Receive_score(void);
 int Receive_score_object(void);
+int Receive_team_score(void);
 int Receive_timing(void);
 int Receive_fuel(void);
 int Receive_cannon(void);

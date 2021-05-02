@@ -1,4 +1,4 @@
-/* $Id: sched.c,v 5.5 2001/06/03 15:02:53 dik Exp $
+/* $Id: sched.c,v 5.6 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -55,7 +55,7 @@
 #define	SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "error.h"
 #include "types.h"
 #include "sched.h"

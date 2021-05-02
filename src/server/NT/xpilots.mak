@@ -25,6 +25,10 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+MTL=midl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "XPilotServer - Win32 Release"
 
 OUTDIR=.\Release
@@ -37,6 +41,8 @@ ALL : "$(OUTDIR)\XPilotServer.exe" "$(OUTDIR)\xpilots.bsc"
 
 
 CLEAN :
+	-@erase "$(INTDIR)\alliance.obj"
+	-@erase "$(INTDIR)\alliance.sbr"
 	-@erase "$(INTDIR)\asteroid.obj"
 	-@erase "$(INTDIR)\asteroid.sbr"
 	-@erase "$(INTDIR)\cannon.obj"
@@ -85,6 +91,8 @@ CLEAN :
 	-@erase "$(INTDIR)\net.sbr"
 	-@erase "$(INTDIR)\netserver.obj"
 	-@erase "$(INTDIR)\netserver.sbr"
+	-@erase "$(INTDIR)\object.obj"
+	-@erase "$(INTDIR)\object.sbr"
 	-@erase "$(INTDIR)\objpos.obj"
 	-@erase "$(INTDIR)\objpos.sbr"
 	-@erase "$(INTDIR)\option.obj"
@@ -121,6 +129,8 @@ CLEAN :
 	-@erase "$(INTDIR)\shipshape.sbr"
 	-@erase "$(INTDIR)\shot.obj"
 	-@erase "$(INTDIR)\shot.sbr"
+	-@erase "$(INTDIR)\showtime.obj"
+	-@erase "$(INTDIR)\showtime.sbr"
 	-@erase "$(INTDIR)\socklib.obj"
 	-@erase "$(INTDIR)\socklib.sbr"
 	-@erase "$(INTDIR)\strdup.obj"
@@ -157,42 +167,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MD /W3 /GX /I "..\..\common" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_XPILOTNTSERVER_" /D "_AFXDLL" /D "_MBCS" /Fr"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-MTL=midl.exe
 MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /win32 
-RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilots.res" /d "NDEBUG" /d "_AFXDLL" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilots.bsc" 
@@ -252,7 +228,10 @@ BSC32_SBRS= \
 	"$(INTDIR)\strlcpy.sbr" \
 	"$(INTDIR)\xpmemory.sbr" \
 	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\wsockerrs.sbr"
+	"$(INTDIR)\wsockerrs.sbr" \
+	"$(INTDIR)\object.sbr" \
+	"$(INTDIR)\alliance.sbr" \
+	"$(INTDIR)\showtime.sbr"
 
 "$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
@@ -318,7 +297,10 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpmemory.obj" \
 	"$(INTDIR)\winNet.obj" \
 	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.res"
+	"$(INTDIR)\xpilots.res" \
+	"$(INTDIR)\object.obj" \
+	"$(INTDIR)\alliance.obj" \
+	"$(INTDIR)\showtime.obj"
 
 "$(OUTDIR)\XPilotServer.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -350,6 +332,8 @@ ALL : "$(OUTDIR)\XPilotServer.exe" "$(OUTDIR)\xpilots.bsc"
 
 
 CLEAN :
+	-@erase "$(INTDIR)\alliance.obj"
+	-@erase "$(INTDIR)\alliance.sbr"
 	-@erase "$(INTDIR)\asteroid.obj"
 	-@erase "$(INTDIR)\asteroid.sbr"
 	-@erase "$(INTDIR)\cannon.obj"
@@ -398,6 +382,8 @@ CLEAN :
 	-@erase "$(INTDIR)\net.sbr"
 	-@erase "$(INTDIR)\netserver.obj"
 	-@erase "$(INTDIR)\netserver.sbr"
+	-@erase "$(INTDIR)\object.obj"
+	-@erase "$(INTDIR)\object.sbr"
 	-@erase "$(INTDIR)\objpos.obj"
 	-@erase "$(INTDIR)\objpos.sbr"
 	-@erase "$(INTDIR)\option.obj"
@@ -434,6 +420,8 @@ CLEAN :
 	-@erase "$(INTDIR)\shipshape.sbr"
 	-@erase "$(INTDIR)\shot.obj"
 	-@erase "$(INTDIR)\shot.sbr"
+	-@erase "$(INTDIR)\showtime.obj"
+	-@erase "$(INTDIR)\showtime.sbr"
 	-@erase "$(INTDIR)\socklib.obj"
 	-@erase "$(INTDIR)\socklib.sbr"
 	-@erase "$(INTDIR)\strdup.obj"
@@ -473,42 +461,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\..\common" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_XPILOTNTSERVER_" /D "_AFXDLL" /D "_MBCS" /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-MTL=midl.exe
 MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /win32 
-RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\xpilots.res" /d "_DEBUG" /d "_AFXDLL" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\xpilots.bsc" 
@@ -568,7 +522,10 @@ BSC32_SBRS= \
 	"$(INTDIR)\strlcpy.sbr" \
 	"$(INTDIR)\xpmemory.sbr" \
 	"$(INTDIR)\winNet.sbr" \
-	"$(INTDIR)\wsockerrs.sbr"
+	"$(INTDIR)\wsockerrs.sbr" \
+	"$(INTDIR)\object.sbr" \
+	"$(INTDIR)\alliance.sbr" \
+	"$(INTDIR)\showtime.sbr"
 
 "$(OUTDIR)\xpilots.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
     $(BSC32) @<<
@@ -634,7 +591,10 @@ LINK32_OBJS= \
 	"$(INTDIR)\xpmemory.obj" \
 	"$(INTDIR)\winNet.obj" \
 	"$(INTDIR)\wsockerrs.obj" \
-	"$(INTDIR)\xpilots.res"
+	"$(INTDIR)\xpilots.res" \
+	"$(INTDIR)\object.obj" \
+	"$(INTDIR)\alliance.obj" \
+	"$(INTDIR)\showtime.obj"
 
 "$(OUTDIR)\XPilotServer.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -642,6 +602,36 @@ LINK32_OBJS= \
 <<
 
 !ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -654,6 +644,12 @@ LINK32_OBJS= \
 
 
 !IF "$(CFG)" == "XPilotServer - Win32 Release" || "$(CFG)" == "XPilotServer - Win32 Debug"
+SOURCE=..\alliance.c
+
+"$(INTDIR)\alliance.obj"	"$(INTDIR)\alliance.sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\asteroid.c
 
 "$(INTDIR)\asteroid.obj"	"$(INTDIR)\asteroid.sbr" : $(SOURCE) "$(INTDIR)"
@@ -750,6 +746,12 @@ SOURCE=..\netserver.c
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\object.c
+
+"$(INTDIR)\object.obj"	"$(INTDIR)\object.sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\objpos.c
 
 "$(INTDIR)\objpos.obj"	"$(INTDIR)\objpos.sbr" : $(SOURCE) "$(INTDIR)"
@@ -831,6 +833,12 @@ SOURCE=..\ship.c
 SOURCE=..\shot.c
 
 "$(INTDIR)\shot.obj"	"$(INTDIR)\shot.sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\showtime.c
+
+"$(INTDIR)\showtime.obj"	"$(INTDIR)\showtime.sbr" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

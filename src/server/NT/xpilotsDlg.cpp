@@ -1,4 +1,4 @@
-/* $Id: xpilotsDlg.cpp,v 5.1 2001/05/07 11:42:17 dik Exp $
+/* $Id: xpilotsDlg.cpp,v 5.2 2001/11/02 01:48:19 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.cpp - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.cpp,v 5.1 2001/05/07 11:42:17 dik Exp $				*
+*  $Id: xpilotsDlg.cpp,v 5.2 2001/11/02 01:48:19 dik Exp $				*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -498,7 +498,7 @@ afx_msg LONG CXpilotsDlg::OnUpdateScores(UINT unused, LONG unused1)
 {
 	char	st[10];
 	sprintf(st, "%d", NumPlayers - NumRobots - NumPseudoPlayers);
-	TRACE("OnUpdateScores <%s>\n", st);
+	//TRACE("OnUpdateScores <%s>\n", st);
 	SendDlgItemMessage(IDC_PLAYERCOUNT, WM_SETTEXT, 0, (LPARAM)st);
 	return(0);
 

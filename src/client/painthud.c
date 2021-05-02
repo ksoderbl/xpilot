@@ -1,4 +1,4 @@
-/* $Id: painthud.c,v 5.8 2001/09/19 14:12:15 gkoopman Exp $
+/* $Id: painthud.c,v 5.10 2002/01/17 19:51:16 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -220,6 +220,8 @@ void Paint_meters(void)
 	Paint_meter(-10, 100, "Loss", packet_loss, FPS);
     if (BIT(instruments, SHOW_PACKET_DROP_METER))
 	Paint_meter(-10, 120, "Drop", packet_drop, FPS);
+    if (BIT(instruments, SHOW_PACKET_LAG_METER))
+	Paint_meter(-10, 140, "Lag", MIN(packet_lag, 1 * FPS), 1 * FPS);
 
     if (thrusttime >= 0 && thrusttimemax > 0)
 	Paint_meter((ext_view_width-300)/2 -32, 2*ext_view_height/3,
@@ -348,8 +350,8 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 		size = 1;
 	    }
 	    if (self != NULL
-		&& self->team == target->team
-		&& BIT(Setup->mode, TEAM_PLAY)) {
+		&& ((self->team == target->team && BIT(Setup->mode, TEAM_PLAY))
+		|| (self->alliance != ' ' && self->alliance == target->alliance))) {
 		Arc_add(hudColor,
 			(int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
 			      - size * 0.5),

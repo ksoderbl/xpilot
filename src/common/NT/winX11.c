@@ -1,4 +1,4 @@
-/* $Id: winX11.c,v 5.2 2001/05/04 08:41:07 dik Exp $
+/* $Id: winX11.c,v 5.3 2001/10/19 17:52:56 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -31,9 +31,11 @@
 
 #include "winX.h"
 #include "winX_.h"
+#include "draw.h"
 
 #include "../error.h"
 #include "../../client/NT/winClient.h" 	/* This needs to be removed */
+#define  WINMAXCOLORS 16
 
 const int	top = 0;
 /*****************************************************************************/
@@ -331,6 +333,107 @@ XChangeGC(Display* dpy, GC gc, unsigned long valuemask, XGCValues* values)
 	}
 #endif
 	return(0);
+}
+
+/*****************************************************************************/
+int XGetGCValues(Display *dpy, GC gc, unsigned long valuemask, XGCValues *values)
+{
+	if(valuemask & GCFunction)
+	{
+		values->function = GXcopy;
+	}
+
+	if(valuemask & GCForeground)
+	{
+		if(cur_color < WINMAXCOLORS)
+		{
+			values->foreground = cur_color;
+		}
+		else if(cur_color < WINMAXCOLORS + 2)
+		{		/* 2, dash white and dash blue */
+			values->foreground = cur_color - CLOAKCOLOROFS;
+		}
+		else if(cur_color == LASERCOLOR)
+		{
+			values->foreground = RED;
+		}
+		else if(cur_color == MISSILECOLOR)
+		{
+			values->foreground = WHITE;
+		}
+		else if(cur_color == LASERTEAMCOLOR)
+		{
+			values->foreground = BLUE;
+		}
+		else
+		{
+			error("Illegal color(%d) while recording\n", cur_color);
+		}
+	}
+
+	if(valuemask & GCBackground)
+	{
+		values->background = BLACK; /* always black */
+	}
+
+	if(valuemask & GCLineWidth)
+	{
+		switch(cur_color)
+		{
+		case LASERCOLOR:
+		case MISSILECOLOR:
+		case LASERTEAMCOLOR:
+			values->line_width = 3;
+			break;
+		default:
+			values->line_width = 0;
+		}
+	}
+
+	if(valuemask & GCLineStyle)
+	{
+		switch(cur_color)
+		{
+		case WHITE+CLOAKCOLOROFS:
+		case BLUE+CLOAKCOLOROFS:
+			values->line_style = LineOnOffDash;
+			break;
+		default:
+			values->line_style = LineSolid;
+		}
+	}
+
+	if(valuemask & GCFillStyle)
+	{
+		values->fill_style = FillSolid;
+	}
+
+	if(valuemask & GCTile)
+	{
+		values->tile = 0;
+	}
+
+	if(valuemask & GCTileStipXOrigin)
+	{
+		values->ts_x_origin = 0;
+	}
+
+	if(valuemask & GCTileStipYOrigin)
+	{
+		values->ts_y_origin = 0;
+	}
+
+	if(valuemask & GCFont)
+	{
+		values->font = xid[xid[gc].hgc.font].font.font->fid;
+	}
+
+	if(valuemask & GCDashOffset)
+	{
+		values->dash_offset = 0;
+	}
+
+	return 1;
 }
 
 /*****************************************************************************/

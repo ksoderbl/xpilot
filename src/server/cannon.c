@@ -1,4 +1,4 @@
-/* $Id: cannon.c,v 5.10 2001/08/26 19:27:25 gkoopman Exp $
+/* $Id: cannon.c,v 5.15 2002/01/27 23:26:55 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -6,7 +6,7 @@
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
- *  	Guido Koopman        <guido@xpilot.org>
+ *  	Kimiko Koopman       <kimiko@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "bit.h"
@@ -54,6 +54,13 @@ char cannon_version[] = VERSION;
 #define IFSOUND(__x)
 #endif
 
+static int Cannon_select_weapon(int ind);
+static void Cannon_aim(int ind, int weapon, int *target, int *dir);
+static void Cannon_fire(int ind, int weapon, int target, int dir);
+static int Cannon_in_danger(int ind);
+static int Cannon_select_defense(int ind);
+static void Cannon_defend(int ind, int defense);
+
 /* the items that are useful to cannons.
    these are the items that cannon get 'for free' once in a while.
    cannons can get other items, but only by picking them up or
@@ -64,7 +71,8 @@ long CANNON_USE_ITEM = (ITEM_BIT_FUEL|ITEM_BIT_WIDEANGLE
 			|ITEM_BIT_TANK|ITEM_BIT_MINE
 			|ITEM_BIT_ECM|ITEM_BIT_LASER
 			|ITEM_BIT_EMERGENCY_THRUST|ITEM_BIT_ARMOR
-			|ITEM_BIT_TRACTOR_BEAM|ITEM_BIT_MISSILE);
+			|ITEM_BIT_TRACTOR_BEAM|ITEM_BIT_MISSILE
+			|ITEM_BIT_PHASING);
 
 /* adds the given amount of an item to the cannon's inventory. the number of
    tanks is taken to be 1. amount is then the amount of fuel in that tank.
@@ -96,6 +104,8 @@ void Cannon_throw_items(int ind)
 {
     cannon_t	*c = World.cannon + ind;
     int		i, dir;
+    object	*obj;
+    DFLOAT	velocity;
 
     for (i = 0; i < NUM_ITEMS; i++) {
 	if (i == ITEM_FUEL)
@@ -107,11 +117,8 @@ void Cannon_throw_items(int ind)
 					    - World.items[i].min_per_pack));
 	    LIMIT(amount, 0, c->item[i]);
 	    if (rfrac() < (dropItemOnKillProb * CANNON_DROP_ITEM_PROB)
-		&& NumObjs < MAX_TOTAL_SHOTS) {
-		int velocity = (int)(rfrac() * 6);
-		object *obj;
+		&& (obj = Object_allocate()) != NULL) {
 
-		obj = Obj[NumObjs++];
 		obj->type = OBJ_ITEM;
 		obj->info = i;
 		obj->color = RED;
@@ -123,6 +130,7 @@ void Cannon_throw_items(int ind)
 		obj->id = NO_ID;
 		obj->team = TEAM_NOT_SET;
 		Object_position_init_pixels(obj, c->pix_pos.x, c->pix_pos.y);
+		velocity = rfrac() * 6;
 		obj->vel.x = tcos(dir) * velocity;
 		obj->vel.y = tsin(dir) * velocity;
 		obj->acc.x = 0;
@@ -157,20 +165,133 @@ void Cannon_init(int ind)
     c->tractor_target = -1;
     c->tractor_count = 0;
     c->tractor_is_pressor = false;
+    c->used = 0;
+    c->emergency_shield_left = 0;
+    c->phasing_left = 0;
+}
+
+void Cannon_check_defense(int ind)
+{
+    int defense = Cannon_select_defense(ind);
+
+    if (defense >= 0
+	&& Cannon_in_danger(ind)) {
+	Cannon_defend(ind, defense);
+    }
 }
 
 void Cannon_check_fire(int ind)
 {
-    int		weapon, target = -1, dir = 0;
+    int	target = -1,
+    	dir = 0,
+	weapon = Cannon_select_weapon(ind);
 
-    weapon = Cannon_select_weapon(ind);
     Cannon_aim(ind, weapon, &target, &dir);
     if (target != -1)
 	Cannon_fire(ind, weapon, target, dir);
 }
 
+/* selects one of the available defenses. see cannon.h for descriptions. */
+static int Cannon_select_defense(int ind)
+{
+    cannon_t	*c = World.cannon + ind;
+
+    if (cannonSmartness == 0)
+	return -1;	/* mode 0 does not defend */
+    if (BIT(c->used, HAS_EMERGENCY_SHIELD)
+	|| BIT(c->used, HAS_PHASING_DEVICE))
+	return -1;	/* still protected */
+    if (c->item[ITEM_EMERGENCY_SHIELD])
+	return CD_EM_SHIELD;
+    if (c->item[ITEM_PHASING])
+	return CD_PHASING;
+    return -1;	/* no defense available */
+}
+
+/* checks if a cannon is about to be hit by a hazardous object.
+   mode 0 does not detect danger.
+   modes 1 - 3 use progressively more accurate detection. */
+static int Cannon_in_danger(int ind)
+{
+    cannon_t	*c = World.cannon + ind;
+    const int	range = 4 * BLOCK_SZ;
+    const long	kill_shots = (KILLING_SHOTS) | OBJ_MINE | OBJ_SHOT
+	    			| OBJ_PULSE | OBJ_SMART_SHOT | OBJ_HEAT_SHOT
+				| OBJ_TORPEDO | OBJ_ASTEROID;
+    object	*shot, **obj_list;
+    const int	max_objs = 100;
+    int		obj_count, i, danger = false;
+    int		npx, npy, tdx, tdy;
+    int		cpx = (int)c->pix_pos.x, cpy = (int)c->pix_pos.y;
+
+    if (cannonSmartness == 0)
+	return false;
+
+    Cell_get_objects(c->blk_pos.x, c->blk_pos.y, range, max_objs,
+		     &obj_list, &obj_count);
+
+    for (i = 0; (i < obj_count) && !danger; i++) {
+	shot = obj_list[i];
+
+	if (shot->life <= 0)
+	    continue;
+	if (!BIT(shot->type, kill_shots))
+	    continue;
+	if (BIT(shot->status, FROMCANNON))
+	    continue;
+	if (BIT(World.rules->mode, TEAM_PLAY)
+	    && teamImmunity
+	    && shot->team == c->team)
+	    continue;
+
+	npx = shot->pos.x;
+	npy = shot->pos.y;
+	if (cannonSmartness > 1) {
+	    npx += shot->vel.x;
+	    npy += shot->vel.y;
+	    if (cannonSmartness > 2) {
+		npx += shot->acc.x;
+		npy += shot->acc.y;
+	    }
+	}
+	tdx = WRAP_DX(npx - cpx);
+	tdy = WRAP_DY(npy - cpy);
+	if (LENGTH(tdx, tdy) <= ((4.5 - cannonSmartness) * BLOCK_SZ)) {
+	    danger = true;
+	    break;
+	}
+    }
+
+    return danger;
+}
+
+/* activates the selected defense. */
+static void Cannon_defend(int ind, int defense)
+{
+    cannon_t	*c = World.cannon + ind;
+    IFSOUND( int sound = -1; )
+
+    switch (defense) {
+    case CD_EM_SHIELD:
+	c->emergency_shield_left += 4 * FPS;
+	SET_BIT(c->used, HAS_EMERGENCY_SHIELD);
+	c->item[ITEM_EMERGENCY_SHIELD]--;
+	IFSOUND( sound = EMERGENCY_SHIELD_ON_SOUND; )
+	break;
+    case CD_PHASING:
+	c->phasing_left += 4 * FPS;
+	SET_BIT(c->used, HAS_PHASING_DEVICE);
+	c->tractor_count = 0;
+	c->item[ITEM_PHASING]--;
+	IFSOUND( sound = PHASING_ON_SOUND; )
+	break;
+    }
+    IFSOUND( if (sound != -1)
+		 sound_play_sensors(c->pix_pos.x, c->pix_pos.y, sound); )
+}
+
 /* selects one of the available weapons. see cannon.h for descriptions. */
-int Cannon_select_weapon(int ind)
+static int Cannon_select_weapon(int ind)
 {
     cannon_t	*c = World.cannon + ind;
 
@@ -214,9 +335,9 @@ int Cannon_select_weapon(int ind)
    the targeted player is also returned (for all modes).
    mode 0 always fires if it sees a player.
    modes 1 and 2 only fire if a player is within range of the selected weapon.
-   mode 3 only fire if a player will be in range when the shot is expected to hit.
+   mode 3 only fires if a player will be in range when the shot is expected to hit.
  */
-void Cannon_aim(int ind, int weapon, int *target, int *dir)
+static void Cannon_aim(int ind, int weapon, int *target, int *dir)
 {
     cannon_t	*c = World.cannon + ind;
     int		speed = ShotsSpeed;
@@ -368,7 +489,7 @@ void Cannon_aim(int ind, int weapon, int *target, int *dir)
 
 /* does the actual firing. also determines in which way to use weapons that
    have more than one possible use. */
-void Cannon_fire(int ind, int weapon, int target, int dir)
+static void Cannon_fire(int ind, int weapon, int target, int dir)
 {
     cannon_t	*c = World.cannon + ind;
     player	*pl = Players[target];

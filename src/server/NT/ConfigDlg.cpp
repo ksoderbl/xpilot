@@ -1,4 +1,4 @@
-/* $Id: ConfigDlg.cpp,v 5.2 2001/05/07 13:09:41 dik Exp $
+/* $Id: ConfigDlg.cpp,v 5.3 2001/10/11 20:16:45 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -146,21 +146,31 @@ HBRUSH CConfigDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 
 void CConfigDlg::OnChoosemap() 
 {
-	static char BASED_CODE szFilter[] = "XPilot Files (*.xp)|*.xp";
+	static char BASED_CODE szFilter[] = "XPilot Mapfiles (*.xp, *.map)|*.xp;*.map";
 	char	dir[MAX_PATH+1];
+	CString	olddir;
 
 	CFileDialog	fc(TRUE, ".xp", NULL, NULL, szFilter, this);
 	GetCurrentDirectory(MAX_PATH, dir);
+	olddir = dir;
+
 	if (SetCurrentDirectory("lib/maps"))
 		GetCurrentDirectory(MAX_PATH, dir);
 	fc.m_ofn.lpstrInitialDir = dir;
 	if (fc.DoModal() == IDOK)
 	{
+		UpdateData();
+
 		if (m_commandline.GetLength())
 			m_commandline += " ";
 		m_commandline += "-map ";
-		m_commandline += fc.GetFileName();
+		if(!stricmp(fc.GetPathName(), (olddir + "\\lib\\maps\\" + fc.GetFileName())))
+			m_commandline += fc.GetFileName();
+		else
+			m_commandline += fc.GetPathName();
+
 		UpdateData(FALSE);
 	}
+	SetCurrentDirectory(olddir);
 }
 

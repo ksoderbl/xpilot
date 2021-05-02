@@ -1247,6 +1247,13 @@ Should the name of the owner of the mine be drawn below the mine.
 .B showMessages
 Should messages appear on screen.
 .TP 12
+.B messagesToStdout
+Do you want messages to be sent to standard output?
+0: No, 1: Only player messages, 2: Player and status messages.
+.TP 12
+.B maxMessages
+The maximum number of messages to display.
+.TP 12
 .B showItems
 Should owned items be displayed permanently on the HUD,
 or only when their amount has changed?

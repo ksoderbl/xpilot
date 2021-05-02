@@ -1,4 +1,4 @@
-/* $Id: guimap.c,v 5.5 2001/06/10 17:36:58 bertg Exp $
+/* $Id: guimap.c,v 5.7 2002/02/10 19:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1057,6 +1057,74 @@ void Gui_paint_setup_item_concentrator(int x, int y)
 	}
     } else {
 	PaintBitmap(p_draw, BM_CONCENTRATOR, WINSCALE(X(x)), WINSCALE(Y(y + BLOCK_SZ)),
+		    WINSCALE(BLOCK_SZ), WINSCALE(BLOCK_SZ), (loops + (x + x * y)) % 32);
+
+    }
+}
+
+
+void Gui_paint_setup_asteroid_concentrator(int x, int y) 
+{
+    static struct concentrator_square {
+	int		size;
+	int		displ;
+	int		dir_off;
+	int		rot_speed;
+	int		rot_dir;
+    } sqrs[] = {
+#if 0
+	{ 16, 3, 0, 1, 0 },
+	{ 12, 5, 3, 2, 0 },
+	{  8, 8, 5, 3, 0 },
+#else
+	{  8, 3, 0, 3, 0 },
+	{ 12, 5, 3, 3, 0 },
+	{ 16, 8, 5, 3, 0 },
+#endif
+    };
+    static unsigned	rot_dir;
+    static long		concentratorloop;
+    unsigned		rdir, tdir;
+    int			i, cx, cy;
+    XPoint		pts[5];
+    if (!blockBitmaps) {
+	SET_FG(colors[RED].pixel);
+	if (concentratorloop != loops) {
+	    concentratorloop = loops;
+	    rot_dir += 5;
+	    for (i = 0; i < NELEM(sqrs); i++) {
+		sqrs[i].rot_dir += sqrs[i].rot_speed;
+	    }
+	}
+	for (i = 0; i < NELEM(sqrs); i++) {
+	    /* I'll bet you didn't know that floating point math
+	       is faster than integer math on a pentium 
+	       (and for some reason the UNIX way rounds off too much) */
+	    rdir = MOD2(rot_dir + sqrs[i].dir_off, RES);
+	    cx = (int)(X(x + BLOCK_SZ / 2)
+		+ sqrs[i].displ * tcos(rdir));
+	    cy = (int)(Y(y + BLOCK_SZ / 2)
+		+ sqrs[i].displ * tsin(rdir));
+	    tdir = MOD2(sqrs[i].rot_dir, RES);
+	    pts[0].x = WINSCALE(cx + (int)(sqrs[i].size * tcos(tdir)));
+	    pts[0].y = WINSCALE(cy + (int)(sqrs[i].size * tsin(tdir)));
+	    pts[1].x = WINSCALE(cx + (int)(sqrs[i].size * tcos(MOD2(tdir + RES/4, RES))));
+	    pts[1].y = WINSCALE(cy + (int)(sqrs[i].size * tsin(MOD2(tdir + RES/4, RES))));
+	    pts[2].x = WINSCALE(cx + (int)(sqrs[i].size * tcos(MOD2(tdir + 2*RES/4, RES))));
+	    pts[2].y = WINSCALE(cy + (int)(sqrs[i].size * tsin(MOD2(tdir + 2*RES/4, RES))));
+		pts[3].x = WINSCALE(cx + (int)(sqrs[i].size * tcos(MOD2(tdir + 3*RES/4, RES))));
+	    pts[3].y = WINSCALE(cy + (int)(sqrs[i].size * tsin(MOD2(tdir + 3*RES/4, RES))));
+	    /* Trace("DC: %d cx=%d/%d %d/%d %d/%d %d/%d %d/%d\n", 
+		    i, cx, cy, pts[0].x, pts[0].y, 
+		    pts[1].x, pts[1].y, pts[2].x, pts[2].y, pts[3].x, pts[3].y); */
+
+	    pts[4] = pts[0];
+	    rd.drawLines(dpy, p_draw, gc,
+			 pts, NELEM(pts), CoordModeOrigin);
+	    Erase_points(0, pts, NELEM(pts));
+	}
+    } else {
+	PaintBitmap(p_draw, BM_ASTEROIDCONC, WINSCALE(X(x)), WINSCALE(Y(y + BLOCK_SZ)),
 		    WINSCALE(BLOCK_SZ), WINSCALE(BLOCK_SZ), (loops + (x + x * y)) % 32);
 
     }

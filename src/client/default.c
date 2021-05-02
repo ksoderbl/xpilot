@@ -1,4 +1,4 @@
-/* $Id: default.c,v 5.15 2001/09/19 09:32:47 bertg Exp $
+/* $Id: default.c,v 5.18 2002/01/30 21:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -469,6 +469,14 @@ option options[] = {
 	"This gives the percentage of dropped frames due to display slowness.\n"
     },
     {
+	"packetLagMeter",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Should the packet lag meter be visible.\n"
+	"This gives the amount of lag in frames over the past one second.\n"
+    },
+    {
 	"slidingRadar",
 	NULL,
 	"No",
@@ -638,6 +646,14 @@ option options[] = {
 	"The maximum number of messages to display.\n"
     },
     {
+	"messagesToStdout",
+	NULL,
+	"0",
+	KEY_DUMMY,
+	"Send messages to standard output.\n0: Don't.\n1: Only player "
+	"messages.\n2: Player and status messages.\n"
+    },
+    {
 	"reverseScroll",
 	NULL,
 	"No",
@@ -769,6 +785,13 @@ option options[] = {
 	KEY_DUMMY,
 	"The time in seconds to display item information when\n"
 	"it has changed and the showItems option is turned on.\n"
+    },
+    {
+	"showScoreDecimals",
+	NULL,
+	"1",
+	KEY_DUMMY,
+	"The number of decimals to use when displaying scores.\n"
     },
     {
 	"receiveWindowSize",
@@ -2759,6 +2782,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "packetSizeMeter", &instruments, SHOW_PACKET_SIZE_METER);
     Get_bit_resource(rDB, "packetLossMeter", &instruments, SHOW_PACKET_LOSS_METER);
     Get_bit_resource(rDB, "packetDropMeter", &instruments, SHOW_PACKET_DROP_METER);
+    Get_bit_resource(rDB, "packetLagMeter", &instruments, SHOW_PACKET_LAG_METER);
     Get_bit_resource(rDB, "slidingRadar", &instruments, SHOW_SLIDING_RADAR);
     Get_bit_resource(rDB, "showItems", &instruments, SHOW_ITEMS);
     Get_bit_resource(rDB, "clock", &instruments, SHOW_CLOCK);
@@ -2779,6 +2803,9 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
     LIMIT(showItemsTime, MIN_SHOW_ITEMS_TIME, MAX_SHOW_ITEMS_TIME);
 
+    Get_int_resource(rDB, "showScoreDecimals", &showScoreDecimals);
+    LIMIT(showScoreDecimals, 0, 2);
+
     Get_float_resource(rDB, "speedFactHUD", &hud_move_fact);
     Get_float_resource(rDB, "speedFactPTR", &ptr_move_fact);
     Get_int_resource(rDB, "fuelNotify", &fuelLevel3);
@@ -2794,6 +2821,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_resource(rDB, "motdFont", motdFontName, sizeof motdFontName);
 
     Get_int_resource(rDB, "maxMessages", &maxMessages);
+    Get_int_resource(rDB, "messagesToStdout", &messagesToStdout);
 #ifndef _WINDOWS
     Get_bool_resource(rDB, "selectionAndHistory", &selectionAndHistory);
     Get_int_resource(rDB, "maxLinesInHistory", &maxLinesInHistory);

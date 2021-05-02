@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.19 2001/09/21 18:20:49 gkoopman Exp $
+/* $Id: walls.c,v 5.26 2002/01/27 22:58:55 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "score.h"
@@ -60,7 +60,7 @@ unsigned SPACE_BLOCKS = (
 	UP_GRAV_BIT | DOWN_GRAV_BIT | RIGHT_GRAV_BIT | LEFT_GRAV_BIT | 
 	DECOR_LU_BIT | DECOR_LD_BIT | DECOR_RU_BIT | DECOR_RD_BIT | 
 	DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT |
-	FRICTION_BIT
+	FRICTION_BIT | ASTEROID_CONCENTRATOR_BIT
     );
 
 static struct move_parameters mp;
@@ -783,6 +783,10 @@ void Move_segment(move_state_t *ms)
 	}
 	ms->cannon = i;
 
+	if (BIT(World.cannon[i].used, HAS_PHASING_DEVICE)) {
+	    break;
+	}
+	
 	if (BIT(World.rules->mode, TEAM_PLAY)
 	    && (teamImmunity
 		|| BIT(mi->obj->status, FROMCANNON))
@@ -1551,7 +1555,6 @@ static void Cannon_dies(move_state_t *ms)
     cannon_t           *cannon = World.cannon + ms->cannon;
     int			x = (int)cannon->pix_pos.x;
     int			y = (int)cannon->pix_pos.y;
-    int			sc;
     int			killer = -1;
     player		*pl = NULL;
 
@@ -1602,12 +1605,18 @@ static void Cannon_dies(move_state_t *ms)
 	killer = GetInd[pl->id];
     }
     if (pl) {
-	sc = Rate(pl->score, CANNON_SCORE) / 4;
-	if (BIT(World.rules->mode, TEAM_PLAY)
-	    && pl->team == cannon->team) {
-	    sc = -sc;
+	if (cannonPoints > 0) {
+	    if (BIT(World.rules->mode, TEAM_PLAY)
+		&& teamCannons) {
+		TEAM_SCORE(cannon->team, -cannonPoints);
+	    }
+	    if (pl->score <= cannonMaxScore
+		&& !(BIT(World.rules->mode, TEAM_PLAY)
+		     && pl->team == cannon->team)) {
+		SCORE(killer, cannonPoints, cannon->blk_pos.x,
+					    cannon->blk_pos.y, "");
+	    }
 	}
-	SCORE(killer, sc, cannon->blk_pos.x, cannon->blk_pos.y, "");
     }
 }
 
@@ -1615,12 +1624,13 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 {
     target_t		*targ = &World.targets[ms->target];
     object		*obj = ms->mip->obj;
-    int			j, sc, por,
+    int			j,
 			x, y,
 			killer;
-    int			win_score = 0,
-			win_team_members = 0,
-			lose_score = 0,
+    DFLOAT		sc, por,
+			win_score = 0,
+			lose_score = 0;
+    int			win_team_members = 0,
 			lose_team_members = 0,
 			somebody_flag = 0,
 			targets_remaining = 0,
@@ -1628,7 +1638,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     DFLOAT 		drainfactor;
 
     /* a normal shot or a direct mine hit work, cannons don't */
-    /* BD: should shots/mines by cannons of opposing teams work? */
+    /* KK: should shots/mines by cannons of opposing teams work? */
     /* also players suiciding on target will cause damage */
     if (!BIT(obj->type, KILLING_SHOTS|OBJ_MINE|OBJ_PULSE|OBJ_PLAYER)) {
 	return;
@@ -1643,13 +1653,13 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     switch(obj->type) {
     case OBJ_SHOT:
-#ifdef DRAINFACTOR
-/* BG: this is bad: one shot causes way too much damage. */
-	drainfactor = VECTOR_LENGTH(obj->vel);
-    	drainfactor = (drainfactor * drainfactor * ABS(obj->mass)) / (ShotsSpeed * ShotsSpeed * ShotsMass);
-#else
-	drainfactor = 1;
-#endif
+	if (shotHitFuelDrainUsesKineticEnergy) {
+	    drainfactor = VECTOR_LENGTH(obj->vel);
+	    drainfactor = (drainfactor * drainfactor * ABS(obj->mass))
+			  / (ShotsSpeed * ShotsSpeed * ShotsMass);
+	} else {
+	    drainfactor = 1.0f;
+	}
 	targ->damage += (int)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
 	break;
     case OBJ_PULSE:
@@ -1845,7 +1855,7 @@ static void Object_crash(move_state_t *ms)
     case CrashWall:
 	obj->life = 0;
 #if 0
-/* GK: - Added sparks to wallcrashes for objects != OBJ_SPARK|OBJ_DEBRIS.
+/* KK: - Added sparks to wallcrashes for objects != OBJ_SPARK|OBJ_DEBRIS.
 **       I'm not sure of the amount of sparks or the direction.
 */
 	if (!BIT(obj->type, OBJ_SPARK | OBJ_DEBRIS)) {
@@ -1876,10 +1886,12 @@ static void Object_crash(move_state_t *ms)
 	if (BIT(obj->type, OBJ_ITEM)) {
 	    Cannon_add_item(ms->cannon, obj->info, obj->count);
 	} else {
-	    if (World.cannon[ms->cannon].item[ITEM_ARMOR] > 0)
-		World.cannon[ms->cannon].item[ITEM_ARMOR]--;
-	    else
-		Cannon_dies(ms);
+	    if (!BIT(World.cannon[ms->cannon].used, HAS_EMERGENCY_SHIELD)) {
+		if (World.cannon[ms->cannon].item[ITEM_ARMOR] > 0)
+		    World.cannon[ms->cannon].item[ITEM_ARMOR]--;
+		else
+		    Cannon_dies(ms);
+	    }
 	}
 	break;
 
@@ -2075,7 +2087,9 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	    hudmsg = "[Cannon]";
 	    sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_CANNON_SOUND);
 	}
-	Cannon_dies(ms);
+	if (!BIT(World.cannon[ms->cannon].used, HAS_EMERGENCY_SHIELD)) {
+	    Cannon_dies(ms);
+	}
 	break;
 
     case CrashUniverse:
@@ -2096,8 +2110,9 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	int		cnt[MAX_RECORDED_SHOVES];
 	int		num_pushers = 0;
 	int		total_pusher_count = 0;
-	int		total_pusher_score = 0;
-	int		i, j, sc;
+	DFLOAT		total_pusher_score = 0;
+	int		i, j;
+	DFLOAT		sc;
 
 	SET_BIT(pl->status, KILLED);
 	sprintf(msg, howfmt, pl->name, (!pt) ? " head first" : "");
@@ -2155,8 +2170,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		    msg_len += name_len;
 		    msg_ptr += name_len;
 		}
-		sc = cnt[i] * (int)floor(Rate(pusher->score, pl->score)
-				    * shoveKillScoreMult) / total_pusher_count;
+		sc = cnt[i] * Rate(pusher->score, pl->score)
+				    * shoveKillScoreMult / total_pusher_count;
 		SCORE(GetInd[pusher->id], sc,
 		      OBJ_X_IN_BLOCKS(pl),
 		      OBJ_Y_IN_BLOCKS(pl),
@@ -2166,8 +2181,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		}
 
 	    }
-	    sc = (int)floor(Rate(average_pusher_score, pl->score)
-		       * shoveKillScoreMult);
+	    sc = Rate(average_pusher_score, pl->score)
+		       * shoveKillScoreMult;
 	    SCORE(ind, -sc,
 		  OBJ_X_IN_BLOCKS(pl),
 		  OBJ_Y_IN_BLOCKS(pl),
@@ -2231,13 +2246,18 @@ void Move_player(int ind)
     }
 
 /* Figure out which friction to use. */
-    switch (World.block[pl->pos.bx][pl->pos.by]) {
-    case FRICTION:
-	fric = blockFriction;
-	break;
-    default:
+    if (BIT(pl->used, HAS_PHASING_DEVICE)) {
 	fric = friction;
-	break;
+    }
+    else {
+	switch (World.block[pl->pos.bx][pl->pos.by]) {
+	case FRICTION:
+	    fric = blockFriction;
+	    break;
+	default:
+	    fric = friction;
+	    break;
+	}
     }
 
     cor_res = MOD2(coriolis * RES / 360, RES);

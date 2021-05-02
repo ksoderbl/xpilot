@@ -1,4 +1,4 @@
-/* $Id: score.h,v 5.2 2001/05/18 13:49:50 bertg Exp $
+/* $Id: score.h,v 5.4 2002/01/21 22:04:03 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -47,15 +47,16 @@
 
 #define CANNON_SCORE	    	-1436
 #define WALL_SCORE	    	2000
-#define ASTEROID_SCORE		-9116
 
 #define RATE_SIZE	    	20
 #define RATE_RANGE	    	1024
 
 /* score.c */
 
-void SCORE(int ind, int points, int x, int y, const char *msg);
-int Rate(int winner, int loser);
+void SCORE(int ind, DFLOAT points, int x, int y, const char *msg);
+void TEAM_SCORE(int team, DFLOAT points);
+void Alliance_score(int id, DFLOAT points);
+DFLOAT Rate(DFLOAT winner, DFLOAT loser);
 
 /*
  * Cause `winner' to get `winner_score' points added with message
@@ -69,9 +70,10 @@ int Rate(int winner, int loser);
  * made negative, since you shouldn't gain points by killing team members,
  * or being killed by a team member (it is both players faults).
  *
- * BD 28-4-98: Same for killing your own tank.
+ * KK 28-4-98: Same for killing your own tank.
+ * KK 7-11-1: And for killing a member of your alliance
  */
-void Score_players(int winner, int winner_score, char *winner_msg,
-		   int loser, int loser_score, char *loser_msg);
+void Score_players(int winner, DFLOAT winner_score, char *winner_msg,
+		   int loser, DFLOAT loser_score, char *loser_msg);
 
 #endif

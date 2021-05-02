@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 5.2 2001/05/31 20:53:22 gkoopman Exp $
+/* $Id: rules.h,v 5.3 2001/11/29 13:38:49 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,10 +41,13 @@
 #define ALLOW_CLUSTERS		(1<<11)
 #define ALLOW_MODIFIERS		(1<<12)
 #define ALLOW_LASER_MODIFIERS	(1<<13)
+#define ALLIANCES		(1<<14)
+
 /*
  * Client uses only a subset of them:
  */
-#define CLIENT_RULES_MASK	(WRAP_PLAY|TEAM_PLAY|TIMING|LIMITED_LIVES)
+#define CLIENT_RULES_MASK	(WRAP_PLAY|TEAM_PLAY|TIMING|LIMITED_LIVES|\
+				 ALLIANCES)
 
 /*
  * Possible object and player status bits.

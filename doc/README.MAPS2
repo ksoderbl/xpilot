@@ -70,9 +70,22 @@ The new map format is as follows:
 				like a regular treasure, except that it
 				does not own a ball.
 
+	&			Asteroid concentrator.  Putting it in a map
+				will determine where asteroids appear.  When
+				one or more asteroid concentrators are in a
+				map then asteroidConcentratorProb (1.0 by default) of
+				all asteroids appear only in an area around the
+				asteroid concentrators; the remainder of the
+				asteroids, or all of them if no asteroid
+				concentrators are defined, popup anywhere.  The
+				area is a circle with a radius determined by the
+				server option -asteroidConcentratorRadius.  An asteroid
+				concentrator is drawn on screen as three rotating
+				squares.
+
 	any other char		Empty block
 
-	elnopuv~`&=[]{}|:;"',.?/ are free for future expansion.
+	elnopuv~`=[]{}|:;"',.?/ are free for future expansion.
 
 In case you are wondering if all the characters for map symbols have any
 special meaning, they are not abbreviations, but if you take a look at

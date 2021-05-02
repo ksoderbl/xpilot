@@ -1,4 +1,4 @@
-/* $Id: talkmacros.c,v 5.3 2001/07/08 10:14:11 bertg Exp $
+/* $Id: talkmacros.c,v 5.5 2002/01/29 21:02:10 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -221,7 +221,7 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 		break;
 	    case 's':
 		if (pos < max - 1 - 6) /* short - "-16535" max no of chars */
-		    pos += sprintf (outbuf+pos, "%d", player->score);
+		    pos += sprintf (outbuf+pos, "%.2f", player->score);
 		break;
 	    case 't':
 		if (BIT(Setup->mode, TEAM_PLAY))
@@ -294,7 +294,6 @@ static int Talk_macro_parse_mesg(char *outbuf, char *inbuf, long pos, long max)
 			pos = Talk_macro_parse_mesg (outbuf, tmpptr3, pos, max);
 		    }
 		    inbuf = nextpos;
-		    free (tmpptr);
 		    free (tmpptr1);
 		    free (tmpptr2);
 		    free (tmpptr3);

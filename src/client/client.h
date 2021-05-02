@@ -1,4 +1,4 @@
-/* $Id: client.h,v 5.5 2001/09/18 18:19:19 bertg Exp $
+/* $Id: client.h,v 5.8 2002/01/17 19:51:16 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -72,6 +72,7 @@
 #define SHOW_TEXTURED_BALLS	(1L << 25)
 #define SHOW_REVERSE_SCROLL	(1L << 26)
 #define SHOW_HUD_RADAR          (1L << 27)
+#define SHOW_PACKET_LAG_METER	(1L << 28)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -107,13 +108,14 @@ typedef struct {
     DFLOAT	ratio;
     short	id;
     short	team;
-    short	score;
+    DFLOAT	score;
     short	check;
     short	round;
     short	timing;
     long	timing_loops;
     short	life;
     short	mychar;
+    short	alliance;
     short	war_id;
     short	name_width;	/* In pixels */
     short	name_len;	/* In bytes */
@@ -152,8 +154,8 @@ typedef struct {
 
 #define SCORE_OBJECT_COUNT	100
 typedef struct {
-    int		score,
-		x,
+    DFLOAT	score;
+    int		x,
 		y,
 		count,
 		hud_msg_len,
@@ -211,6 +213,7 @@ extern u_byte	lastNumItems[NUM_ITEMS];
 extern int	numItemsTime[NUM_ITEMS];
 extern DFLOAT	showItemsTime;
 extern short	autopilotLight;
+extern int	showScoreDecimals;
 
 
 extern short	lock_id;		/* Id of player locked onto */
@@ -274,6 +277,7 @@ extern long	instruments;		/* Instruments on screen (bitmask) */
 extern int	packet_size;		/* Current frame update packet size */
 extern int	packet_loss;		/* lost packets per second */
 extern int	packet_drop;		/* dropped packets per second */
+extern int	packet_lag;		/* approximate lag in frames */
 extern char	*packet_measure;	/* packet measurement in a second */
 extern long	packet_loop;		/* start of measurement */
 
@@ -324,8 +328,9 @@ shipobj *Ship_by_id(int id);
 int Handle_leave(int id);
 int Handle_player(int id, int team, int mychar, char *player_name,
 		  char *real_name, char *host_name, char *shape);
-int Handle_score(int id, int score, int life, int mychar);
-int Handle_score_object(int score, int x, int y, char *msg);
+int Handle_score(int id, DFLOAT score, int life, int mychar, int alliance);
+int Handle_score_object(DFLOAT score, int x, int y, char *msg);
+int Handle_team_score(int team, DFLOAT score);
 int Handle_timing(int id, int check, int round);
 int Handle_war(int robot_id, int killer_id);
 int Handle_seek(int programmer_id, int robot_id, int sought_id);

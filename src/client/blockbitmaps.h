@@ -1,4 +1,4 @@
-/* $Id: blockbitmaps.h,v 5.0 2001/04/07 20:00:58 dik Exp $
+/* $Id: blockbitmaps.h,v 5.1 2002/02/10 19:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -72,8 +72,9 @@
 #define BM_MINUSGRAVITY 40
 #define BM_CHECKPOINT	41
 #define BM_METER	42
+#define BM_ASTEROIDCONC	43
 
-#define NUM_BITMAPS 43  
+#define NUM_BITMAPS 44
 
 #define BG_IMAGE_HEIGHT 442  
 #define LOGO_HEIGHT     223

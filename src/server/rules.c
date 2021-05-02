@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 5.9 2001/09/18 18:20:06 bertg Exp $
+/* $Id: rules.c,v 5.13 2001/11/29 14:48:12 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -32,7 +32,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -176,6 +176,10 @@ void Tune_asteroid_prob(void)
 	World.asteroids.max = 0;
     }
     /* superfluous asteroids are handled by Asteroid_update() */
+
+    /* Tune asteroid concentrator parameters */
+    LIMIT(asteroidConcentratorRadius, 1, World.diagonal);
+    LIMIT(asteroidConcentratorProb, 0.0, 1.0);
 }
 
 /*
@@ -335,6 +339,7 @@ void Set_world_rules(void)
        | (limitedVisibility ? LIMITED_VISIBILITY : 0)
        | (limitedLives ? LIMITED_LIVES : 0)
        | (teamPlay ? TEAM_PLAY : 0)
+       | (allowAlliances ? ALLIANCES : 0)
        | (timing ? TIMING : 0)
        | (allowNukes ? ALLOW_NUKES : 0)
        | (allowClusters ? ALLOW_CLUSTERS : 0)
@@ -344,12 +349,19 @@ void Set_world_rules(void)
     rules.lives = worldLives;
     World.rules = &rules;
 
-    if (!BIT(World.rules->mode, PLAYER_KILLINGS))
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	CLR_BIT(World.rules->mode, ALLIANCES);
+    }
+
+    if (!BIT(World.rules->mode, PLAYER_KILLINGS)) {
 	CLR_BIT(KILLING_SHOTS,
 		OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
 		|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_PULSE);
-    if (!BIT(World.rules->mode, PLAYER_SHIELDING))
+    }
+
+    if (!BIT(World.rules->mode, PLAYER_SHIELDING)) {
 	CLR_BIT(DEF_HAVE, HAS_SHIELD);
+    }
 
     DEF_USED &= DEF_HAVE;
 }

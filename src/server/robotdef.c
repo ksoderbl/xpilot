@@ -1,4 +1,4 @@
-/* $Id: robotdef.c,v 5.20.2.1 2001/11/04 19:01:13 dik Exp $
+/* $Id: robotdef.c,v 5.29 2002/01/07 19:56:54 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,7 +42,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -59,6 +59,8 @@
 
 char robotdef_version[] = VERSION;
 
+
+#define ROB_LOOK_AH		2
 
 #define WITHIN(NOW,THEN,DIFF) (NOW<=THEN && (THEN-NOW)<DIFF)
 
@@ -98,6 +100,7 @@ static void Robot_default_set_war(int ind, int victim_id);
 static int Robot_default_war_on_player(int ind);
 static void Robot_default_message(int ind, const char *str);
 static void Robot_default_destroy(int ind);
+static void Robot_default_invite(int ind, int inv_ind);
        int Robot_default_setup(robot_type_t *type_ptr);
 
 
@@ -120,7 +123,8 @@ static robot_type_t robot_default_type = {
     Robot_default_set_war,
     Robot_default_war_on_player,
     Robot_default_message,
-    Robot_default_destroy
+    Robot_default_destroy,
+    Robot_default_invite
 };
 
 
@@ -307,6 +311,74 @@ static void Robot_default_destroy(int ind)
 
     free(pl->robot_data_ptr->private_data);
     pl->robot_data_ptr->private_data = NULL;
+}
+
+/*
+ * A default robot is asked to join an alliance
+ */
+static void Robot_default_invite(int ind, int inv_ind)
+{
+    player			*pl = Players[ind],
+				*inviter = Players[inv_ind];
+    int				war_id = Robot_default_war_on_player(ind);
+    robot_default_data_t	*my_data = Robot_default_get_data(pl);
+    int				i;
+    DFLOAT			limit;
+    int				accept = 1;	/* accept by default */
+
+    if (pl->alliance != ALLIANCE_NOT_SET) {
+	/* if there is a human in our alliance, they should decide
+	   let robots refuse in this case */
+	for (i = 0; i < NumPlayers; i++) {
+	    if (IS_HUMAN_IND(i) && ALLIANCE(ind, i)) {
+		accept = 0;
+		break;
+	    }
+	}
+	if (!accept) {
+	    Refuse_alliance(ind, inv_ind);
+	    return;
+	}
+    }
+    limit = MAX(ABS(pl->score / MAX((my_data->attack / 10), 10)),
+		my_data->defense);
+    if (inviter->alliance == ALLIANCE_NOT_SET) {
+	/* don't accept players we are at war with */
+	if (inviter->id == war_id)
+	    accept = 0;
+	/* don't accept players who are not active */
+	if (BIT(inviter->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
+	    accept = 0;
+	/* don't accept players with scores substantially lower than ours */
+	else if (inviter->score < (pl->score - limit))
+	    accept = 0;
+    }
+    else {
+	DFLOAT	avg_score = 0;
+	int	member_count = Get_alliance_member_count(inviter->alliance);
+
+	for (i = 0; i < NumPlayers; i++) {
+	    if (Players[i]->alliance == inviter->alliance) {
+		if (Players[i]->id == war_id) {
+		    accept = 0;
+		    break;
+		}
+		avg_score += Players[i]->score;
+	    }
+	}
+	if (accept) {
+	    avg_score = avg_score / member_count;
+	    if (avg_score < (pl->score - limit)) {
+		accept = 0;
+	    }
+	}
+    }
+    if (accept) {
+	Accept_alliance(ind, inv_ind);
+    }
+    else {
+	Refuse_alliance(ind, inv_ind);
+    }
 }
 
 
@@ -994,10 +1066,8 @@ static void Choose_weapon_modifier(player *pl, int weapon_type)
 
     if (pl->fuel.sum > pl->fuel.l3) {
 	if ((my_data->robot_count % 2) == 0) {
-#ifndef DRAINFACTOR
 	    if ((my_data->robot_count % 8) == 0)
 		mods.velocity = (int)(rfrac() * MODS_VELOCITY_MAX) + 1;
-#endif
 	    SET_BIT(mods.warhead, CLUSTER);
 	}
     }
@@ -1986,10 +2056,7 @@ static void Robot_default_play_check_objects(int ind,
 	/*
 	 * Any shot of team members excluding self are passive.
 	 */
-	if (BIT(World.rules->mode, TEAM_PLAY)
-	    && teamImmunity
-	    && shot->team == pl->team
-	    && shot->id != pl->id) {
+	if (Team_immune(shot->id, pl->id)) {
 	    continue;
 	}
 
@@ -2088,15 +2155,15 @@ static void Robot_default_play_check_objects(int ind,
 	    }
 	}
     }
-    // Convert *item_i from index in local obj_list[] to index in Obj[]
+
+    /* Convert *item_i from index in local obj_list[] to index in Obj[] */
     if (*item_i >= 0) {
-    for (j=0; (j < NumObjs) && (Obj[j]->id != obj_list[*item_i]->id); j++);
-    if (j >= NumObjs) {
-        *item_i = -1;  // Perhaps an error should be printed, too?
-    }
-    else {
-        *item_i = j;
-    }
+	for (j=0; (j < NumObjs) && (Obj[j]->id != obj_list[*item_i]->id); j++);
+	if (j >= NumObjs) {
+	    *item_i = -1;	/* Perhaps an error should be printed, too? */
+	} else {
+	    *item_i = j;
+	}
     }
 
 }
@@ -2122,10 +2189,7 @@ static void Robot_default_play_check_lasers(int ind)
 	    if (pulse->id == pl->id
 		&& !pulse->refl)
 		continue;
-	    if (BIT(World.rules->mode, TEAM_PLAY)
-		&& teamImmunity
-		&& pl->team == pulse->team
-		&& pl->id != pulse->id)
+	    if (Team_immune(pulse->id, pl->id))
 		continue;
 	    if (pl->id == pulse->id
 		&& selfImmunity)
@@ -2270,9 +2334,9 @@ static void Robot_default_play(int ind)
     Robot_default_play_check_lasers(ind);
 
     /* Note: Only take time to navigate if not being shot at */
-    /* BD: it seems that this 'Check_robot_navigate' function caused
+    /* KK: it seems that this 'Check_robot_navigate' function caused
 	the infamous 'robot stuck under wall' bug, so I commented it out */
-    /* BD: ps. I tried to change that function, but I don't grok it */
+    /* KK: ps. I tried to change that function, but I don't grok it */
     /*if (!(BIT(pl->used, HAS_SHIELD) && BIT(pl->status, THRUSTING))
 	&& Check_robot_navigate(ind, &evade_checked)) {
 	if (playerShielding == 0
@@ -2282,7 +2346,7 @@ static void Robot_default_play(int ind)
 	}
 	return;
     }*/
-    /* BD: unfortunately, this introduced a new bug. robots with large
+    /* KK: unfortunately, this introduced a new bug. robots with large
 	shipshapes don't take off from their bases. here's an attempt to
 	fix it */
     if (QUICK_LENGTH(pl->pos.x - (World.base[pl->home_base].pos.x * BLOCK_SZ),
@@ -2346,7 +2410,7 @@ static void Robot_default_play(int ind)
 	    ship = Players[j];
 	    if (j == ind
 		|| BIT(ship->status, PLAYING|GAME_OVER|PAUSE) != PLAYING
-		|| TEAM_IMMUNE(ind, j))
+		|| Team_immune(pl->id, ship->id))
 		continue;
 
 	    if (!Detect(ind, j))
@@ -2429,8 +2493,7 @@ static void Robot_default_play(int ind)
 		&& !BIT(World.rules->mode, TIMING))
 	    || (BIT(World.rules->mode, TIMING)
 		&& (delta_dir < 3 * RES / 4 || delta_dir > RES / 4))
-	    || (BIT(World.rules->mode, TEAM_PLAY)
-		&& pl->team == ship->team)) {
+	    || Team_immune(pl->id, ship->id)) {
 	    /* unset the player lock */
 	    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
 	    pl->lock.pl_id = 1;
@@ -2523,6 +2586,7 @@ static void Robot_default_play(int ind)
     }
     if (BIT(World.rules->mode, TEAM_PLAY)
 	&& World.NumTreasures > 0
+	&& World.teams[pl->team].NumTreasures > 0
 	&& !navigate_checked
 	&& !BIT(my_data->longterm_mode, TARGET_KILL|NEED_FUEL)) {
 	navigate_checked = true;

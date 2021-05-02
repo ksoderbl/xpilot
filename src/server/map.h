@@ -1,4 +1,4 @@
-/* $Id: map.h,v 5.3 2001/06/05 16:57:11 bertg Exp $
+/* $Id: map.h,v 5.7 2002/01/27 22:58:55 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -66,6 +66,7 @@
 #define RIGHT_GRAV		25
 #define LEFT_GRAV		26
 #define FRICTION		27
+#define ASTEROID_CONCENTRATOR		28
 #define BASE_ATTRACTOR		127
 
 #define SPACE_BIT		(1 << SPACE)
@@ -96,6 +97,7 @@
 #define RIGHT_GRAV_BIT          (1 << RIGHT_GRAV)
 #define LEFT_GRAV_BIT           (1 << LEFT_GRAV)
 #define FRICTION_BIT		(1 << FRICTION)
+#define ASTEROID_CONCENTRATOR_BIT	(1 << ASTEROID_CONCENTRATOR)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)
@@ -140,6 +142,9 @@ typedef struct {
     int			tractor_count;
     bool		tractor_is_pressor;
     unsigned short	team;
+    long		used;
+    int			emergency_shield_left;
+    int			phasing_left;
 } cannon_t;
 
 typedef struct {
@@ -164,12 +169,13 @@ typedef struct {
 typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;
 
 typedef struct {
-    ipos	pos;
-    int		lastdest,	/* last destination wormhole */
-		countdown,	/* if >0 warp to lastdest else random */
-		lastplayer;	/* last player to pass through */
-    bool	temporary;	/* wormhole was left by hyperjump */
-    wormType	type;
+    ipos		pos;
+    int			lastdest,	/* last destination wormhole */
+			countdown;	/* if >0 warp to lastdest else random */
+    bool		temporary;	/* wormhole was left by hyperjump */
+    wormType		type;
+    u_byte		lastblock;	/* block it occluded */
+    unsigned short	lastID;
 } wormhole_t;
 
 typedef struct {
@@ -198,11 +204,13 @@ typedef struct {
     int		NumEmptyTreasures;	/* Number of empty treasures owned */
     int		TreasuresDestroyed;	/* Number of destroyed treasures */
     int		TreasuresLeft;		/* Number of treasures left */
+    DFLOAT	score;
+    DFLOAT	prev_score;
 } team_t;
 
 typedef struct {
     ipos	pos;
-} item_concentrator_t;
+} item_concentrator_t, asteroid_concentrator_t;
 
 typedef struct {
     int			x, y;		/* Size of world in blocks */
@@ -247,6 +255,8 @@ typedef struct {
     target_t		*targets;
     int			NumItemConcentrators;
     item_concentrator_t	*itemConcentrators;
+    int			NumAsteroidConcs;
+    asteroid_concentrator_t	*asteroidConcs;
 } World_map;
 
 #endif

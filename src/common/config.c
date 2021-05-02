@@ -1,4 +1,4 @@
-/* $Id: config.c,v 5.6 2001/06/24 18:59:33 bertg Exp $
+/* $Id: config.c,v 5.7 2002/01/26 13:01:01 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -204,11 +204,11 @@ char *Conf_localmotdfile(void)
     return conf;
 }
 
+char conf_logfile_string[] = LOGFILE;
+
 char *Conf_logfile(void)
 {
-    static char conf[] = LOGFILE;
-
-    return conf;
+    return conf_logfile_string;
 }
 
 /* needed by client/default.c */

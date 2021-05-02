@@ -1,4 +1,4 @@
-/* $Id: portability.h,v 5.2 2001/05/01 10:02:37 bertg Exp $
+/* $Id: portability.h,v 5.4 2002/01/27 12:41:15 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -118,5 +118,14 @@ extern void move_memory(void *dst, void *src, size_t len);
  * Prototypes for testing if we are running under a certain OS.
  */
 extern int is_this_windows(void);
+
+
+/*
+ * Round to nearest integer.
+ */
+#ifdef _WINDOWS
+double rint(double x);
+#endif
+
 
 #endif /* PORTABILITY_H_INCLUDED */

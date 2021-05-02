@@ -1,4 +1,4 @@
-/* $Id: update.c,v 5.16 2001/07/08 10:14:11 bertg Exp $
+/* $Id: update.c,v 5.23 2002/03/05 22:51:48 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -33,7 +33,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "map.h"
@@ -44,6 +44,7 @@
 #include "cannon.h"
 #include "asteroid.h"
 #include "commonproto.h"
+#include "netserver.h"
 
 #define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
 #define TURN_SPARKS(tf)         (5+((tf)>>((FUEL_SCALE_BITS)-6)))
@@ -541,9 +542,19 @@ void Update_objects(void)
 		cannon->last_change = frame_loops;
 	    }
 	    continue;
-	} else if (!cannon->damaged
-		   && !cannon->tractor_count) {
-	    if (rfrac() * 16 < 1) {
+	} else {
+	    /* don't check too often, because this gets quite expensive
+	       on maps with many cannons with defensive items */
+	    if (cannonsUseItems
+		&& cannonsDefend
+		&& rfrac() < 0.65) {
+		Cannon_check_defense(i);
+	    }
+	    if (!BIT(cannon->used, HAS_EMERGENCY_SHIELD)
+		&& !BIT(cannon->used, HAS_PHASING_DEVICE)
+		&& !cannon->damaged
+		&& !cannon->tractor_count
+		&& rfrac() * 16 < 1) {
 		Cannon_check_fire(i);
 	    }
 	    else if (cannonsUseItems
@@ -577,6 +588,20 @@ void Update_objects(void)
 		cannon->tractor_count--;
 	    } else {
 		cannon->tractor_count = 0;
+	    }
+	}
+	if (cannon->emergency_shield_left > 0) {
+	    if (--cannon->emergency_shield_left <= 0) {
+		CLR_BIT(cannon->used, HAS_EMERGENCY_SHIELD);
+		sound_play_sensors(cannon->pix_pos.x, cannon->pix_pos.y,
+				   EMERGENCY_SHIELD_OFF_SOUND);
+	    }
+	}
+	if (cannon->phasing_left > 0) {
+	    if (--cannon->phasing_left <= 0) {
+		CLR_BIT(cannon->used, HAS_PHASING_DEVICE);
+	        sound_play_sensors(cannon->pix_pos.x, cannon->pix_pos.y,
+				   PHASING_OFF_SOUND);
 	    }
 	}
     }
@@ -682,7 +707,10 @@ void Update_objects(void)
 	    continue;
 
 	if (!cloakedShield && BIT(pl->used, HAS_CLOAKING_DEVICE)) {
-	    CLR_BIT(pl->used, HAS_SHIELD | HAS_EMERGENCY_SHIELD | HAS_DEFLECTOR);
+	    CLR_BIT(pl->used, HAS_SHIELD|HAS_EMERGENCY_SHIELD|HAS_DEFLECTOR);
+	    if (!BIT(DEF_HAVE, HAS_SHIELD)) {
+		CLR_BIT(pl->have, HAS_SHIELD);
+	    }
 	}
 
 	if (pl->stunned > 0) {
@@ -1018,8 +1046,8 @@ void Update_objects(void)
 	    w.y = (World.wormHoles[j].pos.y + 0.5) * BLOCK_SZ;
 
 	    } else { /* wormHoleHit == -1 */
-		int i;
-		for (i = 20; i > 0; i--) {
+		int counter;
+		for (counter = 20; counter > 0; counter--) {
 		    w.x = (int)(rfrac() * World.width);
 		    w.y = (int)(rfrac() * World.height);
 		    if (BIT(1U << World.block[(int)(w.x/BLOCK_SZ)]
@@ -1028,11 +1056,11 @@ void Update_objects(void)
 			break;
 		    }
 		}
-		if (!i) {
+		if (!counter) {
 		    w.x = OBJ_X_IN_BLOCKS(pl);
 		    w.y = OBJ_Y_IN_BLOCKS(pl);
 		}
-		if (i
+		if (counter
 		    && wormTime
 		    && BIT(1U << World.block[OBJ_X_IN_BLOCKS(pl)]
 					    [OBJ_Y_IN_BLOCKS(pl)],
@@ -1043,9 +1071,9 @@ void Update_objects(void)
 		    add_temp_wormholes(OBJ_X_IN_BLOCKS(pl),
 				       OBJ_Y_IN_BLOCKS(pl),
 				       (int)(w.x/BLOCK_SZ),
-				       (int)(w.y/BLOCK_SZ),
-				       i);
+				       (int)(w.y/BLOCK_SZ));
 		}
+		j = -2;
 		sound_play_sensors(pl->pos.x, pl->pos.y, HYPERJUMP_SOUND);
 	    }
 
@@ -1091,11 +1119,10 @@ void Update_objects(void)
 	    pl->forceVisible += 15;
 
 	    if ((j != pl->wormHoleHit) && (pl->wormHoleHit != -1)) {
-		World.wormHoles[pl->wormHoleHit].lastplayer = i;
 		World.wormHoles[pl->wormHoleHit].lastdest = j;
 		if (!World.wormHoles[j].temporary) {
 		    World.wormHoles[pl->wormHoleHit].countdown = (wormTime ?
-			wormTime * FPS : WORMCOUNT);
+			wormTime : WORMCOUNT);
 		}
 	    }
 
@@ -1166,7 +1193,7 @@ void Update_objects(void)
     /*
      * Update tanks, Kill players that ought to be killed.
      */
-    for (i=NumPlayers-1; i>=0; i--) {
+    for (i = NumPlayers - 1; i >= 0; i--) {
 	player *pl = Players[i];
 
 	if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) == PLAYING)
@@ -1186,12 +1213,24 @@ void Update_objects(void)
 		}
 	    }
 	}
+
+	if (maxPauseTime > 0
+	    && IS_HUMAN_PTR(pl)
+	    && BIT(pl->status, PAUSE)
+	    && frame_loops - pl->frame_last_busy > maxPauseTime) {
+	    sprintf(msg,
+		    "%s was auto-kicked for pausing too long [*Server notice*]",
+		    pl->name);
+	    Set_message(msg);
+	    Destroy_connection(Players[i]->conn,
+			       "auto-kicked: paused too long");
+	}
     }
 
     /*
      * Kill shots that ought to be dead.
      */
-    for (i=NumObjs-1; i>=0; i--)
+    for (i = NumObjs - 1; i >= 0; i--)
 	if (--(Obj[i]->life) <= 0)
 	    Delete_shot(i);
 
@@ -1199,7 +1238,7 @@ void Update_objects(void)
      * Compute general game status, do we have a winner?
      * (not called after Game_Over() )
      */
-    if (gameDuration >= 0.0) {
+    if (gameDuration >= 0.0 || maxRoundTime > 0) {
 	Compute_game_status();
     }
 

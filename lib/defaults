@@ -35,13 +35,15 @@ allowModifiers:         yes
 # Set the frames per second
 framesPerSecond:	14
 
-# For Internet games we allow remote clients to bounce softly.
+# Define a group of settings which make the world bouncy for players.
+define: SoftWalls \override: \multiline: EndSoftWalls
 maxUnshieldedWallBounceSpeed:		180
 maxShieldedWallBounceSpeed:		180
 maxUnshieldedPlayerWallBounceAngle:	180
 maxShieldedPlayerWallBounceAngle:	180
+EndSoftWalls
 
-# Define settings for private play.  In maps use "expand: PrivateSettings".
+# Define settings for private play.  To activate do "-expand PrivateSettings".
 define: PrivateSettings \override: \multiline: EndPrivateSettings
 idleRun:                no
 noQuit:                 no
@@ -51,10 +53,38 @@ contactPort:            15000
 serverHost:             localhost
 EndPrivateSettings
 
-# Settings for public Internet play.  In maps do "expand: PublicSettings".
+# Settings for public Internet play.  To activate do "-expand PublicSettings".
 define: PublicSettings \override: \multiline: EndPublicSettings
 idleRun:                yes
 noQuit:                 yes
 reportToMetaServer:     yes
 EndPublicSettings
+
+# Settings for everything bouncing.  To activate do "-expand BounceAll".
+define: BounceAll \override: \multiline: EndBounceAll
+allowPlayerBounces:                      yes
+shotsWallBounce:                         yes
+ballsWallBounce:                         yes
+minesWallBounce:                         yes
+itemsWallBounce:                         yes
+missilesWallBounce:                      no
+sparksWallBounce:                        yes
+debrisWallBounce:                        yes
+asteroidsWallBounce:                     yes
+maxObjectWallBounceSpeed:                180
+maxShieldedWallBounceSpeed:              180
+maxUnshieldedWallBounceSpeed:            180
+maxShieldedPlayerWallBounceAngle:        180
+maxUnshieldedPlayerWallBounceAngle:      180
+playerWallBounceBrakeFactor:             0.95
+objectWallBounceBrakeFactor:             0.98
+objectWallBounceLifeFactor:              0.99
+wallBounceFuelDrainMult:                 1.0
+wallBounceDestroyItemProb:               0.0
+edgeBounce:                              yes
+EndBounceAll
+
+# For Internet games we allow remote clients to bounce softly by
+# expanding the SoftWalls define.
+expand: SoftWalls
 

@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 5.13 2001/06/25 07:50:30 bertg Exp $
+/* $Id: parser.c,v 5.17 2001/11/30 11:47:19 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -35,7 +35,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "defaults.h"
@@ -93,6 +93,7 @@ static void Parse_help(char *progname)
 	       options[j].type == valIPos ? "<position>" :
 	       options[j].type == valSec ? "<seconds>" :
 	       options[j].type == valPerSec ? "<per-second>" :
+	       options[j].type == valList ? "<list>" :
 	       "");
 	for (str = options[j].helpLine; *str; str++) {
 	    if (str == options[j].helpLine || str[-1] == '\n') {
@@ -293,6 +294,26 @@ int Parser_list_option(int *index, char *buf)
 	sprintf(buf, "%s:%s", options[i].name,
 		*(char **)options[i].variable);
 	break;
+    case valList:
+	{
+	    list_t list = *(list_t *)options[i].variable;
+	    sprintf(buf, "%s:", options[i].name);
+	    if (list) {
+		list_iter_t iter;
+		for (iter = List_begin(list);
+		     iter != List_end(list);
+		     LI_FORWARD(iter)) {
+		    char *str = LI_DATA(iter);
+		    if (iter != List_begin(list)) {
+			strlcat(buf, ",", MSG_LEN);
+		    }
+		    if (strlcat(buf, str, MSG_LEN) >= MSG_LEN) {
+			break;
+		    }
+		}
+	    }
+	}
+	break;
     default:
 	return 0;
     }
@@ -380,19 +401,21 @@ bool Parser(int argc, char **argv)
 		}
 		else {
 		    if (i + 1 == argc) {
-			errno = 0;
-			error("Option '%s' needs an argument",
-			      desc->commandLineOption);
+			warn("Option '%s' needs an argument", argv[i]);
 		    }
 		    else {
-			Option_set_value(desc->name, argv[++i], 1, OPT_COMMAND);
+			i++;
+			Option_set_value(desc->name, argv[i], 1, OPT_COMMAND);
 		    }
 		}
-		continue;
+	    }
+	    else {
+		warn("Unknown option '%s'", argv[i]);
 	    }
 	}
-	errno = 0;
-	error("Unknown option '%s'", argv[i]);
+	else {
+	    warn("Unknown option '%s'", argv[i]);
+	}
     }
 
     /*
@@ -417,6 +440,9 @@ bool Parser(int argc, char **argv)
 
     /*
      * Read map file if map data not found yet.
+     *
+     * If "mapFileName" is defined and it is not equal to "wild"
+     * then read it's contents from file.  Else read a default map.
      */
     if (!(fname = Option_get_value("mapData", NULL))) {
 	if ((fname = Option_get_value("mapFileName", NULL)) != NULL) {
@@ -436,7 +462,16 @@ bool Parser(int argc, char **argv)
 	}
     }
 
+    /*
+     * Parse the options database and `internalise' it.
+     */
     Options_parse();
+
+    Options_free();
+
+    /*
+     * Construct the World structure from the options.
+     */
     status = Grok_map();
 
     return status;
@@ -526,9 +561,13 @@ int Tune_option(char *name, char *val)
 }
 
 
-int Get_option_value(const char *name, char *value)
+int Get_option_value(const char *name, char *value, unsigned size)
 {
     option_desc		*opt;
+
+    if (size < 12) {
+	return -1;	/* Generic error. */
+    }
 
     if (!(opt = Find_option_by_name(name))) {
 	return -2;	/* Variable not found */
@@ -545,7 +584,7 @@ int Get_option_value(const char *name, char *value)
 	sprintf(value, "%s", *((bool *)opt->variable) ? "true" : "false");
 	break;
     case valString:
-	sprintf(value, "%s", *((char **)opt->variable));
+	strlcpy(value, *((char **)opt->variable), size);
 	break;
     case valSec:
 	sprintf(value, "%d", *((int *)opt->variable) / FPS);
@@ -558,9 +597,10 @@ int Get_option_value(const char *name, char *value)
 		((ipos *)opt->variable)->x,
 		((ipos *)opt->variable)->y);
     default:
-	return -1;
+	return -1;	/* Generic error. */
     }
-    return 1;
+
+    return 1;	/* Success. */
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: client.c,v 5.7 2001/09/10 06:15:12 bertg Exp $
+/* $Id: client.c,v 5.12 2002/01/17 19:51:16 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -82,6 +82,8 @@ DFLOAT	showItemsTime;		/* How long to show changed item count for */
 
 short	autopilotLight;
 
+int	showScoreDecimals;
+
 short	lock_id;		/* Id of player locked onto */
 short	lock_dir;		/* Direction of lock */
 short	lock_dist;		/* Distance to player locked onto */
@@ -140,6 +142,7 @@ char	mods[MAX_CHARS];	/* Current modifiers in effect */
 int	packet_size;		/* Current frame update packet size */
 int	packet_loss;		/* lost packets per second */
 int	packet_drop;		/* dropped packets per second */
+int	packet_lag;		/* approximate lag in frames */
 char	*packet_measure;	/* packet measurement in a second */
 long	packet_loop;		/* start of measurement */
 
@@ -176,6 +179,8 @@ int 	maxVolume;		/* maximum volume (in percent) */
 static other_t		*Others = 0;
 static int		num_others = 0,
 			max_others = 0;
+
+static DFLOAT		teamscores[MAX_TEAMS];
 
 static fuelstation_t	*fuels = 0;
 static int		num_fuels = 0;
@@ -1154,24 +1159,36 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
     return 0;
 }
 
-int Handle_score(int id, int score, int life, int mychar)
+int Handle_score(int id, DFLOAT score, int life, int mychar, int alliance)
 {
     other_t		*other;
 
     if ((other = Other_by_id(id)) == NULL) {
 #ifndef _WINDOWS
 	errno = 0;
-	error("Can't update score for non-existing player %d,%d,%d",
+	error("Can't update score for non-existing player %d,%.2f,%d",
 	      id, score, life);
 #endif
 	return 0;
     }
     else if (other->score != score
 	|| other->life != life
-	|| other->mychar != mychar) {
+	|| other->mychar != mychar
+	|| other->alliance != alliance) {
 	other->score = score;
 	other->life = life;
 	other->mychar = mychar;
+	other->alliance = alliance;
+	scoresChanged = 1;
+    }
+
+    return 0;
+}
+
+int Handle_team_score(int team, DFLOAT score)
+{
+    if (teamscores[team] != score) {
+	teamscores[team] = score;
 	scoresChanged = 1;
     }
 
@@ -1199,7 +1216,7 @@ int Handle_timing(int id, int check, int round)
     return 0;
 }
 
-int Handle_score_object(int score, int x, int y, char *msg)
+int Handle_score_object(DFLOAT score, int x, int y, char *msg)
 {
     score_object_t*	sobj = &score_objects[score_object];
 
@@ -1210,7 +1227,12 @@ int Handle_score_object(int score, int x, int y, char *msg)
 
     /* Initialize sobj->hud_msg (is shown on the HUD) */
     if (msg[0] != '\0') {
-	sprintf(sobj->hud_msg, "%s %d", msg, score);
+	if (showScoreDecimals > 0 && version >= 0x4500) {
+	    sprintf(sobj->hud_msg, "%s %.*f", msg, showScoreDecimals, score);
+	}
+	else {
+	    sprintf(sobj->hud_msg, "%s %d", msg, (int) rint(score));
+	}
 	sobj->hud_msg_len = strlen(sobj->hud_msg);
 	sobj->hud_msg_width = XTextWidth(gameFont,
 					 sobj->hud_msg, sobj->hud_msg_len);
@@ -1218,7 +1240,12 @@ int Handle_score_object(int score, int x, int y, char *msg)
 	sobj->hud_msg_len = 0;
 
     /* Initialize sobj->msg data (is shown on game area) */
-    sprintf(sobj->msg, "%d", score);
+    if (showScoreDecimals > 0 && version >= 0x4500) {
+	sprintf(sobj->msg, "%.*f", showScoreDecimals, score);
+    }
+    else {
+	sprintf(sobj->msg, "%d", (int) rint(score));
+    }
     sobj->msg_len = strlen(sobj->msg);
     sobj->msg_width = XTextWidth(gameFont, sobj->msg, sobj->msg_len);
 
@@ -1231,7 +1258,7 @@ int Handle_score_object(int score, int x, int y, char *msg)
 void Client_score_table(void)
 {
     struct team_score {
-	int		score;
+	DFLOAT		score;
 	int		life;
 	int		playing;
     };
@@ -1291,9 +1318,9 @@ void Client_score_table(void)
 	}
 	else {
 	    if (BIT(Setup->mode, LIMITED_LIVES)) {
-		ratio = (float) other->score;
+		ratio = other->score;
 	    } else {
-		ratio = (float) other->score / (other->life + 1);
+		ratio = other->score / (other->life + 1);
 	    }
 	    if (best == -1
 		|| ratio > best_ratio) {
@@ -1327,8 +1354,13 @@ void Client_score_table(void)
 		/*FALLTHROUGH*/
 	    default:
 		team[other->team].playing++;
-		team[other->team].score += other->score;
+		if (version < 0x4500) {
+		    team[other->team].score += other->score;
+		}
 		break;
+	    }
+	    if (version >= 0x4500) {
+		team[other->team].score = teamscores[other->team];
 	    }
 	}
     }

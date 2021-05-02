@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 5.7 2001/09/18 18:19:20 bertg Exp $
+/* $Id: configure.c,v 5.11 2002/01/30 21:29:39 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -125,6 +125,7 @@ static int Config_create_texturedObjects(int widget_desc, int *height);
 static int Config_create_slidingRadar(int widget_desc, int *height);
 static int Config_create_showItems(int widget_desc, int *height);
 static int Config_create_showItemsTime(int widget_desc, int *height);
+static int Config_create_showScoreDecimals(int widget_desc, int *height);
 static int Config_create_backgroundPointDist(int widget_desc, int *height);
 static int Config_create_backgroundPointSize(int widget_desc, int *height);
 static int Config_create_sparkSize(int widget_desc, int *height);
@@ -146,6 +147,7 @@ static int Config_create_texturedDecor(int widget_desc, int *height);
 static int Config_create_texturedBalls(int widget_desc, int *height);
 static int Config_create_maxFPS(int widget_desc, int *height);
 static int Config_create_maxMessages(int widget_desc, int *height);
+static int Config_create_messagesToStdout(int widget_desc, int *height);
 static int Config_create_reverseScroll(int widget_desc, int *height);
 static int Config_create_oldMessagesColor(int widget_desc, int *height);
 #ifdef SOUND
@@ -159,6 +161,7 @@ static int Config_create_turnSpeedMeter(int widget_desc, int *height);
 static int Config_create_packetSizeMeter(int widget_desc, int *height);
 static int Config_create_packetLossMeter(int widget_desc, int *height);
 static int Config_create_packetDropMeter(int widget_desc, int *height);
+static int Config_create_packetLagMeter(int widget_desc, int *height);
 static int Config_create_clock(int widget_desc, int *height);
 static int Config_create_clockAMPM(int widget_desc, int *height);
 static int Config_create_markingLights(int widget_desc, int *height);
@@ -239,6 +242,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_altTurnResistance,
     Config_create_showMessages,
     Config_create_maxMessages,
+    Config_create_messagesToStdout,
     Config_create_reverseScroll,
     Config_create_oldMessagesColor,
     Config_create_showHUD,
@@ -258,6 +262,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_slidingRadar,
     Config_create_showItems,
     Config_create_showItemsTime,
+    Config_create_showScoreDecimals,
     Config_create_backgroundPointDist,
     Config_create_backgroundPointSize,
     Config_create_sparkSize,
@@ -290,6 +295,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_packetSizeMeter,
     Config_create_packetLossMeter,
     Config_create_packetDropMeter,
+    Config_create_packetLagMeter,
     Config_create_clock,
     Config_create_clockAMPM,
 #ifdef _WINDOWS
@@ -387,7 +393,8 @@ static void Create_config(void)
 		Widget_create_activate(config_widget_desc[num],
 				       offset, height,
 				       width, config_button_height,
-				       0, "PREV", Config_prev, (void *)num);
+				       0, "PREV", Config_prev,
+				       (void *)(long)num);
 	    if (widget_desc == 0) {
 		break;
 	    }
@@ -398,7 +405,8 @@ static void Create_config(void)
 		Widget_create_activate(config_widget_desc[num],
 				       offset, height,
 				       width, config_button_height,
-				       0, "NEXT", Config_next, (void *)num);
+				       0, "NEXT", Config_next,
+				       (void *)(long)num);
 	    if (widget_desc == 0) {
 		break;
 	    }
@@ -409,7 +417,8 @@ static void Create_config(void)
 		Widget_create_activate(config_widget_desc[num],
 				       offset, height,
 				       width, config_button_height,
-				       0, "CLOSE", Config_close, (void *)num);
+				       0, "CLOSE", Config_close,
+				       (void *)(long)num);
 	    if (widget_desc == 0) {
 		break;
 	    }
@@ -681,6 +690,13 @@ static int Config_create_maxMessages(int widget_desc, int *height)
 			   NULL, NULL);
 }
 
+static int Config_create_messagesToStdout(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "messagesToStdout", &messagesToStdout, 0, 2,
+			   NULL, NULL);
+}
+
 static int Config_create_reverseScroll(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "reverseScroll",
@@ -847,6 +863,15 @@ static int Config_create_showItemsTime(int widget_desc, int *height)
 			     "showItemsTime", &showItemsTime,
 			     MIN_SHOW_ITEMS_TIME,
 			     MAX_SHOW_ITEMS_TIME,
+			     NULL, NULL);
+}
+
+static int Config_create_showScoreDecimals(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			     "showScoreDecimals", &showScoreDecimals,
+			     0,
+			     2,
 			     NULL, NULL);
 }
 
@@ -1084,6 +1109,15 @@ static int Config_create_packetDropMeter(int widget_desc, int *height)
 			      (void *) SHOW_PACKET_DROP_METER);
 }
 
+static int Config_create_packetLagMeter(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "packetLagMeter",
+			      BIT(instruments, SHOW_PACKET_LAG_METER)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_PACKET_LAG_METER);
+}
+
 static int Config_create_clock(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "clock",
@@ -1207,6 +1241,9 @@ static int Config_update_instruments(int widget_desc, void *data, bool *val)
     }
     if (BIT(bit, SHOW_PACKET_DROP_METER | SHOW_PACKET_LOSS_METER)) {
 	Net_init_measurement();
+    }
+    if (BIT(bit, SHOW_PACKET_LAG_METER)) {
+	Net_init_lag_measurement();
     }
     if (BIT(bit, SHOW_REVERSE_SCROLL)) {
 	/* a callback for `reverseScroll' in the config menu */
@@ -1562,6 +1599,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "showMineName", BIT(instruments, SHOW_MINE_NAME));
     Config_save_bool(fp, "showMessages", BIT(instruments, SHOW_MESSAGES));
     Config_save_int(fp, "maxMessages", maxMessages);
+    Config_save_int(fp, "messagesToStdout", messagesToStdout);
     Config_save_int(fp, "oldMessagesColor", oldMessagesColor);
     Config_save_bool(fp, "reverseScroll", BIT(instruments, SHOW_REVERSE_SCROLL));
     Config_save_bool(fp, "showHUD", BIT(instruments, SHOW_HUD_INSTRUMENTS));
@@ -1575,9 +1613,11 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "packetSizeMeter", BIT(instruments, SHOW_PACKET_SIZE_METER));
     Config_save_bool(fp, "packetLossMeter", BIT(instruments, SHOW_PACKET_LOSS_METER));
     Config_save_bool(fp, "packetDropMeter", BIT(instruments, SHOW_PACKET_DROP_METER));
+    Config_save_bool(fp, "packetLagMeter", BIT(instruments, SHOW_PACKET_LAG_METER));
     Config_save_bool(fp, "slidingRadar", BIT(instruments, SHOW_SLIDING_RADAR));
     Config_save_bool(fp, "showItems", BIT(instruments, SHOW_ITEMS));
     Config_save_float(fp, "showItemsTime", showItemsTime);
+    Config_save_int(fp, "showScoreDecimals", showScoreDecimals);
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
     Config_save_bool(fp, "filledWorld", BIT(instruments, SHOW_FILLED_WORLD));
     Config_save_bool(fp, "texturedWalls", BIT(instruments, SHOW_TEXTURED_WALLS));
@@ -1650,7 +1690,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 static int Config_save_confirm_callback(int widget_desc, void *popup_desc, const char **strptr)
 {
     if (config_save_confirm_desc != NO_WIDGET) {
-	Widget_destroy((int)popup_desc);
+	Widget_destroy((int)(long int)popup_desc);
 	config_save_confirm_desc = NO_WIDGET;
     }
     return 0;

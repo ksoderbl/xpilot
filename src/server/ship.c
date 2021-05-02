@@ -1,4 +1,4 @@
-/* $Id: ship.c,v 5.12 2001/05/24 11:27:54 bertg Exp $
+/* $Id: ship.c,v 5.17 2001/12/11 12:45:13 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "saudio.h"
@@ -44,6 +44,7 @@
 #include "objpos.h"
 #include "netserver.h"
 #include "commonproto.h"
+#include "proto.h"
 
 char ship_version[] = VERSION;
 
@@ -449,6 +450,8 @@ void Tank_handle_detach(player *pl)
     dummy->home_base	= pl->home_base;
     dummy->team		= pl->team;
     dummy->pseudo_team	= pl->pseudo_team;
+    dummy->alliance	= ALLIANCE_NOT_SET;
+    dummy->invite	= NO_ID;
     dummy->mychar       = 'T';
     dummy->score	= pl->score - tankScoreDecrement;
     updateScores	= true;
@@ -496,6 +499,11 @@ void Tank_handle_detach(player *pl)
     NumPseudoPlayers++;
     updateScores = true;
 
+    /* Possibly join alliance. */
+    if (pl->alliance != ALLIANCE_NOT_SET) {
+	Player_join_alliance(GetInd[dummy->id], GetInd[pl->id]);
+    }
+
     sound_play_sensors(pl->pos.x, pl->pos.y, TANK_DETACH_SOUND);
 
     /* The tank uses shield and thrust */
@@ -520,8 +528,9 @@ void Tank_handle_detach(player *pl)
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, dummy->id);
-	    Send_score(Players[i]->conn, dummy->id, dummy->score, dummy->life,
-		       dummy->mychar);
+	    Send_score(Players[i]->conn, dummy->id,
+		       dummy->score, dummy->life,
+		       dummy->mychar, dummy->alliance);
 	}
     }
 }
@@ -581,11 +590,26 @@ void Make_wreckage(
 
     CLEAR_MODS(mods);
 
-    for (i = 0; i < max_wreckage && sum_mass < total_mass; i++, NumObjs++) {
+    for (i = 0; i < max_wreckage && sum_mass < total_mass; i++) {
+
 	DFLOAT		speed;
 	int		dir, radius;
 
-	wreckage = WIRE_IND(NumObjs);
+	/* Calculate mass */
+	mass = min_mass + rfrac() * (max_mass - min_mass);
+	if ( sum_mass + mass > total_mass ) {
+	    mass = total_mass - sum_mass;
+	}
+	if (mass < min_mass) {
+	    /* not enough mass available. */
+	    break;
+	}
+
+	/* Allocate object */
+	if ((wreckage = WIRE_PTR(Object_allocate())) == NULL) {
+	    break;
+	}
+
 	wreckage->color = color;
 	wreckage->id = id;
 	wreckage->team = team;
@@ -605,14 +629,8 @@ void Make_wreckage(
 	wreckage->acc.y = 0;
 
 	/* Mass */
-	mass = min_mass + rfrac() * (max_mass - min_mass);
-	if ( sum_mass + mass > total_mass )
-	    mass = total_mass - sum_mass;
 	wreckage->mass = mass;
 	sum_mass += mass;
-	if (mass < min_mass) {
-	    break;
-	}
 
 	/* Lifespan  */
 	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);

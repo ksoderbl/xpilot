@@ -1,4 +1,4 @@
-/* $Id: server.c,v 5.13 2001/07/08 09:59:39 bertg Exp $
+/* $Id: server.c,v 5.21 2002/02/13 17:09:18 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -31,6 +31,7 @@
 #include <time.h>
 #include <limits.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #ifndef _WINDOWS
 # include <unistd.h>
@@ -50,6 +51,7 @@
 #endif
 
 #ifdef _WINDOWS
+# include <io.h>
 # include "NT/winServer.h"
 # include "NT/winSvrThread.h"
 #endif
@@ -58,7 +60,7 @@
 #include "version.h"
 #include "config.h"
 #include "types.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "socklib.h"
@@ -81,17 +83,8 @@ char xpilots_versionid[] = "@(#)$" TITLE " $";
  * Global variables
  */
 int			NumPlayers = 0;
-int			NumObjs = 0;
-int			NumPulses = 0;
-int			NumEcms = 0;
-int			NumTransporters = 0;
+int			NumAlliances = 0;
 player			**Players;
-int			obj_1;
-object			*Obj[MAX_TOTAL_SHOTS];
-int			obj_2;
-pulse_t			*Pulses[MAX_TOTAL_PULSES];
-ecm_t			*Ecms[MAX_TOTAL_ECMS];
-trans_t			*Transporters[MAX_TOTAL_TRANSPORTERS];
 int			GetInd_1;
 int			GetInd[NUM_IDS+1];
 server_t		Server;
@@ -139,9 +132,9 @@ int main(int argc, char **argv)
 	   "  provided LICENSE file.\n\n");
 
     init_error(argv[0]);
-    srand(time((time_t *)0) * Get_process_id());
-    seedMT(time((time_t *)0) * Get_process_id());
     Check_server_versions();
+
+    seedMT((unsigned)time((time_t *)0) * Get_process_id());
 
     if (Parser(argc, argv) == FALSE) {
 	exit(1);
@@ -519,13 +512,13 @@ void Server_info(char *str, unsigned max_size)
     if (strlen(msg) + strlen(str) >= max_size) {
 	return;
     }
-    strcat(str, msg);
+    strlcat(str, msg, max_size);
 
     if ((order = (player **) malloc(NumPlayers * sizeof(player *))) == NULL) {
 	error("No memory for order");
 	return;
     }
-    for (i=0; i<NumPlayers; i++) {
+    for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
 	if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	    ratio = (DFLOAT) pl->score;
@@ -548,7 +541,7 @@ void Server_info(char *str, unsigned max_size)
 	}
 	order[j] = pl;
     }
-    for (i=0; i<NumPlayers; i++) {
+    for (i = 0; i < NumPlayers; i++) {
 	pl = order[i];
 	strlcpy(name, pl->name, MAX_CHARS);
 	if (IS_ROBOT_PTR(pl)) {
@@ -570,7 +563,7 @@ void Server_info(char *str, unsigned max_size)
 		: "xpilot.org");
 	if (strlen(msg) + strlen(str) >= max_size)
 	    break;
-	strcat(str, msg);
+	strlcat(str, msg, max_size);
     }
     free(order);
 }
@@ -728,6 +721,47 @@ void Game_Over(void)
 	sprintf(msg,"Worst human player: %s", Players[loose]->name);
 	Set_message(msg);
 	xpprintf("%s\n", msg);
+    }
+}
+
+
+void Server_log_admin_message(int ind, const char *str)
+{
+    /*
+     * Only log the message if logfile already exists,
+     * is writable and less than some KBs in size.
+     */
+    const char		*logfilename = adminMessageFileName;
+    const int		logfile_size_limit = adminMessageFileSizeLimit;
+    FILE		*fp;
+    struct stat		st;
+    player		*pl = Players[ind];
+    char		msg[MSG_LEN * 2];
+
+    if ((logfilename != NULL) &&
+	(logfilename[0] != '\0') &&
+	(logfile_size_limit > 0) &&
+	(access(logfilename, 2) == 0) &&
+	(stat(logfilename, &st) == 0) &&
+	(st.st_size + 80 < logfile_size_limit) &&
+	((size_t)(logfile_size_limit - st.st_size - 80) > strlen(str)) &&
+	((fp = fopen(logfilename, "a")) != NULL))
+    {
+	fprintf(fp,
+		"%s[%s]{%s@%s(%s)|%s}:\n"
+		"\t%s\n",
+		showtime(),
+		pl->name,
+		pl->realname, pl->hostname,
+		Get_player_addr(ind),
+		Get_player_dpy(ind),
+		str);
+	fclose(fp);
+	sprintf(msg, "%s [%s]:[%s]", str, pl->name, "GOD");
+	Set_player_message(pl, msg);
+    }
+    else {
+	Set_player_message(pl, " < GOD doesn't seem to be listening>");
     }
 }
 

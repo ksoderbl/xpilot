@@ -1,4 +1,4 @@
-/* $Id: asteroid.c,v 5.12.2.1 2001/11/04 18:53:08 dik Exp $
+/* $Id: asteroid.c,v 5.17 2002/01/25 21:21:36 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -6,7 +6,7 @@
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
- *  	Guido Koopman        <guido@xpilot.org>
+ *  	Kimiko Koopman        <kimiko@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "list.h"
 #include "global.h"
 #include "proto.h"
@@ -211,7 +211,7 @@ void Break_asteroid(int ind)
     }
 
     if ((asteroidMaxItems > 0) && (rfrac() < asteroidItemProb)) {
-	int	nitems = (int)(rfrac() * (asteroidMaxItems + 1));
+	int	nitems = (int)(rfrac() * asteroidMaxItems) + 1;
 	int	i;
 	int	vx, vy;
 	int	item, item_dir, num_per_pack;
@@ -307,7 +307,11 @@ static void Make_asteroid(DFLOAT x, DFLOAT y,
 	}
     }
 
-    asteroid = WIRE_IND(NumObjs);
+    asteroid = WIRE_PTR(Object_allocate());
+    if (asteroid == NULL) {
+	return;
+    }
+
     asteroid->color = WHITE;
     asteroid->id = NO_ID;
     asteroid->team = TEAM_NOT_SET;
@@ -333,9 +337,11 @@ static void Make_asteroid(DFLOAT x, DFLOAT y,
     CLEAR_MODS(asteroid->mods);
 
     if (Asteroid_add_to_list(asteroid) == true) {
-	NumObjs++;
 	World.asteroids.num += 1 << (size - 1);
-	Cell_add_object((object *) asteroid);
+	Cell_add_object(OBJ_PTR(asteroid));
+    }
+    else {
+	Object_free_ptr(OBJ_PTR(asteroid));
     }
 }
 
@@ -346,16 +352,24 @@ static void Make_asteroid(DFLOAT x, DFLOAT y,
  */
 static void Place_asteroid(void)
 {
-    int		place_count;
-    int		px = 0, py = 0;
-    int		bx, by;
-    unsigned	space;
-    int		okay;
+    int			place_count;
+    int			px = 0, py = 0;
+    int			bx, by;
+    int			dir, dist;
+    unsigned		space;
+    int			okay;
+    asteroid_concentrator_t	*con;
 
     space = SPACE_BLOCKS;
     space &= ~(BASE_BIT | WORMHOLE_BIT);
     space |= FRICTION_BIT;
     /* would be dubious: space |= CANNON_BIT; */
+
+    if (World.NumAsteroidConcs > 0 && rfrac() < asteroidConcentratorProb) {
+	con = &World.asteroidConcs[(int)(rfrac() * World.NumAsteroidConcs)];
+    } else {
+	con = NULL;
+    }
 
     /* we bail out after 8 unsuccessful attempts to avoid wasting
      * too much time on crowded maps */
@@ -364,8 +378,27 @@ static void Place_asteroid(void)
 	if (place_count >= 10) {
 	    return;
 	}
-	px = (int)(rfrac() * World.width);
-	py = (int)(rfrac() * World.height);
+
+	if (con) {
+	    dir = (int)(rfrac() * RES);
+	    dist = (int)(rfrac() * ((asteroidConcentratorRadius * BLOCK_SZ) + 1));
+	    px = (int)((con->pos.x + 0.5) * BLOCK_SZ + dist * tcos(dir));
+	    py = (int)((con->pos.y + 0.5) * BLOCK_SZ + dist * tsin(dir));
+
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (px < 0) px += World.width;
+		if (py < 0) py += World.height;
+		if (px > World.width) px -= World.width;
+		if (py > World.height) py -= World.height;
+	    }
+	    if (px < 0 || px > World.width
+		|| py < 0 || py > World.height) {
+		continue;
+	    }
+	} else {
+	    px = (int)(rfrac() * World.width);
+	    py = (int)(rfrac() * World.height);
+	}
 	bx = px / BLOCK_SZ;
 	by = py / BLOCK_SZ;
 

@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: map.h,v 5.1 2001/05/19 23:08:37 millerjl Exp $
+ * $Id: map.h,v 5.2 2002/02/26 00:41:18 millerjl Exp $
  */
 
 /* Blank Space */
@@ -54,6 +54,7 @@
 #define MAP_ITEM_CONC   '%'
 #define MAP_EMPTY_TREASURE '^'
 #define MAP_FRICTION    'z'
+#define MAP_ASTEROID_CONC '&'
 
 /* Gravity */
 #define MAP_GRAV_POS	'+'

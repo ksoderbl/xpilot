@@ -1,4 +1,4 @@
-/* $Id: score.c,v 5.2 2001/06/03 17:28:37 bertg Exp $
+/* $Id: score.c,v 5.7 2002/01/21 22:04:03 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -35,7 +35,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "score.h"
@@ -45,11 +45,22 @@
 char score_version[] = VERSION;
 
 
-void SCORE(int ind, int points, int x, int y, const char *msg)
+void SCORE(int ind, DFLOAT points, int x, int y, const char *msg)
 {
     player	*pl = Players[ind];
 
-    pl->score += (points);
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	if (!teamShareScore) {
+	    pl->score += points;
+	}
+	TEAM_SCORE(pl->team, points);
+    } else {
+	if (pl->alliance != ALLIANCE_NOT_SET && teamShareScore) {
+	    Alliance_score(pl->alliance, points);
+	} else {
+	    pl->score += points;
+	}
+    }
 
     if (pl->conn != NOT_CONNECTED)
 	Send_score_object(pl->conn, points, x, y, msg);
@@ -57,9 +68,41 @@ void SCORE(int ind, int points, int x, int y, const char *msg)
     updateScores = true;
 }
 
-int Rate(int winner, int loser)
+void TEAM_SCORE(int team, DFLOAT points)
 {
-    int t;
+    if (team == TEAM_NOT_SET)	/* could happen if teamCannons is off */
+	return;
+    
+    World.teams[team].score += points;
+    if (teamShareScore) {
+	int i;
+	DFLOAT share = World.teams[team].score / World.teams[team].NumMembers;
+	for (i = 0; i < NumPlayers; i++) {
+	    if (Players[i]->team == team) {
+		Players[i]->score = share;
+	    }
+	}
+    }
+
+    updateScores = true;
+}
+
+void Alliance_score(int id, DFLOAT points)
+{
+    int		i;
+    int		member_count = Get_alliance_member_count(id);
+    DFLOAT	share = points / member_count;
+
+    for (i = 0; i < NumPlayers; i++) {
+	if (Players[i]->alliance == id) {
+	    Players[i]->score += share;
+	}
+    }
+}
+
+DFLOAT Rate(DFLOAT winner, DFLOAT loser)
+{
+    DFLOAT t;
 
     t = ((RATE_SIZE / 2) * RATE_RANGE) / (ABS(loser - winner) + RATE_RANGE);
     if (loser > winner)
@@ -79,12 +122,15 @@ int Rate(int winner, int loser)
  * made negative, since you shouldn't gain points by killing team members,
  * or being killed by a team member (it is both players faults).
  *
- * BD 28-4-98: Same for killing your own tank.
+ * KK 28-4-98: Same for killing your own tank.
+ * KK 7-11-1: And for killing a member of your alliance
  */
-void Score_players(int winner, int winner_score, char *winner_msg,
-		   int loser, int loser_score, char *loser_msg)
+void Score_players(int winner, DFLOAT winner_score, char *winner_msg,
+		   int loser, DFLOAT loser_score, char *loser_msg)
 {
     if (TEAM(winner, loser)
+	|| (Players[winner]->alliance != ALLIANCE_NOT_SET
+	    && Players[winner]->alliance == Players[loser]->alliance)
 	|| (IS_TANK_IND(loser)
 	    && GetInd[Players[loser]->lock.pl_id] == winner)) {
 	if (winner_score > 0)
@@ -93,8 +139,8 @@ void Score_players(int winner, int winner_score, char *winner_msg,
 	    loser_score = -loser_score;
     }
     SCORE(winner, winner_score,
-	  OBJ_X_IN_BLOCKS(Players[winner]),
-	  OBJ_Y_IN_BLOCKS(Players[winner]),
+	  OBJ_X_IN_BLOCKS(Players[loser]),
+	  OBJ_Y_IN_BLOCKS(Players[loser]),
 	  winner_msg);
     SCORE(loser, loser_score,
 	  OBJ_X_IN_BLOCKS(Players[loser]),

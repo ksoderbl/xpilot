@@ -1,4 +1,4 @@
-/* $Id: query.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
+/* $Id: query.c,v 5.4 2001/12/27 15:28:18 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -217,7 +217,9 @@ int Query_all(sock_t *sock, int port, char *msg, int msglen)
     return Query_fudged(sock, port, msg, msglen);
 #else
 
-    int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
+    int         	fd, len, ifflags, count = 0;
+    /* int			broadcasts = 0; */
+    int			haslb = 0;
     struct sockaddr_in	addr, mask, loopback;
     struct ifconf	ifconf;
     struct ifreq	*ifreqp, ifreq, ifbuf[MAX_INTERFACE];
@@ -343,10 +345,10 @@ int Query_all(sock_t *sock, int port, char *msg, int msglen)
 		 * Success!
 		 */
 		count++;
-		if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
+		/* if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
 		    == IFF_BROADCAST) {
 		    broadcasts++;
-		}
+		} */
 		continue;
 	    }
 
@@ -383,13 +385,24 @@ int Query_all(sock_t *sock, int port, char *msg, int msglen)
 	addr.sin_port = htons(port);
 	if (Query_subnet(sock, &addr, &mask, msg, msglen) != -1) {
 	    count++;
-	    broadcasts++;
+	    /* broadcasts++; */
 	}
     }
 
-    if (broadcasts == 0 && haslb) {
+    /*
+     * Normally we wouldn't send a query over the loopback interface
+     * if we successfully have sent one or more broadcast queries,
+     * but it happens that some Linux machines which have firewalling
+     * packet filters installed don't copy outgoing broadcast packets
+     * to their local sockets.  Therefore we now always also send
+     * one query to the loopback address just to be sure we reach
+     * our own server.  That we now may receive two or more replies
+     * from the same server is not as serious as not receiving any
+     * reply would be.
+     */
+    if (haslb /* && broadcasts == 0 */) {
 	/*
-	 * We didn't reach the localhost yet.
+	 * We may not have reached the localhost yet.
 	 */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_addr = loopback.sin_addr;

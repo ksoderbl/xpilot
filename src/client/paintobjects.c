@@ -1,4 +1,4 @@
-/* $Id: paintobjects.c,v 5.4 2001/06/03 13:33:33 bertg Exp $
+/* $Id: paintobjects.c,v 5.5 2002/01/18 22:34:25 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -60,6 +60,7 @@
 #include "protoclient.h"
 #include "portability.h"
 #include "guiobjects.h"
+#include "guimap.h"
 #include "gfx3d.h"
 #include "blockbitmaps.h" /* can go away if Paint_item_symbol is moved to gui_objects.c */
 #include "wreckshape.h"
@@ -370,7 +371,24 @@ static void Paint_asteroids(void)
 	RELEASE(asteroid_ptr, num_asteroids, max_asteroids);
     }
 }
-		    
+
+
+static void Paint_wormholes(void)
+{
+    int		i, x, y;
+
+    if ( num_wormholes > 0) {
+	for (i = 0; i < num_wormholes; i++) {
+	    x = wormhole_ptr[i].x;
+	    y = wormhole_ptr[i].y;
+	    if (wrap(&x, &y)) {
+		Gui_paint_setup_worm(x, y, loops & 7);
+	    }
+	}
+	RELEASE(wormhole_ptr, num_wormholes, max_wormholes);
+    }
+}
+
 
 static void Paint_missiles(void)
 {
@@ -484,6 +502,7 @@ void Paint_shots(void)
 
     Paint_wreckages();
     Paint_asteroids();
+    Paint_wormholes();
 
     for (i = 0; i < max_; i++) {
 	t_ = i + DEBRIS_TYPES;

@@ -1,4 +1,4 @@
-/* $Id: command.c,v 5.5 2001/05/26 22:29:57 bertg Exp $
+/* $Id: command.c,v 5.20 2002/01/23 09:12:57 kimiko Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -38,12 +38,13 @@
 
 #define SERVER
 #include "version.h"
-#include "const.h"
+#include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "error.h"
 #include "netserver.h"
 #include "commonproto.h"
+#include "score.h"
 
 
 char command_version[] = VERSION;
@@ -101,7 +102,7 @@ static void Send_info_about_player(player * pl)
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, pl->id);
 	    Send_score(Players[i]->conn, pl->id, pl->score, pl->life,
-		       pl->mychar);
+		       pl->mychar, pl->alliance);
 	    Send_base(Players[i]->conn, pl->id, pl->home_base);
 	}
     }
@@ -116,6 +117,7 @@ static void Send_info_about_player(player * pl)
 
 static int Cmd_help(char *arg, player *pl, int oper, char *msg);
 static int Cmd_team(char *arg, player *pl, int oper, char *msg);
+static int Cmd_ally(char *arg, player *pl, int oper, char *msg);
 static int Cmd_version(char *arg, player *pl, int oper, char *msg);
 static int Cmd_lock(char *arg, player *pl, int oper, char *msg);
 static int Cmd_password(char *arg, player *pl, int oper, char *msg);
@@ -137,14 +139,25 @@ typedef struct {
 } Command_info;
 
 
+/*
+ * A list of all the commands sorted alphabetically.
+ */
 static Command_info commands[] = {
     {
 	"advance",
-	"adv",
+	"ad",
 	"/advance <name of player in the queue>. "
 	"Move the player to the front of the queue.  (operator)",
 	1,
 	Cmd_advance
+    },
+    {
+	"ally",
+	"al",
+	"/ally {invite|cancel|refuse|accept|leave|list} [<player name>]. "
+	"Manages alliances and invitations for them.",
+	0,
+	Cmd_ally
     },
     {
 	"get",
@@ -206,7 +219,7 @@ static Command_info commands[] = {
     },
     {
 	"set",
-	"set",
+	"s",
 	"/set <option> <value>.  Sets a server option.  (operator)",
 	1,
 	Cmd_set
@@ -300,7 +313,7 @@ void Handle_player_command(player *pl, char *cmd)
     }
 
     if (msg[0]) {
-	sprintf(msg + strlen(msg), " [*Server reply*]");
+	strlcat(msg, " [*Server reply*]", sizeof(msg));
 	Set_player_message(pl, msg);
     }
 }
@@ -399,8 +412,12 @@ static int Cmd_team(char *arg, player *pl, int oper, char *msg)
 	Detach_ball(GetInd[pl->id], -1);
     }
     World.teams[pl->team].NumMembers--;
+    if (teamShareScore)
+	TEAM_SCORE(pl->team, 0);
     pl->team = team;
     World.teams[pl->team].NumMembers++;
+    if (teamShareScore)
+	TEAM_SCORE(pl->team, 0);
     if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    if (!TEAM(ind, i) && !BIT(Players[i]->status, PAUSE)) {
@@ -423,6 +440,110 @@ static int Cmd_team(char *arg, player *pl, int oper, char *msg)
     return CMD_RESULT_SUCCESS;
 }
 
+static int Cmd_ally(char *arg, player *pl, int oper, char *msg)
+{
+    char		*command;
+    int			result = CMD_RESULT_SUCCESS;
+    static const char	usage[] = "Usage: "
+			"/ally {invite|cancel|refuse|accept|leave|list} "
+			"[<player name>]";
+    static const char *cmds[] = {
+	"invite",
+	"cancel",
+	"refuse",
+	"accept",
+	"leave",
+	"list",
+    };
+    enum AllyCmds {
+	AllyInvite  = 0,
+	AllyCancel  = 1,
+	AllyRefuse  = 2,
+	AllyAccept  = 3,
+	AllyLeave   = 4,
+	AllyList    = 5,
+	NumAllyCmds = 6,
+    };
+    int			i, cmd;
+
+    if (!BIT(World.rules->mode, ALLIANCES)) {
+	strlcpy(msg, "Alliances are not allowed.", MSG_LEN);
+	result = CMD_RESULT_ERROR;
+    }
+    else if (!arg || !(command = strtok(arg, " \t"))) {
+	strlcpy(msg, usage, MSG_LEN);
+	result = CMD_RESULT_ERROR;
+    }
+    else {
+	if ((arg = strtok(NULL, "")) != NULL) {
+	    while (*arg == ' ') {
+		++arg;
+	    }
+	}
+	cmd = -1;
+	for (i = 0; i < NumAllyCmds; i++) {
+	    if (!strncasecmp(cmds[i], command, strlen(command))) {
+		cmd = (cmd == -1) ? i : (-2);
+	    }
+	}
+	if (cmd < 0) {
+	    strlcpy(msg, usage, MSG_LEN);
+	    result = CMD_RESULT_ERROR;
+	}
+	else if (arg) {
+	    /* a name is specified */
+	    int i = Get_player_index_by_name(arg);
+	    if (i >= 0) {
+		if (cmd == AllyInvite) {
+		    Invite_player(GetInd[pl->id], i);
+		}
+		else if (cmd == AllyRefuse) {
+		    Refuse_alliance(GetInd[pl->id], i);
+		}
+		else if (cmd == AllyAccept) {
+		    Accept_alliance(GetInd[pl->id], i);
+		}
+		else {
+		    strlcpy(msg, usage, MSG_LEN);
+		    result = CMD_RESULT_ERROR;
+		}
+	    } else {
+		if (i == -1) {
+		    sprintf(msg, "Name does not match any player.");
+		}
+		else if (i == -2) {
+		    sprintf(msg, "Name matches several players.");
+		}
+		else {
+		    sprintf(msg, "Error.");
+		}
+		result = CMD_RESULT_ERROR;
+	    }
+	} else {
+	    /* no player name is specified */
+	    if (cmd == AllyCancel) {
+		Cancel_invitation(GetInd[pl->id]);
+	    }
+	    else if (cmd == AllyRefuse) {
+		Refuse_all_alliances(GetInd[pl->id]);
+	    }
+	    else if (cmd == AllyAccept) {
+		Accept_all_alliances(GetInd[pl->id]);
+	    }
+	    else if (cmd == AllyLeave) {
+		Leave_alliance(GetInd[pl->id]);
+	    }
+	    else if (cmd == AllyList) {
+		Alliance_player_list(GetInd[pl->id]);
+	    }
+	    else {
+		strlcpy(msg, usage, MSG_LEN);
+		result = CMD_RESULT_ERROR;
+	    }
+	}
+    }
+    return result;
+}
 
 static int Cmd_kick(char *arg, player *pl, int oper, char *msg)
 {
@@ -482,23 +603,6 @@ static int Cmd_help(char *arg, player *pl, int oper, char *msg)
     int			i;
 
     if (!*arg) {
-/*
-	strcpy(msg, "Commands: "
-		    "advance "
-		    "addr "
-		    "get "
-		    "help "
-		    "kick "
-		    "lock "
-		    "password "
-		    "pause "
-		    "queue "
-		    "reset "
-		    "set "
-		    "team "
-		    "version "
-	      );
-*/
 	strcpy(msg, "Commands: ");
 	for(i = 0; i < NELEM(commands); i++) {
 	    strcat(msg, commands[i].name);
@@ -535,6 +639,9 @@ static int Cmd_reset(char *arg, player *pl, int oper, char *msg)
     if (arg && !strcasecmp(arg, "all")) {
 	for (i = NumPlayers - 1; i >= 0; i--) {
 	    Players[i]->score = 0;
+	}
+	for (i = 0; i < MAX_TEAMS; i++) {
+	    World.teams[i].score = 0;
 	}
 	Reset_all_players();
 	if (gameDuration == -1) {
@@ -646,7 +753,7 @@ static int Cmd_set(char *arg, player *pl, int oper, char *msg)
 	    sprintf(msg, "Operation successful.");
 	else {
 	    char value[MAX_CHARS];
-	    Get_option_value(option, value);
+	    Get_option_value(option, value, sizeof(value));
 	    sprintf(msg, " < Option %s set to %s by %s. >",
 		    option, value, pl->name);
 	    Set_message(msg);
@@ -706,7 +813,7 @@ static int Cmd_pause(char *arg, player *pl, int oper, char *msg)
 
 static int Cmd_get(char *arg, player *pl, int oper, char *msg)
 {
-    char *value;
+    char value[MAX_CHARS];
     int i;
 
     if (!arg || !*arg) {
@@ -719,17 +826,12 @@ static int Cmd_get(char *arg, player *pl, int oper, char *msg)
 	strcpy(msg, "Cannot retrieve that option.");
 	return CMD_RESULT_ERROR;
     }
-    if (!(value = malloc(MAX_CHARS))) {
-	strcpy(msg, "Out of memory.");
-	return CMD_RESULT_ERROR;
-    }
 
-    i = Get_option_value(arg, value);
+    i = Get_option_value(arg, value, sizeof(value));
 
     switch (i) {
     case 1:
 	sprintf(msg, "The value of %s is %s.", arg, value);
-	free(value);
 	return CMD_RESULT_SUCCESS;
     case -2:
 	sprintf(msg, "No option named %s.", arg);
@@ -739,43 +841,6 @@ static int Cmd_get(char *arg, player *pl, int oper, char *msg)
 	break;
     }
 
-    free(value);
-
     return CMD_RESULT_ERROR;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

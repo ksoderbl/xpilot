@@ -23,7 +23,7 @@
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
  *
- * $Id: help.c,v 5.1 2001/05/20 19:16:39 millerjl Exp $
+ * $Id: help.c,v 5.2 2002/02/26 00:41:18 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -31,7 +31,7 @@
 Window                   helpwin;
 int                      helppage=0, helpsel, helpscreens=3;
 
-char                     *iconlabel[35] = {
+char                     *iconlabel[36] = {
    "Space"   , 
    "Block"   , "Block" , "Block" , "Block" , "Block", 
    "Decor"   , "Decor" , "Decor" , "Decor" , "Decor",
@@ -43,10 +43,10 @@ char                     *iconlabel[35] = {
    "Positive Gravity" , "Negative Gravity",
    "Current" , "Current" , "Current" , "Current" ,
    "Base" , "Base Facing" ,
-   "Empty (space)", "Empty Treasure", "Friction"
+   "Empty (space)", "Empty Treasure", "Friction", "Asteroid Concentrator"
    };
 
-char                     iconhelp[35] = {
+char                     iconhelp[36] = {
 ' ',
 MAP_FILLED   , MAP_REC_RD   , MAP_REC_LD   , MAP_REC_RU   , MAP_REC_LU   ,
 MAP_DEC_FLD  , MAP_DEC_RD , MAP_DEC_LD , MAP_DEC_RU , MAP_DEC_LU ,
@@ -58,7 +58,7 @@ MAP_WORM_NORMAL , MAP_WORM_IN , MAP_WORM_OUT,
 MAP_GRAV_POS , MAP_GRAV_NEG,
 MAP_CRNT_UP , MAP_CRNT_LT , MAP_CRNT_RT , MAP_CRNT_DN,
 MAP_BASE , MAP_BASE_ORNT ,
-MAP_SPACE, MAP_EMPTY_TREASURE, MAP_FRICTION
+MAP_SPACE, MAP_EMPTY_TREASURE, MAP_FRICTION, MAP_ASTEROID_CONC
 };
 
 
@@ -217,7 +217,7 @@ void DrawHelpWin(void)
                        mapicon_ptr[iconmenu[sel]-32],w-7);
             }
          }
-         for (i=0;i<34;i++) {
+         for (i=0;i<35;i++) {
             j = i/12;
             DrawMapPic(helpwin,(int) 10+j*((HELP_WIDTH-30)/3),
                  (int)(30+(HELP_WIDTH*.17/5+10)*(i-j*12))+(HELP_WIDTH*.5/5*4),
