@@ -25,8 +25,18 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.15 1993/10/01 20:47:15 bjoerns Exp $
+ * RCS:      $Id: socklib.c,v 3.17 1993/10/24 22:33:09 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.17  1993/10/24  22:33:09  bert
+ * Changed a __FILE__ expression to "socklib.c" as Suns don't seem to support
+ * the __FILE__ construct.  Sigh.
+ * Added a DgramReply() routine, not used yet.
+ *
+ * Revision 3.16  1993/10/21  11:08:54  bert
+ * VMS patch from Curt Hjorring.
+ * Removed Optimize_map() from the server.
+ * Made toggleShield a new client option.
+ *
  * Revision 3.15  1993/10/01  20:47:15  bjoerns
  * Added Thrusted Solaris CMW 1.0 patch by Steve Marsden.
  *
@@ -384,27 +394,40 @@ static char sourceid[] =
 #define _SOCKLIB_LIBSOURCE
 
 /* Include files */
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#include <ucx$inetdef.h>
+#else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#endif
 #if (SVR4)
 #include <sys/filio.h>
 #endif
 #if (_SEQUENT_)
 #include <sys/fcntl.h>
-#else
+#elif !defined(VMS)
 #include <fcntl.h>
 #endif
-#if (__hpux)
+#if defined(__hpux) || defined(VMS)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
+#ifdef VMS
+#include <socket.h>
+#include <in.h>
+#include <tcp.h>
+#include <inet.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -418,6 +441,7 @@ static char sourceid[] =
 
 /* Socklib Includes And Definitions */
 #include "socklib.h"
+#include "error.h"
 #include "types.h"
 #ifdef SUNCMW
 #include "cmw.h"
@@ -439,9 +463,6 @@ static char sourceid[] =
 
 /* Default retry value of sl_default_retries */
 #define DEFAULT_RETRIES			5
-
-/* External references */
-extern int 		errno;
 
 /* Environment buffer for setjmp and longjmp */
 static			jmp_buf env;
@@ -665,9 +686,9 @@ int	fd;
  */
 int 
 #ifdef __STDC__
-GetPeerName(int fd, char *name, int namelen)
+SLGetPeerName(int fd, char *name, int namelen)
 #else
-GetPeerName(fd, name, namelen)
+SLGetPeerName(fd, name, namelen)
 int	fd;
 char	*name;
 int	namelen;
@@ -1062,7 +1083,7 @@ int	flag;
     i = ioctl(fd, FIONBIO, &flag);
 #if defined(__sun__)
     if (i < 0) {
-	error("Check out file %s at line number %d", __FILE__, __LINE__);
+	error("Check out file %s at line number %d", "socklib.c", __LINE__);
 	/*
 	 * Some Suns have problems getting ioctl(FIONBIO) to work.
 	 * This is almost certain due to not having run fixincludes
@@ -1166,6 +1187,9 @@ int	fd;
     int			readfds;
     struct timeval	timeout;
 
+#ifndef timerclear
+#define timerclear(tvp)   (tvp)->tv_sec = (tvp)->tv_usec = 0
+#endif
     timerclear(&timeout); /* macro function */
     timeout.tv_sec = sl_timeout_s;
     timeout.tv_usec = sl_timeout_us;
@@ -1744,6 +1768,57 @@ char	*from, *rbuf;
     }
     return (retval);
 } /* DgramReceive */
+
+
+/*
+ *******************************************************************************
+ *
+ *	DgramReply()
+ *
+ *******************************************************************************
+ * Description
+ *	Transmits a UDP/IP datagram to the host/port the most recent datagram
+ *	was received from.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor.
+ *	host		- Pointer to string containing destination host name.
+ *	size		- Message size.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	The number of bytes sent or -1 if any errors occured.
+ *
+ * Globals Referenced
+ *	sl_dgram_lastaddr
+ *
+ * External Calls
+ *	sendto
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+int
+#ifdef __STDC__
+DgramReply(int fd, char *sbuf, int size)
+#else
+DgramReply(fd, sbuf, size)
+int	fd, size;
+char	*sbuf;
+#endif /* __STDC__ */
+{
+    int			retval;
+
+    cmw_priv_assert_netaccess();
+    retval = sendto(fd, sbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
+		   sizeof(struct sockaddr_in));
+    cmw_priv_deassert_netaccess();
+    return retval;
+} /* DgramReply */
 
 
 /*

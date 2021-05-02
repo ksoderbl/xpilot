@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.22 1993/09/18 15:05:27 bert Exp $
+/* $Id: cmdline.c,v 3.23 1993/10/21 10:12:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 /* Options parsing code contributed by Ted Lemon <mellon@ncd.com> */
 
+#define SERVER
 #include <stdlib.h>
 #include "global.h"
 #include "robot.h"
@@ -30,7 +31,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.22 1993/09/18 15:05:27 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.23 1993/10/21 10:12:26 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */

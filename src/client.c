@@ -1,4 +1,4 @@
-/* $Id: client.c,v 3.38 1993/10/02 00:36:07 bjoerns Exp $
+/* $Id: client.c,v 3.44 1993/10/24 22:12:17 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -25,11 +25,16 @@
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
-#if defined(__hpux)
+#if defined(__hpux) || defined(VMS)
 #include <time.h>
 #else
 #include <sys/time.h>
@@ -99,6 +104,7 @@ float	turnspeed_s;		/* Saved turnspeed */
 float	turnresistance;		/* How much is lost in % */
 float	turnresistance_s;	/* Saved (see above) */
 float	spark_prob;		/* Sparkling effect user configurable */
+int	charsPerSecond;		/* Message output speed (configurable) */
 
 float	hud_move_fact;		/* scale the hud-movement (speed) */
 float	ptr_move_fact;		/* scale the speed pointer length */
@@ -114,6 +120,8 @@ char	name[MAX_CHARS];	/* Nick-name of player */
 char	realname[MAX_CHARS];	/* Real name of player */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
+int	toggle_shield;		/* Are shields toggled by a press? */
+int	shields;		/* When shields are considered up */
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -145,12 +153,21 @@ int			score_object = 0;
 
 static fuelstation_t *Fuelstation_by_pos(int x, int y)
 {
-    int			i;
+    int			i, l, h, pos;
 
-    for (i = 0; i < num_fuels; i++) {
-	if (fuels[i].x == x && fuels[i].y == y) {
-	    return &fuels[i];
+    l = 0;
+    h = num_fuels - 1;
+    pos = x * Setup->y + y;
+    while (l < h) {
+	i = (l + h) >> 1;
+	if (pos > fuels[i].pos) {
+	    l = i + 1;
+	} else {
+	    h = i;
 	}
+    }
+    if (l == h && pos == fuels[l].pos) {
+	return &fuels[l];
     }
     error("No fuelstation at (%d,%d)", x, y);
     return NULL;
@@ -168,13 +185,22 @@ int Fuel_by_pos(int x, int y)
 
 int Target_alive(int x, int y, int *damage)
 {
-    int 	i;
+    int 		i, l, h, pos;
 
-    for (i = 0; i < num_targets; i++) {
-	if (targets[i].x == x && targets[i].y == y) {
-	    *damage = targets[i].damage;
-	    return targets[i].dead_time;
+    l = 0;
+    h = num_targets - 1;
+    pos = x * Setup->y + y;
+    while (l < h) {
+	i = (l + h) >> 1;
+	if (pos > targets[i].pos) {
+	    l = i + 1;
+	} else {
+	    h = i;
 	}
+    }
+    if (l == h && pos == targets[l].pos) {
+	*damage = targets[l].damage;
+	return targets[l].dead_time;
     }
     error("No targets at (%d,%d)", x, y);
     return -1;
@@ -193,24 +219,34 @@ int Handle_fuel(int ind, int fuel)
 
 static cannontime_t *Cannon_by_pos(int x, int y)
 {
-    int			i;
+    int			i, l, h, pos;
 
-    for (i = 0; i < num_cannons; i++) {
-	if (cannons[i].x == x && cannons[i].y == y) {
-	    return &cannons[i];
+    l = 0;
+    h = num_cannons - 1;
+    pos = x * Setup->y + y;
+    while (l < h) {
+	i = (l + h) >> 1;
+	if (pos > cannons[i].pos) {
+	    l = i + 1;
+	} else {
+	    h = i;
 	}
+    }
+    if (l == h && pos == cannons[l].pos) {
+	return &cannons[l];
     }
     error("No cannon at (%d,%d)", x, y);
     return NULL;
 }
 
-int Cannon_dead_time_by_pos(int x, int y)
+int Cannon_dead_time_by_pos(int x, int y, int *dot)
 {
     cannontime_t	*cannonp;
 
     if ((cannonp = Cannon_by_pos(x, y)) == NULL) {
 	return -1;
     }
+    *dot = cannonp->dot;
     return cannonp->dead_time;
 }
 
@@ -244,35 +280,36 @@ int Handle_target(int num, int dead_time, int damage)
 
 static homebase_t *Homebase_by_pos(int x, int y)
 {
-    int			i;
+    int			i, l, h, pos;
 
-    for (i = 0; i < num_bases; i++) {
-	if (bases[i].x == x && bases[i].y == y) {
-	    return &bases[i];
+    l = 0;
+    h = num_bases - 1;
+    pos = x * Setup->y + y;
+    while (l < h) {
+	i = (l + h) >> 1;
+	if (pos > bases[i].pos) {
+	    l = i + 1;
+	} else {
+	    h = i;
 	}
+    }
+    if (l == h && pos == bases[l].pos) {
+	return &bases[l];
     }
     error("No homebase at (%d,%d)", x, y);
     return NULL;
 }
 
-int Base_team_by_pos(int x, int y)
-{
-    homebase_t	*basep;
-
-    if ((basep = Homebase_by_pos(x, y)) == NULL) {
-	return 0;
-    }
-    return basep->team;
-}
-
-int Base_id_by_pos(int x, int y)
+int Base_info_by_pos(int x, int y, int *idp, int *teamp)
 {
     homebase_t	*basep;
 
     if ((basep = Homebase_by_pos(x, y)) == NULL) {
 	return -1;
     }
-    return basep->id;
+    *idp = basep->id;
+    *teamp = basep->team;
+    return 0;
 }
 
 int Handle_base(int id, int ind)
@@ -303,18 +340,18 @@ int Check_pos_by_index(int ind, int *xp, int *yp)
 	*yp = 0;
 	return -1;
     }
-    *xp = checks[ind].x;
-    *yp = checks[ind].y;
+    *xp = checks[ind].pos / Setup->y;
+    *yp = checks[ind].pos % Setup->y;
     return 0;
 }
 
 int Check_index_by_pos(int x, int y)
 {
-    int			i;
+    int			i, pos;
 
+    pos = x * Setup->y + y;
     for (i = 0; i < MAX_CHECKPOINT; i++) {
-	if (x == checks[i].x
-	    && y == checks[i].y) {
+	if (pos == checks[i].pos) {
 	    return i;
 	}
     }
@@ -323,6 +360,7 @@ int Check_index_by_pos(int x, int y)
     return 0;
 }
 
+#if 0
 /*
  * Sets as many blocks as possible to FILLED_NO_DRAW.
  * You won't notice any difference. :)
@@ -380,13 +418,295 @@ static void Map_optimize(void)
 	}
     }
 }
+#endif
+
+/*
+ * Optimise the drawing of all blue space dots by converting
+ * certain map objects into a specialised form of their type.
+ */
+void Map_dots(void)
+{
+    int			i,
+			x,
+			y,
+			start;
+
+    /*
+     * Restore the map to unoptimised form.
+     */
+    for (i = Setup->x * Setup->y; i-- > 0; ) {
+	if (Setup->map_data[i] == SETUP_SPACE_DOT) {
+	    Setup->map_data[i] = SETUP_SPACE;
+	}
+    }
+
+    /*
+     * Optimise.
+     */
+    if (map_point_size > 0) {
+	if (BIT(Setup->mode, WRAP_PLAY)) {
+	    for (x = 0; x < Setup->x; x++) {
+		if (Setup->map_data[x * Setup->y] == SETUP_SPACE) {
+		    Setup->map_data[x * Setup->y] = SETUP_SPACE_DOT;
+		}
+	    }
+	    for (y = 0; y < Setup->y; y++) {
+		if (Setup->map_data[y] == SETUP_SPACE) {
+		    Setup->map_data[y] = SETUP_SPACE_DOT;
+		}
+	    }
+	    start = map_point_distance;
+	} else {
+	    start = 0;
+	}
+	if (map_point_distance > 0) {
+	    for (x = start; x < Setup->x; x += map_point_distance) {
+		for (y = start; y < Setup->y; y += map_point_distance) {
+		    if (Setup->map_data[x * Setup->y + y] == SETUP_SPACE) {
+			Setup->map_data[x * Setup->y + y] = SETUP_SPACE_DOT;
+		    }
+		}
+	    }
+	}
+	for (i = 0; i < num_cannons; i++) {
+	    x = cannons[i].pos / Setup->y;
+	    y = cannons[i].pos % Setup->y;
+	    if ((x == 0 || y == 0) && BIT(Setup->mode, WRAP_PLAY)) {
+		cannons[i].dot = 1;
+	    }
+	    else if (map_point_distance > 0
+		&& x % map_point_distance == 0
+		&& y % map_point_distance == 0) {
+		cannons[i].dot = 1;
+	    } else {
+		cannons[i].dot = 0;
+	    }
+	}
+    }
+}
+
+/*
+ * Optimise the drawing of all blue map objects by converting
+ * their map type to a bitmask with bits for each blue segment.
+ */
+void Map_blue(void)
+{
+    int			i,
+			x,
+			y,
+			type,
+			newtype;
+    unsigned char	blue[256];
+
+    /*
+     * Restore an optimised map to its original unoptimised state.
+     */
+    for (x = i = 0; x < Setup->x; x++) {
+	for (y = 0; y < Setup->y; y++, i++) {
+	    type = Setup->map_data[i];
+	    if ((type & BLUE_BIT) == 0) {
+		if (type == SETUP_FILLED_NO_DRAW) {
+		    Setup->map_data[i] = SETUP_FILLED;
+		}
+	    }
+	    else if ((type & BLUE_FUEL) == BLUE_FUEL) {
+		Setup->map_data[i] = SETUP_FUEL;
+	    }
+	    else if (type & BLUE_OPEN) {
+		if (type & BLUE_BELOW) {
+		    Setup->map_data[i] = SETUP_REC_RD;
+		} else {
+		    Setup->map_data[i] = SETUP_REC_LU;
+		}
+	    }
+	    else if (type & BLUE_CLOSED) {
+		if (type & BLUE_BELOW) {
+		    Setup->map_data[i] = SETUP_REC_LD;
+		} else {
+		    Setup->map_data[i] = SETUP_REC_RU;
+		}
+	    } else {
+		Setup->map_data[i] = SETUP_FILLED;
+	    }
+	}
+    }
+
+    /*
+     * Optimise the map for blue.
+     */
+    memset(blue, 0, sizeof blue);
+    blue[SETUP_FILLED] = BLUE_LEFT | BLUE_UP | BLUE_RIGHT | BLUE_DOWN;
+    blue[SETUP_FILLED_NO_DRAW] = blue[SETUP_FILLED];
+    blue[SETUP_FUEL] = blue[SETUP_FILLED];
+    blue[SETUP_REC_RU] = BLUE_RIGHT | BLUE_UP;
+    blue[SETUP_REC_RD] = BLUE_RIGHT | BLUE_DOWN;
+    blue[SETUP_REC_LU] = BLUE_LEFT | BLUE_UP;
+    blue[SETUP_REC_LD] = BLUE_LEFT | BLUE_DOWN;
+    blue[BLUE_BIT|BLUE_OPEN] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_LEFT] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_UP] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_LEFT|BLUE_UP] =
+	blue[SETUP_REC_LU];
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_BELOW] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_BELOW|BLUE_RIGHT] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_BELOW|BLUE_DOWN] =
+    blue[BLUE_BIT|BLUE_OPEN|BLUE_BELOW|BLUE_RIGHT|BLUE_DOWN] =
+	blue[SETUP_REC_RD];
+    blue[BLUE_BIT|BLUE_CLOSED] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_RIGHT] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_UP] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_RIGHT|BLUE_UP] =
+	blue[SETUP_REC_RU];
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_BELOW] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_BELOW|BLUE_LEFT] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_BELOW|BLUE_DOWN] =
+    blue[BLUE_BIT|BLUE_CLOSED|BLUE_BELOW|BLUE_LEFT|BLUE_DOWN] =
+	blue[SETUP_REC_LD];
+    for (i = BLUE_BIT; i < sizeof blue; i++) {
+	if ((i & BLUE_FUEL) == BLUE_FUEL
+	    || (i & (BLUE_OPEN|BLUE_CLOSED)) == 0) {
+	    blue[i] = blue[SETUP_FILLED];
+	}
+    }
+    for (x = i = 0; x < Setup->x; x++) {
+	for (y = 0; y < Setup->y; y++, i++) {
+	    type = Setup->map_data[i];
+	    newtype = 0;
+	    switch (type) {
+	    case SETUP_FILLED:
+	    case SETUP_FILLED_NO_DRAW:
+	    case SETUP_FUEL:
+		newtype = BLUE_BIT;
+		if (type == SETUP_FUEL) {
+		    newtype |= BLUE_FUEL;
+		}
+		if ((x == 0)
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + y]]
+			    & BLUE_RIGHT))
+		    : !(blue[Setup->map_data[(x - 1) * Setup->y + y]]
+			& BLUE_RIGHT))
+		    newtype |= BLUE_LEFT;
+		if ((y == 0)
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[x * Setup->y + Setup->y - 1]]
+			    & BLUE_UP))
+		    : !(blue[Setup->map_data[x * Setup->y + (y - 1)]]
+			& BLUE_UP))
+		    newtype |= BLUE_DOWN;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((x == Setup->x - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[y]]
+				& BLUE_LEFT))
+			: !(blue[Setup->map_data[(x + 1) * Setup->y + y]]
+			    & BLUE_LEFT)))
+		    newtype |= BLUE_RIGHT;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((y == Setup->y - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[x * Setup->y]]
+				& BLUE_DOWN))
+			: !(blue[Setup->map_data[x * Setup->y + (y + 1)]]
+			    & BLUE_DOWN)))
+		    newtype |= BLUE_UP;
+		break;
+		
+	    case SETUP_REC_LU:
+		newtype = BLUE_BIT | BLUE_OPEN;
+		if (x == 0
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + y]]
+			    & BLUE_RIGHT))
+		    : !(blue[Setup->map_data[(x - 1) * Setup->y + y]]
+			& BLUE_RIGHT))
+		    newtype |= BLUE_LEFT;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((y == Setup->y - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[x * Setup->y]]
+				& BLUE_DOWN))
+			: !(blue[Setup->map_data[x * Setup->y + (y + 1)]]
+			    & BLUE_DOWN)))
+		    newtype |= BLUE_UP;
+		break;
+		
+	    case SETUP_REC_RU:
+		newtype = BLUE_BIT | BLUE_CLOSED;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((x == Setup->x - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[y]]
+				& BLUE_LEFT))
+			: !(blue[Setup->map_data[(x + 1) * Setup->y + y]]
+			    & BLUE_LEFT)))
+		    newtype |= BLUE_RIGHT;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((y == Setup->y - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[x * Setup->y]]
+				& BLUE_DOWN))
+			: !(blue[Setup->map_data[x * Setup->y + (y + 1)]]
+			    & BLUE_DOWN)))
+		    newtype |= BLUE_UP;
+		break;
+		
+	    case SETUP_REC_LD:
+		newtype = BLUE_BIT | BLUE_BELOW | BLUE_CLOSED;
+		if ((x == 0)
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + y]]
+			    & BLUE_RIGHT))
+		    : !(blue[Setup->map_data[(x - 1) * Setup->y + y]]
+			& BLUE_RIGHT))
+		    newtype |= BLUE_LEFT;
+		if ((y == 0)
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[x * Setup->y + Setup->y - 1]]
+			    & BLUE_UP))
+		    : !(blue[Setup->map_data[x * Setup->y + (y - 1)]]
+			& BLUE_UP))
+		    newtype |= BLUE_DOWN;
+		break;
+		
+	    case SETUP_REC_RD:
+		newtype = BLUE_BIT | BLUE_BELOW | BLUE_OPEN;
+		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		    || ((x == Setup->x - 1)
+			? (!BIT(Setup->mode, WRAP_PLAY)
+			   || !(blue[Setup->map_data[y]]
+				& BLUE_LEFT))
+			: !(blue[Setup->map_data[(x + 1) * Setup->y + y]]
+			    & BLUE_LEFT)))
+		    newtype |= BLUE_RIGHT;
+		if ((y == 0)
+		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
+			!(blue[Setup->map_data[x * Setup->y + Setup->y - 1]]
+			    & BLUE_UP))
+		    : !(blue[Setup->map_data[x * Setup->y + (y - 1)]]
+			& BLUE_UP))
+		    newtype |= BLUE_DOWN;
+		break;
+
+	    default:
+		continue;
+	    }
+	    if (newtype != 0) {
+		if (newtype == BLUE_BIT) {
+		    newtype = SETUP_FILLED_NO_DRAW;
+		}
+		Setup->map_data[i] = newtype;
+	    }
+	}
+    }
+}
 
 static int Map_init(void)
 {
     int			i,
 			max,
 			type;
-    byte	types[256];
+    byte		types[256];
 
     num_fuels = 0;
     num_bases = 0;
@@ -456,35 +776,31 @@ static int Map_init(void)
 	type = Setup->map_data[i];
 	switch (types[type]) {
 	case 1:
-	    fuels[num_fuels].x = i / Setup->y;
-	    fuels[num_fuels].y = i % Setup->y;
+	    fuels[num_fuels].pos = i;
 	    fuels[num_fuels].fuel = MAX_STATION_FUEL;
 	    num_fuels++;
 	    break;
 	case 2:
-	    cannons[num_cannons].x = i / Setup->y;
-	    cannons[num_cannons].y = i % Setup->y;
+	    cannons[num_cannons].pos = i;
 	    cannons[num_cannons].dead_time = 0;
+	    cannons[num_cannons].dot = 0;
 	    num_cannons++;
 	    break;
 	case 3:
-	    targets[num_targets].x = i / Setup->y;
-	    targets[num_targets].y = i % Setup->y;
+	    targets[num_targets].pos = i;
 	    targets[num_targets].dead_time = 0;
 	    targets[num_targets].damage = TARGET_DAMAGE;
 	    num_targets++;
 	    break;
 	case 4:
-	    bases[num_bases].x = i / Setup->y;
-	    bases[num_bases].y = i % Setup->y;
+	    bases[num_bases].pos = i;
 	    bases[num_bases].id = -1;
 	    bases[num_bases].team = type % 10;
 	    num_bases++;
 	    Setup->map_data[i] = type - (type % 10);
 	    break;
 	case 5:
-	    checks[type - SETUP_CHECK].x = i / Setup->y;
-	    checks[type - SETUP_CHECK].y = i % Setup->y;
+	    checks[type - SETUP_CHECK].pos = i;
 	    Setup->map_data[i] = SETUP_CHECK;
 	    break;
 	}
@@ -740,7 +1056,7 @@ void Client_score_table(void)
     other_t		*other,
 			**order;
     int			i, j, k, best = -1;
-    float		ratio, best_ratio;
+    float		ratio, best_ratio = -1e7;
     char		buf[256];
 
     if (scoresChanged == 0) {
@@ -810,7 +1126,8 @@ int Client_setup(void)
     if (Map_init() == -1) {
 	return -1;
     }
-    Map_optimize();
+    Map_dots();
+    Map_blue();
 
     RadarHeight = (int)((256.0/Setup->x) * Setup->y + 0.5);
 

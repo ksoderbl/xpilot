@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 3.13 1993/10/02 00:36:08 bjoerns Exp $
+/* $Id: configure.c,v 3.23 1993/10/31 22:22:39 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,18 +21,57 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * Configure.c: real-time option control.
+ * To add your own option to the XPilot client do the following:
+ * 1: Define storage for the option value in either client.c/paint.c/xinit.c
+ *    or use a bit in the instruments option set (using the SHOW_XXX macros).
+ * 2: Add a declaration for this storage to either client.h/paint.h/xinit.h
+ *    or, in case a bit in instruments is used, add a SHOW_ macro to client.h.
+ * 3: Add an X resource record to the XrmOptionDescRec opts[] table in
+ *    default.c to have it recognised by the X resource manager routines.
+ * 4: Have it set at startup by the Parse_options() routine in default.c.
+ * 5: Add the functionality of your option, probably in the same file
+ *    as the storage for the option was defined in.
+ * 6: Add it to configure.c (this file) as follows:
+ *   a) Determine if it needs either a bool/int/float widget
+ *      and find a similar option from which you can copy code.
+ *   b) Add the Config_create_XXX function prototype at the top of this file.
+ *   c) Add the Config_create_XXX function name to the config_creator[] table.
+ *      The order in this table determines the order of the options on screen.
+ *   d) Define the Config_create_XXX function similar to one of the others.
+ *   e) If it needs a callback when the value changes then add a
+ *      Config_update_XXX() function after the other update callbacks
+ *      and declare a prototype for the callback at the top of this file.
+ *      The Config_update_XXX() function should be given as an argument to
+ *      the Config_create_bool/int/float() creator in Config_create_XXX().
+ *      If the option doesn't need a callback then the calback argument
+ *      should be given as NULL.
+ *   f) Add one line to the Config_save() routine to have the option saved.
+ * 7: Document your option in the manual page for the client.
+ * 8: Mail a context diff of your changes to xpilot@cs.uit.no.
+ */
+
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#include <pwd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <pwd.h>
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#ifdef VMS
+#include "strcasecmp.h"
+#endif
 #include <limits.h>
 
 #include "version.h"
@@ -44,6 +83,7 @@
 #include "netclient.h"
 #include "widget.h"
 #include "configure.h"
+#include "setup.h"
 #include "error.h"
 
 #ifndef PATH_MAX
@@ -70,6 +110,8 @@ static int Config_create_slidingRadar(int widget_desc, int *height);
 static int Config_create_backgroundPointDist(int widget_desc, int *height);
 static int Config_create_backgroundPointSize(int widget_desc, int *height);
 static int Config_create_sparkSize(int widget_desc, int *height);
+static int Config_create_charsPerSecond(int widget_desc, int *height);
+static int Config_create_toggleShield(int widget_desc, int *height);
 static int Config_create_sparkProb(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
@@ -81,9 +123,13 @@ static int Config_create_turnSpeedMeter(int widget_desc, int *height);
 static int Config_create_packetSizeMeter(int widget_desc, int *height);
 static int Config_create_packetLossMeter(int widget_desc, int *height);
 static int Config_create_packetDropMeter(int widget_desc, int *height);
+static int Config_create_clock(int widget_desc, int *height);
+static int Config_create_markingLights(int widget_desc, int *height);
 static int Config_create_save(int widget_desc, int *height);
 
+static int Config_update_bool(int widget_desc, void *data, bool *val);
 static int Config_update_instruments(int widget_desc, void *data, bool *val);
+static int Config_update_dots(int widget_desc, void *data, int *val);
 static int Config_update_altPower(int widget_desc, void *data, float *val);
 static int Config_update_altTurnResistance(int widget_desc, void *data,
 					   float *val);
@@ -93,6 +139,8 @@ static int Config_update_turnResistance(int widget_desc, void *data,
 					float *val);
 static int Config_update_turnSpeed(int widget_desc, void *data, float *val);
 static int Config_update_sparkProb(int widget_desc, void *data, float *val);
+static int Config_update_charsPerSecond(int widget_desc, void *data, int *val);
+static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
 
 static int Config_close(int widget_desc, void *data, char **strptr);
 static int Config_next(int widget_desc, void *data, char **strptr);
@@ -153,6 +201,9 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_backgroundPointSize,
     Config_create_sparkSize,
     Config_create_sparkProb,
+    Config_create_charsPerSecond,
+    Config_create_markingLights,
+    Config_create_toggleShield,
 #ifdef SOUND
     Config_create_maxVolume,
 #endif
@@ -163,7 +214,8 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_packetSizeMeter,
     Config_create_packetLossMeter,
     Config_create_packetDropMeter,
-    Config_create_save
+    Config_create_clock,
+    Config_create_save			/* must be last */
 };
 
 static void Create_config(void)
@@ -624,7 +676,7 @@ static int Config_create_backgroundPointDist(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
 			     "backgroundPointDist", &map_point_distance, 0, 10,
-			     NULL, NULL);
+			     Config_update_dots, NULL);
 }
 
 static int Config_create_backgroundPointSize(int widget_desc, int *height)
@@ -632,7 +684,7 @@ static int Config_create_backgroundPointSize(int widget_desc, int *height)
     return Config_create_int(widget_desc, height,
 			     "backgroundPointSize", &map_point_size,
 			     MIN_MAP_POINT_SIZE, MAX_MAP_POINT_SIZE,
-			     NULL, NULL);
+			     Config_update_dots, NULL);
 }
 
 static int Config_create_sparkSize(int widget_desc, int *height)
@@ -649,6 +701,21 @@ static int Config_create_sparkProb(int widget_desc, int *height)
 			       "sparkProb", &spark_prob,
 			       0.0, 1.0,
 			       Config_update_sparkProb, NULL);
+}
+
+static int Config_create_charsPerSecond(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			     "charsPerSecond", &charsPerSecond,
+			     10, 255,
+			     Config_update_charsPerSecond, NULL);
+}
+
+static int Config_create_toggleShield(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "toggleShield",
+			      (toggle_shield) ? true : false,
+			      Config_update_toggleShield, NULL);
 }
 
 #ifdef SOUND
@@ -723,6 +790,23 @@ static int Config_create_packetDropMeter(int widget_desc, int *height)
 			      (void *) SHOW_PACKET_DROP_METER);
 }
 
+static int Config_create_clock(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "clock",
+			      BIT(instruments, SHOW_CLOCK)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_CLOCK);
+}
+
+static int Config_create_markingLights(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "markingLights",
+			      markingLights,
+			      Config_update_bool, &markingLights);
+}
+    
+
 static int Config_create_save(int widget_desc, int *height)
 {
     static char		save_str[] = "Save Configuration";
@@ -751,6 +835,17 @@ static int Config_create_save(int widget_desc, int *height)
     return 1;
 }
 
+/* General purpose update callback for booleans.
+ * Requires that a pointer to the boolean value has been given as
+ * client_data argument, and updates this value to the real value.
+ */
+static int Config_update_bool(int widget_desc, void *data, bool *val)
+{
+    bool*	client_data = data;
+    *client_data = *val;
+}
+
+
 static int Config_update_instruments(int widget_desc, void *data, bool *val)
 {
     if (*val == false) {
@@ -761,6 +856,22 @@ static int Config_update_instruments(int widget_desc, void *data, bool *val)
     if ((long)data == SHOW_SLIDING_RADAR) {
 	Paint_sliding_radar();
     }
+    if ((long)data == SHOW_OUTLINE_WORLD) {
+	Map_blue();
+    }
+    if ((long)data == SHOW_PACKET_DROP_METER
+	|| (long)data == SHOW_PACKET_LOSS_METER) {
+	Net_init_measurement();
+    }
+    return 0;
+}
+
+static int Config_update_dots(int widget_desc, void *data, int *val)
+{
+    if (val == &map_point_size && map_point_size > 1) {
+	return 0;
+    }
+    Map_dots();
     return 0;
 }
 
@@ -806,6 +917,19 @@ static int Config_update_sparkProb(int widget_desc, void *data, float *val)
 {
     spark_rand = (int)(spark_prob * MAX_SPARK_RAND + 0.5f);
     Send_display();
+    return 0;
+}
+
+static int Config_update_charsPerSecond(int widget_desc, void *data, int *val)
+{
+    charsPerTick = (float)charsPerSecond / FPS;
+    Send_display();
+    return 0;
+}
+
+static int Config_update_toggleShield(int widget_desc, void *data, bool *val)
+{
+    Set_toggle_shield(*val != false);
     return 0;
 }
 
@@ -928,6 +1052,9 @@ static void Config_save_bool(FILE *fp, char *resource, int value)
 
 static int Config_save(int widget_desc, void *button_str, char **strptr)
 {
+#ifdef VMS
+    return 1;
+#else
     extern char		*Get_keyResourceString(keys_t key);
     int			i;
     KeySym		ks;
@@ -992,11 +1119,15 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_bool(fp, "packetDropMeter", BIT(instruments, SHOW_PACKET_DROP_METER));
     Config_save_bool(fp, "slidingRadar", BIT(instruments, SHOW_SLIDING_RADAR));
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
+    Config_save_bool(fp, "clock", BIT(instruments, SHOW_CLOCK));
     Config_save_int(fp, "backgroundPointDist", map_point_distance);
     Config_save_int(fp, "backgroundPointSize", map_point_size);
     Config_save_int(fp, "sparkSize", spark_size);
     Config_save_float(fp, "sparkProb", spark_prob);
     Config_save_int(fp, "receiveWindowSize", receive_window_size);
+    Config_save_int(fp, "charsPerSecond", charsPerSecond);
+    Config_save_bool(fp, "markingLights", markingLights);
+    Config_save_bool(fp, "toggleShield", toggle_shield);
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
@@ -1033,6 +1164,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 
     *strptr = (char *) button_str;
     return 1;
+#endif
 }
 
 static int Config_save_confirm_callback(int widget_desc, void *popup_desc, char **strptr)

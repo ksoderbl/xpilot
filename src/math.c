@@ -1,4 +1,4 @@
-/* $Id: math.c,v 3.4 1993/09/13 19:09:41 bjoerns Exp $
+/* $Id: math.c,v 3.5 1993/10/21 10:34:40 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,14 +21,27 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "global.h"
+/*
+ * Actually used by SERVER and CLIENT but define SERVER
+ * so to avoid X11 dependencies for the server
+ */
+#define SERVER
+#include <stdlib.h>
+#include <math.h>
+#include "config.h"
+#include "types.h"
+#include "rules.h"
+#include "object.h"
+#include "map.h"
+#include "draw.h"
+#include "proto.h"
 
 
 #define PTS_IN_SHIP 3
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.4 1993/09/13 19:09:41 bjoerns Exp $";
+    "@(#)$Id: math.c,v 3.5 1993/10/21 10:34:40 bert Exp $";
 #endif
 
 float  	tbl_sin[TABLE_SIZE];

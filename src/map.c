@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.14 1993/10/02 00:36:14 bjoerns Exp $
+/* $Id: map.c,v 3.21 1993/11/02 16:40:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,11 +21,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#ifndef VMS
 #include <sys/stat.h>
+#endif
 
 #include "global.h"
 #include "map.h"
@@ -35,7 +38,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.14 1993/10/02 00:36:14 bjoerns Exp $";
+    "@(#)$Id: map.c,v 3.21 1993/11/02 16:40:21 bert Exp $";
 #endif
 
 
@@ -46,46 +49,6 @@ World_map World;
 
 
 u_short Find_closest_team(int posx, int posy);
-
-
-/*
- * Sets as many blocks as possible to FILLED_NO_DRAW.
- * You won't notice any difference. :)
- */
-void Optimize_map(void)
-{
-    int x, y, type;
-
-
-    for (x=1; x<(World.x-1); x++) {
-        u_byte *line	= World.block[x];
-        u_byte *n_line	= World.block[x+1];
-        u_byte *p_line	= World.block[x-1];
-
-	for (y=1; y<(World.y-1); y++)
-	    if (line[y] == FILLED) {
-		type = line[y-1];
-		if ((type != FILLED) && (type != REC_LU) && (type != REC_RU))
-		    continue;
-
-		type = p_line[y];
-		if ((type != FILLED) && (type != REC_RD) && (type != REC_RU))
-		    continue;
-
-		type = n_line[y];
-		if ((type != FILLED) && (type != REC_LD) && (type != REC_LU))
-		    continue;
-
-		type = line[y+1];
-		if ((type != REC_LD) && (type != REC_RD) && (type != FILLED)) {
-                    y++;
-		    continue;
-                }
-
-		line[y++] = FILLED_NO_DRAW;
-	    }
-    }
-}
 
 
 void Print_map(void)			/* Debugging only. */
@@ -122,7 +85,6 @@ void Init_map(void)
     World.NumBases	= 0;
     World.NumGravs	= 0;
     World.NumCannons	= 0;
-    World.NumBases	= 0;
     World.NumWormholes	= 0;
     World.NumTreasures  = 0;
     World.NumTargets    = 0;
@@ -211,7 +173,6 @@ static void Map_error(int line_num)
 void Grok_map(void)
 {
     int i, x, y, c;
-    bool done_line = false;
     char *s;
 
     Init_map();
@@ -251,7 +212,6 @@ void Grok_map(void)
     while (y >= 0) {
 	    
 	x++;
-	done_line = false;
 
 	if (extraBorder && (x == 0 || x == World.x - 1
 	    || y == 0 || y == World.y - 1)) {
@@ -286,15 +246,13 @@ void Grok_map(void)
 	}
 	if (x >= World.x || c == '\n') {
 	    y--; x = -1;
-	    done_line = true;
 	    if (c != '\n') {			/* Get rest of line */
 		error("Map file contains extranous characters");
 		while (c != '\n' && c != EOF)	/* from file. */
 		    fputc(c = *s++, stderr);
 	    }
-	}
-	if (done_line)
 	    continue;
+	}
 
 	switch (World.block[x][y] = c) {
 	case 'r':
@@ -675,8 +633,6 @@ void Grok_map(void)
 	}	
     }
 
-    Optimize_map();
-
     if (WantedNumRobots == -1) {
 	if (BIT(World.rules->mode, TEAM_PLAY)) {
 	    WantedNumRobots = World.teams[0].NumBases;
@@ -707,13 +663,12 @@ void Generate_random_map(void)
 			y,
 			i,
 			size,
-			num_bases = 30,
+			num_bases = 25,
 			num_fuels = (World.x * World.y) / (1000 + rand()%1000),
 			num_cannons = (World.x * World.y) / (100 + rand()%100),
-			num_blocks = (World.x * World.y) / (25 + rand()%25),
-			num_gravs = (World.x * World.y) / (2500 + rand()%2500),
-			num_worms = (World.x * World.y) / (2500 + rand()%2500);
-    
+			num_blocks = (World.x * World.y) / (50 + rand()%50),
+			num_gravs = (World.x * World.y) / (2000 + rand()%2000),
+			num_worms = (World.x * World.y) / (2000 + rand()%2000);
 
     strcpy(World.name, "Random Land");
     strcpy(World.author, "The Computer");
@@ -820,8 +775,8 @@ u_short Find_closest_team(int posx, int posy)
         if (World.base[i].team == TEAM_NOT_SET)
             continue;
         
-        l = Wrap_length(posx - World.base[i].pos.x,
-			posy - World.base[i].pos.y);
+        l = Wrap_length((posx - World.base[i].pos.x)*BLOCK_SZ,
+			(posy - World.base[i].pos.y)*BLOCK_SZ);
 	
         if (l < closest) {
             team = World.base[i].team;
@@ -848,108 +803,178 @@ float Wrap_length(float dx, float dy)
 }
 
 
-void Compute_gravity(void)
+static void Compute_global_gravity(void)
 {
-    int xi, yi, g, gx, gy, dx, dy;
-    int first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi, wrap;
-    float dist2, xforce, yforce;
-    double theta, clock;
+    int			xi, yi, dx, dy;
+    float		xforce, yforce, strength;
+    double		theta;
+    vector		*grav;
 
-
-    wrap = (BIT(World.rules->mode, WRAP_PLAY) != 0);
 
     if (gravityPointSource == false) {
 	theta = (gravityAngle * PI) / 180.0;
-	xforce = sin(theta) * Gravity;
-	yforce = cos(theta) * Gravity;
+	xforce = cos(theta) * Gravity;
+	yforce = sin(theta) * Gravity;
 	for (xi=0; xi<World.x; xi++) {
-	    vector *line = World.gravity[xi];
+	    grav = World.gravity[xi];
 
-	    for (yi=0; yi<World.y; yi++) {
-		line[yi].y = xforce;
-		line[yi].x = yforce;
+	    for (yi=0; yi<World.y; yi++, grav++) {
+		grav->x = xforce;
+		grav->y = yforce;
 	    }
 	}
     } else {
-	if (gravityClockwise) {
-	    clock = -PI / 2;
-	}
-	else if (gravityAnticlockwise) {
-	    clock = PI / 2;
-	}
-	else {
-	    clock = 0.0;
-	}
 	for (xi=0; xi<World.x; xi++) {
-	    vector *line = World.gravity[xi];
+	    grav = World.gravity[xi];
+	    dx = (xi - gravityPoint.x) * BLOCK_SZ;
+	    dx = WRAP_DX(dx);
 
-	    for (yi=0; yi<World.y; yi++) {
-		dx = (xi - gravityPoint.x) * BLOCK_SZ;
-		dy = (yi - gravityPoint.x) * BLOCK_SZ;
-		dx = WRAP_DX(dx);
+	    for (yi=0; yi<World.y; yi++, grav++) {
+		dy = (yi - gravityPoint.y) * BLOCK_SZ;
 		dy = WRAP_DX(dy);
 
 		if (dx == 0 && dy == 0) {
-		    line[yi].y = 0.0;
-		    line[yi].x = 0.0;
+		    grav->x = 0.0;
+		    grav->y = 0.0;
 		    continue;
 		}
-
-		theta = atan2((double)dy, (double)dx) + clock;
-
-		line[yi].x = cos(theta) * Gravity;
-		line[yi].y = sin(theta) * Gravity;
+		strength = Gravity / LENGTH(dx, dy);
+		if (gravityClockwise) {
+		    grav->x =  dy * strength;
+		    grav->y = -dx * strength;
+		}
+		else if (gravityAnticlockwise) {
+		    grav->x = -dy * strength;
+		    grav->y =  dx * strength;
+		}
+		else {
+		    grav->x =  dx * strength;
+		    grav->y =  dy * strength;
+		}
 	    }
 	}
     }
+}
 
+
+static void Compute_grav_tab(vector grav_tab[GRAV_RANGE+1][GRAV_RANGE+1])
+{
+    int			x, y;
+    double		strength;
+
+    grav_tab[0][0].x = grav_tab[0][0].y = 0;
+    for (x = 0; x < GRAV_RANGE+1; x++) {
+	for (y = (x == 0); y < GRAV_RANGE+1; y++) {
+	    strength = pow((double)(sqr(x) + sqr(y)), -1.5);
+	    grav_tab[x][y].x = x * strength;
+	    grav_tab[x][y].y = y * strength;
+	}
+    }
+}
+
+
+static void Compute_local_gravity(void)
+{
+    int			xi, yi, g, gx, gy, ax, ay, dx, dy, isclock;
+    int			first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi;
+    int			min_xi, max_xi, min_yi, max_yi;
+    float		force, fx, fy;
+    vector		*v, *grav, *tab, grav_tab[GRAV_RANGE+1][GRAV_RANGE+1];
+
+
+    Compute_grav_tab(grav_tab);
+
+    min_xi = 0;
+    max_xi = World.x - 1;
+    min_yi = 0;
+    max_yi = World.y - 1;
+    if (BIT(World.rules->mode, WRAP_PLAY)) {
+	min_xi -= MIN(GRAV_RANGE, World.x);
+	max_xi += MIN(GRAV_RANGE, World.x);
+	min_yi -= MIN(GRAV_RANGE, World.y);
+	max_yi += MIN(GRAV_RANGE, World.y);
+    }
     for (g=0; g<World.NumGravs; g++) {
 	gx = World.grav[g].pos.x;
 	gy = World.grav[g].pos.y;
+	force = World.grav[g].force;
 
-	if (gx - GRAV_RANGE >= 0 || wrap) {
-	    first_xi = gx - GRAV_RANGE;
-	} else {
-	    first_xi = 0;
+	if ((first_xi = gx - GRAV_RANGE) < min_xi) {
+	    first_xi = min_xi;
 	}
-	if (gx + GRAV_RANGE < World.x || wrap) {
-	    last_xi = gx + GRAV_RANGE;
-	} else {
-	    last_xi = World.x - 1;
+	if ((last_xi = gx + GRAV_RANGE) > max_xi) {
+	    last_xi = max_xi;
 	}
-	if (gy - GRAV_RANGE >= 0 || wrap) {
-	    first_yi = gy - GRAV_RANGE;
-	} else {
-	    first_yi = 0;
+	if ((first_yi = gy - GRAV_RANGE) < min_yi) {
+	    first_yi = min_yi;
 	}
-	if (gy + GRAV_RANGE < World.y || wrap) {
-	    last_yi = gy + GRAV_RANGE;
-	} else {
-	    last_yi = World.y - 1;
+	if ((last_yi = gy + GRAV_RANGE) > max_yi) {
+	    last_yi = max_yi;
 	}
-	for (xi = first_xi; xi <= last_xi; xi++) {
-	    vector *line = World.gravity[mod_xi = mod(xi, World.x)];
+	if (World.block[gx][gy] == CWISE_GRAV
+	    || World.block[gx][gy] == ACWISE_GRAV) {
+	    isclock = 1;
+	} else {
+	    isclock = 0;
+	}
 
-	    for (yi = first_yi; yi <= last_yi; yi++) {
-
-		mod_yi = (wrap) ? mod(yi, World.y) : yi;
-
-		dx = gx - xi;
-		dy = gy - yi;
-
-		if (dy == 0 && dx == 0)		/* In a grav? */
-		    continue;
-
-		theta = atan2((double)dy, (double)dx);
-
-		if (World.block[gx][gy] == CWISE_GRAV
-		    || World.block[gx][gy] == ACWISE_GRAV)
-		    theta += PI/2.0;
-
-		dist2 = sqr(dx) + sqr(dy);
-		line[mod_yi].x += cos(theta) * World.grav[g].force / dist2;
-		line[mod_yi].y += sin(theta) * World.grav[g].force / dist2;
+	mod_xi = (first_xi < 0) ? (first_xi + World.x) : first_xi;
+	dx = gx - first_xi;
+	fx = force;
+	for (xi = first_xi; xi <= last_xi; xi++, dx--) {
+	    if (dx < 0) {
+		fx = -force;
+		ax = -dx;
+	    } else {
+		ax = dx;
 	    }
-        }
+	    mod_yi = (first_yi < 0) ? (first_yi + World.y) : first_yi;
+	    dy = gy - first_yi;
+	    grav = &World.gravity[mod_xi][mod_yi];
+	    tab = grav_tab[ax];
+	    fy = force;
+	    for (yi = first_yi; yi <= last_yi; yi++, dy--) {
+		if (dx || dy) {
+		    if (dy < 0) {
+			fy = -force;
+			ay = -dy;
+		    } else {
+			ay = dy;
+		    }
+		    v = &tab[ay];
+		    if (isclock) {
+			grav->x -= fy * v->y;
+			grav->y += fx * v->x;
+		    } else {
+			grav->x += fx * v->x;
+			grav->y += fy * v->y;
+		    }
+		}
+		mod_yi++;
+		grav++;
+		if (mod_yi >= World.y) {
+		    mod_yi = 0;
+		    grav = World.gravity[mod_xi];
+		}
+	    }
+	    if (++mod_xi >= World.x) {
+		mod_xi = 0;
+	    }
+	}
     }
+    /*
+     * We may want to free the World.gravity memory here
+     * as it is not used anywhere else.
+     * e.g.: free(World.gravity);
+     *       World.gravity = NULL;
+     *       World.NumGravs = 0;
+     * Some of the more modern maps have quite a few gravity symbols.
+     */
+}
+
+
+void Compute_gravity(void)
+{
+    Compute_global_gravity();
+    Compute_local_gravity();
 }

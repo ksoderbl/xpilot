@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.41 1993/10/02 18:53:08 bjoerns Exp $
+/* $Id: server.c,v 3.47 1993/10/25 22:11:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,11 +21,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
+#include "types.h"
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
-#ifndef __hpux
+#if !defined(__hpux) && !defined(VMS)
 #include <sys/time.h>
 #endif
 #ifdef _SEQUENT_
@@ -34,12 +41,18 @@
 					(struct process_stats *)NULL, \
 					(struct process_stats *)NULL)
 #endif
+#ifdef VMS
+#include "username.h"
+#include <socket.h>
+#include <in.h>
+#include <inet.h>
+#else
 #include <pwd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <arpa/inet.h>
+#endif
+#include <netdb.h>
 
 #include "config.h"
 #include "global.h"
@@ -60,7 +73,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.41 1993/10/02 18:53:08 bjoerns Exp $";
+    "@(#)$Id: server.c,v 3.47 1993/10/25 22:11:29 bert Exp $";
 #endif
 
 
@@ -76,7 +89,7 @@ object			*Obj[MAX_TOTAL_SHOTS];
 long			Id = 1;		    /* Unique ID for each object */
 long			GetInd[MAX_ID];
 server			Server;
-int			Shutdown = -1, ShutdownDelay = 1000;
+int			ShutdownServer = -1, ShutdownDelay = 1000;
 int 			framesPerSecond = 18;
 
 int			Argc;
@@ -180,8 +193,12 @@ int main(int argc, char *argv[])
     /*
      * Get owners login name.
      */
+#ifdef VMS
+    getusername(Server.name);
+#else
     pwent = getpwuid(geteuid());
     strcpy(Server.name, pwent->pw_name);
+#endif
 
     /*
      * Log, if enabled.
@@ -214,7 +231,9 @@ int main(int argc, char *argv[])
 	End_game();
     }
 
-    signal(SIGHUP, Handle_signal);
+    if (signal(SIGHUP, Handle_signal) == SIG_IGN) {
+	signal(SIGHUP, SIG_IGN);
+    }
     signal(SIGTERM, Handle_signal);
     signal(SIGINT, Handle_signal);
 
@@ -270,21 +289,22 @@ void Send_meta_server(void)
 	    Server.host, NumPlayers - NumRobots, 
 	    VERSION, World.name, World.x, World.y, World.author, 
 	    World.NumBases, FPS, contactPort,
-	    (lock && Shutdown == -1) ? "locked" :
-	    (!lock && Shutdown != -1) ? "shutting down" :
-	    (lock && Shutdown != -1) ? "locked and shutting down" : "ok");
+	    (lock && ShutdownServer == -1) ? "locked" :
+	    (!lock && ShutdownServer != -1) ? "shutting down" :
+	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok");
 
     for(i=0; i < NumPlayers; i++) {
 	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
 	    if (first)
 		strcat(string,"add players ");
+	    else
+		strcat(string,",");
 	    first = false;
 	    strcat(string, Players[i]->name);	
 	    strcat(string,"=");
 	    strcat(string,Players[i]->realname);
 	    strcat(string,"@");
 	    strcat(string,Players[i]->hostname);
-	    strcat(string,",");
 	}
     }
     
@@ -295,7 +315,10 @@ void Send_meta_server(void)
     }
     strcat(string, status);
 
-    DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
+    i = strlen(string)+1;
+    if (DgramSend(Socket, meta_address, META_PORT, string, i) != i) {
+	GetSocketError(Socket);
+    }
 }
 
 /*
@@ -305,7 +328,7 @@ void Main_Loop(void)
 {
     extern void		Loop_delay(void);
     int			main_loops = 0;
-    time_t		currentTime, lastPlayerCheckTime = 0;
+    time_t		currentTime;
     time_t		lastMetaCheckTime = 0;
 
 #ifndef SILENT
@@ -329,31 +352,24 @@ void Main_Loop(void)
 	    Send_meta_server();
 	}
 
-	if (NumPlayers == NumRobots
-	    || (login_in_progress && main_loops % 3 == 0)
-	    || currentTime - lastPlayerCheckTime >= CHECK_FOR_NEW_PLAYERS) {
-	    lastPlayerCheckTime = currentTime;
-
-	    if (NumPlayers == NumRobots && !RawMode) {
-		block_timer();
-		Wait_for_new_players();
-		allow_timer();
-	    } else
-		Check_new_players();
+	if (NumPlayers - NumPseudoPlayers == NumRobots && !RawMode) {
+	    block_timer();
+	    Wait_for_new_players();
+	    allow_timer();
 	}
 	
 	Update_objects();
 	
 	/*
 	 * Check for possible shutdown, the server will
-	 * shutdown when Shutdown (a counter) reaches 0.
-	 * If the counter is < 0 then now shutdown is in progress.
+	 * shutdown when ShutdownServer (a counter) reaches 0.
+	 * If the counter is < 0 then no shutdown is in progress.
 	 */
-	if (Shutdown >= 0) {
-	    if (Shutdown == 0)
+	if (ShutdownServer >= 0) {
+	    if (ShutdownServer == 0)
 		End_game();
 	    else
-		Shutdown--;
+		ShutdownServer--;
 	}
 	
 	if ((main_loops % UPDATES_PR_FRAME) == 0) {
@@ -361,7 +377,9 @@ void Main_Loop(void)
 	    Loop_delay();
 	}
 
-	Check_client_input();
+	if (Input(Socket) > 0) {
+	    NoPlayersEnteredYet = false;
+	}
     }
 
     End_game();
@@ -387,16 +405,22 @@ static void Wait_for_new_players(void)
     start_time = tv.tv_sec;
     start_loops = loops;
     while (new_players == false) {
-	if (login_in_progress == 0) {
-	    SetTimeout(CHECK_FOR_NEW_PLAYERS, 0);
+	if (login_in_progress > 0) {
+	    if (Input(-1) > 0) {
+		NoPlayersEnteredYet = false;
+		new_players = true;
+		continue;
+	    }
+	    SetTimeout(0, 10*1000);
 	} else {
-	    SetTimeout(0, 100 * 1000);
+	    SetTimeout(CHECK_FOR_NEW_PLAYERS, 0);
 	}
-	if ((new_players = Check_new_players()) == false) {
-	    gettimeofday(&tv, NULL);
-	    milli_delta = (tv.tv_sec - start_time) * 1000 + tv.tv_usec / 1000;
-	    loops = start_loops + (FPS * milli_delta) / 1000;
+	if (SocketReadable(Socket) != 0) {
+	    Contact();
 	}
+	gettimeofday(&tv, NULL);
+	milli_delta = (tv.tv_sec - start_time) * 1000 + tv.tv_usec / 1000;
+	loops = start_loops + (FPS * milli_delta) / 1000;
     }
     SetTimeout(0, 0);
 }
@@ -409,7 +433,7 @@ void End_game(void)
     player	*pl;
     char	string[50];
 
-    if (Shutdown == 0) {
+    if (ShutdownServer == 0) {
 	error("Shutting down...");
     }
 
@@ -418,7 +442,7 @@ void End_game(void)
 	if (pl->conn == NOT_CONNECTED) {
 	    Delete_player(NumPlayers - 1);
 	} else {
-	    Destroy_connection(pl->conn, __FILE__, __LINE__);
+	    Destroy_connection(pl->conn, "server exiting", __FILE__, __LINE__);
 	}
     }
 
@@ -437,7 +461,7 @@ void End_game(void)
 }
 
 
-bool Check_new_players(void)
+void Contact(void)
 {
     int			i,
     			team,
@@ -448,7 +472,6 @@ bool Check_new_players(void)
     char		*in_host,
 			status,
 			reply_to;
-    bool		new_players = false;
     unsigned		magic,
 			version,
 			my_magic;
@@ -458,32 +481,15 @@ bool Check_new_players(void)
 			nick_name[MAX_CHARS],
 			str[MAX_CHARS];
 
-    switch (Check_new_connections())
-    {
-    case -1:
-	/* Some connection error */
-	break;
-    case 0:
-	/* Normal stuff */
-	break;
-    case 1:
-	/* New player entered the game */
-	NoPlayersEnteredYet = false;
-	updateScores = true;
-	new_players = true;
-	break;
-    }
-
-    if (!SocketReadable(Socket))	/* No-one tried to connect. */
-	return (new_players);
-
     /*
      * Someone connected to us, now try and deschiffer the message :)
      */
     Sockbuf_clear(&ibuf);
-    errno = 0;
-    if ((bytes = DgramReceiveAny(Socket, ibuf.buf, ibuf.size)) <= 0) {
-	if (errno != EWOULDBLOCK && errno != EINTR) {
+    if ((bytes = DgramReceiveAny(Socket, ibuf.buf, ibuf.size)) <= 8) {
+	if (bytes < 0
+	    && errno != EWOULDBLOCK
+	    && errno != EAGAIN
+	    && errno != EINTR) {
 	    /*
 	     * This caused some long series of error messages
 	     * if a player connection crashed violently (SIGKILL, SIGSEGV).
@@ -494,7 +500,7 @@ bool Check_new_players(void)
 	     */
 	    GetSocketError(Socket);
 	}
-	return (new_players);
+	return;
     }
     ibuf.len = bytes;
 
@@ -508,11 +514,8 @@ bool Check_new_players(void)
      */
     if (Packet_scanf(&ibuf, "%u", &magic) <= 0
 	|| (magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
-#ifndef	SILENT
-	errno = 0;
-	error("Incompatible packet received from %s (0x%08x)", in_host, magic);
-#endif
-	return (new_players);
+	D(printf("Incompatible packet from %s (0x%08x)", in_host, magic);)
+	return;
     }
     version = MAGIC2VERSION(magic);
 
@@ -520,41 +523,36 @@ bool Check_new_players(void)
      * Read core of packet.
      */
     if (Packet_scanf(&ibuf, "%s%hu%c", real_name, &port, &reply_to) <= 0) {
-#ifndef	SILENT
-	errno = 0;
-	error("Incomplete packet received from %s", in_host);
-#endif
-	return (new_players);
+	D(printf("Incomplete packet from %s", in_host);)
+	return;
     }
     real_name[MAX_NAME_LEN - 1] = '\0';
 
     /*
      * Now see if we have the same (or compatible) version.
      * If the client request was only a contact request (to see
-     * if there is a server running on this host) then we
-     * don't care about version incompatibilities if the version
-     * of the client is higher than ours, so that the client
-     * can decide itself if it wants to adjust to our version.
+     * if there is a server running on this host) then we don't
+     * care about version incompatibilities, so that the client
+     * can decide itself if it wants to conform to our version.
      */
     if (version < MIN_CLIENT_VERSION
 	|| (version > MAX_CLIENT_VERSION
 	    && reply_to != CONTACT_pack)) {
-#ifndef	SILENT
-	errno = 0;
-	error("Incompatible version with %s@%s (%04x,%04x)",
-	    real_name, in_host, MY_VERSION, version);
-#endif
+	D(error("Incompatible version with %s@%s (%04x,%04x)",
+	    real_name, in_host, MY_VERSION, version);)
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", MAGIC, reply_to, E_VERSION);
-	DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len);
-
-	return (new_players);
+	Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
+	if (DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
+	    GetSocketError(Socket);
+	}
+	return;
     }
     /*
      * Support some older clients, which don't know
      * that they can join the current version.
      */
-    if (version == 0x3020 || version == 0x3030
+    if (version == 0x3020
+	|| version == 0x3030
 	|| (version >= 0x3041 && version <= 0x3043)) {
 	my_magic = VERSION2MAGIC(version);
     } else {
@@ -573,18 +571,14 @@ bool Check_new_players(void)
 	 * Someone wants to enter the game.
 	 */
 	if (Packet_scanf(&ibuf, "%s%s%d", nick_name, disp_name, &team) <= 0) {
-#ifndef	SILENT
-	    errno = 0;
-	    error("Incomplete login packet received from %s@%s",
-		real_name, in_host);
-	    return (new_players);
-#endif
+	    D(printf("Incomplete login from %s@%s", real_name, in_host);)
+	    return;
 	}
 	nick_name[MAX_NAME_LEN - 1] = '\0';
 	disp_name[MAX_DISP_LEN - 1] = '\0';
 
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c", my_magic, reply_to);
+	Packet_printf(&ibuf, "%u%c", my_magic, reply_to);
 
 	/*
 	 * Bad input parameters?
@@ -593,9 +587,10 @@ bool Check_new_players(void)
 	    || real_name[0] == 0
 	    || nick_name[0] < 'A'
 	    || nick_name[0] > 'Z') {
-	    errno = 0;
-	    error("Invalid name parameters (%s,%s) from %s@%s",
+#ifndef SILENT
+	    printf("Invalid name (%s,%s) from %s@%s",
 		  nick_name, real_name, real_name, in_host);
+#endif
 	    status = E_INVAL;
 	}
 
@@ -632,7 +627,7 @@ bool Check_new_players(void)
 	if (status == SUCCESS) {
 	    for (i=0; i<NumPlayers; i++) {
 		if (strcasecmp(Players[i]->name, nick_name) == 0) {
-		    printf("%s %s\n", Players[i]->name, nick_name);
+		    D(printf("%s %s\n", Players[i]->name, nick_name);)
 		    status = E_IN_USE;
 		    break;
 		}
@@ -642,20 +637,19 @@ bool Check_new_players(void)
 	/*
 	 * Find a port for the client to connect to.
 	 */
-	if (status == SUCCESS
-	    && (login_port = Setup_connection(real_name, nick_name, disp_name,
-					      team, in_host, version)) == -1) {
+	if (status == SUCCESS) {
+	    if ((login_port = Setup_connection(real_name, nick_name,
+					       disp_name, team,
+					       in_host, version)) > 0) {
+		/*
+		 * Tell the client which port to use for logging in.
+		 */
+		Packet_printf(&ibuf, "%c%hu", status, login_port);
+		break;
+	    }
 	    status = E_SOCKET;
 	}
-
 	Packet_printf(&ibuf, "%c", status);
-
-	if (status == SUCCESS) {
-	    /*
-	     * Tell the client which port to use for logging in.
-	     */
-	    Packet_printf(&ibuf, "%hu", login_port);
-	}
     }
 	break;
 
@@ -670,7 +664,7 @@ bool Check_new_players(void)
 	       real_name, in_host);
 #endif
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, SUCCESS);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, SUCCESS);
 	Server_info(ibuf.buf + ibuf.len, ibuf.size - ibuf.len);
 	ibuf.buf[ibuf.size - 1] = '\0';
 	ibuf.len += strlen(ibuf.buf + ibuf.len) + 1;
@@ -690,13 +684,12 @@ bool Check_new_players(void)
 	    status = E_INVAL;
 	}
 	else {
-	    sprintf(msg,
-		    "%s [%s SPEAKING FROM ABOVE]",
+	    sprintf(msg, "%s [%s SPEAKING FROM ABOVE]",
 		    str, real_name);
 	    Set_message(msg);
 	}
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -712,7 +705,7 @@ bool Check_new_players(void)
 	    lock = lock ? false : true;
 	}
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -724,7 +717,7 @@ bool Check_new_players(void)
 
 	D(printf("Got CONTACT from %s.\n", in_host));
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -744,16 +737,16 @@ bool Check_new_players(void)
 		(delay > 0) ? "SHUTTING DOWN" : "SHUTDOWN STOPPED",
 		real_name, str);
 	    if (delay > 0) {
-		Shutdown = delay * FPS;		/* delay is in seconds */;
-		ShutdownDelay = Shutdown;
+		ShutdownServer = delay * FPS;		/* delay is in seconds */;
+		ShutdownDelay = ShutdownServer;
 	    } else {
-		Shutdown = -1;
+		ShutdownServer = -1;
 	    }
 	    Set_message(msg);
 	}
 
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -791,14 +784,15 @@ bool Check_new_players(void)
 		if (Players[found]->conn == NOT_CONNECTED) {
 		    Delete_player(found);
 		} else {
-		    Destroy_connection(Players[found]->conn, __FILE__, __LINE__);
+		    Destroy_connection(Players[found]->conn, "kicked out",
+					__FILE__, __LINE__);
 		}
 		updateScores = true;
 	    }
 	}
 
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -811,7 +805,8 @@ bool Check_new_players(void)
 	if (!Owner(real_name)) {
 	    status = E_NOT_OWNER;
 	}
-	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0) {
+	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
+	    || max_robots < 0) {
 	    status = E_INVAL;
 	}
 	else {
@@ -824,7 +819,8 @@ bool Check_new_players(void)
 		     * Remove the robot with the lowest score.
 		     */
 
-		    if (Players[i]->robot_mode != RM_NOT_ROBOT) {
+		    if (Players[i]->robot_mode != RM_NOT_ROBOT
+			&& Players[i]->robot_mode != RM_OBJECT) {
 			if (ind == -1)	
 			    ind = i;
 			else if (Players[i]->score < Players[ind]->score)
@@ -841,7 +837,7 @@ bool Check_new_players(void)
 	}
 
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
 	break;
 
@@ -850,20 +846,17 @@ bool Check_new_players(void)
 	/*
 	 * Incorrect packet type.
 	 */
-	errno = 0;
-	error("Unknown packet type (%d) from %s@%s.\n",
-	    reply_to, real_name, in_host);
+	D(printf("Unknown packet type (%d) from %s@%s.\n",
+	    reply_to, real_name, in_host);)
 
 	Sockbuf_clear(&ibuf);
-	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, E_VERSION);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_VERSION);
     }
 
     if (DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
-	error("Could not send reply to %s@%s on port %d.",
-	    real_name, in_host, port);
+	D(printf("Could not reply to %s@%s/%d.", real_name, in_host, port);)
+	GetSocketError(Socket);
     }
-
-    return new_players;
 }
 
 /*
@@ -873,7 +866,7 @@ void Server_info(char *str, unsigned max_size)
 {
     int i, j, k;
     player *pl, **order, *best = NULL;
-    float ratio, best_ratio;
+    float ratio, best_ratio = -1e7;
     char name[MAX_CHARS];
     char lblstr[MAX_CHARS];
 
@@ -887,9 +880,9 @@ void Server_info(char *str, unsigned max_size)
 	    "PLAYERS (%2d/%2d)..:\n",
 	    TITLE,
 	    Server.name,
-	    (lock && Shutdown == -1) ? "locked" :
-	    (!lock && Shutdown != -1) ? "shutting down" :
-	    (lock && Shutdown != -1) ? "locked and shutting down" : "ok",
+	    (lock && ShutdownServer == -1) ? "locked" :
+	    (!lock && ShutdownServer != -1) ? "shutting down" :
+	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok",
 	    FPS,
 	    World.x, World.y, World.name, World.author,
 	    NumPlayers, World.NumBases);
@@ -970,11 +963,11 @@ void Server_info(char *str, unsigned max_size)
  */
 bool Owner(char *name)
 {
-    if ((strcmp(name, Server.name)  == 0)
-	|| (strcmp(name, "kenrsc")  == 0)
+    if ((strcmp(name, Server.name) == 0)
+	|| (strcmp(name, "kenrsc") == 0)
 	|| (strcmp(name, "bjoerns") == 0)
 	|| (strcmp(name, "bert") == 0)
-	|| (strcmp(name, "root")    == 0))
+	|| (strcmp(name, "root") == 0))
 	return (true);
     else
 	return (false);
@@ -984,10 +977,11 @@ bool Owner(char *name)
 void Handle_signal(int sig_no)
 {
     /* Tell meta serve that we are gone */
-    char	string[50];
+    char	string[80];
     sprintf(string,"server %s\nremove",Server.host);
-    DgramSend(Socket, meta_address, META_PORT, string, sizeof(string));
+    DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
     
+    errno = 0;
     switch (sig_no) {
     case SIGALRM:
 	error("First player has yet to show his butt, I'm bored... Bye!");

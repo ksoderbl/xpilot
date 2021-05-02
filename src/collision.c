@@ -1,4 +1,4 @@
-/* $Id: collision.c,v 3.36 1993/10/01 20:36:47 bert Exp $
+/* $Id: collision.c,v 3.39 1993/10/31 22:30:29 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -32,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.36 1993/10/01 20:36:47 bert Exp $";
+    "@(#)$Id: collision.c,v 3.39 1993/10/31 22:30:29 bert Exp $";
 #endif
 
 #define in_range(o1, o2, r)			\
@@ -184,7 +185,7 @@ static void PlayerCollision(int max_objs)
     /* Player - player, checkpoint, treasure, object and wall */
     for (i=0; i<NumPlayers; i++) {
 	pl = Players[i];
-	if (BIT(pl->status, PLAYING|GAME_OVER|KILLED) != PLAYING)
+	if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING)
 	    continue;
 
 	if (pl->pos.x < 0 || pl->pos.y < 0
@@ -203,7 +204,7 @@ static void PlayerCollision(int max_objs)
 	/* Player - player */
 	if (BIT(World.rules->mode, CRASH_WITH_PLAYER)) {
 	    for (j=i+1; j<NumPlayers; j++)
-		if (BIT(Players[j]->status, PLAYING|GAME_OVER|KILLED)
+		if (BIT(Players[j]->status, PLAYING|PAUSE|GAME_OVER|KILLED)
 		    == PLAYING
 		    && in_range((object *)pl, (object *)Players[j],
 				2*SHIP_SZ-6)) {
@@ -566,7 +567,7 @@ static void PlayerObjectCollision(int i, int max_objs)
      * Collision between a player and an object.
      */
     pl = Players[i]; 
-    if (BIT(pl->status, PLAYING|GAME_OVER|KILLED) != PLAYING)
+    if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING)
 	return;
 
     for (j=0; j<max_objs; j++) {
@@ -948,6 +949,9 @@ static void WallCollide(object *obj, int x, int y,
 	    /* a normal shot or a direct mine hit work, cannons don't */
 	    if (!BIT(obj->type, (KILLING_SHOTS|OBJ_MINE) & ~OBJ_CANNON_SHOT))
 		return;
+	    if (obj->id <= 0) {
+		return;
+	    }
 	    killer = GetInd[obj->id];
 	    if (targ->team == Players[killer]->team)
 		return;

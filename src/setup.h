@@ -1,4 +1,4 @@
-/* $Id: setup.h,v 3.8 1993/09/13 19:10:26 bjoerns Exp $
+/* $Id: setup.h,v 3.11 1993/10/20 00:04:09 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -66,6 +66,7 @@
 #define SETUP_CANNON_RIGHT	16
 #define SETUP_CANNON_DOWN	17
 #define SETUP_CANNON_LEFT	18
+#define SETUP_SPACE_DOT		19
 #define SETUP_TREASURE		20	/* + team number */
 #define SETUP_BASE_LOWEST	30	/* lowest base number */
 #define SETUP_BASE_UP		30	/* + team number */
@@ -75,6 +76,16 @@
 #define SETUP_BASE_HIGHEST	69	/* highest base number */
 #define SETUP_TARGET		70	/* + team number */
 #define SETUP_CHECK		80	/* + check point number */
+
+#define BLUE_UP			0x01
+#define BLUE_RIGHT		0x02
+#define BLUE_DOWN		0x04
+#define BLUE_LEFT		0x08
+#define BLUE_OPEN		0x10	/* diagonal botleft -> rightup */
+#define BLUE_CLOSED		0x20	/* diagonal topleft -> rightdown */
+#define BLUE_FUEL		0x30	/* when filled block is fuelstation */
+#define BLUE_BELOW		0x40	/* when triangle is below diagonal */
+#define BLUE_BIT		0x80	/* set when drawn with blue lines */
 
 /*
  * Structure defining the server configuration, including the map layout.
@@ -98,10 +109,10 @@ typedef struct {
 
 #ifndef NETSERVER_C
 # ifdef FPS
-#  error	/* FPS needs a different definition in the client */
-# else
-#  define FPS		(Setup->frames_per_second)
+#  error "FPS needs a different definition in the client"
+#  undef FPS
 # endif
+# define FPS		(Setup->frames_per_second)
 
 extern setup_t *Setup;
 

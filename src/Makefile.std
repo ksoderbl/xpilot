@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 3.13 1993/10/01 20:47:09 bjoerns Exp $
+# $Id: Makefile.std,v 3.15 1993/10/24 12:22:01 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
 #
@@ -24,11 +24,11 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.0.4
+VERSION=3.0.6
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
-# Last slash important on LIBDIR !!
+# Last slash important on LIBDIR (and on MAPDIR) !!
 LIBDIR=/usr/local/games/lib/xpilot/
 SOUNDSDIR=/usr/local/lib/sounds
 LOCALGURU=xpilot@cs.uit.no
@@ -74,6 +74,11 @@ HPPA_MLIB = -lM
 #
 # Flags for Sun with GCC.
 #
+# For Solaris 2.1 the following flags were used instead:
+#   SUN_CFLAGS = $(DEFS) $(INCS) -DSVR4 -I/usr/openwin/include
+#   SUN_MLIB = -lm -lsocket -lnsl -lkrb
+#
+
 SUN_CC = gcc
 SUN_CFLAGS = $(DEFS) $(INCS)
 SUN_OPT = -O
@@ -438,34 +443,34 @@ client.o : client.c version.h client.h const.h types.h keys.h dbuff.h setup.h \
   error.h rules.h bit.h netclient.h paint.h xinit.h 
 cmdline.o : cmdline.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
-cmw.o : cmw.c cmw.h
+cmw.o : cmw.c 
 collision.o : collision.c global.h config.h types.h rules.h object.h const.h \
   bit.h keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h \
   netserver.h 
 configure.o : configure.c version.h client.h const.h types.h keys.h dbuff.h \
-  paint.h draw.h xinit.h bit.h netclient.h widget.h configure.h error.h 
+  paint.h draw.h xinit.h bit.h netclient.h widget.h configure.h setup.h error.h 
 dbuff.o : dbuff.c client.h const.h types.h keys.h dbuff.h draw.h bit.h 
-default.o : default.c version.h config.h const.h client.h types.h keys.h dbuff.h \
+default.o : default.c types.h version.h config.h const.h client.h keys.h dbuff.h \
   paint.h draw.h pack.h socklib.h bit.h netclient.h xinit.h error.h 
 error.o : error.c error.h 
 event.o : event.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-  map.h item.h draw.h version.h proto.h error.h score.h saudio.h netserver.h 
+  map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
 frame.o : frame.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h netserver.h saudio.h 
-join.o : join.c version.h types.h error.h client.h const.h keys.h dbuff.h netclient.h 
+join.o : join.c types.h version.h error.h client.h const.h keys.h dbuff.h netclient.h 
 map.o : map.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h 
-math.o : math.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-  map.h item.h draw.h version.h proto.h error.h 
+math.o : math.c config.h types.h rules.h object.h const.h bit.h keys.h map.h \
+  item.h draw.h proto.h error.h 
 ncdaudio.o : ncdaudio.c 
 net.o : net.c version.h error.h net.h socklib.h const.h packet.h bit.h 
-netclient.o : netclient.c version.h types.h error.h net.h socklib.h const.h \
+netclient.o : netclient.c types.h version.h error.h net.h socklib.h const.h \
   netclient.h setup.h packet.h bit.h paint.h dbuff.h keys.h client.h xinit.h pack.h \
   draw.h 
-netserver.o : netserver.c global.h config.h types.h rules.h object.h const.h \
+netserver.o : netserver.c types.h global.h config.h rules.h object.h const.h \
   bit.h keys.h map.h item.h draw.h version.h proto.h error.h pack.h socklib.h \
   net.h netserver.h packet.h setup.h robot.h saudio.h 
-option.o : option.c global.h config.h types.h rules.h object.h const.h bit.h \
+option.o : option.c types.h global.h config.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
 paint.o : paint.c version.h client.h const.h types.h keys.h dbuff.h error.h \
   draw.h item.h paint.h xinit.h setup.h rules.h bit.h net.h socklib.h netclient.h 
@@ -479,14 +484,14 @@ rules.o : rules.c global.h config.h types.h rules.h object.h const.h bit.h keys.
   map.h item.h draw.h version.h proto.h error.h 
 saudio.o : saudio.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h netserver.h 
-server.o : server.c config.h global.h types.h rules.h object.h const.h bit.h \
+server.o : server.c types.h config.h global.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h socklib.h pack.h robot.h \
   saudio.h net.h netserver.h 
-socklib.o : socklib.c socklib.h types.h 
+socklib.o : socklib.c socklib.h error.h types.h 
 strcasecmp.o : strcasecmp.c 
 strdup.o : strdup.c 
 syslimit.o : syslimit.c 
-timer.o : timer.c error.h 
+timer.o : timer.c types.h error.h 
 update.o : update.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h 
 usleep.o : usleep.c types.h 

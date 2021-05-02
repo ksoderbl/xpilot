@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.14 1993/10/02 00:36:05 bjoerns Exp $
+/* $Id: Imakefile,v 3.15 1993/10/31 16:10:28 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
  *
@@ -176,7 +176,7 @@ SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
 #
 OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
         default.o math.o xevent.o syslimit.o error.o socklib.o caudio.o \
-	widget.o configure.o $(USLEEP_OBJ) $(AUDIOOBJ)
+	widget.o configure.o $(USLEEP_OBJ) $(AUDIOOBJ) $(STRDUP_OBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
         default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
 	widget.c configure.c $(AUDIOSRC)

@@ -1,4 +1,4 @@
-/* $Id: config.h,v 3.10 1993/09/13 19:09:15 bjoerns Exp $
+/* $Id: config.h,v 3.11 1993/10/21 10:17:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -40,7 +40,12 @@
 #endif
 
 #ifndef LIBDIR
+#ifdef VMS
+#    define LIBPREFIX		"esv1$dkb400:[user.graduate.hjorring.lib.xpilot"
+#    define LIBDIR		LIBPREFIX "]"
+#else
 #    define LIBDIR		"/usr/local/games/lib/xpilot/"
+#endif
 #endif
 
 #ifndef DEFAULTS_FILE_NAME
@@ -53,7 +58,11 @@
 #    define LOGFILE		LIBDIR "log"
 #endif
 #ifndef MAPDIR
+#ifdef VMS
+#    define MAPDIR		LIBPREFIX ".maps]"
+#else
 #    define MAPDIR		LIBDIR "maps/"
+#endif
 #endif
 #ifndef SOUNDFILE
 #    define SOUNDFILE		LIBDIR "sounds"
@@ -86,7 +95,16 @@
  * ZCAT_EXT should define the proper compressed file extension.
  */
 
-#define COMPRESSED_MAPS
+#ifdef VMS
+#    ifdef COMPRESSED_MAPS
+	/*
+	 * Couldn't find a popen(), also compress and gzip don't exist.
+	 */
+#        undef COMPRESSED_MAPS
+#    endif
+#else
+#    define COMPRESSED_MAPS
+#endif
 
 #ifndef ZCAT_EXT
 #    define ZCAT_EXT	".gz"

@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.19 1993/09/20 18:48:01 bert Exp $
+/* $Id: update.c,v 3.21 1993/10/31 22:32:03 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -31,7 +32,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.19 1993/09/20 18:48:01 bert Exp $";
+    "@(#)$Id: update.c,v 3.21 1993/10/31 22:32:03 bert Exp $";
 #endif
 
 
@@ -684,7 +685,7 @@ void Update_objects(void)
     for (i=NumPlayers-1; i>=0; i--) {
         player *pl = Players[i];
         
-	if (BIT(pl->status, PLAYING))
+	if (BIT(pl->status, PLAYING|PAUSE) == PLAYING)
 	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
             if (pl->robot_mode != RM_OBJECT) {

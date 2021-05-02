@@ -14,8 +14,16 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /ftp/xpilot/cvsroot/xpilot/src/socklib.h,v 3.3 1993/08/19 07:35:26 kenrsc Exp $
+ * RCS:      $Header: /home/bert/xpilot/tromsoe/cvsroot/xpilot/src/socklib.h,v 3.5 1993/10/24 22:33:59 bert Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 3.5  1993/10/24  22:33:59  bert
+ * Added prototypes for the new DgramReply() routine.
+ *
+ * Revision 3.4  1993/10/21  11:11:05  bert
+ * VMS patch from Curt Hjorring.
+ * Removed Optimize_map() from the server.
+ * Made toggleShield a new client option.
+ *
  * Revision 3.3  1993/08/19  07:35:26  kenrsc
  * Added patch from bert (3f4changes)
  *
@@ -76,7 +84,11 @@
 #define SL_ERECEIVE		10	/* Receive error */
 
 #ifndef _SOCKLIB_LIBSOURCE
+#ifdef VMS
+#include <in.h>			/* for sockaddr_in */
+#else
 #include <netinet/in.h>			/* for sockaddr_in */
+#endif
 extern int
     sl_errno,
     sl_timeout_s,
@@ -107,6 +119,7 @@ extern int	DgramConnect(int, char *, int);
 extern int	DgramSend(int, char *, int, char *, int);
 extern int	DgramReceiveAny(int, char *, int);
 extern int	DgramReceive(int, char *, char *, int);
+extern int	DgramReply(int, char *, int);
 extern int	DgramSendRec(int, char *, int, char *, int, char *, int);
 extern char	*DgramLastaddr(void);
 extern char	*DgramLastname(void);
@@ -133,6 +146,7 @@ extern int	DgramConnect();
 extern int	DgramSend();
 extern int	DgramReceiveAny();
 extern int	DgramReceive();
+extern int	DgramReply();
 extern int	DgramSendRec();
 extern char	*DgramLastaddr();
 extern char	*DgramLastname();

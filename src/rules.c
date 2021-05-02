@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 3.11 1993/09/20 18:45:31 bert Exp $
+/* $Id: rules.c,v 3.12 1993/10/21 11:02:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
 #include "global.h"
 #include "map.h"
 #include "rules.h"
@@ -28,7 +29,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.11 1993/09/20 18:45:31 bert Exp $";
+    "@(#)$Id: rules.c,v 3.12 1993/10/21 11:02:48 bert Exp $";
 #endif
 
 

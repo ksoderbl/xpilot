@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.23 1993/10/02 15:17:27 bert Exp $
+$Id: BUGS,v 3.27 1993/10/21 13:32:39 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -139,7 +139,7 @@ $Id: BUGS,v 3.23 1993/10/02 15:17:27 bert Exp $
 	just fine.
 
 <BUG> 	011
-<STATUS>fixed/medium
+<STATUS>open/medium
 <VER>	3.0.4
 <DESC>	930930: Charles Curley (chc@dale.ksc.nasa.gov)
 	Cloaks don't seem to work sometimes.  Mostly with three of more
@@ -156,6 +156,19 @@ $Id: BUGS,v 3.23 1993/10/02 15:17:27 bert Exp $
 	a possible fix.  The updateVisibility flag is now explicitly set
 	when a player reenters the game.  It appeared that the lastChange
 	flags in the player visibility structure were nowhere initialised.
+<DESC>	931007: Jonathan Katz (jonathan@cad.ucla.edu)
+	There seems to be a bug in the current release (3.0.5)
+	and the last couple) that allows usually a pair of people
+	on our server to be unable to cloak from each other.
+	The cloaked individual will be 'ghosted' but visible....
+	Also they will show up on the world map and radar...
+<DESC>	931011:  Gary O'Brien <gary@hpmtlgo.lvld.hp.com>
+	We're using xpillot 3.0.5 on HP 700 series.  We still have the
+	cloak bug problem.  We see the problem if there are more than
+	2 human players in the game.  The general rule is if your cloaked
+	and can see them, then they can see you.  A player which is cloaked
+	and not visible cannoot seee you either.
+
 
 <BUG> 	012
 <STATUS>fixed/low
@@ -171,4 +184,49 @@ $Id: BUGS,v 3.23 1993/10/02 15:17:27 bert Exp $
 	This makes it difficult to shoot your own tank.
 	The OBJ_SHIELD flag was set in the status field instead
 	of the used field.  Ouch!
+
+<BUG> 	013
+<STATUS>open/high
+<VER>	3.0.4
+<DESC>	931004: snil@daimi.aau.dk (Sven Nielsen)
+	This Zombie BUG can be quite annoying! One evening I was playing
+	tournament on a norweigean server when it happened to Data. After I
+	had quit he was still in the game. I later came back (had to invent
+	the name Ups!) and saw that Zombie Mr. Data was really spoiling the
+	game. It didn't take long for the other players to find out that Data
+	and Ups!  where from the same host and I got accused of
+	cheating/ruining the game on purpose. I tried different things to
+	get my Zombie out but that was impossible. The owner of the server
+	process was not logged on so no-one had permission to kick him.
+	This BUG can be pretty annoying.
+	I don't know too much about the UDP protocol, but I imagine, that if
+	the packet containing QUIT! is lost then a thing like that may happen.
+	How about inventing an acknowledgement scheme or a way to kick your
+	*own* pilots ???
+<WORK>	931004: bert
+	The client/server protocol had a mechanism to automatically kick
+	players out of the game if they didn't respond for about 40 seconds.
+	I don't understand why this isn't working anymore (it used to work!).
+
+<BUG> 	014
+<STATUS>open/low
+<VER>	3.0.5
+<DESC>	931005: Mark Boyns
+	I have a problem with robot's Ids disappearing.  Sometimes I will see
+	a robot flying around without a name.  The problem seems to be sort
+	of random, and I have not spent any time trying to figure out why.
+
+<BUG> 	015
+<STATUS>open/low
+<VER>	3.0.5
+<DESC>	931020: pery@hprnd.rose.hp.com (Pery Pearson)
+	I usually leave the xpilot server up for as long as it will stay up
+	(it tends to crash after a day or two 8).  I just pause when not
+	playing.  Sometimes my fuel will be depleted when I return even if I
+	had a full tank when I paused.
+<WORK>	931020: bert
+	It could be the case that at some places in the code
+	a check for the player being paused is missing.
+<WORK>	931021: Mr M J Cleaton
+	The solution is simple - deactivate your shields before pausing.
 

@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.22 1993/09/28 21:32:01 kenrsc Exp $
+/* $Id: netserver.h,v 3.24 1993/10/21 10:45:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -62,6 +62,11 @@
 #define MIN_RETRANSMIT		(FPS / 8 + 1)
 #define MAX_RETRANSMIT		(2 * FPS)
 #define DEFAULT_RETRANSMIT	(FPS / 2)
+
+#if defined(VMS) && !defined(MAXHOSTNAMELEN)
+#define MAXHOSTNAMELEN 64
+#endif
+
 
 /*
  * All the connection state info.
@@ -128,11 +133,10 @@ static int Receive_display(int ind);
 
 void Init_receive(void);
 int Setup_net_server(int maxconn);
-void Destroy_connection(int ind, char *file, int line);
+void Destroy_connection(int ind, char *reason, char *file, int line);
 int Setup_connection(char *real, char *nick, char *dpy,
 		     int team, char *host, unsigned version);
-int Check_client_input(void);
-int Check_new_connections(void);
+int Input(int contact_socket);
 int Send_reply(int ind, int replyto, int result);
 int Send_self(int ind,
     int x, int y, int vx, int vy, int dir,

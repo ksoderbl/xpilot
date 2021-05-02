@@ -1,4 +1,4 @@
-/* $Id: caudio.c,v 3.7 1993/09/13 19:09:07 bjoerns Exp $
+/* $Id: caudio.c,v 3.8 1993/10/29 11:59:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -27,6 +27,7 @@
 
 #ifdef SOUND
 
+#define	MAX_RANDOM_SOUNDS	6
 #define SOUNDDIR LIBDIR "sound/"
 
 #define _CAUDIO_C_
@@ -41,16 +42,17 @@
 static int	audioEnabled;
 
 static struct {
-    char	*filename;
-    void	*private;
+    char	**filenames;
+    void	**private;
+    int		nsounds;
 } table[MAX_SOUNDS];
 
 
 void audioInit(char *display)
 {
     FILE           *fp;
-    char            buf[256], *file, *sound;
-    int             i;
+    char            buf[512], *file, *sound, *ifile, *p;
+    int             i, j;
 
     if (!maxVolume || !(fp = fopen(sounds, "r")))
 	return;
@@ -65,18 +67,30 @@ void audioInit(char *display)
 
 	for (i = 0; i < MAX_SOUNDS; i++)
 	    if (!strcmp(sound, soundNames[i])) {
-		if (*file == '/')
-		    table[i].filename = strdup(file);
-		else if (table[i].filename =
-			 (char *)malloc(strlen(SOUNDDIR) + strlen(file) + 1)) {
-		    strcpy(table[i].filename, SOUNDDIR);
-		    strcat(table[i].filename, file);
+		table[i].filenames = (char **)malloc(sizeof(char *) * MAX_RANDOM_SOUNDS);
+		table[i].private = (void **)malloc(sizeof(void *) * MAX_RANDOM_SOUNDS);
+		memset((char *) table[i].private, 0, sizeof(void *) * MAX_RANDOM_SOUNDS);
+		ifile = strtok(file, " \t\n|");
+		j = 0;
+		while (ifile && j < MAX_RANDOM_SOUNDS)
+		{
+		    if (*ifile == '/')
+			table[i].filenames[j] = strdup(ifile);
+		    else if (table[i].filenames[j] =
+			     (char *)malloc(strlen(SOUNDDIR) + strlen(ifile) + 1)) {
+			strcpy(table[i].filenames[j], SOUNDDIR);
+			strcat(table[i].filenames[j], ifile);
+		    }
+		    j++;
+		    ifile = strtok(NULL, " \t\n|");
+		    table[i].nsounds = j;
 		}
 		break;
 	    }
 
 	if (i == MAX_SOUNDS)
 	    fprintf(stderr, "Unknown sound '%s' (ignored)\n", sound);
+
     }
 
     fclose(fp);
@@ -92,23 +106,34 @@ void audioEvents()
 
 int Handle_audio(int type, int volume)
 {
-    if (!audioEnabled || !table[type].filename)
+    int		pick = 0;
+
+    if (!audioEnabled || !table[type].filenames)
 	return 0;
 
-    if (!table[type].private) {
+    if (table[type].nsounds > 1)
+    {
+	/*
+	 * Multiple sounds were specified.  Pick one at random.
+	 */
+	pick = random() % table[type].nsounds;
+    }
+
+    if (!table[type].private[pick]) {
 	int i;
 
 	/* eliminate duplicate sounds */
 	for (i = 0; i < MAX_SOUNDS; i++)
-	    if (i != type && table[i].filename && table[i].private
-		&& strcmp(table[type].filename, table[i].filename) == 0) {
-		table[type].private = table[i].private;
+	    if (i != type && table[i].filenames && table[i].private[pick]
+		&& strcmp(table[type].filenames[0], table[i].filenames[0]) == 0) 
+		{
+		table[type].private[0] = table[i].private[0];
 		break;
 	    }
     }
 
-    audioDevicePlay(table[type].filename, type, MIN(volume, maxVolume),
-		    &table[type].private);
+    audioDevicePlay(table[type].filenames[pick], type, MIN(volume, maxVolume),
+		    &table[type].private[pick]);
 
     return 0;
 }

@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.20 1993/09/26 20:07:31 bert Exp $
+/* $Id: const.h,v 3.21 1993/10/21 10:20:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -38,7 +38,11 @@
 #	if defined(__sun__)
 #           include <values.h>	/* MAXFLOAT for suns */
 #	endif
-#	define  FLT_MAX	MAXFLOAT
+#	ifdef VMS
+#	    include <float.h>
+#	else
+#	    define FLT_MAX	MAXFLOAT
+#	endif
 #   endif
 #endif
 #ifndef	RAND_MAX
@@ -68,9 +72,11 @@
 #define NELEM(a)	((int)(sizeof(a) / sizeof((a)[0])))
 
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
+#ifndef VMS
 #ifndef MAX
 #   define MIN(x, y)		( (x)>(y) ? (y) : (x) )
 #   define MAX(x, y)		( (x)>(y) ? (x) : (y) )
+#endif
 #endif
 #define sqr(x)			( (x)*(x) )
 #define LENGTH(x, y)		( hypot( (double) (x), (double) (y) ) )

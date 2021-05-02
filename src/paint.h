@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.23 1993/09/20 18:42:51 bert Exp $
+/* $Id: paint.h,v 3.25 1993/10/25 21:07:22 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -116,6 +116,8 @@ extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */
 extern u_byte	debris_colors;		/* Number of debris intensities */
 extern u_byte	spark_rand;		/* Sparkling effect */
+extern float	charsPerTick;		/* Output speed of messages */
+extern bool	markingLights;		/* Marking lights on ships */
 
 extern int		maxKeyDefs;
 extern keydefs_t	*keyDefs;

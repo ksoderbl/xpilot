@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.54 1993/10/02 18:53:05 bjoerns Exp $
+/* $Id: paint.c,v 3.65 1993/10/31 22:24:40 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -26,11 +26,17 @@
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <time.h>
 
 #include "version.h"
 #include "client.h"
@@ -46,10 +52,14 @@
 #include "net.h"
 #include "netclient.h"
 
-#define BLUE_LEFT	1
-#define BLUE_UP		2
-#define BLUE_RIGHT	4
-#define BLUE_DOWN	8
+#ifndef ERASE
+#define ERASE		0
+#endif
+
+#define ERASE_INITIALISED	(1 << 0)
+#define ERASE_DAMAGED		(1 << 1)
+
+#define MAX_LINE_WIDTH	4	/* widest line drawn */
 
 #define X(co)  ((int) ((co) - world.x))
 #define Y(co)  ((int) (view_height - (co) + world.y))
@@ -113,6 +123,9 @@ bool	players_exposed;
 short	view_width, view_height;	/* Visible area according to server */
 u_byte	debris_colors;		/* Number of debris intensities from server */
 u_byte	spark_rand;		/* Sparkling effect */
+float	charsPerTick = 0.0;	/* Output speed of messages */
+
+bool	markingLights;
 
 dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
@@ -122,6 +135,10 @@ keydefs_t	*keyDefs;
 other_t	*self;			/* player info */
 
 message_t		*Msg[MAX_MSGS];
+
+
+static void Paint_clock(int redraw);
+
 
 static int		eyesId;		/* Player we get frame updates for */
 
@@ -200,6 +217,24 @@ typedef struct {
     u_byte		x, y;
 } debris_t;
 
+#if ERASE
+typedef struct {
+    int			flags;
+    XRectangle		*rect_ptr;
+    int			num_rect,
+			max_rect;
+    XArc		*arc_ptr;
+    int			num_arc,
+			max_arc;
+    XSegment		*seg_ptr[MAX_LINE_WIDTH + 1];
+    int			num_seg[MAX_LINE_WIDTH + 1],
+			max_seg[MAX_LINE_WIDTH + 1];
+} erase_t;
+
+static erase_t		erase[2],
+			*erp;
+#endif	/* ERASE */
+
 static refuel_t		*refuel_ptr;
 static int		 num_refuel, max_refuel;
 static connector_t	*connector_ptr;
@@ -255,6 +290,32 @@ static int		 num_debris[DEBRIS_TYPES],
 # define RELEASE(P, N, M)	((N) = 0)
 #endif
 
+#if ERASE
+#define EXPAND(P,N,M,T,E)						\
+    if ((N) + (E) > (M)) {						\
+	if ((M) <= 0) {							\
+	    M = (E) + 2;						\
+	    P = (T *) malloc((M) * sizeof(T));				\
+	    N = 0;							\
+	} else {							\
+	    M = ((M) << 1) + (E);					\
+	    P = (T *) realloc(P, (M) * sizeof(T));			\
+	}								\
+	if (P == NULL) {						\
+	    error("No memory");						\
+	    N = M = 0;							\
+	    return;	/* ! */						\
+	}								\
+    }
+
+#define UNEXPAND(P,N,M)							\
+    if ((N) < ((M) >> 2)) {						\
+	free(P);							\
+	M = 0;								\
+    }									\
+    N = 0;
+#endif	/* ERASE */
+
 static long		loops = 0,
 			start_loops,
 			end_loops,
@@ -292,6 +353,196 @@ static Pixel		current_foreground;
 					 (other)->name_len);		\
     }
 
+#if ERASE
+static void Erase_start(void)
+{
+    int			i;
+
+    if (erase[0].flags == 0) {
+	printf("ERASE is On!\n");
+	erp = &erase[0];
+    }
+    if (BIT(erp->flags, ERASE_INITIALISED) == 0) {
+	SET_FG(colors[BLACK].pixel);
+	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
+	SET_BIT(erp->flags, ERASE_INITIALISED);
+    }
+    erp->num_rect = 0;
+    erp->num_arc = 0;
+    for (i = 0; i <= MAX_LINE_WIDTH; i++) {
+	erp->num_seg[i] = 0;
+    }
+}
+
+static void Erase_end(void)
+{
+    int			i,
+			linewidth = false;
+
+    if (erp == &erase[0]) {
+	erp = &erase[1];
+    } else {
+	erp = &erase[0];
+    }
+
+    if (damaged > 0) {
+	return;
+    }
+
+    SET_FG(colors[BLACK].pixel);
+    if (BIT(erp->flags, ERASE_DAMAGED)) {
+	XFillRectangle(dpy, draw, gc, 0, 0, draw_width, draw_height);
+	CLR_BIT(erp->flags, ERASE_DAMAGED);
+	return;
+    }
+
+    if (erp->num_rect != 0) {
+	XFillRectangles(dpy, p_draw, gc, erp->rect_ptr, erp->num_rect);
+	UNEXPAND(erp->rect_ptr, erp->num_rect, erp->max_rect);
+    }
+    if (erp->num_arc != 0) {
+	XDrawArcs(dpy, p_draw, gc, erp->arc_ptr, erp->num_arc);
+	UNEXPAND(erp->arc_ptr, erp->num_arc, erp->max_arc);
+    }
+    for (i = 0; i <= MAX_LINE_WIDTH; i++) {
+	if (erp->num_seg[i] != 0) {
+	    if (i != 0) {
+		XSetLineAttributes(dpy, gc, i,
+				   LineSolid, CapButt, JoinMiter);
+		linewidth = true;
+	    }
+	    XDrawSegments(dpy, p_draw, gc, erp->seg_ptr[i], erp->num_seg[i]);
+	    UNEXPAND(erp->seg_ptr[i], erp->num_seg[i], erp->max_seg[i]);
+	}
+    }
+    if (linewidth == true) {
+	XSetLineAttributes(dpy, gc, 0,
+			   LineSolid, CapButt, JoinMiter);
+    }
+}
+
+static void Erase_rectangle(int x, int y, int width, int height)
+{
+    XRectangle		*p;
+
+    EXPAND(erp->rect_ptr, erp->num_rect, erp->max_rect, XRectangle, 1);
+    p = &erp->rect_ptr[erp->num_rect++];
+    p->x = x;
+    p->y = y;
+    p->width = width;
+    p->height = height;
+}
+
+static void Erase_rectangles(XRectangle *rectp, int n)
+{
+    EXPAND(erp->rect_ptr, erp->num_rect, erp->max_rect, XRectangle, n);
+    memcpy(&erp->rect_ptr[erp->num_rect], rectp, n * sizeof(XRectangle));
+    erp->num_rect += n;
+}
+
+static void Erase_arc(int x, int y, int width, int height,
+		      int angle1, int angle2)
+{
+    XArc		*p;
+
+    EXPAND(erp->arc_ptr, erp->num_arc, erp->max_arc, XArc, 1);
+    p = &erp->arc_ptr[erp->num_arc++];
+    p->x = x;
+    p->y = y;
+    p->width = width;
+    p->height = height;
+    p->angle1 = angle1;
+    p->angle2 = angle2;
+}
+
+static void Erase_arcs(XArc *arcp, int n)
+{
+    EXPAND(erp->arc_ptr, erp->num_arc, erp->max_arc, XArc, n);
+    memcpy(&erp->arc_ptr[erp->num_arc], arcp, n * sizeof(XArc));
+    erp->num_arc += n;
+}
+
+static void Erase_segment(int width, int x1, int y1, int x2, int y2)
+{
+    XSegment		*p;
+
+    EXPAND(erp->seg_ptr[width], erp->num_seg[width], erp->max_seg[width],
+	   XSegment, 1);
+    p = &erp->seg_ptr[width][erp->num_seg[width]++];
+    p->x1 = x1;
+    p->y1 = y1;
+    p->x2 = x2;
+    p->y2 = y2;
+}
+
+static void Erase_segments(XSegment *segp, int n)
+{
+    EXPAND(erp->seg_ptr[0], erp->num_seg[0], erp->max_seg[0],
+	   XSegment, n);
+    memcpy(&erp->seg_ptr[0][erp->num_seg[0]], segp, n * sizeof(XSegment));
+    erp->num_seg[0] += n;
+}
+
+static void Erase_points(int width, XPoint *pointp, int n)
+{
+    XSegment		*p;
+    int			i;
+
+    EXPAND(erp->seg_ptr[width], erp->num_seg[width], erp->max_seg[width],
+	   XSegment, n - 1);
+    p = &erp->seg_ptr[width][erp->num_seg[width]];
+    for (i = 1; i < n; i++) {
+	p->x1 = pointp->x;
+	p->y1 = pointp->y;
+	pointp++;
+	p->x2 = pointp->x;
+	p->y2 = pointp->y;
+	p++;
+    }
+    erp->num_seg[width] += n - 1;
+}
+
+static void Erase_4point(int x, int y, int width, int height)
+{
+    XSegment		*p;
+
+    EXPAND(erp->seg_ptr[0], erp->num_seg[0], erp->max_seg[0],
+	   XSegment, 4);
+    p = &erp->seg_ptr[0][erp->num_seg[0]];
+    p->x1 = x;
+    p->y1 = y;
+    p->x2 = x + width;
+    p->y2 = y;
+    p++;
+    p->x1 = x + width;
+    p->y1 = y;
+    p->x2 = x + width;
+    p->y2 = y + height;
+    p++;
+    p->x1 = x + width;
+    p->y1 = y + height;
+    p->x2 = x;
+    p->y2 = y + height;
+    p++;
+    p->x1 = x;
+    p->y1 = y + height;
+    p->x2 = x;
+    p->y2 = y;
+    p++;
+    erp->num_seg[0] += 4;
+}
+#else	/* ERASE */
+#define Erase_start()
+#define Erase_end()
+#define Erase_rectangle(A,B,C,D)
+#define Erase_rectangles(A,B)
+#define Erase_arc(A,B,C,D,E,F)
+#define Erase_arcs(A,B)
+#define Erase_segment(A,B,C,D,E)
+#define Erase_segments(A,B)
+#define Erase_points(A,B,C)
+#define Erase_4point(A,B,C,D)
+#endif	/* ERASE */
 
 static void Rectangle_start(void)
 {
@@ -310,6 +561,7 @@ static void Rectangle_end(void)
 	if (num_rect[i] > 0) {
 	    SET_FG(colors[i].pixel);
 	    XFillRectangles(dpy, p_draw, gc, rect_ptr[i], num_rect[i]);
+	    Erase_rectangles(rect_ptr[i], num_rect[i]);
 	    RELEASE(rect_ptr[i], num_rect[i], max_rect[i]);
 	}
     }
@@ -345,6 +597,7 @@ static void Arc_end(void)
 	    SET_FG(colors[i].pixel);
 	    XDrawArcs(dpy, p_draw, gc,
 		arc_ptr[i], num_arc[i]);
+	    Erase_arcs(arc_ptr[i], num_arc[i]);
 	    RELEASE(arc_ptr[i], num_arc[i], max_arc[i]);
 	}
     }
@@ -385,6 +638,7 @@ static void Segment_end(void)
 	    SET_FG(colors[i].pixel);
 	    XDrawSegments(dpy, p_draw, gc,
 		seg_ptr[i], num_seg[i]);
+	    Erase_segments(seg_ptr[i], num_seg[i]);
 	    RELEASE(seg_ptr[i], num_seg[i], max_seg[i]);
 	}
     }
@@ -433,6 +687,7 @@ static void Paint_meter(int x, int y, char *title, int val, int max)
     SET_FG(colors[WHITE].pixel);
     XDrawRectangle(dpy, p_draw, gc,
 		   x, y, METER_WIDTH, METER_HEIGHT);
+    Erase_4point(x, y, METER_WIDTH, METER_HEIGHT);
 
     /* Paint scale levels(?) */
     Segment_add(WHITE, x, y-4,		x,	y+METER_HEIGHT+4);
@@ -443,6 +698,10 @@ static void Paint_meter(int x, int y, char *title, int val, int max)
     XDrawString(dpy, p_draw, gc,
 		x+METER_WIDTH+BORDER, y+(gameFont->ascent+METER_HEIGHT)/2,
 		title, strlen(title));
+    Erase_rectangle(x+METER_WIDTH+BORDER - 1,
+		    y+(gameFont->ascent+METER_HEIGHT)/2 - gameFont->ascent,
+		    XTextWidth(gameFont, title, strlen(title)) + 2,
+		    gameFont->ascent + gameFont->descent);
 }
 
 static int wrap(int *x, int *y)
@@ -494,11 +753,18 @@ void Game_over_action(u_byte stat)
     
     if (BIT(old_stat, GAME_OVER) && !BIT(stat, GAME_OVER))
 	XMapRaised(dpy, top);
+    if (toggle_shield) {
+	if (BIT(old_stat, PLAYING|PAUSE|GAME_OVER) != PLAYING) {
+	    if (BIT(stat, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+		Reset_shields();
+	    }
+	}
+    }
 
     old_stat = stat;
 }
 
-void Paint_item_symbol(u_byte type, Drawable d, GC gc, int x, int y)
+static void Paint_item_symbol(u_byte type, Drawable d, GC gc, int x, int y)
 {
     gcv.stipple = itemBitmaps[type];
     gcv.fill_style = FillStippled;
@@ -551,8 +817,13 @@ static void Paint_shots(void)
 	for (i = 0; i < num_itemtype; i++) {
 	    x = itemtype_ptr[i].x;
 	    y = itemtype_ptr[i].y;
-	    if (wrap(&x, &y))
+	    if (wrap(&x, &y)) {
 		Paint_item(itemtype_ptr[i].type, p_draw, gc, X(x), Y(y));
+		Erase_rectangle(X(x) - ITEM_TRIANGLE_SIZE,
+				Y(y) - ITEM_TRIANGLE_SIZE,
+				2*ITEM_TRIANGLE_SIZE + 1,
+				2*ITEM_TRIANGLE_SIZE + 1);
+	    }
 	}
 	RELEASE(itemtype_ptr, num_itemtype, max_itemtype);
     }
@@ -638,6 +909,7 @@ static void Paint_shots(void)
 		SET_FG(colors[WHITE].pixel);
 		XDrawLines(dpy, p_draw, gc,
 			   mine_points, 21, CoordModePrevious);
+		Erase_rectangle(x - 8, y - 3, 17, 7);
 		/* Arc_add(BLUE, x - 4, y - 4, 8, 8, 0, 64*360); */
 	    }
 	}
@@ -678,12 +950,12 @@ static void Paint_shots(void)
 	    x = smart_ptr[i].x;
 	    y = smart_ptr[i].y;
 	    if (wrap(&x, &y)) {
-		x = X(x);
-		y = Y(y);
-		XDrawLine(dpy, p_draw, gc,
-			  x, y,
-			  (int)(x - tcos(smart_ptr[i].dir) * SMART_SHOT_LEN),
-			  (int)(y + tsin(smart_ptr[i].dir) * SMART_SHOT_LEN));
+		x1 = X(x);
+		y1 = Y(y);
+		x2 = (int)(x1 - tcos(smart_ptr[i].dir) * SMART_SHOT_LEN);
+		y2 = (int)(y1 + tsin(smart_ptr[i].dir) * SMART_SHOT_LEN);
+		XDrawLine(dpy, p_draw, gc, x1, y1, x2, y2);
+		Erase_segment(4, x1, y1, x2, y2);
 	    }
 	}
 	XSetLineAttributes(dpy, gc, 0,
@@ -709,6 +981,7 @@ static void Paint_shots(void)
 		XDrawLine(dpy, p_draw, gc,
 			  X(x1), Y(y1),
 			  X(x2), Y(y2));
+		Erase_segment(3, X(x1), Y(y1), X(x2), Y(y2));
 	    }
 	}
 	XSetLineAttributes(dpy, gc, 0,
@@ -737,15 +1010,16 @@ static void Paint_ships(void)
 	    y = paused_ptr[i].y;
 	    if (wrap(&x, &y)) {
 		SET_FG(colors[BLUE].pixel);
+		x0 = X(x - half_pause_size);
+		y0 = Y(y + half_pause_size);
 		XFillRectangle(dpy, p_draw, gc,
-			       X(x - half_pause_size),
-			       Y(y + half_pause_size),
+			       x0, y0,
 			       2*half_pause_size+1, 2*half_pause_size+1);
 		if (paused_ptr[i].count <= 0 || loops % 10 >= 5) {
 		    SET_FG(colors[WHITE].pixel);
 		    XDrawRectangle(dpy, p_draw, gc,
-				   X(x - (half_pause_size + 1)),
-				   Y(y + (half_pause_size + 1)),
+				   x0 - 1,
+				   y0 - 1,
 				   2*(half_pause_size+1),
 				   2*(half_pause_size+1));
 		    XDrawString(dpy, p_draw, gc,
@@ -753,6 +1027,8 @@ static void Paint_ships(void)
 				Y(y - gameFont->ascent/2),
 				"P", 1);
 		}
+		Erase_rectangle(x0 - 1, y0 - 1,
+				2*half_pause_size+3, 2*half_pause_size+3);
 	    }
 	}
 	RELEASE(paused_ptr, num_paused, max_paused);
@@ -802,6 +1078,11 @@ static void Paint_ships(void)
 				X(x - other->name_width / 2),
 				Y(y - gameFont->ascent - 15),
 				other->name, other->name_len);
+		    Erase_rectangle(X(x - other->name_width / 2) - 1,
+				    Y(y - gameFont->ascent - 15)
+					- gameFont->ascent,
+				    other->name_width + 2,
+				    gameFont->ascent + gameFont->descent);
 		}
 
 		if (ship_ptr[i].cloak == 0) {
@@ -814,8 +1095,57 @@ static void Paint_ships(void)
 			&& lock_dist != 0) {
 			XFillPolygon(dpy, p_draw, gc, points, 4,
 				     Convex, CoordModeOrigin);
+			if (points[0].x < points[1].x) {
+			    x0 = points[0].x;
+			    x1 = points[1].x;
+			} else {
+			    x0 = points[1].x;
+			    x1 = points[0].x;
+			}
+			if (points[2].x < x0) {
+			    x0 = points[2].x;
+			}
+			else if (points[2].x > x1) {
+			    x1 = points[2].x;
+			}
+			if (points[0].y < points[1].y) {
+			    y0 = points[0].y;
+			    y1 = points[1].y;
+			} else {
+			    y0 = points[1].y;
+			    y1 = points[0].y;
+			}
+			if (points[2].y < y0) {
+			    y0 = points[2].y;
+			}
+			else if (points[2].y > y1) {
+			    y1 = points[2].y;
+			}
+			Erase_rectangle(x0, y0, x1 + 1 - x0, y1 + 1 - y0);
 		    } else {
 			XDrawLines(dpy, p_draw, gc, points, 4, 0);
+			Erase_points(0, points, 4);
+		    }
+		    if (markingLights) {
+			if (((loops + ship_ptr[i].id) & 0xF) == 0) {
+			    Rectangle_add(RED,
+					  points[1].x-2, points[1].y-2, 6, 6);
+			    Segment_add(RED,
+					points[1].x-8, points[1].y,
+					points[1].x+8, points[1].y);
+			    Segment_add(RED,
+					points[1].x, points[1].y-8,
+					points[1].x, points[1].y+8);
+			} else if (((loops + ship_ptr[i].id) & 0xF) == 2) {
+			    Rectangle_add(BLUE,
+					  points[2].x-2, points[2].y-2, 6, 6);
+			    Segment_add(BLUE,
+					points[2].x-8, points[2].y,
+					points[2].x+8, points[2].y);
+			    Segment_add(BLUE,
+					points[2].x, points[2].y-8,
+					points[2].x, points[2].y+8);
+			}
 		    }
 		}
 
@@ -829,13 +1159,25 @@ static void Paint_ships(void)
 			XChangeGC(dpy, gc, mask, &gcv);
 		    }
 		    if (ship_ptr[i].cloak) {
+#if ERASE
+			int j;
+			for (j = 0; j < 3; j++) {
+			    XDrawLine(dpy, p_draw, gc,
+				      points[j].x, points[j].y,
+				      points[j + 1].x, points[j + 1].y);
+			}
+			Erase_points(1, points, 4);
+#else
 			XDrawLines(dpy, p_draw, gc, points, 4, 0);
+#endif
 		    }
 		    if (ship_ptr[i].shield) {
 			XDrawArc(dpy, p_draw, gc,
 				 X(x - 17),
 				 Y(y + 17),
 				 34, 34, 0, 64 * 360);
+			Erase_arc(X(x - 17), Y(y + 17),
+				  34, 34, 0, 64 * 360);
 		    }
 		}
 	    }
@@ -864,6 +1206,7 @@ static void Paint_ships(void)
 		    XDrawLine(dpy, p_draw, gc,
 			      X(x0), Y(y0),
 			      X(x1), Y(y1));
+		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 		}
 	    }
 	    RELEASE(refuel_ptr, num_refuel, max_refuel);
@@ -879,6 +1222,7 @@ static void Paint_ships(void)
 		    XDrawLine(dpy, p_draw, gc,
 			      X(x0), Y(y0),
 			      X(x1), Y(y1));
+		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 		}
 	    }
 	    RELEASE(connector_ptr, num_connector, max_connector);
@@ -892,6 +1236,7 @@ static void Paint_ships(void)
 		if (wrap(&x0, &y0) && wrap(&x1, &y1))
 		    XDrawLine(dpy, p_draw, gc, 
 			      X(x0), Y(y0), X(x1), Y(y1));
+		    Erase_segment(1, X(x0), Y(y0), X(x1), Y(y1));
 	    }
 	    RELEASE(trans_ptr, num_trans, max_trans);
 	}
@@ -899,7 +1244,8 @@ static void Paint_ships(void)
 
     if (gcv.line_style != LineSolid) {
 	gcv.line_style = LineSolid;
-	XChangeGC(dpy, gc, GCLineStyle, &gcv);
+	mask = GCLineStyle;
+	XChangeGC(dpy, gc, mask, &gcv);
     }
     gcv.dash_offset = 0;
 }
@@ -922,6 +1268,9 @@ static void Paint_score_objects(void)
 				Y(y),
 				sobj->msg, 
 				sobj->msg_len);
+		    Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
+				    sobj->msg_width + 2,
+				    gameFont->ascent + gameFont->descent);
 		}
 	    }
 	    sobj->count++;
@@ -964,6 +1313,7 @@ static void Paint_meters(void)
 static void Paint_lock(int hud_pos_x, int hud_pos_y)
 {
     const int	BORDER = 2;
+    int		x, y;
     other_t	*target;
     char	str[50];
     static int	warningCount;
@@ -979,6 +1329,11 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 		hud_pos_x - target->name_width / 2,
 		hud_pos_y - HUD_SIZE+HUD_OFFSET - gameFont->descent - BORDER,
 		target->name, target->name_len);
+    Erase_rectangle(hud_pos_x - target->name_width / 2 - 1,
+		    hud_pos_y - HUD_SIZE+HUD_OFFSET - gameFont->descent
+			- BORDER - gameFont->ascent,
+		    target->name_width + 2,
+		    gameFont->ascent + gameFont->descent);
     if (lock_dist != 0) {
 	sprintf(str, "%03d", lock_dist / BLOCK_SZ);
 	XDrawString(dpy, p_draw, gc,
@@ -986,6 +1341,11 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 		    hud_pos_y - HUD_SIZE+HUD_OFFSET
 		    - gameFont->descent - BORDER,
 		    str, 3);
+	Erase_rectangle(hud_pos_x + HUD_SIZE - HUD_OFFSET + BORDER - 1,
+			hud_pos_y - HUD_SIZE+HUD_OFFSET
+			    - gameFont->descent - BORDER - gameFont->ascent,
+			XTextWidth(gameFont, str, 3) + 2,
+			gameFont->ascent + gameFont->descent);
 	if (lock_dist > WARNING_DISTANCE || warningCount++ % 2 == 0) {
 	    int size = 10000 / (800 + lock_dist);
 	    if (size == 0) {
@@ -1000,13 +1360,16 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			(int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
 			      - size * 0.5),
 			size, size, 0, 64*360);
-	    else
+	    else {
+		x = (int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
+			  - size * 0.5),
+		y = (int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
+			  - size * 0.5),
 		XFillArc(dpy, p_draw, gc,
-			 (int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
-			       - size * 0.5),
-			 (int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
-			       - size * 0.5),
+			 x, y,
 			 size, size, 0, 64*360);
+		Erase_rectangle(x, y, size, size);
+	    }
 	}
     }
 }
@@ -1020,6 +1383,7 @@ static void Paint_HUD(void)
     int hud_pos_x;
     int hud_pos_y;
     int	i, j, maxWidth = -1;
+    int rect_x, rect_y, rect_width, rect_height;
     static int vertSpacing = -1;
     
     /* 
@@ -1055,17 +1419,29 @@ static void Paint_HUD(void)
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x-HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET,
 		  hud_pos_x+HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET);
+	Erase_segment(0,
+		      hud_pos_x-HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET,
+		      hud_pos_x+HUD_SIZE, hud_pos_y-HUD_SIZE+HUD_OFFSET);
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x-HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET,
 		  hud_pos_x+HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET);
+	Erase_segment(0,
+		      hud_pos_x-HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET,
+		      hud_pos_x+HUD_SIZE, hud_pos_y+HUD_SIZE-HUD_OFFSET);
     }
     if (BIT(instruments, SHOW_HUD_VERTICAL)) {
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE, 
 		  hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y+HUD_SIZE);
+	Erase_segment(0,
+		      hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y-HUD_SIZE, 
+		      hud_pos_x-HUD_SIZE+HUD_OFFSET, hud_pos_y+HUD_SIZE);
 	XDrawLine(dpy, p_draw, gc,
 		  hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y-HUD_SIZE,
 		  hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y+HUD_SIZE);
+	Erase_segment(0,
+		      hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y-HUD_SIZE,
+		      hud_pos_x+HUD_SIZE-HUD_OFFSET, hud_pos_y+HUD_SIZE);
     }
     gcv.line_style = LineSolid;
     XChangeGC(dpy, gc, GCLineStyle, &gcv);
@@ -1077,6 +1453,10 @@ static void Paint_HUD(void)
 	    = MAX(ITEM_SIZE, gameFont->ascent + gameFont->descent) + 1;
     vert_pos = hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER;
     horiz_pos = hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER;
+    rect_width = 0;
+    rect_height = 0;
+    rect_x = horiz_pos;
+    rect_y = vert_pos;
 
     for (i=0; i<NUM_ITEMS; i++) {
 	int num;
@@ -1138,11 +1518,23 @@ static void Paint_HUD(void)
 	    vert_pos += vertSpacing;
 
 	    if (vert_pos+vertSpacing > hud_pos_y+HUD_SIZE-HUD_OFFSET-BORDER) {
-		vert_pos = hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER;
+		rect_width += maxWidth + 2*BORDER;
+		rect_height = vert_pos - rect_y;
 		horiz_pos -= maxWidth + 2*BORDER;
+		vert_pos = hud_pos_y - HUD_SIZE+HUD_OFFSET + BORDER;
 		maxWidth = -1;
 	    }
 	}
+    }
+    if (maxWidth != -1) {
+	rect_width += maxWidth + BORDER;
+    }
+    if (rect_width > 0) {
+	if (rect_height == 0) {
+	    rect_height = vert_pos - rect_y;
+	}
+	rect_x -= rect_width;
+	Erase_rectangle(rect_x, rect_y, rect_width, rect_height);
     }
 
     /* Fuel notify, HUD meter on */
@@ -1152,6 +1544,10 @@ static void Paint_HUD(void)
 		    hud_pos_x + HUD_SIZE-HUD_OFFSET+BORDER,
  		    hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER + gameFont->ascent,
 		    str, strlen(str));
+	Erase_rectangle(hud_pos_x + HUD_SIZE-HUD_OFFSET+BORDER - 1,
+			hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER,
+			XTextWidth(gameFont, str, strlen(str)) + 2,
+			gameFont->ascent + gameFont->descent);
 	if (numTanks) {
 	    if (fuelCurrent == 0)
 		strcpy(str,"M ");
@@ -1162,6 +1558,11 @@ static void Paint_HUD(void)
  		        hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
 			+ gameFont->descent + 2*gameFont->ascent,
 			str, strlen(str));
+	    Erase_rectangle(hud_pos_x + HUD_SIZE-HUD_OFFSET + BORDER - 1,
+			    hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
+				+ gameFont->descent + gameFont->ascent,
+			    XTextWidth(gameFont, str, strlen(str)) + 2,
+			    gameFont->ascent + gameFont->descent);
 	}
     }
 
@@ -1177,8 +1578,14 @@ static void Paint_HUD(void)
 			hud_pos_x - sobj->hud_msg_width/2,
 			hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
 			+ gameFont->ascent
-			+ j++ * (gameFont->ascent + gameFont->descent),
+			+ j * (gameFont->ascent + gameFont->descent),
 			sobj->hud_msg, sobj->hud_msg_len);
+	    Erase_rectangle(hud_pos_x - sobj->hud_msg_width/2 - 1,
+			    hud_pos_y + HUD_SIZE-HUD_OFFSET + BORDER
+				+ j * (gameFont->ascent + gameFont->descent),
+			    sobj->hud_msg_width + 2,
+			    gameFont->ascent + gameFont->descent);
+	    j++;
 	}
     }
 
@@ -1190,6 +1597,9 @@ static void Paint_HUD(void)
 		    hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
 			- gameFont->descent,
 		    str, strlen(str));
+	Erase_rectangle(hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER - size - 1,
+			hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER,
+			size + 2, gameFont->ascent + gameFont->descent);
     }
 
     /* Fuel gauge, must be last */
@@ -1213,6 +1623,10 @@ static void Paint_HUD(void)
 		  hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
 		  HUD_OFFSET - (2*FUEL_GAUGE_OFFSET) + 3,
 		  HUD_FUEL_GAUGE_SIZE + 3);
+    Erase_4point(hud_pos_x + HUD_SIZE - HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
+		 hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
+		 HUD_OFFSET - (2*FUEL_GAUGE_OFFSET) + 3,
+		 HUD_FUEL_GAUGE_SIZE + 3);
 
     size = (HUD_FUEL_GAUGE_SIZE * fuelSum) / fuelMax;
     XFillRectangle(dpy, p_draw, gc,
@@ -1220,14 +1634,21 @@ static void Paint_HUD(void)
 		   hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET
 		   + HUD_FUEL_GAUGE_SIZE - size + 1,
 		   HUD_OFFSET - (2*FUEL_GAUGE_OFFSET), size);
+    Erase_rectangle(hud_pos_x + HUD_SIZE - HUD_OFFSET + FUEL_GAUGE_OFFSET + 1,
+		    hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET
+			+ HUD_FUEL_GAUGE_SIZE - size + 1,
+		    HUD_OFFSET - (2*FUEL_GAUGE_OFFSET), size);
 }
 
 static void Paint_messages(void)
 {
-    int i, y;
+    int i, x, y, width;
     const int	BORDER = 10,
 		SPACING = messageFont->ascent+messageFont->descent+1;
-    
+
+    if (charsPerTick <= 0.0)
+	charsPerTick = (float)charsPerSecond / FPS;
+
     for (y = view_height - messageFont->descent - BORDER, i = 0;
 	 i < MAX_MSGS;
 	 i++, y -= SPACING) {
@@ -1244,17 +1665,24 @@ static void Paint_messages(void)
 	    Msg[i]->len = 0;
 	    continue;
 	}
-	len = MSG_DURATION - Msg[i]->life;
+	len = charsPerTick * (MSG_DURATION - Msg[i]->life);
 	len = MIN(Msg[i]->len, len);
 	if (Msg[i]->alignment == RIGHT) {
-	    XDrawString(dpy, p_draw, messageGC,
-			view_width-BORDER - Msg[i]->pixelLen, y,
-			Msg[i]->txt, len);
+	    x = view_width-BORDER - Msg[i]->pixelLen;
 	} else {
-	    XDrawString(dpy, p_draw, messageGC,
-			BORDER, y,
-			Msg[i]->txt, len);
+	    x = BORDER;
 	}
+	XDrawString(dpy, p_draw, messageGC,
+		    x, y,
+		    Msg[i]->txt, len);
+	if (len < Msg[i]->len) {
+	    width = XTextWidth(messageFont, Msg[i]->txt, len);
+	} else {
+	    width = Msg[i]->pixelLen;
+	}
+	Erase_rectangle(x - 1, y - messageFont->ascent,
+			width + 2,
+			messageFont->ascent + messageFont->descent);
     }
 }
 
@@ -1276,7 +1704,8 @@ void Add_message(char *message)
     Msg[0]->len = strlen(message);
     Msg[0]->pixelLen = XTextWidth(messageFont, Msg[0]->txt, Msg[0]->len);
 
-    if (Msg[0]->txt[Msg[0]->len-1] == ']' || strcmp(Msg[0]->txt, " <") == 0)
+    if (Msg[0]->txt[Msg[0]->len-1] == ']'
+	|| strncmp(Msg[0]->txt, " <", 2) == 0)
 	Msg[0]->alignment = RIGHT;
     else
 	Msg[0]->alignment = LEFT;
@@ -1414,6 +1843,7 @@ static void Paint_vcannon(void)
 	    }
 	    points[3] = points[0];
 	    XDrawLines(dpy, p_draw, gc, points, 4, 0);
+	    Erase_points(0, points, 4);
 	}
 	RELEASE(vcannon_ptr, num_vcannon, max_vcannon);
     }
@@ -1437,6 +1867,10 @@ static void Paint_vfuel(void)
 	    XFillRectangle(dpy, p_draw, gc,
 			  X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
 			  BLOCK_SZ - 2*FUEL_BORDER + 1, size + 1);
+	    Erase_rectangle(X(x + FUEL_BORDER),
+			    Y(y - FUEL_BORDER + BLOCK_SZ),
+			    BLOCK_SZ - 2*FUEL_BORDER + 1,
+			    BLOCK_SZ - 2*FUEL_BORDER + 1);
 	}
 	/* Draw F in fuel cells */
 	s[0] = 'F'; s[1] = '\0';
@@ -1458,7 +1892,7 @@ static void Paint_vfuel(void)
 static void Paint_vbase(void)
 {
     const int	BORDER = 4;					/* in pixels */
-    int		i, id, x, y, xi, yi, type;
+    int		i, id, x, y, xi, yi, team, type, size;
     other_t	*other;
     char	s[3];
 
@@ -1470,51 +1904,18 @@ static void Paint_vbase(void)
 	    xi = vbase_ptr[i].xi;
 	    yi = vbase_ptr[i].yi;
 	    type = vbase_ptr[i].type;
-	    if (!BIT(Setup->mode, TEAM_PLAY)) {
-		s[0]='\0';
-	    } else {
-		s[0] = '0' + Base_team_by_pos(xi, yi);
-		s[1] = ' ';
-		s[2] = '\0';
-	    }
 	    switch (type) {
 	    case SETUP_BASE_UP:
 		Segment_add(WHITE,
 			    X(x), Y(y-1),
 			    X(x+BLOCK_SZ), Y(y-1));
 		y -= BORDER + gameFont->ascent;
-		if (s[0]) {
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				s, 2);
-		    x += XTextWidth(gameFont, s, 2);
-		}
-		if ((id = Base_id_by_pos(xi, yi)) != -1
-		    && (other = Other_by_id(id)) != NULL) {
-		    FIND_NAME_WIDTH(other);
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				other->name, other->name_len);
-		}
 		break;
 	    case SETUP_BASE_DOWN:
 		Segment_add(WHITE,
 			    X(x), Y(y+BLOCK_SZ+1),
 			    X(x+BLOCK_SZ), Y(y+BLOCK_SZ+1));
 		y += BORDER + BLOCK_SZ;
-		if (s[0]) {
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				s, 2);
-		    x += XTextWidth(gameFont, s, 2);
-		}
-		if ((id = Base_id_by_pos(xi, yi)) != -1
-		    && (other = Other_by_id(id)) != NULL) {
-		    FIND_NAME_WIDTH(other);
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				other->name, other->name_len);
-		}
 		break;
 	    case SETUP_BASE_LEFT:
 		Segment_add(WHITE,
@@ -1522,19 +1923,6 @@ static void Paint_vbase(void)
 			    X(x+BLOCK_SZ+1), Y(y));
 		x += BLOCK_SZ + BORDER;
 		y += BLOCK_SZ/2 - gameFont->ascent/2;
-		if (s[0]) {
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				s, 2);
-		    x += XTextWidth(gameFont, s, 2);
-		}
-		if ((id = Base_id_by_pos(xi, yi)) != -1
-		    && (other = Other_by_id(id)) != NULL) {
-		    FIND_NAME_WIDTH(other);
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				other->name, other->name_len);
-		}
 		break;
 	    case SETUP_BASE_RIGHT:
 		Segment_add(WHITE,
@@ -1542,27 +1930,44 @@ static void Paint_vbase(void)
 			    X(x-1), Y(y));
     		y += BLOCK_SZ/2 - gameFont->ascent/2;
 		x -= BORDER;
-		if (s[0]) {
-		    x -= XTextWidth(gameFont, s, 2);
-		    s[1] = s[0];
-		    s[0] = ' ';
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				s, 2);
-		}
-		if ((id = Base_id_by_pos(xi, yi)) != -1
-		    && (other = Other_by_id(id)) != NULL) {
-		    FIND_NAME_WIDTH(other);
-		    x -= other->name_width;
-		    XDrawString(dpy, p_draw, gc,
-				X(x), Y(y),
-				other->name, other->name_len);
-		}
 		break;
 	    default:
 		errno = 0;
-		error("Wrong direction of base.");
+		error("Bad base dir.");
 		continue;
+	    }
+	    if (Base_info_by_pos(xi, yi, &id, &team) == -1) {
+		continue;
+	    }
+	    if (BIT(Setup->mode, TEAM_PLAY)) {
+		s[0] = '0' + team;
+		s[1] = ' ';
+		s[2] = '\0';
+		size = XTextWidth(gameFont, s, 2);
+		if (type == SETUP_BASE_RIGHT) {
+		    x -= size;
+		}
+		XDrawString(dpy, p_draw, gc,
+			    X(x), Y(y),
+			    s, 2);
+		Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
+				size + 2,
+				gameFont->ascent + gameFont->descent);
+		if (type != SETUP_BASE_RIGHT) {
+		    x += size;
+		}
+	    }
+	    if ((other = Other_by_id(id)) != NULL) {
+		FIND_NAME_WIDTH(other);
+		if (type == SETUP_BASE_RIGHT) {
+		    x -= other->name_width;
+		}
+		XDrawString(dpy, p_draw, gc,
+			    X(x), Y(y),
+			    other->name, other->name_len);
+		Erase_rectangle(X(x) - 1, Y(y) - gameFont->ascent,
+				other->name_width + 2,
+				gameFont->ascent + gameFont->descent);
 	    }
 	}
 	RELEASE(vbase_ptr, num_vbase, max_vbase);
@@ -1573,32 +1978,17 @@ static void Paint_world(void)
 {
     int xi, yi, xb, yb, size, fuel, color;
     int rxb, ryb;
-    int xdot;
-    int ydot;
+    int dot;
     int x, y;
     const int WS_PR_SC_W = 1+(float)view_width/BLOCK_SZ;
     const int WS_PR_SC_H = 1+(float)view_height/BLOCK_SZ;
     static const int INSIDE_WS=BLOCK_SZ-2;
     static int wormDrawCount;
-    int type;
+    int type, mapoff;
     int sx = 0, sy = 0;
     char s[2];
-    static bool blue_init = false;
-    static unsigned char blue[256];
 
 
-    if (blue_init == false) {
-	memset(blue, 0, sizeof blue);
-	blue[SETUP_FILLED] = BLUE_LEFT | BLUE_UP | BLUE_RIGHT | BLUE_DOWN;
-	blue[SETUP_FILLED_NO_DRAW] = blue[SETUP_FILLED];
-	blue[SETUP_FUEL] = blue[SETUP_FILLED];
-	blue[SETUP_REC_RU] = BLUE_RIGHT | BLUE_UP;
-	blue[SETUP_REC_RD] = BLUE_RIGHT | BLUE_DOWN;
-	blue[SETUP_REC_LU] = BLUE_LEFT | BLUE_UP;
-	blue[SETUP_REC_LD] = BLUE_LEFT | BLUE_DOWN;
-	blue_init = true;
-    }
-    
     wormDrawCount = (wormDrawCount + 1) & 7;
 
     xb = (world.x/BLOCK_SZ);
@@ -1630,210 +2020,84 @@ static void Paint_world(void)
 	}
     }
 
-    for (rxb = sx; rxb <= WS_PR_SC_W; rxb++) {
-	xi = xb + rxb;
-	if (xi == Setup->x) {
-	    if (!BIT(Setup->mode, WRAP_PLAY))
-		break;
-	    xdot = 1;
-	} else
-	    xdot = 0;
-	if (xi >= Setup->x)
-	    xi -= Setup->x;
-	x = (xb + rxb) * BLOCK_SZ;
+    for (rxb = sx, xi = xb + rxb, x = xi * BLOCK_SZ, mapoff = xi * Setup->y;
+	    rxb <= WS_PR_SC_W;
+	    rxb++, xi++, x += BLOCK_SZ, mapoff += Setup->y) {
 
-	for (ryb = sy; ryb <= WS_PR_SC_H; ryb++) {
-	    yi = ryb + yb;
-	    if (yi == Setup->y) {
+	if (xi >= Setup->x) {
+	    if (xi == Setup->x) {
 		if (!BIT(Setup->mode, WRAP_PLAY))
 		    break;
-		ydot = 1;
-	    } else
-		ydot = 0;
-	    if (yi >= Setup->y)
+	    }
+	    xi -= Setup->x;
+	    mapoff = xi * Setup->y;
+	}
+
+	for (ryb = sy, yi = ryb + yb, y = yi * BLOCK_SZ;
+		ryb <= WS_PR_SC_H;
+		ryb++, yi++, y += BLOCK_SZ) {
+
+	    if (yi >= Setup->y) {
+		if (yi == Setup->y) {
+		    if (!BIT(Setup->mode, WRAP_PLAY))
+			break;
+		}
 		yi -= Setup->y;
-	    y = (yb + ryb) * BLOCK_SZ;
+	    }
 
-	    switch (type = Setup->map_data[xi * Setup->y + yi]) {
-		
-	    case SETUP_FUEL:
-		fuel = Fuel_by_pos(xi, yi);
-		Handle_vfuel(x, y, fuel);
-		/*FALLTHROUGH*/
+	    type = Setup->map_data[mapoff + yi];
 
-	    case SETUP_FILLED:
-	    case SETUP_FILLED_NO_DRAW:
-		if ((xi == 0)
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + yi]]
-			    & BLUE_RIGHT))
-		    : !(blue[Setup->map_data[(xi - 1) * Setup->y + yi]]
-			& BLUE_RIGHT))
+	    if (type & BLUE_BIT) {
+		if (type & BLUE_LEFT) {
 		    Segment_add(BLUE,
 				X(x),
 				Y(y),
 				X(x),
 				Y(y+BLOCK_SZ));
-		if ((yi == 0)
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[xi * Setup->y + Setup->y - 1]]
-			    & BLUE_UP))
-		    : !(blue[Setup->map_data[xi * Setup->y + (yi - 1)]]
-			& BLUE_UP))
+		}
+		if (type & BLUE_DOWN) {
 		    Segment_add(BLUE,
 				X(x),
 				Y(y),
 				X(x+BLOCK_SZ),
 				Y(y));
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((xi == Setup->x - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[yi]]
-				& BLUE_LEFT))
-			: !(blue[Setup->map_data[(xi + 1) * Setup->y + yi]]
-			    & BLUE_LEFT)))
+		}
+		if (type & BLUE_RIGHT) {
 		    Segment_add(BLUE,
 				X(x+BLOCK_SZ),
 				Y(y),
 				X(x+BLOCK_SZ),
 				Y(y+BLOCK_SZ));
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((yi == Setup->y - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[xi * Setup->y]]
-				& BLUE_DOWN))
-			: !(blue[Setup->map_data[xi * Setup->y + (yi + 1)]]
-			    & BLUE_DOWN)))
+		}
+		if (type & BLUE_UP) {
 		    Segment_add(BLUE,
 				X(x),
 				Y(y+BLOCK_SZ),
 				X(x+BLOCK_SZ),
 				Y(y+BLOCK_SZ));
-		break;
-		
-	    case SETUP_REC_LU:
-		if (xi == 0
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + yi]]
-			    & BLUE_RIGHT))
-		    : !(blue[Setup->map_data[(xi - 1) * Setup->y + yi]]
-			& BLUE_RIGHT))
+		}
+		if ((type & BLUE_FUEL) == BLUE_FUEL) {
+		    fuel = Fuel_by_pos(xi, yi);
+		    Handle_vfuel(x, y, fuel);
+		}
+		else if (type & BLUE_OPEN) {
 		    Segment_add(BLUE,
 				X(x),
 				Y(y),
-				X(x),
+				X(x+BLOCK_SZ),
 				Y(y+BLOCK_SZ));
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((yi == Setup->y - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[xi * Setup->y]]
-				& BLUE_DOWN))
-			: !(blue[Setup->map_data[xi * Setup->y + (yi + 1)]]
-			    & BLUE_DOWN)))
+		}
+		else if (type & BLUE_CLOSED) {
 		    Segment_add(BLUE,
 				X(x),
 				Y(y+BLOCK_SZ),
-				X(x+BLOCK_SZ),
-				Y(y+BLOCK_SZ));
-		Segment_add(BLUE,
-			    X(x),
-			    Y(y),
-			    X(x+BLOCK_SZ),
-			    Y(y+BLOCK_SZ));
-		break;
-		
-	    case SETUP_REC_RU:
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((xi == Setup->x - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[yi]]
-				& BLUE_LEFT))
-			: !(blue[Setup->map_data[(xi + 1) * Setup->y + yi]]
-			    & BLUE_LEFT)))
-		    Segment_add(BLUE,
-				X(x+BLOCK_SZ),
-				Y(y),
-				X(x+BLOCK_SZ),
-				Y(y+BLOCK_SZ));
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((yi == Setup->y - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[xi * Setup->y]]
-				& BLUE_DOWN))
-			: !(blue[Setup->map_data[xi * Setup->y + (yi + 1)]]
-			    & BLUE_DOWN)))
-		    Segment_add(BLUE,
-				X(x),
-				Y(y+BLOCK_SZ),
-				X(x+BLOCK_SZ),
-				Y(y+BLOCK_SZ));
-		Segment_add(BLUE,
-			    X(x),
-			    Y(y+BLOCK_SZ),
-			    X(x+BLOCK_SZ),
-			    Y(y));
-		break;
-		
-	    case SETUP_REC_LD:
-		if ((xi == 0)
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[(Setup->x - 1) * Setup->y + yi]]
-			    & BLUE_RIGHT))
-		    : !(blue[Setup->map_data[(xi - 1) * Setup->y + yi]]
-			& BLUE_RIGHT))
-		    Segment_add(BLUE,
-				X(x),
-				Y(y),
-				X(x),
-				Y(y+BLOCK_SZ));
-		if ((yi == 0)
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[xi * Setup->y + Setup->y - 1]]
-			    & BLUE_UP))
-		    : !(blue[Setup->map_data[xi * Setup->y + (yi - 1)]]
-			& BLUE_UP))
-		    Segment_add(BLUE,
-				X(x),
-				Y(y),
 				X(x+BLOCK_SZ),
 				Y(y));
-		Segment_add(BLUE,
-			    X(x),
-			    Y(y+BLOCK_SZ),
-			    X(x+BLOCK_SZ),
-			    Y(y));
-		break;
-		
-	    case SETUP_REC_RD:
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
-		    || ((xi == Setup->x - 1)
-			? (!BIT(Setup->mode, WRAP_PLAY)
-			   || !(blue[Setup->map_data[yi]]
-				& BLUE_LEFT))
-			: !(blue[Setup->map_data[(xi + 1) * Setup->y + yi]]
-			    & BLUE_LEFT)))
-		    Segment_add(BLUE,
-				X(x+BLOCK_SZ),
-				Y(y),
-				X(x+BLOCK_SZ),
-				Y(y+BLOCK_SZ));
-		if ((yi == 0)
-		    ? (!BIT(Setup->mode, WRAP_PLAY) ||
-			!(blue[Setup->map_data[xi * Setup->y + Setup->y - 1]]
-			    & BLUE_UP))
-		    : !(blue[Setup->map_data[xi * Setup->y + (yi - 1)]]
-			& BLUE_UP))
-		    Segment_add(BLUE,
-				X(x),
-				Y(y),
-				X(x+BLOCK_SZ),
-				Y(y));
-		Segment_add(BLUE,
-			    X(x),
-			    Y(y),
-			    X(x+BLOCK_SZ),
-			    Y(y+BLOCK_SZ));
-		break;
+		}
+		continue;
+	    }
+
+	    switch (type) {
 		
 	    case SETUP_CHECK:
 		SET_FG(colors[BLUE].pixel);
@@ -1850,9 +2114,12 @@ static void Paint_world(void)
 		if (Check_index_by_pos(xi, yi) == nextCheckPoint) {
 		    XFillPolygon(dpy, p_draw, gc,
 				 points, 5, Convex, CoordModeOrigin);
+		    Erase_rectangle(X(x), Y(y+BLOCK_SZ),
+				    BLOCK_SZ, BLOCK_SZ);
 		} else {
 		    XDrawLines(dpy, p_draw, gc,
 			       points, 5, 0); 
+		    Erase_points(0, points, 5);
 		}
 		break;
 		
@@ -1919,14 +2186,14 @@ static void Paint_world(void)
 	    case SETUP_WORM_NORMAL:
 		{
 		    static int wormOffset[8][3] = {
-			10, 10, 10,
-			5, 10, 10,
-			0, 10, 10,
-			0, 5, 10,
-			0, 0, 10,
-			5, 0, 10,
-			10, 0, 10,
-			10, 5, 10,
+			{ 10, 10, 10 },
+			{ 5, 10, 10 },
+			{ 0, 10, 10 },
+			{ 0, 5, 10 },
+			{ 0, 0, 10 },
+			{ 5, 0, 10 },
+			{ 10, 0, 10 },
+			{ 10, 5, 10 }
 		    };
 #define _O 	wormOffset[wormDrawCount]
 #define ARC(_x, _y, _w)						\
@@ -1946,25 +2213,21 @@ static void Paint_world(void)
 	    case SETUP_CANNON_DOWN:
 	    case SETUP_CANNON_RIGHT:
 	    case SETUP_CANNON_LEFT:
-		if (Cannon_dead_time_by_pos(xi, yi) <= 0) {
+		if (Cannon_dead_time_by_pos(xi, yi, &dot) <= 0) {
 		    Handle_vcannon(x, y, type);
+		    break;
+		}
+		if (dot == 0) {
 		    break;
 		}
 		/*FALLTHROUGH*/
 
-	    case SETUP_SPACE: {
-		if (map_point_size > 0
-		    && (xdot || ydot
-			|| (map_point_distance > 0
-			    && (xi%map_point_distance) == 0
-			    && (yi%map_point_distance) == 0))) {
-		    Rectangle_add(BLUE,
-				  X(x + BLOCK_SZ / 2),
-				  Y(y + BLOCK_SZ / 2),
-				  map_point_size, map_point_size);
-		}
+	    case SETUP_SPACE_DOT:
+		Rectangle_add(BLUE,
+			      X(x + BLOCK_SZ / 2),
+			      Y(y + BLOCK_SZ / 2),
+			      map_point_size, map_point_size);
 		break;
-            }
 
 	    case SETUP_BASE_UP:
 	    case SETUP_BASE_RIGHT:
@@ -1997,16 +2260,6 @@ static void Paint_world(void)
 		    }
 		    SET_FG(colors[color].pixel);
 
-#if 0
-		    Rectangle_add(color,
-				  X(x), Y(y+BLOCK_SZ),
-				  BLOCK_SZ, BLOCK_SZ);
-
-		    Rectangle_add(color,
-				  X(x+(BLOCK_SZ+2)/4),
-				  Y(y+3*BLOCK_SZ/4),
-				  BLOCK_SZ/2, BLOCK_SZ/2);
-#else
 		    a1 = X(x);
 		    b1 = Y(y+BLOCK_SZ);
 		    a2 = a1 + BLOCK_SZ;
@@ -2017,18 +2270,24 @@ static void Paint_world(void)
 		    Segment_add(color, a1, b2, a2, b2);
 
 		    XDrawRectangle(dpy, p_draw, gc,
-				  X(x+(BLOCK_SZ+2)/4),
-				  Y(y+3*BLOCK_SZ/4),
-				  BLOCK_SZ/2, BLOCK_SZ/2);
-				   
-#endif
+				   X(x+(BLOCK_SZ+2)/4),
+				   Y(y+3*BLOCK_SZ/4),
+				   BLOCK_SZ/2, BLOCK_SZ/2);
+		    Erase_4point(X(x+(BLOCK_SZ+2)/4),
+				 Y(y+3*BLOCK_SZ/4),
+				 BLOCK_SZ/2, BLOCK_SZ/2);
 
 		    s[0] = '0' + type - SETUP_TARGET; s[1] = '\0';
+		    size = XTextWidth(gameFont, s, 1);
 		    XDrawString(dpy, p_draw, gc,
-				X(x + BLOCK_SZ/2
-				  - XTextWidth(gameFont, s, 1)/2),
+				X(x + BLOCK_SZ/2 - size/2),
 				Y(y + BLOCK_SZ/2 - gameFont->ascent/2),
 				s, 1);
+		    Erase_rectangle(X(x + BLOCK_SZ/2 - size/2) - 1,
+				    Y(y + BLOCK_SZ/2 - gameFont->ascent/2)
+					- gameFont->ascent,
+				    size + 2,
+				    gameFont->ascent + gameFont->descent);
 
 		    if (damage != TARGET_DAMAGE) {
 			size = (damage * BLOCK_SZ) / (TARGET_DAMAGE * 2);
@@ -2082,6 +2341,9 @@ static void Paint_world(void)
 		XDrawString(dpy, p_draw, gc,
 			    X(x+BLOCK_SZ/2),
 			    Y(y+BLOCK_SZ/2), s, 1);
+		Erase_rectangle(X(x+BLOCK_SZ/2) - 1, Y(y+BLOCK_SZ/2),
+				XTextWidth(gameFont, s, 1) + 2,
+				gameFont->ascent + gameFont->descent);
 		break;
 
 	    default:
@@ -2157,6 +2419,9 @@ void Paint_world_radar(void)
     visible[SETUP_FUEL] = 1;
     for (i = 0; i < 10; i++) {
 	visible[SETUP_TARGET+i] = 1;
+    }
+    for (i = BLUE_BIT; i < sizeof visible; i++) {
+	visible[i] = 1;
     }
 
     if (Setup->x >= 256) {
@@ -2392,10 +2657,18 @@ void Paint_frame(void)
 	SET_FG(colors[BLACK].pixel ^ colors[BLUE].pixel);
 	XFillRectangle(dpy, draw, gc, 0, 0, draw_width, draw_height);
 	XSetFunction(dpy, gc, GXcopy);
+#if ERASE
+	SET_BIT(erp->flags, ERASE_DAMAGED);
+	Erase_end();
+#endif
     }
     else {
+#if ERASE
+	Erase_end();
+#else
 	SET_FG(colors[BLACK].pixel);
 	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
+#endif
     }
 
     if (talk_mapped == true) {
@@ -2408,6 +2681,7 @@ void Paint_frame(void)
 	}
 	Talk_cursor(toggle);
     }
+    Paint_clock(0);
 
     XFlush(dpy);
 }
@@ -2437,6 +2711,7 @@ int Handle_start(long server_loops)
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	num_debris[i] = 0;
     }
+    Erase_start();
 
     damaged = 0;
     destruct = 0;
@@ -2834,6 +3109,8 @@ void Paint_score_start(void)
 
     gcv.line_style = LineOnOffDash;
     XChangeGC(dpy, scoreListGC, GCLineStyle, &gcv);
+
+    Paint_clock(1);
 }
 
 
@@ -2876,11 +3153,11 @@ void Paint_score_entry(int entry_num,
 	    sprintf(lifeStr, " %3d", other->life);
 
 	if (war) {
-	    sprintf(label, "%c %s% 05d%s  %s (%s)",
+	    sprintf(label, "%c %s%5d%s  %s (%s)",
 		    other->mychar, teamStr, other->score, lifeStr,
 		    other->name, war->name);
 	} else {
-	    sprintf(label, "%c %s% 05d%s  %s",
+	    sprintf(label, "%c %s%5d%s  %s",
 		    other->mychar, teamStr, other->score, lifeStr,
 		    other->name);
 	}
@@ -2903,4 +3180,58 @@ void Paint_score_entry(int entry_num,
 		  BORDER, thisLine,
   		  SCORE_LIST_WINDOW_WIDTH - BORDER, thisLine);
     }
+}
+
+
+static void Paint_clock(int redraw)
+{
+    int			minute,
+			hour,
+			height = scoreListFont->ascent + scoreListFont->descent
+				+ 3,
+			border = 3;
+    time_t		t;
+    struct tm		*m;
+    char		buf[16];
+    static long		prev_loops;
+    static int		width;
+
+    if (BIT(instruments, SHOW_CLOCK) == 0) {
+	if (width != 0) {
+	    XSetForeground(dpy, scoreListGC, colors[windowColor].pixel);
+	    XFillRectangle(dpy, players, scoreListGC,
+			   256 - (width + 2 * border), 0,
+			   width + 2 * border, height);
+	    width = 0;
+	}
+	return;
+    }
+    if (redraw == 0
+	&& loops > prev_loops
+	&& loops - prev_loops < (FPS << 5)) {
+	return;
+    }
+    prev_loops = loops;
+    time(&t);
+    m = localtime(&t);
+    minute = m->tm_min;
+    hour = m->tm_hour;
+    if (minute++ == 59) {
+	minute = 0;
+	if (hour++ == 23) {
+	    hour = 0;
+	}
+    }
+    sprintf(buf, "%02d:%02d", hour, minute);
+    width = XTextWidth(scoreListFont, buf, strlen(buf));
+    XSetForeground(dpy, scoreListGC, colors[windowColor].pixel);
+    XFillRectangle(dpy, players, scoreListGC,
+		   256 - (width + 2 * border), 0,
+		   width + 2 * border, height);
+    ShadowDrawString(dpy, players, scoreListGC,
+		     256 - (width + border),
+		     scoreListFont->ascent + 2,
+		     buf,
+		     colors[WHITE].pixel,
+		     colors[BLACK].pixel);
 }

@@ -9,6 +9,9 @@
  * You can do anything you like to this... :)
  */
 
+#include <string.h>
+#include <stdlib.h>
+
 char* strdup (const char* s1)
 {
 	char* s2;

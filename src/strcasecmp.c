@@ -1,4 +1,4 @@
-/* $Id: strcasecmp.c,v 3.5 1993/09/13 19:10:28 bjoerns Exp $
+/* $Id: strcasecmp.c,v 3.6 1993/10/21 11:11:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -27,7 +27,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: strcasecmp.c,v 3.5 1993/09/13 19:10:28 bjoerns Exp $";
+    "@(#)$Id: strcasecmp.c,v 3.6 1993/10/21 11:11:46 bert Exp $";
 #endif
 
 /*
@@ -56,7 +56,6 @@ int strcasecmp(const char *str1, const char *str2)
 int strncasecmp(const char *str1, const char *str2, size_t n)
 {
     int	c1, c2;
-
 
     do {
 	if (n-- <= 0) {

@@ -1,4 +1,4 @@
-/* $Id: timer.c,v 3.10 1993/09/20 18:47:13 bert Exp $
+/* $Id: timer.c,v 3.11 1993/10/21 11:13:09 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,9 +21,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "types.h"
 #include <stdio.h>
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#include <socket.h>
+#include <time.h>
+#include "gettimeofday.h"
+#else
 #include <unistd.h>
+#endif
+#ifndef VMS
 #include <sys/time.h>
+#endif
 #include <signal.h>
 #include <stdlib.h>
 
@@ -66,7 +77,11 @@ static int __sigtemp;           /* For use with sigprocmask */
 extern int  framesPerSecond;
 
 
+#ifdef VMS
+#define BUSYLOOP
+#else
 #undef BUSYLOOP
+#endif
 #ifdef BUSYLOOP
 void Loop_delay(void)
 {

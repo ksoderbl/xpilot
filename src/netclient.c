@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 3.37 1993/10/02 00:36:16 bjoerns Exp $
+/* $Id: netclient.c,v 3.45 1993/10/28 21:14:00 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,10 +21,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "types.h"
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/param.h>
-#if defined(__hpux)
+#endif
+#if defined(__hpux) || defined(VMS)
 #include <time.h>
 #else
 #include <sys/time.h>
@@ -33,12 +38,16 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
+#ifdef VMS
+#include <socket.h>
+#include <in.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
 #include <netdb.h>
 
 #include "version.h"
-#include "types.h"
 #include "error.h"
 #include "net.h"
 #include "netclient.h"
@@ -557,7 +566,11 @@ void Net_cleanup(void)
 
     if (sock > 2) {
 	ch = PKT_QUIT;
-	write(sock, &ch, 1);
+	if (write(sock, &ch, 1) != 1) {
+	    GetSocketError(sock);
+	    write(sock, &ch, 1);
+	}
+	usleep(50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -578,7 +591,15 @@ void Net_cleanup(void)
     }
     if (sock > 2) {
 	ch = PKT_QUIT;
-	write(sock, &ch, 1);
+	if (write(sock, &ch, 1) != 1) {
+	    GetSocketError(sock);
+	    write(sock, &ch, 1);
+	}
+	usleep(50*1000);
+	if (write(sock, &ch, 1) != 1) {
+	    GetSocketError(sock);
+	    write(sock, &ch, 1);
+	}
 	close(sock);
     }
 }
@@ -640,7 +661,7 @@ int Net_start(void)
     int			retries,
 			type,
 			result;
-    long		last;
+    time_t		last;
 
     for (retries = 0;;) {
 	if (retries == 0
@@ -744,21 +765,32 @@ int Net_start(void)
 	}
 	break;
     }
+    packet_measure = NULL;
+    Net_init_measurement();
+    errno = 0;
+    return 0;
+}
+
+void Net_init_measurement(void)
+{
     packet_loss = 0;
     packet_drop = 0;
     packet_loop = 0;
     if (BIT(instruments, SHOW_PACKET_LOSS_METER|SHOW_PACKET_DROP_METER) != 0) {
-	if ((packet_measure = (char *) malloc(FPS)) == NULL) {
-	    error("No memory for packet measurement");
-	    CLR_BIT(instruments,
-		    SHOW_PACKET_LOSS_METER|SHOW_PACKET_DROP_METER);
+	if (packet_measure == NULL) {
+	    if ((packet_measure = (char *) malloc(FPS)) == NULL) {
+		error("No memory for packet measurement");
+		CLR_BIT(instruments,
+			SHOW_PACKET_LOSS_METER|SHOW_PACKET_DROP_METER);
+	    } else {
+		memset(packet_measure, PACKET_DRAW, FPS);
+	    }
 	}
-	memset(packet_measure, PACKET_DRAW, FPS);
-    } else {
+    }
+    else if (packet_measure != NULL) {
+	free(packet_measure);
 	packet_measure = NULL;
     }
-    errno = 0;
-    return 0;
 }
 
 /*
@@ -1588,7 +1620,8 @@ int Receive_war(void)
     short		robot_id, killer_id;
     u_byte		ch;
 
-    if ((n = Packet_scanf(&cbuf, "%c%hd%hd", &ch, &robot_id, &killer_id)) <= 0) {
+    if ((n = Packet_scanf(&cbuf, "%c%hd%hd",
+			  &ch, &robot_id, &killer_id)) <= 0) {
 	return n;
     }
     if ((n = Handle_war(robot_id, killer_id)) == -1) {
@@ -1967,28 +2000,26 @@ int Send_turnresistance_s(float turnresistance_s)
 
 int Receive_quit(void)
 {
+    unsigned char	pkt;
+    sockbuf_t		*sbuf;
+    char		reason[MAX_CHARS];
+
     if (rbuf.ptr < rbuf.buf + rbuf.len) {
-	if (*rbuf.ptr != PKT_QUIT) {
-	    errno = 0;
-	    error("Not a quit packet in receive buffer");
-	    return -1;
-	}
-	rbuf.ptr++;
-    }
-    else if (cbuf.ptr < cbuf.buf + cbuf.len) {
-	if (*cbuf.ptr != PKT_QUIT) {
-	    errno = 0;
-	    error("Not a quit packet in reliable data buffer");
-	    return -1;
-	}
-	cbuf.ptr++;
+	sbuf = &rbuf;
     } else {
-	errno = 0;
-	error("No buffer to read a quit packet from");
-	return -1;
+	sbuf = &cbuf;
     }
-    errno = 0;
-    error("Got quit packet");
+    if (Packet_scanf(sbuf, "%c", &pkt) != 1) {
+	errno = 0;
+	error("Can't read quit packet");
+    } else {
+	if (version < 0x3043
+	    || Packet_scanf(sbuf, "%s", reason) <= 0) {
+	    strcpy(reason, "unknown reason");
+	}
+	errno = 0;
+	error("Got quit packet: \"%s\"", reason);
+    }
     return -1;
 }
 

@@ -1,0 +1,2 @@
+void getusername(char *uname);
+

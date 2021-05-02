@@ -1,4 +1,4 @@
-/* $Id: default.c,v 3.40 1993/10/02 00:36:10 bjoerns Exp $
+/* $Id: default.c,v 3.47 1993/10/31 22:23:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "types.h"
 #include <X11/Xos.h>
 #include <X11/keysym.h>
 #ifdef	__apollo
@@ -28,8 +29,14 @@
 #endif
 #include <X11/Intrinsic.h>
 #include <sys/types.h>
-#include <sys/param.h>
+#ifdef VMS
+#include "strcasecmp.h"
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#include <sys/param.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -49,7 +56,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.40 1993/10/02 00:36:10 bjoerns Exp $";
+    "@(#)$Id: default.c,v 3.47 1993/10/31 22:23:27 bert Exp $";
 #endif
 
 #ifndef PATH_MAX
@@ -220,6 +227,10 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-outlineWorld",			".outlineWorld",
     	XrmoptionSepArg,			NULL },
+    { "-markingLights",			".markingLights",
+    	XrmoptionSepArg,			NULL },
+    { "-clock",				".clock",
+    	XrmoptionSepArg,			NULL },
     { "-gameFont",			".gameFont",
     	XrmoptionSepArg,			NULL },
     { "-scoreListFont",			".scoreListFont",
@@ -351,6 +362,8 @@ static XrmOptionDescRec opts[] = {
     { "-keyToggleVelocity",		".keyToggleVelocity",
 	XrmoptionSepArg,			NULL },
     { "-keyToggleCompass",		".keyToggleCompass",
+	XrmoptionSepArg,			NULL },
+    { "-toggleShield",			".toggleShield",
 	XrmoptionSepArg,			NULL }
 };
 
@@ -516,6 +529,9 @@ static void Get_int_resource(XrmDatabase db, char *myName, char *myClass,
 static void Get_file_defaults(XrmDatabase *rDBptr,
 			      char *myName, char *myClass)
 {
+#ifdef VMS
+#define MAXPATHLEN 1024
+#endif
     int			len;
     char		*ptr,
 			*lang = getenv("LANG"),
@@ -526,6 +542,15 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
     sprintf(path, "%s%s", LIBDIR, myClass);
     *rDBptr = XrmGetFileDatabase(path);
 
+#ifdef VMS
+    /*
+     * None of the paths generated will be valid VMS file names.
+     */
+    tmpDB = XrmGetFileDatabase("SYS$LOGIN:decw$xdefaults.dat");
+    XrmMergeDatabases(tmpDB, rDBptr);
+    tmpDB = XrmGetFileDatabase("DECW$USER_DEFAULTS:xpilot.dat");
+    XrmMergeDatabases(tmpDB, rDBptr);
+#else
     if (lang != NULL) {
 	sprintf(path, "/usr/lib/X11/%s/app-defaults/%s", lang, myClass);
 	if (access(path, 0) == -1) {
@@ -595,6 +620,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
 	tmpDB = XrmGetFileDatabase(path);
 	XrmMergeDatabases(tmpDB, rDBptr);
     }
+#endif
 }
 
 
@@ -649,11 +675,20 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     if (Get_string_resource(argDB, myName, myClass, "display", NULL, dispName,
 			    MAX_DISP_LEN) == 0
 	|| dispName[0] == '\0') {
+#ifdef VMS
+	if ((ptr = getenv("DECW$DISPLAY")) != NULL) {
+#else
 	if ((ptr = getenv("DISPLAY")) != NULL) {
+#endif
 	    strncpy(dispName, ptr, MAX_DISP_LEN);
 	    dispName[MAX_DISP_LEN - 1] = '\0';
 	} else {
+#ifdef VMS
+	    strcpy(dispName, "::0.0");
+	    sprintf(dispName, "%s::0.0", host);
+#else
 	    strcpy(dispName, ":0.0");
+#endif
 	}
     }
     if ((dpy = XOpenDisplay(dispName)) == NULL) {
@@ -708,6 +743,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_float_resource(rDB, myName, myClass, "sparkProb", 0.50,
 		       &spark_prob);
     spark_rand = (int)(spark_prob * MAX_SPARK_RAND + 0.5f);
+    Get_int_resource(rDB, myName, myClass, "charsPerSecond", 50,
+		     &charsPerSecond);
+    Get_bool_resource(rDB, myName, myClass, "markingLights", "True", &i);
+    markingLights = (i == false) ? false : true;
 
     Get_int_resource(rDB, myName, myClass, "backgroundPointDist", 8,
 		     &map_point_distance);
@@ -795,6 +834,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     if (i) {
 	SET_BIT(instruments, SHOW_OUTLINE_WORLD);
     }
+    Get_bool_resource(rDB, myName, myClass, "clock", "False", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_CLOCK);
+    }
 
     Get_float_resource(rDB, myName, myClass, "speedFactHUD", 0.0,
 		       &hud_move_fact);
@@ -830,6 +873,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		 sizeof audioServer);
 #endif
 
+    Get_bool_resource(rDB, myName, myClass, "toggleShield", "False",
+		      &toggle_shield);
 
     /*
      * Key bindings

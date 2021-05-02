@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 3.45 1993/10/02 19:35:25 bert Exp $
+/* $Id: xinit.c,v 3.46 1993/10/12 21:09:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.45 1993/10/02 19:35:25 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.46 1993/10/12 21:09:41 bert Exp $";
 #endif
 
 #if defined(__cplusplus)
@@ -153,8 +153,9 @@ static struct {
 	    "robots to seak certain players"			},
     {	itemLaser_bits,
 	    "Laser; "
-	    "limited range laser beam, "
-	    "having more laser items increases the range of the laser, "
+	    "limited range laser pulse weapon, "
+	    "having more laser items increases the range and rate "
+	    "of the laser pulses, "
 	    "they can be irrepairably damaged by ECMs" },
 };
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */

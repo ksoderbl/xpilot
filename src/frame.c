@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.25 1993/10/02 00:36:13 bjoerns Exp $
+/* $Id: frame.c,v 3.27 1993/10/28 21:17:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,14 +21,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <sys/types.h>
+#ifndef  VMS
 #include <sys/param.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
 
+#define SERVER
 #include "global.h"
 #include "version.h"
 #include "bit.h"
@@ -37,7 +45,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.25 1993/10/02 00:36:13 bjoerns Exp $";
+    "@(#)$Id: frame.c,v 3.27 1993/10/28 21:17:14 bert Exp $";
 #endif
 
 
@@ -271,8 +279,8 @@ static int Frame_status(int conn, int ind)
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count > 0) {
 	Send_destruct(conn, pl->count);
     }
-    if (Shutdown != -1) {
-	Send_shutdown(conn, Shutdown, ShutdownDelay);
+    if (ShutdownServer != -1) {
+	Send_shutdown(conn, ShutdownServer, ShutdownDelay);
     }
     return 1;
 }
@@ -706,7 +714,7 @@ void Frame_update(void)
 	 */
 	if (newTimeLeft <= 0) {
 	    Game_Over();
-	    Shutdown = 30 * FPS;	/* Shutdown in 30 seconds */
+	    ShutdownServer = 30 * FPS;	/* Shutdown in 30 seconds */
 	    game_over_called = true;
 	}
     }
@@ -715,6 +723,13 @@ void Frame_update(void)
 	pl = Players[i];
 	conn = pl->conn;
 	if (conn == NOT_CONNECTED) {
+	    continue;
+	}
+	if (BIT(pl->status, PAUSE) && (loops & 0x01) == 0) {
+	    /*
+	     * Reduce the frame rate for paused players
+	     * to reduce network load.
+	     */
 	    continue;
 	}
 	if (Send_start_of_frame(conn) == -1) {

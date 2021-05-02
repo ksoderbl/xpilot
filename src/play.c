@@ -1,4 +1,4 @@
-/* $Id: play.c,v 3.22 1993/10/02 00:36:22 bjoerns Exp $
+/* $Id: play.c,v 3.27 1993/11/02 16:43:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#define SERVER
 #include "global.h"
 #include "draw.h"
 #include "score.h"
@@ -34,7 +35,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.22 1993/10/02 00:36:22 bjoerns Exp $";
+    "@(#)$Id: play.c,v 3.27 1993/11/02 16:43:34 bert Exp $";
 #endif
 
 
@@ -280,21 +281,22 @@ void Place_item(int type, player *pl)
         grav = GRAVITY;
         x = pl->prevpos.x / BLOCK_SZ;
         y = pl->prevpos.y / BLOCK_SZ;
-        while (World.block[x][y] != SPACE) {
-            x = rand()%World.x;
-            y = rand()%World.y;
-        }
     } else {
         if ((rand()&127) < MovingItemsRand)
             grav = GRAVITY;
         else {
             grav = 0;
-            vx = vy = 0.0;
         }
-        do {
-            x = rand()%World.x;
-            y = rand()%World.y;
-        } while (World.block[x][y] != SPACE);
+	x = rand()%World.x;
+	y = rand()%World.y;
+    }
+    while (World.block[x][y] != SPACE) {
+	/*
+	 * This will take very long (or forever) with maps
+	 * that hardly have any (or none) spaces.
+	 */
+	x = rand()%World.x;
+	y = rand()%World.y;
     }
     if (grav) {
         vx = (rand()&7)-3;
@@ -305,6 +307,8 @@ void Place_item(int type, player *pl)
         } else {
 	    vy -= Gravity * 12;
 	}
+    } else {
+	vx = vy = 0.0;
     }
 
     item->color = RED;
@@ -975,6 +979,9 @@ void do_transporter(player *pl)
 		break;
 	    case OBJ_LASER:
 		STEAL(lasers, "a laser");
+		if (pl->lasers > MAX_LASERS) {
+		    pl->lasers = MAX_LASERS;
+		}
 		break;
 	    case OBJ_TANK:
 		{
@@ -1067,19 +1074,21 @@ void do_ecm(player *pl)
     for (i = 0; i < NumPlayers; i++) {
 	p = Players[i];
 
-	if (p != pl && BIT(p->status, PLAYING|GAME_OVER) == PLAYING &&
+	if (p != pl && BIT(p->status, PLAYING|PAUSE|GAME_OVER) == PLAYING &&
 	    Wrap_length(pl->pos.x - p->pos.x,
 			pl->pos.y - p->pos.y) <= ECM_DISTANCE) {
 
 	    int c = rand() % ECM_DAMAGE_COUNT;
 	    p->forceVisible += c;
 
+	    /* ECM destroys lasers */
+	    if (p->lasers > 0) {
+		p->lasers = ((ECM_DAMAGE_COUNT - 1 - c) * p->lasers)
+		    / (ECM_DAMAGE_COUNT - 1);
+	    }
+
 	    if (p->robot_mode == RM_NOT_ROBOT || p->robot_mode == RM_OBJECT) {
 		p->damaged += c;
-		/* ECM destroys lasers */
-		if (p->lasers > 0) {
-		    p->lasers = (c * p->lasers) / ECM_DAMAGE_COUNT;
-		}
 	    } else
 		if (pl->lock.tagged == LOCK_PLAYER
 		    && (pl->lock.distance < pl->sensor_range
@@ -1579,7 +1588,7 @@ void Tank_handle_detach(player *pl)
     dummy->have = DEF_HAVE;
     dummy->used = (DEF_USED & ~USED_KILL & pl->have) | OBJ_SHIELD;
     if (playerShielding == 0) {
-	dummy->shield_time = 3 * FPS;
+	dummy->shield_time = 30 * FPS;
 	dummy->have |= OBJ_SHIELD;
     }
     

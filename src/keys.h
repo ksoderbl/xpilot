@@ -1,4 +1,4 @@
-/* $Id: keys.h,v 3.9 1993/09/13 19:09:37 bjoerns Exp $
+/* $Id: keys.h,v 3.10 1993/10/21 10:31:48 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -24,10 +24,11 @@
 #ifndef KEYS_H
 #define KEYS_H
 
+#ifndef SERVER
 #include <X11/Intrinsic.h>
 
 #define CONTROL_DELAY	100
-
+#endif
 
 /*
  * The following enum type defines the possible actions as a result of
@@ -74,9 +75,12 @@ typedef enum {
     NUM_KEYS		/* The number of different keys_t */
 } keys_t;
 
+
+#ifndef SERVER
 typedef struct {
     KeySym	keysym;			/* Keysym-to-action array */
     keys_t	key;
 } keydefs_t;
+#endif
 
 #endif

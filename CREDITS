@@ -9,6 +9,15 @@ Release 3.0 credits:
 	Greg Renda			Sound scheme client/serverized
 					and added NCD sound support.
 	Dave Lemke
+	Curt Hjorring			VMS port.
+	Andrew Scherpbier		Random sound patch.
+	Stephen Singer
+	Andy Skinner
+	Tero Kivinen			Outline world.
+	David Chatterton		Ultrix and SGI.
+	Johan Danielsson
+	Fred Hucht & Michael Staats	Several (big) patches
+	Maurice Abraham
 	Makoto Matsushita
 	& all the beta testers
 
@@ -26,6 +35,7 @@ Version 2.0 credits:	(Never released)
 	Stig Sæther Bakken
 	Jim Hickey
 	Harvey Thompson
+	Ted Lemon
 
 Version 1.2 credits:
 

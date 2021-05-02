@@ -1,4 +1,4 @@
-/* $Id: event.c,v 3.24 1993/10/01 20:38:30 bert Exp $
+/* $Id: event.c,v 3.27 1993/11/02 16:33:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,6 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define SERVER
 #include "global.h"
 #include "score.h"
 #include "map.h"
@@ -32,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.24 1993/10/01 20:38:30 bert Exp $";
+    "@(#)$Id: event.c,v 3.27 1993/11/02 16:33:51 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -77,10 +78,11 @@ int Handle_keyboard(int ind)
 
     for (key = 0; key < NUM_KEYS; key++) {
 	if (pl->last_keyv[key / BITV_SIZE] == pl->prev_keyv[key / BITV_SIZE]) {
-	    key |= (BITV_SIZE - 1);
+	    key |= (BITV_SIZE - 1);	/* Skip to next keyv element */
 	    continue;
 	}
-	while (BITV_ISSET(pl->last_keyv, key) == BITV_ISSET(pl->prev_keyv, key)) {
+	while (BITV_ISSET(pl->last_keyv, key)
+	       == BITV_ISSET(pl->prev_keyv, key)) {
 	    if (++key >= NUM_KEYS) {
 		break;
 	    }
@@ -360,7 +362,7 @@ int Handle_keyboard(int ind)
 				return 1;
 			    } else {
 				pl->prev_life = pl->life = 0;
-				pl->mychar = 'D';
+				pl->mychar = 'W';
 				SET_BIT(pl->status, GAME_OVER);
 			    }
 			}

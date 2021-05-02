@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 3.12 1993/09/20 18:44:13 bert Exp $
+/* $Id: proto.h,v 3.14 1993/10/21 10:58:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -24,6 +24,13 @@
 #ifndef	PROTO_H
 #define	PROTO_H
 
+#include <stddef.h>
+#include <string.h>
+
+#ifdef VMS
+#include "strcasecmp.h"
+#endif
+
 #include "types.h"
 #include "object.h"
 
@@ -48,7 +55,6 @@ extern int Handle_keyboard(int);
 /*
  * Prototypes for map.c
  */
-extern void Optimize_map(void);
 extern void Print_map(void)			/* Debugging only. */;
 extern void Init_map(void);
 extern void Free_map(void);
@@ -141,7 +147,7 @@ extern void UpdateItemChances(int num_players);
 extern int main(int argc, char *argv[]);
 extern void Main_Loop(void);
 extern void End_game(void);
-extern bool Check_new_players(void);
+extern void Contact(void);
 extern bool Owner(char *name);
 extern void Handle_signal(int sig_no);
 extern void Log_game(char *heading);

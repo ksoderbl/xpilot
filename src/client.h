@@ -1,4 +1,4 @@
-/* $Id: client.h,v 3.33 1993/09/26 19:46:13 bert Exp $
+/* $Id: client.h,v 3.38 1993/10/31 22:22:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -42,6 +42,7 @@
 #define SHOW_PACKET_SIZE_METER	(1<<10)
 #define SHOW_PACKET_LOSS_METER	(1<<11)
 #define SHOW_PACKET_DROP_METER	(1<<12)
+#define SHOW_CLOCK		(1<<13)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -72,34 +73,30 @@ typedef struct {
 } other_t;
 
 typedef struct {
-    short	x,		/* Block index */
-		y;		/* Block index */
+    int		pos;		/* Block index */
     long	fuel;		/* Amount of fuel available */
 } fuelstation_t;
 
 typedef struct {
-    short	x,		/* Block index */
-		y,		/* Block index */
-		id,		/* Id of owner or -1 */
+    int		pos;		/* Block index */
+    short	id,		/* Id of owner or -1 */
 		team;		/* Team this base belongs to */
 } homebase_t;
 
 typedef struct {
-    short	x,		/* Block index */
-		y,		/* Block index */
-                dead_time;	/* Frames inactive */
+    int		pos;		/* Block index */
+    short	dead_time,	/* Frames inactive */
+                dot;		/* Draw dot if inactive */
 } cannontime_t;
 
 typedef struct {
-    short	x,		/* Block index */
-		y,		/* Block index */
-		dead_time;	/* Frames inactive */
+    int		pos;		/* Block index */
+    short	dead_time;	/* Frames inactive */
     u_short	damage;		/* Damage to target */
 } target_t;
 
 typedef struct {
-    short	x,		/* Block index */
-		y;		/* Block index */
+    int		pos;		/* Block index */
 } checkpoint_t;
 
 #define SCORE_OBJECT_COUNT	100
@@ -167,6 +164,7 @@ extern float	turnspeed_s;		/* Saved turnspeed */
 extern float	turnresistance;		/* How much is lost in % */
 extern float	turnresistance_s;	/* Saved (see above) */
 extern float	spark_prob;		/* Sparkling effect configurable */
+extern int	charsPerSecond;		/* Message output speed (config) */
 
 extern float	hud_move_fact;		/* scale the hud-movement (speed) */
 extern float	ptr_move_fact;		/* scale the speed pointer length */
@@ -183,6 +181,8 @@ extern char	realname[MAX_CHARS];	/* Real name of player */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
 extern int	scoresChanged;
+extern int	toggle_shield;		/* Are shields toggled by a press? */
+extern int	shields;		/* When shields are considered up */
 
 
 #ifdef SOUND
@@ -194,11 +194,10 @@ extern int 	maxVolume;		/* maximum volume (in percent) */
 int Fuel_by_pos(int x, int y);
 int Target_alive(int x, int y, int *damage);
 int Handle_fuel(int ind, int fuel);
-int Cannon_dead_time_by_pos(int x, int y);
+int Cannon_dead_time_by_pos(int x, int y, int *dot);
 int Handle_cannon(int ind, int dead_time);
 int Handle_target(int num, int dead_time, int damage);
-int Base_team_by_pos(int x, int y);
-int Base_id_by_pos(int x, int y);
+int Base_info_by_pos(int x, int y, int *id, int *team);
 int Handle_base(int id, int ind);
 int Check_pos_by_index(int ind, int *xp, int *yp);
 int Check_index_by_pos(int x, int y);
@@ -210,6 +209,8 @@ int Handle_score(int id, int score, int life, int mychar);
 int Handle_score_object(int score, int x, int y, char *msg);
 int Handle_war(int robot_id, int killer_id);
 int Handle_seek(int programmer_id, int robot_id, int sought_id);
+void Map_dots(void);
+void Map_blue(void);
 void Client_score_table(void);
 int Client_init(char *server, unsigned server_version);
 int Client_setup(void);
@@ -221,6 +222,8 @@ int Client_input(int);
 void Client_flush(void);
 void Client_sync(void);
 int Client_wrap_mode(void);
+void Reset_shields(void);
+void Set_toggle_shield(int onoff);
 int xevent(int);
 int Key_init(void);
 int Key_update(void);

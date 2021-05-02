@@ -1,4 +1,4 @@
-/* $Id: net.c,v 3.12 1993/09/20 18:37:33 bert Exp $
+/* $Id: net.c,v 3.15 1993/10/28 21:18:47 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,18 +21,28 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
-#if defined(__hpux)
+#if defined(__hpux) || defined(VMS)
 #include <time.h>
 #else
 #include <sys/time.h>
 #endif
+#ifdef VMS
+#include <socket.h>
+#include <in.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
 #include <netdb.h>
 
 #include "version.h"
@@ -114,7 +124,7 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
 	sbuf->len = 0;
 	sbuf->ptr = sbuf->buf;
     } else {
-#if defined(__hpux) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_)
+#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_)
 	memmove(sbuf->buf, sbuf->buf + len, sbuf->len - len);
 #else
 	bcopy(sbuf->buf + len, sbuf->buf, sbuf->len - len);
@@ -204,7 +214,11 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 		Sockbuf_clear(sbuf);
 		return -1;
 	    }
-	    error("send (%d)", i);
+	    { static int send_err;
+		if ((send_err++ & 0x3F) == 0) {
+		    error("send (%d)", i);
+		}
+	    }
 	    if (GetSocketError(sbuf->sock) == -1) {
 		error("GetSocketError send");
 		return -1;
@@ -315,7 +329,11 @@ int Sockbuf_read(sockbuf_t *sbuf)
 		error("Can't recv on socket");
 		return -1;
 	    }
-	    error("recv (%d)", i);
+	    { static int recv_err;
+		if ((recv_err++ & 0x3F) == 0) {
+		    error("recv (%d)", i);
+		}
+	    }
 	    if (GetSocketError(sbuf->sock) == -1) {
 		error("GetSocketError recv");
 		return -1;
@@ -549,7 +567,7 @@ int Packet_printf(va_alist)
 	if (failure == PRINTF_SIZE) {
 #ifndef SILENT
 	    static int before;
-	    if (before++ == 0) {
+	    if ((before++ & 0x0F) == 0) {
 		printf("Write socket buffer not big enough (%d,%d,\"%s\")\n",
 		    sbuf->size, sbuf->len, fmt);
 	    }

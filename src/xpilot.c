@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.26 1993/10/02 00:36:31 bjoerns Exp $
+/* $Id: xpilot.c,v 3.30 1993/10/27 18:36:34 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,21 +21,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#ifdef VMS
+#include "username.h"
+#include <socket.h>
+#include <in.h>
+#include <inet.h>
+#else
 #include <pwd.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 #if (SVR4)
 # include <sys/sockio.h>
 #endif
+#ifdef VMS
+#include <time.h>
+#else
 #include <sys/time.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#endif
 #ifndef LINUX
 #include <net/if.h>
 #endif
@@ -55,10 +71,14 @@
 #include "cmw.h"
 #endif /* SUNCMW */
 
+#if defined(VMS) && !defined(MAXHOSTNAMELEN)
+#define MAXHOSTNAMELEN 64
+#endif
+
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.26 1993/10/02 00:36:31 bjoerns Exp $";
+    "@(#)$Id: xpilot.c,v 3.30 1993/10/27 18:36:34 bjoerns Exp $";
 #endif
 
 #define MAX_LINE	256
@@ -177,7 +197,7 @@ static bool Get_contact_message(void)
 	     * Resend the contact message to him adapted to his version.
 	     */
 	    Sockbuf_clear(&sbuf);
-	    Packet_printf(&sbuf, "%lu%s%hu%c", VERSION2MAGIC(0x3020),
+	    Packet_printf(&sbuf, "%u%s%hu%c", VERSION2MAGIC(0x3020),
 			  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
 	    if (DgramSend(sbuf.sock, server_host, server_port,
 			  sbuf.buf, sbuf.len) == -1) {
@@ -199,7 +219,7 @@ static bool Get_contact_message(void)
 
 
 
-static int Get_reply_message(sockbuf_t *ibuf)
+static bool Get_reply_message(sockbuf_t *ibuf)
 {
     int			len;
     unsigned		magic;
@@ -262,6 +282,10 @@ static bool Process_commands(sockbuf_t *ibuf)
 
 	    gets(str);
 	    c = str[0];
+	    if (feof(stdin)) {
+		puts("");
+		c = 'Q';
+	    }
 	    CAP_LETTER(c);
 	} else {
 	    if (list_servers)
@@ -273,7 +297,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 	}
 
 	Sockbuf_clear(ibuf);
-	Packet_printf(ibuf, "%lu%s%hu", VERSION2MAGIC(server_version),
+	Packet_printf(ibuf, "%u%s%hu", VERSION2MAGIC(server_version),
 		      real_name, GetPortNum(ibuf->sock));
 
 	switch (c) {
@@ -364,13 +388,16 @@ static bool Process_commands(sockbuf_t *ibuf)
 		   "N    -   Next server, skip this one.\n"
 		   "S    -   list Status.\n"
 		   "Q    -   Quit.\n"
-		   "K    -   Kick a player.               (only owner)\n"
-		   "M    -   send a Message.              (only owner)\n"
-		   "L    -   Lock/unLock server access.   (only owner)\n"
-		   "D(*) -   shutDown/cancel shutDown.    (only owner)\n"
+		   "K    -   Kick a player.                (only owner)\n"
+		   "M    -   send a Message.               (only owner)\n"
+		   "L    -   Lock/unLock server access.    (only owner)\n"
+		   "D(*) -   shutDown/cancel shutDown.     (only owner)\n"
+		   "R(#) -   set maximum number of Robots. (only owner)\n"
 		   "J or just Return enters the game.\n"
-		   "* If you don't specify any delay, you will signal that\n"
-		   "  the server should stop an ongoing shutdown.\n");
+		   "(*) If you don't specify any delay, you will signal that\n"
+		   "    the server should stop an ongoing shutdown.\n"
+		   "(#) Not specifying the maximum number of robots is\n"
+		   "    the same as specifying 0 robots.\n");
 
 	    /*
 	     * Next command.
@@ -610,15 +637,19 @@ int main(int argc, char *argv[])
     /*
      * --- Setup core of pack ---
      */
+#ifdef VMS
+    getusername(real_name);
+#else
     if ((pwent = getpwuid(geteuid())) == NULL
 	|| pwent->pw_name[0] == '\0') {
 	error("Can't get user info for user id %d", geteuid());
 	exit(1);
     }
     strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
+#endif
     nick_name[0] = '\0';
     Sockbuf_clear(&sbuf);
-    Packet_printf(&sbuf, "%lu%s%hu%c", MAGIC,
+    Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
 		  real_name, GetPortNum(sbuf.sock), CONTACT_pack);
 
 
@@ -677,7 +708,15 @@ int main(int argc, char *argv[])
 
     } else {				/* Search for servers... */
 #ifdef LINUX
-	printf("If you have LINUX defined during compilation than\n"
+	printf("If you have LINUX defined during compilation then\n"
+	       "you need to specify which host to connect to.\n");
+#else
+#ifdef VMS
+	/*
+	 * VMS could cope with the old 'fudged' broadcast code
+	 * Should add it back in
+	 */
+	printf("If you have VMS defined during compilation then\n"
 	       "you need to specify which host to connect to.\n");
 #else
 	SetTimeout(10, 0);
@@ -695,6 +734,7 @@ int main(int argc, char *argv[])
 		break;
 	    }
 	}
+#endif
 #endif
     }
 
@@ -714,6 +754,16 @@ int main(int argc, char *argv[])
 
 
 #ifndef LINUX
+#ifdef VMS
+/*
+ * Use old fudged broadcasting code
+ */
+int Query_all(int sockfd, int port, char *msg, int msglen)
+{
+    return -1;
+}
+#else
+
 /*
  * Code which uses 'real' broadcasting to find server.  Provided by
  * Bert Gÿsbers.  Thanks alot!
@@ -1015,4 +1065,5 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 
     return count;
 }
+#endif
 #endif

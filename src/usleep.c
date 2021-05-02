@@ -13,14 +13,19 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
  *
  */
 
+#ifdef VMS
+#include <time.h>
+#include <socket.h>
+#else
 #include <sys/types.h>
 #include <sys/time.h>
+#endif
 
 #include "types.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.2 1993/09/20 18:48:34 bert Exp $";
+    "@(#)$Id: usleep.c,v 3.5 1993/10/30 21:27:10 bert Exp $";
 #endif
 
 
@@ -29,10 +34,16 @@ int usleep(unsigned long usec)
 /*#ifdef SYSV
     poll((struct poll *) 0, (size_t) 0, usec / 1000);	/* ms RES */
 /*#else*/
+#ifdef VMS
+    float timeout;
+
+    timeout = usec/1000000.0;
+    LIB$WAIT(&timeout);
+#else
     struct timeval timeout;
     timeout.tv_usec = usec % (unsigned long) 1000000;
     timeout.tv_sec = usec / (unsigned long) 1000000;
     (void) select(0, (void *) 0, (void *) 0, (void *) 0, &timeout);
-/*#endif*/
+#endif
     return 0;
 }

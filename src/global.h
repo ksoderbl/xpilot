@@ -1,4 +1,4 @@
-/* $Id: global.h,v 3.18 1993/09/18 15:08:15 bert Exp $
+/* $Id: global.h,v 3.20 1993/10/25 21:59:41 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -39,6 +39,11 @@
 #include "proto.h"
 
 
+#ifndef MAX
+#define MAX(a,b)  ((a) > (b) ? (a) : (b))
+#define MIN(a,b)  ((a) < (b) ? (a) : (b))
+#endif
+
 typedef struct {
     int max_num;
     char name[80];
@@ -49,9 +54,12 @@ typedef struct {
 /*
  * Global data.
  */
+#ifdef SERVER
 extern player		**Players;
 extern object		*Obj[];
+#endif
 extern wireobj		ships[];
+#ifdef SERVER
 extern long		loops;
 extern long		Id;
 extern int		NumPlayers;
@@ -62,19 +70,20 @@ extern int		robotsLeave, robotLeaveLife;
 extern int		robotLeaveScore, robotLeaveRatio;
 extern World_map	World;
 extern server		Server;
-extern float		ShotsMass, ShipPower, ShipMass, ShotsSpeed, Gravity;
+extern float		ShotsMass, ShipMass, ShotsSpeed, Gravity;
 extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
 extern long		GetInd[];
+#endif
 extern float		tbl_sin[];
-extern int		Shutdown, ShutdownDelay;
+#ifdef SERVER
+extern int		ShutdownServer, ShutdownDelay;
 extern bool		RawMode;
 extern bool		NoQuit;
 extern int		framesPerSecond;
 extern char		*mapFileName;
-extern int		mapRule;
 extern char		*mapData;
 extern int		mapWidth;
 extern int		mapHeight;
@@ -128,5 +137,6 @@ extern float		itemProbMult;
 extern float		maxItemDensity;
 extern float		gameDuration;
 extern time_t		gameOverTime;
+#endif
 
 #endif /* GLOBAL_H */

@@ -1,4 +1,4 @@
-/* $Id: robot.c,v 3.15 1993/10/02 00:36:24 bjoerns Exp $
+/* $Id: robot.c,v 3.17 1993/10/31 22:31:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 /* Robot code submitted by Maurice Abraham. */
 
+#define SERVER
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -1240,7 +1241,8 @@ void Update_robots(void)
 	if (itemLaserProb > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
 	    for (j = 0; j < NumPlayers; j++) {
 		ship = Players[j];
-		if (j == i || BIT(ship->status, PLAYING|GAME_OVER) != PLAYING)
+		if (j == i
+		    || BIT(ship->status, PLAYING|PAUSE|GAME_OVER) != PLAYING)
 		    continue;
 		if (ship->num_pulses > 0) {
 		    distance = Wrap_length(pl->pos.x - ship->pos.x,
@@ -1286,7 +1288,8 @@ void Update_robots(void)
 
 	for (j = 0; j < NumPlayers; j++) {
 	    ship = Players[j];
-	    if (j == i || BIT(ship->status, PLAYING|GAME_OVER) != PLAYING)
+	    if (j == i
+		|| BIT(ship->status, PLAYING|PAUSE|GAME_OVER) != PLAYING)
 		continue;
 
 	    dx = ship->pos.x - pl->pos.x, dx = WRAP_DX(dx);
@@ -1325,7 +1328,7 @@ void Update_robots(void)
 
 	if (pl->lock.tagged == LOCK_PLAYER) {
 	    ship = Players[GetInd[pl->lock.pl_id]];
-	    if (!(BIT(ship->status, PLAYING))
+	    if (BIT(ship->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
 		|| (pl->robot_lock == LOCK_PLAYER
 		    && pl->robot_lock_id != pl->lock.pl_id)
 		|| pl->lock.distance > 2 * VISIBILITY_DISTANCE

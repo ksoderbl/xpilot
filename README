@@ -36,6 +36,13 @@ or less up to date.
 
 
 
+VMS:
+\\\\
+
+*   VMS users should examine the VMS subdirectory and read the README.VMS
+    which is in there.
+
+
 REQUIREMENTS:
 \\\\\\\\\\\\\
 
@@ -46,7 +53,6 @@ XPilot require the following resources:
 
 Also note that XPilot generates heavy netload and isn't gentle with the X
 server, so a fast machine in a fast network is the ideal situation.
-
 
 
 INSTALLATION:

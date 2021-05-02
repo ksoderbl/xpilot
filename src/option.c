@@ -1,4 +1,4 @@
-/* $Id: option.c,v 3.10 1993/10/02 00:36:18 bjoerns Exp $
+/* $Id: option.c,v 3.12 1993/10/21 10:46:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -21,10 +21,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "types.h"
+#ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#define SERVER
 #include "global.h"
 #include "robot.h"
 #include "map.h"
@@ -461,7 +468,7 @@ static FILE *openDefaultsFile(char *filename)
 	if ((ifile = openCompressedDefaultsFile()) != NULL) {
 	    return ifile;
 	}
-	sprintf(FileName, "%s/%s", MAPDIR, filename);
+	sprintf(FileName, "%s%s", MAPDIR, filename);
 	if ((ifile = openCompressedDefaultsFile()) != NULL) {
 	    return ifile;
 	}
@@ -486,7 +493,7 @@ static FILE *openDefaultsFile(char *filename)
 	return ifile;
     }
 #endif
-    sprintf(FileName, "%s/%s", MAPDIR, filename);
+    sprintf(FileName, "%s%s", MAPDIR, filename);
     if ((ifile = fopen(FileName, "r")) != NULL) {
 	return ifile;
     }
@@ -622,7 +629,3 @@ void parseOptions(void)
 	    }
 	}
 }
-
-
-
-

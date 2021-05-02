@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 3.21 1993/10/02 00:36:27 bjoerns Exp $
+/* $Id: xevent.c,v 3.22 1993/10/21 11:18:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -94,6 +94,19 @@ static void Key_event(XEvent *event)
 		scoresChanged++;
 		continue;	/* server doesn't need to know */
 
+	    case KEY_SHIELD:
+		if (toggle_shield) {
+		    shields = !shields;
+		    if (shields) {
+			BITV_SET(keyv, key);
+		    } else {
+			BITV_CLR(keyv, key);
+		    }
+		    change = true;
+		    continue;
+		}
+		break;
+
 	    case KEY_REFUEL:
 	    case KEY_TANK_NEXT:
 	    case KEY_TANK_PREV:
@@ -124,6 +137,12 @@ static void Key_event(XEvent *event)
 	    case KEY_TALK:
 		continue;	/* server doesn't need to know */
 
+	    case KEY_SHIELD:
+		if (toggle_shield) {
+		    continue;
+		}
+		break;
+
 	    case KEY_REFUEL:
 		fuelCount = FUEL_NOTIFY;
 		break;
@@ -137,6 +156,23 @@ static void Key_event(XEvent *event)
     }
     if (change == true) {
 	Net_key_change();
+    }
+}
+
+void Reset_shields(void)
+{
+    if (toggle_shield) {
+	BITV_SET(keyv, KEY_SHIELD);
+	Net_key_change();
+	shields = 1;
+    }
+}
+
+void Set_toggle_shield(int onoff)
+{
+    toggle_shield = onoff;
+    if (toggle_shield) {
+	shields = (BITV_ISSET(keyv, KEY_SHIELD) != 0);
     }
 }
 

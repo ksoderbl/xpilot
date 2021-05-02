@@ -1,4 +1,4 @@
-/* $Id: error.c,v 3.3 1993/10/02 19:17:26 bert Exp $
+/* $Id: error.c,v 3.4 1993/10/21 10:24:55 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -11,8 +11,10 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: error.c,v 3.3 1993/10/02 19:17:26 bert Exp $";
+    "@(#)$Id: error.c,v 3.4 1993/10/21 10:24:55 bert Exp $";
 #endif
+
+#include <string.h>
 
 
 
@@ -39,7 +41,11 @@ static char		progname[MAX_PROG_LENGTH];
  */
 void init_error(char *prog)
 {
+#ifdef VMS
+    char *p = strrchr(prog, ']');
+#else
     char *p = strrchr(prog, '/');
+#endif
 
     strncpy(progname, p ? p+1 : prog, MAX_PROG_LENGTH);   /* Beautify arv[0] */
 }
@@ -55,7 +61,10 @@ void error(char *fmt, ...)
 {
     va_list	 ap;			/* Argument pointer */
     int		 e = errno;		/* Store errno */
-
+#ifdef VMS
+    if (e == EVMSERR)
+	e = 0/*__gnu_vaxc_errno__*/;
+#endif
 
     va_start(ap, fmt);
 
@@ -83,7 +92,7 @@ va_dcl		/* Note that the format argument cannot be separately	*
 		 * declared because of the definition of varargs.	*/
 {
     va_list	 args;
-    int		 e = errno;
+    int		 e = errno;		/* Store errno */
     extern int	 sys_nerr;
     extern char *sys_errlist[];
     char	*fmt;

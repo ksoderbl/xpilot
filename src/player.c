@@ -1,4 +1,4 @@
-/* $Id: player.c,v 3.25 1993/10/01 20:44:42 bert Exp $
+/* $Id: player.c,v 3.28 1993/11/02 16:45:54 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -22,6 +22,7 @@
  */
 
 #include <stdio.h>
+#define SERVER
 #include "global.h"
 #include "map.h"
 #include "score.h"
@@ -31,7 +32,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.25 1993/10/01 20:44:42 bert Exp $";
+    "@(#)$Id: player.c,v 3.28 1993/11/02 16:45:54 bert Exp $";
 #endif
 
 
@@ -397,57 +398,98 @@ void Reset_all_players(void)
 
 void Compute_game_status(void)
 {
-    int i, x;
-    int team[MAX_TEAMS];
-    int	teams = 0;
-    int num_teams = 0;
-    int numActivePlayers = 0;
-
-    /* Do we have a winning team ? */
+    int i;
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
-	for(i=0; i < MAX_TEAMS; i++) {
-	    team[i] = 0;
-	    if (World.teams[i].NumMembers > 0)
-		num_teams++;
+
+	/* Do we have a winning team ? */
+
+	enum TeamState {
+	    TeamEmpty,
+	    TeamDead,
+	    TeamAlive
+	}	team_state[MAX_TEAMS];
+	int	num_dead_teams = 0;
+	int	num_alive_teams = 0;
+	int	winning_team = -1;
+
+	for (i = 0; i < MAX_TEAMS; i++) {
+	    team_state[i] = TeamEmpty;
 	}
 
-	for (i=0; i < NumPlayers && teams < 2; i++) {
-	    if (!BIT(Players[i]->status, GAME_OVER))
-		if (team[Players[i]->team] == 0) {
-		    team[Players[i]->team]++;
-		    teams++;
+	for (i = 0; i < NumPlayers; i++) {
+	    if (Players[i]->robot_mode == RM_OBJECT) {
+		/* Ignore tanks. */
+		continue;
+	    }
+	    else if (BIT(Players[i]->status, PAUSE)) {
+		/* Ignore paused players. */
+		continue;
+	    }
+	    else if (BIT(Players[i]->status, GAME_OVER)) {
+		if (team_state[Players[i]->team] == TeamEmpty) {
+		    /* Assume all teammembers are dead. */
+		    num_dead_teams++;
+		    team_state[Players[i]->team] = TeamDead;
 		}
+	    }
+	    /*
+	     * If the player is not paused and he is not in the
+	     * game over mode then he is considered alive.
+	     * But he may not be playing though if the rest of the team
+	     * was genocided very quickly after game reset, while this
+	     * player was still being transported back to his homebase.
+	     */
+	    else if (team_state[Players[i]->team] != TeamAlive) {
+		if (team_state[Players[i]->team] == TeamDead) {
+		    /* Oops!  Not all teammembers were dead yet. */
+		    num_dead_teams--;
+		}
+		team_state[Players[i]->team] = TeamAlive;
+		if (++num_alive_teams > 1) {
+		    /* Still a team battle going on. */
+		    return;
+		} else {
+		    /* Remember a team which was alive. */
+		    winning_team = Players[i]->team;
+		}
+	    }
 	}
 	
-	if ((teams == 1) && (num_teams > 1)) {
-	    for (i=0; team[i] <= 0; i++)
-		;
-	    sprintf(msg, "Team %d has won the game!", i);
+	if ((num_alive_teams == 1) && (num_dead_teams > 0)) {
+	    sprintf(msg, "Team %d has won the game!", winning_team);
 	    Set_message(msg);
-	    for (x=0; x < NumPlayers; x++) {
-		if (Players[x]->team == i) {
-		    SCORE(x, PTS_GAME_WON, 
-			  (int) Players[x]->pos.x/ BLOCK_SZ,
-			  (int) Players[x]->pos.y/BLOCK_SZ, "Winner");
+	    for (i = 0; i < NumPlayers; i++) {
+		if (BIT(Players[i]->status, PAUSE)) {
+		    /* Paused players don't get any points. */
+		    continue;
+		}
+		else if (Players[i]->robot_mode == RM_OBJECT) {
+		    /* Ignore tanks. */
+		    continue;
+		}
+		else if (Players[i]->team == winning_team) {
+		    SCORE(i, PTS_GAME_WON, 
+			  (int) Players[i]->pos.x/ BLOCK_SZ,
+			  (int) Players[i]->pos.y/BLOCK_SZ, "Winner");
 		}
 	    }
 	    /* Start up all player's again */
-	    Reset_all_players();    
-	} else if (teams == 0) {
-	    sprintf(msg, "We have a draw!", i);
+	    Reset_all_players();
+	} else if (num_alive_teams == 0 && num_dead_teams > 1) {
+	    sprintf(msg, "We have a draw!");
 	    Set_message(msg);
 	    /* Start up all player's again */
 	    Reset_all_players();    
 	}
-    } else {	    
+    } else {
 
     /* Do we have a winner ? (No team play) */
 	int num_alive_players = 0;
 	int num_active_players = 0;
 	int num_alive_robots = 0;
 	int num_active_humans = 0;
-	int ind;
+	int ind = -1;
 
 	for (i=0; i < NumPlayers; i++)  {
 	    if (!BIT(Players[i]->status, PAUSE)) {
@@ -519,7 +561,7 @@ void Delete_player(int ind)
 #endif /* SOUND */
     NumPlayers--;
     
-    if (pl->team != TEAM_NOT_SET)
+    if (pl->team != TEAM_NOT_SET && pl->robot_mode != RM_OBJECT)
 	World.teams[pl->team].NumMembers--;
 
     if (pl->robot_mode != RM_NOT_ROBOT && pl->robot_mode != RM_OBJECT)
@@ -605,21 +647,20 @@ void Kill_player(int ind)
     if (BIT(World.rules->mode, TIMING))
 	pl->fuel.sum = pl->fuel.tank[0] = RACE_PLAYER_FUEL;
 
-    if (BIT(pl->mode, LIMITED_LIVES))
-	pl->life--;
-    else
-	pl->life++;
-
     /* Detach ball from player */
     if (BIT(pl->have, OBJ_BALL))
 	for(i=0; i<NumObjs; i++) 
 	    if (BIT(Obj[i]->type, OBJ_BALL) && Obj[i]->id == pl->id)
 		Obj[i]->id = -1;
 
-    if (pl->life == -1) {
-	pl->life = 0;
-	SET_BIT(pl->status, GAME_OVER);
-	pl->mychar = 'D';
+    if (BIT(pl->mode, LIMITED_LIVES)) {
+	if (pl->life-- <= 0) {
+	    pl->life = 0;
+	    SET_BIT(pl->status, GAME_OVER);
+	    pl->mychar = 'D';
+	}
+    } else {
+	pl->life++;
     }
 
     pl->have	= DEF_HAVE;

@@ -2,7 +2,7 @@
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .\"
 .\" File:         xpilot.6
-.\" Id:		  $Id: xpilot.6,v 3.16 1993/09/13 20:50:47 bert Exp $
+.\" Id:		  $Id: xpilot.6,v 3.20 1993/11/02 16:49:43 bert Exp $
 .\" Description:  XPilot man page
 .\" Author:       Bjoern Stabell, Ken Ronny Schouten & Bert Gijsbers
 .\" Modified:     910520
@@ -430,8 +430,9 @@ When missiles are zapped by ECM, they will become confused for a
 while and then have a high probability of going after the player
 who you were locked onto when you used the ECM.  If another ship
 is within range of the ECM, all it's sensors will freeze for a
-while and if the ship was cloaked, it will become visible for a
-while.  The ECM is activated by pressing the \fIkeyECM\fP key.
+while and the screen of that player will flash.
+If the ship was cloaked, it will become visible for some moments.
+The ECM is activated by pressing the \fIkeyECM\fP key.
 .TP 12
 .B Transporter
 Enables you to steal equipment and energy/fuel from the closest
@@ -676,6 +677,20 @@ inverse the moving of the HUD. (Default 0.0)
 Uses a red line to indicate the current velocity. On edge of the line is the
 center of the ship. The other end is moved in the same way, as the HUD, if
 speedFactPTR is set.
+.TP 12
+.B charsPerSecond
+This determines the speed in which messages are written, in characters
+per second.
+.TP 12
+.B markingLights
+Should the fighters have marking lights, just like airplanes?
+.TP 12
+.B clock
+Display a small digital clock.
+.TP 12
+.B toggleShield
+Have the shield status be changed only by a key press and ignore the
+key release.
 .TP 12
 .B fuelMeter
 Determines if the fuel meter should be visible. This meter visualizes your

@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 3.6 1993/09/13 19:10:20 bjoerns Exp $
+/* $Id: rules.h,v 3.7 1993/10/31 22:32:43 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -41,7 +41,7 @@
 #define PLAYING			(1L<<0)		/* Not returning to base */
 #define PAUSE			(1L<<1)
 #define GAME_OVER		(1L<<2)         /* 0-1-2 must stay below 8 */
-#define KILLED			(1L<<3)
+#define KILLED			(1L<<3)		/* is unimportant for client */
 #define THRUSTING		(1L<<4)
 #define SELF_DESTRUCT		(1L<<5)
 

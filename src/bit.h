@@ -1,4 +1,4 @@
-/* $Id: bit.h,v 3.4 1993/09/13 19:09:06 bjoerns Exp $
+/* $Id: bit.h,v 3.5 1993/10/12 17:25:17 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -39,4 +39,3 @@
 typedef unsigned char bitv_t;
 
 #endif
-

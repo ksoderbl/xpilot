@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 3.14 1993/10/02 18:53:00 bjoerns Exp $
+/* $Id: draw.h,v 3.15 1993/10/21 10:24:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -75,11 +75,13 @@
 #define FUEL_GAUGE_OFFSET   6
 #define HUD_FUEL_GAUGE_SIZE (2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
 
+enum alignment_t { RIGHT, LEFT };
+
 typedef struct {
     char txt[MSG_LEN];
     short len;
     short pixelLen;
-    enum { RIGHT, LEFT } alignment;    
+    enum alignment_t alignment;
     long life;
 } message_t;
 
