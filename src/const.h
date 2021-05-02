@@ -1,4 +1,4 @@
-/* $Id: const.h,v 3.43 1994/04/22 01:52:00 bert Exp $
+/* $Id: const.h,v 3.44 1994/05/12 20:47:07 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -261,8 +261,6 @@
 #define HEAT_MID_ERROR          8
 #define HEAT_WIDE_TIMEOUT       (8*FPS)
 #define HEAT_WIDE_ERROR         16
-
-#define MAX_MISSILES_PER_PACK	4
 
 #define CLUSTER_MASS_SHOTS(mass) ((mass) * 0.9 / ShotsMass)
 #define CLUSTER_MASS_DRAIN(mass) (CLUSTER_MASS_SHOTS(mass)*ED_SHOT)

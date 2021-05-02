@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 3.77 1994/04/16 08:44:27 bert Exp $
+/* $Id: netserver.c,v 3.82 1994/05/25 15:10:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -125,6 +125,7 @@
 #include "bit.h"
 #include "socklib.h"
 #include "net.h"
+#include "draw.h"
 #define NETSERVER_C
 #include "netserver.h"
 #include "packet.h"
@@ -132,7 +133,6 @@
 #undef NETSERVER_C
 #include "robot.h"
 #include "saudio.h"
-#include "draw.h"
 #ifdef sco
 #undef select		/* Xos.h defines select as XSelect */
 #endif
@@ -437,7 +437,7 @@ int Setup_net_server(int maxconn, int contsock)
  * Since 3.0.6 the client also receives a short reason why the
  * connection was terminated.
  */
-void Destroy_connection(int ind, char *reason, char *file, int line)
+void Destroy_connection(int ind, char *reason)
 {
     connection_t	*connp = &Conn[ind];
     int			id,
@@ -447,8 +447,7 @@ void Destroy_connection(int ind, char *reason, char *file, int line)
 
     if (connp->state == CONN_FREE) {
 	errno = 0;
-	error("Cannot destroy empty connection (%s,%d,\"%s\")",
-	      file, line, reason);
+	error("Cannot destroy empty connection (\"%s\")", reason);
 	return;
     }
     sock = connp->w.sock;
@@ -461,9 +460,9 @@ void Destroy_connection(int ind, char *reason, char *file, int line)
 	write(sock, pkt, len);
     }
 #ifndef SILENT
-    printf("Destroying connection for %s=%s@%s|%s (\"%s\",%s,%d)\n",
+    printf("Destroying connection for %s=%s@%s|%s (\"%s\")\n",
 	    connp->nick, connp->real, connp->host, connp->dpy,
-	    reason, file, line);
+	    reason);
 #endif
     connp->state = CONN_FREE;
     if (connp->id != -1) {
@@ -481,16 +480,13 @@ void Destroy_connection(int ind, char *reason, char *file, int line)
     if (connp->dpy != NULL) {
 	free(connp->dpy);
     }
-    if (connp->shape != NULL) {
-	free(connp->shape);
-    }
     Sockbuf_cleanup(&connp->w);
     Sockbuf_cleanup(&connp->r);
     Sockbuf_cleanup(&connp->c);
     memset(connp, 0, sizeof(*connp));
 
     /* Tell the meta server */
-    Send_meta_server();
+    Send_meta_server(1);
 
     if (write(sock, pkt, len) != len) {
 	GetSocketError(sock);
@@ -594,7 +590,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
     connp->real = strdup(real);
     connp->nick = strdup(nick);
     connp->dpy = strdup(dpy);
-    connp->shape = NULL;
+    connp->ship = NULL;
     connp->team = team;
     connp->version = version;
     connp->state = CONN_LISTENING;
@@ -627,7 +623,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
 	|| connp->nick == NULL
 	|| connp->dpy == NULL) {
 	error("Not enough memory for connection");
-	Destroy_connection(free_conn_index, "no memory", __FILE__, __LINE__);
+	Destroy_connection(free_conn_index, "no memory");
 	return -1;
     }
 
@@ -650,7 +646,7 @@ static int Handle_listening(int ind)
     if (connp->state != CONN_LISTENING) {
 	errno = 0;
 	error("Connection not in listening state");
-	Destroy_connection(ind, "not listening", __FILE__, __LINE__);
+	Destroy_connection(ind, "not listening");
 	return -1;
     }
     Sockbuf_clear(&connp->r);
@@ -663,8 +659,7 @@ static int Handle_listening(int ind)
 	    n = 0;
 	}
 	else if (n != 0) {
-	    Destroy_connection(ind, "read first packet error",
-			       __FILE__, __LINE__);
+	    Destroy_connection(ind, "read first packet error");
 	}
 	return n;
     }
@@ -673,11 +668,11 @@ static int Handle_listening(int ind)
     if (DgramConnect(connp->w.sock, connp->addr, connp->his_port) == -1) {
 	error("Cannot connect datagram socket (%s,%d)",
 	      connp->host, connp->his_port);
-	Destroy_connection(ind, "connect error", __FILE__, __LINE__);
+	Destroy_connection(ind, "connect error");
 	return -1;
     }
 #ifndef SILENT
-    printf("Connected to %s/%d", connp->host, connp->his_port);
+    printf("Connected to %s(%s)/%d", connp->host, connp->addr, connp->his_port);
     if (connp->version != MY_VERSION)
 	printf(" (version %04x)\n", connp->version);
     else
@@ -686,14 +681,14 @@ static int Handle_listening(int ind)
     if (connp->r.ptr[0] != PKT_VERIFY) {
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
 	Send_reliable(ind);
-	Destroy_connection(ind, "not connecting", __FILE__, __LINE__);
+	Destroy_connection(ind, "not connecting");
 	return -1;
     }
     if ((n = Packet_scanf(&connp->r, "%c%s%s",
 			  &type, real, nick)) <= 0) {
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
 	Send_reliable(ind);
-	Destroy_connection(ind, "verify incomplete", __FILE__, __LINE__);
+	Destroy_connection(ind, "verify incomplete");
 	return -1;
     }
     if (strcmp(real, connp->real) != 0
@@ -704,14 +699,14 @@ static int Handle_listening(int ind)
 #endif
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
 	Send_reliable(ind);
-	Destroy_connection(ind, "verify incorrect", __FILE__, __LINE__);
+	Destroy_connection(ind, "verify incorrect");
 	return -1;
     }
     Sockbuf_clear(&connp->w);
     if (Send_reply(ind, PKT_VERIFY, PKT_SUCCESS) == -1
     	|| Packet_printf(&connp->c, "%c%u", PKT_MAGIC, connp->magic) <= 0
 	|| Send_reliable(ind) <= 0) {
-	Destroy_connection(ind, "confirm failed", __FILE__, __LINE__);
+	Destroy_connection(ind, "confirm failed");
 	return -1;
     }
     connp->state = CONN_DRAIN;
@@ -732,7 +727,7 @@ static int Handle_setup(int ind)
 			len;
 
     if (connp->state != CONN_SETUP) {
-	Destroy_connection(ind, "not setup", __FILE__, __LINE__);
+	Destroy_connection(ind, "not setup");
 	return -1;
     }
     if (connp->setup == 0) {
@@ -744,7 +739,7 @@ static int Handle_setup(int ind)
 			  Setup->frames_per_second, Setup->map_order,
 			  Setup->name, Setup->author);
 	if (n <= 0) {
-	    Destroy_connection(ind, "setup 0 write error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "setup 0 write error");
 	    return -1;
 	}
 	connp->setup = (char *) &Setup->map_data[0] - (char *) Setup;
@@ -767,8 +762,7 @@ static int Handle_setup(int ind)
 	}
 	buf = (char *) Setup;
 	if (Sockbuf_write(&connp->c, &buf[connp->setup], len) != len) {
-	    Destroy_connection(ind, "sockbuf write setup error",
-			       __FILE__, __LINE__);
+	    Destroy_connection(ind, "sockbuf write setup error");
 	    return -1;
 	}
 	connp->setup += len;
@@ -835,7 +829,7 @@ static int Handle_login(int ind)
 	    return -1;
 	}
     }
-    Init_player(NumPlayers, connp->shape);
+    Init_player(NumPlayers, connp->ship);
     pl = Players[NumPlayers];
     strcpy(pl->name, connp->nick);
     strcpy(pl->realname, connp->real);
@@ -957,8 +951,10 @@ static int Handle_login(int ind)
 	if (World.targets[i].dead_time == 0
 	    && World.targets[i].damage == TARGET_DAMAGE) {
 	    SET_BIT(World.targets[i].conn_mask, conn_bit);
+	    CLR_BIT(World.targets[i].update_mask, conn_bit);
 	} else {
 	    CLR_BIT(World.targets[i].conn_mask, conn_bit);
+	    SET_BIT(World.targets[i].update_mask, conn_bit);
 	}
     }
 
@@ -993,13 +989,13 @@ static int Handle_input(int ind)
 	return Handle_listening(ind);
     } else {
 	if (connp->state != CONN_FREE) {
-	    Destroy_connection(ind, "not input", __FILE__, __LINE__);
+	    Destroy_connection(ind, "not input");
 	}
 	return -1;
     }
     Sockbuf_clear(&connp->r);
     if (Sockbuf_read(&connp->r) == -1) {
-	Destroy_connection(ind, "input error", __FILE__, __LINE__);
+	Destroy_connection(ind, "input error");
 	return -1;
     }
     if (connp->r.len <= 0) {
@@ -1081,7 +1077,7 @@ int Input(void)
 		sprintf(msg, "%s mysteriously disappeared!?", connp->nick);
 		Set_message(msg);
 	    }
-	    Destroy_connection(i, "timeout", __FILE__, __LINE__);
+	    Destroy_connection(i, "timeout");
 	    continue;
 	}
 	if (connp->state != CONN_PLAYING) {
@@ -1206,7 +1202,7 @@ int Input(void)
 
     if (num_logins > 0) {
 	/* Tell the meta server */
-	Send_meta_server();
+	Send_meta_server(1);
     }
 
     return num_logins;
@@ -1225,7 +1221,7 @@ int Send_reply(int ind, int replyto, int result)
 
     n = Packet_printf(&connp->c, "%c%c%c", PKT_REPLY, replyto, result);
     if (n == -1) {
-	Destroy_connection(ind, "write error", __FILE__, __LINE__);
+	Destroy_connection(ind, "write error");
 	return -1;
     }
     return n;
@@ -1240,8 +1236,8 @@ int Send_self(int ind,
     int lock_id, int lock_dist, int lock_dir,
     int check, int cloaks, int sensors, int mines,
     int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int lasers, int emergency_thrusts, int tractor_beams,
-    int autopilots, int autopilotlight,
+    int afterburners, int lasers, int emergency_thrusts, int emergency_shields,
+    int tractor_beams, int autopilots, int autopilotlight,
     int num_tanks, int current_tank, int fuel_sum, int fuel_max, long status)
 {
     connection_t	*connp = &Conn[ind];
@@ -1285,6 +1281,14 @@ int Send_self(int ind,
 		      autopilotlight
 
 		      );
+    if (n <= 0) {
+	return n;
+    }
+    if (connp->version >= 0x3200) {
+	n = Packet_printf(&connp->w,
+			  "%c",
+			  emergency_shields);
+    }
 		     
     return n;
 }
@@ -1357,6 +1361,7 @@ int Send_player(int ind, int id)
 {
     connection_t	*connp = &Conn[ind];
     player		*pl = Players[GetInd[id]];
+    char		buf[MSG_LEN];
 
     if (!BIT(connp->state, CONN_PLAYING|CONN_READY)) {
 	errno = 0;
@@ -1364,12 +1369,14 @@ int Send_player(int ind, int id)
 	      connp->state, connp->id);
 	return 0;
     }
+    Convert_ship_2_string(pl->ship, buf,
+			  (connp->version < 0x3200) ? 0x3100 : 0x3200);
     return Packet_printf(&connp->c,
 			 "%c%hd" "%c%c" "%s%s%s" "%S",
 			 PKT_PLAYER, pl->id,
 			 pl->team, pl->mychar,
 			 pl->name, pl->realname, pl->hostname,
-			 (pl->shape_str) ? pl->shape_str : "");
+			 buf);
 }
 
 /*
@@ -1448,6 +1455,14 @@ int Send_shutdown(int ind, int count, int delay)
 int Send_thrusttime(int ind, int count, int max)
 {
     return Packet_printf(&Conn[ind].w, "%c%hd%hd", PKT_THRUSTTIME, count, max);
+}
+
+int Send_shieldtime(int ind, int count, int max)
+{
+    if (Conn[ind].version < 0x3200) {
+	return 1;
+    }
+    return Packet_printf(&Conn[ind].w, "%c%hd%hd", PKT_SHIELDTIME, count, max);
 }
 
 int Send_debris(int ind, int type, unsigned char *p, int n)
@@ -1539,6 +1554,11 @@ int Send_target(int ind, int num, int dead_time, int damage)
 
 int Send_item(int ind, int x, int y, int type)
 {
+    if (type >= ITEM_EMERGENCY_SHIELD) {
+	if (Conn[ind].version < 0x3200) {
+	    return 1;
+	}
+    }
     return Packet_printf(&Conn[ind].w, "%c%hd%hd%c", PKT_ITEM, x, y, type);
 }
 
@@ -1558,12 +1578,16 @@ int Send_trans(int ind, int x1, int y1, int x2, int y2)
 			 PKT_TRANS, x1, y1, x2, y2);
 }
 
-int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak)
+int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak,
+	      int emergency_shield)
 {
     return Packet_printf(&Conn[ind].w,
-			 "%c%hd%hd%hd" "%c%c",
+			 "%c%hd%hd%hd" "%c" "%c",
 			 PKT_SHIP, x, y, id,
-			 dir, (shield != 0) | ((cloak != 0) << 1));
+			 dir,
+			 (shield != 0) | ((cloak != 0) << 1)
+			     | ((emergency_shield != 0) << 2)
+			);
 }
 
 int Send_refuel(int ind, int x0, int y0, int x1, int y1)
@@ -1586,9 +1610,6 @@ int Send_laser(int ind, int color, int x, int y, int len, int dir)
 {
     connection_t *connp = &Conn[ind];
 
-    if (connp->version < 0x3043) {
-	return 1;
-    }
     return Packet_printf(&connp->w, "%c%c%hd%hd%hd%c", PKT_LASER,
 			 color, x, y, len, dir);
 }
@@ -1668,7 +1689,7 @@ int Send_start_of_frame(int ind)
     if (Packet_printf(&connp->w,
 		      "%c%ld%ld",
 		      PKT_START, loops, connp->last_key_change) <= 0) {
-	Destroy_connection(ind, "write error", __FILE__, __LINE__);
+	Destroy_connection(ind, "write error");
 	return -1;
     }
 
@@ -1686,7 +1707,7 @@ int Send_end_of_frame(int ind)
     n = Packet_printf(&connp->w, "%c%ld", PKT_END, loops);
     last_packet_of_frame = 0;
     if (n == -1) {
-	Destroy_connection(ind, "write error", __FILE__, __LINE__);
+	Destroy_connection(ind, "write error");
 	return -1;
     }
     if (n == 0) {
@@ -1710,7 +1731,7 @@ int Send_end_of_frame(int ind)
 	}
     }
     if (Sockbuf_flush(&connp->w) == -1) {
-	Destroy_connection(ind, "flush error", __FILE__, __LINE__);
+	Destroy_connection(ind, "flush error");
 	return -1;
     }
     Sockbuf_clear(&connp->w);
@@ -1753,7 +1774,7 @@ static int Receive_keyboard(int ind)
 
 static int Receive_quit(int ind)
 {
-    Destroy_connection(ind, "client quit", __FILE__, __LINE__);
+    Destroy_connection(ind, "client quit");
 
     return -1;
 }
@@ -1767,13 +1788,13 @@ static int Receive_play(int ind)
     if ((n = Packet_scanf(&connp->r, "%c", &ch)) != 1) {
 	errno = 0;
 	error("Cannot receive play packet");
-	Destroy_connection(ind, "receive error", __FILE__, __LINE__);
+	Destroy_connection(ind, "receive error");
 	return -1;
     }
     if (ch != PKT_PLAY) {
 	errno = 0;
 	error("Packet is not of play type");
-	Destroy_connection(ind, "not play", __FILE__, __LINE__);
+	Destroy_connection(ind, "not play");
 	return -1;
     }
     if (connp->state != CONN_LOGIN) {
@@ -1784,7 +1805,7 @@ static int Receive_play(int ind)
 	    }
 	    errno = 0;
 	    error("Connection not in login state (%02x)", connp->state);
-	    Destroy_connection(ind, "not login", __FILE__, __LINE__);
+	    Destroy_connection(ind, "not login");
 	    return -1;
 	}
 	if (Send_reliable(ind) == -1) {
@@ -1794,7 +1815,7 @@ static int Receive_play(int ind)
     }
     Sockbuf_clear(&connp->w);
     if (Handle_login(ind) == -1) {
-	Destroy_connection(ind, "login failed", __FILE__, __LINE__);
+	Destroy_connection(ind, "login failed");
 	return -1;
     }
    
@@ -1812,7 +1833,7 @@ static int Receive_power(int ind)
 
     if ((n = Packet_scanf(&connp->r, "%c%hd", &ch, &tmp)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
@@ -1840,7 +1861,7 @@ static int Receive_power(int ind)
     default:
 	errno = 0;
 	error("Not a power packet (%d,%02x)", ch, connp->state);
-	Destroy_connection(ind, "not power", __FILE__, __LINE__);
+	Destroy_connection(ind, "not power");
 	return -1;
     }
     return 1;
@@ -1909,7 +1930,7 @@ int Send_reliable(int ind)
 			  len, rel_off, loops) <= 0
 	    || Sockbuf_write(&connp->w, read_buf, len) != len) {
 	    error("Cannot write reliable data");
-	    Destroy_connection(ind, "write error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "write error");
 	    return -1;
 	}
 	if ((n = Sockbuf_flush(&connp->w)) < len) {
@@ -1920,7 +1941,7 @@ int Send_reliable(int ind)
 		break;
 	    } else {
 		error("Cannot flush reliable data (%d)", n);
-		Destroy_connection(ind, "flush error", __FILE__, __LINE__);
+		Destroy_connection(ind, "flush error");
 		return -1;
 	    }
 	}
@@ -1979,13 +2000,13 @@ static int Receive_ack(int ind)
 			  &ch, &rel, &rel_loops)) <= 0) {
 	errno = 0;
 	error("Cannot read ack packet (%d)", n);
-	Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	Destroy_connection(ind, "read error");
 	return -1;
     }
     if (ch != PKT_ACK) {
 	errno = 0;
 	error("Not an ack packet (%d)", ch);
-	Destroy_connection(ind, "not ack", __FILE__, __LINE__);
+	Destroy_connection(ind, "not ack");
 	return -1;
     }
     rtt = loops - rel_loops;
@@ -2042,7 +2063,7 @@ static int Receive_ack(int ind)
 	errno = 0;
 	error("Bad ack (diff=%ld,cru=%ld,c=%ld,len=%d)",
 	    diff, rel, connp->reliable_offset, connp->c.len);
-	Destroy_connection(ind, "bad ack", __FILE__, __LINE__);
+	Destroy_connection(ind, "bad ack");
 	return -1;
     }
     else if (diff <= 0) {
@@ -2102,7 +2123,7 @@ static int Receive_undefined(int ind)
 
     errno = 0;
     error("Unknown packet type (%d,%02x)", connp->r.ptr[0], connp->state);
-    Destroy_connection(ind, "undefined packet", __FILE__, __LINE__);
+    Destroy_connection(ind, "undefined packet");
     return -1;
 }
 
@@ -2117,12 +2138,12 @@ static int Receive_ack_cannon(int ind)
     if ((n = Packet_scanf(&connp->r, "%c%ld%hu",
 			  &ch, &loops_ack, &num)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
     if (num >= World.NumCannons) {
-	Destroy_connection(ind, "bad cannon ack", __FILE__, __LINE__);
+	Destroy_connection(ind, "bad cannon ack");
 	return -1;
     }
     if (loops_ack >= World.cannon[num].last_change) {
@@ -2142,12 +2163,12 @@ static int Receive_ack_fuel(int ind)
     if ((n = Packet_scanf(&connp->r, "%c%ld%hu",
 			  &ch, &loops_ack, &num)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
     if (num >= World.NumFuels) {
-	Destroy_connection(ind, "bad fuel ack", __FILE__, __LINE__);
+	Destroy_connection(ind, "bad fuel ack");
 	return -1;
     }
     if (loops_ack >= World.fuel[num].last_change) {
@@ -2167,16 +2188,17 @@ static int Receive_ack_target(int ind)
     if ((n = Packet_scanf(&connp->r, "%c%ld%hu",
 			  &ch, &loops_ack, &num)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
     if (num >= World.NumTargets) {
-	Destroy_connection(ind, "bad target ack", __FILE__, __LINE__);
+	Destroy_connection(ind, "bad target ack");
 	return -1;
     }
     if (loops_ack >= World.targets[num].last_change) {
 	SET_BIT(World.targets[num].conn_mask, 1 << ind);
+	CLR_BIT(World.targets[num].update_mask, 1 << ind);
     }
     return 1;
 }
@@ -2190,6 +2212,8 @@ static int Receive_ack_target(int ind)
 
 static void Handle_talk(int ind, char *str)
 {
+    connection_t	*connp = &Conn[ind];
+    player		*pl = Players[GetInd[connp->id]];
     int			i, sent, team, len;
     char		*cp,
 			msg[MSG_LEN * 2]; 
@@ -2198,13 +2222,13 @@ static void Handle_talk(int ind, char *str)
 	|| cp == str
 	|| strchr("-)/}", cp[1])	/* smileys are smileys */
 	) {
-	sprintf(msg, "%s [%s]", str, Players[ind]->name);
+	sprintf(msg, "%s [%s]", str, pl->name);
 	Set_message(msg);
 	return;
     }
     *cp++ = '\0';
     len = strlen (str);
-    sprintf(msg, "%s [%s]", cp, Players[ind]->name);
+    sprintf(msg, "%s [%s]", cp, pl->name);
 
     if (strspn(str, "0123456789") == len) {		/* Team message */
 	team = atoi (str);
@@ -2216,14 +2240,23 @@ static void Handle_talk(int ind, char *str)
 	    }
 	}
 	if (sent) {
-	    if (Players[ind]->team != team)
-		Set_player_message (Players[ind], msg);
+	    if (pl->team != team)
+		Set_player_message (pl, msg);
 	} else {
 	    sprintf(msg, "Message not sent, nobody in team %d!",
 		    team);
-	    Set_player_message(Players[ind], msg);
+	    Set_player_message(pl, msg);
 	}
-    } else {						/* Player message */
+    }
+    else if (strcasecmp(str, "god") == 0) {
+	FILE *fp = fopen(LOGFILE, "a");
+	if (fp) {
+	    fprintf(fp, "[%s](%s@%s(%s)|%s): %s\n",
+		    pl->name, pl->realname, connp->host, connp->addr, connp->dpy, cp);
+	    fclose(fp);
+	}
+    }
+    else {						/* Player message */
 	for (sent = -1, i = 0; i < NumPlayers; i++) {
 	    if (strncasecmp(Players[i]->name, str, len) == 0
 		|| strncasecmp(Players[i]->realname, str, len) == 0)
@@ -2233,18 +2266,18 @@ static void Handle_talk(int ind, char *str)
 	case -2:
 	    sprintf(msg, "Message not sent, %s matches more than one player!",
 		    str);
-	    Set_player_message(Players[ind], msg);
+	    Set_player_message(pl, msg);
 	    break;
 	case -1:
 	    sprintf(msg, "Message not sent, %s does not match any player!",
 		    str);
-	    Set_player_message(Players[ind], msg);
+	    Set_player_message(pl, msg);
 	    break;
 	default:
-	    if (sent != ind) {
+	    if (Players[sent] != pl) {
 		sprintf(msg + strlen(msg), ":[%s]", Players[sent]->name);
 		Set_player_message(Players[sent], msg);
-		Set_player_message(Players[ind], msg);
+		Set_player_message(pl, msg);
 	    }
 	    break;
 	}
@@ -2261,19 +2294,19 @@ static int Receive_talk(int ind)
 
     if ((n = Packet_scanf(&connp->r, "%c%ld%s", &ch, &seq, str)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
     if (seq > connp->talk_sequence_num) {
 	if ((n = Packet_printf(&connp->c, "%c%ld", PKT_TALK_ACK, seq)) <= 0) {
 	    if (n == -1) {
-		Destroy_connection(ind, "write error", __FILE__, __LINE__);
+		Destroy_connection(ind, "write error");
 	    }
 	    return n;
 	}
 	connp->talk_sequence_num = seq;
-	Handle_talk (GetInd[connp->id], str);
+	Handle_talk (ind, str);
     }
     return 1;
 }
@@ -2288,7 +2321,7 @@ static int Receive_display(int ind)
     if ((n = Packet_scanf(&connp->r, "%c%hd%hd%c%c", &ch, &width, &height,
 			  &debris_colors, &spark_rand)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
@@ -2329,7 +2362,7 @@ static int Receive_modifier_bank(int ind)
 
     if ((n = Packet_scanf(&connp->r, "%c%c%s", &ch, &bank, &str)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read modbank", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read modbank");
 	}
 	return n;
     }
@@ -2418,12 +2451,12 @@ static int Receive_shape(int ind)
 
     if ((n = Packet_scanf(&connp->r, "%c%S", &ch, str)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read shape", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read shape");
 	}
 	return n;
     }
-    if (connp->state == CONN_LOGIN) {
-	connp->shape = (*str) ? strdup(str) : NULL;
+    if (connp->state == CONN_LOGIN && connp->ship == NULL) {
+	connp->ship = Parse_shape_str(str);
     }
     return 1;
 }
@@ -2440,7 +2473,7 @@ static int Receive_motd(int ind)
 			  "%c%ld%ld",
 			  &ch, &offset, &bytes)) <= 0) {
 	if (n == -1) {
-	    Destroy_connection(ind, "read error", __FILE__, __LINE__);
+	    Destroy_connection(ind, "read error");
 	}
 	return n;
     }
@@ -2467,7 +2500,7 @@ static int Send_motd(int ind)
     if (off < 0) {
 	errno = 0;
 	error("Send_motd bad offset %ld", off);
-	Destroy_connection(ind, "motd offset", __FILE__, __LINE__);
+	Destroy_connection(ind, "motd offset");
 	return -1;
     }
     if (connp->c.len >= MAX_RELIABLE_DATA_PACKET_SIZE) {
@@ -2497,20 +2530,21 @@ static int Send_motd(int ind)
     if (len <= 0) {
 	len = 0;
 	connp->motd_offset = -1;
-	fclose(motd_fp);
-	motd_fp = NULL;
+	if (motd_fp) {
+	    fclose(motd_fp);
+	    motd_fp = NULL;
+	}
     }
     if (Packet_printf(&connp->c,
 		      "%c%ld%hd%ld",
 		      PKT_MOTD, off, len, size) <= 0) {
-	Destroy_connection(ind, "motd header", __FILE__, __LINE__);
+	Destroy_connection(ind, "motd header");
 	return -1;
     }
     if (len > 0) {
 	connp->motd_offset += len;
 	if (Sockbuf_write(&connp->c, buf, len) != len) {
-	    Destroy_connection(ind, "motd data",
-			       __FILE__, __LINE__);
+	    Destroy_connection(ind, "motd data");
 	    return -1;
 	}
     }

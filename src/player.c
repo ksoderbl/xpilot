@@ -1,4 +1,4 @@
-/* $Id: player.c,v 3.48 1994/04/11 21:05:45 bert Exp $
+/* $Id: player.c,v 3.50 1994/05/23 19:21:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -34,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.48 1994/04/11 21:05:45 bert Exp $";
+    "@(#)$Id: player.c,v 3.50 1994/05/23 19:21:26 bert Exp $";
 #endif
 
 
@@ -160,11 +160,11 @@ void Go_home(int ind)
 }
 
 
-void Init_player(int ind, char *shape)
+void Init_player(int ind, wireobj *ship)
 {
-    player *pl = Players[ind];
-    bool too_late = false;
-    int i;
+    player		*pl = Players[ind];
+    bool		too_late = false;
+    int			i;
 
 
     pl->vel.x	= pl->vel.y	= 0.0;
@@ -198,11 +198,8 @@ void Init_player(int ind, char *shape)
     pl->transporters    = initialTransporters;
     pl->transInfo.count	= 0;
 
-    pl->shape_str = NULL;
-    if (allowShipShapes == true) {
-	if ((pl->ship = Parse_shape_str(shape)) != Default_ship()) {
-	    pl->shape_str = shape;
-	}
+    if (allowShipShapes == true && ship) {
+	pl->ship = ship;
     }
     else {
 	pl->ship = Default_ship();
@@ -261,6 +258,9 @@ void Init_player(int ind, char *shape)
     pl->emergency_thrusts = initialEmergencyThrusts;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
+    pl->emergency_shields = initialEmergencyShields;
+    pl->emergency_shield_left = 0;
+    pl->emergency_shield_max = 0;
     pl->autopilots	= initialAutopilots;
     pl->tractor_beams	= initialTractorBeams;
     pl->ecmInfo.count	= 0;
@@ -278,6 +278,8 @@ void Init_player(int ind, char *shape)
     CLEAR_MODS(pl->mods);
     for (i = 0; i < NUM_MODBANKS; i++)
 	CLEAR_MODS(pl->modbank[i]);
+    for (i = 0; i < LOCKBANK_MAX; i++)
+	pl->lockbank[i] = NOT_CONNECTED;
 
     {
 	static u_short	pseudo_team_no = 0;
@@ -403,16 +405,16 @@ void Reset_all_players(void)
 	    Players[i]->mychar = ' ';
 	    Players[i]->life = World.rules->lives;
 	}
-	if (Players[i]->robot_mode != RM_NOT_ROBOT)
-	    Players[i]->mychar = 'R';
 	if (Players[i]->robot_mode == RM_OBJECT)
 	    Players[i]->mychar = 'T';
+	else if (Players[i]->robot_mode != RM_NOT_ROBOT)
+	    Players[i]->mychar = 'R';
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 
 	/* Detach any balls and kill ball */
 	/* We are starting all over again */
-	for(j=NumObjs-1; j >= 0 ; j--) {
+	for (j = NumObjs - 1; j >= 0 ; j--) {
 	    if (BIT(Obj[j]->type, OBJ_BALL)) {
 		Obj[j]->id = -1;
 		Obj[j]->life = 0;
@@ -423,14 +425,14 @@ void Reset_all_players(void)
 	}
 
 	/* Reset the treasures */
-	for(i=0; i < World.NumTreasures; i++) {
+	for (i = 0; i < World.NumTreasures; i++) {
 	    World.treasures[i].destroyed = 0;
 	    World.treasures[i].have = false;
 	    Make_treasure_ball(i);
 	}
 
 	/* Reset the teams */
-	for(i=0; i < MAX_TEAMS; i++) {
+	for (i = 0; i < MAX_TEAMS; i++) {
 	    World.teams[i].TreasuresDestroyed = 0;
 	    World.teams[i].TreasuresLeft = World.teams[i].NumTreasures;
 	}
@@ -584,6 +586,13 @@ void Compute_game_status(void)
 		/* Ignore paused players. */
 		continue;
 	    }
+#if 0
+	    /* not all teammode maps have treasures. */
+	    else if (World.teams[Players[i]->team].NumTreasures == 0) {
+		/* Ingore players with no treasures troves */
+		continue;
+	    }
+#endif
 	    else if (BIT(Players[i]->status, GAME_OVER)) {
 		if (team_state[Players[i]->team] == TeamEmpty) {
 		    /* Assume all teammembers are dead. */
@@ -593,14 +602,15 @@ void Compute_game_status(void)
 	    }
 	    /*
 	     * If the player is not paused and he is not in the
-	     * game over mode then he is considered alive.
+	     * game over mode and his team own treasures then he is
+	     * considered alive.
 	     * But he may not be playing though if the rest of the team
 	     * was genocided very quickly after game reset, while this
 	     * player was still being transported back to his homebase.
 	     */
 	    else if (team_state[Players[i]->team] != TeamAlive) {
 		if (team_state[Players[i]->team] == TeamDead) {
-		    /* Oops!  Not all teammembers were dead yet. */
+		    /* Oops!  Not all teammembers are dead yet. */
 		    num_dead_teams--;
 		}
 		team_state[Players[i]->team] = TeamAlive;
@@ -620,7 +630,13 @@ void Compute_game_status(void)
 	    int		max_left = 0;
 	    int		max_score = 0;
 
-	    /* Still a team battle going on. */
+	    /*
+	     * Game is not over if more than one team which have treasures
+	     * still have one remaining in play.  Note that it is possible
+	     * for max_destroyed to be zero, in the case where a team
+	     * destroys some treasures and then all quit, and the remaining
+	     * teams did not destroy any.
+	     */
 	    for (i = 0; i < MAX_TEAMS; i++) {
 		team_score[i] = 0;
 		if (team_state[i] != TeamAlive) {
@@ -635,10 +651,9 @@ void Compute_game_status(void)
 	    }
 
 	    /*
-	     * Game is not over if more than one team has treasure or nothing
-	     * has been destroyed.
+	     * Game is not over if more than one team has treasure.
 	     */
-	    if (teams_with_treasure > 1 || !max_destroyed)
+	    if (teams_with_treasure > 1 /*|| !max_destroyed*/)
 		return;
 
 	    /*
@@ -646,7 +661,7 @@ void Compute_game_status(void)
 	     *	Team destroying most number of treasures;
 	     *	If drawn; the one with most saved treasures,
 	     *	If drawn; the team with the most points,
-	     *	If drawn; a overall draw.
+	     *	If drawn; an overall draw.
 	     */
 	    for (winners = i = 0; i < MAX_TEAMS; i++) {
 		if (!team_win[i])
@@ -699,7 +714,7 @@ void Compute_game_status(void)
 		}
 	    }
 	    if (winners == 1) {
-		sprintf(buf, "by destroying %d treasures, saving %d, and "
+		sprintf(buf, " by destroying %d treasures, saving %d, and "
 			"scoring %d points",
 			max_destroyed, max_left, max_score);
 		Team_game_over(winning_team, buf);
@@ -719,11 +734,31 @@ void Compute_game_status(void)
 	    *bp = '\0';
 	    Team_game_over(-1, buf);
 
-	} else if (num_alive_teams == 1 && num_dead_teams > 0) {
-	    Team_game_over(winning_team, " by staying alive");
-	} else if (num_alive_teams == 0 && num_dead_teams > 1) {
-	    Team_game_over(-1, " as everyone died");
 	}
+	else if (num_dead_teams > 0) {
+	    if (num_alive_teams == 1)
+		Team_game_over(winning_team, " by staying alive");
+	    else
+		Team_game_over(-1, " as everyone died");
+	}
+	else {
+	    /*
+	     * num_alive_teams <= 1 && num_dead_teams == 0
+	     * 
+	     * There is a possibility that the game has ended because players
+	     * quit, the game over state is needed to reset treasures.  We
+	     * must count how many treasures are missing, if there are any
+	     * the playing team (if any) wins.
+	     */
+	    int	i, treasures_destroyed;
+
+	    for (treasures_destroyed = i = 0; i < MAX_TEAMS; i++)
+		treasures_destroyed += (World.teams[i].NumTreasures
+					- World.teams[i].TreasuresLeft);
+	    if (treasures_destroyed)
+		Team_game_over(winning_team, " by staying in the game");
+	}
+
     } else {
 
     /* Do we have a winner ? (No team play) */
@@ -731,7 +766,7 @@ void Compute_game_status(void)
 	int num_active_players = 0;
 	int num_alive_robots = 0;
 	int num_active_humans = 0;
-	int ind = -1;
+	int winner = -1;
 
 	for (i=0; i < NumPlayers; i++)  {
 	    if (!BIT(Players[i]->status, PAUSE)) {
@@ -741,7 +776,7 @@ void Compute_game_status(void)
 			&& Players[i]->robot_mode != RM_OBJECT) {
 			num_alive_robots++;
 		    }
-		    ind = i; 	/* Tag player that's alive */
+		    winner = i; 	/* Tag player that's alive */
 		}
 		else if (Players[i]->robot_mode == RM_NOT_ROBOT) {
 		    num_active_humans++;
@@ -751,14 +786,16 @@ void Compute_game_status(void)
 	}
 
 	if (num_alive_players == 1 && num_active_players > 1) {
-	    sprintf(msg, "%s has won the game!", Players[ind]->name);
+	    sprintf(msg, "%s has won the game!", Players[winner]->name);
 	    Set_message(msg);
-	    SCORE(ind, PTS_GAME_WON, (int) Players[ind]->pos.x/ BLOCK_SZ,
-		  (int) Players[ind]->pos.y/BLOCK_SZ, "Winner");
+	    SCORE(winner, PTS_GAME_WON,
+		  (int) Players[winner]->pos.x/ BLOCK_SZ,
+		  (int) Players[winner]->pos.y/BLOCK_SZ, "Winner");
 	    sound_play_all(PLAYER_WIN_SOUND);
 	    /* Start up all player's again */
 	    Reset_all_players();    
-	} else if (num_alive_players == 0 && num_active_players >= 1) {
+	}
+	else if (num_alive_players == 0 && num_active_players >= 1) {
 	    sprintf(msg, "We have a draw!");
 	    Set_message(msg);
 	    sound_play_all(PLAYER_DRAW_SOUND);
@@ -785,7 +822,7 @@ void Compute_game_status(void)
 void Delete_player(int ind)
 {
     player *pl;
-    int i, id;
+    int i, j, id;
 
 
     pl = Players[ind];
@@ -797,7 +834,8 @@ void Delete_player(int ind)
 		Obj[i]->id = -1;
 	    if (Obj[i]->owner == id)
 		Obj[i]->owner = -1;
-	} else {
+	}
+	else {
 	    if (Obj[i]->id == id)
 		Delete_shot(i);
 	}
@@ -842,6 +880,10 @@ void Delete_player(int ind)
 	    && Players[i]->robot_lock_id == id) {
 	    CLR_BIT(Players[i]->robot_lock, LOCK_PLAYER);
 	}
+	for (j = 0; j < LOCKBANK_MAX; j++) {
+	    if (Players[i]->lockbank[j] == id)
+		Players[i]->lockbank[j] = NOT_CONNECTED;
+	}
     }
 
     for (i = 0; i < NumPlayers; i++) {
@@ -854,7 +896,7 @@ void Delete_player(int ind)
 
 void Detach_ball(int ind, int obj)
 {
-    int i, c;
+    int			i, cnt;
 
     if (obj == -1 || Obj[obj] == Players[ind]->ball) {
 	Players[ind]->ball = NULL;
@@ -862,17 +904,17 @@ void Detach_ball(int ind, int obj)
     }
 
     if (BIT(Players[ind]->have, OBJ_BALL)) {
-	for (c = i = 0; i < NumObjs; i++) {
+	for (cnt = i = 0; i < NumObjs; i++) {
 	    if (BIT(Obj[i]->type, OBJ_BALL) && Obj[i]->id == Players[ind]->id){
 		if (obj == -1 || obj == i) {
 		    Obj[i]->id = -1;
 		    /* Don't reset owner so you can throw balls */
 		} else {
-		    c++;
+		    cnt++;
 		}
 	    }
 	}
-	if (c == 0)
+	if (cnt == 0)
 	    CLR_BIT(Players[ind]->have, OBJ_BALL);
     }
 }
@@ -918,6 +960,9 @@ void Kill_player(int ind)
     pl->emergency_thrusts = initialEmergencyThrusts;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
+    pl->emergency_shields = initialEmergencyShields;
+    pl->emergency_shield_left = 0;
+    pl->emergency_shield_max = 0;
     pl->tractor_beams	= initialTractorBeams;
     pl->autopilots	= initialAutopilots;
     pl->damaged 	= 0;

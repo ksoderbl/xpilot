@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 3.59 1994/04/05 20:28:40 bert Exp $
+/* $Id: netclient.c,v 3.62 1994/05/25 07:33:36 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -98,7 +98,6 @@ static long		last_loops,
 			talk_last_send;
 static char		talk_str[MAX_CHARS];
 
-extern void usleep(unsigned long usec);
 
 /*
  * Initialize the function dispatch tables.
@@ -153,6 +152,7 @@ static void Receive_init(void)
     receive_tbl[PKT_MODIFIERS]  = Receive_modifiers;
     receive_tbl[PKT_FASTSHOT]	= Receive_fastshot;
     receive_tbl[PKT_THRUSTTIME] = Receive_thrusttime;
+    receive_tbl[PKT_SHIELDTIME] = Receive_shieldtime;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	receive_tbl[PKT_DEBRIS + i] = Receive_debris;
     }
@@ -582,7 +582,7 @@ void Net_cleanup(void)
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
 	}
-	usleep(50*1000);
+	usleep((unsigned long)50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -607,7 +607,7 @@ void Net_cleanup(void)
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
 	}
-	usleep(50*1000);
+	usleep((unsigned long)50*1000);
 	if (write(sock, &ch, 1) != 1) {
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
@@ -1372,6 +1372,19 @@ int Receive_self(void)
 		     &view_width, &view_height, &debris_colors,
 		     &stat, &autopilotLight
 		     );
+    if (n <= 0) {
+	return n;
+    }
+    if (version < 0x3200) {
+	num_items[ITEM_EMERGENCY_SHIELD] = 0;
+    }
+    else {
+	n = Packet_scanf(&rbuf, "%c",
+			 &(num_items[ITEM_EMERGENCY_SHIELD]));
+	if (n <= 0) {
+	    return n;
+	}
+    }
 
     if (debris_colors > 8) {
 	debris_colors = 8;
@@ -1486,7 +1499,7 @@ int Receive_ball(void)
 
 int Receive_ship(void)
 {
-    int		n, shield, cloak;
+    int		n, shield, cloak, eshield;
     short	x, y, id;
     u_byte	ch, dir, flags;
 
@@ -1498,7 +1511,8 @@ int Receive_ship(void)
     }
     shield = ((flags & 1) != 0);
     cloak = ((flags & 2) != 0);
-    if ((n = Handle_ship(x, y, id, dir, shield, cloak)) == -1) {
+    eshield = ((flags & 4) != 0);
+    if ((n = Handle_ship(x, y, id, dir, shield, cloak, eshield)) == -1) {
 	return -1;
     }
     return 1;
@@ -1529,8 +1543,10 @@ int Receive_item(void)
     if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c", &ch, &x, &y, &type)) <= 0) {
 	return n;
     }
-    if ((n = Handle_item(x, y, type)) == -1) {
-	return -1;
+    if (type < NUM_ITEMS) {
+	if ((n = Handle_item(x, y, type)) == -1) {
+	    return -1;
+	}
     }
     return 1;
 }
@@ -1575,6 +1591,21 @@ int Receive_thrusttime(void)
 	return n;
     }
     if ((n = Handle_thrusttime(count, max)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_shieldtime(void)
+{
+    int		n;
+    short	count, max;
+    u_byte	ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &count, &max)) <= 0) {
+	return n;
+    }
+    if ((n = Handle_shieldtime(count, max)) == -1) {
 	return -1;
     }
     return 1;
@@ -2070,8 +2101,13 @@ int Send_keyboard(u_byte *keyboard_vector)
 
 int Send_shape(char *str)
 {
-    if (Packet_printf(&wbuf, "%c%S", PKT_SHAPE,
-		      (str) ? str : "") <= 0) {
+    wireobj		*w;
+    char		buf[MSG_LEN];
+
+    w = Convert_shape_str(str);
+    Convert_ship_2_string(w, buf, (version < 0x3200) ? 0x3100 : 0x3200);
+    Free_ship_shape(w);
+    if (Packet_printf(&wbuf, "%c%S", PKT_SHAPE, buf) <= 0) {
 	return -1;
     }
     return 0;

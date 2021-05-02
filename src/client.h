@@ -1,4 +1,4 @@
-/* $Id: client.h,v 3.43 1994/03/30 16:49:42 bert Exp $
+/* $Id: client.h,v 3.44 1994/05/23 19:03:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -155,6 +155,8 @@ extern short	shutdown_delay;
 extern short	shutdown_count;
 extern short	thrusttime;
 extern short	thrusttimemax;
+extern short	shieldtime;
+extern short	shieldtimemax;
 
 extern int	RadarHeight;
 extern int	map_point_distance;	/* spacing of navigation points */

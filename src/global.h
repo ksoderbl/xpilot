@@ -1,4 +1,4 @@
-/* $Id: global.h,v 3.49 1994/03/30 16:56:23 bert Exp $
+/* $Id: global.h,v 3.51 1994/05/23 19:09:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -133,6 +133,7 @@ extern bool		gravityClockwise;
 extern bool		gravityAnticlockwise;
 extern int		MovingItemsRand;
 extern int 		ThrowItemOnKillRand;
+extern int		DetonateItemOnKillRand;
 extern int		nukeMinSmarts;
 extern int		nukeMinMines;
 extern float		nukeClusterDamage;
@@ -158,12 +159,14 @@ extern bool		minesOnRadar;
 extern bool		nukesOnRadar;
 extern bool 		identifyMines;
 extern bool		distinguishMissiles;
+extern int		maxMissilesPerPack;
 extern bool		targetTeamCollision;
 extern bool		treasureKillTeam;
 extern bool		treasureCollisionDestroys;
 extern bool		treasureCollisionMayKill;
 
 extern float 		dropItemOnKillProb;
+extern float		detonateItemOnKillProb;
 extern float 		movingItemProb;
 extern float 		itemEnergyPackProb;
 extern float 		itemTankProb;
@@ -180,6 +183,7 @@ extern float		itemLaserProb;
 extern float		itemEmergencyThrustProb;
 extern float		itemTractorBeamProb;
 extern float		itemAutopilotProb;
+extern float		itemEmergencyShieldProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
 extern float		gameDuration;
@@ -200,6 +204,7 @@ extern int		initialLasers;
 extern int		initialEmergencyThrusts;
 extern int		initialTractorBeams;
 extern int		initialAutopilots;
+extern int		initialEmergencyShields;
 
 extern char	       	*scoreTableFileName;
 #endif

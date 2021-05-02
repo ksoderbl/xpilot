@@ -3,8 +3,296 @@
 ====                         Xpilot Change Log                             ====
 ===============================================================================
 
-This is a summary of changes of release 3.1.3 compared to release 3.1.2:
+This is a summary of changes of release 3.2.0 compared to release 3.1.3:
 
+Added a shipshape patch for robots.  Now all robots have their own `personal'
+ship shape.  Patch provided by John E. Norlin <norlije@cujo.tc.cat.com>
+A workaround has been added for a bug in HP's ANSI C compiler.
+
+Added a new server option called maxMissilesPerPack which determines the
+number of missiles given by picking up one missile item.
+This was needed for no-shield maps were missiles are very strong weapons.
+
+Made the "teamAssign" option default to true.  This helps users in
+joining a team mode game.
+
+Servers can now be shutdown from a crontab entry by a command line like:
+xpilot -display NO_X -shutdown Shutting_down_message server
+
+When getting the name of the computer now there is searched for a
+xpilot host alias.  Patch provided by Jyke Jokinen.
+
+Fixed drawing cloaked ships in ERASE mode.  Bug reported by Zack Evans
+and fix pointed out by by Christian Brunschen.
+
+Bugfix for teammode maps with only one team were that team would
+remain dead forever until another team would enter the game.
+
+Fix from Patrick Kenny for games teammode games with limited lives.
+Players who just entered and are still waiting do not get points
+subtracted or added when a target is destroyed.  This was extended
+to include treasures too.
+
+Players can now send a talk message to GOD which will be printed to the
+LOGFILE.  Thanks to a patch from Patrick Kenny.
+
+Fix for GetLocalHostName which was broken by a previous fix.
+
+Pete Ford has come up with a new, more rational, ship-shape format.
+It features:
+
+    1. Keyword oriented system, to allow for more flexibility and future 
+       extension.
+
+    2. Additional gun sites allowed on ships; main gun is relocatable and up 
+       to three extra gun sites are allowed on each side of the ship for wide 
+       angle guns.
+
+    3. Additional marking light positions allowed - up to three for each 
+       color (red = left, blue = right as before).
+
+    4. Alternative missile racks - positions where missiles launch from. Up 
+       to four racks can be given, and mini missiles will launch from separate
+       racks if available.
+
+    5. Engine is relocatable, although it still fires along the x-axis of the 
+       ship as defined.
+
+    6. Compatibility with the 3.1 ship-shape format for exisiting 3.1 clients 
+       joining '3.2' servers and 3.2 clients joining 3.1 servers.
+
+    The new ship shape format is:
+
+    xpilot*shipShape: (keyword: x1,y1 ...) (keyword: x1, y1) etc.
+
+    Keywords can appear any number of times in the shape string; the 
+    behaviour is dependent on the keyword.
+    If a keyword is not given then a default will be applied: if the shape is 
+    not defined then the default shape is used.
+    Allowed keywords are:
+
+    shape:  defines points for ship shape. Up to 16 points will be stored, 
+            any more than 16 are ignored. Points should appear as x,y pairs, 
+            each pair separated with at least one space character. 
+            Multiple 'shape:' keywords have a cumulative effect; adding extra 
+            points to the list, up to the limit of 16. There is no requirement
+            to give the number of points to expect - this is worked out after
+            the whole string is parsed.
+            The existing restrictions on separation of points apply.
+            If no 'shape:' keyword present then the contents of the string 
+            will be ignored and the default ship used.
+
+    mainGun: defines the firing position for the main gun. Only one x,y pair 
+             is read; further 'mainGun:' keywords will be ignored.
+             Default is the foremost point in the 'shape:' list.
+
+    leftGun: defines a firing position for an additional left-side gun. Up to 
+             three of these can be specified, any more will be ignored.
+             The left-hand part of any wide-angle shots will be fired from
+             these points if they exist.
+             Default is to have no left guns: only a main gun.
+
+    rightGun: defines a firing position for an additional left-side gun. Up to
+              three of these can be specified, any more will be ignored.
+              The left-hand part of any wide-angle shots will be fired from
+              these points if they exist. There is no need for left and right
+              guns to balance (or even be on the correct side of the ship!)
+              Default is to have no right guns: only a main gun.
+
+    leftLight: defines a position for the left (red) marking light. Up to 
+               three of these can be given.
+               Default is one light on the left-most point on the ship.
+
+    rightLight: defines a position for the right (blue) marking light. Up to 
+                three of these can be given.
+                Default is one light on the right-most point on the ship.
+
+    engine: defines the point from which the engine thrust originates. Only 
+            one of these points will be defined; multiple 'engine:' keywords 
+            will override previous positions.
+            Default is on the ship x-axis at the rear-most x-value defined.
+
+    missileRack: defines a missile launch point. More than one of these will
+                 mean that missiles are launched from each rack in turn. This 
+                 works best with mini missiles (especially torpedos).
+                 Default is one rack at the main gun position.
+
+    Because the ship shape string would become extremely long in the new
+    format short aliases for the keywords in the shipshape string are
+    provided.  The list of keywords together with their aliases is:
+
+        Full version   Short Version   Meaning
+        ------------   -------------   -------
+        shape:         SH:             ship shape points
+        mainGun:       MG:             Main gun position
+        leftGun:       LG:             Left wide gun position(s)
+        rightGun:      RG:             Right wide gun position(s)
+        leftLight:     LL:             Left (red) light position(s)
+        rightLight:    RL:             Right (blue) light positions(s)
+        engine:        EN:             Engine thrust point
+        missileRack:   MR:             Missile launch point(s)
+
+    The points given for weapons, lights etc. need not be points defined in 
+    the ship shape definition.
+
+    Example:
+    This is my latest version of my own ship-shape (called Enigma); note that 
+    it should be read as one continuous string without line breaks.
+
+    xpilot*shipShape: (shape: 15,0 -2,4 -8,13 0,13 0,14 -15,14 -12,3 -15,3 
+    -15,-3 -12,-3 -15,-14 0,-14 0,-13 -8,-13 -2,-4) (missileRack: 0,14 0,-14) 
+    (leftGun: 0,14 -5,14) (rightGun: 0,-14 -5,-14) (leftLight: -15,14 0,0) 
+    (rightLight: -15,-14 0,0) (engine: -15,0)
+
+    I've tried to make the format easy to extend; extensions can be added in 
+    the parsing routines in math.c quite easily. Of course, the playing code 
+    will have to be changed to accommodate any extension.
+    My own ideas for improvement are to include a 'name:' string for the name 
+    of the ship (possibly to allow selection from a set of shapes while 
+    playing...) and positions for rear guns.
+
+    Known Problems:
+
+    1. At the moment, mini smart and heat missiles still spread from the
+       missile racks, so the effect is lost a little. It is probably possible
+       to determine whether spread is required, but I haven't done that yet.
+
+    2. Wide angle guns all fire from additional gun positions if possible; 
+       they probably should use the main gun more. Also they spread in the 
+       same way as the existing program - of course setting Z3 on the weapons 
+       mods will fire in parallel lines of shots; Z3 was could almost have 
+       been designed for this patch!
+
+    Thanks to those people who've made suggestions already (Bjoern & Bert).
+    Any comments/suggestions/bugs/bug-fixes should be sent to me:
+
+    p.s.ford@durham.ac.uk
+
+    The latest improvements are:
+
+    1. Code to restrict lights,guns etc. to within the ship-shape design.
+       It's not perfect, but it tends to allow invalid positions rather than
+       disallow valid ones. Thanks to Bert for a very nice diagram of the
+       problem!
+
+    Pete Ford (Enigma)
+
+New ship shapes should obey a new size restriction.  This is because some
+ship-shape-artists made ships very small to have a slight advantage in
+manouvring in tight places.  Also, those small ships are a little less
+easy to spot.  Therefore the following size restriction is now enforced:
+the width and height of the ship added together should be at least 38.
+To give everybody some time to convert their ships to the new format
+and to adapt it to meet this restriction it is not enforced right away, but
+rather a warning is printed that it will be enforced in a future version.
+
+Harvey Thompson provided the following changes:
+
+    - Fix a small bug in maptoppm, and also make walls blue and bases
+      grey to appear more like the map does in real life.
+
+    - Fix some install bugs in Imakefile.
+
+    - The players radar will show up the current state of any targets.
+      The target block will be cleared when it is destroyed and drawn
+      in when created.  This is very useful on maps (such as ninebases.map)
+      which use lots of passable targets as team shields for bases.
+
+    - When you die, there is a chance that any remaining missiles and
+      mines which are not thrown will detonate in close proximity to
+      your dying ship.  The detonateItemOnKillProb (default 0.5) controls
+      this chance.  This means that killing a well tooled player may
+      be dangerous if you are too close.
+
+    - Mine and missile pack objects are correctly acccounted.  That is
+      when a player dies and throws one, and they only had say three
+      missiles, the thrown pack contains only three missiles.
+
+    - Player crashing into target causes damage depending on speed
+      of impact (limited to quart damage).
+
+    - New reprogram key (keyReprogram, defaults to leftquote ` key).
+      This allows modifier banks to be reprogrammed with current settings.
+      Simply hold the reprogram key with the desired modified bank key
+      and your current settings are stored in that bank for later
+      retrieval.
+
+    - New compass lock bank keys (keyLoadLock1..4, defaults to 5..8 keys).
+      These allow you to store the current compass lock into that key,
+      simply hold down the reprogram key and the lock bank key.  The
+      current compass lock is then stored and can be retreived at a later
+      time (so long as that player does not quit).  Useful for keeping
+      tabs on a team of players.
+
+    - New KEYBOARD environment (or keyboard resource/option).  If
+      set this defines another X11 display from which keyboard events
+      are taken.  A blank window is drawn on that display.  This can
+      be used to allow two players to fly one ship, a weapons man and
+      a flyer.  I've tried this and its fairly interesting and hard.
+
+      This change was actually done for some people who had a strange
+      X terminal which generates key release events right after a key
+      press event; making xpilot unplayable.  These people however had
+      access to simple PC's (not good enough to play X pilot on) which
+      could run X, the key events where then read from the PCs.
+
+    - Corrections to team win condition.  Pplayers leaving can cause
+      a game win, and indeed leave one team in game (who should win).
+
+Fixed a bug which caused a player sometimes to be launched when
+connecting to a moving ball.  The bug was that the ball's length
+variable wasn't initialised upon connection.
+
+Scott W. Adkins <sadkins@bigbird.cs.ohiou.edu> contributed
+an emergency shield item patch:
+    The following is the patch that implements the Emergency Shield item.
+    Included are the modifications made to 25 source files (*.c, *.h), a 
+    new bitmap, and also modifications to the xpilot manual page to reflect
+    the new item and the usage key.
+    Here is a quick description of it (which is taken from the man page):
+
+      Gives you a limited amount of extra shield power, which prevents any
+      fuel loss from shots, debris, player and wall collisions, missiles, 
+      mines, etc.  While in use, the ship can smash into walls at any speed
+      and angle without fear of being killed.  The extra shield capability
+      is toggled on and off by a separate key and can thus be saved, with
+      the remaining amount of extra shield power being saved for later use.
+      Once toggled on, the extra shield power will take effect and be used
+      only while the normal shields are up.  Best used when confronted with
+      cluster mines and missles or deadly cannons.
+
+   The default key to turn the emergency shield on or off is `g'.
+   The server has the following new options:
+       -initialEmergencyShields
+       -itemEmergencyShieldProb
+   The client has the following new option:
+       -keyEmergencyShield
+
+The maximum number of ship shape points has been increased from 16 to 24.
+
+Updated the README.MAPS and README.MAPS2 files to reflect all of the
+map and option changes of the past several versions.  These files
+are now up to date!
+
+Added a new README.SHIPS file which explains all of the current features
+of the ship shapes and how to define them and what restrictions they
+must meet.
+
+Added a patch from Scott Stevens for ship and name drawing:
+    1) increase the width returned by FIND_NAME_WIDTH to ensure the correct
+    rectangle is erased (stopping the lines being drawn all over the place if
+    someone's name ends in "f")
+    2) if erase is set locked players are outlined in blue instead of being
+    filled.
+    3) if ship naming is off the so is base naming (not sure about this one,
+    but I thought it was odd the original way).
+
+Fixed bug for servermotd which caused coredumps on some systems.
+Reported by Ben Jackson.
+
+===============================================================================
+
+This is a summary of changes of release 3.1.3 compared to release 3.1.2:
 Changes for Suns in socklib.c to solve unresolved references to
 strerror and _res.
 

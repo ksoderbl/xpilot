@@ -1,4 +1,4 @@
-/* $Id: update.c,v 3.38 1994/04/20 18:23:21 bert Exp $
+/* $Id: update.c,v 3.39 1994/05/23 19:25:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -33,7 +33,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.38 1994/04/20 18:23:21 bert Exp $";
+    "@(#)$Id: update.c,v 3.39 1994/05/23 19:25:04 bert Exp $";
 #endif
 
 
@@ -102,6 +102,32 @@ void Emergency_thrust (int ind, int on)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
 	}
 	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_OFF_SOUND);
+    }
+}
+
+/*
+ * Turn emergency shield on or off.
+ */
+void Emergency_shield (int ind, int on)
+{
+    player	*pl = Players[ind];
+    const int	emergency_shield_time = 8 * FPS;
+
+    if (on) {
+	if (pl->emergency_shield_left <= 0) {
+	    pl->emergency_shield_left = emergency_shield_time;
+	    pl->emergency_shield_max = emergency_shield_time;
+	    pl->emergency_shields--;
+	}
+	SET_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
+    } else {
+	CLR_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	if (pl->emergency_shield_left <= 0) {
+	    if (pl->emergency_shields <= 0)
+		CLR_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
+	}
+	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_OFF_SOUND);
     }
 }
 
@@ -341,6 +367,23 @@ void do_Tractor_beam (player *pl)
     to->vel.y -= tsin(theta) * force / to->mass;
 }
 
+/*
+ * Update `target' on all players radars.  Usually used when target is
+ * destroyed or recreated.
+ */
+void Update_radar_target(int target)
+{
+    target_t *targ = &World.targets[target];
+    int i;
+
+    for (i = 0; i < NumPlayers; i++) {
+	player *pl = Players[i];
+
+	if (pl->robot_mode != RM_NOT_ROBOT || pl->conn == NOT_CONNECTED)
+	    continue;
+	SET_BIT(targ->update_mask, (1 << pl->conn));
+    }
+}
 
 /********** **********
  * Updating objects and the like.
@@ -379,7 +422,7 @@ void Update_objects(void)
 	    && World.items[i].chance > 0
 	    && rand()%World.items[i].chance == 0) {
 
-	    Place_item(i, 0);
+	    Place_item(i, 0, 0);
 	}
 
     /*
@@ -458,6 +501,7 @@ void Update_objects(void)
 		    = TARGET;
 		World.targets[i].conn_mask = 0;
 		World.targets[i].last_change = loops;
+		Update_radar_target(i);
 	    }
 	    continue;
 	}
@@ -543,6 +587,13 @@ void Update_objects(void)
 		&& BIT(pl->status, THRUSTING)
 		&& --pl->emergency_thrust_left <= 0)
 		Emergency_thrust(i, 0);
+	}
+
+	if (BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
+	    if (pl->fuel.sum > 0
+		&& BIT(pl->used, OBJ_SHIELD)
+		&& --pl->emergency_shield_left <= 0)
+		Emergency_shield(i, 0);
 	}
 
 	/*
@@ -922,6 +973,9 @@ void Update_objects(void)
 	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
 	    Throw_items(pl);
+
+	    Detonate_items(pl);
+	    
             if (pl->robot_mode != RM_OBJECT) {
 	        Kill_player(i);
             } else {

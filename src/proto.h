@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 3.27 1994/04/14 11:47:38 bert Exp $
+/* $Id: proto.h,v 3.29 1994/05/23 19:22:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -105,7 +105,7 @@ extern void Free_shots(void);
 extern void Tank_handle_detach(player*);
 extern void Add_fuel(pl_fuel_t*,long);
 extern void Update_tanks(pl_fuel_t*);
-extern void Place_item(int type, player*);
+extern void Place_item(int type, player*, int);
 extern void Place_mine(int ind);
 extern void Place_moving_mine(int ind);
 extern void Place_general_mine(int ind, int status, float x, float y,
@@ -128,13 +128,14 @@ extern void Explode_object(object *shot, float x, float y,
 			   int real_dir, int spread, int intensity);
 extern void Explode(int ind);
 extern void Throw_items(player*);
+extern void Detonate_items(player*);
 
 /*
  * Prototypes for player.c
  */
 extern void Pick_startpos(int ind);
 extern void Go_home(int ind);
-extern void Init_player(int ind, char *shape);
+extern void Init_player(int ind, wireobj *ship);
 extern void Alloc_players(int number);
 extern void Free_players(void);
 extern void Update_score_table(void);
@@ -171,7 +172,7 @@ extern void Handle_signal(int sig_no);
 extern void Log_game(char *heading);
 extern void Server_info(char *, unsigned);
 extern void Game_Over(void);
-extern void Send_meta_server(void);
+extern void Send_meta_server(int change);
 
 /*
  * Prototypes for frame.c
@@ -194,6 +195,7 @@ extern void allow_timer(void);
 /*
  * Prototypes for update.c
  */
+extern void Update_radar_target(int);
 extern void Update_objects(void);
 extern void Emergency_thrust(int ind, int on);
 extern void Autopilot(int ind, int on);

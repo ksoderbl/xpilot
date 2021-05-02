@@ -25,8 +25,17 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.32 1994/04/15 15:33:40 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.35 1994/05/17 07:35:29 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.35  1994/05/17  07:35:29  bert
+ * More fiddling with the xpilot hostname alias and getting the domainname.
+ *
+ * Revision 3.34  1994/05/15  14:27:02  bert
+ * Fix for GetLocalHostName which was broken by a previous fix.
+ *
+ * Revision 3.33  1994/04/30  11:50:39  kenrsc
+ * Added a patch from Jyke Jokinen to send the name of the machine to be xpilot.* if it excist such an alias for it to the meta server. Have also changed the meta server to take the hostname from the packet.
+ *
  * Revision 3.32  1994/04/15  15:33:40  bert
  * Fixed Sun problems.
  *
@@ -2343,7 +2352,19 @@ void GetLocalHostName(name, size)
     unsigned		size;
 #endif /* __STDC__ */
 {
-    struct hostent	*he;
+    struct hostent	*he, *he2, tmp;
+    char		*chXpilot = "xpilot";
+    char		chXpName[MAXHOSTNAMELEN];
+    int			lenXpilot;
+
+    lenXpilot = strlen(chXpilot);
+
+    /* Make a wild guess that a "xpilot" name is in this domain: */
+    if ((he2 = gethostbyname(chXpilot)) != NULL) {
+	strcpy(chXpName, he2->h_name);	/* copy data to static buffer */
+	tmp = *he2;
+	he2 = &tmp;
+    }
 
     gethostname(name, size);
     if ((he = gethostbyname(name)) == NULL) {
@@ -2357,22 +2378,28 @@ void GetLocalHostName(name, size)
      * then we try to get the FQDN via the backdoor of the IP address.
      * Let's hope it works :)
      */
+
     if (strchr(he->h_name, '.') == NULL
 	&& he->h_addrtype == AF_INET
 	&& he->h_length == 4) {
 	unsigned long a = 0;
 	memcpy((void *)&a, he->h_addr_list[0], 4);
-	if ((he = gethostbyaddr((char *)&a, 4, AF_INET)) == NULL
-	    || strchr(he->h_name, '.') == NULL) {
+	if ((he = gethostbyaddr((char *)&a, 4, AF_INET)) != NULL
+	    && strchr(he->h_name, '.') != NULL) {
+	    strncpy(name, he->h_name, size);
+	    name[size - 1] = '\0';
+	}
+	else {
 #if !defined(VMS)
 	    FILE *fp = fopen("/etc/resolv.conf", "r");
 	    if (fp) {
-		char *s, buf[128];
+		char *s, buf[256];
 		while (fgets(buf, sizeof buf, fp)) {
-		    if ((s = strtok(buf, " \t\r\n"))
+		    if ((s = strtok(buf, " \t\r\n")) != NULL
 			&& !strcmp(s, "domain")
-			&& (s = strtok(NULL, " \t\r\n"))) {
-			sprintf(name + strlen(name), ".%s", s);
+			&& (s = strtok(NULL, " \t\r\n")) != NULL) {
+			strcat(name, ".");
+			strcat(name, s);
 			break;
 		    }
 		}
@@ -2381,6 +2408,40 @@ void GetLocalHostName(name, size)
 #endif
 	    return;
 	}
+    }
+
+    /* 
+     * If a "xpilot" host is found compare if it's this one.
+     * and if so, make the local name as "xpilot.*"
+     */
+    if (he2 != NULL) {               /* host xpilot was found */
+	if (strcmp(he->h_name, chXpName) == 0) { 
+	   /* 
+	   * Identical official names. Can they be different hosts after this? 
+	   * Find out the name which starts with "xpilot" and use it:
+	   */
+	    he2 = gethostbyname(chXpilot); /* read again the aliases info */
+	    if (he2 == NULL)       /* shouldn't happen */
+		return;
+
+	    if (strncmp(chXpilot, he2->h_name, lenXpilot) != 0) {
+		/* 
+		 * the official hostname doesn't begin "xpilot"
+		 * so we'll find the alias:
+		 */
+		int i;
+		for (i = 0; he2->h_aliases[i] != NULL; i++) {
+		    if (!strncmp(chXpilot, he2->h_aliases[i], lenXpilot)) {
+			strncpy(name, he2->h_aliases[i], size);
+			return;
+		    }
+		}
+	    } else {
+		strncpy(name, he2->h_name, size);
+		return;
+	    }
+	}
+	/* NOT REATCHED */
     }
 } /* GetLocalHostName */
 

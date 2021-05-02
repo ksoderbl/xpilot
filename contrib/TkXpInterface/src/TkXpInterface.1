@@ -1,4 +1,4 @@
-.TH TkXpInterface 1 "07 April 1994" "FLSPA Software"
+.TH TkXpInterface VERSION " May 1994"
 .SH NAME
 TkXpInterface \- a funky user interface for xpilots(6) (Client and/or Server)
 .SH SYNOPSIS
@@ -6,13 +6,16 @@ TkXpInterface
 .SH DESCRIPTION
 .B TkXpInterface
 will give you a window showing all maps in the default xpilot map directory.
-On this machine it is set to \fBMAPDIR\fR. To choose a map file double-click
-on it, the bitmap image of the map will be displayed. The default map file
+On this machine it is set to \fBMAPDIR\fR. To choose a map file click on it,
+the bitmap image of the map will be displayed. The default map file
 you selected is \fBMAP\fR. TkXpInterface takes into account all options included in the 
 map file you choose, and warns you if some options are unknown for Xpilots.
 you can move in different directories when you click on the directory name or
 when you type yourself the pathname, if the directory does'nt exist
 you back to the default directory.
+
+You can select a \fBship shape\fR for your client.
+You can fix the \fBgravity\fR value with your mouse on the map drawing.
 
 You will also get a series of buttons and sliders to configure the server.
 .LP
@@ -28,7 +31,7 @@ different configurations (map, options) but you must select different port
 numbers.
 .LP
 
-You can also \fBSave Rename Delete\fR a map file and/or a compressed map file,
+You can also \fBSave Copy Delete\fR a map file and/or a compressed map file,
 if you save the map file all options you selected will be saved too.
 .LP
 
@@ -39,13 +42,19 @@ You can connect to the Xpilots meta-server (non-interactive)
 \fBMETASERVER\fR to play on a foreign server.
 All current servers can be \fBsorted\fR by names, FPS,...
 Just pass your mouse cursor on the choosen server to display all
-informations about it. If you double-click, your xpilot client will be connected
+informations about it. If you click on a server name, and you
+activate the "Connect" button your xpilot client will be connected
 to this server.
+You can do a \fBPing\fR on the remote server to test the connection.
 Note : When you start the xpilots client (in background), wait some secondes to let it 
 establish the connection !
 
 \fBTkXpInterface\fR creates some temporary files (for the bitmap and meta-server files)
 in the read/write \fBTEMPDIR\fR directory.
+
+If you click with the right-button a help window will appear to explain you the area
+where the mouse cursor is.
+
 .SH SEE ALSO
 .B
 xpilots(6) xpilot(6)
@@ -59,14 +68,13 @@ Ramdane Ferhati -
 .B
 Frenchy
 .br
-FLSPA Software - Where Purple Dreams become Reality.
 .SH CONTACT
 Comments, bug reports and suggestions are welcome by email
 to berne@ensisun.imag.fr or ferhati@aremihp.univ-lille1.fr
 .SH NOTES
 .LP
 Needs \fBTcl\fR (tcl7.3) and \fBTk\fR (tk3.6) to run. The configuration options 
-have been written for xpilots version 3.1.0. It may or may not work with other versions.
+have been written for xpilots version 3.1.x. It may or may not work with other versions.
 .SH ACKNOWLEDGEMENTS
 .LP
 First version of tkxpilots - \fBRichard Oak\fR

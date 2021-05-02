@@ -1,20 +1,18 @@
 #
-# Installation procedure for TkXpInterface-3.1.
+# Installation procedure for TkXpInterface-3.4
 #
-# March 1994
 
 1) Install the "maps2image" package FIRST !
-   Edit its Makefile and choose :
+   Use the LAST version in the ./TkXpInterface-3.4/contrib directory
+   of Xpilots-3.1.x
 
-       FONT  =  helvR14.bdf
-
-2) Edit the Makefile in the ./TkXpInterface-3.1 directory.
+2) Edit the Makefile in the ./TkXpInterface-3.4 directory.
    Specify where you want everything to go 
 
 3) type :
    "make"
    "make install"
-   "make clean".
+   "make clean"
 
 4) Read the manual page, command :
    
@@ -23,3 +21,52 @@
 5) Happy flying!
 
 6) Mail a greeting to the authors.
+
+
+- TkXpInterface includes a help, just Single-Click with the RIGHT button
+  to have a help about the area where is you mouse pointer !
+- There are now at least 140 ship shapes, so to have a fast load of this
+  program, edit TkXpI.shp and delete the lines that don't correspond to
+  your favorite shapes.
+------------------------------------------------------------------
+BUGS :
+TkXpInterface was ONLY tested on :
+                  HP 9000/735 running HP-UX 9.01
+                  SUN Sparc server 1000
+                  IBM Risc 6000
+
+-The TkXpInterface is now adapted for the monochrome screen, if you
+ have some Black&White problem type : "TkXpInterface -reverse"
+
+-If after the sort of the current servers (in the meta-server command)
+the servers are not sorted, that's mean TkXpInterface doesn't recognize YOUR
+"sort" unix command, e-mail me its exact syntax to include it in the next version.
+
+The syntax of the UNIX command depend of the machine you used :
+TkXpInterface calls some UNIX commands, if you see a strange behavior
+of TkXpInterface e-mail me the Tcl error message :
+The UNIX commands used are :
+      grep sort sed telnet cat rm mv cp ls echo tail head ping
+
+e-mail troubles to :
+berne@ensisun.imag.fr And ferhati@aremihp.univ-lille1.fr
+
+Enjoy !
+
+-------------------------------------------------------------------------- 
+Package name:     TkXpInterface-3.4
+Version number:   3.4
+Original author:  Ramdane Ferhati (ferhati@aremihp.univ-lille1.fr)
+		  Berne Yves-Henri (berne@ensisun.imag.fr)
+Based on the idea of Richard Oak (Original author of tkxpilots)
+Report bugs to:   berne@ensisun.imag.fr or ferhati@aremihp.univ-lille1.fr
+Tested on:        HP 9000/735 running HP-UX 9.01
+		  SUN Sparc server 1000
+		  IBM Risc 6000
+Purpose:
+Interface to xpilot server. This is a Tcl/Tk script that allows you to
+configure xpilots servers using buttons and sliders. It also allows you to
+choose from all maps in the default map directory and includes all of the
+xpilots command line options.
+Date archived:    22 April 1994
+Special notes:    None

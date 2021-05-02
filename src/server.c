@@ -1,4 +1,4 @@
-/* $Id: server.c,v 3.81 1994/04/20 15:11:24 bert Exp $
+/* $Id: server.c,v 3.85 1994/05/23 19:24:17 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -76,7 +76,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.81 1994/04/20 15:11:24 bert Exp $";
+    "@(#)$Id: server.c,v 3.85 1994/05/23 19:24:17 bert Exp $";
 #endif
 
 
@@ -110,7 +110,6 @@ time_t			gameOverTime = 0;
 time_t			serverTime = 0;
 extern int		login_in_progress;
 
-void Send_meta_server(void);
 static bool Owner(char *name, char *in_host);
 
 static void catch_alarm(int signum)
@@ -266,7 +265,7 @@ int main(int argc, char *argv[])
      * Report to Meta server
      */
    
-    Send_meta_server();
+    Send_meta_server(1);
     
     /*
      * If the server is not in raw mode it should run only if
@@ -293,21 +292,32 @@ int main(int argc, char *argv[])
     return (-1);
 }
 
-void Send_meta_server(void)
+void Send_meta_server(int change)
 {
 #ifdef SOUND
 #define SOUND_SUPPORT_STR	"yes"
 #else
 #define SOUND_SUPPORT_STR	"no"
 #endif
+#define GIVE_META_SERVER_A_HINT	180
 
-    char 	string[MAX_STR_LEN];
-    char 	status[MAX_STR_LEN];
-    int		i;
-    bool	first = true;
+    char 		string[MAX_STR_LEN];
+    char 		status[MAX_STR_LEN];
+    int			i;
+    bool		first = true;
+    time_t		currentTime;
+    static time_t	lastMetaSendTime = 0;
+
 
     if (!reportToMetaServer)
 	return;
+
+    currentTime = time(NULL);
+    if (!change) {
+	if (currentTime - lastMetaSendTime < GIVE_META_SERVER_A_HINT)
+	    return;
+    }
+    lastMetaSendTime = currentTime;
 
     Server_info(status, sizeof(status));
 
@@ -322,6 +332,8 @@ void Send_meta_server(void)
 	    "add fps %d\n"
 	    "add port %d\n"
 	    "add mode %s\n"
+	    "add teams %d\n"
+	    "add timing %d\n"
 	    "add stime %ld\n"
 	    "add sound " SOUND_SUPPORT_STR "\n",
 	    Server.host, NumPlayers - NumRobots, 
@@ -330,7 +342,8 @@ void Send_meta_server(void)
 	    (lock && ShutdownServer == -1) ? "locked"
 		: (!lock && ShutdownServer != -1) ? "shutting down"
 		: (lock && ShutdownServer != -1) ? "locked and shutting down"
-		: "ok",
+		: "ok", World.NumTeamBases, 
+	    BIT(World.rules->mode, TIMING) ? 1:0,
 	    time(NULL) - serverTime);
 
 
@@ -342,6 +355,11 @@ void Send_meta_server(void)
 		    Players[i]->name,
 		    Players[i]->realname,
 		    Players[i]->hostname);
+	    if (BIT(World.rules->mode, TEAM_PLAY)) {
+		sprintf(status,"{%d}",Players[i]->team);
+		strcat(string,status);
+	    }
+		
 	    first = false;
 	}
     }
@@ -373,8 +391,6 @@ void Main_Loop(void)
 {
     extern void		Loop_delay(void);
     int			main_loops = 0;
-    time_t		currentTime;
-    time_t		lastMetaCheckTime = 0;
 
 #ifndef SILENT
     printf("Server runs at %d frames per second\n", framesPerSecond);
@@ -386,16 +402,7 @@ void Main_Loop(void)
 	   || NumPlayers - NumPseudoPlayers > NumRobots
 	   || NoPlayersEnteredYet) {
 	
-	currentTime = time(NULL);
 	main_loops++;
-
-#define CHECK_FOR_NEW_PLAYERS	4
-#define GIVE_META_SERVER_A_HINT	180
-
-	if (currentTime - lastMetaCheckTime >= GIVE_META_SERVER_A_HINT) {
-	    lastMetaCheckTime = currentTime;
-	    Send_meta_server();
-	}
 
 	if (NumPlayers - NumPseudoPlayers == NumRobots && !RawMode) {
 	    block_timer();
@@ -419,6 +426,9 @@ void Main_Loop(void)
 	
 	if ((main_loops % UPDATES_PR_FRAME) == 0) {
 	    Frame_update();
+	    if ((main_loops & 0xF) == 0) {
+		Send_meta_server(0);
+	    }
 	    Loop_delay();
 	}
 
@@ -436,6 +446,8 @@ void Main_Loop(void)
  */
 static void Wait_for_new_players(void)
 {
+#define CHECK_FOR_NEW_PLAYERS	4
+
     int			new_players = false;
     time_t		start_time,
 			start_loops,
@@ -463,6 +475,7 @@ static void Wait_for_new_players(void)
 	if (SocketReadable(Socket) != 0) {
 	    Contact();
 	}
+	Send_meta_server(0);
 	gettimeofday(&tv, NULL);
 	milli_delta = (tv.tv_sec - start_time) * 1000 + tv.tv_usec / 1000;
 	loops = start_loops + (FPS * milli_delta) / 1000;
@@ -489,7 +502,7 @@ void End_game(void)
 	if (pl->conn == NOT_CONNECTED) {
 	    Delete_player(NumPlayers - 1);
 	} else {
-	    Destroy_connection(pl->conn, "server exiting", __FILE__, __LINE__);
+	    Destroy_connection(pl->conn, "server exiting");
 	}
     }
 
@@ -602,7 +615,8 @@ void Contact(void)
 	{ "initialLasers",           &initialLasers },
 	{ "initialEmergencyThrusts", &initialEmergencyThrusts },
 	{ "initialTractorBeams",     &initialTractorBeams },
-	{ "initialAutopilots",       &initialAutopilots }
+	{ "initialAutopilots",       &initialAutopilots },
+	{ "initialEmergencyShields", &initialEmergencyShields }
     };
 
     /*
@@ -914,8 +928,7 @@ void Contact(void)
 		if (Players[found]->conn == NOT_CONNECTED) {
 		    Delete_player(found);
 		} else {
-		    Destroy_connection(Players[found]->conn, "kicked out",
-					__FILE__, __LINE__);
+		    Destroy_connection(Players[found]->conn, "kicked out");
 		}
 		updateScores = true;
 	    }

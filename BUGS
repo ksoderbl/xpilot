@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.38 1994/03/09 19:56:15 bert Exp $
+$Id: BUGS,v 3.41 1994/05/23 16:31:14 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -177,3 +177,37 @@ $Id: BUGS,v 3.38 1994/03/09 19:56:15 bert Exp $
 	My suggestion: change effect of team immunity so that it
 	applies only to simple shots.  (Would be a pretty simple fix).
 
+<BUG>  022
+<STATUS>open/medium
+<VER>	3.1.3
+<DESC>	940503: leo@dcs.warwick.ac.uk (Leo Hendry)
+	I have been playing tournament and team tournament maps recently and I have
+	noticed that when you try to connect to a freely moving ball the force applied
+	to your ship when you take up the strain on the connnector is completely
+	random.  For example you can connect to an almost stationary ball and you will
+	be thrown with great force into the wall, but other times you can connect to a
+	falling ball without difficulty.
+
+<BUG>   023
+<STATUS>open/medium
+<VER>   3.1.3
+<DESC>  940504: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+        If the server is not in RawMode (Robots playing even if humans is 
+        not there) and NoQuit is also set the server will be idle until
+        the first player shows up. This also means that the server will
+        not send info to the meta server during this time. So after about
+        16 minutes the server will no longer be in the meta server list.
+        I don't think this is what the starters of the long term servers
+        want.
+<FIX>   Set an alarm for about 6-10 minutes so the server breaks the idle
+        hang to send a message to the meta server. This means some 
+        changing in the way signals are handled.
+
+<BUG>   024
+<STATUS>open/medium
+<VER>   3.1.3
+<DESC>  940523: Frenchy
+	When the target blows up and the game resets then the target
+	still exists, but it is untouchable.
+	Sometimes the target appears in red instead of blue, even
+	if it belongs to the player's team.

@@ -1,4 +1,4 @@
-/* $Id: paint.c,v 3.89 1994/04/23 16:59:47 bert Exp $
+/* $Id: paint.c,v 3.93 1994/05/25 16:16:10 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -92,6 +92,7 @@ char	keyListFontName[FONT_LEN];
 char	motdFontName[FONT_LEN];
 
 Display	*dpy;			/* Display of player (pointer) */
+Display	*kdpy;			/* Keyboard display */
 short	about_page;		/* Which page is the player on? */
 u_short	team;			/* What team is the player on? */
 
@@ -107,6 +108,7 @@ GC	motdGC;			/* GC for the motd text */
 
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
+Window	keyboard;		/* Keyboard window */
 Pixmap	p_draw;			/* Saved pixmap for the drawing */
 					/* area (monochromes use this) */
 Window	radar;			/* Radar window */
@@ -184,7 +186,7 @@ typedef struct {
 
 typedef struct {
     short		x, y, id, dir;
-    u_byte		shield, cloak;
+    u_byte		shield, cloak, eshield;
 } ship_t;
 
 typedef struct {
@@ -369,7 +371,7 @@ static Pixel		current_foreground;
 #define FIND_NAME_WIDTH(other)						\
     if ((other)->name_width == 0) {					\
 	(other)->name_len = strlen((other)->name);			\
-	(other)->name_width = XTextWidth(gameFont, (other)->name,	\
+	(other)->name_width = 2 + XTextWidth(gameFont, (other)->name,	\
 					 (other)->name_len);		\
     }
 
@@ -1125,7 +1127,7 @@ static void Paint_shots(void)
 
 static void Paint_ships(void)
 {
-    int			i, j, x, y, cnt, dir, x0, y0, x1, y1, size;
+    int			i, j, x, y, cnt, dir, x0, y0, x1, y1, size, lcnt;
     unsigned long	mask;
     other_t		*other;
     static int		pauseCharWidth = -1;
@@ -1193,8 +1195,8 @@ static void Paint_ships(void)
 		dir = ship_ptr[i].dir;
 		ship = Ship_by_id(ship_ptr[i].id);
 		for (cnt = 0; cnt < ship->num_points; cnt++) {
-		    points[cnt].x = X(x + ship->pts[dir][cnt].x);
-		    points[cnt].y = Y(y + ship->pts[dir][cnt].y);
+		    points[cnt].x = X(x + ship->pts[cnt][dir].x);
+		    points[cnt].y = Y(y + ship->pts[cnt][dir].y);
 		}
 		points[cnt++] = points[0];
 
@@ -1227,6 +1229,15 @@ static void Paint_ships(void)
 		    if (lock_id == ship_ptr[i].id
 			&& ship_ptr[i].id != -1
 			&& lock_dist != 0) {
+/* if ERASE is defined outline the locked ship in blue, instead of
+** mucking around with polygons, SKS 25/05/94
+*/
+#if ERASE
+			SET_FG(colors[BLUE].pixel);
+			XDrawLines(dpy, p_draw, gc, points, cnt, 0);
+			SET_FG(colors[WHITE].pixel);
+			Erase_points(0, points, cnt);
+#else
 			XFillPolygon(dpy, p_draw, gc, points, cnt,
 				     Complex, CoordModeOrigin);
 			x0 = x1 = y0 = y1 = 0;
@@ -1237,38 +1248,44 @@ static void Paint_ships(void)
 			    else if (points[j].y > y1) y1 = points[j].y;
 			}
 			Erase_rectangle(x0, y0, x1 + 2 - x0, y1 + 2 - y0);
+#endif
 		    } else {
 			Erase_points(0, points, cnt);
 		    }
 		    if (markingLights) {
 			if (((loops + ship_ptr[i].id) & 0xF) == 0) {
-			    Rectangle_add(RED,
-                                points[ship->pt1].x-2,
-                                points[ship->pt1].y-2, 6, 6);
-			    Segment_add(RED,
-                                points[ship->pt1].x-8,
-                                points[ship->pt1].y,
-                                points[ship->pt1].x+8,
-                                points[ship->pt1].y);
-			    Segment_add(RED,
-                                points[ship->pt1].x,
-                                points[ship->pt1].y-8,
-                                points[ship->pt1].x,
-                                points[ship->pt1].y+8);
+		            for (lcnt = 0; lcnt < ship->num_l_light; lcnt++) {
+			        Rectangle_add(RED,
+                                    X(x + ship->l_light[lcnt][dir].x) - 2,
+                                    Y(y + ship->l_light[lcnt][dir].y) - 2, 
+                                    6, 6);
+			        Segment_add(RED,
+                                    X(x + ship->l_light[lcnt][dir].x)-8,
+                                    Y(y + ship->l_light[lcnt][dir].y),
+                                    X(x + ship->l_light[lcnt][dir].x)+8,
+                                    Y(y + ship->l_light[lcnt][dir].y));
+			        Segment_add(RED,
+                                    X(x + ship->l_light[lcnt][dir].x),
+                                    Y(y + ship->l_light[lcnt][dir].y)-8,
+                                    X(x + ship->l_light[lcnt][dir].x),
+                                    Y(y + ship->l_light[lcnt][dir].y)+8);
+                            }
 			} else if (((loops + ship_ptr[i].id) & 0xF) == 2) {
-                            Rectangle_add(BLUE,
-                                points[ship->pt2].x-2,
-                                points[ship->pt2].y-2, 6, 6);
-                            Segment_add(BLUE,
-                                points[ship->pt2].x-8,
-                                points[ship->pt2].y,
-                                points[ship->pt2].x+8,
-                                points[ship->pt2].y);
-                            Segment_add(BLUE,
-                                points[ship->pt2].x,
-                                points[ship->pt2].y-8,
-                                points[ship->pt2].x,
-                                points[ship->pt2].y+8);
+		            for (lcnt = 0; lcnt < ship->num_r_light; lcnt++) {
+                                Rectangle_add(BLUE,
+                                    X(x + ship->r_light[lcnt][dir].x)-2,
+                                    Y(y + ship->r_light[lcnt][dir].y)-2, 6, 6);
+                                Segment_add(BLUE,
+                                    X(x + ship->r_light[lcnt][dir].x)-8,
+                                    Y(y + ship->r_light[lcnt][dir].y),
+                                    X(x + ship->r_light[lcnt][dir].x)+8,
+                                    Y(y + ship->r_light[lcnt][dir].y));
+                                Segment_add(BLUE,
+                                    X(x + ship->r_light[lcnt][dir].x),
+                                    Y(y + ship->r_light[lcnt][dir].y)-8,
+                                    X(x + ship->r_light[lcnt][dir].x),
+                                    Y(y + ship->r_light[lcnt][dir].y)+8);
+                            }
 			}
 		    }
 		}
@@ -1285,7 +1302,7 @@ static void Paint_ships(void)
 		    if (ship_ptr[i].cloak) {
 #if ERASE
 			int j;
-			for (j = 0; j < 3; j++) {
+			for (j = 0; j < cnt - 1; j++) {
 			    XDrawLine(dpy, p_draw, gc,
 				      points[j].x, points[j].y,
 				      points[j + 1].x, points[j + 1].y);
@@ -1296,12 +1313,17 @@ static void Paint_ships(void)
 #endif
 		    }
 		    if (ship_ptr[i].shield) {
-			XDrawArc(dpy, p_draw, gc,
-				 X(x - 17),
-				 Y(y + 17),
+			XDrawArc(dpy, p_draw, gc, X(x - 17), Y(y + 17), 
 				 34, 34, 0, 64 * 360);
 			Erase_arc(X(x - 17), Y(y + 17),
 				  34, 34, 0, 64 * 360);
+
+			if (ship_ptr[i].eshield) {	/* Emergency Shield */
+			    XDrawArc(dpy, p_draw, gc, X(x - 19), Y(y + 19), 
+			        38, 38, 0, 64 * 360);
+			    Erase_arc(X(x - 19), Y(y + 19), 
+			        38, 38, 0, 64 * 360);
+			}
 		    }
 		}
 	    }
@@ -1446,11 +1468,18 @@ static void Paint_meters(void)
 		    (thrusttime >= thrusttimemax ? thrusttimemax : thrusttime),
 		    thrusttimemax);
 
+    if (shieldtime >= 0 && shieldtimemax > 0)
+	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 20,
+		    "Shields Left",
+		    (shieldtime >= shieldtimemax ? shieldtimemax : shieldtime),
+		    shieldtimemax);
+
     if (destruct > 0)
-	Paint_meter((view_width-300)/2 -32, 3*view_height/4,
+	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 40,
 		   "Self destructing", destruct, 150);
+
     if (shutdown_count >= 0)
-	Paint_meter((view_width-300)/2 -32, 4*view_height/5,
+	Paint_meter((view_width-300)/2 -32, 2*view_height/3 + 60,
 		   "SHUTDOWN", shutdown_count, shutdown_delay);
 }
 
@@ -2124,7 +2153,10 @@ static void Paint_vbase(void)
 	    if (Base_info_by_pos(xi, yi, &id, &team) == -1) {
 		continue;
 	    }
-	    if (BIT(Setup->mode, TEAM_PLAY)) {
+/* only draw base teams if ship naming is on, SKS 25/05/94
+*/
+	    if (BIT(Setup->mode, TEAM_PLAY) &&
+		BIT(instruments, SHOW_SHIP_NAME)) {
 		s[0] = '0' + team;
 		s[1] = ' ';
 		s[2] = '\0';
@@ -2142,7 +2174,10 @@ static void Paint_vbase(void)
 		    x += size;
 		}
 	    }
-	    if ((other = Other_by_id(id)) != NULL) {
+/* only draw base names if ship naming is on, SKS 25/05/94
+*/
+	    if ((other = Other_by_id(id)) != NULL &&
+		BIT(instruments, SHOW_SHIP_NAME)) {
 		FIND_NAME_WIDTH(other);
 		if (type == SETUP_BASE_RIGHT) {
 		    x -= other->name_width;
@@ -2578,7 +2613,8 @@ void Paint_sliding_radar(void)
 
 void Paint_world_radar(void)
 {
-    int			i, xi, yi, xm, ym, xp, yp;
+    int			i, xi, yi, xm, ym, xp, yp, xmoff, xioff;
+    int			type, vis, damage;
     float		xs, ys;
     int			npoint = 0, nsegment = 0, start, end;
     const int		max = 256;
@@ -2616,11 +2652,16 @@ void Paint_world_radar(void)
     if (Setup->x >= 256) {
 	xs = (float)(256 - 1) / (Setup->x - 1);
 	ys = (float)(RadarHeight - 1) / (Setup->y - 1);
-	for (xi=0; xi<Setup->x; xi++) {
+	for (xi = 0; xi < Setup->x; xi++) {
 	    start = end = -1;
 	    xp = (int)(xi * xs + 0.5);
-	    for (yi=0; yi<Setup->y; yi++) {
-		if (visible[Setup->map_data[xi * Setup->y + yi]] != 0) {
+	    xioff = xi * Setup->y;
+	    for (yi = 0; yi < Setup->y; yi++) {
+		type = Setup->map_data[xioff + yi];
+		if (type >= SETUP_TARGET && type < SETUP_TARGET+10)
+		    vis = (Target_alive(xi, yi, &damage) == 0);
+		else vis = visible[type];
+		if (vis) {
 		    yp = (int)(yi * ys + 0.5);
 		    if (start == -1) {
 			start = end = yp;
@@ -2628,9 +2669,7 @@ void Paint_world_radar(void)
 			end = yp;
 		    }
 		}
-		if (start != -1
-		    && (visible[Setup->map_data[xi * Setup->y + yi]] == 0
-		    || yi == Setup->y - 1)) {
+		if (start != -1 && (!vis || yi == Setup->y - 1)) {
 		    if (end > start) {
 			segments[nsegment].x1 = xp;
 			segments[nsegment].y1 = RadarHeight - 1 - start;
@@ -2659,13 +2698,18 @@ void Paint_world_radar(void)
     } else {
 	xs = (float)(Setup->x - 1) / (256 - 1);
 	ys = (float)(Setup->y - 1) / (RadarHeight - 1);
-	for (xi=0; xi<256; xi++) {
-	    xm = (int)(xi * xs + 0.5) * Setup->y;
+	for (xi = 0; xi < 256; xi++) {
+	    xm = (int)(xi * xs + 0.5);
+	    xmoff = xm * Setup->y;
 	    start = end = -1;
 	    xp = xi;
-	    for (yi=0; yi<RadarHeight; yi++) {
+	    for (yi = 0; yi < RadarHeight; yi++) {
 		ym = (int)(yi * ys + 0.5);
-		if (visible[Setup->map_data[xm + ym]] != 0) {
+		type = Setup->map_data[xmoff + ym];
+		vis = visible[type];
+		if (type >= SETUP_TARGET && type < SETUP_TARGET+10)
+		    vis = (Target_alive(xm, ym, &damage) == 0);
+		if (vis) {
 		    yp = yi;
 		    if (start == -1) {
 			start = end = yp;
@@ -2673,9 +2717,7 @@ void Paint_world_radar(void)
 			end = yp;
 		    }
 		}
-		if (start != -1
-		    && (visible[Setup->map_data[xm + ym]] == 0
-		    || yi == RadarHeight - 1)) {
+		if (start != -1 && (!vis || yi == RadarHeight - 1)) {
 		    if (end > start) {
 			segments[nsegment].x1 = xp;
 			segments[nsegment].y1 = RadarHeight - 1 - start;
@@ -2716,7 +2758,51 @@ void Paint_world_radar(void)
 		      AllPlanes&(~(dpl_2[0]|dpl_2[1])));
 }
 
+/*
+ * Try and draw an area of the radar which represents block position
+ * `xi' `yi'.  If `draw' is zero the area is cleared.
+ */
+void Paint_radar_block(int xi, int yi, int draw)
+{
+    float	xs, ys;
+    int		xp, yp, xw, yw;
 
+    if (s_radar == p_radar)
+	XSetPlaneMask(dpy, radarGC, AllPlanes&(~(dpl_1[0]|dpl_1[1])));
+    XSetForeground(dpy, radarGC, colors[(draw ? BLUE : BLACK)].pixel);
+
+    if (Setup->x >= 256) {
+	xs = (float)(256 - 1) / (Setup->x - 1);
+	ys = (float)(RadarHeight - 1) / (Setup->y - 1);
+	xp = (int)(xi * xs + 0.5);
+	yp = RadarHeight - 1 - (int)(yi * ys + 0.5);
+	XDrawPoint(dpy, s_radar, radarGC, xp, yp);
+    } else {
+	xs = (float)(Setup->x - 1) / (256 - 1);
+	ys = (float)(Setup->y - 1) / (RadarHeight - 1);
+	/*
+	 * Calculate the min and max points on the radar that would show
+	 * block position `xi' and `yi'.  Note `xp' is the minimum x coord
+	 * for `xi',which is one more than the previous xi value would give,
+	 * and `xw' is the maximum, which is then changed to a width value.
+	 * Similarly for `yw' and `yp' (the roles are reversed because the
+	 * radar is upside down).
+	 */
+	xp = (int)((xi - 0.5) / xs) + 1;
+	xw = (int)((xi + 0.5) / xs);
+	yw = (int)((yi - 0.5) / ys) + 1;
+	yp = (int)((yi + 0.5) / ys);
+	xw -= xp;
+	yw = yp - yw;
+	yp = RadarHeight - 1 - yp;
+	XFillRectangle(dpy, s_radar, radarGC, xp, yp, xw+1, yw+1);
+    }
+    if (s_radar == p_radar)
+	XSetPlaneMask(dpy, radarGC, 
+		      AllPlanes&(~(dpl_2[0]|dpl_2[1])));
+}
+    
+		       
 void Paint_frame(void)
 {
     static long scroll_i = 0;
@@ -2909,6 +2995,7 @@ int Handle_start(long server_loops)
     shutdown_count = -1;
     eyesId = (self != NULL) ? self->id : 0;
     thrusttime = -1;
+    shieldtime = -1;
     return 0;
 }
 
@@ -3017,6 +3104,13 @@ int Handle_thrusttime(int count, int max)
     return 0;
 }
 
+int Handle_shieldtime(int count, int max)
+{
+    shieldtime = count;
+    shieldtimemax = max;
+    return 0;
+}
+
 int Handle_refuel(int x0, int y0, int x1, int y1)
 {
     refuel_t	t;
@@ -3078,7 +3172,7 @@ int Handle_ball(int x, int y, int id)
     return 0;
 }
 
-int Handle_ship(int x, int y, int id, int dir, int shield, int cloak)
+int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshield)
 {
     ship_t	t;
 
@@ -3088,6 +3182,7 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak)
     t.dir = dir;
     t.shield = shield;
     t.cloak = cloak;
+    t.eshield = eshield;
     HANDLE(ship_ptr, num_ship, max_ship, t);
 
     if (id == eyesId) {

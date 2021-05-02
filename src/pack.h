@@ -1,4 +1,4 @@
-/* $Id: pack.h,v 3.29 1994/03/31 15:29:30 bert Exp $
+/* $Id: pack.h,v 3.30 1994/05/23 19:16:17 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -82,8 +82,9 @@
  * 3.1.0.1: key-change-ids are now send as longs instead of bytes.
  * 3.1.0.2: different player status byte.
  * 3.1.0.3: different mine packet.
+ * 3.2.0.0: New ship shape definition and big patches.
  */
-#define	MAGIC		0x3103F4ED
+#define	MAGIC		0x3200F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))

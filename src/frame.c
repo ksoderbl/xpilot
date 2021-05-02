@@ -1,4 +1,4 @@
-/* $Id: frame.c,v 3.46 1994/04/24 11:58:28 bert Exp $
+/* $Id: frame.c,v 3.47 1994/05/23 19:09:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -45,7 +45,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.46 1994/04/24 11:58:28 bert Exp $";
+    "@(#)$Id: frame.c,v 3.47 1994/05/23 19:09:14 bert Exp $";
 #endif
 
 
@@ -334,6 +334,7 @@ static int Frame_status(int conn, int ind)
 	pl->afterburners,
 	pl->lasers,
 	pl->emergency_thrusts,
+	pl->emergency_shields,
 	pl->tractor_beams,
 	pl->autopilots,
 	showautopilot,
@@ -389,6 +390,10 @@ static int Frame_status(int conn, int ind)
 	Send_thrusttime(conn,
 			pl->emergency_thrust_left,
 			pl->emergency_thrust_max);
+    if (BIT(pl->used, OBJ_EMERGENCY_SHIELD))
+	Send_shieldtime(conn,
+			pl->emergency_shield_left,
+			pl->emergency_shield_max);
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count > 0) {
 	Send_destruct(conn, pl->count);
     }
@@ -454,13 +459,12 @@ static void Frame_map(int conn, int ind)
     }
 
     for (i = 0; i < World.NumTargets; i++) {
-	if (BIT(World.targets[i].conn_mask, conn_bit) == 0) {
-	    if (block_inview(&bv,
-			     World.targets[i].pos.x,
-			     World.targets[i].pos.y)) {
-		Send_target(conn, i, World.targets[i].dead_time,
-			    World.targets[i].damage);
-	    }
+	target_t *targ = &World.targets[i];
+
+	if (BIT(targ->update_mask, conn_bit) 
+	    || (BIT(targ->conn_mask, conn_bit) == 0
+		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
+	    Send_target(conn, i, targ->dead_time, targ->damage);
 	}
     }
 }
@@ -616,19 +620,16 @@ static void Frame_shots(int conn, int ind)
 	    Send_item(conn, x, y, ITEM_LASER);
 	    break;
 	case OBJ_EMERGENCY_THRUST:
-
 		Send_item(conn, x, y, ITEM_EMERGENCY_THRUST);
-
+	    break;
+	case OBJ_EMERGENCY_SHIELD:
+	    Send_item(conn, x, y, ITEM_EMERGENCY_SHIELD);
 	    break;
 	case OBJ_TRACTOR_BEAM:
-
 		Send_item(conn, x, y, ITEM_TRACTOR_BEAM);
-
 	    break;
 	case OBJ_AUTOPILOT:
-
 		Send_item(conn, x, y, ITEM_AUTOPILOT);
-
 	    break;
 	default:
 	    error("Frame_shots: Shot type %d not defined.", shot->type);
@@ -750,7 +751,8 @@ static void Frame_ships(int conn, int ind)
 		pl_i->id,
 		pl_i->dir,
 		BIT(pl_i->used, OBJ_SHIELD) != 0,
-		BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0
+		BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0,
+		BIT(pl_i->used, OBJ_EMERGENCY_SHIELD) != 0
 	    );
 	}
 	if (BIT(pl_i->used, OBJ_REFUEL)) {
@@ -783,8 +785,8 @@ static void Frame_ships(int conn, int ind)
 
 	    for (j = 0; j < 3; j++) {
 		Send_connector(conn,
-		       (int) (t->pos.x + t->ship->pts[t->dir][j].x + 0.5),
-		       (int) (t->pos.y + t->ship->pts[t->dir][j].y + 0.5),
+		       (int) (t->pos.x + t->ship->pts[j][t->dir].x + 0.5),
+		       (int) (t->pos.y + t->ship->pts[j][t->dir].y + 0.5),
 		       (int) (pl_i->pos.x + 0.5),
 		       (int) (pl_i->pos.y + 0.5), 1);
 	    }

@@ -1,4 +1,4 @@
-/* $Id: paint.h,v 3.36 1994/04/12 13:43:17 bjoerns Exp $
+/* $Id: paint.h,v 3.37 1994/05/23 19:19:13 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -45,12 +45,13 @@ int Handle_damaged(int damaged);
 int Handle_destruct(int count);
 int Handle_shutdown(int count, int delay);
 int Handle_thrusttime(int count, int max);
+int Handle_shieldtime(int count, int max);
 int Handle_refuel(int x0, int y0, int x1, int y1);
 int Handle_connector(int x0, int y0, int x1, int y1, int tractor);
 int Handle_laser(int color, int x, int y, int len, int dir);
 int Handle_missile(int x, int y, int dir, int len);
 int Handle_ball(int x, int y, int id);
-int Handle_ship(int x, int y, int id, int dir, int shield, int cloak);
+int Handle_ship(int x, int y, int id, int dir, int shield, int cloak, int eshield);
 int Handle_mine(int x, int y, int teammine, int id);
 int Handle_item(int x, int y, int type);
 int Handle_shot(int x, int y, int color);
@@ -69,6 +70,7 @@ int Handle_eyes(int id);
 void Paint_item(u_byte type, Drawable d, GC gc, int x, int y);
 void Paint_sliding_radar(void);
 void Paint_world_radar(void);
+void Paint_radar_block(int, int, int);
 void Paint_score_entry(int entry_num, other_t* other, bool best);
 void Paint_score_start(void);
 int Handle_time_left(long sec);
@@ -122,6 +124,7 @@ extern char keyListFontName[FONT_LEN];
 extern char motdFontName[FONT_LEN];
 
 extern Display	*dpy;			/* Display of player (pointer) */
+extern Display	*kdpy;			/* Keyboard display */
 extern short	about_page;		/* Which page is the player on? */
 extern u_short	team;			/* What team is the player on? */
 extern bool	players_exposed;	/* Is score window exposed? */
@@ -131,7 +134,7 @@ extern bool	radar_exposed;		/* Is radar window exposed? */
 
 extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
 extern GC	keyListGC, motdGC;
-extern Window	top, draw, radar, players;
+extern Window	top, draw, keyboard, radar, players;
 extern Pixmap	p_draw, p_radar, s_radar;
 extern Pixmap	itemBitmaps[];
 extern long	dpl_1[2], dpl_2[2];	/* Used by radar hack */

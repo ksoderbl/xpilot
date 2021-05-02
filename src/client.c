@@ -1,4 +1,4 @@
-/* $Id: client.c,v 3.49 1994/03/09 12:05:32 bert Exp $
+/* $Id: client.c,v 3.50 1994/05/23 19:03:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -81,6 +81,8 @@ short	shutdown_delay;
 short	shutdown_count;
 short	thrusttime;
 short	thrusttimemax;
+short	shieldtime;
+short	shieldtimemax;
 
 int	map_point_distance;	/* spacing of navigation points */
 int	map_point_size;		/* size of navigation points */
@@ -275,6 +277,13 @@ int Handle_target(int num, int dead_time, int damage)
 	&& (damage < 1
 	|| damage > TARGET_DAMAGE)) {
 	printf ("target %d, dead %d, damage %d\n", num, dead_time, damage);
+    }
+    if (targets[num].dead_time > 0 && dead_time == 0) {
+	    int	pos = targets[num].pos;
+	    Paint_radar_block(pos / Setup->y, pos % Setup->y, 1);
+    } else if (targets[num].dead_time == 0 && dead_time > 0) {
+	    int	pos = targets[num].pos;
+	    Paint_radar_block(pos / Setup->y, pos % Setup->y, 0);
     }
     targets[num].dead_time = dead_time;
     targets[num].damage = damage;
@@ -856,7 +865,7 @@ wireobj *Ship_by_id(int id)
     other_t		*other;
 
     if ((other = Other_by_id(id)) == NULL) {
-	return Default_ship();
+	return Parse_shape_str(NULL);
     }
     return other->ship;
 }

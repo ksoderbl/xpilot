@@ -1,4 +1,4 @@
-/* $Id: keys.h,v 3.19 1994/04/14 08:14:07 bert Exp $
+/* $Id: keys.h,v 3.20 1994/05/23 19:10:32 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -94,12 +94,12 @@ typedef enum {
     KEY_TOGGLE_MESSAGES,
     KEY_REPAIR,
     KEY_TOGGLE_IMPLOSION,
-    KEY_UNUSED_56,
-    KEY_UNUSED_57,
-    KEY_UNUSED_58,
-    KEY_UNUSED_59,
-    KEY_UNUSED_60,						/* 60 */
-    KEY_UNUSED_61,
+    KEY_REPROGRAM,
+    KEY_LOAD_LOCK_1,
+    KEY_LOAD_LOCK_2,
+    KEY_LOAD_LOCK_3,
+    KEY_LOAD_LOCK_4,						/* 60 */
+    KEY_EMERGENCY_SHIELD,
     KEY_UNUSED_62,
     KEY_UNUSED_63,
     NUM_KEYS		/* The number of different keys_t */

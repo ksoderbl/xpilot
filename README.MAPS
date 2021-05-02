@@ -76,59 +76,293 @@ The set of all possible config file, map file and command line options
 is enumerated in cmdline.c, and can be easily extended.   Currently,
 the following options are available:
 
-config     command line    default    description
-file name  alternative     setting
----------- --------------- ---------- ----------------------------------------
-gravity	   		    -0.14     The ambient gravity
-shipMass   	             20.0     Mass of player's ships
-shotMass   		      0.1     Mass of an individual shot
-shotSpeed  	             21.0     Shot speed increment from player's speed
-shotLife   	             90	      Length of shot life, in ticks
-maxRobots  robots            -1	      Number of robots to create (-1
-				      means as many as possible)
-maxPlayerShots shots        256	      The most shots from any player
-				      that can be in flight at once
-shotsGravity                true      Are shots affected by gravity?
-loseMass   		    false     Does the player lose mass when shots 
-				      are fired?
-idleRun    rawmode          false     Do robots keep playing without humans?
-noQuit     		    false     Does the server stay up without humans?
-mapWidth   	            100       The width of the map
-mapHeight  	            100	      The height of the map
-mapFileName map          DEFAULT_MAP  The name of the map file (this doesn't
-				      get used except on the command line)
-mapName    	            unknown   The name of the map
-mapAuthor  	           anonymous  The author of the map
-mapData    		    (random)  The map data (yes, this can be specified
-				      on the command line!)
-mapRule    	          -1	      This corresponds to the rule value in
-				      old-style maps, and shouldn't be used
-				      in new maps, since the individual rule
-				      features can now be accessed seperately.
-crashWithPlayer 	    yes	      Can players crash into each other?
-playerKillings  	    yes	      Can players kill each other?
-playerShielding		    yes	      Can shields be used?
-limitedVisibility	    no	      Is visibility limited?
-limitedLives		    no	      Are lives limited?
-worldLives lives            0	      If yes, maximum number of lives
-teamPlay		    yes	      Is team play allowed?
-onePlayerOnly		    no	      Only one player allowed?
-timing			    no	      Are we racing?
-edgeWrap		    no	      Is wraparound enabled?
-edgeBounce		    no	      Is bouncing enabled?
-gravityPoint                0,0	      For line sources, a point through which
-				      the line passes.   For point sources, the
-				      point of origin of the gravity.
-gravityAngle                0	      The angle of the gravity line, if the
-				      source is a uniform line.
-gravityPointSource	    no	      Does the global gravity come from a
-				      point source?
-gravityClockwise	    no	      If yes, is it clockwise?
-gravityAnticlockwise        no	      Anticlockwise?
-defaultsFileName defaults MAPDIR/server-defaults
-				      This is usually specified on the command
-				      line to get an alternate defaults file.
+option name                             default description
+--------------------------------------- ------- -------------------------------
 
-Note that some of the features controlled above aren't implemented yet
-- for example, edge bouncing doesn't work yet, and currently the
-global gravity can only come from the line ``y = 0x + 0''.
+mapName					unknown	Name of the map
+mapAuthor				anonymous	Name of map's author
+mapWidth				100	Width of world
+mapHeight				100	Height of world
+mapData					none	The map's topology
+gameDuration
+time					0.0	Duration of game in minutes.
+gravity					-0.14          Gravity strength
+shipMass				20.0           Mass of fighters
+shotMass				0.1	Mass of bullets
+shotSpeed				21.0	Maximum speed of bullets
+shotLife				60	Life of bullets in ticks
+fireRepeatRate
+fireRepeat				2	Number of frames per
+						automatic fire (0=off)
+maxRobots
+robots					4	How many robots do you want?
+robotsTalk				false	Do robots talk when they die,
+						kill, etc.?
+robotsLeave				true	Do robots leave the game?
+robotLeaveLife				50	Max life per robot (0=off)
+robotLeaveScore				-90	Min score for robot to play
+						(0=off)
+robotLeaveRatio				-5	Min ratio for robot to play
+						(0=off)
+maxPlayerShots
+shots					256	Maximum bullets present at one
+						time
+shotsGravity				true	Are bullets afflicted by
+						gravity?
+idleRun
+rawMode					false	The robots keep playing even
+						if all human players quit.
+noQuit					false	The server keeps running even
+						if all players have left.
+contactPort
+port					15345	Contact port number
+motd					none	File name for server-motd
+allowPlayerCrashes			yes	Can players overrun other
+						players?
+allowPlayerBounces			yes	Can players bounce with other
+						players?
+allowPlayerKilling
+killings				yes	Should players be allowed to
+						kill one other?
+allowShields
+shields					yes	Should we allow shields?
+playerStartsShielded
+playerStartShielded			yes	Players start with shields up
+shotsWallBounce				no	Do shots bounce off walls?
+ballsWallBounce				yes	Do balls bounce off walls?
+minesWallBounce				no	Do mines bounce off walls?
+itemsWallBounce				yes	Do items bounce off walls?
+missilesWallBounce			no	Do missiles bounce off walls?
+sparksWallBounce			no	Do thrust spark particles
+						bounce off walls to give
+						reactive thrust?
+debrisWallBounce			no	Do explosion debris particles
+						bounce off walls?
+maxObjectWallBounceSpeed
+maxObjectBounceSpeed			40	The maximum allowed speed for
+						objects to bounce off walls
+maxShieldedWallBounceSpeed
+maxShieldedBounceSpeed			50	The maximum allowed speed for
+						a shielded player to bounce
+						off walls
+maxUnshieldedWallBounceSpeed
+maxUnshieldedBounceSpeed		20	Maximum allowed speed for an
+						unshielded player to bounce
+						off walls
+maxShieldedPlayerWallBounceAngle
+maxShieldedBounceAngle			90	Maximum allowed angle for a
+						shielded player to bounce
+						off walls
+maxUnshieldedPlayerWallBounceAngle
+maxUnshieldedBounceAngle		30	Maximum allowed angle for an
+						unshielded player to bounce
+						off walls
+playerWallBounceBrakeFactor
+playerWallBrake				0.89	Factor to slow down players
+						when they hit the wall
+						(between 0 and 1)
+objectWallBounceBrakeFactor
+objectWallBrake				0.95	Factor to slow down objects
+						when they hit the wall
+						(between 0 and 1)
+objectWallBounceLifeFactor		0.80	Factor to reduce the life of
+						objects after bouncing
+						(between 0 and 1)
+wallBounceFuelDrainMult
+wallBounceDrain				1.0	Multiplication factor for
+						player wall bounce fuel cost.
+wallBounceDestroyItemProb		0.0	Player wall bounce item damage
+						probability.
+reportToMetaServer
+reportMeta				yes	Keep the meta server informed
+						about our game?
+limitedVisibility			no	Should the players have a
+						limited visibility?
+limitedLives				no	Should players have limited
+						lives?
+worldLives
+lives					0	Number of lives each player
+						has (no sense without
+						limitedLives)
+teamPlay
+teams					no	Should we allow team play?
+teamAssign				yes	Should player be assigned to
+						first non-empty team if team
+						isn't set?
+teamImmunity				yes	Should other team members be
+						immune to various shots,
+						thrust etc.?
+emcsReprogramMines			yes	Do ECMs reprogram mines?
+playerMinimumStartFuel
+playerMinStartFuel			400.0	Minimum amount of fuel a player
+						will have after being killed
+targetKillTeam				no	Do team members die when their
+						last target explodes?
+targetTeamCollision
+targetCollision				yes	Do team members collide with
+						their own target or not
+treasureKillTeam			no	Do team members die when
+						treasure is destroyed?
+treasureCollisionDestroys
+treasureCollisionDestroy		yes	Destroy balls on collisions
+treasureCollisionMayKill
+treasureUnshieldedCollisionKills	no	Does unshielded collision kill
+						player
+onePlayerOnly				no	One player modus
+timing
+race					no	Race mode
+edgeWrap				no	Wrap around edges
+edgeBounce				yes	Players and bullets bounce
+						when they hit the edge
+extraBorder				no	Give map an extra border of
+						solid rock
+gravityPoint				0,0	If the gravity is a point
+						source, where does that
+						gravity originate?
+gravityAngle				90	If gravity is along a uniform
+						line, at what angle is that
+						line?
+gravityPointSource			false	Is gravity originating from a
+						single point?
+gravityClockwise			false	If the gravity is a point
+						source, is it clockwise?
+gravityAnticlockwise			false	If the gravity is a point
+						source, is it anticlockwise?
+framesPerSecond
+FPS					18	Number of frames per second
+						the server should strive for
+allowNukes
+nukes					False	Should nuclear weapons be
+						allowed?
+allowClusters
+clusters				False	Should cluster weapons be
+						allowed?
+allowModifiers
+modifiers				False	Should the weapon modifiers be
+						allowed?
+allowLaserModifiers
+lasermodifiers				False	Can lasers be modified to be
+						a different weapon?
+allowShipShapes
+ShipShapes				True	Are players allowed to define
+						their own ship shape?
+playersOnRadar
+playersRadar				True	Are players visible on the
+						radar
+missilesOnRadar
+missilesRadar				True	Are missiles visible on the
+						radar
+minesOnRadar
+minesRadar				False	Are mines visible on the
+						radar
+nukesOnRadar
+nukesRadar				True	Are nukes visible or
+						highlighted on radar
+distinguishMissiles			True	Are different types of
+						missiles distinguished
+						(by length)
+maxMissilesPerPack			4	Number of missiles gotten by
+						picking up one missile item.
+identifyMines				True	Are mine owner's names
+						displayed
+shieldedItemPickup
+shieldItem				False	Can items be picked up while
+						shields are up?
+shieldedMining
+shieldMine				False	Can mines be thrown and placed
+						while shields are up?
+laserIsStunGun
+stunGun					False	Is the laser weapon a stun gun
+						weapon?
+nukeMinSmarts				7	Minimum number of smart
+						missiles needed to make a
+						nuclear variant
+nukeMinMines				4	Minimum number of mines needed
+						to make a nuclear variant
+nukeClusterDamage			1.0	How much each cluster debris
+						does damage wise from a nuke
+						variant Also reduces number of
+						particles in the explosion
+mineFuseTime				0.0	Time after which owned mines
+						become deadly, zero means never
+movingItemProb				0.2	Probability for an item to
+						appear as moving
+dropItemOnKillProb			0.5	Probability for dropping an
+						item (each item) when you are
+						killed
+detonateItemOnKillProb			0.5	Probability for undropped
+						items to detonate when you are
+						killed
+destroyItemInCollisionProb		0.0	Probability for items (some
+						items) to be destroyed in a
+						collision
+itemProbMult
+itemProbFact				1.0	Item Probability
+						Multiplication Factor scales
+						all item probabilities
+maxItemDensity				0.00012	Maximum density [0.0-1.0] for
+						items (max items per block)
+itemEnergyPackProb			0	Probability for an energy pack
+						to appear
+itemTankProb				0	Probability for an extra tank
+						to appear
+itemECMProb				0	Probability for an ECM item
+						to appear
+itemMineProb				0	Probability for a mine item
+						to appear
+itemMissileProb				0	Probability for a missile item
+						to appear
+itemCloakProb				0	Probability for a cloak item
+						to appear
+itemSensorProb				0	Probability for a sensor item
+						to appear
+itemWideangleProb			0	Probability for a wideangle
+						item to appear
+itemRearshotProb			0	Probability for a rearshot item
+						to appear
+itemAfterburnerProb			0	Probability for an afterburner
+						item to appear
+itemTransporterProb			0	Probability for a transporter
+						item to appear
+itemLaserProb				0	Probability for a Laser item
+						to appear
+itemEmergencyThrustProb			0	Probability for an Emergency Thrust
+						item to appear
+itemTractorBeamProb			0	Probability for a Tractor Beam item
+						to appear
+itemAutopilotProb			0	Probability for an Autopilot item
+						to appear
+itemEmergencyShieldProb			0	Probability for an Emergency Shield
+						item to appear
+initialFuel				1000	How much fuel players start
+						with
+initialTanks				0	How many tanks players start
+						with
+initialECMs				0	How many ECMs players start
+						with
+initialMines				0	How many mines players start
+						with
+initialMissiles				0	How many missiles players start
+						with
+initialCloaks				0	How many cloaks players start
+						with
+initialSensors				0	How many sensors players start
+						with
+initialWideangles			0	How many wideangles players
+						start with
+initialRearshots			0	How many rearshots players
+						start with
+initialAfterburners			0	How many afterburners players
+						start with
+initialTransporters			0	How many transporters players
+						start with
+initialLasers				0	How many lasers players
+						start with
+initialEmergencyThrusts			0	How many emergency thrusts
+						players start with
+initialTractorBeams			0	How many tractor/pressor beams
+						players start with
+initialAutopilots			0	How many autopilots players
+						start with
+initialEmergencyShields			0	How many emergency shields
+						players start with

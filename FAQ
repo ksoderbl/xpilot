@@ -1,10 +1,10 @@
 Followup-To: poster
 Reply-To: bert@mc.bio.uva.nl
 Archive-name: xpilot-faq
-Expires: Fri, 29 Apr 1994 00:00:00 GMT
+Expires: Sun, 29 May 1994 00:00:00 GMT
 Summary: XPilot, a multi-player tactical manouvring game for X and Unix.
-Last-modified: 1994/04/20
-Version: 2.4.1
+Last-modified: 1994/05/25
+Version: 2.6.0
 
 This is the Frequently Asked Questions list With Answers for XPilot.
 Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
@@ -12,10 +12,11 @@ This FAQ is posted in alt.games.xpilot every week
 and on the XPilot mailing list every couple of weeks.
 It is part of the XPilot distribution.
 It can also be obtained by: telnet xpilot.cs.uit.no 4402.
-Or by anonymous ftp to xpilot.sdsu.edu in pub/xpilot-maps/FAQ.
+Or by anonymous ftp to xpilot.sdsu.edu in /pub/xpilot-maps/FAQ.
+Or by anonymous ftp to ftp.x.org in /contrib/games/xpilot/xpilot-FAQ.
 
-Questions changed in this release: 2, 3, 10, 17, 23
-Questions changed in the previous release:
+Questions changed in this release: 0, 1, 2, 17
+Questions changed in the previous release: 1
 
 Questions:
 
@@ -38,26 +39,24 @@ Questions:
 14) How can I design my own maps easily?
 15) I have a problem because this and that is not working.
 16) What is the meta server?  Where can I find other players?
-17) Is there a WWW-gateway to the metaserver?
+17) What information on XPilot is available on World-Wide Web?
 18) How should I subscribe/unsubscribe to/from the XPilot mailing list?
 19) How can I contribute bugfixes and new features to the game?
 20) Is there an archive of alt.games.xpilot and the mailing list?
-21) How can I fire nukes?
-22) Why do I never get any items (triangles) to appear in my maps?
-23) What are the Well Known Problems for the latest version?
-24) What if I'm having trouble installing XPilot on Platform XYZ?
+21) Why do I never get any items (triangles) to appear in my maps?
+22) What are the Well Known Problems for the latest version?
+23) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Answers:
 
 0) Does this FAQ answer all my questions about XPilot?
 
-No.  This FAQ is only meant to get you up and running and covers some
+No, this FAQ is only meant to get you up and running and covers some
 issues not found elsewhere.  In the XPilot distribution there is
 authoritative documentation any wanna-be XPiloter should read.
 Pay special attention to the two manual pages in the man6 directory
-and to the three README files.  The README files are README, README.MAPS
-and README.MAPS2.  Reading these files carefully will prevent a lot of
-unnecessary beginner questions and will make you a better player.
+and to the four README files.  The README files are README, README.MAPS,
+README.MAPS2 and README.SHIPS.
 
 1) What is this wonderful game called XPilot everybody is talking about?
 
@@ -86,29 +85,28 @@ the roundtrip times are below 150 milliseconds or so, depending on the
 frame rate of the XPilot server.
 
 XPilot is written by Bjoern Stabell, Ken Ronny Schouten and Bert Gijsbers.
-Many people around the world have contributed code or helped in other ways
-to have XPilot run on a diverse set of Unix computers and VMS.
+Many people around the world have contributed ideas and code or helped in
+other ways to have XPilot run on a diverse set of Unix computers and VMS.
 
-New features are added every month.
+The following World-Wide Web info about the authors is available:
+        http://www.cs.uit.no/~bjoerns/
+        http://www.cs.uit.no/~kenrsc/
 
 2) What is the latest version?
 
-3.1.2.  Which is XPilot release 3.1, patchlevel 2.
+3.2.0.  Which is XPilot release 3.2, patchlevel 0.
 
 3) Where can I get it as soon as possible?
 
 Anonymous ftp to ftp.cs.uit.no (129.242.16.93) in /pub/games/xpilot.
 Use as login name anonymous or ftp and use as password your email address.
-Look for the file named xpilot-3.1.2.tar.gz, which is the already fully
+Look for the file named xpilot-3.2.0.tar.gz, which is the already fully
 patched up version.  Some patches for older versions are also available.
-Other anonymous ftp sites may have it as well, for example:
-ftp.x.org (198.112.44.100) in /contrib
-src.doc.ic.ac.uk (146.169.2.1) in /computing/graphics/systems/X11/contrib
-pdq.coe.montana.edu (192.31.215.240) in /pub/mirrors/X11-contrib
-ftp.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games
-ftp.uu.net (192.48.96.9) in /pub/window-sys/X/contrib
-wuarchive.wustl.edu (128.252.135.4) in /packages/X11R5/contrib-pub
-But some of them do not have the latest patch level.
+Other anonymous ftp sites may have it as well, the most up to date is
+ftp.x.org (198.112.44.100) in /contrib/games/xpilot.
+Also have a look in the /contrib/games/xpilot/util subdirectory where
+you can find an assortment of utilities complementing XPilot.
+Another important ftp site is ftp.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games.
 
 If you have absolutely no FTP access then you can get it send by email.
 Mail to bert@mc.bio.uva.nl with a Subject line of `mail xpilot'.
@@ -118,7 +116,7 @@ much faster anyway.
 You will get a dozen mails with XPilot in gzipped uuencoded format.
 Strip the mail headers and concatenate these files in the right order
 into one big file.  The last line of this file should read: "end".
-Then uudecode this file to get xpilot-3.1.2.tar.gz.
+Then uudecode this file to get xpilot-3.2.0.tar.gz.
 This is the XPilot distribution file as found on ftp.cs.uit.no.
 
 4) Sound?  Does it really have sound?
@@ -155,11 +153,11 @@ prep.ai.mit.edu (18.71.0.38).  The last one in the pub/gnu directory.
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.1.2.tar.gz > xpilot-3.1.2.tar
+    gzip -d < xpilot-3.2.0.tar.gz > xpilot-3.2.0.tar
 
 or even better :
 
-    gzip -d < xpilot-3.1.2.tar.gz | tar xvf -
+    gzip -d < xpilot-3.2.0.tar.gz | tar xvf -
 
 6) I do not have the patch program on my system, so how can I upgrade?
 
@@ -295,13 +293,13 @@ X server, XPilot version, compile time options and frames per second.
 12) Where can I get new maps?
 
 anonymous ftp:
-        sounds.sdsu.edu:/pub/xpilot-maps
+        xpilot.sdsu.edu:/pub/xpilot-maps
 gopher:
         Name=xpilot-maps
         Type=1
         Port=71
         Path=1/pub/xpilot-maps
-        Host=sounds.sdsu.edu
+        Host=xpilot.sdsu.edu
         (Note that you can only retrieve maps with gopher...)
 
 You can also use the new xpmtp program which is in the contrib directory
@@ -343,7 +341,7 @@ submit <mapname>  - Submit <mapname> to the map archive.
 All commands must be specified on the "Subject:" line of the mail message.
 Here's an example:
 
-% Mail -s "get doggy.map" xpilot-maps@sounds.sdsu.edu < /dev/null
+% Mail -s "get doggy.map" xpilot-maps@xpilot.sdsu.edu < /dev/null
 
 Where "Mail" is the BSD mail program.  On some System V machines like HP-UX
 this is installed as the mailx program.
@@ -421,175 +419,50 @@ Help is available online.  Example session:
 
     E-mail problems to kenrsc@stud.cs.uit.no (Ken Ronny Schouten).
 
-    >help
-
-    Possible commands:
-    HELP        LIST       QUIT        SERVER        STATUS      NEWS
-    FAQ         NICK       REMOVENICK  NICKS
-    Also try "help help".
-
-    You can also contact the Xpilot Meta server through port number 4401.
-    It will list out the servers and terminate the connection. This should
-    be used by any program you make that uses the Xpilot Meta server. The list
-    is in the following format:
-    version:hostname:port number:number of users:map name:map size:map author:
-    :server status:number of home bases:frames per second:players list:sound
-    :server uptime
     >list
-    3.0.7          :i11s16.ira.uka.de        :15345    :0   :NA        :The Continent, in XPilot 2.0 format
-    3.0.7          :irz201.inf.tu-dresden.de :15345    :1   :NA        :The Black Hole
-    3.0.7          :mars.cip.informatik.uni-muenchen.de:15345    :1   :NA        :The Globe
-    3.0.7          :dxnhd7.mpi-hd.mpg.de     :15345    :1   :NA        :Endless Space
-    3.0.7          :killing.uni-muenster.de  :15345    :3   :NA        :The Globe
-    3.0.7          :kronos.rbi.informatik.uni-frankfurt.de:15345    :3   :NA        :Fuzz EW
-    3.0.7          :clarinet.dfki.uni-sb.de  :15345    :1   :NA        :Fuzz EW
-    3.0.7          :jerusalem.fzi.de         :15345    :1   :NA        :huge wadges of slick death from hell
-    3.0.7          :europa.rbi.informatik.uni-frankfurt.de:15345    :6   :NA        :The Pit!
-    3.0.7          :intrepid.physik.uni-osnabrueck.de:15345    :1   :NA        :The Globe
-    3.0.7          :speedy.cip.physik.tu-muenchen.de:15345    :2   :NA        :The Pit!
-    3.0.7          :hai.appl-math.tu-muenchen.de:15345    :1   :NA        :The Globe
-    3.0.7          :exodus.fl.dth.dk         :15345    :7   :NA        :Tournament
-    3.0.7          :dali.vision.auc.dk       :15345    :1   :NA        :The Wide Colony (version 4.0)
-    3.0.7          :micro.iesd.auc.dk        :15345    :9   :NA        :CyberParadise
-    3.0.7          :s40415.esu.edu           :15345    :0   :NA        :Tournament
-    3.0.7          :eehpx39.cen.uiuc.edu     :15345    :1   :NA        :Foobar!
-    3.0.7          :mizar.wustl.edu          :15345    :1   :NA        :Caffeine's Carnage
-    3.0.7          :caesun12.eng.miami.edu   :15345    :4   :NA        :Wastelands - (50/50 space & land masses, 300x300) "Get some more!"
-    3.0.7          :snowy.alfred.edu         :15345    :0   :NA        :The Globe
-    3.0.7          :caf.mit.edu              :15345    :0   :NA        :The Globe
-    3.0.7          :lk-hp-16.hut.fi          :15345    :1   :NA        :Bubbles
-    3.0.7          :amadeus.cs.hut.fi        :15345    :1   :NA        :The Globe
-    3.0.7          :tanelorn.sura.net        :15345    :1   :NA        :Puchalski's Pleasure Palare III
-    3.0.7          :kits.cs.vu.nl            :15345    :2   :NA        :Ultra Doom
-    3.0.7          :babbage.hsn.no           :15345    :0   :NA        :Safe Harbour
-    3.0.7          :vibeke.dsv.su.se         :15345    :1   :NA        :DSV Tournament
-    3.0.7          :staru1.livjm.ac.uk       :15345    :2   :NA        :The Globe
-    3.0.7          :pine.shu.ac.uk           :15345    :0   :NA        :Vegatable Extracts
-    >server micro.iesd.auc.dk
+    3.1.1          :144.168.23.100           :15345    :0   :2.51      :Team-combat
+    3.1.2          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
+    3.1.2          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
+    3.1.3          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
+    3.1.0          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
+    3.1.3          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
+    3.1.3          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
+    3.1.3          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
+    3.1.2          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
+    3.1.3          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
+    3.1.3          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
+    3.1.2          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
+    3.1.1          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
+    3.1.3          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
+    3.1.3          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
+    3.1.3          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
+    3.1.3          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
+    3.1.3          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
+    3.1.3          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
+    3.1.3          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
+    3.1.3          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
+    >server scratch.eecs.umich.edu
     >status
-    SERVER VERSION...: XPilot 3.0.7
-    STARTED BY.......: rhod
+    SERVER VERSION...: XPilot 3.1.1
+    STARTED BY.......: pkenny
     STATUS...........: ok
-    MAX SPEED........: 10 fps
-    WORLD (150x298)..: CyberParadise
-	  AUTHOR.....: Tom Grydeland & Brahe/Dittmer
-    PLAYERS (10/13)..:
+    MAX SPEED........: 12 fps
+    WORLD (100x100)..: Blood's Music
+	  AUTHOR.....: Patrick Kenny - pkenny@eecs.umich.edu
+    PLAYERS ( 7/12)..:
 
     NO:  TM: NAME:             LIFE:   SC:    PLAYER:
     -------------------------------------------------
-     1...    Roosje             007    90     jos@145.18.160.33
-     2...    Baldrick           011    68     g0204008@130.225.68.233
-     3... *  Ziser              003    56     bmeg93@130.225.50.9
-     4...    ProximaCentauri    001    20     band@129.241.35.12
-     5...    Stigurd            002    13     stigaard@130.225.48.129
-     6...    The Red Baron      001    12     holmlund@192.36.171.34
-     7... R  Terminator         002    -2     robot@robots.org
-     8...    Samoht             004   -12     thomas@130.225.48.50
-     9... R  R2D2               006   -22     robot@robots.org
-    10...    Wez                020   -32     f3pt-27@129.16.234.10
+     1... *2 Ender              003   342     turtle@ender.sdsu.edu
+     2...  2 DR.DEATH           003   249     boyns@hercules.sdsu.edu
+     3...  4 Phoenix            002    75     dan@starfire.ne.uiuc.edu
+     4... W2 Arafat             000     0     furth@tph21.tuwien.ac.at
+     5...  3 Lei                003    -5     caol@misty.cs.byu.edu
+     6...  2 Hero               003   -13     jmin@sunny.cs.byu.edu
+     7...  3 Neptune One        002  -189     garrett@athena.sdsu.edu
 
-    >nicks
-    ace                  ?                    d91-ewi@nada.kth.se
-    Airwolf              DP                   popki_d@cs.odu.edu
-    andregiant           ?                    andre@cs.colorado.edu
-    armageddon           ?                    pyc081@lancaster.ac.uk
-    armless              ?                    m.d.f.box@newcastle.ac.uk
-    asskicker            Andres               andres@bibiana.eng.miami.edu
-    astor                ?                    csc356@lancaster.ac.uk
-    awesome              ?                    hocke@ira.uka.de
-    billyjoejimbob       ?                    bsd402@lancaster.ac.uk
-    Binglord             Lars Syrstad         larss@pvv.unit.no
-    Blaghaid             Magne Syrstad        syrstad@alkymi.unit.no
-    blitzkreig           ?                    pezzuto@esu.edu
-    Bollox               Per Rasmussen        d89-pra@nada.kth.se
-    Bullseye             Ronny H Arild        ronnya@stud.cs.uit.no
-    Bundy                Michael Arras        arras@forwiss.uni-erlangen.de
-    calvin               ?                    craigm@ics.uci.edu
-    capt chaos           ?                    jaerla@idt.unit.no
-    cheeseball           ?                    hardaker@ece.ucdavis.edu
-    deathstrike          ?                    mrieding@physik.tu-muenchen.de
-    Devastation          JeffyC               jclauson@esu.edu
-    dr.death             ?                    boyns@sdsu.edu
-    Drake                Per Rasmussen        d89-pra@nada.kth.se
-    El Loco              Clint Mumford        mumfordc@ut.et.byu.edu
-    elgen                ?                    torkilg@stud.cs.uit.no
-    Ender                ?                    andrew@sdsu.edu
-    Erl                  "Erland              Lewin"
-    Erl                  Erland               d90-erl@nada.kth.se
-    Euphoriac            Stig Sæther Bakken   ssb@pvv.unit.no
-    Flash Gordon         Dag-Frode Olsen      dago@stud.cs.uit.no
-    fossy                ?                    wilhelms@uni-augsburg.de
-    frenchy              ?                    ferhati@aremihp.univ-lille1.fr
-    habeeb               ?                    aser@esu.edu
-    hasse                ?                    hansk@stud.cs.uit.no
-    Hendrik              John Harrison        J.C.Harrison@ncl.ac.uk
-    hg                   ?                    hansg@elixir.e.kth.se
-    Hobgoblin            Petri Heinila        hevi@lut.fi
-    Idiot                Lisin                lo@doc.ic.ac.uk
-    Imperial             Yoon                 yky@doc.ic.ac.uk
-    jester               ?                    a.s.wherrett@ncl.ac.uk
-    JoDa                 JoDa                 d91-jda@nada.kth.se
-    jonathan             ?                    maucl@csv.warwick.ac.uk
-    killer               ?                    berne@ensisun.imag.fr
-    kinunir              ?                    ngibbins@dcs.warwick.ac.uk
-    kludge               ?                    welchm@alaska.et.byu.edu
-    kreuz                ?                    e2mano7@etek.chalmers.se
-    LarsS                Lars Slettjord       larss@stud.cs.uit.no
-    LoboSpawn            Harald Fusdahl       haraldf@stud.cs.uit.no
-    MacRae               Brian R. Becker      beckerb@cs.ucdavis.edu
-    mindmax              ?                    d5c192@rick.cs.ubc.ca
-    Mr. Grinch           James Hewitt         j3hewitt@maxwell.ee.washington.edu
-    NB                   Neven                nb@doc.ic.ac.uk
-    nemesis              ?                    chh12@mbfs.bio.cam.ac.uk
-    Nemesis              Nemesis!             chh12@mbfs.bio.cam.ac.uk
-    nogood               ?                    d91-men@jota.sm.luth.se
-    Orion                Fredrik              md0orion@mdstud.chalmers.se
-    p                    ?                    csc338@cent1.lancs.ac.uk
-    pathos               ?                    mikula@ugcs.caltech.edu
-    patriot              ?                    patrick@cs.vu.nl
-    pedath               ?                    p.d.thomas@ncl.ac.uk
-    perplex              ?                    larshaug@ifi.uio.no
-    phoenix              ?                    drj21264@uxa.cso.uiuc.edu
-    President            ?                    N.Bozanic@imperial.ac.uk
-    prospero             ?                    rene@iesd.auc.dk
-    q                    ?                    md2gange@mdstud.chalmers.se
-    raptor               ?                    zannoni@boifzc.cineca.it
-    rocketman            ?                    casper@cs.hut.fi
-    Rocky                J|rgen Johansson     jorgen@elixir.e.kth.se
-    rocky                sune                 sune@arne.e.kth.se
-    roosje               ?                    jos@mc.bio.uva.nl
-    Rumble Fish          Christian Engstler   mat4@bau1.uibk.ac.at
-    Selac                Bjørn Stabell        bjoerns@stud.cs.uit.no
-    shade                ?                    kmg@mbuf.bio.cam.ac.uk
-    silk                 ?                    p.i.hillier@ncl.ac.uk
-    skyler               ?                    jgealow@mtl.mit.edu
-    Smasher              Ken Ronny Schouten   kenrsc@stud.cs.uit.no
-    something weird      ?                    gothick@dcs.warwick.ac.uk
-    Space                Bert Gijsbers        bert@mc.bio.uva.nl
-    spiff                ?                    fritz@mtl.mit.edu
-    studentdriver        ?                    ematsui@count.ucsc.edu
-    T'moth               Tim Auckland         tda10@ucs.cam.ac.uk
-    Tapern               ?                    gjertrud@stud.cs.uit.no
-    Target               Adler                adler@pvv.unit.no
-    the kid              ?                    s.k.stevens@ic.ac.uk
-    Tiger                Ørjan Martinsen      orjanm@stud.cs.uit.no
-    to mega therion      ?                    x1c192@ugrad.cs.ubc.ca
-    toxicwaste           ?                    greg@bibiana.eng.miami.edu
-    trauco               ?                    david-ve@dsv.su.se
-    vampire              ?                    pyd016@cent1.lancs.ac.uk
-    Weevil               Ronny H Arild        ronnya@stud.cs.uit.no
-    x-terminator         ?                    nicholas@dcs.rhbnc.ac.uk
-    xplode               ?                    e2jovi3@etek.chalmers.se
-    Zoff                 Erwin Zierler        erwin@bau3.uibk.ac.at
-    There are 95 entries registered.
     >quit
     Connection closed by foreign host.
-
-The meta server is developed and maintained by Ken Ronny Schouten.
-His email address is kenrsc@stud.cs.uit.no.
-
-Due to some software problems the meta server may not be running
-at all times, but it mostly will.
 
 Try port 4401 instead of 4400 to get the server listing in a different format.
 
@@ -597,26 +470,17 @@ Port 4402 will get you the latest version of this FAQ.
 
 Port 4403 will list the current nicknames database.
 
-17) Is there a WWW-gateway to the metaserver.
+Due to some software problems the meta server may not be running
+at all times, but it mostly will.  In case it happens to be unreachable
+there is an backup meta server at telnet xpilot.mc.bio.uva.nl 4400.
 
-There is a GOPHER gateway at gopher.sdsu.edu port 888, this requires
-that you configure the gopher program to run xpilot instead of telnet.
+The meta server is developed and maintained by Ken Ronny Schouten.
+His email address is kenrsc@stud.cs.uit.no.
 
-There is also a HTTP gateway at
-"http://www.nada.kth.se/htbin/d-sektionen/xpilot".
-The server sends back a message containing the arguments to xpilot.
-This information will end up in a file, therefore you have to have a line
-in your .mailcap-file (assuming you use Mosaic, other clients may handle
-this in some other way) to handle this, something like:
+17) What information about XPilot is available on World-Wide Web?
 
-application/xpilot; xpilot `cat %s`
-
-Note the back-quotes.
-
-This service is provided thanks to Johan Danielsson (d91-jda@nada.kth.se).
-
-Or try http://rs560.cl.msu.edu/misc/xpilot.html which is provided by
-Charles Henrich from Michigan State University, henrich@crh.cl.msu.edu.
+The XPilot Page on the World-Wide Web can be found on URL
+<http://www.cs.uit.no/XPilot/>.
 
 18) How should I subscribe/unsubscribe to/from the XPilot mailing list?
 
@@ -634,8 +498,7 @@ the diff command.  Use `diff -c oldfile newfile' or `diff -cr olddir newdir'.
 The authors very much appreciate fixes and improvements.  XPilot has a
 longstanding tradition of incorporating code from hackers all over the world.
 Ideas for new features can of course be discussed in alt.games.xpilot
-and the mailing list.  Unfortunately, not all discussions lead to someone
-starting coding.
+and the mailing list.
 
 20) Is there an archive of alt.games.xpilot and the mailing list?
 
@@ -646,23 +509,7 @@ Note that this is also an archive of the mailing list (they are the same).
 There is also an older archive of the XPilot mailing list on ftp.cs.uit.no
 in pub/games/xpilot.
 
-21) How can I fire nukes?
-
-First: you must configure the server to permit nukes to be fired.
-You can do this with the 'allowNukes' option.  Include a line like:
-'allowNukes: true' in the defaults file, in the map file or on the
-command line as '-allowNukes true'.
-Second: you must have eight or more missiles.
-Third: you must have enough fuel to fire a missile (not much).
-Fourth: you must have shields down.
-Fifth: you must hit the right key, which mostly is 'n'.
-
-As an aside you may be interested to know that the destructive power
-of a nuke increases with the number of missiles you have.
-If your fighter is light (i.e. little fuel and no tanks) then the
-recoil may be so heavy that you will be smashed into the wall backwards.
-
-22) Why do I never get any items (triangles) to appear in my maps?
+21) Why do I never get any items (triangles) to appear in my maps?
 
 At startup the xpilot server looks for a configuration file to
 retrieve default values for some of the options.
@@ -676,7 +523,7 @@ This is the case if you do not get any items to appear in your maps.
 An example defaults file with reasonable default values can be
 found in the XPilot distribution as xpilot-3.x.y/lib/defaults.
 
-23) What are the Well Known Problems for the latest version?
+22) What are the Well Known Problems for the latest version?
 
 The first of these Well Known Problems apply to XPilot 3.0 patchlevel 3,
 but may also apply to later patchlevels:
@@ -746,7 +593,11 @@ d) For some keys the X resources and help is missing.
 Important bug: kicking a player terminates the server.
 Fixed in 3.1.2.
 
-24) What if I'm having trouble installing XPilot on Platform XYZ?
+3.1.2 generates unresolved references during link time on Suns.
+
+Patchlevel 3.1.3 seems to be the most stable version sofar.
+
+23) What if I'm having trouble installing XPilot on Platform XYZ?
 
 Below is a list of people who are willing to help others install XPilot
 on various platforms. Please feel free to mail these people about any

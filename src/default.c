@@ -1,4 +1,4 @@
-/* $Id: default.c,v 3.68 1994/04/12 13:43:07 bjoerns Exp $
+/* $Id: default.c,v 3.70 1994/05/23 19:07:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -58,7 +58,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.68 1994/04/12 13:43:07 bjoerns Exp $";
+    "@(#)$Id: default.c,v 3.70 1994/05/23 19:07:24 bert Exp $";
 #endif
 
 #ifndef MAXPATHLEN
@@ -176,6 +176,8 @@ static struct _keyResources
 	KEY_TOGGLE_LASER,		"Toggle laser modifier" },
     { "keyEmergencyThrust",		"j",
 	KEY_EMERGENCY_THRUST,		"Pull emergency thrust handle" },
+    { "keyEmergencyShield",		"g",
+	KEY_EMERGENCY_SHIELD,		"Toggle emergency shield power" },
     { "keyTractorBeam",			"comma",
 	KEY_TRACTOR_BEAM,		"Use tractor beam in attract mode" },
     { "keyPressorBeam",			"period",
@@ -194,6 +196,16 @@ static struct _keyResources
 	KEY_TOGGLE_OWNED_ITEMS,		"Toggle list of owned items on HUD" },
     { "keyToggleMessages",		"0",
 	KEY_TOGGLE_MESSAGES,		"Toggle showing of messages" },
+    { "keyReprogram",			"quoteleft",
+	KEY_REPROGRAM,			"Reprogram modifier or lock bank" },
+    { "keyLoadLock1",			"5",
+	KEY_LOAD_LOCK_1,		"Load lock in bank 1" },
+    { "keyLoadLock2",			"6",
+	KEY_LOAD_LOCK_2,		"Load lock in bank 2" },
+    { "keyLoadLock3",			"7",
+	KEY_LOAD_LOCK_3,		"Load lock in bank 3" },
+    { "keyLoadLock4",			"8",
+	KEY_LOAD_LOCK_4,		"Load lock in bank 4" },
 };
 
 
@@ -216,6 +228,8 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-display",			".display",
     	XrmoptionSepArg,			NULL },
+    { "-keyboard",			".keyboard",
+	XrmoptionSepArg,			NULL },
     { "-geometry",			".geometry",
     	XrmoptionSepArg,			NULL },
     { "-shutdown",			".shutdown",
@@ -448,6 +462,8 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-keyEmergencyThrust",		".keyEmergencyThrust",
 	XrmoptionSepArg,			NULL },
+    { "-keyEmergencyShield",		".keyEmergencyShield",
+	XrmoptionSepArg,			NULL },
     { "-keyTractorBeam",		".keyTractorBeam",
 	XrmoptionSepArg,			NULL },
     { "-keyPressorBeam",		".keyPressorBeam",
@@ -465,6 +481,16 @@ static XrmOptionDescRec opts[] = {
     { "-keyToggleOwnedItems",		".keyToggleOwnedItems",
 	XrmoptionSepArg,			NULL },
     { "-keyToggleMessages",		".keyToggleMessages",
+	XrmoptionSepArg,			NULL },
+    { "-keyReprogram",			".keyReprogram",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadLock1",			".keyLoadLock1",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadLock2",			".keyLoadLock2",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadLock3",			".keyLoadLock3",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadLock4",			".keyLoadLock4",
 	XrmoptionSepArg,			NULL },
 };
 
@@ -754,6 +780,7 @@ void Parse_options(int *argcp, char **argvp, char *realName,
 	    error("Type: %s -help to see a list of options", argvp[0]);
 	    exit(1);
 	}
+	/* The rest of the arguments are hostnames of servers. */
     }
 
     if (Get_resource(argDB, myName, myClass, "help", NULL, resValue,
@@ -794,15 +821,35 @@ void Parse_options(int *argcp, char **argvp, char *realName,
 	    /* user does not want X stuff.  experimental.  use at own risk. */
 	    strcpy(nickName, realName);
 	    *my_team = TEAM_NOT_SET;
-	    *port = SERVER_PORT;
-	    *list = false;
+	    Get_int_resource(argDB, myName, myClass, "port", SERVER_PORT, port);
+	    Get_bool_resource(argDB, myName, myClass, "list", "False", list);
 	    *join = false;
-	    *shut_msg = '\0';
 	    *noLocalMotd = true;
 	    return;
 	}
 	exit(1);
     }
+
+    if (Get_string_resource(argDB, myName, myClass, "keyboard", NULL,
+			    resValue, MAX_DISP_LEN) == 0
+	|| resValue[0] == '\0') {
+#ifdef VMS
+	if ((ptr = getenv("DECW$KEYBOARD")) != NULL)
+#else
+	if ((ptr = getenv("KEYBOARD")) != NULL)
+#endif
+	{
+	    strncpy(resValue, ptr, MAX_DISP_LEN);
+	    resValue[MAX_DISP_LEN - 1] = '\0';
+	}
+    }
+    if (resValue[0] == '\0') {
+	kdpy = NULL;
+    } else if ((kdpy = XOpenDisplay(resValue)) == NULL) {
+	error("Can't open keyboard '%s'", resValue);
+	exit(1);
+    }
+
     Get_resource(argDB, myName, myClass, "visual", "",
 		 visualName, sizeof visualName);
     if (strncasecmp(visualName, "list", 4) == 0) {

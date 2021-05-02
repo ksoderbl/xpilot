@@ -1,0 +1,765 @@
+{TkXpInterface-VERSION  Help on Help :
+
+ To get help on a window object just click on it with the RIGHT mouse button.
+
+
+^U Attention ! 
+1) This program doesn't verify the data you enters. This means that if
+   you choose some non-numeric values for the probabilities, your server 
+   may have have a strange behavior.
+
+2) TkXpInterface doesn't verify whether the map files are readable or
+   writable. If you haven't the permission, Tcl will show you an error
+   message.
+
+Finally) If a Tcl error message occurs you MUST click on the "OK" button
+   otherwise TkXpInterface will be frozen!
+   If TkXpInterface is still frozen this error window is certainly behind
+   the main panel or your keyboard is in Caps-locked mode!
+}
+{TkXpInterface-VERSION  Help on Robots :
+
+Activation condition :
+  On the main panel the ^R Number ^R of ^R robots scale must be different
+  from zero.
+
+The ^R Max ^R life , ^R Min ^R score and ^R Min ^R ratio  buttons can be fixed if
+the ^R Robots ^R leave ^R ^R the ^R game button is On.
+
+This panel fixes the following Xpilots options :
+    -/+robotsLeave
+        Do robots leave the game?
+    -/+idleRun or rawMode
+        The robots keep playing even if all human players quit
+    -/+robotsTalk
+        Do robots talk when they die, kill, etc.?
+    -robotLeaveLife <integer>
+        Max life per robot (0=off)
+    -robotLeaveScore <integer>
+        Min score for robot to play (0=off)
+    -robotLeaveRatio <integer>
+        Min ratio for robot to play (0=off)
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Team :
+
+Activation condition :
+  On the main panel the ^R Team ^R play ^R mode button must be On.
+
+This panel fixes the following Xpilots options :
+    -/+targetKillTeam
+        Do team members die when their last target explodes?
+    -/+teamAssign
+        Should player be assigned to first non-empty team if team isn't set?
+    -/+teamImmunity
+        Should other team members be immune to various shots, thrust etc.?
+    -/+targetTeamCollision or targetCollision
+        Do team members collide with their own target or not
+    -/+treasureKillTeam
+        Do team members die when treasure is destroyed?
+    -/+treasureCollisionDestroys or treasureCollisionDestroy
+        Destroy balls on collisions
+    -/+treasureCollisionMayKill or treasureUnshieldedCollisionKills
+        Does unshielded collision kill player
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Shield :
+
+ The ^R Pick ^R up...  and ^R Drop/throw...  buttons can be used if
+ the ^R Use ^R shields  button is On.
+
+This panel fixes the following Xpilots options :
+    -/+playerStartsShielded or playerStartShielded
+        Players start with shields up
+    -/+allowShields or shields
+        Should we allow shields?
+    -/+shieldedItemPickup or shieldItem
+        Can items be picked up while shields are up?
+    -/+shieldedMining or shieldMine
+        Can mines be thrown and placed while shields are up?
+}
+{TkXpInterface-VERSION  Help on Radar :
+
+  The ^R Limited ^R visibility button can be used if
+  the ^R Players ^R visible ^R on ^R radar button is On.
+
+This panel fixes the following Xpilots options :
+    -/+playersOnRadar or playersRadar
+        Are players visible on the radar
+    -/+limitedVisibility
+        Should the players have limited visibility?
+    -/+missilesOnRadar or missilesRadar
+        Are missiles visible on the radar
+    -/+minesOnRadar or minesRadar
+        Are mines visible on the radar
+    -/+nukesOnRadar or nukesRadar
+        Are nukes visible or highlighted on radar
+    -/+distinguishMissiles
+        Are different types of missiles distinguished (by length)
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Weapons :
+
+This panel fixes the following Xpilots options :
+    -nukeClusterDamage <real>
+        How much each cluster debris does damage wise from a nuke variant
+        Also reduces number of particles in the explosion
+    -mineFuseTime <seconds>
+        Time after which owned mines become deadly, zero means never
+    -/+laserIsStunGun or stunGun
+        Is the laser weapon a stun gun weapon?
+    -/+allowClusters or clusters
+        Should cluster weapons be allowed?
+    -/+allowModifiers or modifiers
+        Should the weapon modifiers be allowed?
+    -/+allowLaserModifiers or lasermodifiers
+        Can lasers be modified to be a different weapon?
+    -/+emcsReprogramMines or ecmsReprogramMines
+        Do ECMs reprogram mines?
+    -/+allowNukes or nukes
+        Should nuclear weapons be allowed?
+    -/+identifyMines
+        Are mine owners' names displayed
+    -nukeMinSmarts <integer>
+        Minimum number of smart missiles needed to make a nuclear variant
+    -nukeMinMines <integer>
+        Minimum number of mines needed to make a nuclear variant
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Players :
+
+  The ^R Number ^R of ^R lives scale can be changed if
+  the ^R Limited ^R lives button is On.
+
+The ^R Players ^R can... and ^R Players ^R bounce... buttons can be used if
+the ^R One ^R player ^R only button on the main panel is Off (even if these
+buttons aren't deactivated).
+
+This panel fixes the following Xpilots options :
+    -/+limitedLives
+        Should players have limited lives?
+    -/+allowPlayerCrashes
+        Can players run over other players?
+    -/+allowPlayerKilling or killings
+        Should players be allowed to kill one another?
+    -/+allowPlayerBounces
+        Can players bounce agains other players?
+    -worldLives or lives <integer>
+        Number of lives each player has (no sense without limitedLives)
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Bounce :
+
+  If you choose ^R Extra ^R border a thick line will appear around the map's
+  drawing.
+  If you choose ^R Edge ^R bouncing a fine line will appear around the map's
+  drawing.
+  If you choose ^R Edge ^R wrap no line will appear around the map's drawing.
+
+This panel fixes the following Xpilots options :
+    -/+extraBorder
+        Give map an extra border of solid rock
+    -/+edgeWrap
+        Wrap around edges
+    -/+edgeBounce
+        Players and bullets bounce when they hit the edge
+
+    -/+shotsWallBounce
+        Do shots bounce off walls?
+    -/+ballsWallBounce
+        Do balls bounce off walls?
+    -/+minesWallBounce
+        Do mines bounce off walls?
+    -/+itemsWallBounce
+        Do items bounce off walls?
+    -/+missilesWallBounce
+        Do missiles bounce off walls?
+    -/+sparksWallBounce
+        Do thrust spark particles bounce off walls to give reactive thrust?
+    -/+debrisWallBounce
+        Do explosion debris particles bounce off walls?
+
+    -maxObjectWallBounceSpeed or maxObjectBounceSpeed <real>
+        The maximum allowed speed for objects to bounce off walls
+    -maxShieldedWallBounceSpeed or maxShieldedBounceSpeed <real>
+        The maximum allowed speed for a shielded player to bounce off walls
+    -maxUnshieldedWallBounceSpeed or maxUnshieldedBounceSpeed <real>
+        Maximum allowed speed for an unshielded player to bounce off walls
+    -maxShieldedPlayerWallBounceAngle or maxShieldedBounceAngle <real>
+        Maximum allowed angle for a shielded player to bounce off walls
+    -maxUnshieldedPlayerWallBounceAngle or maxUnshieldedBounceAngle <real>
+        Maximum allowed angle for an unshielded player to bounce off walls
+    -playerWallBounceBrakeFactor or playerWallBrake <real>
+        Factor to slow down players by when they hit the wall(between 0 and 1)
+    -objectWallBounceBrakeFactor or objectWallBrake <real>
+        Factor to slow down objects by when they hit the wall(between 0 and 1)
+    -objectWallBounceLifeFactor <real>
+        Factor to reduce the life of objects by after bouncing(between 0 and1)
+    -wallBounceFuelDrainMult or wallBounceDrain <real>
+        Multiplication factor for player wall bounce fuel cost.
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Misc. :
+
+This panel fixes the following Xpilots options :
+    -shipMass or shipmass <real>
+        Mass of fighters
+    -shotMass or shotmass <real>
+        Mass of bullets
+    -shotSpeed or shotspeed <real>
+        Maximum speed of bullets
+    -playerMinimumStartFuel or playerMinStartFuel <real>
+        Minimum amount of fuel a player will have after being killed
+    -/+shotsGravity
+        Are bullets affected by gravity
+    -shotLife or shotlife <integer>
+        Life of bullets in ticks
+    -fireRepeatRate or fireRepeat <integer>
+        Number of frames per automatic fire (0=off)
+    -maxPlayerShots or shots <integer>
+        Maximum number of bullets present at one time
+    -/+allowShipShapes or ShipShapes
+        Are players allowed to define their own ship shape?
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Start the server :
+
+  The ^R Start ^R server button starts a xpilot server with the current configuration.
+  Only the modified options will be passed to the Xpilots command line,
+  the others, included in the default file and the Xpilots Dump 
+  configuration, will be read by Xpilots.
+
+  It doesn't take into account the chosen ship shapes and chosen team
+  ("Team to join" entry), these are client options.
+
+  You can launch more than one server with different configurations 
+  (maps, options...) if you change each time the ^R Port ^R to ^R use value 
+  on the main panel.
+}
+{TkXpInterface-VERSION  Help on Copyright :
+
+  This button displays the Copyright information, the version of
+  TkXpInterface and the both authors names.
+  When you start TkXpInterface or when you load a map, this panel shows
+  you what it is doing.
+}
+{TkXpInterface-VERSION  Help on Items setup :
+
+^U Attention !
+1) The main panel configuration doesn't take into account the values
+   you choose. e.g. If you set ECMs probability and ECMs initial
+   value to 0 the ^R ECMs ^R reprogram ^R mines in the ^S Weapons menu no longeur
+   has any effect even though you can still change it.
+
+This panel fixes the following Xpilots options :
+    -itemEnergyPackProb <real>
+        Probability for an energy pack to appear
+    -itemTankProb <real>
+        Probability for an extra tank to appear
+    -itemECMProb <real>
+        Probability for an ECM item to appear
+    -itemMineProb <real>
+        Probability for a mine item to appear
+    -itemMissileProb <real>
+        Probability for a missile item to appear
+    -itemCloakProb <real>
+        Probability for a cloak item to appear
+    -itemSensorProb <real>
+        Probability for a sensor item to appear
+    -itemWideangleProb <real>
+        Probability for a wideangle item to appear
+    -itemRearshotProb <real>
+        Probability for a rearshot item to appear
+    -itemAfterburnerProb <real>
+        Probability for an afterburner item to appear
+    -itemTransporterProb <real>
+        Probability for a transporter item to appear
+    -itemLaserProb <real>
+        Probability for a Laser item to appear
+    -itemEmergencyThrustProb <real>
+        Probability for an Emergency Thrust item to appear
+    -itemTractorBeamProb <real>
+        Probability for a Tractor Beam item to appear
+    -itemAutopilotProb <real>
+        Probability for an Autopilot item to appear
+
+    -itemProbMult or itemProbFact <real>
+        Item Probability Multiplication Factor scales all item probabilities
+
+    -movingItemProb <real>
+        Probability for an item to appear as moving
+    -dropItemOnKillProb <real>
+        Probability for dropping an item (each item) when you are killed
+    -destroyItemInCollisionProb <real>
+        Probability for items (some items) to be destroyed in a collision
+    -maxItemDensity <real>
+        Maximum density [0.0-1.0] for items (max items per block)
+    -wallBounceDestroyItemProb <real>
+        Player wall bounce item damage probability.
+
+    -initialFuel <integer>
+        How much fuel players start with
+    -initialTanks <integer>
+        How many tanks players start with
+    -initialECMs <integer>
+        How many ECMs players start with
+    -initialMines <integer>
+        How many mines players start with
+    -initialMissiles <integer>
+        How many missiles players start with
+    -initialCloaks <integer>
+        How many cloaks players start with
+    -initialSensors <integer>
+        How many sensors players start with
+    -initialWideangles <integer>
+        How many wideangles players start with
+    -initialRearshots <integer>
+        How many rearshots players start with
+    -initialAfterburners <integer>
+        How many afterburners players start with
+    -initialTransporters <integer>
+        How many transporters players start with
+    -initialLasers <integer>
+        How many lasers players start with
+    -initialEmergencyThrusts <integer>
+        How many emergency thrusts players start with
+    -initialTractorBeams <integer>
+        How many tractor/pressor beams players start with
+    -initialAutopilots <integer>
+        How many autopilots players start with
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Save-Copy Delete a map file :
+
+^R Delete : 1) To delete the current map file (the last loaded file) just
+            click on the ^R Delete button.  The message "No map selected"
+            will be displayed, and some buttons will be desactivated.
+            You must select another map before starting the server.
+         2) To delete another map file :
+           - Go to the directory where it is, by clicking on the sub-
+             directories on the top of the map list or by typing the path
+             name in the ^R Current ^R dir. entry box.
+           - Click on the ^R Map ^R file button.
+           - Type the file name you want to delete.
+           - Click on the ^R Compressed ^R map ^R file button to obtain the same
+             state (Compressed or Uncompressed) as the file you want to
+             delete.
+           - Click on the ^R Delete button.
+           This operation doesn't change the current loaded map file.
+
+^R Save : This operation save the current loaded map file with :
+         - with all commented lines from the file (begining with a "#")
+         - with all configurations different from the default file and
+           from the xpilots dump exept if the ^R Save ^R all ^R options 
+           button is On.
+         - with the original map data (to change it, use XmapEdit).
+         - with all original options unknown by Xpilots-3.1.x you may have
+           seen in a error message window when you loaded this map.
+          You can save it in another directory with another file name (it
+         is a copy) with a compressed or uncompressed format selected with
+         the ^R Compressed ^R map ^R file button, TkXpInterface
+         accepts both.
+
+         When you save a map file the current file becomes the saved file !
+}
+{TkXpInterface-VERSION  Help on remote servers :
+
+ If you want to play on a remote server, click on the "Meta server" button.
+
+ ^R Connect button :
+ - To play the game on the choosen remote server with the ^R ship ^R shape and 
+   ^R Team ^R to ^R join you selected before or after calling
+   the ^S Meta ^S server menu. If the connection is OK, you can quit TkXpInterface,
+   otherwise try another remote server or the same server again (still selected)
+
+ ^R Ping button :
+ - To do a PING on a selected remote server.
+   After a moment you will see in a window the results of the ping operation.
+   TkXpInterface doesn't interpret these results (they depend of your UNIX
+   platform).
+
+ ^R Status button :
+   It's useful if you want more info about a game (i.e. the scores of all the
+   players, the lives, the robots...)
+
+ ^R Update button :
+   To update the list of active remote servers.
+   If the connection is bad (for the Telnet) you will see an error message in a
+   window and TkXpInterface will keep the list of old servers, otherwise
+   all the sorted remote servers using Xpilots-x.y.z (servers filtered) 
+   will appear in a window and will be stored in the TkXpI.srv file.
+   the meta server filter is defined during the installation.
+
+ ^R Sort button :
+   - Chose your favorite ordered ^R sort ^R indexes and click on the ^R OK button, the
+   current list of servers will be sorted. The priority of each sort name is
+   written before it.
+
+ ^R Word(s) ^R to ^R search entry box :
+   to search for some sub-strings in the list of remote servers, it's useful if you 
+   want to look for a friend (with his nick name or e-mail adress) and a map name,
+   etc....
+   + The search mode doesn't take into account the difference between the
+    lowercases and uppercases.
+   + You must enter ^U at ^U least 3 characters for each sub-string you look for.
+   + Each sub-string must be separated with at least one ^U space character.
+   + the servers names, that correspond to this criterion, will be displayed
+     with ^U another ^U color and the ^U <Cr> ^U column will be updated on the left of the
+     server names.
+     This column contains the position of the sub-string in the sentence.
+     Cr=1 for the 1st word, Cr=2 for the 2nd word ...
+   + The number of remote servers that correspond to this criterion will be
+     displayed on the header of the servers list " ^U #number ^U found ".
+   + If you put your mouse pointer inside the list of
+     servers these servers names will retrieve the normal color, so use the
+     scroll bar to look for the servers ^U before to put your mouse pointer
+     inside the list.
+
+ ^R Team ^R to ^R join scale :
+     Just to select your own team before the connection to the remote server.
+
+ ^R Nick ^R name entry box :
+     Just to select a new nick name before the connection to the remote server.
+     The nick name accepts the space characters, if it's an empty string xpilot
+     will use its default value from the ~/xpilotrc file.
+
+ ^R Shapes list :
+     Just to select your own ship shape before the connection to the remote
+     server.  If you click again on the selected shape it will be deselected
+     so your xpilot client will use the shape defined in your ~/xpilotrc file.
+
+ ^R Servers list :
+    The servers window has 11 columns :
+    1- (Pl)  The number of players
+    2- (FPS) The number of frames per second
+    3- (Tm)  Show if this remote server is in team mode
+       no : means server is not on team mode
+        ? : means unknown, because the remote server doesn't support this info.
+        x : x = total number of teams supported by the map.
+    4- (Ra)  Race mode (yes, no, ?)
+    5- (Ba)  The number of home bases
+    6- (Snd) Use of the sound (yes, no).
+    7- (Up)  Time since the server have been started (dd:hh:mn:sec).
+    8- (St)  Status of the remote server.
+    9- (Map) The map name (only the 10 first characters).
+   10- (Cr)  The position of the criteria used by the search of sub-strings.
+   11- (Server) Remote server name.
+
+   - Just pass your mouse pointer over a server name to see all the informations
+   about it. If it's a team mode you will see the team number before each nick
+   name "T#" otherwise its order "#)".
+   If you are interested by a team mode server, you can set your own team to 
+   join without quit the ^S Meta ^S server menu.
+
+   - Click on a choosen remote server to select it, its name will appear on the
+   bottom.
+
+^U Attention !
+   - When you start the xpilots client ^U wait some secondes to let it 
+     establish the connection !
+   - The team and race mode informations ^U will ^U be ^U used for Xpilots-3.1.4 and
+     later !
+
+   I see you have chosen the following during the installation :
+   The meta-server : <METASERVER>
+   The Ping options : <PINGOPTIONS>
+   The Meta-filter : <METAFILTER>
+   The default sub-strings to search for <WHOWHAT>
+   The directory where is TkXpI.srv : <TEMPDIR>
+   Additional client's options : <CLIENTOPTIONS>
+
+}
+{TkXpInterface-VERSION  Help on Play the game :
+
+  This starts an Xpilot client on your LOCAL machine (127.0.0.1)
+
+  - with the port number indicated on the main panel in the 
+    ^R Port ^R to ^R use entry box.
+
+  - with the "-join" option to avoid the xpilots command line.
+
+  - with some other options you defined during the TkXpInterface installation.
+
+  - with the team number indicated on the main panel in the 
+    ^R Team ^R to ^R join entry box, if the server is not in team mode the
+    xpilots client will ignore this option.
+    If the sever is in team mode and your choosen team is full, change the
+    team number on the main panel and restart.
+
+  If the client runs well you can quit TkXpInterface.
+  You can start more than one client (as many servers are still running
+  in background, see the help on start-server).
+
+   I see you have chosen the following during the installation :
+   Additinal client's options : <CLIENTOPTIONS>
+
+^U Attention !
+  It is obvious that you must start at least one server before clicking
+  this button. You must also change the "Port to use" value to one used by
+  one of servers you have started.
+}
+{TkXpInterface-VERSION  Help on Quit :
+
+ This kills TkXpInterface and frees up some resources on your workstation.
+ The servers and/or clients you have started will continue to run in the
+ background.
+}
+{TkXpInterface-VERSION  Help on List of maps :
+
+ To load a map file click on it's name.
+ A map must have ".map" as extension or ".map.gz" if you have choosen
+ "gzip" as compressor during the installation, or ".map.Z" if you have
+ choosen "compress" and "uncompress" as compressor during 
+ the installation of TkXpInterface.
+
+ An asterix (*) after the map name means the map is compressed; it will
+ be decompressed in the temporary directory with the name "TkXpI.tm".
+
+ This temporary file will be deleted if you quit TkXpInterface normally.
+ (i.e. Quit button, not <Control-c>).
+
+ TkXpInterface will verify if all options in the map file are compatible with
+ Xpilots-3.1.x, if not you will be given an error message in a window when  you
+ load the map if you have switched on the ^R Check ^R options button.
+ The ^U button ^U on ^U the ^U right of ^R Check ^R options button will show you if some options
+ warnings occured.
+
+ before the map names list you can change the current directory :
+
+ To default Dir : to go to the default dir (if you are lost).
+          ..    : to go on the previous directory.
+          ./xxx : to go to the xxx subdirectory
+          ./    : to update the map list in the current directory (if another
+                  user is working in this directory while you are using 
+                  TkXpInterface, use this if you obtain "<mapfile> not found"
+                  when you try to load a map)
+
+ You can also change the path with the ^R Current ^R dir. entry box, but if you
+ type a wrong path name, the new directory will be the default directory.
+
+ The ^R Current ^R file: line show you the pathname and the name of the last
+ loaded map.
+
+   I see you have chosen the following during the installation :
+   The temporary Dir: <TEMPDIR>
+   The default Dir  : <MAPDIR>
+   The default map  : <MAP>
+   The default file : <DEFAULT>
+   The compressor   : <ZCOMP>
+       decompressor : <ZDCOMP>
+       extention    : <ZEXT>
+}
+{TkXpInterface-VERSION  Help on Ship shapes :
+
+ It displays the set of ship shapes read from TkXpI.shp file.
+ The ship shape you chose by a click on the name of the ship is
+ used, of course, only by the xpilots client.
+ Its name appears on the top of the list.
+
+ During the reading of the ship shapes TkXpInterface verify if their
+ definition is congruent with xpilot's rules ("math.c" file in the
+ source of xpilots) it displays the errors in the window from where
+ you launch TkXpInterface, but it doesn't reject these bad shapes,
+ you will see "_!!" after the ship name under its drawing.
+
+ Each drawing shows you the :
+        shape, mainGuns, leftGuns, rightGuns, leftLights
+        rightLights, engines, missileRacks.
+
+ You can edit TkXpI.shp file to add some new shapes but respect the
+ format described in the header of this file.
+
+ I see you have chosen the following during the installation :
+   The directory where TkXpI.shp is : <LIBDIR>
+}
+{TkXpInterface-VERSION  Help on the right main panel : 
+
+ If TkXpInterface doesn't find a valid motd file its button is
+ deactivated.
+
+ If the scoreTableFileName is an empty string its button is
+ deactivated.
+
+ If ^R Team ^R play ^R mode is On, the ^S Team menu is active and the
+ ^R One ^R player ^R only button is switched off.
+
+ If ^R One ^R player ^R only is On, the ^R Team ^R play ^R mode button is
+ switched off and the ^S Team menu is deactive. In the ^S Player menu
+ only ^R Limited ^R lives and ^R Number ^R of ^R lives make a sense!
+
+ The ^S Robots menu is active if the ^R Number ^R of ^R robots is greater than 0.
+
+ The ^R Port ^R to ^R use value will be used by the next server or client you start.
+
+ The ^R Team ^R to ^R join will be used by the next client you start.
+
+ ^U Note : TkXpInterface doesn't take into account the motd and score files
+        defined in the xpilots dump and defaults file but on those 
+        defined during the installation !
+
+ I see you have chosen the following during the installation :
+   The motd file  : <MOTDFILE>
+   The score file : <SCOREFILE>
+
+This panel fixes the following Xpilots options :
+    -/+reportToMetaServer or reportMeta
+        Keep the meta server informed about our game?
+    -motd <string>
+        File name for server-motd
+    -scoreTableFileName or scoretable <string>
+        Filename for the score table to be dumped to
+    -/+noQuit or noquit
+        The server keeps running even if all players have left
+    -/+onePlayerOnly
+        One player mode
+    -/+teamPlay or teams
+        Should we allow team play?
+    -/+timing or race
+        Race mode
+    -maxRobots or robots <integer>
+        How many robots do you want?
+    -gameDuration or time <real>
+        Duration of game in minutes (aka. pizza mode)
+    -framesPerSecond or FPS <integer>
+        Number of frames per second the server should strive for
+
+Client and server option :
+    -contactPort or port <integer>
+        Contact port number
+
+Client option :
+    -team <value> 
+        Team to join
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Gravity :
+
+ In the ^S Bounce menu :
+  If you have chosen ^R Extra ^R border a thick line appears around the map's
+  drawing.
+  If you have chosen ^R Edge ^R bouncing a fine line appears around the map's
+  drawing.
+  If you have chosen ^R Edge ^R wrap no line appears around the map's drawing.
+
+ The setting of the gravity is now a ^U PLEASURE, There are two methods :
+
+    - manually with your keyboard on the acquisition area,
+      but I know you know.
+
+       - if the gravity is a point (Clockwise or Anticlockwise) and you
+         enter some values greater than the map size, the map size will
+         be set automatically.
+
+    - with the mouse :
+
+       - if the gravity is along a line, you can adjust the gravity
+         (value and direction) by clicking (drag&drop) on the "elastic"
+         line on the center of the map.
+
+       - if the gravity is a point (Clockwise or Anticlockwise), you can
+         adjust the gravity value if you click (move) on the border of the
+         circle and the origin of the gravity if you click on its center.
+         Generally the default values are 0,0 so to catch the center click
+         on the upper-left on the map drawing.
+
+       - in both cases the moves will instantaneously change the
+         corresponding values in the acquisition area (under the map
+         drawing).
+
+^U Attention !
+ If the "Problem with maps2image" message occures that means :
+    - you haven't the correct version.
+    - or the program isn't found
+    - or you haven't the permission !
+
+ If you enter these values manually, respect the format:
+ <integer value> for the gravity line.
+ <integer,integer> values for the gravity point. 
+
+This panel fixes the following Xpilots options :
+    -gravity <real>
+        Gravity strength
+    -gravityPoint <position>
+        If the gravity is a point source, where does that gravity originate?
+    -gravityAngle <real>
+        If gravity is along a uniform line, at what angle is that line?
+    -/+gravityPointSource
+        Is gravity originating from a single point?
+    -/+gravityClockwise
+        If the gravity is a point source, is it clockwise?
+    -/+gravityAnticlockwise
+        If the gravity is a point source, is it anticlockwise?
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}
+{TkXpInterface-VERSION  Help on Update server :
+
+  The ^R Update ^R server button , on a running local server (without restarted it) :
+  - Changes the ^U initial ^U items values.
+  - Changes the ^U number ^U of ^U robots.
+  - ^U Locks or ^U Unlocks the game.
+  - ^U Shuts ^U down the server or ^U Stops it if its value is equal to 0 or if
+       it's an empty string.
+  - ^U Sends ^U a ^U message to the players.
+  All the values (modified or not) will be passed to the client command line.
+
+^U Attention !
+  The ^R Port ^R to ^R use value on the main panel must be the same
+  as the one used by the running local server you want to update.
+
+This panel uses the following Xpilots options :
+    -maxRobots or robots <integer>
+        How many robots do you want?
+    -initialFuel <integer>
+        How much fuel players start with
+    -initialTanks <integer>
+        How many tanks players start with
+    -initialECMs <integer>
+        How many ECMs players start with
+    -initialMines <integer>
+        How many mines players start with
+    -initialMissiles <integer>
+        How many missiles players start with
+    -initialCloaks <integer>
+        How many cloaks players start with
+    -initialSensors <integer>
+        How many sensors players start with
+    -initialWideangles <integer>
+        How many wideangles players start with
+    -initialRearshots <integer>
+        How many rearshots players start with
+    -initialAfterburners <integer>
+        How many afterburners players start with
+    -initialTransporters <integer>
+        How many transporters players start with
+    -initialLasers <integer>
+        How many lasers players start with
+    -initialEmergencyThrusts <integer>
+        How many emergency thrusts players start with
+    -initialTractorBeams <integer>
+        How many tractor/pressor beams players start with
+    -initialAutopilots <integer>
+        How many autopilots players start with
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
+}

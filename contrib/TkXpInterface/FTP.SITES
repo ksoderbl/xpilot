@@ -1,0 +1,426 @@
+		TkXpInterface-3.4
+Is in /contrib/games/xpilot/util of the ftp site :  ftp.x.org
+
+This is a tcl/tk script that allows you to configure xpilots servers, by giving
+you lots of buttons to click on, and things to slide :-)
+
+Features:
+
+   o     Easy to use interface
+   o     Choose from all maps in the directory you select.
+   o     Each game is highly configurable with the 140 options to
+         xpilots-3.1.x included.
+   o     Support is included for multiple ports, removal of individual items,
+         pizza mode, changing server speed, and much more!
+
+You will need wish(1) and xpilots(6) (!) to run this application.
+"wish" is the Tcl/Tk Package.
+
+N.B. The configuration options have been tested using tk3.6, tcl7.3 and
+xpilots-3.1.1 and later It may not work on other versions of these programs.
+If not, the code should be easy enough for you to change.
+
+Where can you find tcl/tk and xpilots (set of some FTP sites) :
+   tcl7.3.tar.gz or tcl7.3.tar.Z
+            and
+   tk3.6.tar.gz or tk3.6.tar.Z
+           and
+    xpilot-3.1.x.tar.gz
+
+For tcl7.3.tar :
+----------------
+
+akiu.gw.tohoku.ac.jp
+	/pub/unix/tcl
+		-rw-r--r--     358397  Dec  9 06:32  tcl7.3.tar.gz
+allspice.berkeley.edu
+	/tcl
+		-rw-rw-r--     607400  Nov 23 08:49  tcl7.3.tar.Z
+athene.uni-paderborn.de
+	/unix/tcl
+		-rw-r--r--     355770  Nov 26 07:10  tcl7.3.tar.gz
+brain.vifp.monash.edu.au
+	/pub/src/programming
+		-rw-r--r--     358408  Dec  3 06:57  tcl7.3.tar.gz
+cnuce_arch.cnr.it
+	/pub/X/contrib
+		-r--r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+colonsay.dcs.ed.ac.uk
+	/export/X11R5/Misc-contrib
+		-rw-r--r--     607400  Jan 25 15:35  tcl7.3.tar.Z
+	/pub/X11R5/Misc-contrib
+		-rw-r--r--     607400  Jan 25 15:35  tcl7.3.tar.Z
+coombs.anu.edu.au
+	/pub/irc/tcl
+		-r--r--r--     358408  Dec  8 19:20  tcl7.3.tar.gz
+cs.huji.ac.il
+	/pub/languages/tcl
+		-rw-r--r--     607400  Jan  4 16:45  tcl7.3.tar.Z
+dime.cs.umass.edu
+	/pub/rcf/exp/anonymous/pub/languages
+		-rw-r--r--     358408  Nov 29 11:14  tcl7.3.tar.gz
+dutepp0.et.tudelft.nl
+	/pub/Unix/Lang
+		-rw-r--r--     358408  Nov 23 07:49  tcl7.3.tar.gz
+etlport.etl.go.jp
+	/pub/tcl
+		-rw-r--r--     607400  Nov 29 11:43  tcl7.3.tar.Z
+ftp.denet.dk
+	/mirror1/X11/contrib
+		-r--r--r--     607400  Nov 29 01:39  tcl7.3.tar.Z
+	/mirror1/unix/tcl/sprite-mirror
+		-r--r--r--     607400  Nov 23 09:47  tcl7.3.tar.Z
+ftp.germany.eu.net
+	/pub/X11/contrib
+		-rw-r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+ftp.luth.se
+	/pub/X11/contrib
+		-r--r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+	/pub/misc/languages/tcl/sprite-mirror
+		-r--r--r--     607400  Nov 23 08:47  tcl7.3.tar.Z
+ftp.x.org
+	/contrib
+		-rw-r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+gatekeeper.dec.com
+	/.0/BSD/UCB/tcl/sprite
+		-r--r--r--     607400  Nov 23 00:49  tcl7.3.tar.Z
+harbor.ecn.purdue.edu
+	/pub/tcl/sprite-mirror
+		-r--r--r--     607400  Nov 23 08:47  tcl7.3.tar.Z
+hplyot.obspm.fr
+	/tcl
+		-rw-r--r--     355759  Nov 24 11:30  tcl7.3.tar.gz
+imag.imag.fr
+	/archive/shells/expect
+		lrwxrwxrwx         15  Feb  3 13:02  tcl7.3.tar.Z
+	/archive/shells
+		-rw-r--r--     607400  Dec  1 15:05  tcl7.3.tar.Z
+isfs.kuis.kyoto-u.ac.jp
+	/ftpmail/ftp.center.osaka-u.ac.jp/tcl-tk/sprite-mirror
+		-rw-rw-r--     607400  Feb 23 00:22  tcl7.3.tar.Z
+	/ftpmail/srawgw.sra.co.jp/pub/lang/tcl
+		-rw-rw-r--     607400  Dec  9 04:43  tcl7.3.tar.Z
+	/lang/tcl
+		-rw-r--r--     355759  Dec  9 04:43  tcl7.3.tar.gz
+isy.liu.se
+	/pub/tcl
+		-rw-r--r--     607400  Feb  3 10:22  tcl7.3.tar.Z
+knot.queensu.ca
+	/pub/unix/software
+		-rw-r--r--     607400  Nov 26 15:59  tcl7.3.tar.Z
+mammoth.cs.berkeley.edu
+	/ucb/tcl
+		-rw-rw-r--     607400  Nov 23 08:47  tcl7.3.tar.Z
+nic.switch.ch
+	/mirror/X-contrib
+		-rw-rw-r--     607400  Nov 29 01:39  tcl7.3.tar.Z
+	/mirror/tcl
+		-rw-rw-r--     607400  Nov 23 09:49  tcl7.3.tar.Z
+pith.uoregon.edu
+	/pub/Solaris2.x/src
+		-rw-r--r--     607400  Nov 24 14:36  tcl7.3.tar.Z
+	/pub/src
+		-rw-r--r--     607400  Nov 24 14:24  tcl7.3.tar.Z
+plaza.aarnet.edu.au
+	/X11/contrib
+		-r--r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+quepasa.cs.tu-berlin.de
+	/.4/pub/tcl/distrib
+		-rw-rw-r--     355759  Nov 23 09:47  tcl7.3.tar.gz
+	/.4/pub/tcl/expect
+		-rw-rw-r--     355759  Jan  6 21:15  tcl7.3.tar.gz
+rs3.hrz.th-darmstadt.de
+	/pub/X11/contrib
+		-rw-rw-r--     607400  Nov 29 01:39  tcl7.3.tar.Z
+	/pub/programming/languages/tcl
+		-rw-rw-r--     355759  Nov 23 09:47  tcl7.3.tar.gz
+rzsun2.informatik.uni-hamburg.de
+	/pub/lang/tcl
+		-rw-r--r--     355759  Nov 29 21:03  tcl7.3.tar.gz
+sun0.urz.uni-heidelberg.de
+	/
+		-rw-rw-r--     607400  Nov 29 00:39  pub/X11/contrib/tcl7.3.tar.Z
+sunsite.unc.edu
+	/pub/X11/contrib
+		-r--r--r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+theta.iis.u-tokyo.ac.jp
+	/pub1/contrib
+		-rw-r--r--     607400  Nov 29 09:39  tcl7.3.tar.Z
+unix.hensa.ac.uk
+	/pub/uunet/languages/tcl
+		-rw-r--r--     607400  Nov 23 13:47  tcl7.3.tar.Z
+	/pub/uunet/pub/window-sys/X/contrib
+		-rw-r--r--     607400  Nov 29 05:39  tcl7.3.tar.Z
+von-neum.uni-muenster.de
+	/pub/X11R5/contrib
+		-rw-rw-r--     607400  Nov 29 00:39  tcl7.3.tar.Z
+
+For tk3.6.tar :
+----------------
+
+akiu.gw.tohoku.ac.jp
+	/pub/unix/tcl
+		-rw-r--r--     722411  Dec  9 06:40  tk3.6.tar.gz
+allspice.berkeley.edu
+	/tcl
+		-rw-rw-r--    1165237  Nov 23 08:48  tk3.6.tar.Z
+athene.uni-paderborn.de
+	/unix/tcl
+		-rw-r--r--     717120  Nov 26 07:10  tk3.6.tar.gz
+brain.vifp.monash.edu.au
+	/pub/src/programming
+		-rw-r--r--     722421  Dec  3 06:31  tk3.6.tar.gz
+cnuce_arch.cnr.it
+	/pub/X/contrib
+		-r--r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+coombs.anu.edu.au
+	/pub/irc/tcl
+		-r--r--r--     722421  Dec  8 19:24  tk3.6.tar.gz
+cs.huji.ac.il
+	/pub/languages/tcl
+		-rw-r--r--    1165237  Nov 23 06:48  tk3.6.tar.Z
+dime.cs.umass.edu
+	/pub/rcf/exp/anonymous/pub/languages
+		-rw-r--r--     722421  Nov 29 11:13  tk3.6.tar.gz
+dutepp0.et.tudelft.nl
+	/pub/Unix/Lang
+		-rw-r--r--     722421  Nov 23 07:48  tk3.6.tar.gz
+etlport.etl.go.jp
+	/pub/tcl
+		-rw-r--r--    1165237  Nov 29 11:40  tk3.6.tar.Z
+ftp.denet.dk
+	/mirror1/X11/contrib
+		-r--r--r--    1165237  Nov 29 01:40  tk3.6.tar.Z
+	/mirror1/unix/tcl/sprite-mirror
+		-r--r--r--    1165237  Nov 23 09:47  tk3.6.tar.Z
+ftp.germany.eu.net
+	/pub/X11/contrib
+		-rw-r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+ftp.luth.se
+	/pub/X11/contrib
+		-r--r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+	/pub/misc/languages/tcl/sprite-mirror
+		-r--r--r--    1165237  Nov 23 08:47  tk3.6.tar.Z
+ftp.x.org
+	/contrib
+		-rw-r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+gatekeeper.dec.com
+	/.0/BSD/UCB/tcl/sprite
+		-r--r--r--    1165237  Nov 23 00:48  tk3.6.tar.Z
+gogol.cenatls.cena.dgac.fr
+	/pub/languages/tcl
+		-rw-r--r--     717120  Nov 25 00:28  tk3.6.tar.gz
+harbor.ecn.purdue.edu
+	/pub/tcl/sprite-mirror
+		-r--r--r--    1165237  Nov 23 08:47  tk3.6.tar.Z
+hplyot.obspm.fr
+	/tcl
+		-rw-r--r--     717110  Nov 24 11:29  tk3.6.tar.gz
+imag.imag.fr
+	/archive/shells
+		-rw-r--r--    1165237  Dec  1 14:55  tk3.6.tar.Z
+isfs.kuis.kyoto-u.ac.jp
+	/lang/tcl
+		-rw-r--r--     717110  Dec 15 17:18  tk3.6.tar.gz
+isy.liu.se
+	/pub/tcl
+		-rw-r--r--    1165237  Feb  3 10:22  tk3.6.tar.Z
+knot.queensu.ca
+	/pub/unix/software
+		-rw-r--r--    1165237  Nov 26 16:04  tk3.6.tar.Z
+mammoth.cs.berkeley.edu
+	/ucb/tcl
+		-rw-rw-r--    1165237  Nov 23 08:47  tk3.6.tar.Z
+nic.switch.ch
+	/mirror/X-contrib
+		-rw-rw-r--    1165237  Nov 29 01:40  tk3.6.tar.Z
+	/mirror/tcl
+		-rw-rw-r--    1165237  Nov 23 09:48  tk3.6.tar.Z
+plaza.aarnet.edu.au
+	/X11/contrib
+		-r--r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+quepasa.cs.tu-berlin.de
+	/.4/pub/tcl/distrib
+		-rw-rw-r--     717110  Nov 23 09:47  tk3.6.tar.gz
+	/.4/pub/tcl/expect
+		-rw-rw-r--     717110  Jan  6 21:16  tk3.6.tar.gz
+rs3.hrz.th-darmstadt.de
+	/pub/X11/contrib
+		-rw-rw-r--    1165237  Nov 29 01:40  tk3.6.tar.Z
+rzsun2.informatik.uni-hamburg.de
+	/pub/lang/tcl
+		-rw-r--r--     717110  Nov 29 22:04  tk3.6.tar.gz
+sun0.urz.uni-heidelberg.de
+	/
+		-rw-rw-r--    1165237  Nov 29 00:40  pub/X11/contrib/tk3.6.tar.Z
+sunsite.unc.edu
+	/pub/X11/contrib
+		-r--r--r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+theta.iis.u-tokyo.ac.jp
+	/pub1/contrib
+		-rw-r--r--    1165237  Nov 29 09:40  tk3.6.tar.Z
+von-neum.uni-muenster.de
+	/pub/X11R5/contrib
+		-rw-rw-r--    1165237  Nov 29 00:40  tk3.6.tar.Z
+
+
+For xpilot-3.1.x.tar.gz :
+-------------------------
+askhp.ask.uni-karlsruhe.de
+	/pub/hp/hpux9/Games
+		-rw-r-----     484571  Apr 15 16:55  xpilot-3.1.2.tar.gz
+		-rw-r-----     485337  Apr 25 16:05  xpilot-3.1.3.tar.gz
+bode.ee.ualberta.ca
+	/pub/unix/HPUX/hpux9/Games
+		-rw-r--r--     484571  Apr 15 03:55  xpilot-3.1.2.tar.gz
+		-rw-r--r--     485337  Apr 25 03:05  xpilot-3.1.3.tar.gz
+ftp.germany.eu.net
+	/pub/X11/XConsortium/contrib
+		-rw-r--r--      25851  Mar 31 13:15  xpilot-3.1.0-README
+		-rw-r--r--      14436  Apr 14 09:57  xpilot-3.1.1-3.1.2.gz
+		-rw-r--r--       6119  Apr 25 04:43  xpilot-3.1.2-3.1.3.gz
+		-rw-r--r--     495458  Apr 25 04:44  xpilot-3.1.3.tar.gz
+	/pub/os/FreeBSD/packages-1.1
+		-rw-r--r--     219247  Apr 16 17:42  xpilot_bin.tgz
+	/pub/os/Linux/Local.EUnet/German/LST/install/xappl2
+		-rw-r--r--     122424  Nov 18 09:03  xpilot20.tgz
+	/pub/os/Linux/Mirror.SunSITE/games/x11/action
+		-rw-r--r--     182866  Jul 12 1993  xpilot-3.0.0.tar.gz
+		-rw-r--r--     552396  Apr 19 10:39  xpilot-3.1.2-bin.tar.gz
+		-rw-r--r--       1316  Apr 19 10:39  xpilot-3.1.2.lsm
+		-rw-r--r--     494972  Apr 19 10:39  xpilot-3.1.2.tar.gz
+		-rw-r--r--     112113  Jun 15 1993  xpilot-beta-2.0.3-bin.tgz
+ftp.luth.se
+	/pub/X11/contrib
+		-r--r--r--      25851  Mar 31 16:15  xpilot-3.1.0-README
+		-r--r--r--      14436  Apr 14 13:57  xpilot-3.1.1-3.1.2.gz
+		-r--r--r--       6119  Apr 25 08:43  xpilot-3.1.2-3.1.3.gz
+		-r--r--r--     494972  Apr 14 13:57  xpilot-3.1.2.tar.gz
+		-r--r--r--     495458  Apr 25 08:44  xpilot-3.1.3.tar.gz
+hayes.ims.alaska.edu
+	/slackware/other/games/x11/action/.cap
+		-rwxr-xr-x         46  Feb 22 12:04  xpilot-3.0.0.tar.gz
+		-rwxr-xr-x         66  Feb 22 12:04  xpilot-beta-2.0.3-bin.tgz
+	/slackware/other/games/x11/action
+		-rwxr-xr-x     182866  Jul 12 1993  xpilot-3.0.0.tar.gz
+		-rwxr-xr-x     112113  Jun 15 1993  xpilot-beta-2.0.3-bin.tgz
+		-rwxr-xr-x       1388  Jun 15 1993  xpilot-beta-2.0.3.README
+hpftp.cict.fr
+	/hpux9/Games
+		-rw-r-----     484571  Apr 15 16:55  xpilot-3.1.2.tar.gz
+		-rw-r-----     485337  Apr 25 16:05  xpilot-3.1.3.tar.gz
+isfs.kuis.kyoto-u.ac.jp
+	/BSD/FreeBSD/packages-1.1
+		-r--r--r--     219247  Apr 16 19:42  xpilot_bin.tgz
+lune.csc.liv.ac.uk
+	/hpux9/Games
+		-rw-r-----     484571  Apr 15 14:55  xpilot-3.1.2.tar.gz
+		-rw-r-----     485337  Apr 25 14:05  xpilot-3.1.3.tar.gz
+mcsun.eu.net
+	/os/linux/util/X11/contrib
+		-r--r--r--     182866  Sep 15 1993  xpilot-3.0.0.tar.gz
+	/os/linux/util/games/x11/action
+		-rw-rw-r--     182866  Jul 12 1993  xpilot-3.0.0.tar.gz
+		-rw-rw-r--     552396  Apr 19 10:39  xpilot-3.1.2-bin.tar.gz
+		-rw-rw-r--     494972  Apr 19 10:39  xpilot-3.1.2.tar.gz
+		-rw-rw-r--     112113  Jun 15 1993  xpilot-beta-2.0.3-bin.tgz
+		-rw-rw-r--       1388  Jun 15 1993  xpilot-beta-2.0.3.README
+mrcnext.cso.uiuc.edu
+	/pub/linux/games/x11/action
+		-r--r--r--     552396  Apr 19 12:39  xpilot-3.1.2-bin.tar.gz
+		-r--r--r--       1316  Apr 19 12:39  xpilot-3.1.2.lsm
+		-r--r--r--     494972  Apr 19 12:39  xpilot-3.1.2.tar.gz
+nctuccca.edu.tw
+	/Operating-Systems/FreeBSD/packages-1.1
+		-r--r--r--     219247  Apr 16 00:00  xpilot_bin.tgz
+nic.switch.ch
+	/mirror/X11/contrib
+		-rw-rw-r--      25851  Mar 31 17:15  xpilot-3.1.0-README
+		-rw-rw-r--      14436  Apr 14 13:57  xpilot-3.1.1-3.1.2.gz
+		-rw-rw-r--       6119  Apr 25 08:43  xpilot-3.1.2-3.1.3.gz
+		-rw-rw-r--     495458  Apr 25 08:44  xpilot-3.1.3.tar.gz
+	/mirror/linux/sunsite/games/x11/action
+		-rw-rw-r--     552396  Apr 19 14:39  xpilot-3.1.2-bin.tar.gz
+		-rw-rw-r--       1316  Apr 19 14:39  xpilot-3.1.2.lsm
+		-rw-rw-r--     494972  Apr 19 14:39  xpilot-3.1.2.tar.gz
+nz20.rz.uni-karlsruhe.de
+	/pub/linux/mirror.erlangen/install/xappl2
+		-rw-r--r--     122424  Nov 18 10:03  xpilot20.tgz
+	/pub/linux/mirror.sunsite/games/x11/action
+		-rw-r--r--     552396  Apr 19 12:39  xpilot-3.1.2-bin.tar.gz
+		-rw-r--r--       1316  Apr 19 12:39  xpilot-3.1.2.lsm
+		-rw-r--r--     494972  Apr 19 12:39  xpilot-3.1.2.tar.gz
+pdq.coe.montana.edu
+	/pub/mirrors/X11-contrib
+		-r--r--r--       6119  Apr 25 00:43  xpilot-3.1.2-3.1.3.gz
+		-r--r--r--     495458  Apr 25 00:44  xpilot-3.1.3.tar.gz
+	/pub/mirrors/unix/freebsd/packages-1.1
+		-r--r--r--     219247  Apr 16 13:42  xpilot_bin.tgz
+plaza.aarnet.edu.au
+	/X11/contrib
+		-r--r--r--      25851  Mar 31 05:15  xpilot-3.1.0-README
+		-r--r--r--      14436  Apr 14 01:57  xpilot-3.1.1-3.1.2.gz
+		-r--r--r--       6119  Apr 24 20:43  xpilot-3.1.2-3.1.3.gz
+		-r--r--r--     494972  Apr 14 01:57  xpilot-3.1.2.tar.gz
+		-r--r--r--     495458  Apr 24 20:44  xpilot-3.1.3.tar.gz
+public.x.org
+	/contrib
+		-rw-r--r--      25851  Mar 31 15:15  xpilot-3.1.0-README
+		-rw-r--r--      14436  Apr 14 11:57  xpilot-3.1.1-3.1.2.gz
+		-rw-r--r--       6119  Apr 25 06:43  xpilot-3.1.2-3.1.3.gz
+		-rw-r--r--     495458  Apr 25 06:44  xpilot-3.1.3.tar.gz
+rs3.hrz.th-darmstadt.de
+	/pub/X11/contrib
+		-rw-rw-r--      25851  Mar 31 17:15  xpilot-3.1.0-README
+		-rw-rw-r--      14436  Apr 14 13:57  xpilot-3.1.1-3.1.2.gz
+		-rw-rw-r--       6119  Apr 25 08:43  xpilot-3.1.2-3.1.3.gz
+		-rw-rw-r--     495458  Apr 25 08:44  xpilot-3.1.3.tar.gz
+rzsun2.informatik.uni-hamburg.de
+	/pub/Linux/packages/LST/install/xappl2
+		-rw-r--r--     122424  Nov 18 09:03  xpilot20.tgz
+sun0.urz.uni-heidelberg.de
+	/pub/X11/contrib
+		-rw-rw-r--      25851  Mar 31 15:15  xpilot-3.1.0-README
+		-rw-rw-r--      14436  Apr 14 11:57  xpilot-3.1.1-3.1.2.gz
+		-rw-rw-r--       6119  Apr 25 06:43  xpilot-3.1.2-3.1.3.gz
+		-rw-rw-r--     495458  Apr 25 06:44  xpilot-3.1.3.tar.gz
+swdsrv.edvz.univie.ac.at
+	/unix/systems/hpux/hpux9/Games
+		-r--r--r--     484571  Apr 15 14:55  xpilot-3.1.2.tar.gz
+		-r--r--r--     485337  Apr 25 14:05  xpilot-3.1.3.tar.gz
+	/unix/systems/linux/funet/util/X11/contrib
+		-r--r--r--     182866  Sep 15 1993  xpilot-3.0.0.tar.gz
+	/unix/systems/linux/funet/util/games/x11/action
+		-r--r--r--     182866  Jul 12 1993  xpilot-3.0.0.tar.gz
+		-r--r--r--     552396  Apr 19 10:39  xpilot-3.1.2-bin.tar.gz
+		-r--r--r--     494972  Apr 19 10:39  xpilot-3.1.2.tar.gz
+		-r--r--r--     112113  Jun 15 1993  xpilot-beta-2.0.3-bin.tgz
+		-r--r--r--       1388  Jun 15 1993  xpilot-beta-2.0.3.README
+	/unix/systems/linux/sunsite/games/x11/action
+		-r--r--r--     552396  Apr 19 12:39  xpilot-3.1.2-bin.tar.gz
+		-r--r--r--       1316  Apr 19 12:39  xpilot-3.1.2.lsm
+		-r--r--r--     494972  Apr 19 12:39  xpilot-3.1.2.tar.gz
+	/x11/contrib
+		-r--r--r--      25851  Mar 31 15:15  xpilot-3.1.0-README
+		-r--r--r--      14436  Apr 14 11:57  xpilot-3.1.1-3.1.2.gz
+		-r--r--r--       6119  Apr 25 06:43  xpilot-3.1.2-3.1.3.gz
+		-r--r--r--     495458  Apr 25 06:44  xpilot-3.1.3.tar.gz
+theta.iis.u-tokyo.ac.jp
+	/pub1/X11R5/contrib
+		-rw-r--r--      25851  Mar 31 15:15  xpilot-3.1.0-README
+		-rw-r--r--      14436  Apr 14 02:57  xpilot-3.1.1-3.1.2.gz
+		-rw-r--r--       6119  Apr 24 21:43  xpilot-3.1.2-3.1.3.gz
+		-rw-r--r--     494972  Apr 14 02:57  xpilot-3.1.2.tar.gz
+		-rw-r--r--     495458  Apr 24 21:44  xpilot-3.1.3.tar.gz
+	/pub2/FreeBSD/packages-1.1
+		-rw-r--r--     219247  Apr 16 10:42  xpilot_bin.tgz
+unix.hensa.ac.uk
+	/pub/sunsite/pub/Linux/games/x11/action
+		-r--r--r--     552396  Apr 19 08:39  xpilot-3.1.2-bin.tar.gz
+		-r--r--r--       1316  Apr 19 08:39  xpilot-3.1.2.lsm
+		-r--r--r--     494972  Apr 19 08:39  xpilot-3.1.2.tar.gz
+von-neum.uni-muenster.de
+	/pub/X11R5/contrib
+		-rw-rw-r--      25851  Mar 31 15:15  xpilot-3.1.0-README
+		-rw-rw-r--      14436  Apr 14 11:57  xpilot-3.1.1-3.1.2.gz
+		-rw-rw-r--     494972  Apr 14 11:57  xpilot-3.1.2.tar.gz

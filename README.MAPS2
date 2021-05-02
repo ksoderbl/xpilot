@@ -30,4 +30,10 @@ The new map format is as follows:
 
 	A..Z			Checks, 'A' = start
 
+	$			Force the direction of homebases.
+				Players starting on homebases that are
+				adjacent to this symbol will start with the
+				front of their ship pointing to this dollar
+				sign.  Except that client don't draw it.
+
 	any other char		Empty block

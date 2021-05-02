@@ -1,4 +1,4 @@
-/* $Id: netserver.h,v 3.36 1994/04/10 13:15:33 bert Exp $
+/* $Id: netserver.h,v 3.37 1994/05/23 19:15:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -105,7 +105,7 @@ typedef struct {
     char		*real;			/* real login name of player */
     char		*nick;			/* nickname of player */
     char		*dpy;			/* display of player */
-    char		*shape;			/* ship shape of player */
+    wireobj		*ship;			/* ship shape of player */
     char		addr[MAXHOSTNAMELEN];	/* address of players host */
     char		host[MAXHOSTNAMELEN];	/* hostname of players host */
 } connection_t;
@@ -139,7 +139,7 @@ static int Send_motd(int ind);
 
 void Init_receive(void);
 int Setup_net_server(int maxconn, int contact_socket);
-void Destroy_connection(int ind, char *reason, char *file, int line);
+void Destroy_connection(int ind, char *reason);
 int Setup_connection(char *real, char *nick, char *dpy,
 		     int team, char *addr, char *host, unsigned version);
 int Input(void);
@@ -150,8 +150,8 @@ int Send_self(int ind,
     int lock_id, int lock_dist, int lock_dir,
     int check, int cloaks, int sensors, int mines,
     int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int lasers, int emergency_thrusts, int tractor_beams,
-    int autopilots, int autopilotlight,
+    int afterburners, int lasers, int emergency_thrusts, int emergency_shields,
+    int tractor_beams, int autopilots, int autopilotlight,
     int num_tanks, int current_tank, int fuel_sum, int fuel_max, long status);
 int Send_modifiers(int ind, char *mods);
 int Send_leave(int ind, int id);
@@ -166,6 +166,7 @@ int Send_cannon(int ind, int num, int dead_time);
 int Send_destruct(int ind, int count);
 int Send_shutdown(int ind, int count, int delay);
 int Send_thrusttime(int ind, int count, int max);
+int Send_shieldtime(int ind, int count, int max);
 int Send_debris(int ind, int type, unsigned char *p, int n);
 int Send_fastshot(int ind, int type, unsigned char *p, int n);
 int Send_shot(int ind, int x, int y, int color, int teamshot);
@@ -177,7 +178,7 @@ int Send_audio(int ind, int type, int vol);
 int Send_item(int ind, int x, int y, int type);
 int Send_paused(int ind, int x, int y, int count);
 int Send_ecm(int ind, int x, int y, int size);
-int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak);
+int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak, int eshield);
 int Send_refuel(int ind, int x0, int y0, int x1, int y1);
 int Send_connector(int ind, int x0, int y0, int x1, int y1, int tractor);
 int Send_laser(int ind, int color, int x, int y, int len, int dir);

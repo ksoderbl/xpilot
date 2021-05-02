@@ -2,7 +2,7 @@
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .\"
 .\" File:         xpilot.6
-.\" Id:		  $Id: xpilot.6,v 3.24 1994/03/30 20:23:28 bert Exp $
+.\" Id:		  $Id: xpilot.6,v 3.25 1994/05/23 18:53:06 bert Exp $
 .\" Description:  XPilot man page
 .\" Author:       Bjoern Stabell, Ken Ronny Schouten & Bert Gijsbers
 .\" Modified:     910520
@@ -511,6 +511,17 @@ the ship you are currently locked onto.  The force is mutual, and thus
 if your ship is lighter than your target you will move more towards him
 than him towards you.  Best used with heavy ships to pull then push
 annoying players into walls.
+.TP 12
+.B Emergency Shield
+Gives you a limited amount of extra shield power, which prevents any
+fuel loss from shots, debri, player and wall collisions, missiles, 
+mines, etc.  While in use, the ship can smash into walls at any speed
+and angle without fear of being killed.  The extra shield capability
+is toggled on and off by a separate key and can thus be saved, with
+the remaining amount of extra shield power being saved for later use.
+Once toggled on, the extra shield power will take effect and be used
+only while the normal shields are up.  Best used when confronted with
+cluster mines and missles or deadly cannons.
 
 .SH CONTROLS
 
@@ -743,13 +754,21 @@ This toggles the autopilot feature.  You need atleast one Autopilot item
 before this will work.
 .TP 12
 .B keyToggleEmergencyThrust {j Meta Alt}
-This toggles the emergency thrust item.  You need atleast one Emergency
+This toggles the emergency thrust item.  You need at least one emergency
 thrust item, on first turning this on the item is used up and ten seconds
 or so of emergency thrust is placed at your disposal.  The time is only
 used up as you thrust, and hitting this key will return you back to normal
 thrust while conserving the remaining boosted thrust.  If you posses both
 Autopilot and Emergency Thrust items, pressing the Meta or Alt keys will
 give the equivalent of emergency brakes.
+.TP 12
+.B keyToggleEmergencyShield {g}
+This toggles the emergency shield item.  You need at least one emergency
+shield item.  When first turning on, this item is used up and ten seconds
+or so of emergency shield power is placed at your disposal.  The time is 
+only used up as you use your regular shields, and hitting this key again
+will return you back to normal shield power while conserving the remaining
+emergency shield power.
 .TP 12
 .B keyToggleShields {g}
 This toggles shields on, another press will turn them off.  Useful for

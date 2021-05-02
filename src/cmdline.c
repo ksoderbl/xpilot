@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 3.56 1994/03/30 16:50:21 bert Exp $
+/* $Id: cmdline.c,v 3.58 1994/05/23 19:04:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -31,7 +31,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.56 1994/03/30 16:50:21 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.58 1994/05/23 19:04:27 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -111,6 +111,8 @@ char		*scoreTableFileName;	/* Name of score table file */
 int 		MovingItemsRand;	/* Probability for moving items */
 int		ThrowItemOnKillRand;	/* Probability for players items to */
 					/* drop upon beeing killed */
+int		DetonateItemOnKillRand;	/* Probaility for remaining items to */
+					/* detonate on being killed */
 int		nukeMinSmarts;		/* minimum smarts for a nuke */
 int		nukeMinMines;		/* minimum number of mines for nuke */
 float		nukeClusterDamage;	/* multiplier for damage from nuke */
@@ -121,6 +123,8 @@ int		mineFuseTime;		/* Length of time mine is fused */
 float 		movingItemProb;		/* Probability for moving items */
 float		dropItemOnKillProb;	/* Probability for players items to */
 					/* drop when player is killed */
+float		detonateItemOnKillProb;	/* Probaility for remaining items to */
+					/* detonate when player is killed */
 float		destroyItemInCollisionProb;
 float 		itemEnergyPackProb;
 float 		itemTankProb;
@@ -137,6 +141,7 @@ float		itemLaserProb;
 float		itemEmergencyThrustProb;
 float		itemTractorBeamProb;
 float		itemAutopilotProb;
+float		itemEmergencyShieldProb;
 float		itemProbMult;
 float		maxItemDensity;
 int		initialFuel;
@@ -154,6 +159,7 @@ int		initialLasers;
 int		initialEmergencyThrusts;
 int		initialTractorBeams;
 int		initialAutopilots;
+int		initialEmergencyShields;
 
 bool		allowNukes;
 bool		allowClusters;
@@ -166,6 +172,7 @@ bool		missilesOnRadar;	/* Are missiles visible on radar? */
 bool		minesOnRadar;		/* Are mines visible on radar? */
 bool		nukesOnRadar;		/* Are nuke weapons radar visible? */
 bool		distinguishMissiles;	/* Smarts, heats & torps look diff.? */
+int		maxMissilesPerPack;	/* Number of missiles per item. */
 bool		identifyMines;		/* Mines have names displayed? */
 bool		shieldedItemPickup;	/* Pickup items with shields up? */
 bool		shieldedMining;		/* Detach mines with shields up? */
@@ -319,7 +326,7 @@ static optionDesc options[] = {
 	"no", &teamPlay, valBool },
   { "teamAssign", "teamAssign",
 	"Should player be assigned to first non-empty team if team isn't set?",
-	"no", &teamAssign, valBool },
+	"yes", &teamAssign, valBool },
   { "teamImmunity", "teamImmunity",
 	"Should other team members be immune to various shots, thrust etc.?",
 	"yes", &teamImmunity, valBool },
@@ -393,17 +400,26 @@ static optionDesc options[] = {
   { "allowShipShapes", "ShipShapes",
 	"Are players allowed to define their own ship shape?",
 	"True", &allowShipShapes, valBool },
-  { "playersOnRadar", "playersRadar", "Are players visible on the radar",
+  { "playersOnRadar", "playersRadar",
+	"Are players visible on the radar",
 	"True", &playersOnRadar, valBool },
-  { "missilesOnRadar", "missilesRadar", "Are missiles visible on the radar",
+  { "missilesOnRadar", "missilesRadar",
+	"Are missiles visible on the radar",
 	"True", &missilesOnRadar, valBool },
-  { "minesOnRadar", "minesRadar", "Are mines visible on the radar",
+  { "minesOnRadar", "minesRadar",
+	"Are mines visible on the radar",
 	"False", &minesOnRadar, valBool },
-  { "nukesOnRadar", "nukesRadar", "Are nukes visible or highlighted on radar",
+  { "nukesOnRadar", "nukesRadar",
+	"Are nukes visible or highlighted on radar",
 	"True", &nukesOnRadar, valBool },
-  { "distinguishMissiles", "distinguishMissiles", "Are different types of missiles distinguished (by length)",
+  { "distinguishMissiles", "distinguishMissiles",
+	"Are different types of missiles distinguished (by length)",
 	"True", &distinguishMissiles, valBool },
-  { "identifyMines", "identifyMines", "Are mine owner's names displayed",
+  { "maxMissilesPerPack", "maxMissilesPerPack",
+	"Number of missiles gotten by picking up one missile item.",
+	"4", &maxMissilesPerPack, valInt },
+  { "identifyMines", "identifyMines",
+	"Are mine owner's names displayed",
 	"True", &identifyMines, valBool },
   { "shieldedItemPickup", "shieldItem",
 	"Can items be picked up while shields are up?",
@@ -433,6 +449,9 @@ static optionDesc options[] = {
   { "dropItemOnKillProb", "dropItemOnKillProb",
 	"Probability for dropping an item (each item) when you are killed",
 	"0.5", &dropItemOnKillProb, valReal },
+  { "detonateItemOnKillProb", "detonateItemOnKillProb",
+	"Probability for undropped items to detonate when you are killed",
+	"0.5", &detonateItemOnKillProb, valReal },
   { "destroyItemInCollisionProb", "destroyItemInCollisionProb",
 	"Probability for items (some items) to be destroyed in a collision",
 	"0.0", &destroyItemInCollisionProb, valReal },
@@ -488,6 +507,9 @@ static optionDesc options[] = {
   { "itemAutopilotProb", "itemAutopilotProb",
 	"Probability for an Autopilot item to appear",
 	"0", &itemAutopilotProb, valReal },
+  { "itemEmergencyShieldProb", "itemEmergencyShieldProb",
+	"Probability for an Emergency Shield item to appear",
+	"0", &itemEmergencyShieldProb, valReal },
 
   { "initialFuel", "initialFuel",
         "How much fuel players start with",
@@ -534,6 +556,9 @@ static optionDesc options[] = {
   { "initialAutopilots", "initialAutopilots",
         "How many autopilots players start with",
         "0", &initialAutopilots, valInt },
+  { "initialEmergencyShields", "initialEmergencyShields",
+        "How many emergency shields players start with",
+        "0", &initialEmergencyShields, valInt },
 
   { "gameDuration", "time",
 	"Duration of game in minutes (aka. pizza mode)",

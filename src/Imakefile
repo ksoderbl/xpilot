@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.29 1994/03/26 20:25:54 bert Exp $
+/* $Id: Imakefile,v 3.31 1994/05/25 07:40:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -43,7 +43,8 @@ MANFILT = groff -Tlatin1 -man
 #MANFILT = nroff -man
 
 PROGRAMS = xpilot xpilots
-VERSION = 3.1.0
+VERSION = 3.2.0
+LOCALGURU = xpilot@cs.uit.no
 
 /*
  * DEFS should be used for program specific defines.
@@ -70,7 +71,7 @@ VERSION = 3.1.0
  *  LIBDIR			- define to where you want the help-files etc.
  *				  (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
  */
-DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\"  -DLIBDIR=\"$(LIBDIR)/\"
+DEFS = -DLOCALGURU=\"$(LOCALGURU)\"  -DLIBDIR=\"$(LIBDIR)/\"
 
 
 /*
@@ -228,8 +229,8 @@ install::
 	    [ -r $(BINDIR)/$$prog-$(VERSION) ] && rm -f $(BINDIR)/$$prog-$(VERSION); \
 	    ( set -x ; ln $(BINDIR)/$$prog $(BINDIR)/$$prog-$(VERSION) ) \
 	done
-	@cd ../man6; for manpage in *.$(MANEXT); do \
-	    ( set -x ; $(MANFILT) < $$manpage > $(MANDIR)/xpilot.$(MANEXT) ) \
+	@cd ../man6; for manpage in *.6; do \
+	    ( set -x ; $(MANFILT) <$$manpage >$(MANDIR)/xpilot.$(MANEXT) ) \
 	done
 	$(MKDIRHIER) $(LIBDIR)/maps;
 	@cd ../lib; for libfile in *; do \
@@ -240,7 +241,7 @@ install::
 	    fi \
 	done
 	@cd ../lib/maps; for mapfile in *; do \
-	    ( rm -f $(LIBDIR)/mmapaps/$$mapfile; \
+	    ( rm -f $(LIBDIR)/maps/$$mapfile; \
 	      set -x; \
 	      $(INSTALL) -c $(INSTDATFLAGS) $$mapfile $(LIBDIR)/maps ) \
 	done

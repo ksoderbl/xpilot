@@ -1,4 +1,4 @@
-/* $Id: object.h,v 3.37 1994/04/11 21:01:41 bert Exp $
+/* $Id: object.h,v 3.38 1994/05/23 19:15:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -63,6 +63,7 @@
 #define OBJ_TRANSPORTER         (1UL<<28)
 #define OBJ_FIRE		(1UL<<29)
 #define OBJ_PULSE		(1UL<<30)
+#define OBJ_EMERGENCY_SHIELD	(1UL<<31)
 
 #define OBJ_ALL_ITEMS	\
 	OBJ_AFTERBURNER|\
@@ -79,7 +80,8 @@
 	OBJ_TANK|\
 	OBJ_TRACTOR_BEAM|\
 	OBJ_TRANSPORTER|\
-	OBJ_WIDEANGLE_SHOT
+	OBJ_WIDEANGLE_SHOT|\
+	OBJ_EMERGENCY_SHIELD
 
 /*
  * Weapons modifiers.
@@ -114,11 +116,12 @@ typedef struct {
 #define STUN			(1L<<0)
 #define BLIND			(1L<<1)
 
-#define LOCK_NONE		0x00	/* Locked on player */
+#define LOCK_NONE		0x00	/* No lock */
 #define LOCK_PLAYER		0x01	/* Locked on player */
 #define LOCK_VISIBLE		0x02	/* Lock information was on HUD */
 					/* computed just before frame shown */
 					/* and client input checked */
+#define LOCKBANK_MAX		4	/* Maximum number of locks in bank */
 
 #define NOT_CONNECTED		(-1)
 
@@ -247,7 +250,6 @@ struct player {
     long	score;			/* Current score of player */
     long	prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
-    char	*shape_str;		/* ship shape description in text */
     wireobj	*ship;			/* wire model of ship shape */
     float	power;			/* Force of thrust */
     float	power_s;		/* Saved power fiks */
@@ -271,10 +273,13 @@ struct player {
     int		transporters;		/* Number of transporters */
     int		autopilots;		/* Number of autopilots */
     int		emergency_thrusts;	/* Number of emergency thrusts */
+    int		emergency_shields;	/* Number of emergency shields */
     int		tractor_beams;		/* Number of tractor beams */
 
     int		emergency_thrust_left;	/* how much emergency thrust left */
     int		emergency_thrust_max;	/* maximum time left */
+    int		emergency_shield_left;	/* how much emergency shield left */
+    int		emergency_shield_max;	/* maximum time left */
     float	auto_power_s;		/* autopilot saves of current */
     float	auto_turnacc_s;		/* power, turnacc, turnspeed and */
     float	auto_turnspeed_s;	/* turnresistance settings. Restored */
@@ -305,6 +310,7 @@ struct player {
 	position    pos;		/* Position of locked object */
 	float	    distance;		/* Distance to object */
     } lock;
+    int		lockbank[LOCKBANK_MAX]; /* Saved player locks */
 
     char	mychar;			/* Special char for player */
     char	prev_mychar;		/* Special char for player */

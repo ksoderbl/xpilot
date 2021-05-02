@@ -1,4 +1,4 @@
-/* $Id: xinit.c,v 3.61 1994/02/17 11:02:17 bert Exp $
+/* $Id: xinit.c,v 3.62 1994/05/23 19:26:49 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.61 1994/02/17 11:02:17 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.62 1994/05/23 19:26:49 bert Exp $";
 #endif
 
 #if defined(__cplusplus)
@@ -117,12 +117,13 @@ static struct {
 #include "items/itemEmergencyThrust.xbm"
 #include "items/itemTractorBeam.xbm"
 #include "items/itemAutopilot.xbm"
+#include "items/itemEmergencyShield.xbm"
 
 /* NB!  Is dependent on the order of the items in item.h */
 static struct {
     char*	data;
     char*	keysText;
-} itemBitmapData[NUM_ITEMS] = {
+} itemBitmapData[NUM_ITEMS + 4 /*safety margin for future extensions*/] = {
     {	itemEnergyPack_bits,
 	    "Extra energy/fuel"					},
     {	itemWideangleShot_bits,
@@ -173,6 +174,9 @@ static struct {
 	    "Autopilot; "
 	    "when on, the ship will turn and thrust against the "
             "direction of travel" },
+    {	itemEmergencyShield_bits,
+	    "EmergencyShield; "
+	    "gives emergency shield capabilities for a limited period" },
 };
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
     
@@ -506,6 +510,75 @@ static void Get_visual_info(void)
 
 
 /*
+ * Initialize miscellaneous window hints and properties.
+ */
+int Init_disp_prop(Display *d, Window win, int w, int h, int x, int y,
+		   int flags)
+{
+    extern char	**Argv;
+    extern int	Argc;
+    XClassHint	xclh;
+    XWMHints	xwmh;
+    XSizeHints	xsh;
+    char	msg[256];
+
+    xwmh.flags	   = InputHint|StateHint|IconPixmapHint; 
+    xwmh.input	   = True;
+    xwmh.initial_state = NormalState;
+    xwmh.icon_pixmap   = XCreateBitmapFromData(d, win,
+					       (char *)icon_bits,
+					       icon_width, icon_height);
+
+    xsh.flags = (flags|PMinSize|PMaxSize|PBaseSize|PResizeInc);
+    xsh.width = w;
+    xsh.base_width =
+    xsh.min_width = MIN_TOP_WIDTH;
+    xsh.max_width = MAX_TOP_WIDTH;
+    xsh.width_inc = 1;
+    xsh.height = h;
+    xsh.base_height =
+    xsh.min_height = MIN_TOP_HEIGHT;
+    xsh.max_height = MAX_TOP_HEIGHT;
+    xsh.height_inc = 1;
+    xsh.x = x;
+    xsh.y = y;
+
+    xclh.res_name = NULL;	/* NULL: Automatically uses Argv[0], */
+    xclh.res_class = "XPilot"; /* stripped of directory prefixes. */
+
+    /*
+     * Set the above properties.
+     */
+    XSetWMProperties(d, win, NULL, NULL, Argv, Argc,
+		     &xsh, &xwmh, &xclh);
+
+    /*
+     * Now initialize icon and window title name.
+     */
+    if (titleFlip)
+	sprintf(msg, "Successful connection to server at \"%s\".",
+		servername);
+    else
+	sprintf(msg, "%s -- Server at \"%s\".", TITLE, servername);
+    XStoreName(d, win, msg);
+
+    sprintf(msg, "%s:%s", name, servername);
+    XSetIconName(d, win, msg);
+
+    if (d != dpy)
+	    return;
+
+    /*
+     * Specify IO error handler and the WM_DELETE_WINDOW atom in
+     * an attempt to catch 'nasty' quits.
+     */
+    ProtocolAtom = XInternAtom(d, "WM_PROTOCOLS", False);
+    KillAtom = XInternAtom(d, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(d, win, &KillAtom, 1);
+    XSetIOErrorHandler(FatalError);
+}
+
+/*
  * The following function initializes a player window.
  * It returns 0 if the initialization was successful, 
  * or -1 if it couldn't initialize the double buffering routine.
@@ -519,7 +592,6 @@ int Init_window(void)
 				x, y;
     unsigned			w, h;
     XGCValues			xgc;
-    char			msg[256];
     int				button_form,
 				menu_button;
     XSetWindowAttributes	sattr;
@@ -710,7 +782,14 @@ int Init_window(void)
 			0, dispDepth,
 			InputOutput, visual,
 			mask, &sattr);
-
+    if (kdpy) {
+	    int scr = DefaultScreen(kdpy);
+	    keyboard = XCreateSimpleWindow(kdpy,
+					   DefaultRootWindow(kdpy),
+					   top_x, top_y,
+					   top_width, top_height,
+					   0, 0, BlackPixel(dpy, scr));
+    }
 
     /*
      * Create item bitmaps
@@ -892,74 +971,17 @@ int Init_window(void)
     XSelectInput(dpy, top,
 		 KeyPressMask | KeyReleaseMask
 		 | FocusChangeMask | StructureNotifyMask);
+    if (kdpy)
+	    XSelectInput(kdpy, keyboard,
+			 KeyPressMask | KeyReleaseMask | FocusChangeMask);
     XSelectInput(dpy, radar, ExposureMask);
     XSelectInput(dpy, players, ExposureMask);
     XSelectInput(dpy, draw, 0);
 
-
-    /*
-     * Initialize miscellaneous window hints and properties.
-     */
-    {
-	extern char	**Argv;
-	extern int	Argc;
-	XClassHint	xclh;
-	XWMHints	xwmh;
-	XSizeHints	xsh;
-
-	xwmh.flags	   = InputHint|StateHint|IconPixmapHint; 
-	xwmh.input	   = True;
-	xwmh.initial_state = NormalState;
-	xwmh.icon_pixmap   = XCreateBitmapFromData(dpy, top,
-						   (char *)icon_bits,
-						   icon_width, icon_height);
-
-	xsh.flags = (top_flags|PMinSize|PMaxSize|PBaseSize|PResizeInc);
-	xsh.width = top_width;
-	xsh.base_width =
-	xsh.min_width = MIN_TOP_WIDTH;
-	xsh.max_width = MAX_TOP_WIDTH;
-	xsh.width_inc = 1;
-	xsh.height = top_height;
-	xsh.base_height =
-	xsh.min_height = MIN_TOP_HEIGHT;
-	xsh.max_height = MAX_TOP_HEIGHT;
-	xsh.height_inc = 1;
-	xsh.x = top_x;
-	xsh.y = top_y;
-
-	xclh.res_name = NULL;	/* NULL: Automatically uses Argv[0], */
-	xclh.res_class = "XPilot"; /* stripped of directory prefixes. */
-
-	/*
-	 * Set the above properties.
-	 */
-	XSetWMProperties(dpy, top, NULL, NULL, Argv, Argc,
-			 &xsh, &xwmh, &xclh);
-
-	/*
-	 * Now initialize icon and window title name.
-	 */
-	if (titleFlip)
-	    sprintf(msg, "Successful connection to server at \"%s\".",
-		    servername);
-	else
-	    sprintf(msg, "%s -- Server at \"%s\".", TITLE, servername);
-	XStoreName(dpy, top, msg);
-
-	sprintf(msg, "%s:%s", name, servername);
-	XSetIconName(dpy, top, msg);
-
-	/*
-	 * Specify IO error handler and the WM_DELETE_WINDOW atom in
-	 * an attempt to catch 'nasty' quits.
-	 */
-	ProtocolAtom = XInternAtom(dpy, "WM_PROTOCOLS", False);
-	KillAtom = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
-	XSetWMProtocols(dpy, top, &KillAtom, 1);
-	XSetIOErrorHandler(FatalError);
-    }
-
+    Init_disp_prop(dpy, top, top_width, top_height, top_x, top_y, top_flags);
+    if (kdpy)
+	    Init_disp_prop(kdpy, keyboard, top_width, top_height,
+			   top_x, top_y, top_flags);
 
     /*
      * Initialize misc. pixmaps if we're not color switching.
@@ -977,16 +999,20 @@ int Init_window(void)
     }
 
     XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
-
+    if (kdpy)
+	    XAutoRepeatOff(kdpy);
 
     /*
      * Maps the windows, makes the visible. Voila!
      */
     XMapSubwindows(dpy, top);
     XMapWindow(dpy, top);
-
-
     XSync(dpy, False);
+
+    if (kdpy) {
+	    XMapWindow(kdpy, keyboard);
+	    XSync(kdpy, False);
+    }
 
     return 0;
 }
@@ -1986,6 +2012,11 @@ void Quit(void)
 	}
 	XCloseDisplay(dpy);
 	dpy = NULL;
+	if (kdpy) {
+		XAutoRepeatOn(kdpy);
+		XCloseDisplay(kdpy);
+		kdpy = NULL;
+	}
     }
 }
 

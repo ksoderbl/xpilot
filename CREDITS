@@ -1,6 +1,16 @@
-This is a very abbreviated credit list.  We couldn't possibly enumerate
-all the people who have been involved in XPilot, especially since we have
-no such list at hand. :)
+This is a very abbreviated credit list.  We couldn't possibly enumerate all
+the people who have been involved in XPilot, especially since we have no such
+list at hand. :)  If you find someone (yourself!?) missing from this list
+then please don't hesitate to complain to the authors at xpilot@cs.uit.no.
+
+Release 3.2 credits:
+
+	Harvey Thompson			Bugfixes and new code.
+	Scott W. Adkins			Emergency Shield.
+	John E. Norlin			Robots ship shapes.
+	Patrick Kenny			GOD log, bugfix.
+	Pete Ford			New ship shape format.
+	Jyke Jokinen			xpilot host alias.
 
 Release 3.1 credits:
 
@@ -8,8 +18,9 @@ Release 3.1 credits:
 					features, ideas and cleanups.  Thanks!
 	Mark Boyns			Sound.
 	Stig Sæther Bakken		Imakefile, testing & feedback.
-	Scott W. Adkins			Ship shapes, item bitmaps.
+	Scott W. Adkins			Ship shapes.
 	Tony Plate			Missile length and names.
+	Steven Singer			Sun tester & knowledge provider. :-)
 
 Release 3.0 credits:
 

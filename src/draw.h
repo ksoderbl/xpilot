@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 3.20 1994/04/12 13:43:10 bjoerns Exp $
+/* $Id: draw.h,v 3.22 1994/05/24 14:26:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -71,10 +71,31 @@
 
 #define CLOAK_FAILURE	    130
 
+/*
+ * Please don't change any of these maxima.
+ * It will create incompatibilities and frustration.
+ */
+#define MIN_SHIP_PTS	    3
+#define MAX_SHIP_PTS	    24
+#define MAX_GUN_PTS	    3
+#define MAX_LIGHT_PTS	    3
+#define MAX_RACK_PTS	    4
+
 typedef struct {			/* Defines wire-obj, i.e. ship */
-    position	*pts[RES];		/* the shape rotated many ways */
+    position	*pts[MAX_SHIP_PTS];	/* the shape rotated many ways */
     int		num_points;		/* total points in object */
-    int		pt1, pt2;		/* which two points are the back */
+    position	engine[RES];		/* Engine position */
+    position	m_gun[RES];		/* Main gun position */
+    int		num_l_gun,
+		num_r_gun;		/* number of additional cannons */
+    position	*l_gun[MAX_GUN_PTS],	/* Additional cannon positions, left*/
+     		*r_gun[MAX_GUN_PTS];	/* Additional cannon positions, right*/
+    int		num_l_light,		/* Number of lights */
+		num_r_light;
+    position	*l_light[MAX_LIGHT_PTS], /* Left and right light positions */
+    		*r_light[MAX_LIGHT_PTS];
+    int		num_m_rack;		/* Number of missile racks */
+    position	*m_rack[MAX_RACK_PTS];
 } wireobj;
 
 typedef unsigned long	Pixel;
@@ -84,5 +105,6 @@ extern void Free_ship_shape(wireobj *w);
 extern wireobj *Parse_shape_str(char *str);
 extern wireobj *Convert_shape_str(char *str);
 extern int Validate_shape_str(char *str);
+extern void Convert_ship_2_string(wireobj *w, char *buf, unsigned shape_version);
 
 #endif

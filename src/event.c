@@ -1,4 +1,4 @@
-/* $Id: event.c,v 3.43 1994/04/14 08:13:15 bert Exp $
+/* $Id: event.c,v 3.44 1994/05/23 19:08:34 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -34,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.43 1994/04/14 08:13:15 bert Exp $";
+    "@(#)$Id: event.c,v 3.44 1994/05/23 19:08:34 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -217,6 +217,11 @@ int Handle_keyboard(int ind)
 	    case KEY_LOAD_MODIFIERS_2:
 	    case KEY_LOAD_MODIFIERS_3:
 	    case KEY_LOAD_MODIFIERS_4:
+	    case KEY_LOAD_LOCK_1:
+	    case KEY_LOAD_LOCK_2:
+	    case KEY_LOAD_LOCK_3:
+	    case KEY_LOAD_LOCK_4:
+	    case KEY_REPROGRAM:
 	    case KEY_SWAP_SETTINGS:
 	    case KEY_INCREASE_POWER:
 	    case KEY_DECREASE_POWER:
@@ -467,12 +472,38 @@ int Handle_keyboard(int ind)
 		CLEAR_MODS(pl->mods);
 		break;
 
+	    case KEY_REPROGRAM:
+		SET_BIT(pl->status, REPROGRAM);
+		break;
+
 	    case KEY_LOAD_MODIFIERS_1:
 	    case KEY_LOAD_MODIFIERS_2:
 	    case KEY_LOAD_MODIFIERS_3:
-	    case KEY_LOAD_MODIFIERS_4:
-		pl->mods = pl->modbank[key - KEY_LOAD_MODIFIERS_1];
+	    case KEY_LOAD_MODIFIERS_4: {
+		modifiers *m = &(pl->modbank[key - KEY_LOAD_MODIFIERS_1]);
+
+		if (BIT(pl->status, REPROGRAM))
+		    *m = pl->mods;
+		else
+		    pl->mods = *m;
 		break;
+	    }
+
+	    case KEY_LOAD_LOCK_1:
+	    case KEY_LOAD_LOCK_2:
+	    case KEY_LOAD_LOCK_3:
+	    case KEY_LOAD_LOCK_4: {
+		int *l = &(pl->lockbank[key - KEY_LOAD_LOCK_1]);
+
+		if (BIT(pl->status, REPROGRAM)) {
+		    if (BIT(pl->lock.tagged, LOCK_PLAYER))
+			*l = pl->lock.pl_id;
+		} else if (*l != NOT_CONNECTED) {
+		    pl->lock.pl_id = *l;
+		    SET_BIT(pl->lock.tagged, LOCK_PLAYER);
+		}
+		break;
+	    }
 
 	    case KEY_TOGGLE_AUTOPILOT:
 		if (BIT(pl->have, OBJ_AUTOPILOT))
@@ -482,6 +513,11 @@ int Handle_keyboard(int ind)
 	    case KEY_EMERGENCY_THRUST:
 		if (BIT(pl->have, OBJ_EMERGENCY_THRUST))
 		    Emergency_thrust(ind,!BIT(pl->used, OBJ_EMERGENCY_THRUST));
+		break;
+
+	    case KEY_EMERGENCY_SHIELD:
+		if (BIT(pl->have, OBJ_EMERGENCY_SHIELD))
+		    Emergency_shield(ind,!BIT(pl->used, OBJ_EMERGENCY_SHIELD));
 		break;
 
 	    case KEY_DROP_MINE:
@@ -565,6 +601,9 @@ int Handle_keyboard(int ind)
 
 			if (BIT(pl->used, OBJ_EMERGENCY_THRUST))
 			    Emergency_thrust(ind, 0);
+
+			if (BIT(pl->used, OBJ_EMERGENCY_SHIELD))
+			    Emergency_shield(ind, 0);
 
 			if (!BIT(pl->used, OBJ_AUTOPILOT))
 			    Autopilot(ind, 1);
@@ -738,6 +777,10 @@ int Handle_keyboard(int ind)
 		if (BIT(pl->used, OBJ_AUTOPILOT))
 		    Autopilot(ind, 0);
 		CLR_BIT(pl->status, THRUSTING);
+		break;
+
+	    case KEY_REPROGRAM:
+		CLR_BIT(pl->status, REPROGRAM);
 		break;
 
 	    default:

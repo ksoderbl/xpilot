@@ -1,4 +1,4 @@
-/* $Id: rules.c,v 3.27 1994/04/11 21:02:29 bert Exp $
+/* $Id: rules.c,v 3.28 1994/05/23 19:23:26 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -30,7 +30,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.27 1994/04/11 21:02:29 bert Exp $";
+    "@(#)$Id: rules.c,v 3.28 1994/05/23 19:23:26 bert Exp $";
 #endif
 
 
@@ -77,6 +77,7 @@ void Set_initial_resources(void)
     CLR_BIT(DEF_HAVE,
 	OBJ_CLOAKING_DEVICE |
 	OBJ_EMERGENCY_THRUST |
+	OBJ_EMERGENCY_SHIELD |
 	OBJ_TRACTOR_BEAM |
 	OBJ_AUTOPILOT);
 
@@ -84,6 +85,8 @@ void Set_initial_resources(void)
 	SET_BIT(DEF_HAVE, OBJ_CLOAKING_DEVICE);
     if (initialEmergencyThrusts > 0)
 	SET_BIT(DEF_HAVE, OBJ_EMERGENCY_THRUST);
+    if (initialEmergencyShields > 0)
+	SET_BIT(DEF_HAVE, OBJ_EMERGENCY_SHIELD);
     if (initialTractorBeams > 0)
 	SET_BIT(DEF_HAVE, OBJ_TRACTOR_BEAM);
     if (initialAutopilots > 0)
@@ -137,6 +140,7 @@ void Set_world_rules(void)
     Init_item(ITEM_TRANSPORTER, itemTransporterProb);
     Init_item(ITEM_LASER, itemLaserProb);
     Init_item(ITEM_EMERGENCY_THRUST, itemEmergencyThrustProb);
+    Init_item(ITEM_EMERGENCY_SHIELD, itemEmergencyShieldProb);
     Init_item(ITEM_TRACTOR_BEAM, itemTractorBeamProb);
     Init_item(ITEM_AUTOPILOT, itemAutopilotProb);
     DEF_USED &= DEF_HAVE;
@@ -147,6 +151,7 @@ void Set_world_rules(void)
     LIMIT(dropItemOnKillProb, 0.0, 1.0);
     LIMIT(movingItemProb, 0.0, 1.0);
     ThrowItemOnKillRand = (int)(dropItemOnKillProb * 128);
+    DetonateItemOnKillRand = (int)(detonateItemOnKillProb * 128);
     MovingItemsRand = (int)(movingItemProb * 128);
 
     Set_initial_resources();

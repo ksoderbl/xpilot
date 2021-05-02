@@ -1,4 +1,4 @@
-/* $Id: item.h,v 3.11 1994/02/07 13:19:50 bjoerns Exp $
+/* $Id: item.h,v 3.12 1994/05/23 19:10:15 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -39,7 +39,8 @@
 #define ITEM_EMERGENCY_THRUST	12
 #define ITEM_TRACTOR_BEAM	13
 #define ITEM_AUTOPILOT		14
-#define NUM_ITEMS		15
+#define ITEM_EMERGENCY_SHIELD	15
+#define NUM_ITEMS		16
 
 /* Each item is ITEM_SIZE x ITEM_SIZE */
 #define ITEM_SIZE		16

@@ -1,4 +1,4 @@
-/* $Id: rules.h,v 3.19 1994/03/30 17:06:15 bert Exp $
+/* $Id: rules.h,v 3.20 1994/05/23 19:23:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -62,6 +62,7 @@
 #define RECREATE		(1L<<17)	/* Recreate ball */
 #define FROMBOUNCE		(1L<<18)	/* Spark from wall bounce */
 #define OWNERIMMUNE		(1L<<19)	/* Owner is immune to object */
+#define REPROGRAM		(1L<<20)	/* Player reprogramming */
 
 /* #define WAITING_SHOTS	(1L<<32) */
 /* #define SHOT_GRAVITY		(1L<<32) */

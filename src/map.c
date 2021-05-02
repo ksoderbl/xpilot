@@ -1,4 +1,4 @@
-/* $Id: map.c,v 3.29 1994/02/23 10:54:07 bert Exp $
+/* $Id: map.c,v 3.31 1994/05/23 19:11:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -38,7 +38,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.29 1994/02/23 10:54:07 bert Exp $";
+    "@(#)$Id: map.c,v 3.31 1994/05/23 19:11:02 bert Exp $";
 #endif
 
 
@@ -492,6 +492,7 @@ void Grok_map(void)
 		    World.targets[World.NumTargets].dead_time = 0;
 		    World.targets[World.NumTargets].damage = TARGET_DAMAGE;
 		    World.targets[World.NumTargets].conn_mask = (unsigned)-1;
+		    World.targets[World.NumTargets].update_mask = 0;
 		    World.targets[World.NumTargets].last_change = loops;
 		    World.NumTargets++;
 		    break;
@@ -523,6 +524,8 @@ void Grok_map(void)
 			if (c >= '0' && c <= '9') {
 			    World.base[World.NumBases].team = c - '0';
 			    World.teams[c - '0'].NumBases++;
+			    if (World.teams[c - '0'].NumBases == 1)
+				World.NumTeamBases++;
 			} else {
 			    World.base[World.NumBases].team = 0;
 			}

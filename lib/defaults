@@ -18,6 +18,7 @@ itemLaserProb:	        1.60596e-08
 itemEmergencyThrustProb:1.60596e-08
 itemTractorBeamProb:    2.74620e-08
 itemAutoPilotProb:      1.60596e-08
+itemEmergencyShieldProb:1.60596e-08
 
 # A few items appear moving.  It is fun to chase them
 # when they are bouncing.

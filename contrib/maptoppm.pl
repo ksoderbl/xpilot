@@ -91,7 +91,7 @@ while (<>)
 	{
 	    s/\s//g;
 	    ($dummy, $dummy, $end) = split(/:/);
-	    print "P3\n$width $height\n255\n"
+	    print "P3\n$width $height\n255\n";
 	}
 	next;
     }
@@ -103,10 +103,10 @@ while (<>)
     s/[^$symbols]/ /g;		# get rid characters we don't care about
 
     s/[$space]/$black /g;
-    s/[$wall]/$gray /g;
+    s/[$wall]/$blue /g;
     s/[$fuel]/$red /g;
     s/[$cannon]/$white /g;
-    s/[$base]/$blue /g;
+    s/[$base]/$gray /g;
 
     s/[$gravLeft]/$green /g;
     s/[$gravRight]/$green /g;

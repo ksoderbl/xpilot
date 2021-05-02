@@ -1,4 +1,4 @@
-/* $Id: xevent.c,v 3.30 1994/02/07 13:20:59 bjoerns Exp $
+/* $Id: xevent.c,v 3.31 1994/05/23 19:26:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -366,6 +366,36 @@ int xevent(int new_input)
 	}
     }
 
+    if (kdpy) {
+	n = XEventsQueued(kdpy, type);
+	for (i = 0; i < n; i++) {
+	    XNextEvent(kdpy, &event);
+	    switch (event.type) {
+	    case KeyPress:
+	    case KeyRelease:
+		Key_event(&event);
+		break;
+
+		/* Back in play */
+	    case FocusIn:
+		gotFocus = true;
+		XAutoRepeatOff(kdpy);
+		break;
+
+		/* Probably not playing now */
+	    case FocusOut:
+	    case UnmapNotify:
+		gotFocus = false;
+		XAutoRepeatOn(kdpy);
+		break;
+
+	    case MappingNotify:
+		XRefreshKeyboardMapping(&event.xmapping);
+		break;
+	    }
+	}
+    }
+		
     return 0;
 }
 

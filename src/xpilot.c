@@ -1,4 +1,4 @@
-/* $Id: xpilot.c,v 3.42 1994/04/05 20:27:38 bert Exp $
+/* $Id: xpilot.c,v 3.43 1994/05/25 07:34:45 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -72,7 +72,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.42 1994/04/05 20:27:38 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.43 1994/05/25 07:34:45 bert Exp $";
 #endif
 
 #if defined(LINUX) || defined(VMS)
@@ -109,8 +109,6 @@ int			Argc;
 
 static int Query_all(int sockfd, int port, char *msg, int msglen);
 static int Query_fudged(int sockfd, int port, char *msg, int msglen);
-
-extern void usleep(unsigned long);
 
 
 static void printfile(char *filename)
@@ -866,7 +864,7 @@ static int Query_subnet(int sockfd,
 	 * are still transmitting packets for non-existing servers
 	 * and the server packet colliding with one of our packets.
 	 */
-	usleep(10000);
+	usleep((unsigned long)10000);
     }
 
     return 0;

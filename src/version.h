@@ -1,4 +1,4 @@
-/* $Id: version.h,v 3.47 1994/04/25 08:51:30 bert Exp $
+/* $Id: version.h,v 3.49 1994/05/25 07:39:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -35,8 +35,8 @@
  * the word "beta" or "alpha".
  */
 #define VERSION_MAJOR		"3"
-#define VERSION_MINOR		"1"
-#define VERSION_PATCHLEVEL	"3"
+#define VERSION_MINOR		"2"
+#define VERSION_PATCHLEVEL	"0"
 #define VERSION_STATUS		""
 
 /*

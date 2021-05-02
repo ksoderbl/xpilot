@@ -1,4 +1,4 @@
-/* $Id: map.h,v 3.11 1994/02/07 13:19:57 bjoerns Exp $
+/* $Id: map.h,v 3.13 1994/05/23 19:11:31 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
@@ -129,6 +129,7 @@ typedef struct {
     int        dead_time;
     int        damage;
     unsigned	conn_mask;
+    unsigned 	update_mask;
     long	last_change;
 } target_t;
 
@@ -157,6 +158,7 @@ typedef struct {
 
     team_t	teams[MAX_TEAMS];
 
+    int		NumTeamBases;      /* How many 'different' teams are allowed */
     int		NumBases;
     base_t	*base;
     int		NumFuels;

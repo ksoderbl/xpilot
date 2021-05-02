@@ -1,0 +1,44 @@
+
+Hi All !
+
+Some fixed buggs :
+
+    - Color fixed for the text on the bitmap (when an error occurs
+      on the maps2image program)
+       Thanks to Hugues Crepin (chugues@droopy.inria.fr)
+    - If TkXpInterface is executed in background the telnet don't crash :
+       Thanks to Bert Gijsbers (bert@mc.bio.uva.nl)
+    - The filter of the remote server list is based on the lexically order.
+       Thanks to Bert Gijsbers (bert@mc.bio.uva.nl)
+    - The temporary file (tkxpI.upd) is suppressed.
+       Thanks to Hugues Crepin (chugues@droopy.inria.fr)
+
+Some improvements :
+
+- The server mode accepts the new xpilots options :
+  maxMissilesPerPack
+  detonateItemOnKillProb
+  itemEmergencyShieldProb
+  initialEmergencyShields
+- The server mode accepts the New ship shapes format but DOESN'T verify
+  if it is accepted by your current client.
+
+- The ship shapes definition (in TkXpI.shp) accepts the multilines format.
+- You can for a running local server (without restarted it.):
+     - change the initial items values
+     - change the number of robots
+     - Lock or Unlock the game
+     - Shut down or Stop the shut down
+     - Send a message of God to the player 
+- The "Search" entry box in now on the main panel of the metaserver menu.
+- In the Meta server menu, the results of the "Status" option is filtered.
+- In the installation in the Makefile, the user can set a filter for
+  the remote servers with the Xpilots version to avoid the display of 
+  some old and incompatble version of xpilots.
+- For the monochrome displays, TkXpInterface is in Black on White,
+  the "-reverse" option on the  TkXpInterface commande line toggles it
+  in White on Black.
+
+- etc.......
+Regards
+Ramdane
