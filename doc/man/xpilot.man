@@ -4,7 +4,7 @@
 .\"
 .TH XPILOT  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.5.1: May 13th, 1996
+.ds ]W XPilot 3.6.2: Feb 25th, 1997
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -949,7 +949,12 @@ and finally in $HOME/.xpilotrc.
 If the LANG environment variable is undefined or if that file doesn't
 exist then it will look for the file as if LANG had been undefined.
 Resources defined in files listed later will override resources in
-files listed earlier.  All of these resources can be overridden by
+files listed earlier.
+If the
+.B XPILOTRC
+environment variable
+is defined then its value is used instead of $HOME/.xpilotrc.
+All of these resources can be overridden by
 their corresponding command line arguments.
 .RS 5
 .TP 12
@@ -1320,19 +1325,19 @@ Please also note that xpilot can be addictive, and strenous
 for both you and your keyboard.  We take no responsibility. :)
 
 
-There is a \fBmeta server\fP running on \fBxpilot.cs.uit.no\fP,
+There is a \fBmeta server\fP running on \fBmeta.xpilot.org\fP,
 port \fB4400\fP, into which all servers registers.  This way you
 can easily check if there are any servers running nearby.  To use
 it, try:
 .IP
-.B telnet xpilot.cs.uit.no 4400
+.B telnet meta.xpilot.org 4400
 .B help
 .B list
 .PP
 
 Or:
 .IP
-.B telnet xpilot.cs.uit.no 4401
+.B telnet meta.xpilot.org 4401
 .PP
 
 If you experience any problems with `jerkiness', you should try
@@ -1362,18 +1367,30 @@ performance and computer load.  The maximum value of
 \fIreceiveWindowSize\fP is four.
 
 
+.SH ENVIRONMENT
+
+If
+.B XPILOTRC
+is set then its value is used instead of $HOME/.xpilotrc
+to find the file containing the XPilot resources.
+.B XPILOTUSER
+and 
+.B XPILOTHOST
+set the loginname and hostname as reported to the xpilots server.
+
+
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoerns@acm.org> and
-Ken Ronny Schouten <kenrsc@stud.cs.uit.no> from the University of Tromsø, and
-Bert Gÿsbers <bert@mc.bio.uva.nl> from the University of Amsterdam.
+Bjørn Stabell <bjoern@xpilot.org> and
+Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, and
+Bert Gÿsbers <bert@xpilot.org> from the University of Amsterdam.
 
 
 .SH BUG REPORTS
 
 The product is seemingly stable, so bug reports are highly
-appreciated.  Send email to \fBxpilot@cs.uit.no\fP and we will
+appreciated.  Send email to \fBxpilot@xpilot.org\fP and we will
 see what we can do.  We merely ask that you remember to include
 the following information:
 .IP
@@ -1385,7 +1402,7 @@ the following information:
 .TP
 \(bu Which Xresources you're using.
 .TP
-\(bu The full version of XPilot, i.e., 3.5.1
+\(bu The full version of XPilot, i.e., 3.6.2
 .TP
 \(bu What the bug looks like (symptoms)
 .TP

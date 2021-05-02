@@ -1,10 +1,10 @@
-/* $Id: net.c,v 3.31 1996/05/02 16:05:49 bert Exp $
+/* $Id: net.c,v 3.34 1996/10/13 15:01:10 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #if defined(__hpux)
 #include <time.h>
@@ -385,7 +386,7 @@ int Sockbuf_copy(sockbuf_t *dest, sockbuf_t *src, int len)
 }
 
 #if STDVA
-int Packet_printf(sockbuf_t *sbuf, char *fmt, ...)
+int Packet_printf(sockbuf_t *sbuf, const char *fmt, ...)
 #else
 int Packet_printf(va_alist)
     va_dcl
@@ -577,7 +578,7 @@ int Packet_printf(va_alist)
 }
 
 #if STDVA
-int Packet_scanf(sockbuf_t *sbuf, char *fmt, ...)
+int Packet_scanf(sockbuf_t *sbuf, const char *fmt, ...)
 #else
 int Packet_scanf(va_alist)
     va_dcl

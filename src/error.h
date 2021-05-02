@@ -1,10 +1,10 @@
-/* $Id: error.h,v 3.4 1995/07/13 22:02:49 bjoerns Exp $
+/* $Id: error.h,v 3.7 1996/10/13 15:01:09 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
  * Gaute Nessan, University of Tromsoe (gaute@staff.cs.uit.no).
  *
- * Modified by Bjoern Stabell (bjoerns@staff.cs.uit.no).
+ * Modified by Bjoern Stabell <bjoern@xpilot.org>.
  */
 
 #ifndef	ERROR_H
@@ -18,21 +18,15 @@
 #endif
 #include <errno.h>
 #include <stdio.h>
-#if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
-#   include <stdarg.h>
-#else
-#   include <varargs.h>
-#endif
-#include <string.h>
 
 #if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
-    extern void init_error(char *prog);
-    extern void error(char *fmt, ...);
+#   include <stdarg.h>
+    extern void error(const char *fmt, ...);
 #else
-    extern void init_error();
+#   include <varargs.h>
     extern void error();
 #endif
 
-extern void init_error(char *prog);
+extern void init_error(const char *prog);
 
 #endif	/* ERROR_H */

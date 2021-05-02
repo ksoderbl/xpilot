@@ -1,10 +1,10 @@
-/* $Id: hpaudio.c,v 3.6 1995/08/19 16:17:49 bert Exp $
+/* $Id: hpaudio.c,v 3.7 1996/10/06 00:01:08 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 /*
- * Audio driver for HP-UX Aserver by Bert Gijsbers (bert@mc.bio.uva.nl).
+ * Audio driver for HP-UX Aserver by Bert Gijsbers <bert@xpilot.org>.
  * Note that the Aserver and HP audio system seems to be a misdesign.
  * At least I'm not able to get XPilot to play sounds on it satisfactorily and
  * others have reported similar difficulties getting sounds to work on HPs.

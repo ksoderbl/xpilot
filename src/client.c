@@ -1,10 +1,10 @@
-/* $Id: client.c,v 3.78 1996/05/13 12:16:45 bert Exp $
+/* $Id: client.c,v 3.81 1996/10/13 15:01:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <string.h>
 #if defined(__hpux)
 #include <time.h>
 #else
@@ -964,7 +965,7 @@ int Handle_leave(int id)
 	 */
 	if (other->mychar != 'T'
 	    && other->mychar != 'R') {
-	    sprintf(msg, "%s left the game.", other->name);
+	    sprintf(msg, "%s left this world.", other->name);
 	    Add_message(msg);
 	}
 	num_others--;

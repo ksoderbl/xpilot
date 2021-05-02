@@ -1,10 +1,10 @@
-/* $Id: xinit.h,v 3.37 1996/04/27 18:39:09 bert Exp $
+/* $Id: xinit.h,v 3.42 1996/12/15 21:30:56 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,10 +35,6 @@
 
 #define MAX_POINTER_BUTTONS 5
 
-#define HaveColor(d)							\
-    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor		\
-     || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
-
 extern Atom		ProtocolAtom, KillAtom;
 extern int		buttonColor, windowColor, borderColor;
 extern int		ButtonHeight;
@@ -60,8 +56,7 @@ extern int		num_spark_colors;
 /*
  * Prototypes for xinit.c
  */
-extern int Parse_colors(Colormap cmap);
-extern void List_visuals(void);
+extern const char* Item_get_text(int i);
 extern int Init_top(void);
 extern int Init_windows(void);
 extern int Alloc_msgs(void);
@@ -69,6 +64,7 @@ extern void Free_msgs(void);
 extern void Expose_info_window(void);
 extern void Expose_button_window(int color, Window w);
 extern void Info(Window w);
+extern void Talk_resize(void);
 extern void Talk_cursor(bool visible);
 extern void Talk_map_window(bool map);
 extern int Talk_do_event(XEvent *event);
@@ -78,15 +74,21 @@ extern void Draw_score_table(void);
 extern void Resize(Window w, int width, int height);
 
 extern int DrawShadowText(Display*, Window w, GC gc,
-			  int x_border, int start_y, char *str,
+			  int x_border, int start_y, const char *str,
 			  unsigned long fg, unsigned long bg);
 extern void ShadowDrawString(Display*, Window w, GC gc,
-			     int x, int start_y, char *str,
+			     int x, int start_y, const char *str,
 			     unsigned long fg, unsigned long bg);
-void About(Window w);
-void Expose_about_window(void);
-int Handle_motd(long off, char *buf, int len, long filesize);
-int Startup_server_motd(void);
+/*
+ * about.c
+ */
+extern int About_callback(int, void *, const char **);
+extern int Keys_callback(int, void *, const char **);
+extern int Motd_callback(int, void *, const char **);
+extern void About(Window w);
+extern void Expose_about_window(void);
+extern int Handle_motd(long off, char *buf, int len, long filesize);
+extern int Startup_server_motd(void);
 
 #endif
 

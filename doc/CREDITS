@@ -1,12 +1,21 @@
 This is a very abbreviated credit list.  We couldn't possibly enumerate all
 the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
-then please don't hesitate to complain to the authors at xpilot@cs.uit.no.
+then please don't hesitate to complain to the authors at xpilot@xpilot.org.
+
+Release 3.6 credits:
+
+	Tim Auckland			Gravity currents
+	Mark Boyns			Several patches and comments
+	Scott Manley			
+	Ben Jackson
+	Andrew Mobbs			itemConcentratorProb
+	Ian Jackson			itemConcentratorProb
 
 Release 3.5 credits:
 
-	Steve Payne                     ship checking, Linux plock + option
-	Claus Leth Gregersen            item limits, hud ship, textured balls
+	Steve Payne                     Ship checking, Linux plock + option
+	Claus Leth Gregersen            Item limits, hud ship, textured balls
 	Aleksi Suhonen                  X multibuffer
 	Jens Koerber                    VMS changes
 

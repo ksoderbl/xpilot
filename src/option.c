@@ -1,10 +1,10 @@
-/* $Id: option.c,v 3.32 1996/05/02 16:05:53 bert Exp $
+/* $Id: option.c,v 3.37 1996/10/21 21:40:40 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "types.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +30,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
+#include "types.h"
 #include "const.h"
 #include "global.h"
 #include "proto.h"
@@ -44,7 +44,7 @@ char option_version[] = VERSION;
 #define PATH_MAX	1023
 #endif
 
-#define	NHASH	29
+#define	NHASH	199
 
 valPair    *hashArray[NHASH];
 
@@ -52,7 +52,7 @@ valPair    *hashArray[NHASH];
 /*
  * Compute a reasonable case-insensitive hash value across a character string.
  */
-static unsigned int hash(char *name)
+static unsigned int hash(const char *name)
 {
     unsigned int hashVal = 0;
     unsigned char *s = (unsigned char *)name;
@@ -73,7 +73,7 @@ static unsigned int hash(char *name)
 /*
  * Allocate a new bucket for the hash table and fill in its values.
  */
-static valPair *newOption(char *name, char *value)
+static valPair *newOption(const char *name, const char *value)
 {
     valPair    *tmp = (valPair *)malloc(sizeof(valPair));
 
@@ -104,7 +104,7 @@ static valPair *newOption(char *name, char *value)
  * to the hash table regardless of override.   Either way, if def is nonzero,
  * it is attached to the name-value pair - this will only happen once anyway.
  */
-void addOption(char *name, char *value, int override, void *def)
+void addOption(const char *name, const char *value, int override, void *def)
 {
     valPair    *tmp;
     int         ix = hash(name);
@@ -140,7 +140,7 @@ void addOption(char *name, char *value, int override, void *def)
  * Return the value of the specified option, or (char *)0 if there is no value
  * for that option.
  */
-char *getOption(char *name)
+char *getOption(const char *name)
 {
     valPair    *tmp;
     int         ix = hash(name);
@@ -218,7 +218,8 @@ static char *getMultilineValue(char **map_ptr, char *delimiter)
 	if (i == slen) {
 	    char       *t = s;
 
-	    s = (char *)realloc(s, slen += 32768);
+	    slen += (slen / 2) + 8192;
+	    s = (char *)realloc(s, slen);
 	    bol += s - t;
 	}
 	if (ich == '\n') {
@@ -519,7 +520,7 @@ static FILE *openCompressedDefaultsFile(void)
 #endif
 
 
-static FILE *openDefaultsFile(char *filename)
+static FILE *openDefaultsFile(const char *filename)
 {
     int		len = strlen(filename);
     bool	hasmap = false;
@@ -583,10 +584,10 @@ static FILE *openDefaultsFile(char *filename)
 /*
  * Parse a file containing defaults (and possibly a map).
  */
-bool parseDefaultsFile(char *filename)
+bool parseDefaultsFile(const char *filename)
 {
     FILE       *ifile;
-    int		fd, map_offset, n;
+    int		fd, map_offset, map_size, n;
     char       *map_buf;
 
     LineNumber = 1;
@@ -603,7 +604,8 @@ bool parseDefaultsFile(char *filename)
 #define MAP_CHUNK_SIZE	8192
 
     map_offset = 0;
-    map_buf = (char *) malloc(MAP_CHUNK_SIZE + 1);
+    map_size = 2*MAP_CHUNK_SIZE;
+    map_buf = (char *) malloc(map_size + 1);
     if (!map_buf) {
 	error("Not enough memory to read the map!");
 	free(FileName);
@@ -612,7 +614,7 @@ bool parseDefaultsFile(char *filename)
     }
 
     for (;;) {
-	n = read(fd, &map_buf[map_offset], MAP_CHUNK_SIZE);
+	n = read(fd, &map_buf[map_offset], map_size - map_offset);
 	if (n < 0) {
 	    error("Error reading map!");
 	    free(FileName);
@@ -625,12 +627,15 @@ bool parseDefaultsFile(char *filename)
 	}
 	map_offset += n;
 
-	map_buf = (char *) realloc(map_buf, map_offset + MAP_CHUNK_SIZE + 1);
-	if (!map_buf) {
-	    error("Not enough memory to read the map!");
-	    free(FileName);
-	    fclose(ifile);
-	    return false;
+	if (map_size - map_offset < MAP_CHUNK_SIZE) {
+	    map_size += (map_size / 2) + MAP_CHUNK_SIZE;
+	    map_buf = (char *) realloc(map_buf, map_size + 1);
+	    if (!map_buf) {
+		error("Not enough memory to read the map!");
+		free(FileName);
+		fclose(ifile);
+		return false;
+	    }
 	}
     }
 

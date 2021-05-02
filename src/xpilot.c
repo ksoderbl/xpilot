@@ -1,10 +1,10 @@
-/* $Id: xpilot.c,v 3.74 1996/05/02 16:06:05 bert Exp $
+/* $Id: xpilot.c,v 3.82 1996/10/23 16:09:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,36 +21,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef _IBMESA
-# define _SOCKADDR_LEN
-#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
+#include <netdb.h>
 #ifdef VMS
 # include "username.h"
-# include <socket.h>
-# include <in.h>
-# include <inet.h>
 #else
 # include <pwd.h>
 # include <sys/types.h>
 # include <sys/param.h>
-# include <sys/socket.h>
-# include <sys/ioctl.h>
-# include <netinet/in.h>
-# include <arpa/inet.h>
-#endif
-#if defined(SVR4) || defined(__svr4__)
-# include <sys/sockio.h>
-#endif
 # include <sys/time.h>
-#ifndef LINUX0
-# include <net/if.h>
 #endif
-#include <netdb.h>
-#include <string.h>
 
 #include "version.h"
 #include "config.h"
@@ -61,6 +45,7 @@
 #include "error.h"
 #include "socklib.h"
 #include "net.h"
+#include "protoclient.h"
 #ifdef SUNCMW
 # include "cmw.h"
 #endif /* SUNCMW */
@@ -70,29 +55,14 @@ char xpilot_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.74 1996/05/02 16:06:05 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.82 1996/10/23 16:09:53 bert Exp $";
 #endif
-
-#if defined(LINUX0) || defined(VMS)
-# ifndef QUERY_FUDGED
-#  define QUERY_FUDGED
-# endif
-#endif
-
-#ifdef	LIMIT_ACCESS
-extern bool		Is_allowed(char *);
-#endif
-extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-			  int *my_team, int *list, int *join, int *noLocalMotd,
-			  char *nickName, char *dispName, char *shut_msg);
-extern int Join(char *server_addr, char *server_name, int port,
-		char *real, char *nick, int my_team,
-		char *display, unsigned version);
-extern int micro_delay(unsigned usec);
-
 
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */
 
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN	64
+#endif
 
 static int		contact_port = SERVER_PORT,
 			server_port,
@@ -115,13 +85,10 @@ static int		onesock = 0;
 char			**Argv;
 int			Argc;
 
-
-static int Query_all(int sockfd, int port, char *msg, int msglen);
-static int Query_fudged(int sockfd, int port, char *msg, int msglen);
 static void Check_client_versions(void);
 
 
-static void printfile(char *filename)
+static void printfile(const char *filename)
 {
     FILE		*fp;
     int			c;
@@ -170,7 +137,8 @@ static int create_dgram_addr_socket(char *dotaddr, int port)
 
 static int create_dgram_socket(int port)
 {
-    return create_dgram_addr_socket("0.0.0.0", port);
+    static char any_addr[] = "0.0.0.0";
+    return create_dgram_addr_socket(any_addr, port);
 }
 
 static void close_dgram_socket(int fd)
@@ -398,7 +366,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 		exit(1);
 	    }
 	    if (DgramConnect(ibuf->sock, server_addr, server_port) == -1 && !onesock) {
-		error("Can't connect to server %s on port %d\n",
+		error("Can't connect %s on port %d\n",
 		      server_addr, server_port);
 		return (false);
 	    }
@@ -854,8 +822,10 @@ static bool Contact_servers(int count, char **servers)
 		error("Couldn't send contact requests");
 		exit(1);
 	    }
-	    if (retries) {
-		printf("Searching again...\n");
+	    if (retries == 0) {
+		printf("Searching for a \"xpilots\" server on the local net...\n");
+	    } else {
+		printf("Searching once more...\n");
 	    }
 	    while (Get_contact_message(&sbuf)) {
 		contacted++;
@@ -875,7 +845,11 @@ static bool Contact_servers(int count, char **servers)
 			      real_name, GetPortNum(sbuf.sock), CONTACT_pack);
 		if (DgramSend(sbuf.sock, servers[i], contact_port,
 			      sbuf.buf, sbuf.len) == -1) {
-		    error("Can't contact server at %s on port %d",
+		    if (sl_errno == SL_EHOSTNAME) {
+			printf("Can't find %s\n", servers[i]);
+			break;
+		    }
+		    error("Can't contact %s on port %d",
 			  servers[i], contact_port);
 		}
 		if (retries) {
@@ -902,7 +876,6 @@ static bool Contact_servers(int count, char **servers)
  */
 int main(int argc, char *argv[])
 {
-    struct passwd	*pwent;
     int			result;
 
     /*
@@ -912,7 +885,7 @@ int main(int argc, char *argv[])
 	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
-    if (strcmp(LOCALGURU, "xpilot@cs.uit.no")) {
+    if (strcmp(LOCALGURU, "xpilot@xpilot.org") && strcmp(LOCALGURU, "xpilot@cs.uit.no")) {
 	printf("  " LOCALGURU " is responsible for the local installation.\n\n");
     }
 
@@ -928,23 +901,34 @@ int main(int argc, char *argv[])
     init_error(argv[0]);
     srand(time((time_t *)0) * getpid());
     Check_client_versions();
-    GetLocalHostName(hostname, sizeof hostname);
+    if (getenv("XPILOTHOST")) {
+	strncpy(hostname, getenv("XPILOTHOST"), sizeof(hostname) - 1);
+    }
+    else {
+        GetLocalHostName(hostname, sizeof hostname);
+    }
 
     /*
      * --- Setup core of pack ---
      */
-#ifdef VMS
-    getusername(real_name);
-#else
-    if ((pwent = getpwuid(geteuid())) == NULL
-	|| pwent->pw_name[0] == '\0') {
-	error("Can't get user info for user id %d", geteuid());
-	exit(1);
+    if (getenv("XPILOTUSER")) {
+	strncpy(real_name, getenv("XPILOTUSER"), sizeof(real_name) - 1);
     }
-    strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
+    else {
+#ifdef VMS
+	getusername(real_name);
+#else
+	struct passwd	*pwent;
+        if ((pwent = getpwuid(geteuid())) == NULL
+	    || pwent->pw_name[0] == '\0') {
+	    error("Can't get user info for user id %d", geteuid());
+	    exit(1);
+        }
+        strncpy(real_name, pwent->pw_name, sizeof(real_name) - 1);
 #endif
-    nick_name[0] = '\0';
+    }
 
+    nick_name[0] = '\0';
 
     /*
      * --- Check commandline arguments and resource files ---
@@ -985,7 +969,6 @@ int main(int argc, char *argv[])
 	result = Contact_servers(argc - 1, &argv[1]);
     }
     else {
-	extern int metaclient(int, char **);
 	result = metaclient(argc - 1, &argv[1]);
     }
 #endif
@@ -996,357 +979,6 @@ int main(int argc, char *argv[])
 	return 0;
     }
     return 1;
-}
-
-
-
-/*
- * Code which uses 'real' broadcasting to find server.  Provided by
- * Bert Gÿsbers.  Thanks alot!
- */
-
-#ifndef MAX_INTERFACE
-#define MAX_INTERFACE    16	/* Max. number of network interfaces. */
-#endif
-#ifdef DEBUGBROADCAST
-#undef D
-#define D(x)	x
-#endif
-
-
-/*
- * Query all hosts on a subnet one after another.
- * This should be avoided as much as possible.
- * It may cause network congestion and therefore fail,
- * because UDP is unreliable.
- * We only allow this horrible kludge for subnets with 8 or less
- * bits in the host part of the subnet mask.
- * Subnets with irregular subnet bits are properly handled (I hope).
- */
-static int Query_subnet(int sockfd,
-			struct sockaddr_in *host_addr,
-			struct sockaddr_in *mask_addr,
-			char *msg,
-			int msglen)
-{
-    int i, nbits, max;
-    unsigned long bit, mask, dest, host, hostmask, hostbits[256];
-    struct sockaddr_in addr;
-
-    addr = *host_addr;
-    host = ntohl(host_addr->sin_addr.s_addr);
-    mask = ntohl(mask_addr->sin_addr.s_addr);
-    memset ((void *)hostbits, 0, sizeof hostbits);
-    nbits = 0;
-    hostmask = 0;
-
-    /*
-     * Only the lower 32 bits of an unsigned long are used.
-     */
-    for (bit = 1; (bit & 0xffffffff) != 0; bit <<= 1) {
-	if ((mask & bit) != 0) {
-	    continue;
-	}
-	if (nbits >= 8) {
-	    /* break; ? */
-	    error("too many host bits in subnet mask");
-	    return (-1);
-	}
-	hostmask |= bit;
-	for (i = (1 << nbits); i < 256; i++) {
-	    if ((i & (1 << nbits)) != 0) {
-		hostbits[i] |= bit;
-	    }
-	}
-	nbits++;
-    }
-    if (nbits < 2) {
-	error("malformed subnet mask");
-	return (-1);
-    }
-
-    /*
-     * The first and the last address are reserved for the subnet.
-     * So, for an 8 bit host part only 254 hosts are tried, not 256.
-     */
-    max = (1 << nbits) - 2;
-    for (i=1; i <= max; i++) {
-	dest = (host & ~hostmask) | hostbits[i];
-	addr.sin_addr.s_addr = htonl(dest);
-	GetSocketError(sockfd);
-	sendto(sockfd, msg, msglen, 0,
-	       (struct sockaddr *)&addr, sizeof(addr));
-	D( printf("sendto %s/%d\n",
-		  inet_ntoa(addr.sin_addr), ntohs(addr.sin_port)); );
-	/*
-	 * Imagine a server responding to our query while we
-	 * are still transmitting packets for non-existing servers
-	 * and the server packet colliding with one of our packets.
-	 */
-	micro_delay((unsigned)10000);
-    }
-
-    return 0;
-}
-
-
-static int Query_fudged(int sockfd, int port, char *msg, int msglen)
-{
-    int			i, count = 0;
-    unsigned char	*p;
-    struct sockaddr_in	addr, subnet;
-    struct hostent	*h;
-    unsigned long	addrmask, netmask;
-
-    if ((h = gethostbyname(hostname)) == NULL) {
-	error("gethostbyname");
-	return -1;
-    }
-    if (h->h_addrtype != AF_INET || h->h_length != 4) {
-	errno = 0;
-	error("Dunno about addresses with address type %d and length %d\n",
-	      h->h_addrtype, h->h_length);
-	return -1;
-    }
-    for (i = 0; h->h_addr_list[i]; i++) {
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	p = (unsigned char *) h->h_addr_list[i];
-	addrmask = p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
-	addr.sin_addr.s_addr = htonl(addrmask);
-	subnet = addr;
-	if (addrmask == 0x7F000001) {
-	    GetSocketError(sockfd);
-	    if (sendto(sockfd, msg, msglen, 0,
-		       (struct sockaddr *)&addr, sizeof(addr)) != -1) {
-		count++;
-	    }
-	} else {
-	    netmask = 0xFFFFFF00;
-	    subnet.sin_addr.s_addr = htonl(netmask);
-	    if (Query_subnet(sockfd, &addr, &subnet, msg, msglen) != -1) {
-		count++;
-	    }
-	}
-    }
-    if (count == 0) {
-	errno = 0;
-	count = -1;
-    }
-    return count;
-}
-
-
-/*
- * Send a datagram on all network interfaces of the local host.  Return the
- * number of packets succesfully transmitted.
- * We only use the loopback interface if we didn't do a broadcast
- * on one of the other interfaces in order to reduce the chance that
- * we get multiple responses from the same server.
- */
-static int Query_all(int sockfd, int port, char *msg, int msglen)
-{
-#ifdef QUERY_FUDGED
-    return Query_fudged(sockfd, contact_port, msg, msglen);
-#else
-
-    int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
-    struct sockaddr_in	addr, mask, loopback;
-    struct ifconf	ifconf;
-    struct ifreq	*ifreqp, ifreq, ifbuf[MAX_INTERFACE];
-
-    /*
-     * Broadcasting on a socket must be explicitly enabled.
-     */
-    if (SetSocketBroadcast(sockfd, 1) == -1) {
-	error("set broadcast");
-	return (-1);
-    }
-
-    /*
-     * Create an unbound datagram socket.  Only used for ioctls.
-     */
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-	error("socket");
-	return (-1);
-    }
-
-    /*
-     * Get names and addresses of all local network interfaces.
-     */
-    ifconf.ifc_len = sizeof(ifbuf);
-    ifconf.ifc_buf = (caddr_t)ifbuf;
-    memset((void *)ifbuf, 0, sizeof(ifbuf));
-    if (ioctl(fd, SIOCGIFCONF, (char *)&ifconf) == -1) {
-	error("ioctl SIOCGIFCONF");
-	close(fd);
-	return Query_fudged(sockfd, port, msg, msglen);
-    }
-    for (len = 0; len + sizeof(struct ifreq) <= ifconf.ifc_len;) {
-	ifreqp = (struct ifreq *)&ifconf.ifc_buf[len];
-
-	D( printf("interface name %s\n", ifreqp->ifr_name); );
-	D( printf("\taddress family %d\n", ifreqp->ifr_addr.sa_family); );
-
-	len += sizeof(struct ifreq);
-#if BSD >= 199006 || HAVE_SA_LEN || defined(_SOCKADDR_LEN) || defined(_AIX)
-	/*
-	 * Recent TCP/IP implementations have a sa_len member in the socket
-	 * address structure in order to support protocol families that have
-	 * bigger addresses.
-	 */
-	if (ifreqp->ifr_addr.sa_len > sizeof(ifreqp->ifr_addr)) {
-	    len += ifreqp->ifr_addr.sa_len - sizeof(ifreqp->ifr_addr);
-	    D( printf("\textra address length %d\n",
-		      ifreqp->ifr_addr.sa_len - sizeof(ifreqp->ifr_addr)); );
-	}
-#endif
-	if (ifreqp->ifr_addr.sa_family != AF_INET) {
-	    /*
-	     * Not supported.
-	     */
-	    continue;
-	}
-
-	addr = *(struct sockaddr_in *)&ifreqp->ifr_addr;
-	D( printf("\taddress %s\n", inet_ntoa(addr.sin_addr)); );
-
-	/*
-	 * Get interface flags.
-	 */
-	ifreq = *ifreqp;
-	if (ioctl(fd, SIOCGIFFLAGS, (char *)&ifreq) == -1) {
-	    error("ioctl SIOCGIFFLAGS");
-	    continue;
-	}
-	ifflags = ifreq.ifr_flags;
-
-	if ((ifflags & IFF_UP) == 0) {
-	    D( printf("\tinterface is down\n"); );
-	    continue;
-	}
-	D( printf("\tinterface %s running\n",
-		  (ifflags & IFF_RUNNING) ? "is" : "not"); );
-
-	if ((ifflags & IFF_LOOPBACK) != 0) {
-	    D( printf("\tloopback interface\n"); );
-	    /*
-	     * Only send on the loopback if we don't broadcast.
-	     */
-	    if (haslb == 0) {
-		loopback = *(struct sockaddr_in *)&ifreq.ifr_addr;
-		haslb = 1;
-	    }
-	    continue;
-	} else if ((ifflags & IFF_POINTOPOINT) != 0) {
-	    D( printf("\tpoint-to-point interface\n"); );
-	    ifreq = *ifreqp;
-	    if (ioctl(fd, SIOCGIFDSTADDR, (char *)&ifreq) == -1) {
-		error("ioctl SIOCGIFDSTADDR");
-		continue;
-	    }
-	    addr = *(struct sockaddr_in *)&ifreq.ifr_addr;
-	    D(printf("\tdestination address %s\n", inet_ntoa(addr.sin_addr)););
-	} else if ((ifflags & IFF_BROADCAST) != 0) {
-	    D( printf("\tbroadcast interface\n"); );
-	    ifreq = *ifreqp;
-	    if (ioctl(fd, SIOCGIFBRDADDR, (char *)&ifreq) == -1) {
-		error("ioctl SIOCGIFBRDADDR");
-		continue;
-	    }
-	    addr = *(struct sockaddr_in *)&ifreq.ifr_addr;
-	    D( printf("\tbroadcast address %s\n", inet_ntoa(addr.sin_addr)); );
-	} else {
-	    /*
-	     * Huh?  It's not a loopback and not a point-to-point
-	     * and it doesn't have a broadcast address???
-	     * Something must be rotten here...
-	     */
-	}
-
-	if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST)) != 0) {
-	    /*
-	     * Well, we have an address (at last).
-	     */
-	    addr.sin_port = htons(port);
-	    if (sendto(sockfd, msg, msglen, 0,
-		       (struct sockaddr *)&addr, sizeof addr) == msglen) {
-		D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
-		/*
-		 * Success!
-		 */
-		count++;
-		if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
-		    == IFF_BROADCAST) {
-		    broadcasts++;
-		}
-		continue;
-	    }
-
-	    /*
-	     * Failure.
-	     */
-	    error("sendto %s/%d failed", inet_ntoa(addr.sin_addr), port);
-
-	    if ((ifflags & (IFF_LOOPBACK|IFF_POINTOPOINT|IFF_BROADCAST))
-		!= IFF_BROADCAST) {
-		/*
-		 * It wasn't the broadcasting that failed.
-		 */
-		continue;
-	    }
-
-	    /*
-	     * Broadcasting failed.
-	     * Try it in a different (kludgy) manner.
-	     */
-	}
-
-	/*
-	 * Get the netmask for this interface.
-	 */
-	ifreq = *ifreqp;
-	if (ioctl(fd, SIOCGIFNETMASK, (char *)&ifreq) == -1) {
-	    error("ioctl SIOCGIFNETMASK");
-	    continue;
-	}
-	mask = *(struct sockaddr_in *)&ifreq.ifr_addr;
-	D( printf("\tmask %s\n", inet_ntoa(mask.sin_addr)); );
-
-	addr.sin_port = htons(port);
-	if (Query_subnet(sockfd, &addr, &mask, msg, msglen) != -1) {
-	    count++;
-	    broadcasts++;
-	}
-    }
-
-    if (broadcasts == 0 && haslb) {
-	/*
-	 * We didn't reach the localhost yet.
-	 */
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr = loopback.sin_addr;
-	addr.sin_port = htons(port);
-	if (sendto(sockfd, msg, msglen, 0,
-		   (struct sockaddr *)&addr, sizeof addr) == msglen) {
-	    D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
-	    count++;
-	} else {
-	    error("sendto %s/%d failed", inet_ntoa(addr.sin_addr), port);
-	}
-    }
-
-    close(fd);
-
-    if (count == 0) {
-	errno = 0;
-	count = -1;
-    }
-
-    return count;
-
-#endif	/* QUERY_FUDGED */
 }
 
 /*
@@ -1370,6 +1002,12 @@ static void Check_client_versions(void)
 			net_version[],
 			netclient_version[],
 			paint_version[],
+			paintdata_version[],
+			painthud_version[],
+			paintmap_version[],
+			paintobjects_version[],
+			paintradar_version[],
+			query_version[],
 			record_version[],
 			socklib_version[],
 			texture_version[],
@@ -1396,6 +1034,12 @@ static void Check_client_versions(void)
 	{ "net", net_version },
 	{ "netclient", netclient_version },
 	{ "paint", paint_version },
+	{ "paintdata", paintdata_version },
+	{ "painthud", painthud_version },
+	{ "paintmap", paintmap_version },
+	{ "paintobjects", paintobjects_version },
+	{ "paintradar", paintradar_version },
+	{ "query", query_version },
 	{ "record", record_version },
 	{ "socklib", socklib_version },
 	{ "texture", texture_version },

@@ -1,15 +1,15 @@
-/* $Id: error.c,v 3.7 1994/11/12 15:14:44 bert Exp $
+/* $Id: error.c,v 3.9 1996/10/12 08:36:53 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
  * Gaute Nessan, University of Tromsoe (gaute@staff.cs.uit.no).
  *
- * Modified by Bjoern Stabell (bjoerns@staff.cs.uit.no).
+ * Modified by Bjoern Stabell <bjoern@xpilot.org>.
  */
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: error.c,v 3.7 1994/11/12 15:14:44 bert Exp $";
+    "@(#)$Id: error.c,v 3.9 1996/10/12 08:36:53 bert Exp $";
 #endif
 
 #include <stdlib.h>
@@ -44,7 +44,7 @@ static char		progname[MAX_PROG_LENGTH];
 /*
  * Functions.
  */
-void init_error(char *prog)
+void init_error(const char *prog)
 {
 #ifdef VMS
     char *p = strrchr(prog, ']');
@@ -52,7 +52,7 @@ void init_error(char *prog)
     char *p = strrchr(prog, '/');
 #endif
 
-    strncpy(progname, p ? p+1 : prog, MAX_PROG_LENGTH);   /* Beautify arv[0] */
+    strncpy(progname, p ? p+1 : prog, MAX_PROG_LENGTH - 1);   /* Beautify arv[0] */
 }
 
 
@@ -62,7 +62,7 @@ void init_error(char *prog)
 /*
  * Ok, let's do it the ANSI C way.
  */
-void error(char *fmt, ...)
+void error(const char *fmt, ...)
 {
     va_list	 ap;			/* Argument pointer */
     int		 e = errno;		/* Store errno */

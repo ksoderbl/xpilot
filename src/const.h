@@ -1,10 +1,10 @@
-/* $Id: const.h,v 3.59 1996/04/27 16:09:00 bert Exp $
+/* $Id: const.h,v 3.62 1996/10/06 00:00:58 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -108,6 +108,7 @@
 #   define MAX(x, y)		( (x)>(y) ? (x) : (y) )
 #endif
 #define sqr(x)			( (x)*(x) )
+#define DELTA(a, b)		(((a) >= (b)) ? ((a) - (b)) : ((b) - (a)))
 #define LENGTH(x, y)		( hypot( (double) (x), (double) (y) ) )
 #define VECTOR_LENGTH(v)	( hypot( (double) (v).x, (double) (v).y ) )
 #define LIMIT(val, lo, hi)	( val=(val)>(hi)?(hi):((val)<(lo)?(lo):(val)) )
@@ -209,7 +210,7 @@
 
 #define	RECOVERY_DELAY		(FPS*3)
 
-#define MAX_ID			4096		    /* Should suffice :) */
+#define NUM_IDS			256
 #define EXPIRED_MINE_ID		4096   /* assume no player has this id */
 #define MAX_PSEUDO_PLAYERS      16
 

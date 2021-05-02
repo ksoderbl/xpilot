@@ -1,10 +1,10 @@
-/* $Id: global.h,v 3.74 1996/05/13 19:28:17 bert Exp $
+/* $Id: global.h,v 3.77 1997/02/25 14:04:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ typedef struct {
 extern player		**Players;
 extern object		*Obj[];
 extern long		frame_loops;
-extern long		Id;
 extern int		NumPlayers;
 extern int		NumPseudoPlayers;
 extern int		NumObjs;
@@ -67,7 +66,7 @@ extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
-extern long		GetInd[];
+extern int		GetInd[];
 #endif
 extern float		tbl_sin[];
 extern float		tbl_cos[];
@@ -170,6 +169,7 @@ extern float            rogueMineProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
 extern int		itemConcentratorRadius;
+extern float		itemConcentratorProb;
 extern float		gameDuration;
 extern time_t		gameOverTime;
 

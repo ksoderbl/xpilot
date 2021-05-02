@@ -1,10 +1,10 @@
-/* $Id: syslimit.c,v 3.9 1995/01/11 19:59:11 bert Exp $
+/* $Id: syslimit.c,v 3.10 1996/10/06 00:01:46 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 3.9 1995/01/11 19:59:11 bert Exp $";
+    "@(#)$Id: syslimit.c,v 3.10 1996/10/06 00:01:46 bjoerns Exp $";
 #endif
 
 

@@ -1,10 +1,10 @@
-/* $Id: netclient.c,v 3.92 1996/05/13 12:16:48 bert Exp $
+/* $Id: netclient.c,v 3.99 1996/12/14 20:32:01 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "types.h"
 #include <unistd.h>
 #ifndef VMS
 #include <sys/param.h>
@@ -33,6 +32,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <errno.h>
 #ifdef VMS
@@ -46,6 +46,7 @@
 
 #include "version.h"
 #include "config.h"
+#include "types.h"
 #include "const.h"
 #include "error.h"
 #include "net.h"
@@ -57,13 +58,12 @@
 #include "xinit.h"
 #include "pack.h"
 #include "socklib.h"
+#include "protoclient.h"
 
 char netclient_version[] = VERSION;
 
 #define TALK_RETRY	2
 
-
-int micro_delay(unsigned usec);
 
 /*
  * Type definitions.
@@ -1161,12 +1161,12 @@ int Net_input(void)
 
     /*
      * If the server hasn't yet acked our last keyboard change
-     * and we haven't updated it in the previous time frame
+     * and we haven't updated it in the (previous) current time frame
      * or if we haven't sent anything for a while (keepalive)
      * then we send our current keyboard state.
      */
     if ((last_keyboard_ack != last_keyboard_change
-	    && last_keyboard_update + 1 < last_loops)
+	    && last_keyboard_update /*+ 1*/ < last_loops)
 	|| last_loops - last_send_anything > 5 * Setup->frames_per_second) {
 	Key_update();
 	last_send_anything = last_loops;
@@ -1814,6 +1814,9 @@ int Receive_player(void)
 			  shape)) <= 0) {
 	return n;
     }
+    name[MAX_NAME_LEN - 1] = '\0';
+    real[MAX_NAME_LEN - 1] = '\0';
+    host[MAX_HOST_LEN - 1] = '\0';
     if (version > 0x3200) {
 	if ((n = Packet_scanf(&cbuf, "%S", &shape[strlen(shape)])) <= 0) {
 	    cbuf.ptr = cbuf_ptr;

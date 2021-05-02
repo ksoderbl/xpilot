@@ -1,10 +1,10 @@
-/* $Id: widget.c,v 3.22 1995/11/12 22:11:57 bert Exp $
+/* $Id: widget.c,v 3.24 1996/10/12 08:37:13 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -209,7 +209,7 @@ static widget_t *Widget_new(int *descp)
     return &widgets[num_widgets++];
 }
 
-static int Widget_create(widget_type_t type, char *name, Window window,
+static int Widget_create(widget_type_t type, const char *name, Window window,
 			 int width, int height, void *sub)
 {
     int			desc;
@@ -305,7 +305,7 @@ int Widget_resize(int widget_desc, int width, int height)
     return widget_desc;
 }
 
-static void Widget_draw_button(widget_t *widget, bool inverse, char *label)
+static void Widget_draw_button(widget_t *widget, bool inverse, const char *label)
 {
     int			x, y;
     unsigned long	fg, bg;
@@ -356,7 +356,7 @@ static void Widget_draw_button(widget_t *widget, bool inverse, char *label)
 		     label, fg, bg);
 }
 
-static void Widget_draw_input(widget_t *widget, char *str)
+static void Widget_draw_input(widget_t *widget, const char *str)
 {
     XClearWindow(dpy, widget->window);
     XDrawString(dpy, widget->window, textGC,
@@ -1279,8 +1279,8 @@ int Widget_create_form(int parent_desc, Window parent_window,
 
 int Widget_create_activate(int parent_desc,
 			   int x, int y, int width, int height,
-			   int border, char *str,
-			   int (*callback)(int, void *, char **),
+			   int border, const char *str,
+			   int (*callback)(int, void *, const char **),
 			   void *user_data)
 {
     int			widget_desc;
@@ -1369,8 +1369,8 @@ int Widget_create_bool(int parent_desc,
     return widget_desc;
 }
 
-int Widget_add_pulldown_entry(int menu_desc, char *str,
-			      int (*callback)(int, void *, char **),
+int Widget_add_pulldown_entry(int menu_desc, const char *str,
+			      int (*callback)(int, void *, const char **),
 			      void *user_data)
 {
     int				entry_desc,
@@ -1486,7 +1486,7 @@ int Widget_add_pulldown_entry(int menu_desc, char *str,
 
 int Widget_create_menu(int parent_desc,
 		       int x, int y, int width, int height,
-		       int border, char *str)
+		       int border, const char *str)
 {
     int			widget_desc;
     Window		window;
@@ -1617,7 +1617,7 @@ int Widget_create_float(int parent_desc,
 int Widget_create_label(int parent_desc,
 			int x, int y,
 			int width, int height,
-			int border, char *str)
+			int border, const char *str)
 {
     int			widget_desc;
     Window		window;
@@ -1717,7 +1717,7 @@ int Widget_create_arrow_left(int parent_desc, int x, int y,
 }
 
 int Widget_create_popup(int width, int height, int border,
-			char *window_name, char *icon_name)
+			const char *window_name, const char *icon_name)
 {
     int				disp_width = DisplayWidth(dpy, 0),
 				disp_height = DisplayHeight(dpy, 0),
@@ -1763,8 +1763,8 @@ int Widget_create_popup(int width, int height, int border,
     return popup_desc;
 }
 
-int Widget_create_confirm(char *confirm_str,
-			  int (*callback)(int, void *, char **))
+int Widget_create_confirm(const char *confirm_str,
+			  int (*callback)(int, void *, const char **))
 {
     static char		button_str[] = "CLOSE";
     const int		label_height = textFont->ascent + textFont->descent,
@@ -1928,7 +1928,7 @@ static int Widget_create_slider(int parent_desc, widget_type_t slider_type,
 }
 
 static int Widget_viewer_save_callback(int widget_desc, void *data,
-					char **strptr)
+				       const char **strptr)
 {
     int			popup_desc = (int) data;
     widget_t		*popup = Widget_pointer(popup_desc);
@@ -1951,7 +1951,7 @@ static int Widget_viewer_save_callback(int widget_desc, void *data,
 }
 
 static int Widget_viewer_close_callback(int widget_desc, void *data,
-					char **strptr)
+					const char **strptr)
 {
     Widget_unmap((int) data);
     return 0;
@@ -2114,7 +2114,7 @@ static void Widget_resize_viewer(XEvent *event, int ind)
 
 int Widget_create_viewer(const char *buf, int len,
 			 int width, int height, int border,
-			 char *window_name, char *icon_name,
+			 const char *window_name, const char *icon_name,
 			 XFontStruct *font)
 {
     const int

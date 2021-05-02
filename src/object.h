@@ -1,10 +1,10 @@
-/* $Id: object.h,v 3.60 1995/11/16 00:13:48 bert Exp $
+/* $Id: object.h,v 3.64 1997/01/16 20:25:03 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,10 @@
 #ifndef ITEM_H
 /* need NUM_ITEMS */
 #include "item.h"
+#endif
+#ifndef CLICK_H
+/* need CLICK */
+#include "click.h"
 #endif
 
 /*
@@ -128,13 +132,25 @@ typedef struct {
 
 #define NOT_CONNECTED		(-1)
 
+/*
+ * Object position is non-modifiable, except at one place.
+ *
+ * NB: position in pixels used to be a float.
+ */
+typedef const struct _objposition objposition;
+struct _objposition {
+    int		cx, cy;			/* object position in clicks. */
+    int		x, y;			/* object position in pixels. */
+    int		bx, by;			/* object position in blocks. */
+};
+
 typedef struct _object object;
 struct _object {
     byte	color;			/* Color of object */
     u_byte	dir;			/* Direction of acceleration */
     int		id;			/* For shots => id of player */
-    position	prevpos;		/* Object's previous position... */
-    position	pos;			/* World coordinates */
+    objposition	pos;			/* World coordinates */
+    ipos	prevpos;		/* Object's previous position... */
     vector	vel;
     vector	acc;
     float	max_speed;
@@ -238,8 +254,8 @@ struct player {
     byte	color;			/* Color of object */
     u_byte	dir;			/* Direction of acceleration */
     int		id;			/* Unique id of object */
-    position	prevpos;		/* Previous position... */
-    position	pos;			/* World coordinates */
+    objposition	pos;			/* World coordinates */
+    ipos	prevpos;		/* Previous position... */
     vector	vel;			/* Velocity of object */
     vector	acc;			/* Acceleration constant */
     float	max_speed;		/* Maximum speed of object */
@@ -323,6 +339,7 @@ struct player {
     int		last_lap;		/* Time on last pass */
     int		last_lap_time;		/* What was your last pass? */
     int		last_check_dir;		/* player dir at last checkpoint */
+    long	last_wall_touch;	/* last time player touched a wall */
 
     int		home_base;		/* Num of home base */
     struct {

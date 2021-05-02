@@ -1,10 +1,10 @@
-/* $Id: join.c,v 3.29 1996/05/02 16:05:47 bert Exp $
+/* $Id: join.c,v 3.34 1996/10/20 21:23:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "types.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,10 +35,12 @@
 
 #include "version.h"
 #include "config.h"
+#include "types.h"
 #include "const.h"
 #include "error.h"
 #include "client.h"
 #include "netclient.h"
+#include "protoclient.h"
 
 char join_version[] = VERSION;
 
@@ -48,10 +49,7 @@ char join_version[] = VERSION;
 #endif
 
 
-extern void Record_cleanup(void);
-
-
-void Input_loop(void)
+static void Input_loop(void)
 {
     int			rfds,
 			tfds,
@@ -132,7 +130,8 @@ void Input_loop(void)
 	}
 	if ((rfds & (1 << netfd)) != 0 || result > 1) {
 	    if ((result = Net_input()) == -1) {
-		error("Bad net input");
+		errno = 0;
+		error("Have a nice day!");
 		return;
 	    }
 	    if (result > 0) {

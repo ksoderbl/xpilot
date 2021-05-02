@@ -1,10 +1,10 @@
-/* $Id: map.h,v 3.24 1995/03/19 15:33:31 bert Exp $
+/* $Id: map.h,v 3.26 1996/10/06 00:01:13 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,6 +60,10 @@
 #define DECOR_LD		20
 #define DECOR_RU		21
 #define DECOR_RD		22
+#define UP_GRAV			23
+#define DOWN_GRAV		24
+#define RIGHT_GRAV		25
+#define LEFT_GRAV		26
 #define BASE_ATTRACTOR		127
 
 #define SPACE_BIT		(1 << SPACE)
@@ -85,6 +89,10 @@
 #define DECOR_LD_BIT		(1 << DECOR_LD)
 #define DECOR_RU_BIT		(1 << DECOR_RU)
 #define DECOR_RD_BIT		(1 << DECOR_RD)
+#define UP_GRAV_BIT             (1 << UP_GRAV)
+#define DOWN_GRAV_BIT           (1 << DOWN_GRAV)
+#define RIGHT_GRAV_BIT          (1 << RIGHT_GRAV)
+#define LEFT_GRAV_BIT           (1 << LEFT_GRAV)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)

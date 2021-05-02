@@ -8,7 +8,7 @@ source code, and the LICENSE file.
 
 
 
-Installation instructions are the INSTALL file.
+Installation instructions are in the INSTALL file.
 
 VMS users should examine the contrib/VMS subdirectory and read the
 README.VMS which is in there.
@@ -24,14 +24,14 @@ For further reading, see the manuals in the doc/man directory.
 
 OTHER SOURCES OF INFORMATION ON THE INTERNET
 
-XPilot FAQ: telnet xpilot.cs.uit.no 4402
+XPilot FAQ: telnet meta.xpilot.org 4402
 	(also in the doc/ subdirectory)
 
-XPilot Page on WWW: http://www.cs.uit.no/XPilot/
+XPilot Page on WWW: http://www.xpilot.org/
 
 XPilot Newbie Manual on WWW: http://bau2.uibk.ac.at/erwin/NM/www
 
-XPilot FTP archive: ftp.cs.uit.no:/pub/games/xpilot/
+XPilot FTP archive: ftp.xpilot.org:/pub/
 
 XPilot newsgroup: rec.games.computer.xpilot
 
@@ -44,8 +44,8 @@ CONTRIBUTED SOFTWARE
 Check out the contrib directory and the contrib/xpmtp subdirectory for
 some extra nifty programs.  Especially TkXpInterface is a very convenient
 program for starting the xpilots and xpilot programs.
-Don't forget to get xmapedit from ftp.cs.uit.no in the directory
-/pub/games/xpilot/contrib.  It allows you to create and modify XPilot maps.
+Don't forget to get xmapedit from ftp.xpilot.org in the directory
+/pub/contrib.  It allows you to create and modify XPilot maps.
 Look in the same place for more XPilot contributed tools.
 
 
@@ -53,7 +53,9 @@ REPORTING BUGS
 
 If you're completely stuck, found a bug, e-mail us at:
 
-        xpilot@cs.uit.no
+        xpilot@xpilot.org
 
 Remember to include the version of XPilot, your platform, the symptoms
 and, if you have one, a fix when reporting bugs.
+
+$Id: README.msub,v 3.30 1996/10/06 10:52:42 bert Exp $

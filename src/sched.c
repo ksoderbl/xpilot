@@ -1,10 +1,10 @@
-/* $Id: sched.c,v 3.5 1996/05/03 11:04:47 bert Exp $
+/* $Id: sched.c,v 3.11 1996/10/13 19:30:51 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 #include "const.h"
 #include "error.h"
 #include "types.h"
+#include "sched.h"
 
 char sched_version[] = VERSION;
 
@@ -196,6 +197,9 @@ void install_timer_tick(void (*func)(void), int freq)
     setup_timer();
 }
 
+/*
+ * Linked list of timeout callbacks.
+ */
 struct to_handler {
     struct to_handler	*next;
     time_t		when;
@@ -368,6 +372,11 @@ void remove_input(int fd)
     }
 }
 
+#ifdef VMS
+extern int NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
+extern int login_in_progress;
+#endif
+
 static int		sched_running;
 
 void stop_sched(void)
@@ -380,14 +389,8 @@ void stop_sched(void)
  */
 void sched(void)
 {
-    int			io_done = 0, io_todo = 3;
+    int			i, n, io_todo = 3;
     struct timeval	tv, *tvp = &tv;
-    int			readmask;
-
-#ifdef VMS
-    extern int NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
-    extern int login_in_progress;
-#endif
 
     if (sched_running) {
 	error("sched already running");
@@ -396,7 +399,6 @@ void sched(void)
     sched_running = 1;
 
     while (sched_running) {
-
 #ifdef VMS
         if (NumPlayers > NumRobots + NumPseudoPlayers
             || login_in_progress != 0
@@ -416,17 +418,12 @@ void sched(void)
         tv.tv_usec = 0;
 #endif
 
-	readmask = input_mask;
-
 	if (io_todo == 0 && timers_used < timer_ticks) {
-	    io_done = 0;
-	    io_todo = 3;
+	    io_todo = 1 + (timer_ticks - timers_used);
 	    tvp = &tv;
-
 	    if (timer_handler) {
 		(*timer_handler)();
 	    }
-
 	    do {
 		++timers_used;
 		if (--ticks_till_second <= 0) {
@@ -435,32 +432,26 @@ void sched(void)
 		    timeout_chime();
 		}
 	    } while (timers_used + 1 < timer_ticks);
-
 	}
 	else {
-	    int n = select(max_fd + 1, &readmask, 0, 0, tvp);
-	    if (n < 0) {
-		if (errno != EINTR) {
+	    int readmask = input_mask;
+	    n = select(max_fd + 1, &readmask, 0, 0, tvp);
+	    if (n <= 0) {
+		if (n == -1 && errno != EINTR) {
 		    error("sched select error");
 		    exit(1);
 		}
 		io_todo = 0;
 	    }
-	    else if (n == 0) {
-		io_todo = 0;
-	    }
 	    else {
-		int i;
 		for (i = max_fd; i >= 0; i--) {
 		    if ((readmask & (1 << i)) != 0) {
 			(*input_handlers[i].func)(i, input_handlers[i].arg);
-			readmask &= input_mask;
 			if (--n == 0) {
 			    break;
 			}
 		    }
 		}
-		io_done++;
 		if (io_todo > 0) {
 		    io_todo--;
 		}

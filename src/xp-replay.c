@@ -1,10 +1,10 @@
-/* $Id: xp-replay.c,v 3.25 1996/05/02 16:06:03 bert Exp $
+/* $Id: xp-replay.c,v 3.27 1996/10/12 08:37:18 bert Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *      Steven Singer        (S.Singer@ph.surrey.ac.uk)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -297,7 +297,7 @@ struct label {
     int			x, y;		/* position */
     int			w;		/* width (used to line up values) */
     Bool		j;		/* True for right justification */
-    char		*name;		/* Field name */
+    const char		*name;		/* Field name */
     enum LabelDataTypes	type;		/* data type */
     union {
 	int		*i;
@@ -438,7 +438,7 @@ static long	mem_all_types_used;		/* frame memory in use */
 static long	mem_typed_used[NUM_MEMTYPES];	/* debugging & analysis */
 static long	max_mem = 8 * 1024 * 1024;	/* memory limit (soft) */
 
-static void openErrorWindow(struct errorwin *, char *, ...);
+static void openErrorWindow(struct errorwin *, const char *, ...);
 
 /*
  * Print memory statistics when debugging.
@@ -1380,7 +1380,7 @@ static char		*itemData[NUM_ITEMS] = {
     itemEmergencyShield_bits
 };
 
-static XFontStruct *loadQueryFont(char *fontName, GC gc)
+static XFontStruct *loadQueryFont(const char *fontName, GC gc)
 {
     XFontStruct		*font;
 
@@ -1448,7 +1448,7 @@ static void allocViewColors(struct xprc *rc)
     }
 }
 
-static unsigned long allocColor(char *name)
+static unsigned long allocColor(const char *name)
 {
     XColor		color;
 
@@ -1669,6 +1669,7 @@ static void Init_wm_prop(Window win,
     XWMHints		xwmh;
     XSizeHints		xsh;
     char		msg[256];
+    static char		myClass[] = "XP-replay";
 
     xwmh.flags	   = InputHint|StateHint;
     xwmh.input	   = True;
@@ -1689,7 +1690,7 @@ static void Init_wm_prop(Window win,
     xsh.y = y;
 
     xclh.res_name = NULL;		/* NULL: Automatically uses Argv[0], */
-    xclh.res_class = "XP-replay";	/* stripped of directory prefixes. */
+    xclh.res_class = myClass;		/* stripped of directory prefixes. */
 
     /*
      * Set the above properties.
@@ -1814,7 +1815,7 @@ static struct recordwin *Init_recordwindow(unsigned long bg, void *data)
     return(rwin);
 }
 
-static void openErrorWindow(struct errorwin *ewin, char *fmt, ...)
+static void openErrorWindow(struct errorwin *ewin, const char *fmt, ...)
 {
     int w, h, i;
     va_list ap;

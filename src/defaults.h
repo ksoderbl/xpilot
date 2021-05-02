@@ -1,10 +1,10 @@
-/* $Id: defaults.h,v 3.13 1995/01/11 19:27:32 bert Exp $
+/* $Id: defaults.h,v 3.15 1996/10/12 08:36:52 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,13 +45,13 @@ enum valType {
 };
 
 typedef struct {
-    char *name;
-    char *commandLineOption;
-    char *defaultValue;
-    void *variable;
-    enum valType type;
-    void (*tuner)(void);
-    char *helpLine;
+    const char		*name;
+    const char		*commandLineOption;
+    const char		*defaultValue;
+    void		*variable;
+    enum valType	type;
+    void		(*tuner)(void);
+    const char		*helpLine;
 } optionDesc;
 
 #endif

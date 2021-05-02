@@ -113,9 +113,9 @@ See \fIxpilot(@<MANEXT>@)\fP.
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoerns@acm.org> and
-Ken Ronny Schouten <kenrsc@stud.cs.uit.no> from the University of Tromsø, and
-Bert Gÿsbers <bert@mc.bio.uva.nl> from the University of Amsterdam.
+Bjørn Stabell <bjoern@xpilot.org> and
+Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, and
+Bert Gÿsbers <bert@xpilot.org> from the University of Amsterdam.
 
 
 .SH CREDITS

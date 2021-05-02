@@ -1,10 +1,10 @@
-/* $Id: update.c,v 3.70 1996/04/07 17:05:18 bert Exp $
+/* $Id: update.c,v 3.75 1997/01/16 20:25:05 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,25 +34,26 @@
 #include "score.h"
 #include "bit.h"
 #include "saudio.h"
+#include "objpos.h"
 
 char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.70 1996/04/07 17:05:18 bert Exp $";
+    "@(#)$Id: update.c,v 3.75 1997/01/16 20:25:05 bert Exp $";
 #endif
 
 
-#define update_object_speed(OBJ)	{				\
-    int x=(int)((OBJ)->pos.x/BLOCK_SZ), y=(int)((OBJ)->pos.y/BLOCK_SZ);	\
-    if (BIT((OBJ)->status, GRAVITY)) {					\
-	(OBJ)->vel.x += (OBJ)->acc.x + World.gravity[x][y].x;		\
-	(OBJ)->vel.y += (OBJ)->acc.y + World.gravity[x][y].y;		\
+#define update_object_speed(o_)						\
+    if (BIT((o_)->status, GRAVITY)) {					\
+	(o_)->vel.x += (o_)->acc.x					\
+		    + World.gravity[(o_)->pos.bx][(o_)->pos.by].x;	\
+	(o_)->vel.y += (o_)->acc.y					\
+		    + World.gravity[(o_)->pos.bx][(o_)->pos.by].y;	\
     } else {								\
-	(OBJ)->vel.x += (OBJ)->acc.x;					\
-	(OBJ)->vel.y += (OBJ)->acc.y;					\
-    }									\
-}
+	(o_)->vel.x += (o_)->acc.x;					\
+	(o_)->vel.y += (o_)->acc.y;					\
+    }
 
 
 static char msg[MSG_LEN];
@@ -79,11 +80,11 @@ static void Transport_to_home(int ind)
 		check = pl->check - 1;
 	else
 		check = World.NumChecks - 1;
-	bx = World.check[check].x * BLOCK_SZ + BLOCK_SZ/2;
-	by = World.check[check].y * BLOCK_SZ + BLOCK_SZ/2;
+	bx = (World.check[check].x + 0.5) * BLOCK_SZ;
+	by = (World.check[check].y + 0.5) * BLOCK_SZ;
     } else {
-	bx = World.base[pl->home_base].pos.x * BLOCK_SZ + BLOCK_SZ/2;
-	by = World.base[pl->home_base].pos.y * BLOCK_SZ + BLOCK_SZ/2;
+	bx = (World.base[pl->home_base].pos.x + 0.5) * BLOCK_SZ;
+	by = (World.base[pl->home_base].pos.y + 0.5) * BLOCK_SZ;
     }
     dx = WRAP_DX(bx - pl->pos.x);
     dy = WRAP_DY(by - pl->pos.y);
@@ -210,6 +211,14 @@ static void do_Autopilot (player *pl)
     const float	auto_pilot_dead_velocity = 0.5;
 
     /*
+     * If the last movement touched a wall then we shouldn't
+     * mess with the position (speed too?) settings.
+     */
+    if (pl->last_wall_touch + 1 >= frame_loops) {
+	return;
+    }
+
+    /*
      * Having more autopilot items or using emergency thrust causes a much
      * quicker deceleration to occur than during normal flight.  Having
      * no autopilot items will cause minimum delta to occur, this is because
@@ -236,11 +245,11 @@ static void do_Autopilot (player *pl)
      * Due to rounding errors if the velocity is very small we were probably
      * on target to stop last time round, so we actually absolutely stop.
      * This enables the ship to orient away from gravity and set up the
-     * thrust to conteract it.
+     * thrust to counteract it.
      */
     if ((vel = LENGTH(pl->vel.x, pl->vel.y)) < auto_pilot_dead_velocity) {
 	pl->vel.x = pl->vel.y = vel = 0.0;
-	pl->pos = pl->prevpos;
+	Player_position_restore(pl);
     }
 
     /*
@@ -740,8 +749,8 @@ void Update_objects(void)
 	/* target repair */
 	if (BIT(pl->used, OBJ_REPAIR)) {
 	    target_t *targ = &World.targets[pl->repair_target];
-	    float x = targ->pos.x*BLOCK_SZ+BLOCK_SZ/2;
-	    float y = targ->pos.y*BLOCK_SZ+BLOCK_SZ/2;
+	    float x = (targ->pos.x + 0.5) * BLOCK_SZ;
+	    float y = (targ->pos.y + 0.5) * BLOCK_SZ;
 	    if (Wrap_length(pl->pos.x - x, pl->pos.y - y) > 90.0
 		|| targ->damage >= TARGET_DAMAGE
 		|| targ->dead_time > 0) {
@@ -812,7 +821,7 @@ void Update_objects(void)
 	    if (World.wormHoles[pl->wormHoleHit].countdown
 		&& World.wormHoles[pl->wormHoleHit].lastplayer != i)
 		j = World.wormHoles[pl->wormHoleHit].lastdest;
-	    else if (rand() % 100 < 10)
+	    else if (rfrac() < 0.10f)
 		do
 		    j = rand() % World.NumWormholes;
 		while (World.wormHoles[j].type == WORM_IN
@@ -863,8 +872,8 @@ void Update_objects(void)
 
 	    sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 
-	    w.x = World.wormHoles[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
-	    w.y = World.wormHoles[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
+	    w.x = (World.wormHoles[j].pos.x + 0.5) * BLOCK_SZ;
+	    w.y = (World.wormHoles[j].pos.y + 0.5) * BLOCK_SZ;
 
 	    /*
 	     * Don't connect to balls while warping.
@@ -873,32 +882,38 @@ void Update_objects(void)
 		pl->ball = NULL;
 
 	    if (BIT(pl->have, OBJ_BALL)) {
-		object	*b;
-		int k;
-
 		/*
 		 * Take every ball associated with player through worm hole.
 		 * NB. the connector can cross a wall boundary this is
 		 * allowed, so long as the ball itself doesn't collide.
 		 */
+		int k;
 		for (k = 0; k < NumObjs; k++) {
-		    if (!BIT(Obj[k]->type, OBJ_BALL) || Obj[k]->id != pl->id)
-			continue;
-		    b = Obj[k];
-
-		    b->pos.x = w.x + b->pos.x - pl->pos.x;
-		    b->pos.y = w.y + b->pos.y - pl->pos.y;
-		    b->vel.x /= WORM_BRAKE_FACTOR;
-		    b->vel.y /= WORM_BRAKE_FACTOR;
-		    b->prevpos = b->pos;
+		    object *b = Obj[k];
+		    if (BIT(b->type, OBJ_BALL) && b->id == pl->id) {
+			position ballpos;
+			ballpos.x = b->pos.x + (w.x - pl->pos.x);
+			ballpos.y = b->pos.y + (w.y - pl->pos.y);
+			ballpos.x = WRAP_XPIXEL(ballpos.x);
+			ballpos.y = WRAP_YPIXEL(ballpos.y);
+			if (ballpos.x < 0 || ballpos.x >= World.width
+			    || ballpos.y < 0 || ballpos.y >= World.height) {
+			    b->life = 0;
+			}
+			else {
+			    Object_position_set_pixels(b, ballpos.x, ballpos.y);
+			    Object_position_remember(b);
+			    b->vel.x *= WORM_BRAKE_FACTOR;
+			    b->vel.y *= WORM_BRAKE_FACTOR;
+			}
+		    }
 		}
 	    }
 
 	    pl->wormHoleDest = j;
-	    pl->pos = w;
-	    pl->vel.x /= WORM_BRAKE_FACTOR;
-	    pl->vel.y /= WORM_BRAKE_FACTOR;
-	    pl->prevpos = pl->pos;
+	    Player_position_init_pixels(pl, w.x, w.y);
+	    pl->vel.x *= WORM_BRAKE_FACTOR;
+	    pl->vel.y *= WORM_BRAKE_FACTOR;
 	    pl->forceVisible += 15;
 
 	    if (j != pl->wormHoleHit) {

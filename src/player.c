@@ -1,10 +1,10 @@
-/* $Id: player.c,v 3.95 1996/04/10 06:44:59 bert Exp $
+/* $Id: player.c,v 3.101 1997/01/16 20:25:04 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,12 +37,13 @@
 #include "netserver.h"
 #include "saudio.h"
 #include "error.h"
+#include "objpos.h"
 
 char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.95 1996/04/10 06:44:59 bert Exp $";
+    "@(#)$Id: player.c,v 3.101 1997/01/16 20:25:04 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -151,14 +152,8 @@ void Go_home(int ind)
 	vx = (rfrac() - 0.5) * 0.1;
 	vy = (rfrac() - 0.5) * 0.1;
 	velo = LENGTH(vx, vy);
-#if 0
-	dir = Wrap_findDir(World.check[pl->check].x - x,
-			   World.check[pl->check].y - y);
-	dir = MOD2(dir + (int)((rfrac() - 0.5) * (RES / 4)), RES);
-#else
 	dir = pl->last_check_dir;
 	dir = MOD2(dir + (int)((rfrac() - 0.5) * (RES / 8)), RES);
-#endif
     } else {
 	x = World.base[pl->home_base].pos.x;
 	y = World.base[pl->home_base].pos.y;
@@ -167,11 +162,9 @@ void Go_home(int ind)
     }
 
     pl->dir = pl->float_dir = dir;
-    pl->pos.x = x * BLOCK_SZ + BLOCK_SZ/2.0;
-    pl->pos.y = y * BLOCK_SZ + BLOCK_SZ/2.0;
-    pl->prevpos = pl->pos;
-    pl->pos.x += vx;
-    pl->pos.y += vy;
+    Player_position_init_pixels(pl,
+				(x + 0.5) * BLOCK_SZ + vx,
+				(y + 0.5) * BLOCK_SZ + vy);
     pl->vel.x = vx;
     pl->vel.y = vy;
     pl->velocity = velo;
@@ -312,7 +305,7 @@ static void Player_init_fuel(int ind, long total_fuel)
     }
 }
 
-void Init_player(int ind, wireobj *ship)
+int Init_player(int ind, wireobj *ship)
 {
     player		*pl = Players[ind];
     bool		too_late = false;
@@ -363,6 +356,7 @@ void Init_player(int ind, wireobj *ship)
     pl->best_lap	= 0;
     pl->count		= -1;
     pl->shield_time	= 0;
+    pl->last_wall_touch	= 0;
 
     pl->type		= OBJ_PLAYER;
     pl->type_ext	= 0;		/* assume human player */
@@ -457,8 +451,8 @@ void Init_player(int ind, wireobj *ship)
 
     pl->wormDrawCount   = 0;
 
-    pl->id		= Id;
-    GetInd[Id]		= ind;
+    pl->id		= peek_ID();
+    GetInd[pl->id]	= ind;
     pl->conn		= NOT_CONNECTED;
     pl->audio		= NULL;
 
@@ -469,6 +463,8 @@ void Init_player(int ind, wireobj *ship)
     for (i = 0; i < MAX_RECORDED_SHOVES; i++) {
 	pl->shove_record[i].pusher_id = -1;
     }
+
+    return pl->id;
 }
 
 
@@ -827,7 +823,7 @@ static void Give_individual_bonus(int ind, int average_score)
 	  "[Winner]");
 }
 
-static void Team_game_over(int winning_team, char *reason)
+static void Team_game_over(int winning_team, const char *reason)
 {
     int			i, j;
     int			average_score;
@@ -1610,6 +1606,7 @@ void Delete_player(int ind)
 	}
     }
 
+    release_ID(id);
 }
 
 void Detach_ball(int ind, int obj)

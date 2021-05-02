@@ -1,10 +1,10 @@
-/* $Id: netserver.c,v 3.124 1996/05/13 12:16:50 bert Exp $
+/* $Id: netserver.c,v 3.136 1997/02/25 14:18:27 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,6 @@
  * if the acknowledgement timer expires.
  */
 
-#include "types.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -121,6 +120,7 @@
 #define SERVER
 #include "version.h"
 #include "config.h"
+#include "types.h"
 #include "const.h"
 #include "global.h"
 #include "proto.h"
@@ -247,6 +247,10 @@ static int Init_setup(void)
 	    case CWISE_GRAV:	*mapptr = SETUP_CWISE_GRAV; break;
 	    case POS_GRAV:	*mapptr = SETUP_POS_GRAV; break;
 	    case NEG_GRAV:	*mapptr = SETUP_NEG_GRAV; break;
+	    case UP_GRAV:	*mapptr = SETUP_UP_GRAV; break;
+	    case DOWN_GRAV:	*mapptr = SETUP_DOWN_GRAV; break;
+	    case RIGHT_GRAV:	*mapptr = SETUP_RIGHT_GRAV; break;
+	    case LEFT_GRAV:	*mapptr = SETUP_LEFT_GRAV; break;
 	    case ITEM_CONCENTRATOR:	*mapptr = SETUP_ITEM_CONCENTRATOR; break;
 	    case DECOR_FILLED:	*mapptr = SETUP_DECOR_FILLED; break;
 	    case DECOR_RU:	*mapptr = SETUP_DECOR_RU; break;
@@ -507,7 +511,7 @@ static void Conn_set_state(connection_t *connp, int state, int drain_state)
  * Since 3.0.6 the client receives a short message
  * explaining why the connection was terminated.
  */
-void Destroy_connection(int ind, char *reason)
+void Destroy_connection(int ind, const char *reason)
 {
     connection_t	*connp = &Conn[ind];
     int			id,
@@ -771,10 +775,20 @@ static int Handle_listening(int ind)
     connp->r.len = n;
     connp->his_port = DgramLastport();
     if (DgramConnect(connp->w.sock, connp->addr, connp->his_port) == -1) {
-	error("Cannot connect datagram socket (%s,%d)",
-	      connp->host, connp->his_port);
-	Destroy_connection(ind, "connect error");
-	return -1;
+	error("Cannot connect datagram socket (%s,%d,%d)",
+	      connp->addr, connp->his_port, sl_errno);
+	if (GetSocketError(connp->w.sock)) {
+	    error("GetSocketError fails too, giving up");
+	    Destroy_connection(ind, "connect error");
+	    return -1;
+	}
+	errno = 0;
+	if (DgramConnect(connp->w.sock, connp->addr, connp->his_port) == -1) {
+	    error("Still cannot connect datagram socket (%s,%d,%d)",
+		  connp->addr, connp->his_port, sl_errno);
+	    Destroy_connection(ind, "connect error");
+	    return -1;
+	}
     }
 #ifndef SILENT
     printf("%s: Welcome %s=%s@%s|%s (%s/%d)", showtime(), connp->nick,
@@ -903,11 +917,6 @@ static int Handle_login(int ind)
 	error("Not enough bases for players");
 	return -1;
     }
-    if (Id >= MAX_ID) {
-	errno = 0;
-	error("Id too big (%d)", Id);
-	return -1;
-    }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	if (connp->team <= 0 || connp->team >= MAX_TEAMS) {
 	    connp->team = TEAM_NOT_SET;
@@ -940,7 +949,9 @@ static int Handle_login(int ind)
 	    return -1;
 	}
     }
-    Init_player(NumPlayers, connp->ship);
+    if (!Init_player(NumPlayers, connp->ship)) {
+	return -1;
+    }
     pl = Players[NumPlayers];
     strcpy(pl->name, connp->nick);
     strcpy(pl->realname, connp->real);
@@ -956,7 +967,8 @@ static int Handle_login(int ind)
 	World.teams[pl->team].NumMembers++;
     }
     NumPlayers++;
-    connp->id = Id++;
+    request_ID();
+    connp->id = pl->id;
     pl->conn = ind;
     memset(pl->last_keyv, 0, sizeof(pl->last_keyv));
     memset(pl->prev_keyv, 0, sizeof(pl->prev_keyv));
@@ -1187,7 +1199,7 @@ int Input(void)
 
     if (num_logins | num_logouts) {
 	/* Tell the meta server */
-	Send_meta_server(1);
+	Meta_update(1);
 	num_logins = 0;
 	num_logouts = 0;
     }
@@ -1448,7 +1460,7 @@ int Send_fuel(int ind, int num, int fuel)
 			 num, fuel >> FUEL_SCALE_BITS);
 }
 
-int Send_score_object(int ind, int score, int x, int y, char *string)
+int Send_score_object(int ind, int score, int x, int y, const char *string)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -1668,7 +1680,7 @@ int Send_eyes(int ind, int id)
     return Packet_printf(&connp->w, "%c%hd", PKT_EYES, id);
 }
 
-int Send_message(int ind, char *msg)
+int Send_message(int ind, const char *msg)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -2306,10 +2318,21 @@ static void Handle_talk(int ind, char *str)
 	}
     }
     else {						/* Player message */
-	for (sent = -1, i = 0; i < NumPlayers; i++) {
-	    if (strncasecmp(Players[i]->name, str, len) == 0
-		|| strncasecmp(Players[i]->realname, str, len) == 0)
-		sent = (sent == -1) ? i : -2;
+	sent = -1;
+	/* first look for an exact match on player nickname. */
+	for (i = 0; i < NumPlayers; i++) {
+	    if (strcasecmp(Players[i]->name, str) == 0) {
+		sent = i;
+		break;
+	    }
+	}
+	if (sent == -1) {
+	    /* now look for a partial match on both nick and realname. */
+	    for (sent = -1, i = 0; i < NumPlayers; i++) {
+		if (strncasecmp(Players[i]->name, str, len) == 0
+		    || strncasecmp(Players[i]->realname, str, len) == 0)
+		    sent = (sent == -1) ? i : -2;
+	    }
 	}
 	switch (sent) {
 	case -2:
@@ -2578,7 +2601,7 @@ int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)
 	    motd_size = 0;
 	    return -1;
 	}
-	if (fstat(fd, &st) == -1) {
+	if (fstat(fd, &st) == -1 || st.st_size == 0) {
 	    motd_size = 0;
 	    close(fd);
 	    return -1;
@@ -2722,7 +2745,7 @@ static int Receive_fps_request(int ind)
 	if (fps > FPS) pl->player_fps = FPS;
 	if (fps < (FPS / 2)) pl->player_fps = FPS / 2;
 	if (fps == 0) pl->player_fps = FPS;
-	n = FPS - fps;
+	n = FPS - pl->player_fps;
 	if (n <= 0) {
 	    pl->player_count = 0;
 	} else {

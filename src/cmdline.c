@@ -1,10 +1,10 @@
-/* $Id: cmdline.c,v 3.86 1996/05/13 19:28:15 bert Exp $
+/* $Id: cmdline.c,v 3.90 1997/02/25 14:04:19 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,11 +22,11 @@
  */
 /* Options parsing code contributed by Ted Lemon <mellon@ncd.com> */
 
-#define SERVER
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -39,7 +39,7 @@ char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.86 1996/05/13 19:28:15 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.90 1997/02/25 14:04:19 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -136,6 +136,7 @@ float           rogueMineProb;          /* or minepack will "activate" */
 float		itemProbMult;
 float		maxItemDensity;
 int		itemConcentratorRadius;
+float		itemConcentratorProb;
 
 bool		allowNukes;
 bool		allowClusters;
@@ -1161,9 +1162,21 @@ static optionDesc options[] = {
 	"The maximum distance from an item concentator for items to appear in.\n"
 	"Sensible values are in the range 1 to 20.\n"
 	"If no item concentators are defined in a map then items can popup anywhere.\n"
-	"Otherwise items always popup in the vicinity of an item concentrator.\n"
+	"If any are any then items popup in the vicinity of an item concentrator\n"
+	"with probability itemConcentratorProb and anywhere the remainder of the time.\n"
 	"An item concentrator is drawn on screen as three rotating triangles.\n"
 	"The map symbol is the percentage symbol '%'.\n"
+    },
+    {
+	"itemConcentratorProb",
+	"itemConcentratorProb",
+	"1.0",
+	&itemConcentratorProb,
+	valReal,
+	Set_misc_item_limits,
+	"The probability, if any item concentrators are present, that they will be\n"
+	"used.  This proportion of items will be placed near item concentrators,\n"
+	"within itemConcentratorRadius.\n"
     },
     {
 	"rogueHeatProb",
@@ -1562,7 +1575,7 @@ static optionDesc options[] = {
 static void Parse_help(char *progname)
 {
     int			j;
-    char		*str;
+    const char		*str;
 
     printf("Usage: %s [ options ]\n"
 	   "Where options include:\n"

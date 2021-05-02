@@ -1,10 +1,10 @@
-/* $Id: robot.c,v 3.60 1996/04/07 22:44:40 bert Exp $
+/* $Id: robot.c,v 3.65 1996/10/23 15:57:55 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,8 @@
 char robot_version[] = VERSION;
 
 #ifndef	lint
-static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
+static char sourceid[] =
+    "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
 #endif
 
 /*
@@ -581,13 +582,13 @@ void Robot_init(void)
 
 
 static void Robot_talks(enum robot_talk_t says_what,
-			char *robot_name, char *other_name)
+			char *robot_name, const char *other_name)
 {
     /*
      * Insert your own witty messages here and remove the silly ones.
      */
 
-    static char *enter_msgs[] = {
+    static const char *enter_msgs[] = {
 	"%s just can't stand you anymore.",
 	"%s has come to give you a hard time.",
 	"%s is looking for trouble.",
@@ -602,7 +603,7 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"%s has no sense of humour.",
 	"%s is back from the Sirius wars, and he's in a violent mood.",
     };
-    static char *leave_msgs[] = {
+    static const char *leave_msgs[] = {
 	"That's it, I've had enough. :(   I'm outta here. [%s]",
 	"Later people.  It's been fun. [%s]",
 	"Gotta go, ... er ... this ... er ... lab is closing. [%s]",
@@ -617,7 +618,7 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"Wow, this game is just killing me. :( [%s]",
 	"I'll be back when you stop cheating! :-( [%s]",
     };
-    static char *kill_msgs[] = {
+    static const char *kill_msgs[] = {
 	"Have some %s.  Have some! [%s]",
 	"You want some more %s? [%s]",
 	"%s lost his stuff again.  That's just tooooooo bad. :) [%s]",
@@ -628,7 +629,7 @@ static void Robot_talks(enum robot_talk_t says_what,
 	"I think Darwin would've said you're too unfit to survive %s :) [%s]",
 	"Oh my, what colourful explosions you make %s. :) [%s]",
     };
-    static char *war_msgs[] = {
+    static const char *war_msgs[] = {
 	"UNBELIEVABLE, me shot down by %s?!?!  This means war [%s]",
 	"People like %s just piss me off. [%s]",
 	"Nice %s.  But now its my turn. [%s]",
@@ -640,7 +641,7 @@ static void Robot_talks(enum robot_talk_t says_what,
     };
 
     static int		next_msg = -1;
-    char		**msgsp;
+    const char		**msgsp;
     int			two, i, n;
     char		msg[MSG_LEN];
 
@@ -700,6 +701,10 @@ static void Robot_create(void)
     robot_data_t	*data, *new_data;
     robot_type_t	*rob_type;
 
+    if (peek_ID() == 0) {
+	return;
+    }
+
     if ((new_data = (robot_data_t *)malloc(sizeof(robot_data_t))) == NULL) {
 	perror("malloc robot_data");
 	return;
@@ -752,7 +757,7 @@ static void Robot_create(void)
 
     strcpy(robot->name, rob->name);
     strcpy(robot->realname, "robot");
-    strcpy(robot->hostname, "robots.org");
+    strcpy(robot->hostname, "xpilot.org");
 
     robot->color = WHITE;
     robot->turnspeed = MAX_PLAYER_TURNSPEED;
@@ -781,9 +786,9 @@ static void Robot_create(void)
      * robot->shot_mass	= ShotsMass + (rob->defense - rob->attack) / 10.0;
      * robot->max_speed	= SPEED_LIMIT - robot->shot_speed;
      */
+    request_ID();
     NumPlayers++;
     World.teams[0].NumMembers++;
-    Id++;
     NumRobots++;
 
     for (i = 0; i < NumPlayers - 1; i++) {
@@ -848,12 +853,6 @@ void Robot_delete(int ind, int kicked)
 	}
 	Delete_player(ind);
     }
-}
-
-
-void Robot_go_gome(int ind)
-{
-    (*robot_types[Players[ind]->robot_data_ptr->robot_types_ind].go_home)(ind);
 }
 
 

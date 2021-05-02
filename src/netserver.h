@@ -1,10 +1,10 @@
-/* $Id: netserver.h,v 3.53 1996/04/27 18:39:04 bert Exp $
+/* $Id: netserver.h,v 3.57 1996/10/12 22:38:12 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,13 +55,13 @@
 /*
  * Maximum roundtrip time taken as serious for rountrip time calculations.
  */
-#define MAX_RTT			(2 * FPS)
+#define MAX_RTT			(FPS + 1)
 
 /*
  * The retransmission timeout bounds in number of frames.
  */
 #define MIN_RETRANSMIT		(FPS / 8 + 1)
-#define MAX_RETRANSMIT		(2 * FPS)
+#define MAX_RETRANSMIT		(FPS + 1)
 #define DEFAULT_RETRANSMIT	(FPS / 2)
 
 #if defined(VMS) && !defined(MAXHOSTNAMELEN)
@@ -144,8 +144,10 @@ static int Send_motd(int ind);
 
 #endif	/* NETSERVER_C */
 
+char *showtime(void);
+int Get_motd(char *buf, int offset, int maxlen, int *size_ptr);
 int Setup_net_server(void);
-void Destroy_connection(int ind, char *reason);
+void Destroy_connection(int ind, const char *reason);
 int Check_connection(char *real, char *nick, char *dpy, char *addr);
 int Setup_connection(char *real, char *nick, char *dpy, int team,
 		     char *addr, char *host, unsigned version);
@@ -163,7 +165,7 @@ int Send_war(int ind, int robot_id, int killer_id);
 int Send_seek(int ind, int programmer_id, int robot_id, int sought_id);
 int Send_player(int ind, int id);
 int Send_score(int ind, int id, int score, int life, int mychar);
-int Send_score_object(int ind, int score, int x, int y, char *string);
+int Send_score_object(int ind, int score, int x, int y, const char *string);
 int Send_timing(int ind, int id, int check, int round);
 int Send_base(int ind, int id, int num);
 int Send_fuel(int ind, int num, int fuel);
@@ -188,7 +190,7 @@ int Send_connector(int ind, int x0, int y0, int x1, int y1, int tractor);
 int Send_laser(int ind, int color, int x, int y, int len, int dir);
 int Send_radar(int ind, int x, int y, int size);
 int Send_damaged(int ind, int damaged);
-int Send_message(int ind, char *msg);
+int Send_message(int ind, const char *msg);
 int Send_loseitem(int lose_item_index, int ind);
 int Send_start_of_frame(int ind);
 int Send_end_of_frame(int ind);

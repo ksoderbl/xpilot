@@ -1,10 +1,10 @@
-/* $Id: walls.h,v 3.2 1995/12/04 16:08:15 bert Exp $
+/* $Id: walls.h,v 3.4 1996/10/20 21:23:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#ifndef WALLS_H
+#define WALLS_H
+
+#ifndef CLICK_H
+#include "click.h"
+#endif
 
 extern char walls_version[];
 extern long KILLING_SHOTS;
@@ -39,14 +46,6 @@ int Rate(int winner, int looser);
 
 #define FLOAT_TO_INT(F)		((F) < 0 ? -(int)(0.5f-(F)) : (int)((F)+0.5f))
 #define DOUBLE_TO_INT(D)	((D) < 0 ? -(int)(0.5-(D)) : (int)((D)+0.5))
-
-#define CLICK_SHIFT		6
-#define CLICK			(1 << CLICK_SHIFT)
-#define BLOCK_CLICKS		(BLOCK_SZ << CLICK_SHIFT)
-#define PIXEL_TO_CLICKS(I)	((click_t)(I) << CLICK_SHIFT)
-#define CLICKS_TO_PIXEL(C)	((int)((C) >> CLICK_SHIFT))
-#define FLOAT_TO_CLICK(F)	((F)<0 ? -(int)(0.5f-(F)*CLICK) : (int)((F)*CLICK+0.5f))
-#define CLICK_TO_FLOAT(C)	((float)(C) * (1.0f / CLICK))
 
 typedef enum {
     NotACrash = 0,
@@ -74,16 +73,6 @@ typedef enum {
     BounceRightUp = 0x80,
     BounceEdge = 0x0100
 } move_bounce_t;
-
-typedef int click_t;
-
-typedef struct {
-    click_t		x, y;
-} clpos;
-
-typedef struct {
-    click_t		x, y;
-} clvec;
 
 typedef struct {
     int			edge_wrap;
@@ -125,3 +114,4 @@ struct move_parameters {
     unsigned long	obj_treasure_mask;	/* objects treasure crash? */
 };
 
+#endif

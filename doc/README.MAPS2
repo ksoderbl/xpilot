@@ -25,6 +25,10 @@ The new map format is as follows:
 
 	+, -			Positive/repelling and negative/attracting grav
 	>, <			Clockwise and anti-clockwise grav
+	i			Upwards gravity current
+	j			Leftwards gravity current
+	k			Rightwards gravity current
+	m			Downwards gravity current
 
 	@, (, )			In/out, in and out wormholes respectively
 
@@ -37,15 +41,16 @@ The new map format is as follows:
 				sign.  Clients don't draw this symbol.
 
 	%			Item concentrator.  Putting it in a map will
-				determine where items appear.  When one or
-				more item concentrators are in a map then
-				all items appear only in an area around the
-				item concentrators.  The area is a circle with
-				a radius determined by the server option
-				-itemConcentratorRadius.  If no item
-				concentrators are defined in a map then items
-				can popup anywhere.  An item concentrator is
-				drawn on screen as three rotating triangles.
+				determine where items appear.  When one or more
+				item concentrators are in a map then
+				itemConcentratorProb (1.0 by default) of all
+				items appear only in an area around the item
+				concentrators; the remainder of the items, or
+				all of them if no item concentrators are
+				defined, popup anywhere.  The area is a circle
+				with a radius determined by the server option
+				-itemConcentratorRadius.  An item concentrator
+				is drawn on screen as three rotating triangles.
 
 	any other char		Empty block
 

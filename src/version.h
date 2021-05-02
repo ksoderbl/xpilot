@@ -1,10 +1,10 @@
-/* $Id: version.h.msub,v 3.3 1995/03/15 18:36:18 bjoerns Exp $
+/* $Id: version.h.msub,v 3.4 1996/10/06 00:01:50 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-96 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,11 +27,11 @@
 #if defined(__hpux)
 #   pragma COPYRIGHT_DATE	"1991-96"
 #   pragma COPYRIGHT		"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
-#   pragma VERSIONID		"XPilot 3.5.1"
+#   pragma VERSIONID		"XPilot 3.6.2"
 #endif
 
-#define VERSION			"3.5.1"
-#define TITLE			"XPilot 3.5.1"
+#define VERSION			"3.6.2"
+#define TITLE			"XPilot 3.6.2"
 #define AUTHORS			"Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
 #define COPYRIGHT		"Copyright © 1991-96 by Bjørn Stabell, Ken Ronny Schouten & Bert Gijsbers"
 

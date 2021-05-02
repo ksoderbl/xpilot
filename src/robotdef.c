@@ -1,10 +1,10 @@
-/* $Id: robotdef.c,v 3.2 1996/04/07 22:44:41 bert Exp $
+/* $Id: robotdef.c,v 3.7 1996/10/22 20:30:59 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,8 @@
 #include "error.h"
 
 #ifndef	lint
-static char sourceid[] = "@(#)";
+static char sourceid[] =
+    "@(#)$Id: robotdef.c,v 3.7 1996/10/22 20:30:59 bert Exp $";
 #endif
 
 /*
@@ -63,11 +64,8 @@ static char sourceid[] = "@(#)";
 /*
  * Map objects a robot can fly through without damage.
  */
-#define EMPTY_SPACE(s)	\
-    BIT(1 << (s), SPACE_BIT | BASE_BIT | WORMHOLE_BIT | POS_GRAV_BIT | \
-		  NEG_GRAV_BIT | CWISE_GRAV_BIT | ACWISE_GRAV_BIT | \
-		  DECOR_LU_BIT | DECOR_LD_BIT | DECOR_RU_BIT | DECOR_RD_BIT | \
-		  DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT)
+extern unsigned SPACE_BLOCKS;
+#define EMPTY_SPACE(s)	BIT(1 << (s), SPACE_BLOCKS)
 
 /*
  * Bitmask of object types the robot puts up shield for.
@@ -347,6 +345,10 @@ static bool Check_robot_navigate(int ind, bool * num_evade)
 	    case NEG_GRAV:
 	    case CWISE_GRAV:
 	    case ACWISE_GRAV:
+	    case UP_GRAV:
+	    case DOWN_GRAV:
+	    case RIGHT_GRAV:
+	    case LEFT_GRAV:
 		found_grav = true;
 		break;
 
@@ -1735,7 +1737,6 @@ static void Robot_default_play(int ind)
     LIMIT(y, 0, World.y);
     x_speed = pl->vel.x - 2 * World.gravity[x][y].x;
     y_speed = pl->vel.y - 2 * World.gravity[x][y].y;
-    speed = LENGTH(x_speed, y_speed);
 
     if (y_speed < (-my_data->robot_normal_speed) || (my_data->robot_count % 64) < 32) {
 
@@ -1762,6 +1763,7 @@ static void Robot_default_play(int ind)
     pl->turnacc = 0;
     pl->power = MAX_PLAYER_POWER / 2;
     CLR_BIT(pl->status, THRUSTING);
+    speed = LENGTH(x_speed, y_speed);
     if (speed < my_data->robot_normal_speed / 2)
 	SET_BIT(pl->status, THRUSTING);
     else if (speed > my_data->robot_normal_speed)

@@ -1,10 +1,10 @@
-/* $Id: xpmread.c,v 3.3 1996/05/02 16:06:06 bert Exp $
+/* $Id: xpmread.c,v 3.5 1996/10/12 08:37:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ static void xpm_print_error(XPM_read *xpmr)
     error(buf);
 }
 
-static int xpm_read_error(XPM_read *xpmr, char *err_str)
+static int xpm_read_error(XPM_read *xpmr, const char *err_str)
 {
     xpmr->error_str = err_str;
     return -1;

@@ -208,7 +208,7 @@ to uncompress the file before playback.
 
 \fBxp-replay\fP was originally designed and developed by
 Steven Singer (S.Singer@ph.surrey.ac.uk). Additional develpoment was
-performed by Bert Gijsbers (bert@mc.bio.uva.nl).
+performed by Bert Gijsbers (bert@xpilot.org).
 
 The scaling and gamma correction code was taken from the \fBpbmplus\fP
 package, which is Copyright (C) 1989, 1991 by Jef Poskanzer.

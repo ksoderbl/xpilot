@@ -4,7 +4,7 @@
 .\"
 .TH XPILOTS  "Requires UDP/IP and The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.5.1: May 13th, 1996
+.ds ]W XPilot 3.6.2: Feb 25th, 1997
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -113,9 +113,9 @@ See \fIxpilot()\fP.
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoerns@acm.org> and
-Ken Ronny Schouten <kenrsc@stud.cs.uit.no> from the University of Tromsø, and
-Bert Gÿsbers <bert@mc.bio.uva.nl> from the University of Amsterdam.
+Bjørn Stabell <bjoern@xpilot.org> and
+Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, and
+Bert Gÿsbers <bert@xpilot.org> from the University of Amsterdam.
 
 
 .SH CREDITS

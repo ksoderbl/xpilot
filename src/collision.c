@@ -1,10 +1,10 @@
-/* $Id: collision.c,v 3.136 1996/04/10 15:14:50 bert Exp $
+/* $Id: collision.c,v 3.147 1996/12/12 20:43:46 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -39,19 +39,41 @@
 #include "netserver.h"
 #include "pack.h"
 #include "error.h"
+#include "objpos.h"
 
 char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.136 1996/04/10 15:14:50 bert Exp $";
+    "@(#)$Id: collision.c,v 3.147 1996/12/12 20:43:46 bert Exp $";
 #endif
 
+#if 0
+/* this macro doesn't work for edgewrap: */
 #define in_range(o1, o2, r)			\
-    (ABS((o1)->pos.x - (o2)->pos.x) < (r)	\
-     && ABS((o1)->pos.y - (o2)->pos.y) < (r))	\
-    /* this in_range() macro still needs an edgewrap modification */
-
+    (DELTA((o1)->pos.x, (o2)->pos.x) < (r)	\
+     && DELTA((o1)->pos.y, (o2)->pos.y) < (r))
+#else
+/* proposed edgewrap version: */
+#define in_range(o1, o2, r)						\
+    (BIT(World.rules->mode, WRAP_PLAY)					\
+	? ((((o1)->pos.x > (o2)->pos.x)					\
+	    ? (((o1)->pos.x - (o2)->pos.x > (World.width >> 1))		\
+		? ((o1)->pos.x - (o2)->pos.x > World.width - (r))	\
+		: ((o1)->pos.x - (o2)->pos.x < (r)))			\
+	    : (((o2)->pos.x - (o1)->pos.x > (World.width >> 1))		\
+		? ((o2)->pos.x - (o1)->pos.x > World.width - (r))	\
+		: ((o2)->pos.x - (o1)->pos.x < (r))))			\
+	    && (((o1)->pos.y > (o2)->pos.y)				\
+	    ? (((o1)->pos.y - (o2)->pos.y > (World.height >> 1))	\
+		? ((o1)->pos.y - (o2)->pos.y > World.height - (r))	\
+		: ((o1)->pos.y - (o2)->pos.y < (r)))			\
+	    : (((o2)->pos.y - (o1)->pos.y > (World.height >> 1))	\
+		? ((o2)->pos.y - (o1)->pos.y > World.height - (r))	\
+		: ((o2)->pos.y - (o1)->pos.y < (r)))))			\
+	: (DELTA((o1)->pos.x, (o2)->pos.x) < (r)			\
+	&& DELTA((o1)->pos.y, (o2)->pos.y) < (r)))
+#endif
 
 /*
  * Globals
@@ -211,7 +233,7 @@ static void Cell_objects_get(int x, int y, int r, object ***list, int *count)
     }
 }
 
-void SCORE(int ind, int points, int x, int y, char *msg)
+void SCORE(int ind, int points, int x, int y, const char *msg)
 {
     player	*pl = Players[ind];
 
@@ -245,8 +267,8 @@ int Rate(int winner, int loser)
  * made negative, since you shouldn't gain points by killing team members,
  * or being killed by a team member (it is both players faults).
  */
-void Score_players(int winner, int winner_score, char *winner_msg,
-		   int loser, int loser_score, char *loser_msg)
+static void Score_players(int winner, int winner_score, char *winner_msg,
+			  int loser, int loser_score, char *loser_msg)
 {
     if (TEAM(winner, loser)) {
 	if (winner_score > 0)
@@ -836,7 +858,7 @@ static void PlayerObjectCollision(int ind)
 			Players[killer]->name);
 	    }
 	    else if (obj->owner == -1) {
-		char *reprogrammer_name = "some jerk";
+		const char *reprogrammer_name = "some jerk";
 		if (obj->id != -1) {
 		    killer = GetInd[obj->id];
 		    reprogrammer_name = Players[killer]->name;
@@ -847,7 +869,7 @@ static void PlayerObjectCollision(int ind)
 			reprogrammer_name);
 	    }
 	    else {
-		char *reprogrammer_name = "some jerk";
+		const char *reprogrammer_name = "some jerk";
 		if (obj->id != -1) {
 		    killer = GetInd[obj->id];
 		    reprogrammer_name = Players[killer]->name;
@@ -1099,7 +1121,6 @@ static void LaserCollision(void)
 		if (pl->fuel.sum <= -ED_LASER) {
 		    CLR_BIT(pl->used, OBJ_LASER);
 		} else {
-		    Add_fuel(&(pl->fuel), ED_LASER);
 		    if (pl->num_pulses >= pl->max_pulses) {
 			size = pl->item[ITEM_LASER] * sizeof(pulse_t);
 			if (pl->max_pulses <= 0) {
@@ -1115,7 +1136,7 @@ static void LaserCollision(void)
 			}
 			pl->max_pulses = pl->item[ITEM_LASER];
 		    }
-		    pulse = &pl->pulses[pl->num_pulses++];
+		    pulse = &pl->pulses[pl->num_pulses];
 		    pulse->dir = pl->dir;
 		    pulse->len = PULSE_LENGTH;
 		    pulse->life = PULSE_LIFE(pl->item[ITEM_LASER]);
@@ -1124,8 +1145,15 @@ static void LaserCollision(void)
 				    - PULSE_SPEED * tcos(pulse->dir);
 		    pulse->pos.y = pl->pos.y + pl->ship->m_gun[pl->dir].y
 				    - PULSE_SPEED * tsin(pulse->dir);
-		    sound_play_sensors(pulse->pos.x, pulse->pos.y,
-				       FIRE_LASER_SOUND);
+		    pulse->pos.x = WRAP_XPIXEL(pulse->pos.x);
+		    pulse->pos.y = WRAP_YPIXEL(pulse->pos.y);
+		    if (pulse->pos.x >= 0 && pulse->pos.x < World.width
+			&& pulse->pos.y >= 0 && pulse->pos.y < World.height) {
+			pl->num_pulses++;
+			Add_fuel(&(pl->fuel), ED_LASER);
+			sound_play_sensors(pulse->pos.x, pulse->pos.y,
+					   FIRE_LASER_SOUND);
+		    }
 		}
 	    }
 	}
@@ -1228,7 +1256,8 @@ static void LaserCollision(void)
 		    max_victims = NumPlayers;
 		}
 		victims[num_victims].ind = i;
-		victims[num_victims].pos = vic->pos;
+		victims[num_victims].pos.x = vic->pos.x;
+		victims[num_victims].pos.y = vic->pos.y;
 		victims[num_victims].prev_dist = 1e10;
 		num_victims++;
 	    }
@@ -1245,8 +1274,7 @@ static void LaserCollision(void)
 	    obj->owner = pl->id;
 	    obj->id = pl->id;
 	    obj->count = 0;
-	    obj->pos.x = obj->prevpos.x = x1;
-	    obj->pos.y = obj->prevpos.y = y1;
+	    Object_position_init_pixels(obj, x1, y1);
 
 	    for (i = hits = 0; i <= max; i += PULSE_SAMPLE_DISTANCE) {
 
@@ -1347,5 +1375,4 @@ static void LaserCollision(void)
 	obj->life = 0;
     }
 }
-
 

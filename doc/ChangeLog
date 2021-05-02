@@ -3,6 +3,78 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 3.6.2 compared to release 3.6.1:
+
+Tim Auckland provided a patch to make gravity work inside gravity currents.
+
+Fixed a bug which caused ships to crash when turning on autopilot while
+the ship was touching a wall.  (This fixes most situations, not all.)
+Special thanks to Culturally Sensitive Ed for helping with testing this fix.
+
+Applied two bugfixes for 64-bit DEC Alpha machines by Ralf Berger.
+
+A new server option called -itemConcentratorProb by Andrew Mobbs and Ian Jackson:
+    When designing a map, I wanted item concentrators to work slightly
+    differently to the way they currently do; I wanted item concentrators to
+    work probablilistically, i.e. not _every_ item appears within their
+    radius, but them to concentrate the density of items near them.
+    I've introduced a new server option -itemConcentratorProb, this is a
+    floating point in the range 0.0-1.0 and governs the probablility of items
+    appearing within the radius of the concentrator. It's set by default to
+    1.0, so existing maps will continue to work as expected.
+
+===============================================================================
+
+This is a summary of changes of release 3.6.1 compared to release 3.6.0:
+
+Fixed bugs which prevented compile time option ERASE from working.
+
+Added missing files to Makefile.std.
+
+===============================================================================
+
+This is a summary of changes of release 3.6.0 compared to release 3.5.1:
+
+Tim Auckland submitted code to implement four new gravity map objects:
+    For some time I've been fighting with the "gravity" map objects,
+    attempting to find a decent way of mimicing ocean currents or winds.
+    I've come to the conclusion that the current set, attractors/repellors
+    and twisters is just not powerful enough.  So here is a patch that
+    adds a new class of "gravity" object - directional flows.  Only four
+    directions are offered, up, down right and left because each takes a
+    new map character.  But they can be combined to produce quite
+    effective currents.  The map characters I've chosen are i,m,k & j.
+
+It has been claimed that older clients were less `laggy' than recent client
+versions.  The only change in recent versions which might have caused this
+has been taken out again to see if it helps.
+
+Mark Boyns submitted a patch to support the XPILOTUSER and XPILOTHOST 
+environment variables.  If they are defined when xpilot starts then
+they define the user loginname and client hostname as they are reported
+to the server and meta server.
+
+Mark Boyns submitted a patch to support the XPILOTRC environment variable.
+When specified this is used instead of the ~/.xpilotrc to find the XPilot
+client resources.
+
+Much work has been done on improving the speed on the server for
+situations with lots of objects and/or players.
+
+Some big source files have been split up into two or more smaller files.
+
+Scott Manley submitted a patch to allow bouncing off the wall with
+an empty fuel tank if the -wallBounceFuelDrainMult is set to zero.
+
+Ben Jackson subimitted a bugfix patch for the maxFPS client option:
+    Ever since it was introduced, maxFPS has had a subtle off-by-one error.
+    I first noticed it when playing at 6fps on 12fps map -- it should have
+    been smooth but with half as many frames.  I finally fixed it back around
+    version 3.2.9, but forgot to send it in.  Anyway, here's the fix, and a
+    small fix I noticed while making it...
+
+===============================================================================
+
 This is a summary of changes of release 3.5.1 compared to release 3.5.0:
 
 Claus Leth Gregersen provided code for textured balls and the miniature

@@ -1,10 +1,10 @@
-/* $Id: xp-replay.h,v 3.2 1995/01/11 20:07:42 bert Exp $
+/* $Id: xp-replay.h,v 3.3 1996/10/06 00:01:59 bjoerns Exp $
  *
  * XP-Replay, playback an XPilot session.  Copyright (C) 1994-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *      Steven Singer        (S.Singer@ph.surrey.ac.uk)
  *
  * This program is free software; you can redistribute it and/or modify

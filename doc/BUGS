@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
+$Id: BUGS,v 3.54 1996/10/26 11:48:02 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -17,21 +17,6 @@ $Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 # When refering to bugs one may use B+<the bug number>,
 # i.e. B001 refers to the ball-string bug.
 #
-
-<BUG>	001
-<STATUS>open/low
-<VER>	2.0
-<DESC>	kenrsc
-	The ball-string has doesn't take heavy tension, it produces wild,
-	lethal occilations.
-<WORK>	kenrsc
-	What to do we do with this one. My suggestion is to drop
-	the ball when the string stretches too far. What is yours?
-<WORK>  930919: bert
-	I don't see this bug as a problem.  When manouvring the ball
-	the player should take care not to have it oscillate too strong
-	or the player should find a way to reduce to oscillations.
-	But I may not have seen the effect this bug refers too.
 
 <BUG>	002
 <STATUS>open/low
@@ -67,21 +52,6 @@ $Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 <WORK>	931210: bjoerns
 	At least, the server should warn about this condition.
 
-<BUG>  022
-<STATUS>deferred/medium
-<VER>	3.1.3
-<DESC>	940503: leo@dcs.warwick.ac.uk (Leo Hendry)
-	I have been playing tournament and team tournament maps recently and I have
-	noticed that when you try to connect to a freely moving ball the force applied
-	to your ship when you take up the strain on the connnector is completely
-	random.  For example you can connect to an almost stationary ball and you will
-	be thrown with great force into the wall, but other times you can connect to a
-	falling ball without difficulty.
-<WORK>  941021: bert
-	It has improved somewhat (see ChangeLog), but it is still not perfect.
-	However, we got requests from users to keep it risky to try to connect
-	to a ball, so that will be it then for some while at least.
-
 <BUG>   025
 <STATUS>open/low
 <VER>   3.2.2
@@ -98,21 +68,6 @@ $Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 	BTW, I've got the "Bad net input" before, but I've never
 	seen the "debris 0 < 0" message.
 
-<BUG>   027
-<STATUS>open/low
-<VER>   3.2.5
-<DESC>  940823: bj@cs.purdue.edu (Ben Jackson)
-	Sometimes when I'm ECM'd, I end up in blue instead of black.  This is
-	permament until I unmap/remap the window or get ECM'd again and end up
-	in black.  I've looked at the code in paint.c and I can't figure out
-	how it would happen.  It doesn't seem to be dependent on wheter or not
-	I die as a result of being temporarily blinded.  I played for about 45
-	minutes on a map with `-initialEcms 5' and several robots, and I only
-	got to observe the effect a few times (despite many ECM attacks) but in
-	normal gameplay I'd say up to 50% of the time I end up in blue (so it
-	happens equally often per unit time, but not per attack, if that makes
-	any sense).
-
 <BUG>   029
 <STATUS>open/medium
 <VER>   3.2.6
@@ -127,22 +82,6 @@ $Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 	I call this a bug or a) feature, that when a new round
 	starts, the client sends a keypress event to the xpilot
 	server for each key that it thinks is depressed.
-
-<BUG>   31
-<STATUS>open/medium
-<VER>   3.2.5
-<DESC>  941113: Erwin Zierler
-	In the map The Real 3D Mega World in no-wrap mode
-	and edge bounce on, when having a homebase on the
-	bottom turning left or right while sitting on the
-	homebase causes the player to leave the Known Universe.
-
-<BUG>   32
-<STATUS>open/medium
-<VER>   3.2.8
-<DESC>  941114: Mark Boyns
-	When releasing 8 tanks in race mode not all tanks
-	are removed from the world on restart.
 
 <BUG>   34
 <STATUS>closed/high
@@ -165,40 +104,3 @@ $Id: BUGS,v 3.53 1996/04/30 10:30:09 bert Exp $
 	I tried to repeat it with the options given, but couldn't repeat it.
 	Maybe it is fixed already?  If not let me know.
 
-<BUG>   37
-<STATUS>open/medium
-<VER>   3.2.9
-<DESC>  950116: Rus Berrett (berrettr@alaska.et.byu.edu)
-	The xpilot server on scotland crashed Sunday the 15th due to an "unhandled
-	exception".  Fortunately I always compile in debug (due to the humble xpilot
-	development I do on my own).  It seems the culprit was a divide by zero in the function "do_Autopilot".
-	Please find below a few lines scrapped from the dbx shell:
-	(dbx) trace
-	>  0 do_Autopilot(pl = 0x140123b50) ["update.c":280, 0x120039484]
-	   1 Update_objects() ["update.c":645, 0x12003aca4]
-	   2 Main_Loop() ["server.c":442, 0x12000aca8]
-	   3 main(argc = 148, argv = 0x11ffff1e8) ["server.c":316, 0x12000a5e8]
-	(dbx) list 270,290
-	   270          vad = RES - vad;
-	   271          dir = -1;
-	   272      } else {
-	   273          dir = 1;
-	   274      }
-	   275
-	   276      /*
-	   277       * Calculate turnspeed needed to change direction instataneously by
-	   278       * above direction change.
-	   279       */
-	>* 280      turnspeed = ((float)vad) / pl->turnresistance - pl->turnvel;
-	   281      if (turnspeed < 0) {
-	   282          turnspeed = -turnspeed;
-	   283          dir = -dir;
-	   284      }
-	   285
-	   286      /*
-	   287       * Change the turnspeed setting towards the perfect value, and limit
-	   288       * to the maximum only (limiting to the minimum causes oscillation).
-	   289       */
-	   290      if (turnspeed < pl->turnspeed) {
-	(dbx) print (pl->turnresistance - pl->turnvel)
-	0.000000

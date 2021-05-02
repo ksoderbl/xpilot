@@ -1,10 +1,10 @@
-/* $Id: event.c,v 3.68 1996/04/08 19:51:56 bert Exp $
+/* $Id: event.c,v 3.72 1996/10/21 21:40:33 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +21,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -41,7 +41,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.68 1996/04/08 19:51:56 bert Exp $";
+    "@(#)$Id: event.c,v 3.72 1996/10/21 21:40:33 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -357,7 +357,6 @@ int Handle_keyboard(int ind)
 		if (BIT(pl->lock.tagged, LOCK_PLAYER)
 		    && NumPlayers > 1
 		    && (k = pl->lock.pl_id) > 0
-		    && k < Id
 		    && (i = GetInd[k]) > 0
 		    && i < NumPlayers
 		    && Players[i]->id == k
@@ -644,8 +643,7 @@ int Handle_keyboard(int ind)
 			minv = 5.0f;
 			i = HOVERPAUSE;
 		    }
-		    minv += LENGTH(World.gravity[xi][yi].x,
-				   World.gravity[xi][yi].y);
+		    minv += VECTOR_LENGTH(World.gravity[xi][yi]);
 		    if (pl->velocity > minv)
 			break;
 		}

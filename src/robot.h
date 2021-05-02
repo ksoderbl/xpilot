@@ -1,10 +1,10 @@
-/* $Id: robot.h,v 3.15 1996/04/07 17:05:14 bert Exp $
+/* $Id: robot.h,v 3.18 1996/10/12 08:37:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,11 +88,11 @@
  *
  * The recommended practice is to define your new robot types
  * in a separate file and to only declare your robot type
- * specific functionprototypes in robot.c and add one
- * `struct robot_type' record for each separate robot type.
+ * specific initialisation function prototype in robot.c and add one
+ * function pointer to the robot_type_setups array.
  */
 typedef struct {
-    char		*name;
+    const char		*name;
     void		(*create)(int ind, char *str);
     void		(*go_home)(int ind);
     void		(*play)(int ind);

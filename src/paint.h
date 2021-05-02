@@ -1,10 +1,10 @@
-/* $Id: paint.h,v 3.52 1996/05/04 21:43:48 bert Exp $
+/* $Id: paint.h,v 3.54 1996/10/12 22:35:16 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,12 +70,27 @@ int Handle_vbase(int x, int y, int xi, int yi, int type);
 int Handle_vdecor(int x, int y, int xi, int yi, int type);
 int Handle_message(char *msg);
 int Handle_eyes(int id);
-void Paint_item(u_byte type, Drawable d, GC gc, int x, int y);
+void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y);
+void Paint_item(u_byte type, Drawable d, GC mygc, int x, int y);
+void Paint_shots(void);
+void Paint_ships(void);
+void Paint_radar(void);
 void Paint_sliding_radar(void);
 void Paint_world_radar(void);
 void Paint_radar_block(int, int, int);
+void Paint_vcannon(void);
+void Paint_vfuel(void);
+void Paint_vbase(void);
+void Paint_vdecor(void);
+void Paint_world(void);
 void Paint_score_entry(int entry_num, other_t* other, bool best);
 void Paint_score_start(void);
+void Paint_score_objects(void);
+void Paint_meters(void);
+void Paint_HUD(void);
+void Paint_messages(void);
+void Paint_recording(void);
+void Paint_frame(void);
 int Handle_time_left(long sec);
 void Game_over_action(u_byte stat);
 
@@ -132,6 +147,7 @@ extern int	radar_exposures;	/* Is radar window exposed? */
 
 extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
 extern GC	motdGC;
+extern XGCValues gcv;
 extern Window	top, draw, keyboard, radar, players;
 extern Pixmap	p_draw, p_radar, s_radar;
 extern Pixmap	itemBitmaps[];
@@ -166,7 +182,7 @@ extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 		(Display *disp, Drawable d, GC gc,
 		 int x, int y, unsigned width, unsigned height);
 
-extern int		maxKeyDefs;
-extern other_t*		self;		/* Player info */
+extern int	maxKeyDefs;
+extern long	loops;
 
 #endif

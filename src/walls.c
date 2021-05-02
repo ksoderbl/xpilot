@@ -1,10 +1,10 @@
-/* $Id: walls.c,v 3.6 1996/04/07 22:44:44 bert Exp $
+/* $Id: walls.c,v 3.17 1997/01/16 20:25:06 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -41,6 +41,8 @@
 #include "pack.h"
 #include "error.h"
 #include "walls.h"
+#include "click.h"
+#include "objpos.h"
 
 char walls_version[] = VERSION;
 
@@ -48,6 +50,14 @@ char walls_version[] = VERSION;
 	(FILLED_BIT | REC_LU_BIT | REC_LD_BIT | REC_RU_BIT | REC_RD_BIT \
 	| FUEL_BIT | CANNON_BIT | TREASURE_BIT | TARGET_BIT \
 	| CHECK_BIT | WORMHOLE_BIT)
+
+unsigned SPACE_BLOCKS = ( 
+	SPACE_BIT | BASE_BIT | WORMHOLE_BIT | 
+	POS_GRAV_BIT | NEG_GRAV_BIT | CWISE_GRAV_BIT | ACWISE_GRAV_BIT | 
+	UP_GRAV_BIT | DOWN_GRAV_BIT | RIGHT_GRAV_BIT | LEFT_GRAV_BIT | 
+	DECOR_LU_BIT | DECOR_LD_BIT | DECOR_RU_BIT | DECOR_RD_BIT | 
+	DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT 
+    );
 
 static struct move_parameters mp;
 static float wallBounceExplosionMult;
@@ -102,10 +112,15 @@ static void Walldist_dump(void)
     sprintf(name, "walldist.ppm");
     fp = fopen(name, "w");
     if (!fp) {
-	perror(name);
+	error(name);
 	return;
     }
     line = (unsigned char *)malloc(3 * World.x);
+    if (!line) {
+	error("No memory for walldist dump");
+	fclose(fp);
+	return;
+    }
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", World.x, World.y);
     fprintf(fp, "%d\n", 255);
@@ -137,6 +152,7 @@ static void Walldist_dump(void)
     free(line);
     fclose(fp);
 
+    printf("Walldist dumped to %s\n", name);
 #endif
 }
 
@@ -156,6 +172,10 @@ static void Walldist_init(void)
 	maxdist = 255;
     }
     q = (Qelmt_t *)malloc(World.x * World.y * sizeof(Qelmt_t));
+    if (!q) {
+	error("No memory for walldist init");
+	exit(1);
+    }
     for (x = 0; x < World.x; x++) {
 	for (y = 0; y < World.y; y++) {
 	    if (BIT((1 << World.block[x][y]), WALLDIST_MASK)
@@ -252,8 +272,8 @@ void Walls_init(void)
 
 void Move_init(void)
 {
-    mp.click_width = PIXEL_TO_CLICKS(World.width);
-    mp.click_height = PIXEL_TO_CLICKS(World.height);
+    mp.click_width = PIXEL_TO_CLICK(World.width);
+    mp.click_height = PIXEL_TO_CLICK(World.height);
 
     LIMIT(maxObjectWallBounceSpeed, 0, World.hypotenuse);
     LIMIT(maxShieldedWallBounceSpeed, 0, World.hypotenuse);
@@ -898,9 +918,9 @@ static void Move_segment(move_state_t *ms)
 		mid.y = (offset.y + off2.y) / 2;
 		if (offset.y > r
 		    && off2.y > r
-		    && LENGTH(mid.x - r, mid.y - r) > r
-		    && LENGTH(off2.x - r, off2.y - r) > r
-		    && LENGTH(offset.x - r, offset.y - r) > r) {
+		    && sqr(mid.x - r) + sqr(mid.y - r) > sqr(r)
+		    && sqr(off2.x - r) + sqr(off2.y - r) > sqr(r)
+		    && sqr(offset.x - r) + sqr(offset.y - r) > sqr(r)) {
 		    break;
 		}
 
@@ -1759,10 +1779,24 @@ void Move_object(int ind)
 {
     object		*obj = Obj[ind];
     int			nothing_done = 0;
+    int			dist;
     move_info_t		mi;
     move_state_t	ms;
 
-    obj->prevpos = obj->pos;
+    Object_position_remember(obj);
+
+    dist = walldist[obj->pos.bx][obj->pos.by];
+    if (dist > 2) {
+	int max = ((dist - 2) * BLOCK_SZ) >> 1;
+	if (sqr(max) >= sqr(obj->vel.x) + sqr(obj->vel.y)) {
+	    float x = obj->pos.cx + FLOAT_TO_CLICK(obj->vel.x);
+	    float y = obj->pos.cy + FLOAT_TO_CLICK(obj->vel.y);
+	    x = WRAP_XCLICK(x);
+	    y = WRAP_YCLICK(y);
+	    Object_position_set_clicks(obj, x, y);
+	    return;
+	}
+    }
 
     mi.pl = NULL;
     mi.obj = obj;
@@ -1774,11 +1808,11 @@ void Move_object(int ind)
     mi.treasure_crashes = BIT(mp.obj_treasure_mask, obj->type);
     mi.wormhole_warps = true;
 
-    ms.pos.x = FLOAT_TO_CLICK(obj->pos.x);
-    ms.pos.y = FLOAT_TO_CLICK(obj->pos.y);
+    ms.pos.x = obj->pos.cx;
+    ms.pos.y = obj->pos.cy;
     ms.vel = obj->vel;
-    ms.todo.x = FLOAT_TO_CLICK(obj->pos.x + obj->vel.x) - ms.pos.x;
-    ms.todo.y = FLOAT_TO_CLICK(obj->pos.y + obj->vel.y) - ms.pos.y;
+    ms.todo.x = FLOAT_TO_CLICK(ms.vel.x);
+    ms.todo.y = FLOAT_TO_CLICK(ms.vel.y);
     ms.dir = obj->dir;
     ms.mip = &mi;
 
@@ -1805,7 +1839,7 @@ void Move_object(int ind)
 		 */
 		if (!BIT(obj->status, FROMBOUNCE) && BIT(obj->type, OBJ_SPARK))
 		    CLR_BIT(obj->status, OWNERIMMUNE);
-		if (VECTOR_LENGTH(ms.vel) > maxObjectWallBounceSpeed) {
+		if (sqr(ms.vel.x) + sqr(ms.vel.y) > sqr(maxObjectWallBounceSpeed)) {
 		    obj->life = 0;
 		    break;
 		}
@@ -1841,8 +1875,7 @@ void Move_object(int ind)
 	    ms.pos.y -= mp.click_height;
 	}
     }
-    obj->pos.x = CLICK_TO_FLOAT(ms.pos.x);
-    obj->pos.y = CLICK_TO_FLOAT(ms.pos.y);
+    Object_position_set_clicks(obj, ms.pos.x, ms.pos.y);
     obj->vel = ms.vel;
     obj->dir = ms.dir;
     if (ms.crash) {
@@ -1854,8 +1887,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 {
     player		*pl = ms->mip->pl;
     int			ind = GetInd[pl->id];
-    char		*howfmt = NULL;
-    char                *hudmsg = NULL;
+    const char		*howfmt = NULL;
+    const char          *hudmsg = NULL;
 
     msg[0] = '\0';
 
@@ -1979,7 +2012,7 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 
 	    for (i = 0; i < num_pushers; i++) {
 		player		*pusher = pushers[i];
-		char		*sep = (!i) ? " with help from "
+		const char	*sep = (!i) ? " with help from "
 					    : (i < num_pushers - 1) ? ", "
 					    : " and ";
 		int		sep_len = strlen(sep);
@@ -2023,11 +2056,13 @@ void Move_player(int ind)
     player		*pl = Players[ind];
     int			nothing_done = 0;
     int			i;
+    int			dist;
     move_info_t		mi;
     move_state_t	ms[RES];
     int			worst = 0;
     int			crash;
     int			bounce;
+    int			moves_made = 0;
     clpos		pos;
     clvec		todo;
     clvec		done;
@@ -2039,42 +2074,36 @@ void Move_player(int ind)
 
     if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING) {
 	if (!BIT(pl->status, KILLED|PAUSE)) {
-	    pl->prevpos = pl->pos;
-	    pl->pos.x += pl->vel.x;
-	    pl->pos.y += pl->vel.y;
-	    if (BIT(World.rules->mode, WRAP_PLAY)) {
-		if (pl->pos.x < 0) {
-		    pl->pos.x += World.width;
-		}
-		else if (pl->pos.x >= World.width) {
-		    pl->pos.x -= World.width;
-		}
-		if (pl->pos.y < 0) {
-		    pl->pos.y += World.height;
-		}
-		else if (pl->pos.y >= World.height) {
-		    pl->pos.y -= World.height;
-		}
+	    pos.x = pl->pos.cx + FLOAT_TO_CLICK(pl->vel.x);
+	    pos.y = pl->pos.cy + FLOAT_TO_CLICK(pl->vel.y);
+	    pos.x = WRAP_XCLICK(pos.x);
+	    pos.y = WRAP_YCLICK(pos.y);
+	    if (pos.x != pl->pos.cx || pos.y != pl->pos.cy) {
+		Player_position_remember(pl);
+		Player_position_set_clicks(pl, pos.x, pos.y);
 	    }
 	}
 	pl->velocity = VECTOR_LENGTH(pl->vel);
 	return;
     }
 
-    pl->vel.x -= friction*pl->vel.x;
-    pl->vel.y -= friction*pl->vel.y;
+    pl->vel.x *= (1.0f - friction);
+    pl->vel.y *= (1.0f - friction);
 
-    if (pl->pos.x < 0 || pl->pos.x >= World.width
-	|| pl->pos.y < 0 || pl->pos.y >= World.height) {
-	SET_BIT(pl->status, KILLED);
-	sprintf(msg, "%s stepped out of this world.", pl->name);
-	Set_message(msg);
-	LIMIT(pl->pos.x, 0, World.width - 1);
-	LIMIT(pl->pos.y, 0, World.height - 1);
-	pl->prevpos = pl->pos;
-	pl->velocity = VECTOR_LENGTH(pl->vel);
-	sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_HIT_WALL_SOUND);
-	return;
+    Player_position_remember(pl);
+
+    dist = walldist[pl->pos.bx][pl->pos.by];
+    if (dist > 3) {
+	int max = ((dist - 3) * BLOCK_SZ) >> 1;
+	if (max >= pl->velocity) {
+	    pos.x = pl->pos.cx + FLOAT_TO_CLICK(pl->vel.x);
+	    pos.y = pl->pos.cy + FLOAT_TO_CLICK(pl->vel.y);
+	    pos.x = WRAP_XCLICK(pos.x);
+	    pos.y = WRAP_YCLICK(pos.y);
+	    Player_position_set_clicks(pl, pos.x, pos.y);
+	    pl->velocity = VECTOR_LENGTH(pl->vel);
+	    return;
+	}
     }
 
     mi.pl = pl;
@@ -2087,50 +2116,14 @@ void Move_player(int ind)
     mi.target_crashes = true;
     mi.wormhole_warps = true;
 
-    if (!mi.edge_wrap) {
-	if (pl->pos.x < 15) {
-	    for (i = 0; i < pl->ship->num_points; i++) {
-		if (pl->pos.x + pl->ship->pts[i][pl->dir].x < 0) {
-		    pl->pos.x = -pl->ship->pts[i][pl->dir].x;
-		}
-	    }
-	}
-	if (pl->pos.x >= World.width - 16) {
-	    for (i = 0; i < pl->ship->num_points; i++) {
-		if (pl->pos.x + pl->ship->pts[i][pl->dir].x
-		    >= World.width - 0.5f / CLICK) {
-		    pl->pos.x = World.width - pl->ship->pts[i][pl->dir].x
-				- 1.0f / CLICK;
-		}
-	    }
-	}
-	if (pl->pos.y < 15) {
-	    for (i = 0; i < pl->ship->num_points; i++) {
-		if (pl->pos.y + pl->ship->pts[i][pl->dir].y < 0) {
-		    pl->pos.y = -pl->ship->pts[i][pl->dir].y;
-		}
-	    }
-	}
-	if (pl->pos.y >= World.height - 16) {
-	    for (i = 0; i < pl->ship->num_points; i++) {
-		if (pl->pos.y + pl->ship->pts[i][pl->dir].y
-		    >= World.height - 0.5f / CLICK) {
-		    pl->pos.y = World.height - pl->ship->pts[i][pl->dir].y
-				- 1.0f / CLICK;
-		}
-	    }
-	}
-    }
-    pl->prevpos = pl->pos;
-
     vel = pl->vel;
     todo.x = FLOAT_TO_CLICK(vel.x);
     todo.y = FLOAT_TO_CLICK(vel.y);
     for (i = 0; i < pl->ship->num_points; i++) {
-	float x = pl->pos.x + pl->ship->pts[i][pl->dir].x;
-	float y = pl->pos.y + pl->ship->pts[i][pl->dir].y;
-	ms[i].pos.x = FLOAT_TO_CLICK(x);
-	ms[i].pos.y = FLOAT_TO_CLICK(y);
+	float x = pl->ship->pts[i][pl->dir].x;
+	float y = pl->ship->pts[i][pl->dir].y;
+	ms[i].pos.x = pl->pos.cx + FLOAT_TO_CLICK(x);
+	ms[i].pos.y = pl->pos.cy + FLOAT_TO_CLICK(y);
 	ms[i].vel = vel;
 	ms[i].todo = todo;
 	ms[i].dir = pl->dir;
@@ -2138,50 +2131,14 @@ void Move_player(int ind)
 	ms[i].target = -1;
     }
 
-    for (;;) {
+    for (;; moves_made++) {
 
-/* caution: experimental code ahead. */
-#ifndef STABLE
-
-#if 0
-	pos.x = CLICK_TO_FLOAT(ms[0].pos.x) - pl->ship->pts[0][ms[0].dir].x;
-	pos.y = CLICK_TO_FLOAT(ms[0].pos.y) - pl->ship->pts[0][ms[0].dir].y;
-	if (mi.edge_wrap) {
-	    if (pos.x < 0) {
-		pos.x += World.width;
-	    }
-	    else if (pos.x >= World.width) {
-		pos.x -= World.width;
-	    }
-	    if (pos.y < 0) {
-		pos.y += World.height;
-	    }
-	    else if (pos.y >= World.height) {
-		pos.y -= World.height;
-	    }
-	}
-	block.x = pos.x / BLOCK_SZ;
-	block.y = pos.y / BLOCK_SZ;
-#else
 	pos.x = ms[0].pos.x - FLOAT_TO_CLICK(pl->ship->pts[0][ms[0].dir].x);
 	pos.y = ms[0].pos.y - FLOAT_TO_CLICK(pl->ship->pts[0][ms[0].dir].y);
-	if (mi.edge_wrap) {
-	    if (pos.x < 0) {
-		pos.x += mp.click_width;
-	    }
-	    else if (pos.x >= mp.click_width) {
-		pos.x -= mp.click_width;
-	    }
-	    if (pos.y < 0) {
-		pos.y += mp.click_height;
-	    }
-	    else if (pos.y >= mp.click_height) {
-		pos.y -= mp.click_height;
-	    }
-	}
+	pos.x = WRAP_XCLICK(pos.x);
+	pos.y = WRAP_YCLICK(pos.y);
 	block.x = pos.x / BLOCK_CLICKS;
 	block.y = pos.y / BLOCK_CLICKS;
-#endif
 
 	if (walldist[block.x][block.y] > 3) {
 	    int maxcl = ((walldist[block.x][block.y] - 3) * BLOCK_CLICKS) >> 1;
@@ -2234,7 +2191,6 @@ void Move_player(int ind)
 		continue;
 	    }
 	}
-#endif
 
 	bounce = -1;
 	crash = -1;
@@ -2267,6 +2223,7 @@ void Move_player(int ind)
 	}
 	else if (bounce != -1) {
 	    worst = bounce;
+	    pl->last_wall_touch = frame_loops;
 	    if (ms[worst].bounce != BounceEdge) {
 		float	speed = VECTOR_LENGTH(ms[worst].vel);
 		int	v = (int) speed >> 2;
@@ -2285,7 +2242,8 @@ void Move_player(int ind)
 
 		if (BIT(pl->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 		    == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
-		    max_speed = 100; max_angle = RES;
+		    max_speed = 100;
+		    max_angle = RES;
 		}
 
 		ms[worst].vel.x *= playerWallBrakeFactor;
@@ -2350,7 +2308,7 @@ void Move_player(int ind)
 					  * wallBounceFuelDrainMult));
 		    Item_damage(ind, wallBounceDestroyItemProb);
 		}
-		if (!pl->fuel.sum) {
+		if (!pl->fuel.sum && wallBounceFuelDrainMult != 0) {
 		    crash = worst;
 		    ms[worst].crash = (ms[worst].target >= 0 ? CrashTarget :
 				       CrashWallNoFuel);
@@ -2423,24 +2381,11 @@ void Move_player(int ind)
 	}
     }
 
-    pos.x = FLOAT_TO_CLICK(pl->pos.x + pl->ship->pts[worst][pl->dir].x);
-    pos.y = FLOAT_TO_CLICK(pl->pos.y + pl->ship->pts[worst][pl->dir].y);
-    pl->pos.x += CLICK_TO_FLOAT(ms[worst].pos.x - pos.x);
-    pl->pos.y += CLICK_TO_FLOAT(ms[worst].pos.y - pos.y);
-    if (mi.edge_wrap) {
-	if (pl->pos.x < 0) {
-	    pl->pos.x += World.width;
-	}
-	else if (pl->pos.x >= World.width) {
-	    pl->pos.x -= World.width;
-	}
-	if (pl->pos.y < 0) {
-	    pl->pos.y += World.height;
-	}
-	else if (pl->pos.y >= World.height) {
-	    pl->pos.y -= World.height;
-	}
-    }
+    pos.x = ms[worst].pos.x - FLOAT_TO_CLICK(pl->ship->pts[worst][pl->dir].x);
+    pos.y = ms[worst].pos.y - FLOAT_TO_CLICK(pl->ship->pts[worst][pl->dir].y);
+    pos.x = WRAP_XCLICK(pos.x);
+    pos.y = WRAP_YCLICK(pos.y);
+    Player_position_set_clicks(pl, pos.x, pos.y);
     pl->vel = ms[worst].vel;
     pl->velocity = VECTOR_LENGTH(pl->vel);
 
@@ -2456,14 +2401,13 @@ void Turn_player(int ind)
     move_info_t		mi;
     move_state_t	ms[RES];
     int			dir;
-    int			old_dir = pl->dir;
     int			new_dir = MOD2((int)(pl->float_dir + 0.5f), RES);
     int			sign;
     int			crash = -1;
     int			nothing_done = 0;
+    int			turns_done = 0;
     int			blocked = 0;
-    int			bx, by;
-    position		pos;
+    clpos		pos;
     vector		salt;
 
     if (new_dir == pl->dir) {
@@ -2474,19 +2418,7 @@ void Turn_player(int ind)
 	return;
     }
 
-    if (pl->pos.x < 0 || pl->pos.x >= World.width
-	|| pl->pos.y < 0 || pl->pos.y >= World.height) {
-	sprintf(msg, "%s stepped out of this world.", pl->name);
-	Set_message(msg);
-	SET_BIT(pl->status, KILLED);
-	LIMIT(pl->pos.x, 0, World.width - 1);
-	LIMIT(pl->pos.y, 0, World.height - 1);
-	pl->prevpos = pl->pos;
-	return;
-    }
-    bx = (int)(pl->pos.x / BLOCK_SZ);
-    by = (int)(pl->pos.y / BLOCK_SZ);
-    if (walldist[bx][by] > 2) {
+    if (walldist[pl->pos.bx][pl->pos.by] > 2) {
 	pl->dir = new_dir;
 	return;
     }
@@ -2508,55 +2440,62 @@ void Turn_player(int ind)
 	sign = (pl->dir - new_dir <= RES + new_dir - pl->dir) ? -1 : 1;
     }
 
-    pos = pl->pos;
+#if 0
     salt.x = (pl->vel.x > 0) ? 0.1f : (pl->vel.x < 0) ? -0.1f : 0;
     salt.y = (pl->vel.y > 0) ? 0.1f : (pl->vel.y < 0) ? -0.1f : 0;
-    while (pl->dir != new_dir) {
+#else
+    salt.x = (pl->vel.x > 0) ? 1e-6f : (pl->vel.x < 0) ? -1e-6f : 0;
+    salt.y = (pl->vel.y > 0) ? 1e-6f : (pl->vel.y < 0) ? -1e-6f : 0;
+#endif
+
+    pos.x = pl->pos.cx;
+    pos.y = pl->pos.cy;
+    for (; pl->dir != new_dir; turns_done++) {
 	dir = MOD2(pl->dir + sign, RES);
 	if (!mi.edge_wrap) {
-	    if (pos.x < 15) {
+	    if (pos.x <= 22 * CLICK) {
 		for (i = 0; i < pl->ship->num_points; i++) {
-		    if (pos.x + pl->ship->pts[i][dir].x < 0) {
-			pos.x = -pl->ship->pts[i][dir].x;
+		    if (pos.x + FLOAT_TO_CLICK(pl->ship->pts[i][dir].x) < 0) {
+			pos.x = -FLOAT_TO_CLICK(pl->ship->pts[i][dir].x);
 		    }
 		}
 	    }
-	    if (pos.x >= World.width - 16) {
+	    if (pos.x >= mp.click_width - 22 * CLICK) {
 		for (i = 0; i < pl->ship->num_points; i++) {
-		    if (pos.x + pl->ship->pts[i][dir].x
-			>= World.width - 0.5f / CLICK) {
-			pos.x = World.width - pl->ship->pts[i][dir].x - 1;
+		    if (pos.x + FLOAT_TO_CLICK(pl->ship->pts[i][dir].x)
+			>= mp.click_width) {
+			pos.x = mp.click_width - 1
+			       - FLOAT_TO_CLICK(pl->ship->pts[i][dir].x);
 		    }
 		}
 	    }
-	    if (pos.y < 15) {
+	    if (pos.y <= 22 * CLICK) {
 		for (i = 0; i < pl->ship->num_points; i++) {
-		    if (pos.y + pl->ship->pts[i][dir].y < 0) {
-			pos.y = -pl->ship->pts[i][dir].y;
+		    if (pos.y + FLOAT_TO_CLICK(pl->ship->pts[i][dir].y) < 0) {
+			pos.y = -FLOAT_TO_CLICK(pl->ship->pts[i][dir].y);
 		    }
 		}
 	    }
-	    if (pos.y >= World.height - 16) {
+	    if (pos.y >= mp.click_height - 22 * CLICK) {
 		for (i = 0; i < pl->ship->num_points; i++) {
-		    if (pos.y + pl->ship->pts[i][dir].y
-			>= World.height - 0.5f / CLICK) {
-			pos.y = World.height -
-			    pl->ship->pts[i][dir].y - 1;
+		    if (pos.y + FLOAT_TO_CLICK(pl->ship->pts[i][dir].y)
+			>= mp.click_height) {
+			pos.y = mp.click_height - 1
+			       - FLOAT_TO_CLICK(pl->ship->pts[i][dir].y);
 		    }
 		}
+	    }
+	    if (pos.x != pl->pos.cx || pos.y != pl->pos.cy) {
+		Player_position_set_clicks(pl, pos.x, pos.y);
 	    }
 	}
 
 	for (i = 0; i < pl->ship->num_points; i++) {
 	    ms[i].mip = &mi;
-	    ms[i].pos.x = FLOAT_TO_CLICK(pl->pos.x +
-		pl->ship->pts[i][pl->dir].x);
-	    ms[i].pos.y = FLOAT_TO_CLICK(pl->pos.y +
-		pl->ship->pts[i][pl->dir].y);
-	    ms[i].todo.x = FLOAT_TO_CLICK(pos.x +
-		pl->ship->pts[i][dir].x) - ms[i].pos.x;
-	    ms[i].todo.y = FLOAT_TO_CLICK(pos.y +
-		pl->ship->pts[i][dir].y) - ms[i].pos.y;
+	    ms[i].pos.x = pos.x + FLOAT_TO_CLICK(pl->ship->pts[i][pl->dir].x);
+	    ms[i].pos.y = pos.y + FLOAT_TO_CLICK(pl->ship->pts[i][pl->dir].y);
+	    ms[i].todo.x = pos.x + FLOAT_TO_CLICK(pl->ship->pts[i][dir].x) - ms[i].pos.x;
+	    ms[i].todo.y = pos.y + FLOAT_TO_CLICK(pl->ship->pts[i][dir].y) - ms[i].pos.y;
 	    ms[i].vel.x = ms[i].todo.x + salt.x;
 	    ms[i].vel.y = ms[i].todo.y + salt.y;
 	    ms[i].target = -1;
@@ -2578,6 +2517,7 @@ void Turn_player(int ind)
 		    if (++nothing_done >= 5) {
 			ms[i].crash = CrashUnknown;
 			crash = i;
+			blocked = 1;
 			break;
 		    }
 		}
@@ -2595,27 +2535,11 @@ void Turn_player(int ind)
 	    break;
 	}
 	pl->dir = dir;
-	pl->pos = pos;
     }
 
     if (blocked) {
 	pl->float_dir = (float) pl->dir;
-    }
-    if (pl->dir != old_dir) {
-	if (mi.edge_wrap) {
-	    if (pl->pos.x < 0) {
-		pl->pos.x += World.width;
-	    }
-	    else if (pl->pos.x >= World.width) {
-		pl->pos.x -= World.width;
-	    }
-	    if (pl->pos.y < 0) {
-		pl->pos.y += World.height;
-	    }
-	    else if (pl->pos.y >= World.height) {
-		pl->pos.y -= World.height;
-	    }
-	}
+	pl->last_wall_touch = frame_loops;
     }
 
     if (crash != -1) {

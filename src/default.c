@@ -1,10 +1,10 @@
-/* $Id: default.c,v 3.110 1996/05/04 21:43:44 bert Exp $
+/* $Id: default.c,v 3.118 1996/12/15 21:31:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "types.h"
 #include <X11/Xos.h>
 #include <X11/keysym.h>
 #include <X11/Xlib.h>
@@ -44,6 +43,7 @@
 
 #include "version.h"
 #include "config.h"
+#include "types.h"
 #include "const.h"
 #include "paint.h"
 #include "pack.h"
@@ -52,12 +52,13 @@
 #include "netclient.h"
 #include "xinit.h"
 #include "error.h"
+#include "protoclient.h"
 
 char default_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.110 1996/05/04 21:43:44 bert Exp $";
+    "@(#)$Id: default.c,v 3.118 1996/12/15 21:31:22 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -86,8 +87,8 @@ static char sourceid[] =
 #define KEY_LIST_FONT	"-*-fixed-medium-r-*-*-10-*-*-*-c-*-iso8859-1"
 #define MOTD_FONT	"-*-courier-bold-r-*--14-*-*-*-*-*-iso8859-1"
 
-static char		*myName = "xpilot";
-static char		*myClass = "XPilot";
+char			myName[] = "xpilot";
+char			myClass[] = "XPilot";
 
 
 #ifdef SPARC_CMAP_HACK
@@ -106,11 +107,12 @@ keys_t buttonDefs[MAX_POINTER_BUTTONS];
  * the key help window only the first line is used.
  */
 struct option {
-    char		*name;		/* option name */
-    char		*noArg;		/* value for non-argument options */
-    char		*fallback;	/* default value */
+    const char		*name;		/* option name */
+    const char		*noArg;		/* value for non-argument options */
+    const char		*fallback;	/* default value */
     keys_t		key;		/* key if not KEY_DUMMY */
-    char		*help;		/* user help (multiline) */
+    const char		*help;		/* user help (multiline) */
+    unsigned		hash;		/* option name hashed. */
 } options[] = {
     {
 	"help",
@@ -1540,7 +1542,15 @@ struct option {
 };
 
 
-int ON(char *optval);
+static unsigned String_hash(const char *s)
+{
+    unsigned		hash = 0;
+
+    for (; *s; s++) {
+	hash = (((hash >> 29) & 7) | (hash << 3)) ^ *s;
+    }
+    return hash;
+}
 
 
 char* Get_keyHelpString(keys_t key)
@@ -1564,7 +1574,7 @@ char* Get_keyHelpString(keys_t key)
 }
 
 
-char* Get_keyResourceString(keys_t key)
+const char* Get_keyResourceString(keys_t key)
 {
     int			i;
 
@@ -1591,7 +1601,7 @@ static void Usage(void)
 	printf("    -%s %s\n", options[i].name,
 	       (options[i].noArg == NULL) ? "<value>" : "");
 	if (options[i].help && options[i].help[0]) {
-	    char *str;
+	    const char *str;
 	    printf("        ");
 	    for (str = options[i].help; *str; str++) {
 		putchar(*str);
@@ -1621,14 +1631,14 @@ static void Usage(void)
 "one key may be used by multiple key options.\n"
 "If no server is specified then xpilot will search\n"
 "for servers on your local network.\n"
-"For a listing of remote servers try: telnet xpilot.cs.uit.no 4400 \n"
+"For a listing of remote servers try: telnet meta.xpilot.org 4400 \n"
 	  );
 
     exit(1);
 }
 
 
-static int Find_resource(XrmDatabase db, char *resource,
+static int Find_resource(XrmDatabase db, const char *resource,
 			 char *result, unsigned size, int *index)
 {
     int			i,
@@ -1637,9 +1647,10 @@ static int Find_resource(XrmDatabase db, char *resource,
 			str_class[80],
 			*str_type[10];
     XrmValue		rmValue;
+    unsigned		hash = String_hash(resource);
 
     for (i = 0;;) {
-	if (!strcmp(resource, options[i].name)) {
+	if (hash == options[i].hash && !strcmp(resource, options[i].name)) {
 	    *index = i;
 	    break;
 	}
@@ -1671,7 +1682,7 @@ static int Find_resource(XrmDatabase db, char *resource,
 
 
 static int Get_resource(XrmDatabase db,
-			char *resource, char *result, unsigned size)
+			const char *resource, char *result, unsigned size)
 {
     int			index;
 
@@ -1680,7 +1691,7 @@ static int Get_resource(XrmDatabase db,
 
 
 static int Get_string_resource(XrmDatabase db,
-			       char *resource, char *result, unsigned size)
+			       const char *resource, char *result, unsigned size)
 {
     char		*src, *dst;
     int			index, val;
@@ -1700,7 +1711,7 @@ static int Get_string_resource(XrmDatabase db,
 
 
 static void Get_int_resource(XrmDatabase db,
-			     char *resource, int *result)
+			     const char *resource, int *result)
 {
     int			index;
     char		resValue[MAX_CHARS];
@@ -1716,7 +1727,7 @@ static void Get_int_resource(XrmDatabase db,
 
 
 static void Get_float_resource(XrmDatabase db,
-			       char *resource, float *result)
+			       const char *resource, float *result)
 {
     int			index;
     char		resValue[MAX_CHARS];
@@ -1731,7 +1742,7 @@ static void Get_float_resource(XrmDatabase db,
 }
 
 
-static void Get_bool_resource(XrmDatabase db, char *resource, int *result)
+static void Get_bool_resource(XrmDatabase db, const char *resource, int *result)
 {
     int			index;
     char		resValue[MAX_CHARS];
@@ -1741,7 +1752,7 @@ static void Get_bool_resource(XrmDatabase db, char *resource, int *result)
 }
 
 
-static void Get_bit_resource(XrmDatabase db, char *resource,
+static void Get_bit_resource(XrmDatabase db, const char *resource,
 			     long *mask, int bit)
 {
     int			index;
@@ -1750,6 +1761,29 @@ static void Get_bit_resource(XrmDatabase db, char *resource,
     Find_resource(db, resource, resValue, sizeof resValue, &index);
     if (ON(resValue)) {
 	SET_BIT(*mask, bit);
+    }
+}
+
+
+void Get_xpilotrc_file(char *path, unsigned size)
+{
+    const char		*home = getenv("HOME");
+    const char		*defaultFile = ".xpilotrc";
+    const char		*optionalFile = getenv("XPILOTRC");
+
+    if (optionalFile != NULL) {
+	strncpy(path, optionalFile, size);
+    }
+    else if (home != NULL) {
+	strncpy(path, home, size);
+	strncat(path, "/", size);
+	strncat(path, defaultFile, size);
+    }
+    else {
+	strncpy(path, "", size);
+    }
+    if (size > 0) {
+	path[size - 1] = '\0';
     }
 }
 
@@ -1839,8 +1873,8 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
 	XrmMergeDatabases(tmpDB, rDBptr);
     }
 
-    if (home != NULL) {
-	sprintf(path, "%s/.xpilotrc", home);
+    Get_xpilotrc_file(path, sizeof(path));
+    if (path[0] != '\0') {
 	tmpDB = XrmGetFileDatabase(path);
 	XrmMergeDatabases(tmpDB, rDBptr);
     }
@@ -1868,7 +1902,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 #endif
     XrmDatabase		argDB = 0, rDB;
     XrmOptionDescRec	*xopt;
-    extern void		Record_init(char *filename);
 
     XrmInitialize();
 
@@ -1886,6 +1919,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     xopt = (XrmOptionDescRec *)ptr;
     ptr += sizeof(*xopt) * NELEM(options);
     for (i = 0; i < NELEM(options); i++) {
+	options[i].hash = String_hash(options[i].name);
 	xopt[i].option = ptr;
 	xopt[i].option[0] = '-';
 	strcpy(&xopt[i].option[1], options[i].name);
@@ -1897,7 +1931,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	ptr += size;
 	if (options[i].noArg) {
 	    xopt[i].argKind = XrmoptionNoArg;
-	    xopt[i].value = options[i].noArg;
+	    xopt[i].value = (char *)options[i].noArg;
 	}
 	else {
 	    xopt[i].argKind = XrmoptionSepArg;

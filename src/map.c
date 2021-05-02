@@ -1,10 +1,10 @@
-/* $Id: map.c,v 3.45 1996/05/02 16:05:48 bert Exp $
+/* $Id: map.c,v 3.49 1997/01/16 20:24:20 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +28,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -44,7 +44,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.45 1996/05/02 16:05:48 bert Exp $";
+    "@(#)$Id: map.c,v 3.49 1997/01/16 20:24:20 bert Exp $";
 #endif
 
 
@@ -311,6 +311,10 @@ void Grok_map(void)
 	case '-':
 	case '>':
 	case '<':
+        case 'i':
+        case 'm':
+        case 'j':
+        case 'k':
 	    World.NumGravs++;
 	    break;
 	case '@':
@@ -594,6 +598,34 @@ void Grok_map(void)
 		    break;
 		case '<':
 		    line[y] = ACWISE_GRAV;
+		    World.grav[World.NumGravs].pos.x = x;
+		    World.grav[World.NumGravs].pos.y = y;
+		    World.grav[World.NumGravs].force = -GRAVS_POWER;
+		    World.NumGravs++;
+		    break;
+	        case 'i':
+		    line[y] = UP_GRAV;
+		    World.grav[World.NumGravs].pos.x = x;
+		    World.grav[World.NumGravs].pos.y = y;
+		    World.grav[World.NumGravs].force = GRAVS_POWER;
+		    World.NumGravs++;
+		    break;
+	        case 'm':
+		    line[y] = DOWN_GRAV;
+		    World.grav[World.NumGravs].pos.x = x;
+		    World.grav[World.NumGravs].pos.y = y;
+		    World.grav[World.NumGravs].force = -GRAVS_POWER;
+		    World.NumGravs++;
+		    break;
+	        case 'k':
+		    line[y] = RIGHT_GRAV;
+		    World.grav[World.NumGravs].pos.x = x;
+		    World.grav[World.NumGravs].pos.y = y;
+		    World.grav[World.NumGravs].force = GRAVS_POWER;
+		    World.NumGravs++;
+		    break;
+                case 'j':
+		    line[y] = LEFT_GRAV;
 		    World.grav[World.NumGravs].pos.x = x;
 		    World.grav[World.NumGravs].pos.y = y;
 		    World.grav[World.NumGravs].force = -GRAVS_POWER;
@@ -1033,7 +1065,7 @@ static void Compute_grav_tab(vector grav_tab[GRAV_RANGE+1][GRAV_RANGE+1])
 
 static void Compute_local_gravity(void)
 {
-    int			xi, yi, g, gx, gy, ax, ay, dx, dy, isclock;
+    int			xi, yi, g, gx, gy, ax, ay, dx, dy, gtype;
     int			first_xi, last_xi, first_yi, last_yi, mod_xi, mod_yi;
     int			min_xi, max_xi, min_yi, max_yi;
     float		force, fx, fy;
@@ -1069,13 +1101,7 @@ static void Compute_local_gravity(void)
 	if ((last_yi = gy + GRAV_RANGE) > max_yi) {
 	    last_yi = max_yi;
 	}
-	if (World.block[gx][gy] == CWISE_GRAV
-	    || World.block[gx][gy] == ACWISE_GRAV) {
-	    isclock = 1;
-	} else {
-	    isclock = 0;
-	}
-
+	gtype = World.block[gx][gy];
 	mod_xi = (first_xi < 0) ? (first_xi + World.x) : first_xi;
 	dx = gx - first_xi;
 	fx = force;
@@ -1100,12 +1126,24 @@ static void Compute_local_gravity(void)
 			ay = dy;
 		    }
 		    v = &tab[ay];
-		    if (isclock) {
+		    if (gtype == CWISE_GRAV || gtype == ACWISE_GRAV) {
 			grav->x -= fy * v->y;
 			grav->y += fx * v->x;
+		    } else if (gtype == UP_GRAV || gtype == DOWN_GRAV) {
+			grav->y += force * v->x;
+		    } else if (gtype == RIGHT_GRAV || gtype == LEFT_GRAV) {
+			grav->x += force * v->y;
 		    } else {
 			grav->x += fx * v->x;
 			grav->y += fy * v->y;
+		    }
+		}
+		else {
+		    if (gtype == UP_GRAV || gtype == DOWN_GRAV) {
+			grav->y += force;
+		    }
+		    else if (gtype == LEFT_GRAV || gtype == RIGHT_GRAV) {
+			grav->x += force;
 		    }
 		}
 		mod_yi++;

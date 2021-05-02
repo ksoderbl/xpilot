@@ -1,10 +1,10 @@
-/* $Id: types.h,v 3.15 1996/05/02 16:06:01 bert Exp $
+/* $Id: types.h,v 3.17 1996/10/06 21:21:08 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,13 +52,14 @@ typedef unsigned short  u_char;
 typedef unsigned short	u_short;
 #endif
 
-#if 0
-typedef enum {true = 1, false = 0} bool;
-#else
+/*
+ * On some systems an enum is smaller than an int.
+ * On others bool is already a builtin type.
+ * Using preprocessor macros to circumvent both situations.
+ */
 #define false	0
 #define true	1
-typedef int bool;
-#endif
+#define bool	int
 
 typedef struct { float x, y; }	vector;
 typedef vector			position;

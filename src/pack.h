@@ -1,10 +1,10 @@
-/* $Id: pack.h,v 3.49 1996/05/13 12:16:51 bert Exp $
+/* $Id: pack.h,v 3.53 1996/12/14 20:32:02 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,11 +28,6 @@
 
 #define SERVER_PORT	15345		/* Port which server listens to. */
 #define SERVER_PORT_STR	"15345"		/* ASCII version of server port. */
-#define META_PORT	5500
-#define META_HOST	"xpilot.cs.uit.no"
-#define META_HOST_TWO	"prince.bio.uva.nl"
-#define META_IP		"129.242.16.101"
-#define META_IP_TWO	"145.18.160.57"
 
 /*
  * Magic contact word.
@@ -113,6 +108,7 @@
 #define	MAX_STR_LEN		4096
 #define	MAX_DISP_LEN		80
 #define	MAX_NAME_LEN		16
+#define	MAX_HOST_LEN		64
 
 /*
  * Different contact pack types.

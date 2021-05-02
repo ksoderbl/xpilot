@@ -1,10 +1,10 @@
-/* $Id: config.h,v 3.24 1996/04/07 17:05:01 bert Exp $
+/* $Id: config.h,v 3.26 1996/10/08 11:22:38 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@
  * is in the Makefile.std and in the Imakefile.
  */
 #ifndef LOCALGURU
-#    define LOCALGURU		"xpilot@cs.uit.no"
+#    define LOCALGURU		"xpilot@xpilot.org"
 #endif
 
 #ifndef	DEFAULT_MAP
@@ -159,7 +159,7 @@
 /*
  * Leave these alone.
  */
-#define REPORT_ADDRESS	"xpilot@cs.uit.no"
+#define REPORT_ADDRESS	"xpilot@xpilot.org"
 
 #ifdef	DEBUG
 #    define D(x)	{ {x}; fflush(stdout); }

@@ -1,10 +1,10 @@
-/* $Id: setup.h,v 3.17 1995/07/16 16:27:22 bert Exp $
+/* $Id: setup.h,v 3.19 1996/10/06 00:01:43 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,6 +85,10 @@
 #define SETUP_DECOR_DOT_RD	118
 #define SETUP_DECOR_DOT_LU	119
 #define SETUP_DECOR_DOT_LD	120
+#define SETUP_UP_GRAV		121
+#define SETUP_DOWN_GRAV		122
+#define SETUP_RIGHT_GRAV	123
+#define SETUP_LEFT_GRAV		124
 
 #define BLUE_UP			0x01
 #define BLUE_RIGHT		0x02

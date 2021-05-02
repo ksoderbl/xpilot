@@ -1,10 +1,10 @@
-/* $Id: xpmread.h,v 3.1 1995/01/24 17:37:25 bert Exp $
+/* $Id: xpmread.h,v 3.3 1996/10/12 08:37:21 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@ typedef struct XPM_read_struct {
     XPM			*xpm;
     char		**chars_ptr;	/* color representation pointers */
     char		*chars_mem;	/* color representation memory */
-    char		*error_str;	/* string giving error reason */
+    const char		*error_str;	/* string giving error reason */
 } XPM_read;
 
 #endif

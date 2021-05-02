@@ -14,7 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Id: socklib.c,v 3.49 1996/05/02 16:05:59 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.53 1996/10/12 13:15:00 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: socklib.c,v 3.49 1996/05/02 16:05:59 bert Exp $";
+    "@(#)$Id: socklib.c,v 3.53 1996/10/12 13:15:00 bert Exp $";
 #endif
 
 #ifdef TERMNET
@@ -79,12 +79,6 @@ static char sourceid[] =
 #include <resolv.h>
 #endif
 
-#ifdef __cplusplus
-#ifndef __STDC__
-#define __STDC__	1
-#endif
-#endif
-
 /* Socklib Includes And Definitions */
 #include "version.h"
 #include "socklib.h"
@@ -124,11 +118,11 @@ int			sl_timeout_us = DEFAULT_US_TIMEOUT_VALUE;
 /* Global default retries variable used by DgramSendRec */
 int			sl_default_retries = DEFAULT_RETRIES;
 
-/* Global variable containing the last address from DgramReceiveAny */
-struct sockaddr_in	sl_dgram_lastaddr;
-
 /* Global broadcast enable variable (super-user only), default disabled */
 int			sl_broadcast_enabled = 0;
+
+/* Local variable containing the last address from DgramReceiveAny */
+static struct sockaddr_in	sl_dgram_lastaddr;
 
 
 /*
@@ -162,13 +156,7 @@ int			sl_broadcast_enabled = 0;
  *
  * Originally coded by Arne Helme
  */
-void
-#ifdef __STDC__
-SetTimeout(int s, int us)
-#else
-SetTimeout(s, us)
-int s, us;
-#endif /* __STDC__ */
+void SetTimeout(int s, int us)
 {
     sl_timeout_us = us;
     sl_timeout_s = s;
@@ -208,13 +196,7 @@ int s, us;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-CreateServerSocket(int port)
-#else
-CreateServerSocket(port)
-int	port;
-#endif /* __STDC__ */
+int CreateServerSocket(int port)
 {
     struct sockaddr_in	addr_in;
     int			fd;
@@ -280,13 +262,7 @@ int	port;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-GetPortNum(int fd)
-#else
-GetPortNum(fd)
-int	fd;
-#endif /* __STDC__ */
+int GetPortNum(int fd)
 {
     int			len;
     struct sockaddr_in	addr;
@@ -332,13 +308,7 @@ int	fd;
  *
  * Originally coded by Bert Gijsbers
  */
-char *
-#ifdef __STDC__
-GetSockAddr(int fd)
-#else
-GetSockAddr(fd)
-int	fd;
-#endif /* __STDC__ */
+char *GetSockAddr(int fd)
 {
     int			len;
     struct sockaddr_in	addr;
@@ -354,7 +324,7 @@ int	fd;
 /*
  *******************************************************************************
  *
- *	GetPeerName()
+ *	GetRemoteHostName()
  *
  *******************************************************************************
  * Description
@@ -383,15 +353,7 @@ int	fd;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-SLGetPeerName(int fd, char *name, int namelen)
-#else
-SLGetPeerName(fd, name, namelen)
-int	fd;
-char	*name;
-int	namelen;
-#endif /* __STDC__ */
+int GetRemoteHostName(int fd, char *name, int namelen)
 {
     int			len;
     struct sockaddr_in	addr;
@@ -413,7 +375,7 @@ int	namelen;
     name[namelen - 1] = '\0';
 
     return (0);
-} /* GetPeerName */
+} /* GetRemoteHostName */
 
 
 /*
@@ -452,14 +414,7 @@ int	namelen;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-CreateClientSocket(char *host, int port)
-#else
-CreateClientSocket(host, port)
-char	*host;
-int	port;
-#endif /* __STDC__ */
+int CreateClientSocket(char *host, int port)
 {
     struct sockaddr_in	peer;
     struct hostent	*hp;
@@ -530,13 +485,7 @@ int	port;
  *
  * Originally coded by Arne Helme.
  */
-int
-#ifdef __STDC__
-SocketAccept(int fd)
-#else
-SocketAccept(fd)
-int	fd;
-#endif /* __STDC__ */
+int SocketAccept(int fd)
 {
     int		retval;
 
@@ -577,13 +526,7 @@ int	fd;
  *
  * Originally coded by Arne Helme, but moved out of SocketAccept by Bert.
  */
-int
-#ifdef __STDC__
-SocketLinger(int fd)
-#else
-SocketLinger(fd)
-int	fd;
-#endif /* __STDC__ */
+int SocketLinger(int fd)
 {
 #if defined(LINUX0) || !defined(SO_LINGER)
     /*
@@ -633,14 +576,7 @@ int	fd;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-SetSocketReceiveBufferSize(int fd, int size)
-#else
-SetSocketReceiveBufferSize(fd, size)
-int	fd;
-int	size;
-#endif /* __STDC__ */
+int SetSocketReceiveBufferSize(int fd, int size)
 {
     return (setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
 		       (void *)&size, sizeof(size)));
@@ -677,14 +613,7 @@ int	size;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-SetSocketSendBufferSize(int fd, int size)
-#else
-SetSocketSendBufferSize(fd, size)
-int	fd;
-int	size;
-#endif /* __STDC__ */
+int SetSocketSendBufferSize(int fd, int size)
 {
     return (setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
 		       (void *)&size, sizeof(size)));
@@ -722,14 +651,7 @@ int	size;
  * Originally coded by Bert Gÿsbers
  */
 #ifdef TCP_NODELAY
-int
-#ifdef __STDC__
-SetSocketNoDelay(int fd, int flag)
-#else
-SetSocketNoDelay(fd, flag)
-int	fd;
-int	flag;
-#endif /* __STDC__ */
+int SetSocketNoDelay(int fd, int flag)
 {
     /*
      * The fcntl(O_NDELAY) option has nothing to do
@@ -772,20 +694,13 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-SetSocketNonBlocking(int fd, int flag)
-#else
-SetSocketNonBlocking(fd, flag)
-int	fd;
-int	flag;
-#endif /* __STDC__ */
+int SetSocketNonBlocking(int fd, int flag)
 {
 /*
  * There are some problems on some particular systems (suns) with
  * getting sockets to be non-blocking.  Just try all possible ways
  * until one of them succeeds.  Please keep us informed by e-mail
- * to xpilot@cs.uit.no.
+ * to xpilot@xpilot.org.
  */
 
 #ifndef USE_FCNTL_O_NONBLOCK
@@ -891,14 +806,7 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-SetSocketBroadcast(int fd, int flag)
-#else
-SetSocketBroadcast(fd, flag)
-int	fd;
-int	flag;
-#endif /* __STDC__ */
+int SetSocketBroadcast(int fd, int flag)
 {
     return setsockopt(fd, SOL_SOCKET, SO_BROADCAST,
 		      (void *)&flag, sizeof(flag));
@@ -934,13 +842,7 @@ int	flag;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-GetSocketError(int fd)
-#else
-GetSocketError(fd)
-int	fd;
-#endif /* __STDC__ */
+int GetSocketError(int fd)
 {
     int	error, size;
 
@@ -983,13 +885,7 @@ int	fd;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-SocketReadable(int fd)
-#else
-SocketReadable(fd)
-int	fd;
-#endif /* __STDC__ */
+int SocketReadable(int fd)
 {
     int			readfds;
     struct timeval	timeout;
@@ -1040,7 +936,7 @@ int	fd;
  *
  * Originally coded by Arne Helme
  */
-#ifdef __STDC__
+#if defined(__STDC__) || defined(__cplusplus)
 static void inthandler(int signum)
 #else
 static inthandler()
@@ -1085,14 +981,7 @@ static inthandler()
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-SocketRead(int fd, char *buf, int size)
-#else
-SocketRead(fd, buf, size)
-int	fd, size;
-char	*buf;
-#endif /* __STDC__ */
+int SocketRead(int fd, char *buf, int size)
 {
     int	ret, ret1;
 
@@ -1152,14 +1041,7 @@ char	*buf;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-SocketWrite(int fd, char *buf, int size)
-#else
-SocketWrite(fd, buf, size)
-int	fd, size;
-char	*buf;
-#endif /* __STDC__ */
+int SocketWrite(int fd, char *buf, int size)
 {
     int		retval;
 
@@ -1206,13 +1088,7 @@ char	*buf;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-SocketClose(int fd)
-#else
-SocketClose(fd)
-int	fd;
-#endif /* __STDC__ */
+int SocketClose(int fd)
 {
     if (shutdown(fd, 2) == -1)
     {
@@ -1262,13 +1138,7 @@ int	fd;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-CreateDgramSocket(int port)
-#else
-CreateDgramSocket(port)
-int	port;
-#endif /* __STDC__ */
+int CreateDgramSocket(int port)
 {
     struct sockaddr_in	addr_in;
     int			fd;
@@ -1333,14 +1203,7 @@ int	port;
  *
  * Originally coded by Bert Gijsbers, adapted from CreateDgramSocket().
  */
-int
-#ifdef __STDC__
-CreateDgramAddrSocket(char *dotaddr, int port)
-#else
-CreateDgramAddrSocket(dotaddr, port)
-char	*dotaddr;
-int	port;
-#endif /* __STDC__ */
+int CreateDgramAddrSocket(char *dotaddr, int port)
 {
     struct sockaddr_in	addr_in;
     int			fd;
@@ -1404,15 +1267,7 @@ int	port;
  *
  * Originally coded by Bert Gijsbers, adapted from CreateDgramAddrSocket().
  */
-int
-#ifdef __STDC__
-DgramBind(int fd, char *dotaddr, int port)
-#else
-DgramBind(fd, dotaddr, port)
-int	fd;
-char	*dotaddr;
-int	port;
-#endif /* __STDC__ */
+int DgramBind(int fd, char *dotaddr, int port)
 {
     struct sockaddr_in	addr_in;
     int			retval;
@@ -1464,15 +1319,7 @@ int	port;
  *
  * Originally coded by Bert Gÿsbers
  */
-int
-#ifdef __STDC__
-DgramConnect(int fd, char *host, int port)
-#else
-DgramConnect(fd, host, port)
-int	fd;
-char	*host;
-int	port;
-#endif /* __STDC__ */
+int DgramConnect(int fd, char *host, int port)
 {
     struct sockaddr_in	addr_in;
     struct hostent	*hp;
@@ -1542,15 +1389,7 @@ int	port;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-DgramSend(int fd, char *host, int port,
-	  char *sbuf, int size)
-#else
-DgramSend(fd, host, port, sbuf, size)
-int	fd, port, size;
-char	*host, *sbuf;
-#endif /* __STDC__ */
+int DgramSend(int fd, char *host, int port, char *sbuf, int size)
 {
     int			retval;
     struct sockaddr_in	the_addr;
@@ -1616,15 +1455,7 @@ char	*host, *sbuf;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-DgramReceiveAny(int fd, char *rbuf, int size)
-#else
-DgramReceiveAny(fd, rbuf, size)
-int	fd;
-char	*rbuf;
-int	size;
-#endif /* __STDC__ */
+int DgramReceiveAny(int fd, char *rbuf, int size)
 {
     int		retval;
     int		addrlen = sizeof(struct sockaddr_in);
@@ -1673,14 +1504,7 @@ int	size;
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-DgramReceive(int fd, char *from, char *rbuf, int size)
-#else
-DgramReceive(fd, from, rbuf, size)
-int	fd, size;
-char	*from, *rbuf;
-#endif /* __STDC__ */
+int DgramReceive(int fd, char *from, char *rbuf, int size)
 {
     struct sockaddr_in	tmp_addr;
     struct hostent	*hp;
@@ -1742,14 +1566,7 @@ char	*from, *rbuf;
  *
  * Originally coded by Bert Gijsbers
  */
-int
-#ifdef __STDC__
-DgramReply(int fd, char *sbuf, int size)
-#else
-DgramReply(fd, sbuf, size)
-int	fd, size;
-char	*sbuf;
-#endif /* __STDC__ */
+int DgramReply(int fd, char *sbuf, int size)
 {
     int			retval;
 
@@ -1791,15 +1608,7 @@ char	*sbuf;
  *
  * Originally coded by Bert Gijsbers
  */
-int
-#ifdef __STDC__
-DgramRead(int fd, char *rbuf, int size)
-#else
-DgramRead(fd, rbuf, size)
-int	fd;
-char	*rbuf;
-int	size;
-#endif /* __STDC__ */
+int DgramRead(int fd, char *rbuf, int size)
 {
     int		retval;
 
@@ -1841,15 +1650,7 @@ int	size;
  *
  * Originally coded by Bert Gijsbers
  */
-int
-#ifdef __STDC__
-DgramWrite(int fd, char *wbuf, int size)
-#else
-DgramWrite(fd, wbuf, size)
-int	fd;
-char	*wbuf;
-int	size;
-#endif /* __STDC__ */
+int DgramWrite(int fd, char *wbuf, int size)
 {
     int		retval;
 
@@ -1889,12 +1690,10 @@ int	size;
  *
  * Originally coded by Arne Helme
  */
-#ifdef __STDC__
-static void
-DgramInthandler(int signum)
+#if defined(__STDC__) || defined(__cplusplus)
+static void DgramInthandler(int signum)
 #else
-static
-DgramInthandler()
+static DgramInthandler()
 #endif /* __STDC__ */
 {
     (void) signal(SIGALRM, DgramInthandler);
@@ -1945,15 +1744,8 @@ DgramInthandler()
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-DgramSendRec(int fd, char *host, int port, char *sbuf,
+int DgramSendRec(int fd, char *host, int port, char *sbuf,
 	     int sbuf_size, char *rbuf, int rbuf_size)
-#else
-DgramSendRec(fd, host, port, sbuf, sbuf_size, rbuf, rbuf_size)
-int	fd, port, sbuf_size, rbuf_size;
-char	*host, *sbuf, *rbuf;
-#endif /* __STDC__ */
 {
     int		retval = -1;
     int		retry = sl_default_retries;
@@ -2021,12 +1813,7 @@ char	*host, *sbuf, *rbuf;
  *
  * Originally coded by Arne Helme
  */
-char *
-#ifdef __STDC__
-DgramLastaddr(void)
-#else
-DgramLastaddr()
-#endif /* __STDC__ */
+char * DgramLastaddr(void)
 {
     return (inet_ntoa(sl_dgram_lastaddr.sin_addr));
 } /* DgramLastaddr */
@@ -2065,12 +1852,7 @@ DgramLastaddr()
  *
  * Originally coded by Bert Gijsbers
  */
-char *
-#ifdef __STDC__
-DgramLastname(void)
-#else
-DgramLastname()
-#endif /* __STDC__ */
+char *DgramLastname(void)
 {
     struct hostent	*he;
     char		*str;
@@ -2115,12 +1897,7 @@ DgramLastname()
  *
  * Originally coded by Arne Helme
  */
-int
-#ifdef __STDC__
-DgramLastport(void)
-#else
-DgramLastport()
-#endif /* __STDC__ */
+int DgramLastport(void)
 {
     return (ntohs((int)sl_dgram_lastaddr.sin_port));
 } /* DgramLastport */
@@ -2155,13 +1932,7 @@ DgramLastport()
  *
  * Originally coded by Bert Gijsbers
  */
-void
-#ifdef __STDC__
-DgramClose(int fd)
-#else
-DgramClose(fd)
-int	fd;
-#endif /* __STDC__ */
+void DgramClose(int fd)
 {
     close(fd);
 } /* DgramClose */
@@ -2200,13 +1971,7 @@ int	fd;
 #ifdef VMS
 #define MAXHOSTNAMELEN  256
 #endif
-#ifdef __STDC__
 void GetLocalHostName(char *name, unsigned size)
-#else
-void GetLocalHostName(name, size)
-    char		*name;
-    unsigned		size;
-#endif /* __STDC__ */
 {
     struct hostent	*he, *xpilot_he, tmp;
     int			xpilot_len;
@@ -2225,11 +1990,9 @@ void GetLocalHostName(name, size)
 
     /* Make a wild guess that a "xpilot" hostname or alias is in this domain */
     if ((xpilot_he = gethostbyname(xpilot)) != NULL) {
-	if (strcmp(xpilot_he->h_name, "prince.mc.bio.uva.nl")) {
-	    strcpy(xpilot_hostname, xpilot_he->h_name);	/* copy data to buffer */
-	    tmp = *xpilot_he;
-	    xpilot_he = &tmp;
-	}
+	strcpy(xpilot_hostname, xpilot_he->h_name);	/* copy data to buffer */
+	tmp = *xpilot_he;
+	xpilot_he = &tmp;
     }
 
     gethostname(name, size);
@@ -2321,6 +2084,199 @@ void GetLocalHostName(name, size)
 	/* NOT REATCHED */
     }
 } /* GetLocalHostName */
+
+
+/*
+ *******************************************************************************
+ *
+ *	GetInetAddr()
+ *
+ *******************************************************************************
+ * Description
+ *	Convert a dotted decimal address to unsigned long.
+ *
+ * Input Parameters
+ *	Dotted decimal address.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	The Internet address as unsigned long.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	inet_addr
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+unsigned long GetInetAddr(char *name)
+{
+    return inet_addr(name);
+}
+
+
+/*
+ *******************************************************************************
+ *
+ *	ResolveTimeout()
+ *
+ *******************************************************************************
+ * Description
+ *	Catch SIGALRM and do a longjmp.
+ *
+ * Input Parameters
+ *	The signal number.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	None
+ *
+ * Globals Referenced
+ *	env
+ *
+ * External Calls
+ *	longjmp
+ *
+ * Called By
+ *	GetAddrByName and GetNameByAddr.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+#if defined(__STDC__) || defined(__cplusplus)
+static void ResolveTimeout(int signum)
+#else
+static ResolveTimeout()
+#endif /* __STDC__ */
+{
+    DEB(fprintf(stderr, "Resolve timeout\n"));
+    (void) longjmp(env, 1);
+}
+
+
+/*
+ *******************************************************************************
+ *
+ *	GetAddrByName()
+ *
+ *******************************************************************************
+ * Description
+ *	Convert a hostname to its dotted decimal address.
+ *
+ * Input Parameters
+ *	The name of the host.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	On success a pointer to static memory containing the address.
+ *	On failure a NULL pointer.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	gethostbyname
+ *	signal
+ *	setjmp
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+char *GetAddrByName(const char *name)
+{
+    struct hostent	*hp;
+
+    if (setjmp(env)) {
+	sl_errno = SL_ETIMEOUT;
+	signal(SIGALRM, SIG_DFL);
+	return 0;
+    }
+    alarm(0);
+    signal(SIGALRM, ResolveTimeout);
+    alarm(6);
+    hp = gethostbyname(name);
+    alarm(0);
+    signal(SIGALRM, SIG_DFL);
+    if (!hp) {
+	sl_errno = SL_EHOSTNAME;
+	return 0;
+    }
+    return inet_ntoa(*(struct in_addr *)(hp->h_addr));
+}
+
+
+/*
+ *******************************************************************************
+ *
+ *	GetNameByAddr()
+ *
+ *******************************************************************************
+ * Description
+ *	Convert a dotted decimal address to its hostname.
+ *
+ * Input Parameters
+ *	The dotted decimal address.
+ *
+ * Output Parameters
+ *	The name of the host.
+ *
+ * Return Value
+ *	On success a 0.
+ *	On failure a -1.
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	gethostbyaddr
+ *	signal
+ *	setjmp
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+int GetNameByAddr(const char *addr, char *name, int size)
+{
+    struct hostent	*hp;
+    struct sockaddr_in	saddr;
+
+    saddr.sin_addr.s_addr = inet_addr(addr);
+    if (saddr.sin_addr.s_addr == (unsigned long)-1) {
+	sl_errno = SL_EADDR;
+	return -1;
+    }
+    if (setjmp(env)) {
+	sl_errno = SL_ETIMEOUT;
+	signal(SIGALRM, SIG_DFL);
+	return -1;
+    }
+    alarm(0);
+    signal(SIGALRM, ResolveTimeout);
+    alarm(6);
+    hp = gethostbyaddr((char *)&saddr.sin_addr.s_addr, 4, AF_INET);
+    alarm(0);
+    signal(SIGALRM, SIG_DFL);
+    if (!hp) {
+	sl_errno = SL_EHOSTNAME;
+	return -1;
+    }
+    strncpy(name, hp->h_name, size);
+    name[size - 1] = '\0';
+    return 0;
+}
 
 
 #if defined(__sun__)

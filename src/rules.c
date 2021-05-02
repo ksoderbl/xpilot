@@ -1,10 +1,10 @@
-/* $Id: rules.c,v 3.42 1996/04/30 10:36:22 bert Exp $
+/* $Id: rules.c,v 3.45 1997/02/25 14:04:24 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define SERVER
 #include <stdlib.h>
 #include <stdio.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -38,7 +38,7 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.42 1996/04/30 10:36:22 bert Exp $";
+    "@(#)$Id: rules.c,v 3.45 1997/02/25 14:04:24 bert Exp $";
 #endif
 
 
@@ -168,6 +168,7 @@ void Set_misc_item_limits(void)
     LIMIT(destroyItemInCollisionProb, 0.0, 1.0);
 
     LIMIT(itemConcentratorRadius, 1, World.diagonal);
+    LIMIT(itemConcentratorProb, 0.0, 1.0);
 }
 
 

@@ -1,10 +1,10 @@
-/* $Id: proto.h,v 3.56 1996/05/13 19:28:18 bert Exp $
+/* $Id: proto.h,v 3.63 1996/10/12 22:38:14 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,14 @@ void Free_cells(void);
 void Alloc_cells(void);
 void Check_collision(void);
 int wormXY(int x, int y);
-void SCORE(int, int, int, int, char *);
+void SCORE(int, int, int, int, const char *);
+
+/*
+ * Prototypes for id.c
+ */
+int peek_ID(void);
+int request_ID(void);
+void release_ID(int id);
 
 /*
  * Prototypes for walls.c
@@ -52,6 +59,7 @@ void Turn_player(int ind);
 int Handle_keyboard(int);
 void Pause_player(int ind, int onoff);
 int Player_lock_closest(int ind, int next);
+bool team_dead(int team);
 
 /*
  * Prototypes for map.c
@@ -117,6 +125,12 @@ void Fire_shot(int ind, int type, int dir);
 void Fire_general_shot(int ind, float x, float y, int type, int dir,
 		       float speed, modifiers mods);
 void Fire_normal_shots(int ind);
+void Fire_main_shot(int ind, int type, int dir);
+void Fire_shot(int ind, int type, int dir);
+void Fire_left_shot(int ind, int type, int dir, int gun);
+void Fire_right_shot(int ind, int type, int dir, int gun);
+void Fire_left_rshot(int ind, int type, int dir, int gun);
+void Fire_right_rshot(int ind, int type, int dir, int gun);
 void Make_treasure_ball(int treasure);
 int Punish_team(int ind, int t_destroyed, int t_target);
 void Delete_shot(int ind);
@@ -151,7 +165,7 @@ void Go_home(int ind);
 void Compute_sensor_range(player *);
 void Player_add_tank(int ind, long tank_fuel);
 void Player_remove_tank(int ind, int which_tank);
-void Init_player(int ind, wireobj *ship);
+int Init_player(int ind, wireobj *ship);
 void Alloc_players(int number);
 void Free_players(void);
 void Update_score_table(void);
@@ -166,6 +180,7 @@ void Player_death_reset(int ind);
 /*
  * Prototypes for robot.c
  */
+void Parse_robot_file(void);
 void Robot_init(void);
 void Robot_delete(int ind, int kicked);
 void Robot_destroy(int ind);
@@ -189,28 +204,38 @@ void Set_misc_item_limits(void);
 /*
  * Prototypes for server.c
  */
-int main(int argc, char *argv[]);
 void End_game(void);
-void Log_game(char *heading);
-void Game_Over(void);
-void Send_meta_server(int change);
 int Pick_team(void);
-void Set_deny_hosts(void);
+void Server_info(char *str, unsigned max_size);
+void Log_game(const char *heading);
+void Game_Over(void);
 int plock_server(int onoff);
 void tuner_plock(void);
 
+/*
+ * Prototypes for contact.c
+ */
+void Contact_cleanup(void);
+int Contact_init(void);
+void Contact(int fd, void *arg);
+void Queue_loop(void);
+void Set_deny_hosts(void);
+
+/*
+ * Prototypes for metaserver.c
+ */
+void Meta_send(char *mesg, int len);
+int Meta_from(char *addr, int port);
+void Meta_gone(void);
+void Meta_init(int fd);
+void Meta_update(int change);
 
 /*
  * Prototypes for frame.c
  */
 void Frame_update(void);
-void Set_message(char *message);
+void Set_message(const char *message);
 void Set_player_message(player *pl, char *message);
-
-/*
- * Prototypes for syslimit.c
- */
-bool Is_allowed(void);
 
 /*
  * Prototypes for update.c
@@ -224,9 +249,9 @@ void Autopilot(int ind, int on);
 /*
  * Prototypes for option.c
  */
-void addOption (char *name, char *value, int override, void *def);
-char *getOption (char *name);
-bool parseDefaultsFile (char *filename);
-void parseOptions (void);
+void addOption(const char *name, const char *value, int override, void *def);
+char *getOption(const char *name);
+bool parseDefaultsFile(const char *filename);
+void parseOptions(void);
 
 #endif

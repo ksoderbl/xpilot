@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 3.69 1996/05/06 08:48:46 bert Exp $ */
+/* $Id: Imakefile,v 3.74 1996/12/08 15:57:04 bert Exp $ */
 
 #include "Local.config"
 
@@ -102,25 +102,35 @@ depend:: includes
 /*
  * Server program; xpilots
  */
-OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
-        play.o player.o rules.o update.o collision.o walls.o error.o \
-        frame.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
+OBJS1 = server.o metaserver.o netserver.o contact.o event.o map.o math.o cmdline.o \
+	net.o play.o player.o rules.o update.o collision.o walls.o objpos.o error.o \
+        id.o frame.o robot.o robotdef.o option.o socklib.o sched.o saudio.o \
         $(STRCASECMP_OBJ) $(STRDUP_OBJ)
-SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
-        play.c player.c rules.c update.c collision.c walls.c error.c \
-        frame.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
+SRCS1 = server.c metaserver.c netserver.c contact.c event.c map.c math.c cmdline.c \
+	net.c play.c player.c rules.c update.c collision.c walls.c objpos.c error.c \
+        id.c frame.c robot.c robotdef.c option.c socklib.c sched.c saudio.c
 DEPLIBS1 = 
 
 /*
  * Client program; xpilot
  */
-OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
-        default.o math.o xevent.o syslimit.o error.o socklib.o caudio.o \
-	widget.o configure.o usleep.o record.o texture.o xpmread.o \
+OBJS2 = \
+	xpilot.o client.o join.o net.o netclient.o \
+	xinit.o colors.o dbuff.o default.o xevent.o \
+	paint.o paintdata.o painthud.o paintmap.o \
+	paintobjects.o paintradar.o \
+	record.o talk.o about.o configure.o widget.o \
+	math.o syslimit.o error.o socklib.o query.o \
+	caudio.o usleep.o texture.o xpmread.o \
 	$(AUDIOOBJ) $(STRDUP_OBJ)
-SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
-        default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
-	widget.c configure.c usleep.c record.c texture.c xpmread.c \
+SRCS2 = \
+	xpilot.c client.c join.c net.c netclient.c \
+	xinit.c colors.c dbuff.c default.c xevent.c \
+	paint.c paintdata.c painthud.c paintmap.c \
+	paintobjects.c paintradar.c \
+	record.c talk.c about.c configure.c widget.c \
+	math.c syslimit.c error.c socklib.c query.c \
+	caudio.c usleep.c texture.c xpmread.c \
 	$(AUDIOSRC)
 DEPLIBS2 = $(DEPXLIB)
 

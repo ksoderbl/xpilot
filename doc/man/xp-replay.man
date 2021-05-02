@@ -4,7 +4,7 @@
 .\"
 .TH XP-REPLAY  "Requires The X Window System"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 3.5.1: May 13th, 1996
+.ds ]W XPilot 3.6.2: Feb 25th, 1997
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -208,7 +208,7 @@ to uncompress the file before playback.
 
 \fBxp-replay\fP was originally designed and developed by
 Steven Singer (S.Singer@ph.surrey.ac.uk). Additional develpoment was
-performed by Bert Gijsbers (bert@mc.bio.uva.nl).
+performed by Bert Gijsbers (bert@xpilot.org).
 
 The scaling and gamma correction code was taken from the \fBpbmplus\fP
 package, which is Copyright (C) 1989, 1991 by Jef Poskanzer.
@@ -216,7 +216,7 @@ package, which is Copyright (C) 1989, 1991 by Jef Poskanzer.
 
 .SH BUG REPORTS
 
-Bugs can be mailed to \fBxpilot@cs.uit.no\fP.
+Bugs can be mailed to \fBxpilot@xpilot.org\fP.
 
 
 .SH SEE ALSO

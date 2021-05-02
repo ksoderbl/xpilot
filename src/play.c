@@ -1,10 +1,10 @@
-/* $Id: play.c,v 3.126 1996/04/07 22:44:37 bert Exp $
+/* $Id: play.c,v 3.135 1997/02/25 14:04:22 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,12 +37,13 @@
 #include "bit.h"
 #include "netserver.h"
 #include "error.h"
+#include "objpos.h"
 
 char play_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.126 1996/04/07 22:44:37 bert Exp $";
+    "@(#)$Id: play.c,v 3.135 1997/02/25 14:04:22 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -53,6 +54,8 @@ static char sourceid[] =
 #define MINI_MINE_SPREAD_TIME		18
 #define MINI_MINE_SPREAD_SPEED		8
 #define MINI_MISSILE_SPREAD_ANGLE	45
+
+extern unsigned SPACE_BLOCKS;
 
 extern int Rate(int winner, int loser);
 
@@ -330,12 +333,12 @@ void Place_item(int item, player *pl)
 {
     object		*obj;
     int			num_lose, num_per_pack,
-			x, y,
+			bx, by,
 			place_count,
 			dir, dist,
 			grav;
-    float		fx, fy,
-			vx, vy;
+    int			px, py;
+    float		vx, vy;
     item_concentrator_t	*con;
 
     if (NumObjs >= MAX_TOTAL_SHOTS) {
@@ -388,8 +391,8 @@ void Place_item(int item, player *pl)
 
     if (pl) {
 	grav = GRAVITY;
-	fx = pl->prevpos.x;
-	fy = pl->prevpos.y;
+	px = pl->prevpos.x;
+	py = pl->prevpos.y;
 	if (!BIT(pl->status, KILLED)) {
 	    /*
 	     * Player is dropping an item on purpose.
@@ -397,31 +400,25 @@ void Place_item(int item, player *pl)
 	     * player won't immediately pick it up again.
 	     */
 	    if (pl->vel.x >= 0)
-		fx -= (BLOCK_SZ + (rand() & 0x07));
+		px -= (BLOCK_SZ + (rand() & 0x07));
 	    else
-		fx += (BLOCK_SZ + (rand() & 0x07));
+		px += (BLOCK_SZ + (rand() & 0x07));
 	    if (pl->vel.y >= 0)
-		fy -= (BLOCK_SZ + (rand() & 0x07));
+		py -= (BLOCK_SZ + (rand() & 0x07));
 	    else
-		fy += (BLOCK_SZ + (rand() & 0x07));
-	    if (fx < 0)
-		fx += World.width;
-	    else if (fx >= World.width)
-		fx -= World.width;
-	    if (fy < 0)
-		fy += World.height;
-	    else if (fy >= World.height)
-		fy -= World.height;
+		py += (BLOCK_SZ + (rand() & 0x07));
 	}
-	x = fx / BLOCK_SZ;
-	y = fy / BLOCK_SZ;
-	if (!BIT(1U << World.block[x][y], SPACE_BIT | BASE_BIT | WORMHOLE_BIT |
-					  POS_GRAV_BIT | NEG_GRAV_BIT |
-					  CWISE_GRAV_BIT | ACWISE_GRAV_BIT |
-					  CHECK_BIT | DECOR_FILLED_BIT |
-					  DECOR_LU_BIT | DECOR_LD_BIT |
-					  DECOR_RU_BIT | DECOR_RD_BIT |
-					  ITEM_CONCENTRATOR_BIT)) {
+	if (px < 0)
+	    px += World.width;
+	else if (px >= World.width)
+	    px -= World.width;
+	if (py < 0)
+	    py += World.height;
+	else if (py >= World.height)
+	    py -= World.height;
+	bx = px / BLOCK_SZ;
+	by = py / BLOCK_SZ;
+	if (!BIT(1U << World.block[bx][by], SPACE_BLOCKS)) {
 	    return;
 	}
     } else {
@@ -430,7 +427,7 @@ void Place_item(int item, player *pl)
 	} else {
 	    grav = 0;
 	}
-	if (World.NumItemConcentrators > 0) {
+	if (World.NumItemConcentrators > 0 && rfrac() < itemConcentratorProb) {
 	    con = &World.itemConcentrators[rand()%World.NumItemConcentrators];
 	} else {
 	    con = NULL;
@@ -447,28 +444,28 @@ void Place_item(int item, player *pl)
 	    if (con) {
 		dir = MOD2(rand(), RES);
 		dist = rand() % ((itemConcentratorRadius * BLOCK_SZ) + 1);
-		fx = con->pos.x * BLOCK_SZ + BLOCK_SZ / 2 + dist * tcos(dir);
-		fy = con->pos.y * BLOCK_SZ + BLOCK_SZ / 2 + dist * tsin(dir);
+		px = (con->pos.x + 0.5) * BLOCK_SZ + dist * tcos(dir);
+		py = (con->pos.y + 0.5) * BLOCK_SZ + dist * tsin(dir);
 		if (BIT(World.rules->mode, WRAP_PLAY)) {
-		    if (fx < 0) fx += World.width;
-		    if (fx >= World.width) fx -= World.width;
-		    if (fy < 0) fy += World.height;
-		    if (fy >= World.height) fy -= World.height;
+		    if (px < 0) px += World.width;
+		    if (px >= World.width) px -= World.width;
+		    if (py < 0) py += World.height;
+		    if (py >= World.height) py -= World.height;
 		}
-		if (fx < 0 || fx >= World.width
-		    || fy < 0 || fy >= World.height) {
+		if (px < 0 || px >= World.width
+		    || py < 0 || py >= World.height) {
 		    continue;
 		}
-		x = fx / BLOCK_SZ;
-		y = fy / BLOCK_SZ;
+		bx = px / BLOCK_SZ;
+		by = py / BLOCK_SZ;
 	    }
 	    else {
-		fx = rand() % World.width;
-		fy = rand() % World.height;
-		x = fx / BLOCK_SZ;
-		y = fy / BLOCK_SZ;
+		px = rand() % World.width;
+		py = rand() % World.height;
+		bx = px / BLOCK_SZ;
+		by = py / BLOCK_SZ;
 	    }
-	    if (World.block[x][y] == SPACE) {
+	    if (BIT(1U << World.block[bx][by], SPACE_BLOCKS)) {
 		break;
 	    }
 	}
@@ -483,8 +480,8 @@ void Place_item(int item, player *pl)
 		vy += (rand()&7)-3;
 	    }
 	} else {
-	    vx -= Gravity * World.gravity[x][y].x;
-	    vy -= Gravity * World.gravity[x][y].y;
+	    vx -= Gravity * World.gravity[bx][by].x;
+	    vy -= Gravity * World.gravity[bx][by].y;
 	    vx += (rand()&7)-3;
 	    vy += (rand()&7)-3;
 	}
@@ -496,9 +493,7 @@ void Place_item(int item, player *pl)
     obj->color = RED;
     obj->status = grav;
     obj->id = -1;
-    obj->pos.x = fx;
-    obj->pos.y = fy;
-    obj->prevpos = obj->pos;
+    Object_position_init_pixels(obj, px, py);
     obj->vel.x = vx;
     obj->vel.y = vy;
     obj->acc.x =
@@ -739,9 +734,7 @@ void Place_general_mine(int ind, long status, float x, float y,
 	mine->status = status;
 	mine->id = (pl ? pl->id : -1);
 	mine->owner = mine->id;
-	mine->pos.x = x;
-	mine->pos.y = y;
-	mine->prevpos = mine->pos;
+	Object_position_init_pixels(mine, x, y);
 	if (minis > 1) {
 	    int		space = RES/minis;
 	    int		dir;
@@ -837,9 +830,9 @@ void Cannon_fire(int ind)
     speed = 14+(rand()%8);
     shot->color = WHITE;
     shot->id = -1;
-    shot->pos.x = World.cannon[ind].pos.x * BLOCK_SZ+BLOCK_SZ/2;
-    shot->pos.y = World.cannon[ind].pos.y * BLOCK_SZ+BLOCK_SZ/2;
-    shot->prevpos = shot->pos;
+    Object_position_init_pixels(shot,
+				(World.cannon[ind].pos.x+0.5)*BLOCK_SZ,
+				(World.cannon[ind].pos.y+0.5)*BLOCK_SZ);
     shot->status = FROMCANNON;
     if (ShotsGravity) {
 	SET_BIT(shot->status, GRAVITY);
@@ -883,8 +876,8 @@ void Make_treasure_ball(int treasure)
 {
     object *ball;
     treasure_t *t = &(World.treasures[treasure]);
-    float	x = t->pos.x*BLOCK_SZ+(BLOCK_SZ/2),
-		y = t->pos.y*BLOCK_SZ+10;
+    float	x = (t->pos.x + 0.5) * BLOCK_SZ,
+		y = (t->pos.y * BLOCK_SZ) + 10;
 
     if (t->have) {
 	printf ("Failed Make_treasure_ball(treasure=%d):\n", treasure);
@@ -901,8 +894,7 @@ void Make_treasure_ball(int treasure)
     ball->mass = 50;
     ball->vel.x = 0;	  	/* make the ball stuck a little */
     ball->vel.y = 0;		/* longer to the ground */
-    ball->pos.x = x;
-    ball->pos.y = y;
+    Object_position_init_pixels(ball, x, y);
     ball->id = ball->owner = -1;
     ball->type = OBJ_BALL;
     ball->color = WHITE;
@@ -1012,7 +1004,7 @@ int Punish_team(int ind, int t_destroyed, int t_target)
  */
 char *Describe_shot(int type, long status, modifiers mods, int hit)
 {
-    char		*name, *howmany = "a ", *plural = "";
+    const char		*name, *howmany = "a ", *plural = "";
     static char		msg[MSG_LEN];
 
     switch (type) {
@@ -1178,6 +1170,7 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
 			angle,
 			spread;
     vector		mv;
+    position		shotpos;
 
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
@@ -1564,10 +1557,9 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
 	shot->type	= type;
 	shot->id	= (pl ? pl->id : -1);
 	shot->color	= (pl ? pl->color : WHITE);
-	shot->prevpos	= shot->pos;
-	shot->pos.x 	= x;
-	shot->pos.y 	= y;
 
+	shotpos.x	= x;
+	shotpos.y	= y;
 	if (pl && type != OBJ_SHOT) {
 	    if (r == on_this_rack) {
 		/*
@@ -1580,21 +1572,18 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
 		    rack_no = 0;
 		r = 0;
 	    }
-	    shot->pos.x += pl->ship->m_rack[rack_no][pl->dir].x;
-	    shot->pos.y += pl->ship->m_rack[rack_no][pl->dir].y;
+	    shotpos.x += pl->ship->m_rack[rack_no][pl->dir].x;
+	    shotpos.y += pl->ship->m_rack[rack_no][pl->dir].y;
 	    side = pl->ship->m_rack[rack_no][0].y;
 	}
-	if (BIT(World.rules->mode, WRAP_PLAY)) {
-	    if (shot->pos.x < 0) shot->pos.x += World.width;
-	    else if (shot->pos.x >= World.width) shot->pos.x -= World.width;
-	    if (shot->pos.y < 0) shot->pos.y += World.height;
-	    else if (shot->pos.y >= World.height) shot->pos.y -= World.height;
-	}
-	if (shot->pos.x < 0 || shot->pos.x >= World.width
-	    || shot->pos.y < 0 || shot->pos.y >= World.height) {
+	shotpos.x = WRAP_XPIXEL(shotpos.x);
+	shotpos.y = WRAP_YPIXEL(shotpos.y);
+	if (shotpos.x < 0 || shotpos.x >= World.width
+	    || shotpos.y < 0 || shotpos.y >= World.height) {
 	    NumObjs--;
 	    continue;
 	}
+	Object_position_init_pixels(shot, shotpos.x, shotpos.y);
 
 	if (type == OBJ_SHOT || !pl) {
 	    angle = 0.0;
@@ -1990,8 +1979,8 @@ void do_transporter(player *pl)
     player		*closestPlayer = NULL,
 			*p;
     bool		done = false;
-    char		msg[MSG_LEN],
-			*what = 0;
+    char		msg[MSG_LEN];
+    const char		*what = 0;
 
     for (i = 0; i < NumPlayers; i++) {
 	p = Players[i];
@@ -2209,7 +2198,7 @@ void do_lose_item(player *pl)
 #define CONFUSED_UPDATE_GRANULARITY	10
 #define CONFUSED_TIME			3
 
-void do_ecm(player *pl)
+static void do_ecm(player *pl)
 {
     object		*shot;
     object		*closest_mine = NULL;
@@ -2528,7 +2517,7 @@ void Move_ball(int ind)
     /* compute the normalized vector between the ball and the player */
     D.x = WRAP_DX(pl->pos.x - ball->pos.x);
     D.y = WRAP_DY(pl->pos.y - ball->pos.y);
-    length = hypot(D.x, D.y);
+    length = VECTOR_LENGTH(D);
     if (length > 0.0) {
 	D.x /= length;
 	D.y /= length;
@@ -2980,11 +2969,9 @@ void Tank_handle_detach(player *pl)
     /* Return, if no more players or no tanks */
     if (pl->fuel.num_tanks == 0
 	|| NumPseudoPlayers == MAX_PSEUDO_PLAYERS
-	|| Id >= MAX_ID) {
+	|| peek_ID() == 0) {
 	return;
     }
-
-    sound_play_sensors(pl->pos.x, pl->pos.y, TANK_DETACH_SOUND);
 
     /* If current tank is main, use another one */
     if ((ct = pl->fuel.current) == 0)
@@ -3007,8 +2994,7 @@ void Tank_handle_detach(player *pl)
 	Player_remove_tank(NumPlayers, dummy->fuel.num_tanks);
     }
     SET_BIT(dummy->type_ext, OBJ_EXT_TANK);
-    dummy->prevpos	= pl->prevpos;
-    dummy->pos		= pl->pos;
+    Player_position_init_pixels(dummy, pl->pos.x, pl->pos.y);
     dummy->vel		= pl->vel;
     dummy->acc		= pl->acc;
     dummy->dir		= pl->dir;
@@ -3074,10 +3060,12 @@ void Tank_handle_detach(player *pl)
     /* Remember whose tank this is */
     dummy->lock.pl_id = pl->id;
 
+    request_ID();
     NumPlayers++;
     NumPseudoPlayers++;
-    Id++;
     updateScores = true;
+
+    sound_play_sensors(pl->pos.x, pl->pos.y, TANK_DETACH_SOUND);
 
     /* The tank uses shield and thrust */
     dummy->status = (DEF_BITS & ~KILL_BITS) | PLAYING | GRAVITY | THRUSTING;
@@ -3176,9 +3164,7 @@ void Make_debris(
 	debris = Obj[NumObjs];
 	debris->color = color;
 	debris->id = id;
-	debris->pos.x = x;
-	debris->pos.y = y;
-	debris->prevpos = debris->pos;
+	Object_position_init_pixels(debris, x, y);
 	dir = MOD2(min_dir + (int)(rfrac() * (max_dir - min_dir)), RES);
 	dirplus = MOD2(dir + 1, RES);
 	diroff = rfrac();

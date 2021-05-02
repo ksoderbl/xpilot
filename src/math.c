@@ -1,10 +1,10 @@
-/* $Id: math.c,v 3.34 1996/03/11 12:45:24 bert Exp $
+/* $Id: math.c,v 3.38 1997/01/24 17:32:53 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,12 @@
  * Actually used by SERVER and CLIENT but define SERVER
  * so to avoid X11 dependencies for the server
  */
-#define SERVER
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
 
+#define SERVER
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -41,7 +41,7 @@ char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.34 1996/03/11 12:45:24 bert Exp $";
+    "@(#)$Id: math.c,v 3.38 1997/01/24 17:32:53 bert Exp $";
 #endif
 
 
@@ -821,7 +821,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 	    /*
 	     * Normalise
 	     */
-	    dTmp = sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
+	    dTmp = LENGTH(vec[0], vec[1]);
 	    vec[0] /= dTmp;
 	    vec[1] /= dTmp;
 
@@ -1481,14 +1481,15 @@ static int Get_shape_keyword(char *keyw)
 void Calculate_shield_radius(wireobj *w)
 {
     int			i;
-    int			radius, max_radius = 0;
+    int			radius2, max_radius = 0;
 
     for (i = 0; i < w->num_points; i++) {
-	radius = 2 * LENGTH(w->pts[i][0].x, w->pts[i][0].y);
-	if (radius > max_radius) {
-	    max_radius = radius;
+	radius2 = sqr(w->pts[i][0].x) + sqr(w->pts[i][0].y);
+	if (radius2 > max_radius) {
+	    max_radius = radius2;
 	}
     }
+    max_radius = 2.0 * sqrt((double) max_radius);
     w->shield_radius = (max_radius + 2 <= 34)
 			? 34
 			: (max_radius + 2 - (max_radius & 1));

@@ -1,10 +1,10 @@
-/* $Id: net.h,v 3.20 1995/01/11 19:36:42 bert Exp $
+/* $Id: net.h,v 3.22 1996/10/12 08:36:57 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,8 +90,8 @@ int Sockbuf_copy(sockbuf_t *dest, sockbuf_t *src, int len);
 #endif
 
 #if STDVA
-    int Packet_printf(sockbuf_t *, char *fmt, ...);
-    int Packet_scanf(sockbuf_t *, char *fmt, ...);
+    int Packet_printf(sockbuf_t *, const char *fmt, ...);
+    int Packet_scanf(sockbuf_t *, const char *fmt, ...);
 #else
     int Packet_printf();
     int Packet_scanf();

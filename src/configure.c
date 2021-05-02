@@ -1,10 +1,10 @@
-/* $Id: configure.c,v 3.51 1996/05/04 21:43:43 bert Exp $
+/* $Id: configure.c,v 3.54 1996/10/12 08:36:50 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
- *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
- *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
- *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gÿsbers         <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,8 @@
  *      should be given as NULL.
  *   f) Add one line to the Config_save() routine to have the option saved.
  * 7: Document your option in the manual page for the client.
- * 8: Mail a context diff (diff -c old new) of your changes to xpilot@cs.uit.no.
+ * 8: Mail a context diff (diff -c old new) of your changes to
+ *    xpilot@xpilot.org.
  */
 
 #include <X11/Xlib.h>
@@ -59,8 +60,6 @@
 #include <unistd.h>
 #ifdef VMS
 #include "strcasecmp.h"
-#else
-#include <pwd.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,6 +86,9 @@ char configure_version[] = VERSION;
 #ifndef PATH_MAX
 #define PATH_MAX	1023
 #endif
+
+extern const char	*Get_keyResourceString(keys_t key);
+extern void		Get_xpilotrc_file(char *, unsigned);
 
 static int Config_create_power(int widget_desc, int *height);
 static int Config_create_turnSpeed(int widget_desc, int *height);
@@ -162,12 +164,12 @@ static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
 static int Config_update_autoShield(int widget_desc, void *data, bool *val);
 static int Config_update_maxFPS(int widget_desc, void *data, int *val);
 
-static int Config_close(int widget_desc, void *data, char **strptr);
-static int Config_next(int widget_desc, void *data, char **strptr);
-static int Config_prev(int widget_desc, void *data, char **strptr);
-static int Config_save(int widget_desc, void *data, char **strptr);
+static int Config_close(int widget_desc, void *data, const char **strptr);
+static int Config_next(int widget_desc, void *data, const char **strptr);
+static int Config_prev(int widget_desc, void *data, const char **strptr);
+static int Config_save(int widget_desc, void *data, const char **strptr);
 static int Config_save_confirm_callback(int widget_desc, void *popup_desc,
-					char **strptr);
+					const char **strptr);
 
 typedef struct xpilotrc {
     char	*line;
@@ -400,14 +402,14 @@ static void Create_config(void)
     }
 }
 
-static int Config_close(int widget_desc, void *data, char **strptr)
+static int Config_close(int widget_desc, void *data, const char **strptr)
 {
     Widget_unmap(config_widget_desc[config_page]);
     config_mapped = false;
     return 0;
 }
 
-static int Config_next(int widget_desc, void *data, char **strptr)
+static int Config_next(int widget_desc, void *data, const char **strptr)
 {
     int			prev_page = config_page;
 
@@ -420,7 +422,7 @@ static int Config_next(int widget_desc, void *data, char **strptr)
     return 0;
 }
 
-static int Config_prev(int widget_desc, void *data, char **strptr)
+static int Config_prev(int widget_desc, void *data, const char **strptr)
 {
     int			prev_page = config_page;
 
@@ -434,7 +436,7 @@ static int Config_prev(int widget_desc, void *data, char **strptr)
 }
 
 static int Config_create_bool(int widget_desc, int *height,
-			      char *str, bool val,
+			      const char *str, bool val,
 			      int (*callback)(int, void *, bool *),
 			      void *data)
 {
@@ -473,7 +475,7 @@ static int Config_create_bool(int widget_desc, int *height,
 }
 
 static int Config_create_int(int widget_desc, int *height,
-			     char *str, int *val, int min, int max,
+			     const char *str, int *val, int min, int max,
 			     int (*callback)(int, void *, int *), void *data)
 {
     int			offset,
@@ -520,7 +522,7 @@ static int Config_create_int(int widget_desc, int *height,
 }
 
 static int Config_create_float(int widget_desc, int *height,
-			       char *str, float *val, float min, float max,
+			       const char *str, float *val, float min, float max,
 			       int (*callback)(int, void *, float *),
 			       void *data)
 {
@@ -1170,7 +1172,7 @@ static int Config_update_maxFPS(int widget_desc, void *data, int *val)
     return 0;
 }
 
-static void Config_save_failed(char *reason, char **strptr)
+static void Config_save_failed(const char *reason, const char **strptr)
 {
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy(config_save_confirm_desc);
@@ -1258,7 +1260,7 @@ static void Xpilotrc_use(char *line)
     }
 }
 
-static void Config_save_resource(FILE *fp, char *resource, char *value)
+static void Config_save_resource(FILE *fp, const char *resource, char *value)
 {
     char		buf[256];
 
@@ -1267,7 +1269,7 @@ static void Config_save_resource(FILE *fp, char *resource, char *value)
     fprintf(fp, "%s", buf);
 }
 
-static void Config_save_float(FILE *fp, char *resource, float value)
+static void Config_save_float(FILE *fp, const char *resource, float value)
 {
     char		buf[40];
 
@@ -1275,7 +1277,7 @@ static void Config_save_float(FILE *fp, char *resource, float value)
     Config_save_resource(fp, resource, buf);
 }
 
-static void Config_save_int(FILE *fp, char *resource, int value)
+static void Config_save_int(FILE *fp, const char *resource, int value)
 {
     char		buf[20];
 
@@ -1283,7 +1285,7 @@ static void Config_save_int(FILE *fp, char *resource, int value)
     Config_save_resource(fp, resource, buf);
 }
 
-static void Config_save_bool(FILE *fp, char *resource, int value)
+static void Config_save_bool(FILE *fp, const char *resource, int value)
 {
     char		buf[20];
 
@@ -1291,23 +1293,18 @@ static void Config_save_bool(FILE *fp, char *resource, int value)
     Config_save_resource(fp, resource, buf);
 }
 
-static int Config_save(int widget_desc, void *button_str, char **strptr)
+static int Config_save(int widget_desc, void *button_str, const char **strptr)
 {
-    extern char		*Get_keyResourceString(keys_t key);
     int			i;
     KeySym		ks;
     keys_t		key, prev_key;
-    struct passwd	*pwent;
     FILE		*fp;
-    char		*str,
-			*home,
-			*res,
+    const char		*str,
+			*res;
 #ifdef VMS
-			*base = "DECW$USER_DEFAULTS:xpilot.dat",
-#else
-			*base = ".xpilotrc",
+    static char		base[] = "DECW$USER_DEFAULTS:xpilot.dat";
 #endif
-			buf[512],
+    char		buf[512],
 			oldfile[PATH_MAX + 1],
 			newfile[PATH_MAX + 1];
 
@@ -1316,14 +1313,11 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Client_flush();
 
 #ifndef VMS
-    if (((home = getenv("HOME")) == NULL
-	&& ((pwent = getpwuid(getuid())) == NULL
-	    || (home = pwent->pw_dir)[0] == '\0'))
-	|| access(home, 0) == -1) {
-	Config_save_failed("Can't find home directory.", strptr);
+    Get_xpilotrc_file(oldfile, sizeof(oldfile));
+    if (oldfile[0] == '\0') {
+	Config_save_failed("Can't find .xpilotrc file", strptr);
 	return 1;
     }
-    sprintf(oldfile, "%s/%s", home, base);
 #else
     sprintf(oldfile, "%s", base);
     sprintf(newfile, "%s", base);
@@ -1336,7 +1330,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 	fclose(fp);
     }
 #ifndef VMS
-    sprintf(newfile, "%s/%s.new", home, base);
+    sprintf(newfile, "%s.new", oldfile);
     unlink(newfile);
 #endif
     if ((fp = fopen(newfile, "w")) == NULL) {
@@ -1425,10 +1419,10 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Xpilotrc_end(fp);
     fclose(fp);
 #ifndef VMS
-    sprintf(newfile, "%s/%s.bak", home, base);
+    sprintf(newfile, "%s.bak", oldfile);
     rename(oldfile, newfile);
     unlink(oldfile);
-    sprintf(newfile, "%s/%s.new", home, base);
+    sprintf(newfile, "%s.new", oldfile);
     rename(newfile, oldfile);
 #endif
     if (config_save_confirm_desc != NO_WIDGET) {
@@ -1440,7 +1434,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     return 1;
 }
 
-static int Config_save_confirm_callback(int widget_desc, void *popup_desc, char **strptr)
+static int Config_save_confirm_callback(int widget_desc, void *popup_desc, const char **strptr)
 {
     if (config_save_confirm_desc != NO_WIDGET) {
 	Widget_destroy((int)popup_desc);
