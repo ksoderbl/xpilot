@@ -1,12 +1,24 @@
-/* $Id: server.c,v 3.18 1993/08/02 12:55:35 bjoerns Exp $
+/* $Id: server.c,v 3.41 1993/10/02 18:53:08 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -27,7 +39,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
+#include "config.h"
 #include "global.h"
 #include "socklib.h"
 #include "version.h"
@@ -39,11 +53,14 @@
 #include "bit.h"
 #include "net.h"
 #include "netserver.h"
+#ifdef SUNCMW
+#include "cmw.h"
+#endif /* SUNCMW */
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.18 1993/08/02 12:55:35 bjoerns Exp $";
+    "@(#)$Id: server.c,v 3.41 1993/10/02 18:53:08 bjoerns Exp $";
 #endif
 
 
@@ -68,24 +85,43 @@ char			**Argv;
 static int		Socket;
 static sockbuf_t	ibuf;
 static char		msg[MSG_LEN];
-static bool		Log = false;
+static char		meta_address[16];
+static bool		Log = true;
 static bool		NoPlayersEnteredYet = true;
 static bool		lock = false;
 static void		Wait_for_new_players(void);
+time_t			gameOverTime = 0;
 
 extern int		login_in_progress;
 
 void Send_meta_server(void);
+
+static void catch_alarm(int signum)
+{
+    /* nothing */
+}
 
 int main(int argc, char *argv[])
 {
     struct hostent *hinfo;
     struct passwd *pwent;
 
+
+    /*
+     * --- Output copyright notice ---
+     */
+    printf("  Copyright " COPYRIGHT ".\n"
+	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
+	      "for details see the\n"
+	   "  provided LICENSE file.\n\n");
+
 #ifdef __apollo
     signal(SIGFPE, SIG_IGN);
 #endif
     Argc = argc; Argv = argv;
+#ifdef SUNCMW
+    cmw_priv_init();
+#endif /* SUNCMW */
     init_error(argv[0]);
     srand(time((time_t *)0));		/* Take seed from timer. */
     Parser(argc, argv);
@@ -125,6 +161,23 @@ int main(int argc, char *argv[])
     }
 
     /*
+     * Get meta server's address.
+     */
+    signal(SIGALRM, catch_alarm);
+    alarm(10);
+    hinfo = gethostbyname(META_HOST);
+    alarm(0);
+    signal(SIGALRM, SIG_IGN);
+    if (hinfo == NULL) {
+	error("gethostbyname %s", META_HOST);
+	strncpy(meta_address, META_IP, sizeof meta_address);
+    } else {
+	strncpy(meta_address,
+		inet_ntoa(*((struct in_addr *)(hinfo->h_addr))),
+		sizeof meta_address);
+    }
+
+    /*
      * Get owners login name.
      */
     pwent = getpwuid(geteuid());
@@ -145,7 +198,10 @@ int main(int argc, char *argv[])
 	error("Could not create Dgram socket");
 	End_game();
     }
-    SetSocketNonBlocking(Socket, 1);
+    if (SetSocketNonBlocking(Socket, 1) == -1) {
+	error("Can't make contact socket non-blocking");
+	End_game();
+    }
     if (Sockbuf_init(&ibuf, Socket, SERVER_SEND_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for contact buffer");
@@ -157,6 +213,10 @@ int main(int argc, char *argv[])
     if (Setup_net_server(World.NumBases) == -1) {
 	End_game();
     }
+
+    signal(SIGHUP, Handle_signal);
+    signal(SIGTERM, Handle_signal);
+    signal(SIGINT, Handle_signal);
 
     /* 
      * Report to Meta server
@@ -176,9 +236,11 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, SIG_IGN);
 	SetTimeout(0, 0);
     }
-    signal(SIGHUP, Handle_signal);
-    signal(SIGTERM, Handle_signal);
-    signal(SIGINT, Handle_signal);
+ 
+    if (gameDuration > 0.0) {
+      printf("Server will stop in %g minutes.\n", gameDuration);
+      gameOverTime = (time_t)(gameDuration * 60) + time((time_t *)NULL);
+    }
     
     Main_Loop();			    /* Entering main loop. */
     /* NEVER REACHED */
@@ -187,27 +249,53 @@ int main(int argc, char *argv[])
 
 void Send_meta_server(void)
 {
-    char string[MAX_STR_LEN];
-    char status[MAX_STR_LEN];	
+    char 	string[MAX_STR_LEN];
+    char 	status[MAX_STR_LEN];
+    int		i;
+    bool	first = true;
 
-    Server_info(status, sizeof(status));	
+    Server_info(status, sizeof(status));
 
     sprintf(string,
 	    "add server %s\n"
 	    "add users %d\n"
 	    "add version %s\n"
 	    "add map %s\n"
+	    "add sizeMap %3dx%3d\n"
+	    "add author %s\n"
+	    "add bases %d\n"
+	    "add fps %d\n"
 	    "add port %d\n"
-	    "add status ",
+	    "add mode %s\n",
 	    Server.host, NumPlayers - NumRobots, 
-	    VERSION, World.name, contactPort);
+	    VERSION, World.name, World.x, World.y, World.author, 
+	    World.NumBases, FPS, contactPort,
+	    (lock && Shutdown == -1) ? "locked" :
+	    (!lock && Shutdown != -1) ? "shutting down" :
+	    (lock && Shutdown != -1) ? "locked and shutting down" : "ok");
+
+    for(i=0; i < NumPlayers; i++) {
+	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	    if (first)
+		strcat(string,"add players ");
+	    first = false;
+	    strcat(string, Players[i]->name);	
+	    strcat(string,"=");
+	    strcat(string,Players[i]->realname);
+	    strcat(string,"@");
+	    strcat(string,Players[i]->hostname);
+	    strcat(string,",");
+	}
+    }
+    
+    strcat(string,"\nadd status ");
     if (strlen(string) + strlen(status) >= sizeof(string)) {
 	/* Prevent string overflow */
 	strcpy(&status[sizeof(string) - (strlen(string) + 2)], "\n");
     }
     strcat(string, status);
 
-    DgramSend(Socket, META_HOST, META_PORT, string, strlen(string)+1);
+    DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
 }
 
 /*
@@ -216,11 +304,9 @@ void Send_meta_server(void)
 void Main_Loop(void)
 {
     extern void		Loop_delay(void);
-    register int	i, x;
-    int			main_loops = 0, lastLoops;
+    int			main_loops = 0;
     time_t		currentTime, lastPlayerCheckTime = 0;
     time_t		lastMetaCheckTime = 0;
-    bool		playerQuit;
 
 #ifndef SILENT
     printf("Server runs at %d frames per second\n", framesPerSecond);
@@ -320,7 +406,6 @@ static void Wait_for_new_players(void)
  */
 void End_game(void)
 {
-    int		i;
     player	*pl;
     char	string[50];
 
@@ -339,7 +424,7 @@ void End_game(void)
 
     /* Tell meta serve that we are gone */
     sprintf(string,"server %s\nremove",Server.host);
-    DgramSend(Socket, META_HOST, META_PORT, string, sizeof(string));
+    DgramSend(Socket, meta_address, META_PORT, string, sizeof(string));
 
     SocketClose(Socket);
     Free_players();
@@ -358,11 +443,11 @@ bool Check_new_players(void)
     			team,
     			bytes,
     			delay,
+                        max_robots,
     			login_port;
     char		*in_host,
 			status,
 			reply_to;
-    static bool		lock = false;
     bool		new_players = false;
     unsigned		magic,
 			version,
@@ -372,7 +457,6 @@ bool Check_new_players(void)
 			disp_name[MAX_CHARS],
 			nick_name[MAX_CHARS],
 			str[MAX_CHARS];
-
 
     switch (Check_new_connections())
     {
@@ -400,7 +484,14 @@ bool Check_new_players(void)
     errno = 0;
     if ((bytes = DgramReceiveAny(Socket, ibuf.buf, ibuf.size)) <= 0) {
 	if (errno != EWOULDBLOCK && errno != EINTR) {
-	    error("SocketRead (pack from %s)", DgramLastaddr());
+	    /*
+	     * This caused some long series of error messages
+	     * if a player connection crashed violently (SIGKILL, SIGSEGV).
+	     * error("SocketRead (pack from %s)", DgramLastaddr());
+	     */
+	    /*
+	     * Clear the error condition for the contact socket.
+	     */
 	    GetSocketError(Socket);
 	}
 	return (new_players);
@@ -411,15 +502,15 @@ bool Check_new_players(void)
      * Get hostname.
      */
     in_host = DgramLastaddr();
-
+    
     /*
-     * Determine if we can talk with this hand-shake program.
+     * Determine if we can talk with this client.
      */
     if (Packet_scanf(&ibuf, "%u", &magic) <= 0
 	|| (magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
 #ifndef	SILENT
 	errno = 0;
-	error("Incompatible packet received from %s", in_host);
+	error("Incompatible packet received from %s (0x%08x)", in_host, magic);
 #endif
 	return (new_players);
     }
@@ -459,12 +550,13 @@ bool Check_new_players(void)
 
 	return (new_players);
     }
-    if (version == 0x3020) {
-	/*
-	 * Support some older clients, which don't know
-	 * that they can join the current version.
-	 */
-	my_magic = VERSION2MAGIC(0x3020);
+    /*
+     * Support some older clients, which don't know
+     * that they can join the current version.
+     */
+    if (version == 0x3020 || version == 0x3030
+	|| (version >= 0x3041 && version <= 0x3043)) {
+	my_magic = VERSION2MAGIC(version);
     } else {
 	my_magic = MAGIC;
     }
@@ -499,9 +591,11 @@ bool Check_new_players(void)
 	 */
 	if (nick_name[0] == 0
 	    || real_name[0] == 0
-	    || disp_name[0] == 0
 	    || nick_name[0] < 'A'
 	    || nick_name[0] > 'Z') {
+	    errno = 0;
+	    error("Invalid name parameters (%s,%s) from %s@%s",
+		  nick_name, real_name, real_name, in_host);
 	    status = E_INVAL;
 	}
 
@@ -527,7 +621,7 @@ bool Check_new_players(void)
 		status = E_TEAM_NOT_SET;
 	    }
 	    else if (World.teams[team].NumMembers
-		  >= World.teams[team].NumBases) {
+		     >= World.teams[team].NumBases) {
 		status = E_TEAM_FULL;
 	    }
 	}
@@ -538,6 +632,7 @@ bool Check_new_players(void)
 	if (status == SUCCESS) {
 	    for (i=0; i<NumPlayers; i++) {
 		if (strcasecmp(Players[i]->name, nick_name) == 0) {
+		    printf("%s %s\n", Players[i]->name, nick_name);
 		    status = E_IN_USE;
 		    break;
 		}
@@ -596,8 +691,8 @@ bool Check_new_players(void)
 	}
 	else {
 	    sprintf(msg,
-		    " <<< MESSAGE FROM ABOVE (%s) >>> \"%s\"",
-		    real_name, str);
+		    "%s [%s SPEAKING FROM ABOVE]",
+		    str, real_name);
 	    Set_message(msg);
 	}
 	Sockbuf_clear(&ibuf);
@@ -614,7 +709,7 @@ bool Check_new_players(void)
 	if (!Owner(real_name)) {
 	    status = E_NOT_OWNER;
 	} else {
-	    lock = !lock;
+	    lock = lock ? false : true;
 	}
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
@@ -707,6 +802,49 @@ bool Check_new_players(void)
     }
 	break;
 
+    case MAX_ROBOT_pack:	{
+	/*
+	 * Set the maximum of robots wanted in the server
+	 */
+	int	ind;
+
+	if (!Owner(real_name)) {
+	    status = E_NOT_OWNER;
+	}
+	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0) {
+	    status = E_INVAL;
+	}
+	else {
+	    WantedNumRobots = max_robots;
+	    while (WantedNumRobots < NumRobots) {
+		ind = -1;
+		for (i=0; i<NumPlayers; i++) {
+
+		    /*
+		     * Remove the robot with the lowest score.
+		     */
+
+		    if (Players[i]->robot_mode != RM_NOT_ROBOT) {
+			if (ind == -1)	
+			    ind = i;
+			else if (Players[i]->score < Players[ind]->score)
+			    ind = i;
+		    }
+		}
+
+		sprintf(msg, "\"%s\" upset the gods and was kicked out "
+			"of the game.", Players[ind]->name);
+		Set_message(msg);
+		Delete_player(ind);
+	    }
+	    updateScores = true;
+	}
+
+	Sockbuf_clear(&ibuf);
+	Packet_printf(&ibuf, "%lu%c%c", my_magic, reply_to, status);
+    }
+	break;
+
 	
     default:
 	/*
@@ -780,7 +918,11 @@ void Server_info(char *str, unsigned max_size)
     }
     for (i=0; i<NumPlayers; i++) {
 	pl = Players[i];
-	ratio = (float) pl->score / (pl->life + 1);
+	if (BIT(pl->mode, LIMITED_LIVES)) {
+	    ratio = (float) pl->score;
+	} else {
+	    ratio = (float) pl->score / (pl->life + 1);
+	}
 	if (best == NULL
 	    || ratio > best_ratio) {
 	    best_ratio = ratio;
@@ -814,7 +956,7 @@ void Server_info(char *str, unsigned max_size)
 	sprintf(msg, "%2d... %-36s%s@%s\n",
 		i+1, lblstr, pl->realname,
 		pl->robot_mode == RM_NOT_ROBOT
-		? pl->dispname
+		? pl->hostname
 		: "robots.org");
 	if (strlen(msg) + strlen(str) >= max_size)
 	    break;
@@ -831,6 +973,7 @@ bool Owner(char *name)
     if ((strcmp(name, Server.name)  == 0)
 	|| (strcmp(name, "kenrsc")  == 0)
 	|| (strcmp(name, "bjoerns") == 0)
+	|| (strcmp(name, "bert") == 0)
 	|| (strcmp(name, "root")    == 0))
 	return (true);
     else
@@ -843,12 +986,13 @@ void Handle_signal(int sig_no)
     /* Tell meta serve that we are gone */
     char	string[50];
     sprintf(string,"server %s\nremove",Server.host);
-    DgramSend(Socket, META_HOST, META_PORT, string, sizeof(string));
+    DgramSend(Socket, meta_address, META_PORT, string, sizeof(string));
     
     switch (sig_no) {
     case SIGALRM:
 	error("First player has yet to show his butt, I'm bored... Bye!");
 	SocketClose(Socket);
+	Log_game("NOSHOW");
 	break;
 
     case SIGTERM:
@@ -869,6 +1013,8 @@ void Handle_signal(int sig_no)
 	break;
     }
 
+    Log_game("END");			    /* Log end */
+
     exit(sig_no);
 }
 
@@ -878,14 +1024,23 @@ void Log_game(char *heading)
 #ifdef LOG
     char str[1024];
     FILE *fp;
+    char timenow[81];
+    struct tm *ptr;
+    time_t lt;
 
     if (!Log)
 	return;
 
-    sprintf(str,
-	    "%s (%s) - %s@%s, map '%s' (%d)\n",
-	    heading, VERSION, Server.name, Server.host,
-	    World.name, Server.max_num);
+    lt=time(NULL);
+    ptr=localtime(&lt);
+    strftime(timenow,79,"%I:%M:%S %p %Z %A, %B %d, %Y",ptr);
+
+    sprintf(str,"%-50.50s\t%10.10s@%-15.15s\tWorld: %-25.25s\t%10.10s\n",
+	    timenow,
+	    Server.name,
+	    Server.host,
+	    World.name,
+	    heading);
 
     if ((fp=fopen(LOGFILE, "a")) == NULL) {	/* Couldn't open file */
 	error("Couldn't open log file, contact " LOCALGURU "");
@@ -895,4 +1050,81 @@ void Log_game(char *heading)
     fputs(str, fp);
     fclose(fp);
 #endif
+}
+
+void Game_Over(void)
+{
+    long		maxsc, minsc, sc;
+    int			i, win, loose;
+    char		msg[128];
+	
+    Set_message("Game over...");
+
+    /*
+     * Hack to prevent Compute_Game_Status from starting over again...
+     */
+    gameDuration = -1.0;
+    
+    if (BIT(World.rules->mode, TEAM_PLAY)) {
+	int team[MAX_TEAMS];
+	maxsc = -32767;
+	minsc = 32767;
+	win = loose = -1;
+	
+	for (i=0; i < MAX_TEAMS; i++) {
+	    team[i] = 0;
+	}
+	for (i=0; i < NumPlayers; i++) {
+	    if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+		sc = (team[Players[i]->team] += Players[i]->score);
+		if (sc > maxsc) {
+		    maxsc = sc;
+		    win = Players[i]->team;
+		}
+		if (sc < minsc) {
+		    minsc = sc;
+		    loose = Players[i]->team;
+		}
+	    }
+	}
+	if (win != -1) {
+	    sprintf(msg,"Best team (%d Pts): Team %d", maxsc, win);
+	    Set_message(msg);
+	    printf("%s\n", msg);
+	}
+	
+	if (loose != -1 && loose != win) {
+	    sprintf(msg,"Worst team (%d Pts): Team %d", minsc, loose);
+	    Set_message(msg);
+	    printf("%s\n", msg);
+	}
+    }
+
+    maxsc = -32767;
+    minsc = 32767;
+    win = loose = -1;
+
+    for (i = 0; i < NumPlayers; i++) {
+	SET_BIT(Players[i]->status, GAME_OVER);
+	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	    if (Players[i]->score > maxsc) {
+		maxsc = Players[i]->score;
+		win = i;
+	    }
+	    if (Players[i]->score < minsc) {
+		minsc = Players[i]->score;
+		loose = i;
+	    }
+	}
+    }
+    if (win != -1) {
+	sprintf(msg,"Best human player: %s", Players[win]->name);
+	Set_message(msg);
+	printf("%s\n", msg);
+    }
+    if (loose != -1 && loose != win) {
+	sprintf(msg,"Worst human player: %s", Players[loose]->name);
+	Set_message(msg);
+	printf("%s\n", msg);
+    }
 }

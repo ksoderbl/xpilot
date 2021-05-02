@@ -1,12 +1,24 @@
-/* $Id: xevent.c,v 3.12 1993/08/02 12:55:43 bjoerns Exp $
+/* $Id: xevent.c,v 3.21 1993/10/02 00:36:27 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <X11/Xproto.h>
@@ -18,15 +30,16 @@
 #endif
 #include <errno.h>
 #include "client.h"
+#include "paint.h"
 #include "xinit.h"
 #include "draw.h"
-#include "paint.h"
 #include "keys.h"
 #include "bit.h"
 #include "setup.h"
 #include "netclient.h"
+#include "widget.h"
+#include "error.h"
 
-extern int		scoresChanged;
 extern setup_t		*Setup;
 
 static BITV_DECL(keyv, NUM_KEYS);
@@ -64,11 +77,11 @@ int Key_update(void)
     return Send_keyboard(keyv);
 }
 
-void Key_event(XEvent *event)
+static void Key_event(XEvent *event)
 {
     KeySym  	ks;
     keys_t	key;
-    bool	first_iteration = True, change = false;
+    bool	first_iteration = true, change = false;
 
     ks = XLookupKeysym(&event->xkey, 0);
 
@@ -77,7 +90,8 @@ void Key_event(XEvent *event)
 	if (event->type == KeyPress) { /* --- KEYPRESS --- */
 	    switch (key) {
 	    case KEY_ID_MODE:
-		TOGGLE_BIT(instruments, SHOW_SHIP_NAME);
+		showRealName = showRealName ? false : true;
+		scoresChanged++;
 		continue;	/* server doesn't need to know */
 
 	    case KEY_REFUEL:
@@ -131,6 +145,7 @@ int xevent(int new_input)
     int			i, n, type;
     XEvent		event;
     XClientMessageEvent	*cmev;
+    XConfigureEvent	*conf;
 
 #ifdef SOUND
     audioEvents();
@@ -163,36 +178,41 @@ int xevent(int new_input)
 
 	case KeyPress:
 	case KeyRelease:
-	    if (event.xkey.window == talk_w) {
-		Talk_event(&event);
-	    } else {
+	    if (event.xkey.window == top) {
 		Key_event(&event);
+	    }
+	    else if (event.xkey.window == talk_w) {
+		Talk_event(&event);
 	    }
 	    break;
 
 	case ButtonPress:
+	    if (Widget_event(&event) != 0) {
+		break;
+	    }
 	    Expose_button_window(BLACK, event.xbutton.window);
 	    break;
 
 	case ButtonRelease:
-	    Expose_button_window(RED, event.xbutton.window);
-	    if (event.xbutton.window == quit_b) {
-		errno = 0;
-		error("Quit");
-		return -1;
+	    if (Widget_event(&event) != 0) {
+		extern int quitting;
+		if (quitting == true) {
+		    quitting = false;
+		    errno = 0;
+		    error("Quit");
+		    return -1;
+		}
+		break;
 	    }
-	    else if (event.xbutton.window == about_b)
-		About(about_b);
-	    else if (event.xbutton.window == help_b)
-		Help(help_b);
-	    else if (event.xbutton.window == about_close_b)
+	    Expose_button_window(RED, event.xbutton.window);
+	    if (event.xbutton.window == about_close_b)
 		About(about_close_b);
 	    else if (event.xbutton.window == about_next_b)
 		About(about_next_b);
 	    else if (event.xbutton.window == about_prev_b)
 		About(about_prev_b);
-	    else if (event.xbutton.window == help_close_b)
-		Help(help_close_b);
+	    else if (event.xbutton.window == keys_close_b)
+		Keys(keys_close_b);
 	    break;
 
 	case Expose:
@@ -205,16 +225,21 @@ int xevent(int new_input)
 	    }
 	    else if (event.xexpose.window == about_w)
 		Expose_about_window();
-	    else if (event.xexpose.window == help_w)
-		Expose_help_window();
+	    else if (event.xexpose.window == keys_w)
+		Expose_keys_window();
 	    else  if (event.xexpose.window == radar) {
 		radar_exposed = true;
 		Paint_world_radar();
 	    }
 	    else if (event.xexpose.window == talk_w)
 		Talk_event(&event);
-	    else
+	    else if (Widget_event(&event) == 0)
 		Expose_button_window(RED, event.xexpose.window);
+	    break;
+
+	case EnterNotify:
+	case LeaveNotify:
+	    Widget_event(&event);
 	    break;
 
 	    /* Back in play */
@@ -232,6 +257,11 @@ int xevent(int new_input)
 
 	case MappingNotify:
 	    XRefreshKeyboardMapping(&event.xmapping);
+	    break;
+
+	case ConfigureNotify:
+	    conf = &event.xconfigure;
+	    Resize(conf->window, conf->width, conf->height);
 	    break;
 
 	default:

@@ -1,15 +1,26 @@
-/* $Id: cmdline.c,v 3.15 1993/08/02 12:54:52 bjoerns Exp $
+/* $Id: cmdline.c,v 3.22 1993/09/18 15:05:27 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *	Options parsing code contributed by Ted Lemon <mellon@ncd.com>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/* Options parsing code contributed by Ted Lemon <mellon@ncd.com> */
 
 #include <stdlib.h>
 #include "global.h"
@@ -19,7 +30,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.15 1993/08/02 12:54:52 bjoerns Exp $";
+    "@(#)$Id: cmdline.c,v 3.22 1993/09/18 15:05:27 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -93,11 +104,17 @@ float		itemWideangleProb;
 float		itemRearshotProb;
 float		itemAfterburnerProb;
 float		itemTransporterProb;
+float		itemLaserProb;
+float		itemProbMult;
 float		maxItemDensity;
 bool		allowNukes;
 bool		playersOnRadar;		/* Are players visible on radar? */
 bool		missilesOnRadar;	/* Are missiles visible on radar? */
+bool		shieldedItemPickup;	/* Pickup items with shields up? */
+bool		shieldedMining;		/* Detach mines with shields up? */
+bool		laserIsStunGun;		/* Is the laser a stun gun? */
 bool		targetKillTeam;		/* if your target explodes, you die */
+float		gameDuration;		/* total duration of game in minutes */
 
 static optionDesc options[] = {
   { "help", "help", "Print out this message", "0", NULL, valInt },
@@ -145,7 +162,7 @@ static optionDesc options[] = {
   { "contactPort", "port", "Contact port number",
 	"15345", &contactPort, valInt },
   { "mapData", "mapData", "The map's topology",
-	"", &mapData, valString },
+	NULL, &mapData, valString },
   { "allowPlayerCrashes", "crash", 
 	"Should crashes between players be allowed?",
 	"yes", &crashWithPlayer, valBool },
@@ -206,6 +223,15 @@ static optionDesc options[] = {
 	"True", &playersOnRadar, valBool },
   { "missilesOnRadar", "missilesRadar", "Are missiles visible on the radar",
 	"True", &missilesOnRadar, valBool },
+  { "shieldedItemPickup", "shieldItem",
+	"Can items be picked up while shields are up?",
+	"False", &shieldedItemPickup, valBool },
+  { "shieldedMining", "shieldMine",
+	"Can mines be thrown and placed while shields are up?",
+	"False", &shieldedMining, valBool },
+  { "laserIsStunGun", "stunGun",
+	"Is the laser weapon a stun gun weapon?",
+	"False", &laserIsStunGun, valBool },
   { "movingItemProb", "movingItemProb",
 	"Probability for an item to appear as moving",
 	"0.2", &movingItemProb, valReal },
@@ -248,9 +274,18 @@ static optionDesc options[] = {
   { "itemTransporterProb", "itemTransporterProb",
 	"Probability for a transporter item to appear",
 	"0", &itemTransporterProb, valReal },
+  { "itemLaserProb", "itemLaserProb",
+	"Probability for a Laser item to appear",
+	"0", &itemLaserProb, valReal },
+  { "itemProbMult", "itemProbFact",
+	"Item Probability Multiplication Factor scales all item probabilities",
+	"1.0", &itemProbMult, valReal },
   { "maxItemDensity", "maxItemDensity",
 	"Maximum density [0.0-1.0] for items (max items per block)",
 	"0.00012", &maxItemDensity, valReal },
+  { "gameDuration", "time",
+	"Duration of game in minutes (aka. pizza mode)",
+	"0.0", &gameDuration, valReal },
 };
   
 
@@ -312,7 +347,9 @@ void Parser(int argc, char *argv[])
 		    break;
 		}
 	    }
-	    continue;
+	    if (j < NELEM(options)) {
+		continue;
+	    }
 	}
 	errno = 0;
 	error("Unknown option '%s'", argv[i]);

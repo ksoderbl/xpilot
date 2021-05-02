@@ -14,8 +14,11 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /users/staff/bjoerns/src/cvs/xpilot/src/socklib.h,v 3.2 1993/08/02 12:51:20 bjoerns Exp $
+ * RCS:      $Header: /ftp/xpilot/cvsroot/xpilot/src/socklib.h,v 3.3 1993/08/19 07:35:26 kenrsc Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 3.3  1993/08/19  07:35:26  kenrsc
+ * Added patch from bert (3f4changes)
+ *
  * Revision 3.2  1993/08/02  12:51:20  bjoerns
  * Patchlevel 2.
  *
@@ -73,6 +76,7 @@
 #define SL_ERECEIVE		10	/* Receive error */
 
 #ifndef _SOCKLIB_LIBSOURCE
+#include <netinet/in.h>			/* for sockaddr_in */
 extern int
     sl_errno,
     sl_timeout_s,

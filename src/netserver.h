@@ -1,12 +1,24 @@
-/* $Id: netserver.h,v 3.11 1993/08/02 12:55:17 bjoerns Exp $
+/* $Id: netserver.h,v 3.22 1993/09/28 21:32:01 kenrsc Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	NETSERVER_H
@@ -35,7 +47,9 @@
  * The timeout specifies the number of seconds each connection
  * state may last.
  */
+#ifndef CONNECTION_TIMEOUT
 #define CONNECTION_TIMEOUT	(FPS * 40)
+#endif
 
 /*
  * Maximum roundtrip time taken as serious for rountrip time calculations.
@@ -78,6 +92,9 @@ typedef struct {
     int			last_key_change;	/* last keyboard change */
     unsigned		version;		/* XPilot version of client */
     long		talk_sequence_num;	/* talk acknowledgement */
+    int			view_width, view_height;/* Viewable area dimensions */
+    int			debris_colors;		/* Max. debris intensities */
+    int			spark_rand;		/* Sparkling effect */
     char		*real;			/* real login name of player */
     char		*nick;			/* nickname of player */
     char		*dpy;			/* display of player */
@@ -105,6 +122,7 @@ static int Receive_ack_target(int ind);
 static int Receive_discard(int ind);
 static int Receive_undefined(int ind);
 static int Receive_talk(int ind);
+static int Receive_display(int ind);
 
 #endif	/* NETSERVER_C */
 
@@ -122,13 +140,14 @@ int Send_self(int ind,
     int lock_id, int lock_dist, int lock_dir,
     int check, int cloaks, int sensors, int mines,
     int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int num_tanks, int current_tank,
-    int fuel_sum, int fuel_max);
+    int afterburners, int lasers, int num_tanks, int current_tank,
+    int fuel_sum, int fuel_max, long status);
 int Send_leave(int ind, int id);
 int Send_war(int ind, int robot_id, int killer_id);
 int Send_seek(int ind, int programmer_id, int robot_id, int sought_id);
-int Send_player(int ind, int id, int team, int mychar, char *name);
-int Send_score(int ind, int id, int score, int life);
+int Send_player(int ind, int id, int team, int mychar, char *name,
+		char *real, char *disp);
+int Send_score(int ind, int id, int score, int life, int mychar);
 int Send_score_object(int ind, int score, int x, int y, char *string);
 int Send_base(int ind, int id, int num);
 int Send_fuel(int ind, int num, int fuel);
@@ -148,12 +167,18 @@ int Send_ecm(int ind, int x, int y, int size);
 int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak);
 int Send_refuel(int ind, int x0, int y0, int x1, int y1);
 int Send_connector(int ind, int x0, int y0, int x1, int y1);
+int Send_laser(int ind, int color, int x, int y, int len, int dir);
 int Send_radar(int ind, int x, int y);
 int Send_damaged(int ind, int damaged);
 int Send_message(int ind, char *msg);
 int Send_start_of_frame(int ind);
 int Send_end_of_frame(int ind);
 int Send_reliable(int ind);
-
+int Send_time_left(int ind, long sec);
+int Send_eyes(int ind, int id);
+int Send_trans(int ind, int x1, int y1, int x2, int y2);
+void Get_display_parameters(int ind, int *width, int *height,
+			    int *debris_colors, int *spark_rand);
+int Get_player_id(int);
 #endif
 

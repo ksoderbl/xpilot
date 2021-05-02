@@ -1,12 +1,24 @@
-/* $Id: netclient.c,v 3.24 1993/08/02 12:55:09 bjoerns Exp $
+/* $Id: netclient.c,v 3.37 1993/10/02 00:36:16 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -26,16 +38,18 @@
 #include <netdb.h>
 
 #include "version.h"
+#include "types.h"
+#include "error.h"
 #include "net.h"
 #include "netclient.h"
 #include "setup.h"
 #include "packet.h"
 #include "bit.h"
 #include "paint.h"
+#include "xinit.h"
 #include "pack.h"
 #include "draw.h"
 #include "client.h"
-
 
 #define TALK_RETRY	FPS
 
@@ -91,12 +105,15 @@ static void Receive_init(void)
 	reliable_tbl[i] = NULL;
     }
 
+    receive_tbl[PKT_EYES]	= Receive_eyes;
+    receive_tbl[PKT_TIME_LEFT]	= Receive_time_left;
     receive_tbl[PKT_AUDIO]	= Receive_audio;
     receive_tbl[PKT_START]	= Receive_start;
     receive_tbl[PKT_END]	= Receive_end;
     receive_tbl[PKT_SELF]	= Receive_self;
     receive_tbl[PKT_DAMAGED]	= Receive_damaged;
     receive_tbl[PKT_CONNECTOR]	= Receive_connector;
+    receive_tbl[PKT_LASER]	= Receive_laser;
     receive_tbl[PKT_REFUEL]	= Receive_refuel;
     receive_tbl[PKT_SHIP]	= Receive_ship;
     receive_tbl[PKT_ECM]	= Receive_ecm;
@@ -220,8 +237,8 @@ int Net_setup(void)
 		len,
 		size,
 		done = 0,
-		todo = sizeof(setup_t),
 		retries;
+    long	todo = sizeof(setup_t);
     char	*ptr;
 
     if ((Setup = (setup_t *) malloc(sizeof(setup_t))) == NULL) {
@@ -263,6 +280,8 @@ int Net_setup(void)
 			Setup->map_data_len, Setup->x, Setup->y);
 		    return -1;
 		}
+		Setup->width = Setup->x * BLOCK_SZ;
+		Setup->height = Setup->y * BLOCK_SZ;
 		if (Setup->map_order != SETUP_MAP_ORDER_XY
 		    && Setup->map_order != SETUP_MAP_UNCOMPRESSED) {
 		    errno = 0;
@@ -359,7 +378,6 @@ int Net_setup(void)
 int Net_verify(char *real, char *nick, char *disp)
 {
     int		n,
-		rfds,
 		type,
 		result,
 		retries;
@@ -730,7 +748,7 @@ int Net_start(void)
     packet_drop = 0;
     packet_loop = 0;
     if (BIT(instruments, SHOW_PACKET_LOSS_METER|SHOW_PACKET_DROP_METER) != 0) {
-	if ((packet_measure = malloc(FPS)) == NULL) {
+	if ((packet_measure = (char *) malloc(FPS)) == NULL) {
 	    error("No memory for packet measurement");
 	    CLR_BIT(instruments,
 		    SHOW_PACKET_LOSS_METER|SHOW_PACKET_DROP_METER);
@@ -1167,6 +1185,42 @@ int Receive_message(void)
 }
 
 /*
+ * Receive the remaining playing time.
+ */
+int Receive_time_left(void)
+{
+    int		n;
+    u_byte	ch;
+    long	sec;
+
+    if ((n = Packet_scanf(&rbuf, "%c%ld", &ch, &sec)) <= 0) {
+	return n;
+    }
+    if ((n = Handle_time_left(sec)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+/*
+ * Receive the id of the player we get frame updates for (game over mode).
+ */
+int Receive_eyes(void)
+{
+    int			n,
+			id;
+    u_byte		ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd", &ch, &id)) <= 0) {
+	return n;
+    }
+    if ((n = Handle_eyes(id)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+/*
  * Receive the packet with all player information for the HUD.
  * If this packet is missing from the frame update then the player
  * isn't actively playing, which means he's either damaged, dead,
@@ -1181,7 +1235,8 @@ int Receive_self(void)
 		nextCheckPoint, lockDir,
     		numCloaks, numSensors, numMines, numRockets,
     		numEcms, numTransporters, numFrontShots,
-    		numBackShots, numAfterburners, num_tanks, currentTank;
+    		numBackShots, numAfterburners, numLasers,
+    		num_tanks, currentTank, stat;
 
     n = Packet_scanf(&rbuf, "%c" "%hd%hd%hd%hd%c" "%c%c%c"
 		     "%hd%hd%c" "%c%c%c%c" "%c%c%c%c%c" "%c%c%c" "%hd%hd",
@@ -1194,9 +1249,38 @@ int Receive_self(void)
 		     &numFrontShots, &numBackShots,
 		     &numAfterburners, &num_tanks, &currentTank,
 		     &fuelSum, &fuelMax);
+
     if (n <= 0) {
 	return n;
     }
+    if (version >= 0x3041) {
+	n = Packet_scanf(&rbuf, "%c%hd%hd%c", &numLasers,
+			 &view_width, &view_height,
+			 &debris_colors, &spark_rand);
+	if (n <= 0) {
+	    return n;
+	}
+	if (debris_colors > 8) {
+	    debris_colors = 8;
+	}
+	if (view_width != draw_width || view_height != draw_height) {
+	    Send_display();
+	}
+
+	if (version >= 0x3042) {
+	    n = Packet_scanf(&rbuf, "%c", &stat);
+	    if (n <= 0) {
+		return n;
+	    }
+	    Game_over_action(stat);	
+	}
+    } else {
+	numLasers = 0;
+	view_width = DEF_VIEW_SIZE;
+	view_height = DEF_VIEW_SIZE;
+	debris_colors = 0;
+    }
+
     n = Handle_self(x, y, vx, vy, heading,
 		    (float) power,
 		    (float) turnspeed,
@@ -1205,7 +1289,8 @@ int Receive_self(void)
 		    nextCheckPoint, numCloaks, numSensors, numMines,
 		    numRockets, numEcms, numTransporters,
 		    numFrontShots, numBackShots,
-		    numAfterburners, num_tanks, currentTank,
+		    numAfterburners, numLasers,
+		    num_tanks, currentTank,
 		    fuelSum, fuelMax, rbuf.len);
     if (n == -1) {
 	return -1;
@@ -1240,6 +1325,26 @@ int Receive_connector(void)
 	return n;
     }
     if ((n = Handle_connector(x0, y0, x1, y1)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_laser(void)
+{
+    int		n;
+    short	x, y, len;
+    u_byte	ch, color, dir;
+
+    if (version < 0x3043) {
+	rbuf.ptr += 1+1+2+2+2+2;
+	return 1;
+    }
+    if ((n = Packet_scanf(&rbuf, "%c%c%hd%hd%hd%c",
+			  &ch, &color, &x, &y, &len, &dir)) <= 0) {
+	return n;
+    }
+    if ((n = Handle_laser(color, x, y, len, dir)) == -1) {
 	return -1;
     }
     return 1;
@@ -1355,8 +1460,7 @@ int Receive_shutdown(void)
 
 int Receive_debris(void)
 {
-    int			n, color, r, type;
-    short		x, y;
+    int			n, r, type;
 
     if (rbuf.ptr - rbuf.buf + 2 >= rbuf.len) {
 	return 0;
@@ -1382,11 +1486,6 @@ int Receive_shot(void)
 	return n;
     }
     color = ch - PKT_SHOT;
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad shot color %d (%d)", color, ch);
-	return -1;
-    }
     if ((n = Handle_shot(x, y, color)) == -1) {
 	return -1;
     }
@@ -1519,13 +1618,22 @@ int Receive_player(void)
     int			n;
     short		id;
     u_byte		ch, team, mychar;
-    char		name[MAX_CHARS];
+    char		name[MAX_CHARS], real[MAX_CHARS], host[MAX_CHARS];
 
-    if ((n = Packet_scanf(&cbuf, "%c%hd%c%c%s", &ch,
-			  &id, &team, &mychar, name)) <= 0) {
-	return n;
+    if (version < 0x3041) {
+	if ((n = Packet_scanf(&cbuf, "%c%hd%c%c%s", &ch,
+			      &id, &team, &mychar, name)) <= 0) {
+	    return n;
+	}
+	real[0] = '\0';
+	host[0] = '\0';
+    } else {
+	if ((n = Packet_scanf(&cbuf, "%c%hd%c%c%s%s%s", &ch,
+			      &id, &team, &mychar, name, real, host)) <= 0) {
+	    return n;
+	}
     }
-    if ((n = Handle_player(id, team, mychar, name)) == -1) {
+    if ((n = Handle_player(id, team, mychar, name, real, host)) == -1) {
 	return -1;
     }
     return 1;
@@ -1554,13 +1662,20 @@ int Receive_score(void)
 {
     int			n;
     short		id, score, life;
-    u_byte		ch;
+    u_byte		ch, mychar;
 
-    if ((n = Packet_scanf(&cbuf, "%c%hd%hd%hd", &ch,
-			  &id, &score, &life)) <= 0) {
+    if (version < 0x3040) {
+	n = Packet_scanf(&cbuf, "%c%hd%hd%hd", &ch,
+			 &id, &score, &life);
+	mychar = '\0';
+    } else {
+	n = Packet_scanf(&cbuf, "%c%hd%hd%hd%c", &ch,
+			 &id, &score, &life, &mychar);
+    }
+    if (n <= 0) {
 	return n;
     }
-    if ((n = Handle_score(id, score, life)) == -1) {
+    if ((n = Handle_score(id, score, life, mychar)) == -1) {
 	return -1;
     }
     return 1;
@@ -1933,5 +2048,23 @@ int Send_talk(void)
 	return -1;
     }
     talk_last_send = last_loops;
+    return 0;
+}
+
+
+int Send_display(void)
+{
+    int			num_col;
+
+    if (version < 0x3041) {
+	return 0;
+    }
+    num_col = (maxColors == 8) ? 4
+	: (maxColors == 16) ? 8
+	: 0;
+    if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
+		      draw_width, draw_height, num_col, spark_rand) == -1) {
+	return -1;
+    }
     return 0;
 }

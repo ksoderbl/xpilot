@@ -1,12 +1,24 @@
-/* $Id: const.h,v 3.10 1993/08/02 12:54:56 bjoerns Exp $
+/* $Id: const.h,v 3.20 1993/09/26 20:07:31 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef LIMITS_H
@@ -53,7 +65,7 @@
 #define tsin(x)		(tbl_sin[MOD2(x, TABLE_SIZE)])
 #define tcos(x)		(tbl_sin[MOD2((x)+TABLE_SIZE/4, TABLE_SIZE)])
 
-#define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
+#define NELEM(a)	((int)(sizeof(a) / sizeof((a)[0])))
 
 #define ABS(x)			( (x)<0 ? -(x) : (x) )
 #ifndef MAX
@@ -71,19 +83,19 @@
  */
 #define WRAP_DX(dx)	\
 	(BIT(World.rules->mode, WRAP_PLAY) \
-	    ? ((dx) < - (World.x * BLOCK_SZ >> 1) \
-		? (dx) + World.x * BLOCK_SZ \
-		: ((dx) > (World.x * BLOCK_SZ >> 1) \
-		    ? (dx) - World.x * BLOCK_SZ \
+	    ? ((dx) < - (World.width >> 1) \
+		? (dx) + World.width \
+		: ((dx) > (World.width >> 1) \
+		    ? (dx) - World.width \
 		    : (dx))) \
 	    : (dx))
 
 #define WRAP_DY(dy)	\
 	(BIT(World.rules->mode, WRAP_PLAY) \
-	    ? ((dy) < - (World.y * BLOCK_SZ >> 1) \
-		? (dy) + World.y * BLOCK_SZ \
-		: ((dy) > (World.y * BLOCK_SZ >> 1) \
-		    ? (dy) - World.y * BLOCK_SZ \
+	    ? ((dy) < - (World.height >> 1) \
+		? (dy) + World.height \
+		: ((dy) > (World.height >> 1) \
+		    ? (dy) - World.height \
 		    : (dy))) \
 	    : (dy))
 
@@ -93,13 +105,11 @@
 
 #define PSEUDO_TEAM(i,j)\
 	(Players[(i)]->pseudo_team == Players[(j)]->pseudo_team)
-#define TEAM(i, j)		(					\
-	BIT(Players[i]->status, PAUSE) || BIT(Players[j]->status, PAUSE)\
-	? true								\
-	: (BIT(World.rules->mode, TEAM_PLAY)				\
-	   ? (Players[i]->team != TEAM_NOT_SET				\
-	      && Players[i]->team == Players[j]->team)			\
-	   : false))
+#define TEAM(i, j)							\
+	(BIT(Players[i]->status|Players[j]->status, PAUSE)		\
+	|| (BIT(World.rules->mode, TEAM_PLAY)				\
+	   && (Players[i]->team == Players[j]->team)			\
+	   && (Players[i]->team != TEAM_NOT_SET)))
 
 #define CANNON_DEAD_TIME	900
 
@@ -130,6 +140,8 @@
 #define MIN_PLAYER_TURNSPEED	4.0
 #define MAX_PLAYER_POWER	55.0
 #define MIN_PLAYER_POWER	5.0
+#define MAX_PLAYER_TURNRESISTANCE	1.0
+#define MIN_PLAYER_TURNRESISTANCE	0.0
 
 #define FUEL_SCALE_BITS         8
 #define FUEL_SCALE_FACT         (1<<FUEL_SCALE_BITS)
@@ -224,6 +236,13 @@
 #define HEAT_WIDE_TIMEOUT       (8*FPS)
 #define HEAT_WIDE_ERROR         16
 
+#define MAX_LASERS		5
+#define PULSE_SPEED		65
+#define PULSE_SAMPLE_DISTANCE	5
+#define PULSE_LENGTH		(PULSE_SPEED - PULSE_SAMPLE_DISTANCE)
+#define PULSE_MAX_LIFE		8
+#define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS - (lasers)) / 2)
+
 #define WALL_RETURN_TIME        32
 #define WARN_TIME               2
 
@@ -234,7 +253,7 @@
 #define DEBRIS_MASS             4.5
 #define DEBRIS_SPEED(intensity) ((rand()%(1+(intensity>>2)))|20)
 #define DEBRIS_LIFE(intensity)  ((rand()%(1+intensity>>1))|8)
-#define DEBRIS_TYPES		(NUM_COLORS * 3 * 3)
+#define DEBRIS_TYPES		(8 * 4 * 4)
 
 #define PL_DEBRIS_MASS          3.5
 #define PL_DEBRIS_SPEED(mass)   DEBRIS_SPEED(((int)mass)<<1)

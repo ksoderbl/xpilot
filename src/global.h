@@ -1,12 +1,24 @@
-/* $Id: global.h,v 3.13 1993/08/02 12:55:00 bjoerns Exp $
+/* $Id: global.h,v 3.18 1993/09/18 15:08:15 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	GLOBAL_H
@@ -50,7 +62,6 @@ extern int		robotsLeave, robotLeaveLife;
 extern int		robotLeaveScore, robotLeaveRatio;
 extern World_map	World;
 extern server		Server;
-extern int		RadarHeight;
 extern float		ShotsMass, ShipPower, ShipMass, ShotsSpeed, Gravity;
 extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
@@ -95,6 +106,9 @@ extern bool		updateScores;
 extern bool 		allowNukes;
 extern bool		playersOnRadar;
 extern bool		missilesOnRadar;
+extern bool		shieldedItemPickup;
+extern bool		shieldedMining;
+extern bool		laserIsStunGun;
 extern bool		targetKillTeam;
 extern float 		dropItemOnKillProb;
 extern float 		movingItemProb;
@@ -109,6 +123,10 @@ extern float		itemWideangleProb;
 extern float		itemRearshotProb;
 extern float		itemAfterburnerProb;
 extern float		itemTransporterProb;
+extern float		itemLaserProb;
+extern float		itemProbMult;
 extern float		maxItemDensity;
+extern float		gameDuration;
+extern time_t		gameOverTime;
 
 #endif /* GLOBAL_H */

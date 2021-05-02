@@ -16,15 +16,15 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include "types.h"
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.1 1993/08/02 12:55:41 bjoerns Exp $";
+    "@(#)$Id: usleep.c,v 3.2 1993/09/20 18:48:34 bert Exp $";
 #endif
 
 
-int
-usleep(usec)
-    unsigned long usec;
+int usleep(unsigned long usec)
 {
 /*#ifdef SYSV
     poll((struct poll *) 0, (size_t) 0, usec / 1000);	/* ms RES */

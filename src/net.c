@@ -1,12 +1,24 @@
-/* $Id: net.c,v 3.8 1993/08/02 12:55:07 bjoerns Exp $
+/* $Id: net.c,v 3.12 1993/09/20 18:37:33 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -33,7 +45,7 @@ int last_packet_of_frame;
 
 int Sockbuf_init(sockbuf_t *sbuf, int sock, int size, int state)
 {
-    if ((sbuf->buf = sbuf->ptr = malloc(size)) == NULL) {
+    if ((sbuf->buf = sbuf->ptr = (char *) malloc(size)) == NULL) {
 	return -1;
     }
     sbuf->sock = sock;
@@ -188,7 +200,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    }
 #endif
 	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't send on socket");
+		error("Can't send on socket (%d,%d)", sbuf->sock, sbuf->len);
 		Sockbuf_clear(sbuf);
 		return -1;
 	    }

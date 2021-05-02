@@ -1,14 +1,27 @@
-/* $Id: option.c,v 3.5 1993/08/02 12:51:05 bjoerns Exp $
+/* $Id: option.c,v 3.10 1993/10/02 00:36:18 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -16,6 +29,10 @@
 #include "robot.h"
 #include "map.h"
 #include "defaults.h"
+
+#ifndef PATH_MAX
+#define PATH_MAX	1024
+#endif
 
 #define	NHASH	29
 
@@ -169,7 +186,7 @@ static int skipspace(FILE *ifile)
  */
 static char *getMultilineValue(char *delimiter, FILE *ifile)
 {
-    char       *s = malloc(32768);
+    char       *s = (char *)malloc(32768);
     int         i = 0;
     int         slen = 32768;
     char       *bol;
@@ -179,14 +196,14 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
     while (1) {
 	ich = getc(ifile);
 	if (ich == EOF) {
-	    s = realloc(s, i + 1);
+	    s = (char *)realloc(s, i + 1);
 	    s[i] = '\0';
 	    return s;
 	}
 	if (i == slen) {
 	    char       *t = s;
 
-	    s = realloc(s, slen += 32768);
+	    s = (char *)realloc(s, slen += 32768);
 	    bol += s - t;
 	}
 	if (ich == '\n') {
@@ -194,7 +211,7 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
 	    if (delimiter && !strcmp(bol, delimiter)) {
 		char       *t = s;
 
-		s = realloc(s, bol - s + 1);
+		s = (char *)realloc(s, bol - s + 1);
 		s[bol - t] = '\0';
 		return s;
 	    }
@@ -221,9 +238,9 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
  * sequence, so # does not serve as a comment character there, and newlines and
  * whitespace are not discarded.
  */
-#define EXPAND				\
-    if (i == slen) {			\
-        s = realloc(s, slen *= 2);	\
+#define EXPAND					\
+    if (i == slen) {				\
+        s = (char *)realloc(s, slen *= 2);	\
     }
 static void parseLine(FILE *ifile)
 {
@@ -299,7 +316,7 @@ static void parseLine(FILE *ifile)
     s[i++] = '\0';
     name = s;
 
-    s = malloc(slen = 128);
+    s = (char *)malloc(slen = 128);
     i = 0;
     do {
 	EXPAND;
@@ -414,63 +431,114 @@ static int parseOldMapFile(FILE *ifile)
 }
 
 
+#if defined(COMPRESSED_MAPS)
+static FILE *openCompressedDefaultsFile(void)
+{
+    char	buf[PATH_MAX + sizeof(ZCAT_FORMAT)];
+
+    if (access(FileName, 4) == 0) {
+	sprintf(buf, ZCAT_FORMAT, FileName);
+	return popen(buf, "r");
+    }
+    return NULL;
+}
+#endif
+
+
+static FILE *openDefaultsFile(char *filename)
+{
+    int		len = strlen(filename);
+    bool	hasmap = false;
+    FILE	*ifile;
+
+    if ((FileName = (char *)malloc(PATH_MAX)) == NULL) {
+	return NULL;
+    }
+    strcpy(FileName, filename);
+#if defined(COMPRESSED_MAPS)
+    if (len > strlen(ZCAT_EXT)
+	&& strcmp(FileName + len - strlen(ZCAT_EXT), ZCAT_EXT) == 0) {
+	if ((ifile = openCompressedDefaultsFile()) != NULL) {
+	    return ifile;
+	}
+	sprintf(FileName, "%s/%s", MAPDIR, filename);
+	if ((ifile = openCompressedDefaultsFile()) != NULL) {
+	    return ifile;
+	}
+	return NULL;
+    }
+#endif
+    if (len > 4 && strcmp(FileName + len - 4, ".map") == 0) {
+	hasmap = true;
+    }
+    if ((ifile = fopen(FileName, "r")) != NULL) {
+	return ifile;
+    }
+    if (hasmap == false) {
+	strcat(FileName, ".map");
+	if ((ifile = fopen(FileName, "r")) != NULL) {
+	    return ifile;
+	}
+    }
+#if defined(COMPRESSED_MAPS)
+    strcat(FileName, ZCAT_EXT);
+    if ((ifile = openCompressedDefaultsFile()) != NULL) {
+	return ifile;
+    }
+#endif
+    sprintf(FileName, "%s/%s", MAPDIR, filename);
+    if ((ifile = fopen(FileName, "r")) != NULL) {
+	return ifile;
+    }
+    if (hasmap == false) {
+	strcat(FileName, ".map");
+	if ((ifile = fopen(FileName, "r")) != NULL) {
+	    return ifile;
+	}
+    }
+#if defined(COMPRESSED_MAPS)
+    strcat(FileName, ZCAT_EXT);
+    if ((ifile = openCompressedDefaultsFile()) != NULL) {
+	return ifile;
+    }
+#endif
+    return NULL;
+}
+
 
 /*
  * Parse a file containing defaults (and possibly a map).
  */
 bool parseDefaultsFile(char *filename)
 {
-    FILE       *ifile = NULL;
+    FILE       *ifile;
     int         ich;
-    char       *ifname = NULL;
 
-    FileName = filename;
     LineNumber = 1;
-
-    ifile = fopen(filename, "r");			/* "FILE" */
-
-    if (ifile == NULL) {
-	ifname = malloc(strlen(filename) + strlen(MAPDIR) + 5);
-	FileName = ifname;
-	strcpy(ifname, filename);
-	strcat(ifname, ".map");				/* "FILE.map" */
-	ifile = fopen(ifname, "r");
-
-	if (ifile == NULL) {
-	    sprintf(ifname, "%s%s", MAPDIR, filename);	/* "MAPDIR/FILE" */
-	    FileName = ifname;
-	    ifile = fopen(ifname, "r");
-
-	    if (ifile == NULL) {
-		strcat(ifname, ".map");			/* "MAPDIR/FILE.map" */
-		FileName = ifname;
-		ifile = fopen(ifname, "r");
-
-		if (ifile == NULL) {
-		    free(ifname);
-		    return 0;
-		}
-	    }
-	}
+    if ((ifile = openDefaultsFile(filename)) == NULL) {
+	free(FileName);
+	return false;
     }
+
     ich = getc(ifile);
     if (ich != EOF)
 	ungetc(ich, ifile);
     if (isdigit(ich)) {
 	errno = 0;
 	error("%s is in old (v1.x) format, please convert it with mapmapper",
-	      ifname);
-	free(ifname);
+	      FileName);
+	free(FileName);
 	fclose(ifile);
-	return 0;
+	return false;
     } else {
 	while (!feof(ifile))
 	    parseLine(ifile);
     }
 
-    if (ifname) free(ifname);
-    if (ifile) fclose(ifile);
-    return 1;
+    free(FileName);
+    fclose(ifile);
+
+    return true;
 }
 
 
@@ -488,7 +556,7 @@ void parseOptions(void)
     for (i = 0; i < NHASH; i++)
 	for (tmp = hashArray[i]; tmp; tmp = tmp->next) {
 	    /* Does it have a default?   (If so, get a pointer to it) */
-	    if (desc = tmp->def) {
+	    if (desc = (optionDesc *)tmp->def) {
 		if (desc->variable) {
 		    switch (desc->type) {
 		    case valInt:
@@ -509,16 +577,16 @@ void parseOptions(void)
 
 		    case valBool:
 			{
-			    bool	*ptr = desc->variable;
+			    bool	*ptr = (bool *)desc->variable;
 
 			    if (!strcasecmp(tmp->value, "yes")
 				|| !strcasecmp(tmp->value, "on")
 				|| !strcasecmp(tmp->value, "true"))
-				*ptr = 1;
+				*ptr = true;
 			    else if (!strcasecmp(tmp->value, "no")
 				     || !strcasecmp(tmp->value, "off")
 				     || !strcasecmp(tmp->value, "false"))
-				*ptr = 0;
+				*ptr = false;
 			    else {
 				error("Invalid boolean value for %s - %s\n",
 				      desc->name, tmp->value);
@@ -528,7 +596,7 @@ void parseOptions(void)
 
 		    case valIPos:
 			{
-			    ipos       *ptr = desc->variable;
+			    ipos       *ptr = (ipos *)desc->variable;
 			    char       *s;
 
 			    s = strchr(tmp->value, ',');
@@ -544,7 +612,7 @@ void parseOptions(void)
 
 		    case valString:
 			{
-			    char      **ptr = desc->variable;
+			    char      **ptr = (char **)desc->variable;
 
 			    *ptr = tmp->value;
 			    break;

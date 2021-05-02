@@ -1,12 +1,24 @@
-/* $Id: netclient.h,v 3.9 1993/08/02 12:55:12 bjoerns Exp $
+/* $Id: netclient.h,v 3.16 1993/09/20 18:39:20 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	NETCLIENT_H
@@ -35,6 +47,7 @@ int Receive_message(void);
 int Receive_self(void);
 int Receive_refuel(void);
 int Receive_connector(void);
+int Receive_laser(void);
 int Receive_smart(void);
 int Receive_ball(void);
 int Receive_ship(void);
@@ -74,6 +87,10 @@ int Send_turnresistance_s(float turnresistance_s);
 int Receive_audio(void);
 int Receive_talk_ack(void);
 int Send_talk(void);
+int Send_display(void);
 int Net_talk(char *str);
+int Receive_time_left(void);
+int Receive_eyes(void);
+int Receive_magic(void);
 
 #endif

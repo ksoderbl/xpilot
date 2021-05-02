@@ -1,12 +1,24 @@
-/* $Id: Imakefile,v 3.7 1993/08/02 12:54:45 bjoerns Exp $
+/* $Id: Imakefile,v 3.14 1993/10/02 00:36:05 bjoerns Exp $
  *
- *      This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
  *
- *          Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *          Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *      Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #
@@ -57,6 +69,7 @@ DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\" -DLIBDIR=\"/usr/local/games/lib/xpilot/\
 /* CC = gcc			/* 386BSD */
 /* CC = cc			/* AIX */
 /* CC = cc -Xa			/* Sequent's ANSI cc (Dynix/PTX 2 and up) */
+/* CC = CC -D_HPUX_SOURCE -D__STDC__	/* HP (USG) C++ - too strict yet */
 /*
  * People with ULTRIX having problems or solutions should
  * contact David Chatterton at: davidc@bruce.cs.monash.edu.au
@@ -79,6 +92,12 @@ DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\" -DLIBDIR=\"/usr/local/games/lib/xpilot/\
 
 
 /*
+ * If you're using Solaris CMW, you'll have to use Makefile.std or
+ * tweak the Imakefile.  If you add support for CMW in the Imakefile,
+ * drop us a mail, eh? :)
+ */
+
+/*
  * For sound support, you must uncomment either one of these
  * following lines and customize the paths
  */
@@ -87,8 +106,8 @@ NCDAUDIOINC = -I/usr/local/include
 NCDAUDIOLIB = -L/usr/local/lib -laudio
 
 /* #define RPLAY_SOUND			/* Uncomment for rplay sound support */
-RPLAYAUDIOINC = -I/usr/local/include
-RPLAYAUDIOLIB = -L/usr/local/lib -lrplay
+RPLAYAUDIOINC = -I/users/staff/bjoerns/src/xpilot/rplay3.0PL2
+RPLAYAUDIOLIB = -L/users/staff/bjoerns/src/xpilot/rplay3.0PL2 -lrplay
 
 
 /*
@@ -96,11 +115,12 @@ RPLAYAUDIOLIB = -L/usr/local/lib -lrplay
  * SGI users must select their CCOPTIONS here.
  */
 USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
-/* STRDUP_OBJ = usleep.o		/* Uncomment if you lack strdup() */
+/* STRDUP_OBJ = strdup.o		/* Uncomment if you lack strdup() */
 /* STRCASECMP_OBJ = strcasecmp.o	/* Uncomment if you lack strcasecmp()*/
 /* CCOPTIONS = -I/usr/local/include	/* You might need this one */
 /* CCOPTIONS = -xansi -prototypes -D__STDC__	/* For SGI (needed!) SGI */
 
+/* TOP_INCLUDES =			/* Sun users with GCC need this */
 /* EXTRALIB = -ldnet_stub		/* DEC/OSF1 DECnet library required */
 /* EXTRALIB =				/* normal */
 
@@ -156,10 +176,10 @@ SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
 #
 OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
         default.o math.o xevent.o syslimit.o error.o socklib.o caudio.o \
-        $(USLEEP_OBJ) $(AUDIOOBJ)
+	widget.o configure.o $(USLEEP_OBJ) $(AUDIOOBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
         default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
-        $(AUDIOSRC)
+	widget.c configure.c $(AUDIOSRC)
 
 #
 # Make handshake and server program

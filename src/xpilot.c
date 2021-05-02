@@ -1,19 +1,31 @@
-/* $Id: xpilot.c,v 3.11 1993/08/03 11:53:44 bjoerns Exp $
+/* $Id: xpilot.c,v 3.26 1993/10/02 00:36:31 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 #include <pwd.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -32,19 +44,25 @@
 #    include <string.h>
 #endif
 
+#include "version.h"
 #include "config.h"
+#include "types.h"
 #include "pack.h"
 #include "bit.h"
-#include "version.h"
+#include "error.h"
 #include "net.h"
+#ifdef SUNCMW
+#include "cmw.h"
+#endif /* SUNCMW */
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.11 1993/08/03 11:53:44 bjoerns Exp $";
+    "@(#)$Id: xpilot.c,v 3.26 1993/10/02 00:36:31 bjoerns Exp $";
 #endif
 
 #define MAX_LINE	256
+
 
 static int		socket_c,		/* Contact socket */
     			contact_port,
@@ -69,6 +87,8 @@ int			Argc;
 
 
 static int Query_all(int sockfd, int port, char *msg, int msglen);
+
+extern void usleep(unsigned long);
 
 
 static void initaddr(void)
@@ -188,7 +208,8 @@ static int Get_reply_message(sockbuf_t *ibuf)
     if (SocketReadable(ibuf->sock)) {
 	Sockbuf_clear(ibuf);
 	if ((len = read(ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
-	    error("Can't read reply message");
+	    error("Can't read reply message from %s/%d",
+		server_host, server_port);
 	    exit(-1);
 	}
 
@@ -226,7 +247,7 @@ static int Get_reply_message(sockbuf_t *ibuf)
  */
 static bool Process_commands(sockbuf_t *ibuf)
 {
-    int			delay;
+    int			delay, max_robots;
     char		c, status, reply_to, str[MAX_LINE];
     unsigned short	port;
 
@@ -267,7 +288,17 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    str[MAX_NAME_LEN - 1] = '\0';
 	    Packet_printf(ibuf, "%c%s", KICK_PLAYER_pack, str);
 	    break;
-
+	case 'R':
+	    printf("Enter maximum number of robots: ");
+	    fflush(stdout);
+	    gets(str);
+	    if (sscanf(str, "%d", &max_robots) <= 0) {
+		max_robots = 0;
+	    } else
+		if (max_robots < 0)
+		    max_robots = 0;
+	    Packet_printf(ibuf, "%c%d", MAX_ROBOT_pack, max_robots);
+	    break;
 	case 'M':				/* Send a message to server. */
 	    printf("Enter message: ");
 	    fflush(stdout);
@@ -440,9 +471,6 @@ static bool Process_commands(sockbuf_t *ibuf)
 	case E_GAME_LOCKED:
 	    error("Sorry, game locked");
 	    break;
-	case E_DBUFF:
-	    error("Couldn't initialize double buffering");
-	    break;
 	case E_NOT_FOUND:
 	    error("That player is not logged on this server");
 	    break;
@@ -535,8 +563,7 @@ static bool Connect_to_server(void)
  */
 int main(int argc, char *argv[])
 {
-    char		*disp;
-    int			i;
+    int			i, n;
     struct passwd	*pwent;
     bool		connected = false;
 #ifdef	LIMIT_ACCESS
@@ -547,12 +574,23 @@ int main(int argc, char *argv[])
 		       char *nickName, char *dispName, char *shut_msg);
 
 
+    /*
+     * --- Output copyright notice ---
+     */
+    printf("  Copyright " COPYRIGHT ".\n"
+	   "  " TITLE " comes with ABSOLUTELY NO WARRANTY; "
+	      "for details see the\n"
+	   "  provided LICENSE file.\n\n");
+
     Argc = argc;
     Argv = argv;
 
     /*
      * --- Miscellaneous initialization ---
      */
+#ifdef SUNCMW
+    cmw_priv_init();
+#endif /* CMW */
     init_error(argv[0]);
     contact_port = SERVER_PORT;
     initaddr();
@@ -572,7 +610,8 @@ int main(int argc, char *argv[])
     /*
      * --- Setup core of pack ---
      */
-    if ((pwent = getpwuid(geteuid())) == NULL) {
+    if ((pwent = getpwuid(geteuid())) == NULL
+	|| pwent->pw_name[0] == '\0') {
 	error("Can't get user info for user id %d", geteuid());
 	exit(1);
     }
@@ -615,17 +654,21 @@ int main(int argc, char *argv[])
 	exit (-1);
 #endif
 
-    if (argc > 1) {
-	strncpy(server_host, argv[1], sizeof server_host - 1);
-    }
-
     /*
      * --- Try to contact server ---
      */
-    if (server_host[0] != '\0') {	/* Server specified on command line? */
-	if (DgramSend(sbuf.sock, server_host, contact_port,
-		      sbuf.buf, sbuf.len) == -1) {
-	    error("Can't send contact request");
+    if (argc > 1) {		/* Server specified on command line? */
+	n = 0;
+	for (i = 1; i < argc; i++) {
+	    if (DgramSend(sbuf.sock, argv[i], contact_port,
+			  sbuf.buf, sbuf.len) == -1) {
+		error("Can't send contact request to server at %s port %d",
+		      argv[i], contact_port);
+	    } else {
+		n++;
+	    }
+	}
+	if (n == 0) {
 	    exit(1);
 	}
 
@@ -658,6 +701,9 @@ int main(int argc, char *argv[])
     close(socket_c);
     Sockbuf_cleanup(&sbuf);
     if (connected) {
+	extern int Join(char *server, int port, char *real, char *nick,
+			char *display, unsigned version);
+
 	Join(server_host, login_port, real_name, nick_name, display,
 	     server_version);
     }
@@ -791,7 +837,7 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
     /*
      * Create an unbound datagram socket.  Only used for ioctls.
      */
-    if ((fd = socket(AF_INET, SOCK_DGRAM, PF_UNSPEC)) == -1) {
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 	error("socket");
 	return (-1);
     }
@@ -948,7 +994,8 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 	/*
 	 * We didn't reach the localhost yet.
 	 */
-	addr = loopback;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_addr = loopback.sin_addr;
 	addr.sin_port = htons(port);
 	if (sendto(sockfd, msg, msglen, 0,
 		   (struct sockaddr *)&addr, sizeof addr) == msglen) {
@@ -960,6 +1007,11 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
     }
 
     close(fd);
+
+    if (count == 0) {
+	errno = 0;
+	count = -1;
+    }
 
     return count;
 }

@@ -1,21 +1,33 @@
-/* $Id: saudio.c,v 3.3 1993/06/28 20:54:17 bjoerns Exp $
+/* $Id: saudio.c,v 3.8 1993/10/02 18:53:07 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *	This piece of code was provided by Greg Renda (greg@ncd.com).
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
 #include "global.h"
+#include "netserver.h"
 
 #define SOUND_RANGE_FACTOR	0.5		/* factor to increase sound
 						 * range by */
-#define SOUND_DEFAULT_RANGE	CENTER		/* from draw.h (384) */
+#define SOUND_DEFAULT_RANGE	(BLOCK_SZ*15)
 #define SOUND_MAX_VOLUME	100
 #define SOUND_MIN_VOLUME	10
 
@@ -57,6 +69,8 @@ static void queue_audio(player * pl, int index, int volume)
 
 int sound_player_init(player * pl)
 {
+    pl->audio = NULL;
+
     return 0;
 }
 
@@ -124,6 +138,7 @@ void sound_play_queued(player * pl)
                     n;
 
     p = (AudioQPtr)pl->audio;
+    pl->audio = NULL;
 
     while (p) {
 	n = p->next;
@@ -131,8 +146,6 @@ void sound_play_queued(player * pl)
 	free(p);
 	p = n;
     }
-
-    pl->audio = NULL;
 }
 
 void sound_close(player * pl)
@@ -141,12 +154,11 @@ void sound_close(player * pl)
                     n;
 
     p = (AudioQPtr)pl->audio;
+    pl->audio = NULL;
 
     while (p) {
 	n = p->next;
 	free(p);
 	p = n;
     }
-
-    pl->audio = NULL;
 }

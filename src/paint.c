@@ -1,12 +1,24 @@
-/* $Id: paint.c,v 3.34 1993/08/03 21:09:18 bjoerns Exp $
+/* $Id: paint.c,v 3.54 1993/10/02 18:53:05 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <X11/Intrinsic.h>
@@ -26,21 +38,21 @@
 #include "error.h"
 #include "draw.h"
 #include "item.h"
+#include "paint.h"
 #include "xinit.h"
 #include "setup.h"
 #include "rules.h"
 #include "bit.h"
-#include "paint.h"
 #include "net.h"
 #include "netclient.h"
 
 #define BLUE_LEFT	1
 #define BLUE_UP		2
-#define BLUE_RIGHT	3
-#define BLUE_DOWN	4
+#define BLUE_RIGHT	4
+#define BLUE_DOWN	8
 
 #define X(co)  ((int) ((co) - world.x))
-#define Y(co)  ((int) (FULL - (co) + world.y))
+#define Y(co)  ((int) (view_height - (co) + world.y))
 
 extern float  		tbl_sin[];
 extern wireobj		ships[];
@@ -63,21 +75,17 @@ char	messageFontName[FONT_LEN];
 char	scoreListFontName[FONT_LEN];
 char	buttonFontName[FONT_LEN];
 char	textFontName[FONT_LEN];
-char	color_names[4][MAX_COLOR_LEN];
-char	*color_defaults[4];
 
 Display	*dpy;			/* Display of player (pointer) */
 short	about_page;		/* Which page is the player on? */
 u_short	team;			/* What team is the player on? */
-
-u_byte	dpy_type;		/* Display type */
 
 GC	gc;			/* GC for the game area */
 GC	messageGC;		/* GC for messages in the game area */
 GC	radarGC;		/* GC for the radar */
 GC	buttonGC;		/* GC for the buttons */
 GC	scoreListGC;		/* GC for the player list */
-GC	textGC;			/* GC for the info/help text */
+GC	textGC;			/* GC for the info/keys text */
 
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
@@ -89,21 +97,22 @@ Pixmap	p_radar, s_radar;	/* Pixmaps for the radar (implements */
 				/* the planes hack on the radar for */
 				/* monochromes) */
 long	dpl_1[2], dpl_2[2];	/* Used by radar hack */
-Window	quit_b;			/* Quit button */
-Window	help_b;			/* Help window button */
-Window	about_b;		/* About button */
-Window	help_w;			/* Help window */
+Window	keys_w;			/* Help window */
 Window	about_w;		/* About window */
 Window	about_close_b;		/* About window's close button */
 Window	about_next_b;		/* About window's next button */
 Window	about_prev_b;		/* About window's previous button */
-Window	help_close_b;		/* Help window's close button */
+Window	keys_close_b;		/* Help window's close button */
 Window	talk_w;			/* Talk window */
-XColor	colors[4];		/* Colors */
+XColor	colors[MAX_COLORS];	/* Colors */
 Colormap	colormap;	/* Private colormap */
+int	maxColors;		/* Max. number of colors to use */
 bool	gotFocus;
 bool	radar_exposed;
 bool	players_exposed;
+short	view_width, view_height;	/* Visible area according to server */
+u_byte	debris_colors;		/* Number of debris intensities from server */
+u_byte	spark_rand;		/* Sparkling effect */
 
 dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
@@ -113,6 +122,8 @@ keydefs_t	*keyDefs;
 other_t	*self;			/* player info */
 
 message_t		*Msg[MAX_MSGS];
+
+static int		eyesId;		/* Player we get frame updates for */
 
 
 /*
@@ -125,6 +136,11 @@ typedef struct {
 typedef struct {
     short		x0, y0, x1, y1;
 } connector_t;
+
+typedef struct {
+    unsigned char	color, dir;
+    short		x, y, len;
+} laser_t;
 
 typedef struct {
     short		x, y, dir;
@@ -188,6 +204,8 @@ static refuel_t		*refuel_ptr;
 static int		 num_refuel, max_refuel;
 static connector_t	*connector_ptr;
 static int		 num_connector, max_connector;
+static laser_t		*laser_ptr;
+static int		 num_laser, max_laser;
 static smart_t		*smart_ptr;
 static int		 num_smart, max_smart;
 static ball_t		*ball_ptr;
@@ -239,7 +257,8 @@ static int		 num_debris[DEBRIS_TYPES],
 
 static long		loops = 0,
 			start_loops,
-			end_loops;
+			end_loops,
+			time_left = -1;
 
 static XPoint		points[5];
 static XGCValues	gcv;
@@ -252,12 +271,12 @@ static XPoint		diamond[] = {
     { DSIZE, DSIZE }
 };
 
-static XRectangle	*rect_ptr[NUM_COLORS];
-static int		num_rect[NUM_COLORS], max_rect[NUM_COLORS];
-static XArc		*arc_ptr[NUM_COLORS];
-static int		num_arc[NUM_COLORS], max_arc[NUM_COLORS];
-static XSegment		*seg_ptr[NUM_COLORS];
-static int		num_seg[NUM_COLORS], max_seg[NUM_COLORS];
+static XRectangle	*rect_ptr[MAX_COLORS];
+static int		num_rect[MAX_COLORS], max_rect[MAX_COLORS];
+static XArc		*arc_ptr[MAX_COLORS];
+static int		num_arc[MAX_COLORS], max_arc[MAX_COLORS];
+static XSegment		*seg_ptr[MAX_COLORS];
+static int		num_seg[MAX_COLORS], max_seg[MAX_COLORS];
 
 static Pixel		current_foreground;
 
@@ -278,7 +297,7 @@ static void Rectangle_start(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	num_rect[i] = 0;
     }
 }
@@ -287,11 +306,10 @@ static void Rectangle_end(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	if (num_rect[i] > 0) {
 	    SET_FG(colors[i].pixel);
-	    XDrawRectangles(dpy, p_draw, gc,
-		rect_ptr[i], num_rect[i]);
+	    XFillRectangles(dpy, p_draw, gc, rect_ptr[i], num_rect[i]);
 	    RELEASE(rect_ptr[i], num_rect[i], max_rect[i]);
 	}
     }
@@ -301,11 +319,6 @@ static int Rectangle_add(int color, int x, int y, int width, int height)
 {
     XRectangle		t;
 
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad rectangle color %d", color);
-	return -1;
-    }
     t.x = x;
     t.y = y;
     t.width = width;
@@ -318,7 +331,7 @@ static void Arc_start(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	num_arc[i] = 0;
     }
 }
@@ -327,7 +340,7 @@ static void Arc_end(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	if (num_arc[i] > 0) {
 	    SET_FG(colors[i].pixel);
 	    XDrawArcs(dpy, p_draw, gc,
@@ -344,11 +357,6 @@ static int Arc_add(int color,
 {
     XArc t;
 
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad arc color %d", color);
-	return -1;
-    }
     t.x = x;
     t.y = y;
     t.width = width;
@@ -363,7 +371,7 @@ static void Segment_start(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	num_seg[i] = 0;
     }
 }
@@ -372,7 +380,7 @@ static void Segment_end(void)
 {
     int i;
 
-    for (i = 0; i < NUM_COLORS; i++) {
+    for (i = 0; i < maxColors; i++) {
 	if (num_seg[i] > 0) {
 	    SET_FG(colors[i].pixel);
 	    XDrawSegments(dpy, p_draw, gc,
@@ -386,11 +394,6 @@ static int Segment_add(int color, int x1, int y1, int x2, int y2)
 {
     XSegment t;
 
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad segment color %d", color);
-	return -1;
-    }
     t.x1 = x1;
     t.y1 = y1;
     t.x2 = x2;
@@ -424,14 +427,15 @@ static void Paint_meter(int x, int y, char *title, int val, int max)
 		mw4_4 = METER_WIDTH,
     		BORDER = 5;
 
-    SET_FG(colors[RED].pixel);
-    XFillRectangle(dpy, p_draw, gc, x+2, y+2,
-		   (int)(((METER_WIDTH-3)*val)/max), METER_HEIGHT-3);
+    Rectangle_add(RED,
+		  x+2, y+2,
+		  (int)(((METER_WIDTH-3)*val)/max), METER_HEIGHT-3);
     SET_FG(colors[WHITE].pixel);
-    Rectangle_add(WHITE, x, y, METER_WIDTH, METER_HEIGHT);
+    XDrawRectangle(dpy, p_draw, gc,
+		   x, y, METER_WIDTH, METER_HEIGHT);
 
     /* Paint scale levels(?) */
-    Segment_add(WHITE, x, y-4,		x, y+METER_HEIGHT+4);
+    Segment_add(WHITE, x, y-4,		x,	y+METER_HEIGHT+4);
     Segment_add(WHITE, x+mw4_4, y-4,	x+mw4_4, y+METER_HEIGHT+4);
     Segment_add(WHITE, x+mw2_4, y-3,	x+mw2_4, y+METER_HEIGHT+3);
     Segment_add(WHITE, x+mw1_4, y-1,	x+mw1_4, y+METER_HEIGHT+1);
@@ -446,32 +450,32 @@ static int wrap(int *x, int *y)
     int x1, y1;
 
     if (*x >= world.x
-	&& *x <= world.x + FULL
+	&& *x <= world.x + view_width
 	&& *y >= world.y
-	&& *y <= world.y + FULL) {
+	&& *y <= world.y + view_height) {
 	return 1;
     }
     if (BIT(Setup->mode, WRAP_PLAY) && wrappedWorld) {
-	if ((wrappedWorld & 1) && *x > FULL) {
-	    x1 = *x - Setup->x * BLOCK_SZ;
+	if ((wrappedWorld & 1) && *x > view_width) {
+	    x1 = *x - Setup->width;
 	} else {
 	    x1 = *x;
 	}
-	if ((wrappedWorld & 2) && *y > FULL) {
-	    y1 = *y - Setup->y * BLOCK_SZ;
+	if ((wrappedWorld & 2) && *y > view_height) {
+	    y1 = *y - Setup->height;
 	} else {
 	    y1 = *y;
 	}
 	if (x1 >= realWorld.x
-	    && x1 <= realWorld.x + FULL
+	    && x1 <= realWorld.x + view_width
 	    && y1 >= realWorld.y
-	    && y1 <= realWorld.y + FULL) {
+	    && y1 <= realWorld.y + view_height) {
 	    
 	    if ((wrappedWorld & 1) && *x == x1) {
-		*x = x1 + Setup->x * BLOCK_SZ;
+		*x = x1 + Setup->width;
 	    }
 	    if ((wrappedWorld & 2) && *y == y1) {
-		*y = y1 + Setup->y * BLOCK_SZ;
+		*y = y1 + Setup->height;
 	    }
 	    return 1;
 	}
@@ -484,6 +488,15 @@ static int wrap(int *x, int *y)
     return 0;
 }
 
+void Game_over_action(u_byte stat)
+{
+    static u_byte old_stat = 0;
+    
+    if (BIT(old_stat, GAME_OVER) && !BIT(stat, GAME_OVER))
+	XMapRaised(dpy, top);
+
+    old_stat = stat;
+}
 
 void Paint_item_symbol(u_byte type, Drawable d, GC gc, int x, int y)
 {
@@ -502,7 +515,7 @@ void Paint_item_symbol(u_byte type, Drawable d, GC gc, int x, int y)
 
 void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
 {
-    const int		SIZE = 5*ITEM_SIZE/7 + 1;
+    const int		SIZE = ITEM_TRIANGLE_SIZE;
 
     points[0].x = x - SIZE;
     points[0].y = y - SIZE;
@@ -529,8 +542,9 @@ void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
 
 static void Paint_shots(void)
 {
-    int		color, i, j, id, x, y, xs, ys, size;
-    char	*p, str[2];
+    int		color, i, j, id, x, y, xs, ys, x1, x2, y1, y2;
+    int		x_areas, y_areas, areas, max, len, dir;
+    char	str[2];
 
     if (num_itemtype > 0) {
 	SET_FG(colors[RED].pixel);
@@ -548,7 +562,7 @@ static void Paint_shots(void)
 	    x = shot_ptr[i].x;
 	    y = shot_ptr[i].y;
 	    if (wrap(&x, &y)) {
-		Rectangle_add(shot_ptr[i].color, X(x), Y(y), 2, 2);
+		Rectangle_add(shot_ptr[i].color, X(x), Y(y), 3, 3);
 	    }
 	}
 	RELEASE(shot_ptr, num_shot, max_shot);
@@ -610,6 +624,7 @@ static void Paint_shots(void)
 	    { -1, 0 },
 	    { 0, -2 }
 	};
+
 	for (i = 0; i < num_mine; i++) {
 	    x = mine_ptr[i].x;
 	    y = mine_ptr[i].y;
@@ -619,9 +634,8 @@ static void Paint_shots(void)
 		mine_points[0].x = x - 8;
 		mine_points[0].y = y - 1;
 		SET_FG(colors[BLUE].pixel);
-		XFillRectangle(dpy, p_draw, gc,
-			       x - 7, y - 2, 15, 5);
-		SET_FG(colors[RED].pixel);
+		XFillRectangle(dpy, p_draw, gc, x - 7, y - 2, 15, 5);
+		SET_FG(colors[WHITE].pixel);
 		XDrawLines(dpy, p_draw, gc,
 			   mine_points, 21, CoordModePrevious);
 		/* Arc_add(BLUE, x - 4, y - 4, 8, 8, 0, 64*360); */
@@ -630,18 +644,27 @@ static void Paint_shots(void)
 	RELEASE(mine_ptr, num_mine, max_mine);
     }
 
-    size = BIT(dpy_type, DT_HAVE_COLOR) ? 2 : 1;
-    for (i = 0; i < DEBRIS_TYPES; i++) {
+    x_areas = (view_width + 255) >> 8;
+    y_areas = (view_height + 255) >> 8;
+    areas = x_areas * y_areas;
+    max = areas * (debris_colors > 0 ? debris_colors : 4);
+    for (i = 0; i < max; i++) {
 	if (num_debris[i] > 0) {
-	    x = ((i % 3) << 8);
-	    y = (((i / 3) % 3) << 8);
-	    color = i / 9;
-	    y = FULL - 1 - y;
+	    x = ((i % x_areas) << 8);
+	    y = (((i / x_areas) % y_areas) << 8);
+	    color = i / areas;
+	    if (debris_colors > 4) {
+		color = 4 + (((color & 1) << 2) | (color >> 1));
+	    }
+	    else if (debris_colors >= 3) {
+		color += 4;
+	    }
+	    y = view_height - 1 - y;
 	    for (j = 0; j < num_debris[i]; j++) {
 		Rectangle_add(color,
-			      x + debris_ptr[i][j].x,
-			      y - debris_ptr[i][j].y,
-			      size, size);
+			      x + debris_ptr[i][j].x - spark_size/2,
+			      y - debris_ptr[i][j].y - spark_size/2,
+			      spark_size, spark_size);
 	    }
 	    RELEASE(debris_ptr[i], num_debris[i], max_debris[i]);
 	}
@@ -667,6 +690,31 @@ static void Paint_shots(void)
 			   LineSolid, CapButt, JoinMiter);
 	RELEASE(smart_ptr, num_smart, max_smart);
     }
+
+    if (num_laser > 0) {
+	XSetLineAttributes(dpy, gc, 3,
+			   LineSolid, CapButt, JoinMiter);
+	for (i = 0; i < num_laser; i++) {
+	    x1 = laser_ptr[i].x;
+	    y1 = laser_ptr[i].y;
+	    len = laser_ptr[i].len;
+	    dir = laser_ptr[i].dir;
+	    if (wrap(&x1, &y1)) {
+		x2 = x1 + (int)(len * tcos(dir));
+		y2 = y1 + (int)(len * tsin(dir));
+		if ((unsigned)(color = laser_ptr[i].color) >= NUM_COLORS) {
+		    color = WHITE;
+		}
+		SET_FG(colors[color].pixel);
+		XDrawLine(dpy, p_draw, gc,
+			  X(x1), Y(y1),
+			  X(x2), Y(y2));
+	    }
+	}
+	XSetLineAttributes(dpy, gc, 0,
+			   LineSolid, CapButt, JoinMiter);
+	RELEASE(laser_ptr, num_laser, max_laser);
+    }
 }
 
 static void Paint_ships(void)
@@ -676,6 +724,7 @@ static void Paint_ships(void)
     other_t		*other;
     static int		pauseCharWidth = -1;
 
+    gcv.dash_offset = DASHES_LENGTH - (loops % DASHES_LENGTH);
     if (num_paused > 0) {
 	const int half_pause_size = 3*BLOCK_SZ/7;
 
@@ -694,18 +743,19 @@ static void Paint_ships(void)
 			       2*half_pause_size+1, 2*half_pause_size+1);
 		if (paused_ptr[i].count <= 0 || loops % 10 >= 5) {
 		    SET_FG(colors[WHITE].pixel);
-		    Rectangle_add(WHITE,
-				  X(x - (half_pause_size + 1)),
-				  Y(y + (half_pause_size + 1)),
-				  2*(half_pause_size+1), 2*(half_pause_size+1));
+		    XDrawRectangle(dpy, p_draw, gc,
+				   X(x - (half_pause_size + 1)),
+				   Y(y + (half_pause_size + 1)),
+				   2*(half_pause_size+1),
+				   2*(half_pause_size+1));
 		    XDrawString(dpy, p_draw, gc,
 				X(x - pauseCharWidth/2),
 				Y(y - gameFont->ascent/2),
 				"P", 1);
 		}
 	    }
-	    RELEASE(paused_ptr, num_paused, max_paused);
 	}
+	RELEASE(paused_ptr, num_paused, max_paused);
     }
 
     if (num_ecm > 0) {
@@ -851,6 +901,7 @@ static void Paint_ships(void)
 	gcv.line_style = LineSolid;
 	XChangeGC(dpy, gc, GCLineStyle, &gcv);
     }
+    gcv.dash_offset = 0;
 }
 
 
@@ -902,10 +953,10 @@ static void Paint_meters(void)
 	Paint_meter(10, 120, "Drop", packet_drop, FPS);
 
     if (destruct > 0)
-	Paint_meter((FULL-300)/2 -32, 3*FULL/4,
+	Paint_meter((view_width-300)/2 -32, 3*view_height/4,
 		   "Self destructing", destruct, 150);
     if (shutdown_count >= 0)
-	Paint_meter((FULL-300)/2 -32, 4*FULL/5,
+	Paint_meter((view_width-300)/2 -32, 4*view_height/5,
 		   "SHUTDOWN", shutdown_count, shutdown_delay);
 }
 
@@ -978,10 +1029,10 @@ static void Paint_HUD(void)
 	&& selfVisible != 0
 	&& (vel.x != 0 || vel.y != 0)) {
         Segment_add(RED,
-		    CENTER,
-		    CENTER,
-		    CENTER - ptr_move_fact*vel.x,
-		    CENTER + ptr_move_fact*vel.y);
+		    view_width / 2,
+		    view_height / 2,
+		    view_width / 2 - ptr_move_fact*vel.x,
+		    view_height / 2 + ptr_move_fact*vel.y);
     }
 
     if (!BIT(instruments, SHOW_HUD_INSTRUMENTS)) {
@@ -993,8 +1044,8 @@ static void Paint_HUD(void)
      */
     SET_FG(colors[BLUE].pixel);
 
-    hud_pos_x = CENTER - hud_move_fact*vel.x;
-    hud_pos_y = CENTER + hud_move_fact*vel.y;
+    hud_pos_x = view_width / 2 - hud_move_fact*vel.x;
+    hud_pos_y = view_height / 2 + hud_move_fact*vel.y;
 
     /* HUD frame */
     gcv.line_style = LineOnOffDash;
@@ -1059,6 +1110,9 @@ static void Paint_HUD(void)
 	    break;
 	case ITEM_TRANSPORTER:
 	    num = numTransporters;
+	    break;
+	case ITEM_LASER:
+	    num = numLasers;
 	    break;
 	case ITEM_ENERGY_PACK:
 	default:
@@ -1128,9 +1182,20 @@ static void Paint_HUD(void)
 	}
     }
 
+    if (time_left >= 0) {
+	sprintf(str, "%3d:%02d", time_left / 60, time_left % 60);
+	size = XTextWidth(gameFont, str, strlen(str));
+	XDrawString(dpy, p_draw, gc,
+		    hud_pos_x - HUD_SIZE+HUD_OFFSET - BORDER - size,
+		    hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
+			- gameFont->descent,
+		    str, strlen(str));
+    }
+
     /* Fuel gauge, must be last */
-    if (!((fuelCount)
-	  || (fuelSum < fuelLevel3
+    if (BIT(instruments, SHOW_FUEL_GAUGE) == 0
+	|| !((fuelCount)
+	   || (fuelSum < fuelLevel3
 	      && ((fuelSum < fuelLevel1 && (loops%4) < 2)
 		  || (fuelSum < fuelLevel2
 		      && fuelSum > fuelLevel1
@@ -1142,7 +1207,8 @@ static void Paint_HUD(void)
 	fuelCount--;
     }
 
-    Rectangle_add(BLUE,
+    SET_FG(colors[BLUE].pixel);
+    XDrawRectangle(dpy, p_draw, gc,
 		  hud_pos_x + HUD_SIZE - HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
 		  hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
 		  HUD_OFFSET - (2*FUEL_GAUGE_OFFSET) + 3,
@@ -1162,10 +1228,14 @@ static void Paint_messages(void)
     const int	BORDER = 10,
 		SPACING = messageFont->ascent+messageFont->descent+1;
     
-    for (y = FULL - messageFont->descent - BORDER, i = 0;
+    for (y = view_height - messageFont->descent - BORDER, i = 0;
 	 i < MAX_MSGS;
 	 i++, y -= SPACING) {
-	if (Msg[i]->life-- > MSG_FLASH)
+	int len;
+
+	if (Msg[i]->len == 0)
+	    continue;
+	else if (Msg[i]->life-- > MSG_FLASH)
 	    XSetForeground(dpy, messageGC, colors[RED].pixel);
 	else if (Msg[i]->life > 0)
 	    XSetForeground(dpy, messageGC, colors[WHITE].pixel);
@@ -1174,9 +1244,17 @@ static void Paint_messages(void)
 	    Msg[i]->len = 0;
 	    continue;
 	}
-	XDrawString(dpy, p_draw, messageGC,
-		    BORDER, y,
-		    Msg[i]->txt, Msg[i]->len);
+	len = MSG_DURATION - Msg[i]->life;
+	len = MIN(Msg[i]->len, len);
+	if (Msg[i]->alignment == RIGHT) {
+	    XDrawString(dpy, p_draw, messageGC,
+			view_width-BORDER - Msg[i]->pixelLen, y,
+			Msg[i]->txt, len);
+	} else {
+	    XDrawString(dpy, p_draw, messageGC,
+			BORDER, y,
+			Msg[i]->txt, len);
+	}
     }
 }
 
@@ -1196,14 +1274,20 @@ void Add_message(char *message)
     Msg[0]->life = MSG_DURATION;
     strcpy(Msg[0]->txt, message);
     Msg[0]->len = strlen(message);
+    Msg[0]->pixelLen = XTextWidth(messageFont, Msg[0]->txt, Msg[0]->len);
+
+    if (Msg[0]->txt[Msg[0]->len-1] == ']' || strcmp(Msg[0]->txt, " <") == 0)
+	Msg[0]->alignment = RIGHT;
+    else
+	Msg[0]->alignment = LEFT;
 }
 
 
 static void Paint_radar(void)
 {
     int			i, x, y, x1, y1, xw, yw;
-    const float		xf = 256.0f / (float)(Setup->x * BLOCK_SZ),
-    			yf = (float)RadarHeight / (float)(Setup->y * BLOCK_SZ);
+    const float		xf = 256.0f / (float)Setup->width,
+    			yf = (float)RadarHeight / (float)Setup->height;
 
     if (radar_exposed == false) {
 	return;
@@ -1351,10 +1435,8 @@ static void Paint_vfuel(void)
 	    fuel = vfuel_ptr[i].fuel;
 	    size = (BLOCK_SZ - 2*FUEL_BORDER) * fuel / MAX_STATION_FUEL;
 	    XFillRectangle(dpy, p_draw, gc,
-			   X(x + FUEL_BORDER),
-			   Y(y + FUEL_BORDER + size),
-			   BLOCK_SZ - 2*FUEL_BORDER + 1,
-			   size + 1);
+			  X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
+			  BLOCK_SZ - 2*FUEL_BORDER + 1, size + 1);
 	}
 	/* Draw F in fuel cells */
 	s[0] = 'F'; s[1] = '\0';
@@ -1494,7 +1576,8 @@ static void Paint_world(void)
     int xdot;
     int ydot;
     int x, y;
-    static const int WS_PR_SC=1+(float)FULL/BLOCK_SZ;
+    const int WS_PR_SC_W = 1+(float)view_width/BLOCK_SZ;
+    const int WS_PR_SC_H = 1+(float)view_height/BLOCK_SZ;
     static const int INSIDE_WS=BLOCK_SZ-2;
     static int wormDrawCount;
     int type;
@@ -1528,26 +1611,26 @@ static void Paint_world(void)
 	if (world.x < 0) {
 	    Segment_add(BLUE,
 			X(0), Y(0),
-			X(0), Y(Setup->y * BLOCK_SZ));
+			X(0), Y(Setup->height));
 	}
-	if (world.x + FULL >= Setup->x * BLOCK_SZ) {
+	if (world.x + view_width >= Setup->width) {
 	    Segment_add(BLUE,
-			X(Setup->x * BLOCK_SZ), Y(0),
-			X(Setup->x * BLOCK_SZ), Y(Setup->y * BLOCK_SZ));
+			X(Setup->width), Y(0),
+			X(Setup->width), Y(Setup->height));
 	}
 	if (world.y < 0) {
 	    Segment_add(BLUE,
 			X(0), Y(0),
-			X(Setup->x * BLOCK_SZ), Y(0));
+			X(Setup->width), Y(0));
 	}
-	if (world.y + FULL >= Setup->y * BLOCK_SZ) {
+	if (world.y + view_height >= Setup->height) {
 	    Segment_add(BLUE,
-			X(0), Y(Setup->y * BLOCK_SZ),
-			X(Setup->x * BLOCK_SZ), Y(Setup->y * BLOCK_SZ));
+			X(0), Y(Setup->height),
+			X(Setup->width), Y(Setup->height));
 	}
     }
 
-    for (rxb = sx; rxb <= WS_PR_SC; rxb++) {
+    for (rxb = sx; rxb <= WS_PR_SC_W; rxb++) {
 	xi = xb + rxb;
 	if (xi == Setup->x) {
 	    if (!BIT(Setup->mode, WRAP_PLAY))
@@ -1557,22 +1640,18 @@ static void Paint_world(void)
 	    xdot = 0;
 	if (xi >= Setup->x)
 	    xi -= Setup->x;
+	x = (xb + rxb) * BLOCK_SZ;
 
-	for (ryb = sy; ryb <= WS_PR_SC; ryb++) {
+	for (ryb = sy; ryb <= WS_PR_SC_H; ryb++) {
 	    yi = ryb + yb;
-
 	    if (yi == Setup->y) {
 		if (!BIT(Setup->mode, WRAP_PLAY))
 		    break;
 		ydot = 1;
-	    }
-	    else
+	    } else
 		ydot = 0;
-
 	    if (yi >= Setup->y)
 		yi -= Setup->y;
-
-	    x = (xb + rxb) * BLOCK_SZ;
 	    y = (yb + ryb) * BLOCK_SZ;
 
 	    switch (type = Setup->map_data[xi * Setup->y + yi]) {
@@ -1874,30 +1953,16 @@ static void Paint_world(void)
 		/*FALLTHROUGH*/
 
 	    case SETUP_SPACE: {
-                int bg_point_dist = map_point_distance;
-
-		if (xdot || ydot
-		    || (bg_point_dist != 0
-			&& (xi%bg_point_dist) == 0
-			&& (yi%bg_point_dist) == 0)) {
+		if (map_point_size > 0
+		    && (xdot || ydot
+			|| (map_point_distance > 0
+			    && (xi%map_point_distance) == 0
+			    && (yi%map_point_distance) == 0))) {
 		    Rectangle_add(BLUE,
-				  X((xb+rxb) * BLOCK_SZ + BLOCK_SZ / 2),
-				  Y((yb+ryb) * BLOCK_SZ + BLOCK_SZ / 2),
-				  1, 1);
+				  X(x + BLOCK_SZ / 2),
+				  Y(y + BLOCK_SZ / 2),
+				  map_point_size, map_point_size);
 		}
-
-#if 0	/* def DRAW_GRAV_VECTORS */
-		SET_FG(colors[RED].pixel);
-		XDrawLine(dpy, p_draw, gc,
-			  X(x+BLOCK_SZ/2),
-			  Y(y+BLOCK_SZ/2),
-			  X(x+BLOCK_SZ/2 + 50*World.gravity[xi][yi].x),
-			  Y(y+BLOCK_SZ/2 + 50*World.gravity[xi][yi].y));
-		SET_FG(colors[WHITE].pixel);
-		XDrawPoint(dpy, p_draw, gc,
-			   X(x+BLOCK_SZ/2),
-			   Y(y+BLOCK_SZ/2));
-#endif
 		break;
             }
 
@@ -1932,6 +1997,7 @@ static void Paint_world(void)
 		    }
 		    SET_FG(colors[color].pixel);
 
+#if 0
 		    Rectangle_add(color,
 				  X(x), Y(y+BLOCK_SZ),
 				  BLOCK_SZ, BLOCK_SZ);
@@ -1940,6 +2006,22 @@ static void Paint_world(void)
 				  X(x+(BLOCK_SZ+2)/4),
 				  Y(y+3*BLOCK_SZ/4),
 				  BLOCK_SZ/2, BLOCK_SZ/2);
+#else
+		    a1 = X(x);
+		    b1 = Y(y+BLOCK_SZ);
+		    a2 = a1 + BLOCK_SZ;
+		    b2 = b1 + BLOCK_SZ;
+		    Segment_add(color, a1, b1, a1, b2);
+		    Segment_add(color, a2, b1, a2, b2);
+		    Segment_add(color, a1, b1, a2, b1);
+		    Segment_add(color, a1, b2, a2, b2);
+
+		    XDrawRectangle(dpy, p_draw, gc,
+				  X(x+(BLOCK_SZ+2)/4),
+				  Y(y+3*BLOCK_SZ/4),
+				  BLOCK_SZ/2, BLOCK_SZ/2);
+				   
+#endif
 
 		    s[0] = '0' + type - SETUP_TARGET; s[1] = '\0';
 		    XDrawString(dpy, p_draw, gc,
@@ -2010,6 +2092,39 @@ static void Paint_world(void)
 }
 
 
+void Paint_sliding_radar(void)
+{
+    if (BIT(Setup->mode, WRAP_PLAY) == 0) {
+	return;
+    }
+    if (p_radar != s_radar) {
+	return;
+    }
+    if (BIT(instruments, SHOW_SLIDING_RADAR) != 0) {
+	if (s_radar != radar) {
+	    return;
+	}
+	s_radar = XCreatePixmap(dpy, radar,
+				256, RadarHeight,
+				DefaultDepth(dpy, DefaultScreen(dpy)));
+	p_radar = s_radar;
+	if (radar_exposed == true) {
+	    Paint_world_radar();
+	}
+    } else {
+	if (s_radar == radar) {
+	    return;
+	}
+	XFreePixmap(dpy, s_radar);
+	s_radar = radar;
+	p_radar = s_radar;
+	if (radar_exposed == true) {
+	    Paint_world_radar();
+	}
+    }
+}
+
+
 void Paint_world_radar(void)
 {
     int			i, xi, yi, xm, ym, xp, yp;
@@ -2027,6 +2142,8 @@ void Paint_world_radar(void)
 	/* Clear radar */
 	XSetForeground(dpy, radarGC, colors[BLACK].pixel);
 	XFillRectangle(dpy, s_radar, radarGC, 0, 0, 256, RadarHeight);
+    } else {
+	XClearWindow(dpy, radar);
     }
     XSetForeground(dpy, radarGC, colors[BLUE].pixel);
 
@@ -2043,14 +2160,14 @@ void Paint_world_radar(void)
     }
 
     if (Setup->x >= 256) {
-	xs = 256.0 / Setup->x;
-	ys = (float)RadarHeight / Setup->y;
+	xs = (float)(256 - 1) / (Setup->x - 1);
+	ys = (float)(RadarHeight - 1) / (Setup->y - 1);
 	for (xi=0; xi<Setup->x; xi++) {
 	    start = end = -1;
-	    xp = (int)((xi + 0.5) * xs);
+	    xp = (int)(xi * xs + 0.5);
 	    for (yi=0; yi<Setup->y; yi++) {
 		if (visible[Setup->map_data[xi * Setup->y + yi]] != 0) {
-		    yp = (int)((yi + 0.5) * ys);
+		    yp = (int)(yi * ys + 0.5);
 		    if (start == -1) {
 			start = end = yp;
 		    } else {
@@ -2086,8 +2203,8 @@ void Paint_world_radar(void)
 	    }
 	}
     } else {
-	xs = Setup->x / 256.0;
-	ys = Setup->y / (float)RadarHeight;
+	xs = (float)(Setup->x - 1) / (256 - 1);
+	ys = (float)(Setup->y - 1) / (RadarHeight - 1);
 	for (xi=0; xi<256; xi++) {
 	    xm = (int)(xi * xs + 0.5) * Setup->y;
 	    start = end = -1;
@@ -2186,14 +2303,14 @@ void Paint_frame(void)
      * Do we really need to draw all this if the player is damaged?
      */
     if (damaged <= 0) {
-	Rectangle_start();
 	Arc_start();
+
+	Rectangle_start();
 	Segment_start();
-
 	Paint_world();
-
-	Rectangle_end();
 	Segment_end();
+	Rectangle_end();
+
 	Rectangle_start();
 	Segment_start();
 
@@ -2201,23 +2318,19 @@ void Paint_frame(void)
 	Paint_vcannon();
 	Paint_vbase();
 	Paint_shots();
-
-	gcv.dash_offset = DASHES_LENGTH - (loops % DASHES_LENGTH);
 	Paint_ships();
-	gcv.dash_offset = 0;
-
-	Paint_HUD();
 
 	Rectangle_end();
 	Segment_end();
+
 	Rectangle_start();
 	Segment_start();
-
 	Paint_meters();
-
+	Paint_HUD();
 	Rectangle_end();
-	Arc_end();
 	Segment_end();
+
+	Arc_end();
 
 	Paint_messages();
 	Paint_radar();
@@ -2228,15 +2341,16 @@ void Paint_frame(void)
      * Now switch planes and clear the screen.
      */
     if (p_radar != radar && radar_exposed == true) {
-	if (BIT(instruments, SHOW_SLIDING_RADAR) == 0) {
+	if (BIT(instruments, SHOW_SLIDING_RADAR) == 0
+	    || BIT(Setup->mode, WRAP_PLAY) == 0) {
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      0, 0, 256, RadarHeight, 0, 0);
 	} else {
 	    int x, y, w, h;
 	    float xp, yp, xo, yo;
 
-	    xp = (float) (pos.x * 256) / (Setup->x * BLOCK_SZ);
-	    yp = (float) (pos.y * RadarHeight) / (Setup->y * BLOCK_SZ);
+	    xp = (float) (pos.x * 256) / Setup->width;
+	    yp = (float) (pos.y * RadarHeight) / Setup->height;
 	    xo = (float) 256 / 2;
 	    yo = (float) RadarHeight / 2;
 	    if (xo <= xp) {
@@ -2264,11 +2378,11 @@ void Paint_frame(void)
     }
     if (p_draw != draw)
 	XCopyArea(dpy, p_draw, draw, gc,
-		  0, 0, 768, 768, 0, 0);
+		  0, 0, view_width, view_height, 0, 0);
 
     dbuff_switch(dbuf_state);
 
-    if (BIT(dpy_type, DT_HAVE_PLANES)) {
+    if (colorSwitch) {
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 	XSetPlaneMask(dpy, messageGC, dbuf_state->drawing_planes);
     }
@@ -2276,19 +2390,19 @@ void Paint_frame(void)
     if (damaged > 0) {
 	XSetFunction(dpy, gc, GXxor);
 	SET_FG(colors[BLACK].pixel ^ colors[BLUE].pixel);
-	XFillRectangle(dpy, draw, gc, 0, 0, 768, 768);
+	XFillRectangle(dpy, draw, gc, 0, 0, draw_width, draw_height);
 	XSetFunction(dpy, gc, GXcopy);
     }
     else {
 	SET_FG(colors[BLACK].pixel);
-	XFillRectangle(dpy, p_draw, gc, 0, 0, 768, 768);
+	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
     }
 
     if (talk_mapped == true) {
 	static bool toggle;
 	static long last_toggled;
 
-	if (loops > last_toggled + FPS / 2 || loops < last_toggled) {
+	if (loops >= last_toggled + FPS / 2 || loops < last_toggled) {
 	    toggle = (toggle == false) ? true : false;
 	    last_toggled = loops;
 	}
@@ -2328,6 +2442,8 @@ int Handle_start(long server_loops)
     destruct = 0;
     shutdown_delay = 0;
     shutdown_count = -1;
+    eyesId = (self != NULL) ? self->id : 0;
+
     return 0;
 }
 
@@ -2345,7 +2461,8 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
 		int newNumCloaks, int newNumSensors, int newNumMines,
 		int newNumRockets, int newNumEcms, int newNumTransporters,
 		int newExtraShots, int newRearShots,
-		int newAfterBurners, int newNumTanks, int newCurrentTank,
+		int newAfterBurners, int newNumLasers,
+		int newNumTanks, int newCurrentTank,
 		int newFuelSum, int newFuelMax, int newPacketSize)
 {
     pos.x = x;
@@ -2369,6 +2486,7 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
     numFrontShots = newExtraShots;
     numBackShots = newRearShots;
     numAfterburners = newAfterBurners;
+    numLasers = newNumLasers;
     numTanks = newNumTanks;
     fuelCurrent = newCurrentTank;
     if (newFuelSum > fuelSum && selfVisible != 0) {
@@ -2383,26 +2501,33 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
 	packet_size = newPacketSize;
     }
 
-    world.x = pos.x - CENTER;
-    world.y = pos.y - CENTER;
+    world.x = pos.x - (view_width / 2);
+    world.y = pos.y - (view_height / 2);
     realWorld = world;
     wrappedWorld = 0;
     if (BIT(Setup->mode, WRAP_PLAY)) {
 	if (world.x < 0) {
 	    wrappedWorld |= 1;
-	    world.x += Setup->x * BLOCK_SZ;
-	} else if (world.x + FULL >= Setup->x * BLOCK_SZ) {
-	    realWorld.x -= Setup->x * BLOCK_SZ;
+	    world.x += Setup->width;
+	} else if (world.x + view_width >= Setup->width) {
+	    realWorld.x -= Setup->width;
 	    wrappedWorld |= 1;
 	}
 	if (world.y < 0) {
 	    wrappedWorld |= 2;
-	    world.y += Setup->y * BLOCK_SZ;
-	} else if (world.y + FULL >= Setup->y * BLOCK_SZ) {
-	    realWorld.y -= Setup->y * BLOCK_SZ;
+	    world.y += Setup->height;
+	} else if (world.y + view_height >= Setup->height) {
+	    realWorld.y -= Setup->height;
 	    wrappedWorld |= 2;
 	}
     }
+    return 0;
+}
+
+
+int Handle_eyes(int id)
+{
+    eyesId = id;
     return 0;
 }
 
@@ -2453,6 +2578,19 @@ int Handle_connector(int x0, int y0, int x1, int y1)
     return 0;
 }
 
+int Handle_laser(int color, int x, int y, int len, int dir)
+{
+    laser_t	t;
+
+    t.color = color;
+    t.x = x;
+    t.y = y;
+    t.len = len;
+    t.dir = dir;
+    HANDLE(laser_ptr, num_laser, max_laser, t);
+    return 0;
+}
+
 int Handle_smart(int x, int y, int dir)
 {
     smart_t	t;
@@ -2487,7 +2625,7 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak)
     t.cloak = cloak;
     HANDLE(ship_ptr, num_ship, max_ship, t);
 
-    if (self != NULL && self->id == id) {
+    if (id == eyesId) {
 	selfVisible = 1;
 	return Handle_radar(x, y);
     }
@@ -2609,6 +2747,16 @@ int Handle_message(char *msg)
     return 0;
 }
 
+int Handle_time_left(long sec)
+{
+    if (sec >= 0 && sec < 10 && (time_left > sec || sec == 0)) {
+	XBell(dpy, 0);
+	XFlush(dpy);
+    }
+    time_left = (sec >= 0) ? sec : 0;
+    return 0;
+}
+
 int Handle_vcannon(int x, int y, int type)
 {
     vcannon_t	t;
@@ -2650,13 +2798,17 @@ int Handle_vbase(int x, int y, int xi, int yi, int type)
 void Paint_score_start(void)
 {
     static bool	first = true;
-    static char	headingStr[MSG_LEN];
+    char	headingStr[MSG_LEN];
     static int thisLine;
 
     if (first) {
 	thisLine = BORDER + scoreListFont->ascent;
 	first = false;
+    }
 
+    if (showRealName) {
+	strcpy(headingStr, "NICK=USER@HOST");
+    } else {
 	if (BIT(Setup->mode, TEAM_PLAY))
 	    strcpy(headingStr, " TM ");
 	else
@@ -2687,12 +2839,11 @@ void Paint_score_start(void)
 
 void Paint_score_entry(int entry_num,
 		       other_t* other,
-		       bool best,
-		       char* name)
+		       bool best)
 {
     static char	teamStr[3], lifeStr[6], label[MSG_LEN];
     static int lineSpacing = -1, firstLine;
-    int thisLine = firstLine + lineSpacing * entry_num;
+    int thisLine;
 
     /*
      * First time we're here, set up miscellaneous strings for
@@ -2708,18 +2859,32 @@ void Paint_score_entry(int entry_num,
 	firstLine
 	    = 2*BORDER + scoreListFont->ascent + lineSpacing;
     }
+    thisLine = firstLine + lineSpacing * entry_num;
 
     /*
      * Setup the status line
      */
-    if (BIT(Setup->mode, TEAM_PLAY))
-	teamStr[0] = other->team + '0';
+    if (showRealName) {
+	sprintf(label, "%s=%s@%s", other->name, other->real, other->host);
+    } else {
+	other_t*	war = Other_by_id(other->war_id);
 
-    if (BIT(Setup->mode, LIMITED_LIVES))
-	sprintf(lifeStr, " %3d", other->life);
+	if (BIT(Setup->mode, TEAM_PLAY))
+	    teamStr[0] = other->team + '0';
 
-    sprintf(label, "%c %s% 05d%s  %s",
-	    other->mychar, teamStr, other->score, lifeStr, name);
+	if (BIT(Setup->mode, LIMITED_LIVES))
+	    sprintf(lifeStr, " %3d", other->life);
+
+	if (war) {
+	    sprintf(label, "%c %s% 05d%s  %s (%s)",
+		    other->mychar, teamStr, other->score, lifeStr,
+		    other->name, war->name);
+	} else {
+	    sprintf(label, "%c %s% 05d%s  %s",
+		    other->mychar, teamStr, other->score, lifeStr,
+		    other->name);
+	}
+    }
 
     /*
      * Draw the line

@@ -25,8 +25,127 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.7 1993/08/02 12:55:37 bjoerns Exp $
+ * RCS:      $Id: socklib.c,v 3.15 1993/10/01 20:47:15 bjoerns Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.15  1993/10/01  20:47:15  bjoerns
+ * Added Thrusted Solaris CMW 1.0 patch by Steve Marsden.
+ *
+ * Revision 3.14  1993/09/20  18:46:17  bert
+ * Changes to have XPilot compiled by g++, both under Linux and HP-UX 9.01.
+ * Added new entries in Makefile.std for C++ compilation.
+ * Several include files added.  Missing prototypes were added to include
+ * files.  Several casts to shut up the compiler.  Changes to socklib.c
+ * for bad function pointers.  Some obscure functions were still written
+ * in K&R style.  A few small changes to make some statements valid C++ code.
+ *
+ * Revision 3.13  1993/08/24  12:17:30  bjoerns
+ * Summary provided by Bert:
+ *
+ * 1) Lasers.
+ * #define MAX_LASERS              8
+ * #define MIN_LASER_LEN           100
+ * #define MAX_LASER_LEN           350
+ * #define EXTRA_LASER_LEN         ((MAX_LASER_LEN-MIN_LASER_LEN)/(MAX_LASERS-1))
+ * #define LASER_LENGTH(lasers)    (MIN_LASER_LEN + ((lasers)-1)*EXTRA_LASER_LEN)
+ * #define LASER_COST(lasers)      (ED_LASER*LASER_LENGTH(lasers)/MAX_LASER_LEN)
+ * #define ED_LASER                (-80.0*FUEL_SCALE_FACT)
+ * #define ED_LASER_HIT            (-120.0*FUEL_SCALE_FACT)
+ * Lasers costs quite a lot of fuel and it remains to be seen if they
+ * are useful at all.  But I didn't want to risk introducing a weapon
+ * which was too heavy.  So rather start low profile then.
+ * Robots defend against lasers and use them if possible.
+ * The default key for firing a laser is the slash key.
+ *
+ * 2) Add player info to the Player packet for new to be developed
+ * player info window.
+ *
+ * 3) Sliding radar is now also selectable from the configure window.
+ *
+ * 4) Fix for player mutual crash scores.  The scores for the second player
+ * were disadvantaged by the scores just calculated for the first player.
+ * This depended upon the order of the players in the Players[] array.
+ *
+ * 5) Removed all pl->fuel.count = FUEL_NOTIFY; statements from the server
+ * as this is a client only business.
+ *
+ * 6) Moved the robot war declarations from collision.c to robot.c in a
+ * new function because it was also needed in LaserCollision().
+ *
+ * 7) The configuration window stuff is now also savable to $(HOME)/.xpilotrc.
+ * It checks to only replace resources that it understands and will add
+ * resources that were missing.  The screen related resources are not
+ * saved because they may have been derived from a X display particular
+ * resource file.
+ *
+ * 8) Changed most of the `double buffer' names into 'color switch'
+ * were appropriate.
+ *
+ * 9) Changed PACK version into 0x3041 to differentiate from the 0x3040 versions.
+ *
+ * 10) Changed About window to create room for the new Laser item info.
+ * The window is now also somewhat smaller to fit into 1024x768 screens.
+ *
+ * 11) All the sliding radar X stuff is now move into a separate subroutine
+ * in paint.c.
+ *
+ * 12) The rand() calls in Place_item for gravity items wasn't doing anything.
+ * It read: (((rand()&7)-3)/4) which always evaluates to zero.
+ *
+ * 13) ECMs also damage lasers.
+ *
+ * 14) Fixed a score update bug introduced by a previous 3.0.4 patch.
+ *
+ * 15) Increased the robot manouvring lookahead a little, because robots
+ * crashed into the walls too often after the previous lookahead limitation.
+ *
+ * 16) Some of the robot idle mode manouvring compensates for gravity a little.
+ *
+ * 17) New easy to use confirmation popup widget for short messages.
+ *
+ * 18) Changes to the wideangle item to have three streams of bullets.
+ * Otherwise it looked too much the same as the laser item.
+ *
+ * 19) When installing a new colormap try to allocate the first 16 colors
+ * the same as the default colormap to reduce the chance that the window
+ * manager decorations and other colors will flicker because of the
+ * color switching.
+ *
+ * 20) If the default visual is DirectColor or TrueColor then automatically.
+ * try to use a PseudoColor visual.
+ *
+ * 21) Fix for the CONFIG/SCORE label in the menu.  The bug was pointed
+ * out by Fred Hucht.
+ *
+ * 22) The client accepts now more then one server on the command line.
+ *
+ * Revision 3.12  1993/08/19  07:35:25  kenrsc
+ * Added patch from bert (3f4changes)
+ *
+ * Revision 3.11  1993/08/16  17:03:42  kenrsc
+ * Changes by Bert (see patch 3a4 for more info
+ *
+ * Revision 3.10  1993/08/15  00:33:34  kenrsc
+ * Changed back soem of the code for the meta server. Fixed a small bug.
+ *
+ * Revision 3.9  1993/08/07  02:23:45  kenrsc
+ * Made the extra fields reported to the meta server.
+ * Made the readable address available to the meta server and the server.
+ * Made the server report to the meta server when player numbers changes.
+ * Changed the field called dispname to hostname since it is not a dispname
+ * but a host name :)
+ *
+ * Revision 3.8  1993/08/06  21:21:00  bjoerns
+ * 1) Some tweaks to the new client option code like a -xrm option.
+ * 2) Correction for maximum string size Get_resource.
+ * 3) Fix for the /usr/X11/lib/app-defaults resource path.
+ * 4) Fix for NULL pointer dereference if neither XUSERFILESEARCHPATH
+ * or XAPPLRESDIR were defined in the environment.
+ * Thanks to welch@xcf.Berkeley.EDU (Sean N. Welch).
+ * 5) Limit the receiveWindowSize.
+ * 6) Destroying the resource database after use (memory reuse).
+ * 7) Fix for definition of the BLUE_... bits in paint.c.
+ * 8) Fix for the first empty score entry in paint.c.
+ *
  * Revision 3.7  1993/08/02  12:55:37  bjoerns
  * Patchlevel 3.
  *
@@ -272,6 +391,11 @@ static char sourceid[] =
 #if (SVR4)
 #include <sys/filio.h>
 #endif
+#if (_SEQUENT_)
+#include <sys/fcntl.h>
+#else
+#include <fcntl.h>
+#endif
 #if (__hpux)
 #include <time.h>
 #else
@@ -288,9 +412,19 @@ static char sourceid[] =
 #include <signal.h>
 #include <setjmp.h>
 #include <errno.h>
+#if defined(__sun__)
+#include <fcntl.h>
+#endif
 
 /* Socklib Includes And Definitions */
 #include "socklib.h"
+#include "types.h"
+#ifdef SUNCMW
+#include "cmw.h"
+#else
+#define cmw_priv_assert_netaccess() /* empty */
+#define cmw_priv_deassert_netaccess() /* empty */
+#endif /* SUNCMW */
 
 /* Debug macro */
 #ifdef DEBUG
@@ -684,7 +818,13 @@ SocketAccept(fd)
 int	fd;
 #endif /* __STDC__ */
 {
-    return accept(fd, NULL, 0);
+    int		retval;
+
+    cmw_priv_assert_netaccess();
+    retval = accept(fd, NULL, 0);
+    cmw_priv_deassert_netaccess();
+
+    return retval;
 } /* SocketAccept */
 
 
@@ -725,10 +865,9 @@ SocketLinger(fd)
 int	fd;
 #endif /* __STDC__ */
 {
-#ifdef LINUX
+#if defined(LINUX) || defined(__linux__)
     /*
-     * As of 0.99.9 Linux doesn't have LINGER stuff.
-     * This is likely to be improved in later versions however.
+     * As of 0.99.12 Linux doesn't have LINGER stuff.
      */
     return 0;
 #else
@@ -915,10 +1054,25 @@ int	fd;
 int	flag;
 #endif /* __STDC__ */
 {
-#if (_SEQUENT_)
-    return (fcntl(fd, F_SETFL, (flag * O_NDELAY)));
+#if (_SEQUENT_) /* || defined(__sun__) ??? */
+    return (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY: 0 ));
 #else
-    return (ioctl(fd, FIONBIO, &flag));
+    int                       i;
+ 
+    i = ioctl(fd, FIONBIO, &flag);
+#if defined(__sun__)
+    if (i < 0) {
+	error("Check out file %s at line number %d", __FILE__, __LINE__);
+	/*
+	 * Some Suns have problems getting ioctl(FIONBIO) to work.
+	 * This is almost certain due to not having run fixincludes
+	 * correctly after installing GCC (need root permission for that).
+	 * Using the fcntl(O_NDELAY) above may work.  Please let
+	 * us know at xpilot@cs.uit.no if that works for you or not.
+	 */
+    }
+#endif
+    return i;
 #endif
 } /* SetSocketNonBlocking */
 
@@ -1056,11 +1210,10 @@ int	fd;
  * Originally coded by Arne Helme
  */
 #ifdef __STDC__
-static void 
+static void inthandler(int signum)
 #else
-static
+static inthandler()
 #endif /* __STDC__ */
-inthandler()
 {
     DEB(fprintf(stderr, "Connection interrupted, timeout\n"));
     (void) longjmp(env, 1);
@@ -1119,9 +1272,10 @@ char	*buf;
 	return (-1);
     }
     ret = 0;
+    cmw_priv_assert_netaccess();
     while (ret < size) 
     {
-	(void) signal(SIGALRM, ((void (*) ())inthandler));
+	(void) signal(SIGALRM, inthandler);
 	(void) alarm(sl_timeout_s);
 	ret1 = read(fd, &buf[ret], size - ret);
 	DEB(fprintf(stderr, "Read %d bytes\n", ret1));
@@ -1131,6 +1285,7 @@ char	*buf;
 	if (ret1 <= 0)
 	    return (-1);
     }
+    cmw_priv_deassert_netaccess();
     return (ret);
 } /* SocketRead */
 
@@ -1175,10 +1330,16 @@ int	fd, size;
 char	*buf;
 #endif /* __STDC__ */
 {
+    int		retval;
+
+    cmw_priv_assert_netaccess();
     /*
      * A SIGPIPE exception may occur if the peer entity has disconnected.
      */
-    return (write(fd, buf, size));
+    retval = write(fd, buf, size);
+    cmw_priv_deassert_netaccess();
+
+    return retval;
 } /* SocketWrite */
 
 
@@ -1427,9 +1588,11 @@ int	fd, port, size;
 char	*host, *sbuf;
 #endif /* __STDC__ */
 {
+    int			retval;
     struct sockaddr_in	the_addr;
     struct hostent	*hp;
 
+    sl_errno = 0;
     (void) memset((char *)&the_addr, 0, sizeof(struct sockaddr_in));
     the_addr.sin_family		= AF_INET;
     the_addr.sin_port		= htons(port);
@@ -1451,8 +1614,11 @@ char	*host, *sbuf;
 		    ((struct in_addr*)(hp->h_addr))->s_addr;
 	}
     }
-    return (sendto(fd, sbuf, size, 0, (struct sockaddr *)&the_addr,
-		   sizeof(struct sockaddr_in)));
+    cmw_priv_assert_netaccess();
+    retval = sendto(fd, sbuf, size, 0, (struct sockaddr *)&the_addr,
+		   sizeof(struct sockaddr_in));
+    cmw_priv_deassert_netaccess();
+    return retval;
 } /* DgramSend */
 
 
@@ -1496,11 +1662,15 @@ char	*rbuf;
 int	size;
 #endif /* __STDC__ */
 {
+    int		retval;
     int		addrlen = sizeof(struct sockaddr_in);
 
     (void) memset((char *)&sl_dgram_lastaddr, 0, addrlen);
-    return (recvfrom(fd, rbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
-	&addrlen));
+    cmw_priv_assert_netaccess();
+    retval = recvfrom(fd, rbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
+	&addrlen);
+    cmw_priv_deassert_netaccess();
+    return retval;
 } /* DgramReceiveAny */
 
 
@@ -1607,13 +1777,13 @@ char	*from, *rbuf;
  */
 #ifdef __STDC__
 static void
-DgramInthandler(void)
+DgramInthandler(int signum)
 #else
 static
 DgramInthandler()
 #endif /* __STDC__ */
 {
-    (void) signal(SIGALRM, ((void (*) ())DgramInthandler));
+    (void) signal(SIGALRM, DgramInthandler);
 } /* DgramInthandler */
 
 
@@ -1671,11 +1841,11 @@ int	fd, port, sbuf_size, rbuf_size;
 char	*host, *sbuf, *rbuf;
 #endif /* __STDC__ */
 {
-    int		retval;
+    int		retval = -1;
     int		retry = sl_default_retries;
     
-    (void) signal(SIGALRM, ((void (*) ())DgramInthandler));
-    while (retry)
+    (void) signal(SIGALRM, DgramInthandler);
+    while (retry > 0)
     {
 	if (DgramSend(fd, host, port, sbuf, sbuf_size) == -1)
 	    return (-1);

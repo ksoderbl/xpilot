@@ -53,7 +53,11 @@ INSTALLATION:
 \\\\\\\\\\\\\
 
 *   In the src directory, edit the config.h and Imakefile files to suit
-    your environment.  If you don't have Imake, you can use Makefile.std
+    your environment.  You must define where you will put the XPilot lib
+    directory and possibly the XPilot maps directory too if it will not
+    be in the lib directory.  Also, there are likely to be some compiler
+    flags which you may need to enable.
+    If you don't have Imake, you can use Makefile.std
     (just rename it to Makefile and type 'make' for more info).
 
 *   If you have Imake, issue the following command:
@@ -113,8 +117,8 @@ INSTALLATION:
 MISCELLANEOUS INFORMATION:
 \\\\\\\\\\\\\\\\\\\\\\\\\\
 
-Please refer to the manuals in the man6 directory for further reading.  If
-you're completely stuck, found a bug or just want to chat :), e-mail us at:
+See the manuals in the man6 directory for further reading.  If you're
+completely stuck, found a bug or just want to chat :), e-mail us at:
 
         xpilot@cs.uit.no
 
@@ -123,3 +127,5 @@ and a fix (if you have one) when reporting bugs.
 
 There is a mailing list for XPilot - please send an email to
 xpilot-request@cs.uit.no with subject `info' if you want to know more.
+
+There is a newsgroup for XPilot: alt.games.xpilot.

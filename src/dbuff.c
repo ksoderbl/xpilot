@@ -1,12 +1,24 @@
-/* $Id: dbuff.c,v 3.3 1993/06/28 20:53:31 bjoerns Exp $
+/* $Id: dbuff.c,v 3.7 1993/09/13 19:09:21 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -22,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.3 1993/06/28 20:53:31 bjoerns Exp $";
+    "@(#)$Id: dbuff.c,v 3.7 1993/09/13 19:09:21 bjoerns Exp $";
 #endif
 
 
@@ -98,6 +110,17 @@ dbuff_state_t *start_dbuff(Display *display, Colormap cmap,
 	for (i=0; i<(1 << planes); i++) {
 	    colors[i].pixel = color(state, i | (i << planes));
 	    colors[i].flags = DoRed | DoGreen | DoBlue;
+	}
+    }
+    else if (planes > 1) {
+	for (i = 0; i < (1 << planes); i++) {
+	    if (XAllocColor(display, cmap, &colors[i]) == False) {
+		while (--i >= 0) {
+		    XFreeColors(display, cmap, &colors[i].pixel, 1, 0);
+		}
+		release(state);
+		return NULL;
+	    }
 	}
     }
     else {

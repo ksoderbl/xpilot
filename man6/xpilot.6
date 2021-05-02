@@ -2,18 +2,19 @@
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .\"
 .\" File:         xpilot.6
+.\" Id:		  $Id: xpilot.6,v 3.16 1993/09/13 20:50:47 bert Exp $
 .\" Description:  XPilot man page
-.\" Author:       Bjoern Stabell & Ken Ronny Schouten
+.\" Author:       Bjoern Stabell, Ken Ronny Schouten & Bert Gijsbers
 .\" Modified:     910520
 .\" Language:     Text
 .\" Package:      xpilot
 .\"
-.\" (c) Copyright 1991, UiT, all rights reserved.
+.\" (c) Copyright 1991-93, the XPilot authors.
 .\"
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .TH XPILOT 6 "Requires UDP/IP and The X Window System"
-.ds )H GNU Public License applies
-.ds ]W Release 3.0, July 1993
+.ds )H GNU Public License 2.0 applies
+.ds ]W XPilot Release 3.0: July 1993
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -34,7 +35,7 @@ xpilot \- XPilot/UX  Multiplayer gravity war game client
 .B [-shutdown [\fImessage\fC]]
 .B [-display \fIstring\fC]
 .B [-port \fIport-number\fC]
-.B [\fIserver-host\fC]
+.B [\fIserver-host ...\fC]
 
 
 .SH OVERVIEW
@@ -102,11 +103,11 @@ Specifies your wanted team number.
 Specifies which X server to contact.
 .TP 15
 .B -port \fInumber\fP
-Specifies the port number to use when contacting a server.
+Specifies the port number of the server.
 .TP 15
 .B \fIserver-host\fP
 Tries to connect to server at host \fIserver-host\fP.  The default is to
-search through the \fBsub-domains\fP your machine is connected to.
+send a broadcast query on your attached network.
 
 
 .SH PROMPT COMMANDS
@@ -147,10 +148,15 @@ First on each line, you might find a letter which gives you some
 information about the status of the player:
 .B R
 means the player is a robot,
+.B T
+means the player is not a player but a detached tank,
 .B D
-means player is dead (only possible in limited lives mode) and
+means player is dead (only possible in limited lives mode),
 .B P
-means the player is paused.
+means the player is paused and
+.B W
+means the player is waiting to join the game after login
+(in limited lives mode).
 
 Depending on the current game mode, you will also find
 information about which teams each player belong to and how many
@@ -202,6 +208,48 @@ discussion about \fBXresources\fP below).
 .B Score messages
 Relevant score information is shown below the HUD, as well as on
 the game field.
+.TP 12
+.B Time left
+The amount of time the game will last if the the server was started
+with a time limit.  This is displayed in the upper left corner of
+your HUD.
+
+.RS -5
+Between the \fBradar\fP and the \fBRating list\fP there are three
+push buttons: 
+.RS 5
+.TP 12
+.B Quit
+Exits the game and the program.
+.TP 12
+.B About
+Pressing the \fBAbout\fP button will popup a three page help window.
+It explains in short the functionality of all the items
+you may encounter together with a graphical depiction of them.
+.TP 12
+.B Menu
+The \fBMenu\fP button pops up a pull down menu with the following
+buttons:
+.RS 5
+.TP 12
+.B Keys
+Will popup the \fBKeys\fP window, which contains a list of
+all the \fBX keysyms\fP that have one or more xpilot actions
+bound to them.
+.TP 12
+.B Config
+Changes the \fBRating list\fP into a window with a list
+of most of the options.  The options can be changed interactively.
+Pushing the \fBSave configuration\fP button will save the options
+and the key bindings to the .xpilotrc file in your home directory.
+.TP 12
+.B Score
+Displays the players and their scores in the \fBRating list\fP window.
+.TP 12
+.B Player
+Lists the players with their login name and their host address
+in the \fBRating list\fP window.
+.RS -5
 .RS -5
 
 
@@ -216,7 +264,7 @@ descriptions of some of the main concepts of the game.
 
 All objects in the game are affected by gravity - that is, they
 will accelerate in the direction the gravity is strongest.  The
-strength of the gravity is use configurable (see
+strength of the gravity is user configurable (see
 \fIxpilots(6)\fP), and can even be set to 0.
 
 Some objects affect the gravity in a limited area, these are
@@ -224,7 +272,7 @@ called \fBgravs\fP and they exist in miscellaneous types
 (attractive, repulsive, clockwise, anti-clockwise).  Gravs are
 shown as red circles with some symbol inside which is different
 for each type of grav.  (For more information on how the affect
-the gravity, see \fIxpilots(6)\fP.)
+they gravity, see \fIxpilots(6)\fP.)
 
 .SS Wormholes
 
@@ -244,16 +292,16 @@ equipment use fuel/energy and some even work better the more fuel
 you have.
 
 You may gain fuel by picking up special `fuel cans' (see
-\fBbonus items\fP section) or refueling at a refuel station.
+\fBbonus items\fP section) or by refueling at a refuel station.
 Refuel stations may be found in blocks in the world, they differ
 from standard background blocks in that they have a red/black
 \fBF\fP in them, and they are partly or completely filled with
 red.  The amount of red determines how much fuel the station has
-at available for you.  To refuel, you must hit the
+available.  To refuel, you must hit the
 \fIkeyRefuel\fP key (see \fBcontrols\fP section).
 
 Fuel takes up mass and will also determine how big the explosion
-will be when (sorry, `if' :) you meet your destiny.
+will be when (sorry, `if' :) you meet your destiny. 
 
 
 .SS Combat
@@ -261,14 +309,14 @@ will be when (sorry, `if' :) you meet your destiny.
 There are two different and mutually exclusive modes which have
 greatly different objectives: \fBcombat mode\fP and \fBrace
 mode\fP.  The most extensive is the \fBcombat mode\fP, which also
-happen to be the default.
+happens to be the default.
 
 Here your main objective is to get as high a rating as possible
-by `blasting away' on enemy (human or robot) players and cannons.
-All will naturally fire back at you, so you will also need some
-nifty piloting skills and/or some heavy equipment to really enjoy
-living.  Extra weapons are explained in the \fBbonus items\fP
-section.
+by `blasting away' on enemy fighters (human or robot controlled)
+and cannons.  All will naturally fire back at you, so you will
+also need some nifty piloting skills and/or some heavy equipment
+to really enjoy living.  Extra weapons are explained in the
+\fBbonus items\fP section.
 
 
 .SS Race
@@ -289,9 +337,18 @@ additional objectives too.
 
 You can gain points if the map you are using have \fBtargets\fP
 or \fBtreasures\fP.  The main difference is that you get points
-by blowing up an enemy's target, while enemy treasures have to be
-stolen from the enemies and dropped on your own treasure.  You
-pick up a treasure by using \fIkeyConnector\fP.
+by blowing up an enemy's target using shots or mines.
+A shot will only damage a target and if the target is completely
+damaged then the next shot will blow it up.  A mine will immediately
+destroy a target.  Two missile hits will also destroy a target.
+
+Enemy treasures have to be stolen from the enemies and dropped on
+your own treasure.  You pick up a treasure by using \fIkeyConnector\fP
+when flying nearby the enemies treasure.  This will attach
+the treasure to your ship with a strong rubber band.
+It is possible (in emergency situations :) to detach the enemy treasure
+by pressing \fIkeyDropBall\fP, but this will of course not gain you or
+your team any points.
 
 
 .SS Shields
@@ -301,8 +358,9 @@ the server options specified.  If you have, they are activacted
 with the \fIkeyShield\fP key (see \fBcontrols\fP section).
 Generally collisions with other objects (except for debris and
 sparks) are lethal, but when you are hit by something with your
-shields up, fuel/energy is drained, and you will survive
-(provided you have enough fuel/energy).
+shields up then it will only cost you some fuel/energy.
+If you didn't have enough fuel then the collision will be lethal
+again.  Having your shields up costs fuel.
 
 
 .SS Bonus items
@@ -317,10 +375,13 @@ life easier.  As of today, these items include:
 More fuel/energy.
 .TP 12
 .B Cloaking device
-Makes you invisible, both on radar and on the screen.
+Makes you invisible for other players, both on radar and on the screen.
+However, when you are hit by a shot or missile or bounce with another
+player then you will be temporarily visible again.
 .TP 12
 .B Sensors
-Enables you to see cloakers more easily.
+Enables you to see cloakers to a limited extent.  Having more sensors
+improves this.
 .TP 12
 .B Rear cannon
 Extra rear cannon.
@@ -376,6 +437,10 @@ while.  The ECM is activated by pressing the \fIkeyECM\fP key.
 Enables you to steal equipment and energy/fuel from the closest
 fighter, provided it is within the transporters range.  You
 activate the transporter by pressing the \fIkeyTransporter\fP key.
+.TP 12
+.B Laser
+Gives you a laser weapon with limited range.  Having more of these
+increases the range.
 
 
 .SH CONTROLS
@@ -397,16 +462,16 @@ Turn left (anti-clockwise).
 .B keyTurnRight {s}
 Turn right (clockwise).
 .TP 12
-.B keyThrust {right shift}
+.B keyThrust {right shift or left shift}
 Thrust me.
 .TP 12
-.B keyFireShot {return}
+.B keyFireShot {return or linefeed}
 Fire normal shot.
 .TP 12
-.B keyShield {space}
+.B keyShield {space or right meta}
 Raise shield.  Must be held down for continuous use.
 .TP 12
-.B keyRefuel {left ctrl}
+.B keyRefuel {f or ctrl or caps lock}
 Try to connect to nearest fuel station.  Must be held down during refueling.
 .RS -5
 .TP 4
@@ -420,7 +485,11 @@ Self destruct.  At last we managed to include a timer, got rid of all those
 nasty I'd-rather-die-by-my-own-hands-than-let-you-kill-me-and-get-all-
 the-points pilots.
 .TP 12
-.B keyCloak {BackSpace}
+.B keyIdMode {i}
+Toggle the ID mode.  Instead of the score list it will display the list
+of players with their real names and computer addresses.
+.TP 12
+.B keyCloak {BackSpace or Delete}
 Enable/disable cloaking device if available.  You will be invisible on both
 radar and on screen, but beware - the device is not foolproof, it is
 not cheap on your fuel and the only thing becoming invisible is your ship,
@@ -441,7 +510,7 @@ Drop a moving mine - that is, a bomb.
 .B keyEcm {[}
 Fire an ECM pulse.
 .TP 12
-.B keyChangeHome {Home}
+.B keyChangeHome {Home or h}
 Change home base.  You will need to be landed on the base of your choice.
 (The \fBHome\fP key is located just right of the \fBReturn\fP key on most
 HP-keyboards.)  These keys are convenient for HP keyboards, also somewhat
@@ -457,7 +526,7 @@ If you have additional tanks, the current tank will be the previous tank.
 Detach the current tank (or the last additional tank).
 Heat-seeking missiles will hopefully follow this tank.
 .TP 12
-.B keyPause {p}
+.B keyPause {p or Pause}
 Parking mode - you can only park while you're landed on your own
 home base, and when you park, you cannot rejoin the game until
 the P has stopped blinking (to prevent users from using this
@@ -480,6 +549,8 @@ direction.
 .B keyFireNuke {n}
 Fire a nuclear missile without flight control.  It runs very fast
 in shot direction.
+.B keyFireLaser {slash}
+Activate the laser beam.
 .TP 12
 .B keyLockClose {Select}
 Will lock onto the closest player if he/she is within range.
@@ -512,32 +583,43 @@ Increase turn speed.
 .B keyDecreaseTurnspeed {-}
 Decrease turn speed.
 
+.TP 0
+And:
+.TP 12
+.B keyTalk {m}
+Toggles the talk window.  It is a small and wide window below the middle
+of the game window.  If you move the mouse pointer into it then you can
+type a message which will be send to all players in this game.
+Pressing escape while typing cancels the message.  Pressing return
+will send it.
+
 
 .SH X RESOURCES
 
-XPilot understands the following X resources in addition to the key
-resources described above:
+At startup xpilot will look for X resources in several places.
+First it looks in the LIBDIR (as defined during compilation,
+mostly as something like /usr/local/games/xpilot/lib/)
+for the file named XPilot.
+After that it looks for more resources in
+/usr/lib/X11/$LANG/app-defaults/XPilot,
+$XUSERFILESEARCHPATH/XPilot,
+$XAPPLRESDIR/$LANG/XPilot,
+$HOME/app-defaults/$LANG/XPilot,
+resources set using xrdb or else $HOME/.Xdefaults,
+host specific resources in the file pointed to by $XENVIRONMENT
+or else in $HOME/.Xdefaults-hostname
+and finally in $HOME/.xpilotrc.
+If the LANG environment variable is undefined or if that file doesn't
+exist then it will look for the file as if LANG had been undefined.
+Resources defined in files listed later will override resources in
+files listed earlier.  All of these resources can be overridden by
+their corresponding command line arguments.
+
+The following resources are understood:
 .RS 5
 .TP 12
-.B gameFont
-The font used on the HUD and for nearly all text part of the game
-field.
-.TP 12
-.B messageFont
-The font used for messages displayed in the bottom left corner of
-the game field.
-.TP 12
-.B scoreListFont
-The font used on the score list.  Must be non-proportional.
-.TP 12
-.B buttonFont
-The font used on all buttons.
-.TP 12
-.B textFont
-The font used in the help and about windows.
-.TP 12
 .B name
-Nick name of your player.
+Your nick name.
 .TP 12
 .B team
 Preferred team number.
@@ -609,8 +691,34 @@ Should the turnspeed meter be visible at all times. (Default false)
 Should the power meter be visible at all times. (Default false)
 .TP 12
 .B backgroundPointDist
-Specifies the block distance between points, used in empty map
-regions.  8 is default, 0 means no points.
+Specifies the block distance between points drawn in the background,
+used in empty map regions.  8 is default, 0 means no points.
+.TP 12
+.B backgroundPointSize
+Specifies the size of the background points.  The default is 2,
+0 means no points.
+.TP 12
+.B slidingRadar
+If the game is in edgewrap mode (see \fIxpilots(6)\fP) then the
+radar will keep your position on the radar in the center and
+draw the rest of the radar around it.  This requires very
+good X performance and a pretty fast workstation.  Default is off.
+.TP 12
+.B outlineWorld
+Draws only the outline of all the blue map constructs.
+.TP 12
+.B packetSizeMeter
+Turns on a meter displaying the maximum packet size of the last few seconds.
+.TP 12
+.B packetLostMeter
+Turns on a meter displaying the percentage of packets lost in the last second
+due to network failure (overload).
+.TP 12
+.B packetDropMeter
+Turns on a meter displaying the percentage of packets dropped due to your
+display not being able to keep up with the rate at which the server is
+generating frame updates.  If possible lower the frame update rate of
+the server with the -fps option.
 .TP 12
 .B receiveWindowSize
 Specifies how big the receive window should be.  See
@@ -623,9 +731,62 @@ Specifies the sound file.  (Only if sound is enabled.)
 Specifies the volume to play sounds with, where 0 turns off
 sound.  (Only if sound is enabled.)
 .TP 12
-.B backgroundPointDist
-Specifies the block distance between points, used in empty map
-regions.  8 is default, 0 means no points.
+.B audioServer
+Specifies the audio server to use.  (Only if sound is enabled.)
+.TP 12
+.B geometry
+Specifies the geometry to use like: -geometry 1280x1024+0+0.
+.TP 12
+.B visual
+Specifies which visual to use.  You can see which visuals your
+display supports by running: xpilot -visual list.
+.TP 12
+.B mono
+Turns on mono display type.
+.TP 12
+.B colorSwitch <true/false>
+Tells xpilot to use a color switching display technique or not.
+Default is true if your display hardware has enough colors available.
+.TP 12
+.B maxColors
+Tells xpilot how many colors you want it to use.
+Default is 8, with a maximum of 16.  If your display seems slow then
+try: xpilot -maxColors 4.
+.TP 12
+.B gameFont
+The font used on the HUD and for nearly all text part of the game
+field.
+.TP 12
+.B messageFont
+The font used for messages displayed in the bottom left corner of
+the game field.
+.TP 12
+.B scoreListFont
+The font used on the score list.  Must be non-proportional.
+.TP 12
+.B buttonFont
+The font used on all buttons.
+.TP 12
+.B textFont
+The font used in the help and about windows.
+.TP 12
+.B black
+Specifies the color to use for black.  Default is #000000 which is equivalent
+to specifying Black.
+.TP 12
+.B white
+Specifies the color to use for white.  Default is #FFFFFF which is equivalent
+to specifying White.
+.TP 12
+.B blue
+Specifies the color to use for blue.
+.TP 12
+.B red
+Specifies the color to use for red.
+.B color0
+Specifies the color to use for color 0.  You can specify colors
+up to color15 this way.  Black, white, blue and red are equivalent to
+color0, color1, color2 and color3 respectively.
 .RS -5
 
 
@@ -637,12 +798,14 @@ The simplest invocation of the hand-shake program is to just type:
 .PP
 
 This will force the program to search after a server on all the
-machines on your \fBsub-domain\fP.
+machines on your attached network.
 
 Say you know where the server is, and you don't want to be
 prompted (handy in scripts etc.), you may type for example:
 .IP
 .B xpilot -join lglab08
+
+where lglab08 is the name of the host running the server.
 .PP
 In the examples above your name would be your \fBlogin name\fP.
 Let's say you want to be really cool and your login name is
@@ -680,6 +843,11 @@ it, try:
 .B list
 .PP
 
+Or:
+.IP
+.B telnet xpilot.cs.uit.no 4401
+.PP
+
 If you experience any problems with `jerkiness', you should try
 to adjust the \fIreceiveWindowSize\fP Xresource.  The problem may
 be that your X server can't display as fast as the XPilot server
@@ -699,7 +867,11 @@ will always try to read a second frame from the network and if
 this succeeds it will discard the oldest frame.  A better number
 for \fIreceiveWindowSize\fP is three which will discard the
 oldest frame out of three and therefore be less subject to small
-changes in network delivery times.  The maximum value of
+changes in network delivery times.  If your display is fast enough
+and can keep up with rate at which the server is generating frames
+then specifying a value bigger than one will not result in dropping
+frames, but rather will it be a buffer for small changes in network
+performance and computer load.  The maximum value of
 \fIreceiveWindowSize\fP is four.
 
 
@@ -739,7 +911,15 @@ We would also like to receive changes you do to make the code
 compile on your machine (we would NOT like to receive the whole
 program translated to K&R C, keep it ANSI :) If you don't have an
 ANSI compiler, there are several utilities which may help you
-de-ANSI-fy the code (unproto, unprotoize etc).
+de-ANSI-fy the code (unproto, unprotoize etc), but a better solution
+will be to install the GNU C compiler on your system.
+
+
+.SH COPYRIGHT & DISCLAIMER
+
+XPilot is copyright (C) 1991-93 by the authors mentioned above.
+XPilot comes with ABSOLUTELY NO WARRANTY; for details see the
+provided LICENSE file.
 
 
 .SH FILES

@@ -1,12 +1,24 @@
-/* $Id: client.c,v 3.25 1993/08/02 12:54:49 bjoerns Exp $
+/* $Id: client.c,v 3.38 1993/10/02 00:36:07 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <X11/Xproto.h>
@@ -31,6 +43,7 @@
 #include "bit.h"
 #include "netclient.h"
 #include "paint.h"
+#include "xinit.h"
 
 #define MAX_CHECKPOINT	26
 
@@ -53,6 +66,7 @@ short 	numTransporters;
 short	numFrontShots;
 short	numBackShots;
 short	numAfterburners;
+short	numLasers;
 
 short	lock_id;		/* Id of player locked onto */
 short	lock_dir;		/* Direction of lock */
@@ -65,6 +79,8 @@ short	shutdown_delay;
 short	shutdown_count;
 
 int	map_point_distance;	/* spacing of navigation points */
+int	map_point_size;		/* size of navigation points */
+int	spark_size;		/* size of debris and spark */
 long	control_count;		/* Display control for how long? */
 
 long	fuelSum;			/* Sum of fuel in all tanks */
@@ -82,6 +98,7 @@ float	turnspeed;		/* How fast player acc-turns */
 float	turnspeed_s;		/* Saved turnspeed */
 float	turnresistance;		/* How much is lost in % */
 float	turnresistance_s;	/* Saved (see above) */
+float	spark_prob;		/* Sparkling effect user configurable */
 
 float	hud_move_fact;		/* scale the hud-movement (speed) */
 float	ptr_move_fact;		/* scale the speed pointer length */
@@ -92,6 +109,7 @@ int	packet_drop;		/* dropped packets per second */
 char	*packet_measure;	/* packet measurement in a second */
 long	packet_loop;		/* start of measurement */
 
+bool	showRealName = false;	/* Show realname instead of nick name */
 char	name[MAX_CHARS];	/* Nick-name of player */
 char	realname[MAX_CHARS];	/* Real name of player */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
@@ -99,6 +117,7 @@ unsigned	version;	/* Version of the server */
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
+char 	audioServer[MAX_CHARS];	/* audio server */
 int 	maxVolume;		/* maximum volume (in percent) */
 #endif /* SOUND */
 
@@ -550,16 +569,12 @@ int Handle_leave(int id)
     return 0;
 }
 
-int Handle_player(int id, int team, int mychar, char *player_name)
+int Handle_player(int id, int team, int mychar, char *player_name,
+		  char *real_name, char *host_name)
 {
     other_t		*other;
 
-    if ((other = Other_by_id(id)) != NULL) {
-	errno = 0;
-	error("Player \"%s\" in team %d changed to \"%s\" in team %d",
-	    other->name, other->team, player_name, team);
-    }
-    else {
+    if ((other = Other_by_id(id)) == NULL) {
 	if (num_others >= max_others) {
 	    max_others += 5;
 	    if (num_others == 0) {
@@ -603,6 +618,10 @@ int Handle_player(int id, int team, int mychar, char *player_name)
     other->name_width = 0;
     strncpy(other->name, player_name, sizeof(other->name));
     other->name[sizeof(other->name) - 1] = '\0';
+    strncpy(other->real, real_name, sizeof(other->real));
+    other->real[sizeof(other->real) - 1] = '\0';
+    strncpy(other->host, host_name, sizeof(other->host));
+    other->host[sizeof(other->host) - 1] = '\0';
     scoresChanged = 1;
 
     return 0;
@@ -617,6 +636,13 @@ int Handle_war(int robot_id, int killer_id)
     if ((robot = Other_by_id(robot_id)) == NULL) {
 	errno = 0;
 	error("Can't update war for non-existing player (%d,%d)", robot_id, killer_id);
+	return 0;
+    }
+    if (killer_id == -1) {
+	/*
+	 * Robot is no longer in war mode.
+	 */
+	robot->war_id = -1;
 	return 0;
     }
     if ((killer = Other_by_id(killer_id)) == NULL) {
@@ -639,21 +665,11 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
 			*sought;
     char		msg[MSG_LEN];
 
-    if ((programmer = Other_by_id(programmer_id)) == NULL) {
+    if ((programmer = Other_by_id(programmer_id)) == NULL
+	|| (robot = Other_by_id(robot_id)) == NULL
+	|| (sought = Other_by_id(sought_id)) == NULL) {
 	errno = 0;
-	error("Can't find seek programmer (%d,%d,%d)",
-	      programmer_id, robot_id, sought_id);
-	return 0;
-    }
-    if ((robot = Other_by_id(robot_id)) == NULL) {
-	errno = 0;
-	error("Can't find seeking robot (%d,%d,%d)",
-	      programmer_id, robot_id, sought_id);
-	return 0;
-    }
-    if ((sought = Other_by_id(sought_id)) == NULL) {
-	errno = 0;
-	error("Can't find sought player (%d,%d,%d)",
+	error("Bad player seek (%d,%d,%d)",
 	      programmer_id, robot_id, sought_id);
 	return 0;
     }
@@ -667,7 +683,7 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
     return 0;
 }
 
-int Handle_score(int id, int score, int life)
+int Handle_score(int id, int score, int life, int mychar)
 {
     other_t		*other;
 
@@ -677,9 +693,13 @@ int Handle_score(int id, int score, int life)
 	return 0;
     }
     else if (other->score != score
-	|| other->life != life) {
+	|| other->life != life
+	|| other->mychar != mychar && version >= 0x3040) {
 	other->score = score;
 	other->life = life;
+	if (version >= 0x3040) {
+	    other->mychar = mychar;
+	}
 	scoresChanged = 1;
     }
 
@@ -718,12 +738,10 @@ int Handle_score_object(int score, int x, int y, char *msg)
 void Client_score_table(void)
 {
     other_t		*other,
-			*war,
 			**order;
     int			i, j, k, best = -1;
     float		ratio, best_ratio;
-    char		*name,
-			buf[MSG_LEN];
+    char		buf[256];
 
     if (scoresChanged == 0) {
 	return;
@@ -742,7 +760,11 @@ void Client_score_table(void)
     }
     for (i = 0; i < num_others; i++) {
 	other = &Others[i];
-	ratio = (float) other->score / (other->life + 1);
+	if (BIT(Setup->mode, LIMITED_LIVES)) {
+	    ratio = (float) other->score;
+	} else {
+	    ratio = (float) other->score / (other->life + 1);
+	}
 	if (best == -1
 	    || ratio > best_ratio) {
 	    best_ratio = ratio;
@@ -762,17 +784,7 @@ void Client_score_table(void)
     for (i = 0; i < num_others; i++) {
 	other = order[i];
 	j = other - Others;
-	if (other->war_id != -1
-	    && (war = Other_by_id(other->war_id)) != NULL) {
-	    sprintf(buf, "%s (%s)", other->name, war->name);
-	    name = buf;
-	    if (strlen(name) >= 19) {
-		strcpy(&name[17], ")");
-	    }
-	} else {
-	    name = other->name;
-	}
-	Paint_score_entry(i, other, j == best, name);
+	Paint_score_entry(i, other, j == best ? true : false);
     }
     free(order);
     scoresChanged = 0;
@@ -780,6 +792,9 @@ void Client_score_table(void)
 
 int Client_init(char *server, unsigned server_version)
 {
+    extern void Make_table(void);
+    extern void Make_ships(void);
+
     version = server_version;
 
     Make_table();
@@ -797,11 +812,7 @@ int Client_setup(void)
     }
     Map_optimize();
 
-    RadarHeight = (256.0/Setup->x) * Setup->y + 0.5;
-
-    if (BIT(Setup->mode, WRAP_PLAY) == 0) {
-	CLR_BIT(instruments, SHOW_SLIDING_RADAR);
-    }
+    RadarHeight = (int)((256.0/Setup->x) * Setup->y + 0.5);
 
     if (Init_window() == -1) {
 	return -1;
@@ -819,7 +830,8 @@ int Client_power(void)
 	|| Send_turnspeed(turnspeed) == -1
 	|| Send_turnspeed_s(turnspeed_s) == -1
 	|| Send_turnresistance(turnresistance) == -1
-	|| Send_turnresistance_s(turnresistance_s) == -1) {
+	|| Send_turnresistance_s(turnresistance_s) == -1
+	|| Send_display() == -1) {
 	return -1;
     }
     return 0;
@@ -860,4 +872,9 @@ void Client_flush(void)
 void Client_sync(void)
 {
     XSync(dpy, False);
+}
+
+int Client_wrap_mode(void)
+{
+    return (BIT(Setup->mode, WRAP_PLAY) != 0);
 }

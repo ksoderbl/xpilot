@@ -1,4 +1,4 @@
-/* $Id: saudio.h,v 3.5 1993/09/13 19:10:22 bjoerns Exp $
+/* $Id: cmw.h,v 3.1 1993/10/01 20:47:12 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -20,34 +20,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-/* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
-#ifndef _saudio_h
-#define _saudio_h
+#ifndef CMW_H
+#define CMW_H
 
-#ifndef SOUND
+#ifdef SUNCMW
 
-/*
- * Define like this to avoid having to put #ifdef SOUND all over the place.
- */
-#define sound_player_init(player)
-#define sound_play_player(player, index)
-#define sound_play_all(index)
-#define sound_play_sensors(x, y, index)
-#define sound_play_queued(player)
-#define sound_close(player)
+void cmw_priv_init(void);
+void cmw_priv_assert_netaccess(void);
+void cmw_priv_deassert_netaccess(void);
 
-#else						/* SOUND */
+#endif /* SUNCMW */
 
-#include "audio.h"
+#endif /* CMW_H */
 
-int             sound_player_init(player *);
-void            sound_play_player(player *, int);
-void            sound_play_all(int);
-void            sound_play_sensors(float, float, int);
-void            sound_play_queued(player * pl);
-void            sound_close(player * pl);
-
-#endif						/* SOUND */
-
-#endif						/* _saudio_h */

@@ -1,4 +1,4 @@
-/* $Id: saudio.h,v 3.5 1993/09/13 19:10:22 bjoerns Exp $
+/* $Id: configure.h,v 3.5 1993/09/13 19:09:18 bjoerns Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -20,34 +20,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-/* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
-#ifndef _saudio_h
-#define _saudio_h
+#ifndef	CONFIGURE_H
+#define	CONFIGURE_H
 
-#ifndef SOUND
+int Config(bool);
+void Config_resize(void);
 
-/*
- * Define like this to avoid having to put #ifdef SOUND all over the place.
- */
-#define sound_player_init(player)
-#define sound_play_player(player, index)
-#define sound_play_all(index)
-#define sound_play_sensors(x, y, index)
-#define sound_play_queued(player)
-#define sound_close(player)
-
-#else						/* SOUND */
-
-#include "audio.h"
-
-int             sound_player_init(player *);
-void            sound_play_player(player *, int);
-void            sound_play_all(int);
-void            sound_play_sensors(float, float, int);
-void            sound_play_queued(player * pl);
-void            sound_close(player * pl);
-
-#endif						/* SOUND */
-
-#endif						/* _saudio_h */
+#endif

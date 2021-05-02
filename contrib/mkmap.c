@@ -1,7 +1,6 @@
-/*
- * A simple random-world generator for Xpilot.
+/* A simple random-world generator for Xpilot.
  * Written by Paul Gardner (pgar@excalib.com) 2/93.
- * This is for version 1 maps.
+ * Updated by Paul Gardner for Xpilot 3.x 7/93.
  */
 
 #include <stdio.h>
@@ -9,7 +8,6 @@
 #include <string.h>
 
 /* Xpilot headers */
-#include "limits.h"
 #include "map.h"
 
 #ifdef _HPUX_SOURCE
@@ -21,8 +19,8 @@
 
 static int wd = 200;
 static int ht = 200;
-static int rule = 0;
 static int seed = -1;
+static int edgewrap = 0;
 static char *author = "Paul Gardner (mkmap)";
 static char *mapname = "Random (%d)";
 static char *fn = "a.map";
@@ -183,9 +181,14 @@ typedef struct
 	int xminborder, yminborder, xmaxborder, ymaxborder;
 	int n;
 } Terrain;
+#define MAX_CANNONS (-1)
+#define MAX_BASES (-1)
+#define MAX_FUELS (-1)
+#define MAX_GRAVS (-4)
+#define MAX_WORMHOLES (-1)
 static Terrain terrain[] =
 {
-{ 0, "mystery", '?', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
+{ -1, "mystery", '?', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
 { FILLED, "filled", 'x', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
 { NW_FILLED, "nwfilled", 's', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
 { NE_FILLED, "nefilled", 'a', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
@@ -196,9 +199,9 @@ static Terrain terrain[] =
 { DN_CANNON, "cannon", 'c', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
 { LF_CANNON, "cannon", 'd', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
 { RT_CANNON, "cannon", 'f', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
-{ BASE, "base", '*', 340, 1, MAX_BASES, valid_base, 2, 2, 2, 2, },
+{ BASE, "base", '_', 340, 1, MAX_BASES, valid_base, 2, 2, 2, 2, },
 { SPACE, "space", ' ', -1, -1, -1, (int (*)())0, 0, 0, 0, 0, },
-{ FUEL, "fuel", 'F', 1100, -1, MAX_FUELS, valid_fuel, 0, 0, 0, 0, },
+{ FUEL, "fuel", '#', 1100, -1, MAX_FUELS, valid_fuel, 0, 0, 0, 0, },
 { POS_GRAV, "pos_grav", '+', 50, -1, MAX_GRAVS/4, valid_grav,
 	GRAV_RAD, GRAV_RAD, GRAV_RAD, GRAV_RAD, },
 { NEG_GRAV, "neg_grav", '-', 50, -1, MAX_GRAVS/4, valid_grav,
@@ -207,7 +210,7 @@ static Terrain terrain[] =
 	GRAV_RAD, GRAV_RAD, GRAV_RAD, GRAV_RAD, },
 { CWISE_GRAV, "cwise_grav", '>', 30, -1, MAX_GRAVS/4, valid_grav,
 	GRAV_RAD, GRAV_RAD, GRAV_RAD, GRAV_RAD, },
-{ WORMHOLE, "wormhole", 'W', 80, MIN_WORMHOLES, MAX_WORMHOLES, valid_worm,
+{ WORMHOLE, "wormhole", '@', 80, MIN_WORMHOLES, MAX_WORMHOLES, valid_worm,
 	WORM_RAD, WORM_RAD, WORM_RAD, WORM_RAD, },
 };
 #define NTERRAIN (sizeof(terrain)/sizeof(terrain[0]))
@@ -297,8 +300,8 @@ char **argv;
 			case 'v': verbose = atoi( &argv[i][2] ); break;
 			case 'w': wd = atoi( &argv[i][2] ); break;
 			case 'h': ht = atoi( &argv[i][2] ); break;
-			case 'r': rule = atoi( &argv[i][2] ); break;
 			case 's': seed = atoi( &argv[i][2] ); break;
+			case 'e': edgewrap = atoi( &argv[i][2] ); break;
 			case 'a': author = &argv[i][2]; break;
 			case 'm': mapname = &argv[i][2]; break;
 			case 'o': fn = &argv[i][2]; break;
@@ -349,15 +352,18 @@ char **argv;
 	}
 
 	/* make border */
-	for ( x=0 ; x<wd ; x++ )
+	if ( !edgewrap )
 	{
-		SETMAP( map, x, 0, FILLED );
-		SETMAP( map, x, ht-1, FILLED );
-	}
-	for ( y=0 ; y<ht ; y++ )
-	{
-		SETMAP( map, 0, y, FILLED );
-		SETMAP( map, wd-1, y, FILLED );
+		for ( x=0 ; x<wd ; x++ )
+		{
+			SETMAP( map, x, 0, FILLED );
+			SETMAP( map, x, ht-1, FILLED );
+		}
+		for ( y=0 ; y<ht ; y++ )
+		{
+			SETMAP( map, 0, y, FILLED );
+			SETMAP( map, wd-1, y, FILLED );
+		}
 	}
 
 	/* plant seeds */
@@ -451,18 +457,23 @@ char **argv;
 			progname, fn, strerror( errno ) );
 		exit( 1 );
 	}
-	fprintf( fp, "%dx%d\n", wd, ht );
-	fprintf( fp, "%d\n", rule );
+	fprintf( fp, "mapWidth:            %d\n", wd );
+	fprintf( fp, "mapHeight:           %d\n", ht );
+	fprintf( fp, "mapName:             " );
 	fprintf( fp, mapname, seed );
 	fputc( '\n', fp );
-	fprintf( fp, "%s\n", author );
+	fprintf( fp, "mapAuthor:           %s\n", author );
+	fprintf( fp, "teamPlay:            no\n" );
+	fprintf( fp, "timing:              no\n" );
+	fprintf( fp, "edgeWrap:            %s\n", edgewrap?"yes":"no" );
+	fprintf( fp, "mapData: \\multiline: EndOfMapdata\n" );
 	for ( y=0 ; y<ht ; y++ )
 	{
 		for ( x=0 ; x<wd ; x++ )
 			fputc( terr2symbol( GETMAP( map, x, y ) ), fp );
 		fputc( '\n', fp );
 	}
+	fprintf( fp, "EndOfMapdata\n" );
 	fclose( fp );
 	exit( 0 );
 }
-

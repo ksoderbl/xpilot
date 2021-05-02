@@ -1,12 +1,24 @@
-/* $Id: object.h,v 3.11 1993/08/02 12:55:18 bjoerns Exp $
+/* $Id: object.h,v 3.20 1993/09/26 20:08:36 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	OBJECT_H
@@ -16,6 +28,7 @@
 #include "types.h"
 #include "bit.h"
 #include "keys.h"
+#include "rules.h"
 
 
 #define OBJ_PLAYER		(1UL<<0)	/* Types of objects */
@@ -24,6 +37,7 @@
 #define OBJ_NUKE		(1UL<<3)
 #define OBJ_CANNON_DEBRIS	(1UL<<4)	/* Cannon objects */
 #define OBJ_CANNON_SHOT		(1UL<<5)
+#define OBJ_LASER		(1UL<<6)
 #define OBJ_BALL		(1UL<<7)
 #define OBJ_SHOT		(1UL<<8)	/* Misc. objects */
 #define OBJ_SMART_SHOT		(1UL<<9)
@@ -47,27 +61,6 @@
 #define OBJ_CONNECTOR		(1UL<<27)
 #define OBJ_TRANSPORTER         (1UL<<28)
 #define OBJ_FIRE		(1UL<<29)
-
-/*
- * Possible player status bits
- */
-#define PLAYING			(1L<<0)		/* Not returning to base */
-#define WAITING_SHOTS		(1L<<1)
-#define KILLED			(1L<<2)
-#define THRUSTING		(1L<<3)
-#define SELF_DESTRUCT		(1L<<4)
-#define GRAVITY			(1L<<5)
-#define SHOT_GRAVITY		(1L<<6)
-#define LOOSE_MASS		(1L<<9)
-#define PAUSE			(1L<<10)
-#define GAME_OVER		(1L<<11)
-#define INACTIVE		(1L<<12)    /* Accept keyboard input etc... */
-#define FUEL_GAUGE		(1L<<13)
-#define VELOCITY_GAUGE		(1L<<14)
-#define POWER_GAUGE		(1L<<15)
-#define WARPING			(1L<<16)
-#define WARPED			(1L<<17)
-#define CONFUSED		(1L<<18)
 
 #define LOCK_NONE		1
 #define LOCK_PLAYER		2
@@ -112,11 +105,25 @@ typedef struct {
     int		current;		/* Number of currently used tank */
     int		num_tanks;		/* Number of tanks */
     long	tank[MAX_TANKS];
-    long	count;			/* Display fuel for how long? */
     long	l1;			/* Fuel critical level */
     long	l2;			/* Fuel warning level */
     long	l3;			/* Fuel notify level */
 } pl_fuel_t;
+
+struct _visibility {
+    int	canSee;
+    long	lastChange;
+};
+
+/*
+ * Structure holding the info for one pulse of a laser.
+ */
+typedef struct {
+    position	pos;
+    int		dir;
+    int		len;
+    int		life;
+} pulse_t;
 
 /* IMPORTANT
  *
@@ -178,6 +185,10 @@ typedef struct {
     int		cloaks;			/* Number of cloaks. */
     int		sensors;		/* Number of sensors */
     int		missiles;		/* Number of missiles. */
+    int		lasers;			/* Number of laser items. */
+    int		num_pulses;		/* Number of laser pulses in the air. */
+    int		max_pulses;		/* Max. number of laser pulses. */
+    pulse_t	*pulses;		/* Info on laser pulses. */
     int		ecms;			/* Number of ecms. */
     int		transporters;		/* number of transporters */
     int		shot_max;		/* Maximum number of shots active */
@@ -194,13 +205,6 @@ typedef struct {
     int		last_lap;		/* Time on last pass */
     int		last_lap_time;		/* What was your last pass? */
     int		last_time;		/* What was the time? */
-    position	world;			/* Lower left hand corner is this */
-					/* world coordinate */
-    position	realWorld;		/* If the player is on the edge of
-					   the screen, these are the world
-					   coordinates before adjustment... */
-    int		wrappedWorld;		/* Nonzero if we're near the edge
-					   of the world (realWorld != world) */
 
     int		home_base;		/* Num of home base */
     struct {
@@ -211,9 +215,10 @@ typedef struct {
     } lock;
 
     char	mychar;			/* Special char for player */
+    char	prev_mychar;		/* Special char for player */
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
-    char	dispname[MAX_CHARS];	/* Display name of player */
+    char	hostname[MAX_CHARS];	/* Hostname of client player uses */
     u_short	team;			/* What team is the player on? */
     u_short	pseudo_team;		/* Which team is used for my tanks */
 					/* (detaching!) */
@@ -227,10 +232,7 @@ typedef struct {
     int		robot_lock;
     int		robot_lock_id;
 
-    struct _visibility {
-	int	canSee;
-	long	lastChange;
-    } *visibility;
+    struct _visibility *visibility;
 
     int updateVisibility, forceVisible, damaged;
     int wormDrawCount, wormHoleHit, wormHoleDest;

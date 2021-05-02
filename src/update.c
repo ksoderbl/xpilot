@@ -1,14 +1,25 @@
-/* $Id: update.c,v 3.12 1993/08/02 12:55:40 bjoerns Exp $
+/* $Id: update.c,v 3.19 1993/09/20 18:48:01 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
 
 #include "global.h"
 #include "map.h"
@@ -20,7 +31,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.12 1993/08/02 12:55:40 bjoerns Exp $";
+    "@(#)$Id: update.c,v 3.19 1993/09/20 18:48:01 bert Exp $";
 #endif
 
 
@@ -37,8 +48,8 @@ static char sourceid[] =
     int x=(int)((obj).pos.x/BLOCK_SZ), y=(int)((obj).pos.y/BLOCK_SZ);	\
     (obj).wrapped = 0;                                               	\
     if (x<0 || x>=World.x || y<0 || y>=World.y) {			\
-	LIMIT((obj).pos.x, 0.0, BLOCK_SZ*World.x-1.0);		    	\
-	LIMIT((obj).pos.y, 0.0, BLOCK_SZ*World.y-1.0);		    	\
+	LIMIT((obj).pos.x, 0.0, World.width-1.0);		    	\
+	LIMIT((obj).pos.y, 0.0, World.height-1.0);		    	\
     } else {								\
 	(obj).prevpos = (obj).pos;					\
 	if (BIT((obj).status, GRAVITY)) {				\
@@ -48,100 +59,11 @@ static char sourceid[] =
 	    (obj).pos.x += (obj).vel.x += (obj).acc.x;			\
 	    (obj).pos.y += (obj).vel.y += (obj).acc.y;			\
 	}								\
-	if (!BIT(World.rules->mode, WRAP_PLAY)) {			\
-	    if ((obj).pos.x < 0) {					\
-		if (edgeBounce) {					\
-		    (obj).pos.x = -(obj).pos.x;				\
-		    if ((obj).vel.x < 0) {				\
-			(obj).vel.x = -(obj).vel.x;			\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = MOD2(RES / 2 - (obj).dir, RES);	\
-			}						\
-		    }							\
-		} else {						\
-		    (obj).pos.x = 0;					\
-		    if ((obj).vel.x < 0) {				\
-			(obj).vel.x = 0;				\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = ((obj).vel.y<0)?(3*RES/4):RES/4;\
-			}						\
-		    }							\
-		}							\
-	    }								\
-	    if ((obj).pos.x >= World.x * BLOCK_SZ) {			\
-		if (edgeBounce) {					\
-		    (obj).pos.x = 2 * World.x * BLOCK_SZ - (obj).pos.x; \
-		    if ((obj).vel.x > 0) {				\
-			(obj).vel.x = -(obj).vel.x;			\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = MOD2(RES / 2 - (obj).dir, RES);	\
-			}						\
-		    }							\
-		} else {						\
-		    (obj).pos.x = World.x * BLOCK_SZ - 1;    		\
-		    if ((obj).vel.x > 0) {				\
-			(obj).vel.x = 0;				\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = ((obj).vel.y<0)?(3*RES/4):RES/4;\
-			}						\
-		    }							\
-		}							\
-	    }								\
-	    if ((obj).pos.y < 0) {					\
-		if (edgeBounce) {					\
-		    (obj).pos.y = -(obj).pos.y;				\
-		    if ((obj).vel.y < 0) {				\
-			(obj).vel.y = -(obj).vel.y;			\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = MOD2(RES - (obj).dir, RES);	\
-			}						\
-		    }							\
-		} else {						\
-		    (obj).pos.y = 0;					\
-		    if ((obj).vel.y < 0) {				\
-			(obj).vel.y = 0;				\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = ((obj).vel.x<0)?(RES/2):0;	\
-			}						\
-		    }							\
-		}							\
-	    }								\
-	    if ((obj).pos.y >= World.y * BLOCK_SZ) {			\
-		if (edgeBounce) {					\
-		    (obj).pos.y = 2 * World.y * BLOCK_SZ - (obj).pos.y;	\
-		    if ((obj).vel.y > 0) {				\
-			(obj).vel.y = -(obj).vel.y;			\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = MOD2(RES - (obj).dir, RES);	\
-			}						\
-		    }							\
-		} else {						\
-		    (obj).pos.y = World.y * BLOCK_SZ - 1;		\
-		    if ((obj).vel.y > 0) {				\
-			(obj).vel.y = 0;				\
-			if ((obj).type != OBJ_PLAYER) {			\
-			    (obj).dir = ((obj).vel.x<0)?(RES/2):0;	\
-			}						\
-		    }							\
-		}							\
-	    }								\
-	} else {							\
-	    if ((obj).pos.x < 0) {					\
-		(obj).pos.x += World.x * BLOCK_SZ;	    		\
-		(obj).wrapped |= 1;					\
-	    }								\
-	    if ((obj).pos.x >= World.x * BLOCK_SZ) {			\
-		(obj).pos.x -= World.x * BLOCK_SZ;			\
-		(obj).wrapped |= 1;					\
-	    }								\
-	    if ((obj).pos.y < 0) {					\
-		(obj).pos.y += World.y * BLOCK_SZ;			\
-		(obj).wrapped |= 2;					\
-	    }								\
-	    if ((obj).pos.y >= World.y * BLOCK_SZ) {			\
-		(obj).pos.y -= World.y * BLOCK_SZ;			\
-		(obj).wrapped |= 2;					\
-	    }								\
+	if ((obj).pos.x < 0 ||						\
+	    (obj).pos.x >= World.width ||				\
+	    (obj).pos.y < 0 ||						\
+	    (obj).pos.y >= World.height) {				\
+	    Limit_object_pos((object *)&(obj));				\
 	}								\
     }									\
     /*  speed_limit(obj); */						\
@@ -150,6 +72,112 @@ static char sourceid[] =
 
 
 static char msg[MSG_LEN];
+
+
+/*
+ * This was part of the update_object_pos() macro first, but
+ * some C preprocessor couldn't handle the length.
+ * Because objects only very infrequently traverse the edge the
+ * speed loss of moving this to a function is negligible.
+ */
+static void Limit_object_pos(object *obj)
+{
+    if (!BIT(World.rules->mode, WRAP_PLAY)) {
+	if (obj->pos.x < 0) {
+	    if (edgeBounce) {
+		obj->pos.x = -obj->pos.x;
+		if (obj->vel.x < 0) {
+		    obj->vel.x = -obj->vel.x;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = MOD2(RES / 2 - obj->dir, RES);
+		    }
+		}
+	    } else {
+		obj->pos.x = 0;
+		if (obj->vel.x < 0) {
+		    obj->vel.x = 0;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = (obj->vel.y < 0) ? (3*RES/4) : RES/4;
+		    }
+		}
+	    }
+	}
+	if (obj->pos.x >= World.width) {
+	    if (edgeBounce) {
+		obj->pos.x = 2 * World.width - obj->pos.x;
+		if (obj->vel.x > 0) {
+		    obj->vel.x = -obj->vel.x;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = MOD2(RES / 2 - obj->dir, RES);
+		    }
+		}
+	    } else {
+		obj->pos.x = World.width - 1;    
+		if (obj->vel.x > 0) {
+		    obj->vel.x = 0;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = (obj->vel.y < 0) ? (3*RES/4) : RES/4;
+		    }
+		}
+	    }
+	}
+	if (obj->pos.y < 0) {
+	    if (edgeBounce) {
+		obj->pos.y = -obj->pos.y;
+		if (obj->vel.y < 0) {
+		    obj->vel.y = -obj->vel.y;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = MOD2(RES - obj->dir, RES);
+		    }
+		}
+	    } else {
+		obj->pos.y = 0;
+		if (obj->pos.y < 0) {
+		    obj->vel.y = 0;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = (obj->vel.x < 0) ? (RES/2) : 0;
+		    }
+		}
+	    }
+	}
+	if (obj->pos.y >= World.height) {
+	    if (edgeBounce) {
+		obj->pos.y = 2 * World.height - obj->pos.y;
+		if (obj->vel.y > 0) {
+		    obj->vel.y = -obj->vel.y;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = MOD2(RES - obj->dir, RES);
+		    }
+		}
+	    } else {
+		obj->pos.y = World.height - 1;
+		if (obj->vel.y > 0) {
+		    obj->vel.y = 0;
+		    if (obj->type != OBJ_PLAYER) {
+			obj->dir = (obj->vel.x < 0) ? (RES/2) : 0;
+		    }
+		}
+	    }
+	}
+    } else {
+	if (obj->pos.x < 0) {
+	    obj->pos.x += World.width;	    
+	    obj->wrapped |= 1;
+	}
+	if (obj->pos.x >= World.width) {
+	    obj->pos.x -= World.width;
+	    obj->wrapped |= 1;
+	}
+	if (obj->pos.y < 0) {
+	    obj->pos.y += World.height;
+	    obj->wrapped |= 2;
+	}
+	if (obj->pos.y >= World.height) {
+	    obj->pos.y -= World.height;
+	    obj->wrapped |= 2;
+	}
+    }
+}
 
 
 #ifndef OLD_TRANSPORT_TO_HOME
@@ -189,6 +217,7 @@ void Update_objects(void)
 {
     int i, j;
     player *pl;
+    object *obj;
 
 
     /*
@@ -251,12 +280,14 @@ void Update_objects(void)
      * Update shots.
      */
     for (i=0; i<NumObjs; i++) {
-	update_object_pos(*Obj[i]);
-	
-	if (BIT(Obj[i]->type, OBJ_BALL) && Obj[i]->id != -1)
+	obj = Obj[i];
+
+	update_object_pos(*obj);
+
+	if (BIT(obj->type, OBJ_BALL) && obj->id != -1)
 	    Move_ball(i);
 
-        if (BIT(Obj[i]->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT
+        if (BIT(obj->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT
 		|OBJ_TORPEDO|OBJ_NUKE))
 	    Move_smart_shot(i);
     }
@@ -324,10 +355,8 @@ void Update_objects(void)
 	/* Limits. */
 	LIMIT(pl->power, MIN_PLAYER_POWER, MAX_PLAYER_POWER);
 	LIMIT(pl->turnspeed, MIN_PLAYER_TURNSPEED, MAX_PLAYER_TURNSPEED);
-	LIMIT(pl->turnresistance, 0.0, 1.0);
-
-	if (pl->fuel.count > 0)
-	    pl->fuel.count--;
+	LIMIT(pl->turnresistance, MIN_PLAYER_TURNRESISTANCE,
+				  MAX_PLAYER_TURNRESISTANCE);
 
 	if (pl->count > 0) {
 	    pl->count--;
@@ -522,7 +551,8 @@ void Update_objects(void)
 		    wy = (World.wormHoles[j].pos.y - 
 			  World.wormHoles[pl->wormHoleHit].pos.y) * BLOCK_SZ;
 		    
-		    proximity = ABS(pl->vel.y * wx + pl->vel.x * wy);
+		    proximity = pl->vel.y * wx + pl->vel.x * wy;
+		    proximity = ABS(proximity);
 		    
 		    if (pl->vel.x * wx + pl->vel.y * wy < 0) {
 			if (proximity < proxRear) {
@@ -625,28 +655,6 @@ void Update_objects(void)
 	}
 
 	pl->used &= pl->have;
-
-	pl->world.x = pl->pos.x - CENTER;	/* Scroll */
-	pl->world.y = pl->pos.y - CENTER;
-	pl->wrappedWorld = 0;
-	if (BIT (World.rules->mode, WRAP_PLAY)) {
-	    pl->realWorld = pl->world;
-	    if (pl->world.x < 0) {
-		pl->wrappedWorld |= 1;
-		pl->world.x += World.x * BLOCK_SZ;
-	    } else if (pl->world.x + FULL >= World.x * BLOCK_SZ) {
-		pl->realWorld.x -= World.x * BLOCK_SZ;
-		pl->wrappedWorld |= 1;
-	    }
-
-	    if (pl->world.y < 0) {
-		pl->wrappedWorld |= 2;
-		pl->world.y += World.y * BLOCK_SZ;
-	    } else if (pl->world.y + FULL >= World.y * BLOCK_SZ) {
-		pl->realWorld.y -= World.y * BLOCK_SZ;
-		pl->wrappedWorld |= 2;
-	    }
-	}
     }
 
     for (i=0; i<World.NumWormholes; i++)
@@ -700,8 +708,11 @@ void Update_objects(void)
 
     /*
      * Compute general game status, do we have a winner?
+     * (not called after Game_Over() )
      */
-    Compute_game_status();
+    if (gameDuration >= 0.0) {
+	Compute_game_status();
+    }
 
     /*
      * Now update labels if need be.

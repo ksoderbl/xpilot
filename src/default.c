@@ -1,12 +1,24 @@
-/* $Id: default.c,v 3.21 1993/08/03 21:09:14 bjoerns Exp $
+/* $Id: default.c,v 3.40 1993/10/02 00:36:10 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <X11/Xos.h>
@@ -26,17 +38,22 @@
 #include "version.h"
 #include "config.h"
 #include "const.h"
-#include "object.h"
 #include "client.h"
 #include "paint.h"
 #include "draw.h"
 #include "pack.h"
 #include "bit.h"
 #include "netclient.h"
+#include "xinit.h"
+#include "error.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.21 1993/08/03 21:09:14 bjoerns Exp $";
+    "@(#)$Id: default.c,v 3.40 1993/10/02 00:36:10 bjoerns Exp $";
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX	1024
 #endif
 
 /*
@@ -47,14 +64,6 @@ static char sourceid[] =
 #define SCORE_LIST_FONT		"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
 #define BUTTON_FONT		"-*-*-bold-o-*-*-14-*-*-*-*-*-iso8859-1"
 #define TEXT_FONT		"-*-*-bold-i-*-*-14-*-*-*-p-*-iso8859-1"
-
-/*
- * Default colors.
- */
-#define COLOR_BLACK		"#000000"
-#define COLOR_WHITE		"#FFFFFF"
-#define COLOR_BLUE		"#4E7CFF"
-#define COLOR_RED		"#FF3A27"
 
 static struct _keyResources
 {
@@ -81,6 +90,8 @@ static struct _keyResources
 	KEY_FIRE_HEAT,			"Fire heat seaking missile" },
     { "keyFireNuke",			"n",
 	KEY_FIRE_NUKE,			"Fire nuclear missile" },
+    { "keyFireLaser",			"slash",
+	KEY_FIRE_LASER,			"Activate laser beam" },
     { "keyDropMine",			"Tab",
 	KEY_DROP_MINE,			"Drop a mine (bomb)" },
     { "keyDetachMine",			"bracketright",
@@ -100,7 +111,7 @@ static struct _keyResources
     { "keySelfDestruct",		"q",
 	KEY_SELF_DESTRUCT,		"Toggle self destruct" },
     { "keyIdMode",			"i",
-	KEY_ID_MODE,			"Toggle ID mode" },
+	KEY_ID_MODE,			"Toggle ID mode (show realname)" },
     { "keyPause",			"p Pause",
 	KEY_PAUSE,			"Toggle pause mode" },
     { "keySwapSettings",		"Escape",
@@ -117,39 +128,39 @@ static struct _keyResources
 	KEY_TANK_PREV,			"Shift to previous tank" },
     { "keyTankDetach",			"r",
 	KEY_TANK_DETACH,		"Detach tank" },
-    { "keyIncreasePower",		"KP_Multiply",
+    { "keyIncreasePower",		"KP_Multiply KP_F1",
 	KEY_INCREASE_POWER,		"Increase power" },
-    { "keyDecreasePower",		"KP_Divide",
+    { "keyDecreasePower",		"KP_Divide KP_F2",
 	KEY_DECREASE_POWER,		"Decrease power" },
-    { "keyIncreaseTurnspeed",		"KP_Add",
+    { "keyIncreaseTurnspeed",		"KP_Add KP_F3",
 	KEY_INCREASE_TURNSPEED,		"Increase turnspeed" },
-    { "keyDecreaseTurnspeed",		"KP_Subtract",
+    { "keyDecreaseTurnspeed",		"KP_Subtract KP_F4",
 	KEY_DECREASE_TURNSPEED,		"Decrease turnspeed" },
     { "keyTransporter",			"t",
 	KEY_TRANSPORTER,		"Use transporter" },
     { "keyTalk",			"m",
 	KEY_TALK,			"Enable/disable talk window" },
-    { "keyToggleVelocity",		"v",
-	KEY_TOGGLE_VELOCITY,		"N/A" },
     { "keyToggleCompass",		"c",
-	KEY_TOGGLE_COMPASS,		"N/A" }
+	KEY_TOGGLE_COMPASS,		"Enable/disable locking on players" }
 };
 
 
 static XrmOptionDescRec opts[] = {
     { "-help",				".help",
-    	XrmoptionIsArg,				NULL },
+    	XrmoptionNoArg,				"True" },
     { "-version",			".version",
-    	XrmoptionIsArg,				NULL },
+    	XrmoptionNoArg,				"True" },
     { "-name",				".name",
     	XrmoptionSepArg,			NULL },
     { "-join",				".join",
-	XrmoptionIsArg,				NULL },
+	XrmoptionNoArg,				"True" },
     { "-list",				".list",
-	XrmoptionIsArg,				NULL },
+	XrmoptionNoArg,				"True" },
     { "-team",				".team",
 	XrmoptionSepArg,			NULL },
     { "-display",			".display",
+    	XrmoptionSepArg,			NULL },
+    { "-geometry",			".geometry",
     	XrmoptionSepArg,			NULL },
     { "-shutdown",			".shutdown",
     	XrmoptionSepArg,			NULL },
@@ -159,6 +170,8 @@ static XrmOptionDescRec opts[] = {
     { "-sounds",			".sounds",
     	XrmoptionSepArg,			NULL },
     { "-maxVolume",			".maxVolume",
+    	XrmoptionSepArg,			NULL },
+    { "-audioServer",			".audioServer",
     	XrmoptionSepArg,			NULL },
 #endif
     { "-power",				".power",
@@ -219,6 +232,14 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-receiveWindowSize",		".receiveWindowSize",
     	XrmoptionSepArg,			NULL },
+    { "-visual",			".visual",
+    	XrmoptionSepArg,			NULL },
+    { "-mono",				".mono",
+    	XrmoptionNoArg,				"True" },
+    { "-colorSwitch",			".colorSwitch",
+    	XrmoptionSepArg,			NULL },
+    { "-maxColors",			".maxColors",
+    	XrmoptionSepArg,			NULL },
     { "-black",				".black",
     	XrmoptionSepArg,			NULL },
     { "-white",				".white",
@@ -226,6 +247,38 @@ static XrmOptionDescRec opts[] = {
     { "-blue",				".blue",
     	XrmoptionSepArg,			NULL },
     { "-red",				".red",
+    	XrmoptionSepArg,			NULL },
+    { "-color0",			".color0",
+    	XrmoptionSepArg,			NULL },
+    { "-color1",			".color1",
+    	XrmoptionSepArg,			NULL },
+    { "-color2",			".color2",
+    	XrmoptionSepArg,			NULL },
+    { "-color3",			".color3",
+    	XrmoptionSepArg,			NULL },
+    { "-color4",			".color4",
+    	XrmoptionSepArg,			NULL },
+    { "-color5",			".color5",
+    	XrmoptionSepArg,			NULL },
+    { "-color6",			".color6",
+    	XrmoptionSepArg,			NULL },
+    { "-color7",			".color7",
+    	XrmoptionSepArg,			NULL },
+    { "-color8",			".color8",
+    	XrmoptionSepArg,			NULL },
+    { "-color9",			".color9",
+    	XrmoptionSepArg,			NULL },
+    { "-color10",			".color10",
+    	XrmoptionSepArg,			NULL },
+    { "-color11",			".color11",
+    	XrmoptionSepArg,			NULL },
+    { "-color12",			".color12",
+    	XrmoptionSepArg,			NULL },
+    { "-color13",			".color13",
+    	XrmoptionSepArg,			NULL },
+    { "-color14",			".color14",
+    	XrmoptionSepArg,			NULL },
+    { "-color15",			".color15",
     	XrmoptionSepArg,			NULL },
     { "-keyTurnLeft",			".keyTurnLeft",
 	XrmoptionSepArg,			NULL },
@@ -244,6 +297,8 @@ static XrmOptionDescRec opts[] = {
     { "-keyFireHeat",			".keyFireHeat",
 	XrmoptionSepArg,			NULL },
     { "-keyFireNuke",			".keyFireNuke",
+	XrmoptionSepArg,			NULL },
+    { "-keyFireLaser",			".keyFireLaser",
 	XrmoptionSepArg,			NULL },
     { "-keyDropMine",			".keyDropMine",
 	XrmoptionSepArg,			NULL },
@@ -310,12 +365,27 @@ static int ON(char *optval)
 
 char* Get_keyhelpstring(keys_t key)
 {
-    int i=0;
-    char* str = "Oops";
+    int i;
+    char* str = NULL;
 
     for (i = 0; i < NELEM(keyResources); i++)
 	if (keyResources[i].key == key) {
 	    str = keyResources[i].helpLine;
+	    break;
+	}
+
+    return str;
+}
+
+
+char* Get_keyResourceString(keys_t key)
+{
+    int i;
+    char* str = NULL;
+
+    for (i = 0; i < NELEM(keyResources); i++)
+	if (keyResources[i].key == key) {
+	    str = keyResources[i].resource;
 	    break;
 	}
 
@@ -333,8 +403,8 @@ void Usage(void)
 	printf("\t%s%s\n", opts[i].option,
 	       (opts[i].argKind == XrmoptionSepArg) ?  " <value>" : "");
     }
-    printf("If no server is specified then the command will affect\n");
-    printf("the servers on your local network\n");
+    printf("If no server is specified then xpilot will search\n");
+    printf("for servers on your local network\n");
     printf("Try: `telnet xpilot.cs.uit.no 4400' to see some remote servers\n");
 
     exit(1);
@@ -360,7 +430,7 @@ static int Get_resource(XrmDatabase db, char *myName, char *myClass,
 	if (rmValue.addr == NULL) {
 	    len = 0;
 	} else {
-	    len = MIN(rmValue.size, size);
+	    len = MIN(rmValue.size, size - 1);
 	    strncpy(result, rmValue.addr, len);
 	}
 	result[len] = '\0';
@@ -382,6 +452,27 @@ static int Get_resource(XrmDatabase db, char *myName, char *myClass,
 	result[0] = '\0';
     }
     return 0;
+}
+
+
+static int Get_string_resource(XrmDatabase db, char *myName, char *myClass,
+			       char *resource, char *fallback, char *result,
+			       unsigned size)
+{
+    char		*src, *dst;
+    int			val;
+
+    val = Get_resource(db, myName, myClass, resource, fallback, result, size);
+    src = dst = result;
+    while ((*src & 0x7f) == *src && isgraph(*src) == 0 && *src != '\0') {
+	src++;
+    }
+    while ((*src & 0x7f) != *src || isgraph(*src) != 0) {
+	*dst++ = *src++;
+    }
+    *dst = '\0';
+
+    return val;
 }
 
 
@@ -423,7 +514,7 @@ static void Get_int_resource(XrmDatabase db, char *myName, char *myClass,
 
 
 static void Get_file_defaults(XrmDatabase *rDBptr,
-			       char *myName, char *myClass)
+			      char *myName, char *myClass)
 {
     int			len;
     char		*ptr,
@@ -441,7 +532,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
 	    sprintf(path, "/usr/lib/X11/app-defaults/%s", myClass);
 	}
     } else {
-	sprintf(path, "/usr/lib/X11/%s", myClass);
+	sprintf(path, "/usr/lib/X11/app-defaults/%s", myClass);
     }
     tmpDB = XrmGetFileDatabase(path);
     XrmMergeDatabases(tmpDB, rDBptr);
@@ -465,12 +556,12 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
     }
     else if (home != NULL) {
 	if (lang != NULL) {
-	    sprintf(path, "%s/%s/%s", ptr, lang, myClass);
+	    sprintf(path, "%s/app-defaults/%s/%s", home, lang, myClass);
 	    if (access(path, 0) == -1) {
-		sprintf(path, "%s/%s", ptr, myClass);
+		sprintf(path, "%s/app-defaults/%s", home, myClass);
 	    }
 	} else {
-	    sprintf(path, "%s/%s", ptr, myClass);
+	    sprintf(path, "%s/app-defaults/%s", home, myClass);
 	}
 	tmpDB = XrmGetFileDatabase(path);
 	XrmMergeDatabases(tmpDB, rDBptr);
@@ -513,6 +604,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 {
     int			i,
 			j,
+			firstKeyDef,
 			num;
     keys_t		key;
     KeySym		ks;
@@ -526,7 +618,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     XrmInitialize();
 
     argDB = 0;
-    XrmParseCommand(&argDB, opts, NELEM(opts), myClass, argcp, argvp);
+    XrmParseCommand(&argDB, opts, NELEM(opts), myName, argcp, argvp);
 
     /*
      * Check for bad arguments.
@@ -535,7 +627,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 	if (argvp[i][0] == '-') {
 	    errno = 0;
 	    error("Unknown option '%s'", argvp[i]);
-	    Usage();
+	    error("Type: %s -help to see a list of options", argvp[0]);
+	    exit(1);
 	}
     }
 
@@ -553,8 +646,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_resource(argDB, myName, myClass, "shutdown", "", shut_msg,
 		 MAX_CHARS);
 
-    if (Get_resource(argDB, myName, myClass, "display", NULL, dispName,
-		     MAX_DISP_LEN) == 0
+    if (Get_string_resource(argDB, myName, myClass, "display", NULL, dispName,
+			    MAX_DISP_LEN) == 0
 	|| dispName[0] == '\0') {
 	if ((ptr = getenv("DISPLAY")) != NULL) {
 	    strncpy(dispName, ptr, MAX_DISP_LEN);
@@ -563,24 +656,24 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 	    strcpy(dispName, ":0.0");
 	}
     }
-#ifndef LINUX
-    if (dispName[0] == '\0'
-	|| strstr(dispName, "unix:0") != NULL
-	|| strstr(dispName, "local:0") != NULL
-	|| strstr(dispName, "localhost:0") != NULL
-	|| strcmp(dispName, ":0.0") == 0
-	|| strcmp(dispName, ":0") == 0) {
-	sprintf(dispName, "%s:0", host);
-    }
-#endif
     if ((dpy = XOpenDisplay(dispName)) == NULL) {
 	error("Can't open display '%s'", dispName);
 	exit(1);
+    }
+    Get_resource(argDB, myName, myClass, "visual", "",
+		 visualName, sizeof visualName);
+    if (strncasecmp(visualName, "list", 4) == 0) {
+	List_visuals();
+	exit(0);
     }
 
     Get_file_defaults(&rDB, myName, myClass);
 
     XrmMergeDatabases(argDB, &rDB);
+
+    Get_string_resource(rDB, myName, myClass, "geometry", "", resValue,
+			sizeof resValue);
+    geometry = strdup(resValue);
 
     Get_resource(rDB, myName, myClass, "name", realName, nickName,
 		 MAX_NAME_LEN);
@@ -612,22 +705,42 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		       &turnspeed_s);
     Get_float_resource(rDB, myName, myClass, "altTurnResistance", 0.12,
 		       &turnresistance_s);
+    Get_float_resource(rDB, myName, myClass, "sparkProb", 0.50,
+		       &spark_prob);
+    spark_rand = (int)(spark_prob * MAX_SPARK_RAND + 0.5f);
 
     Get_int_resource(rDB, myName, myClass, "backgroundPointDist", 8,
 		     &map_point_distance);
+    Get_int_resource(rDB, myName, myClass, "backgroundPointSize",
+		     DEF_MAP_POINT_SIZE, &map_point_size);
+    LIMIT(map_point_size, MIN_MAP_POINT_SIZE, MAX_MAP_POINT_SIZE);
+    Get_int_resource(rDB, myName, myClass, "sparkSize",
+		     DEF_SPARK_SIZE, &spark_size);
+    LIMIT(spark_size, MIN_SPARK_SIZE, MAX_SPARK_SIZE);
 
-    color_defaults[BLACK] = COLOR_BLACK;
-    color_defaults[WHITE] = COLOR_WHITE;
-    color_defaults[BLUE] = COLOR_BLUE;
-    color_defaults[RED] = COLOR_RED;
-    Get_resource(rDB, myName, myClass, "black", color_defaults[BLACK],
-		 color_names[BLACK], sizeof(color_names[BLACK]));
-    Get_resource(rDB, myName, myClass, "white", color_defaults[WHITE],
-		 color_names[WHITE], sizeof(color_names[WHITE]));
-    Get_resource(rDB, myName, myClass, "blue", color_defaults[BLUE],
-		 color_names[BLUE], sizeof(color_names[BLUE]));
-    Get_resource(rDB, myName, myClass, "red", color_defaults[RED],
-		 color_names[RED], sizeof(color_names[RED]));
+    Get_resource(rDB, myName, myClass, "visual", "",
+		 visualName, sizeof visualName);
+    Get_bool_resource(rDB, myName, myClass, "mono", "False", &i);
+    mono = (i != 0) ? true : false;
+    Get_bool_resource(rDB, myName, myClass, "colorSwitch", "True", &i);
+    colorSwitch = (i != 0) ? true : false;
+    Get_int_resource(rDB, myName, myClass, "maxColors", 4,
+		     &maxColors);
+    Get_string_resource(rDB, myName, myClass, "black", "",
+			color_names[BLACK], sizeof(color_names[BLACK]));
+    Get_string_resource(rDB, myName, myClass, "white", "",
+			color_names[WHITE], sizeof(color_names[WHITE]));
+    Get_string_resource(rDB, myName, myClass, "blue", "",
+			color_names[BLUE], sizeof(color_names[BLUE]));
+    Get_string_resource(rDB, myName, myClass, "red", "",
+			color_names[RED], sizeof(color_names[RED]));
+    for (i = 0; i < MAX_COLORS; i++) {
+	char buf[8], def[MAX_COLOR_LEN];
+	sprintf(buf, "color%d", i);
+	strcpy(def, (i < NUM_COLORS) ? color_names[i] : "");
+	Get_string_resource(rDB, myName, myClass, buf, def,
+			    color_names[i], sizeof(color_names[i]));
+    }
 
     instruments = 0;
     Get_bool_resource(rDB, myName, myClass, "showShipName", "True", &i);
@@ -646,11 +759,11 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     if (i) {
 	SET_BIT(instruments, SHOW_HUD_HORIZONTAL);
     }
-    Get_bool_resource(rDB, myName, myClass, "fuelMeter", "True", &i);
+    Get_bool_resource(rDB, myName, myClass, "fuelMeter", "False", &i);
     if (i) {
 	SET_BIT(instruments, SHOW_FUEL_METER);
     }
-    Get_bool_resource(rDB, myName, myClass, "fuelGauge", "False", &i);
+    Get_bool_resource(rDB, myName, myClass, "fuelGauge", "True", &i);
     if (i) {
 	SET_BIT(instruments, SHOW_FUEL_GAUGE);
     }
@@ -704,12 +817,17 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 
     Get_int_resource(rDB, myName, myClass, "receiveWindowSize",
 		     DEF_RECEIVE_WINDOW_SIZE, &receive_window_size);
+    LIMIT(receive_window_size, MIN_RECEIVE_WINDOW_SIZE,
+	  MAX_RECEIVE_WINDOW_SIZE);
 
 #ifdef SOUND
-    Get_resource(rDB, myName, myClass, "sounds", SOUNDFILE, sounds,
-		 sizeof sounds);
+    Get_string_resource(rDB, myName, myClass, "sounds", SOUNDFILE, sounds,
+			sizeof sounds);
 
     Get_int_resource(rDB, myName, myClass, "maxVolume", 100, &maxVolume);
+
+    Get_resource(rDB, myName, myClass, "audioServer", NULL, audioServer,
+		 sizeof audioServer);
 #endif
 
 
@@ -729,6 +847,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		     keyResources[i].resource, keyResources[i].fallback,
 		     resValue, sizeof resValue);
 
+	firstKeyDef = num;
 	for (str = strtok(resValue, " \t\r\n");
 	    str != NULL;
 	    str = strtok(NULL, " \t\r\n")) {
@@ -738,7 +857,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		continue;
 	    }
 
-	    for (j = 0; j < num; j++) {
+	    for (j = firstKeyDef; j < num; j++) {
 		if (keyDefs[j].keysym == ks
 		    && keyDefs[j].key == key) {
 		    break;
@@ -770,6 +889,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 	    exit(1);
 	}
     }
+
+    XrmDestroyDatabase(rDB);
 
 #ifdef SOUND
     audioInit(dispName);

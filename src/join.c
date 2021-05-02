@@ -1,12 +1,24 @@
-/* $Id: join.c,v 3.10 1993/08/02 12:55:02 bjoerns Exp $
+/* $Id: join.c,v 3.16 1993/09/26 19:50:07 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -25,14 +37,14 @@
 #endif
 
 #include "version.h"
+#include "types.h"
 #include "error.h"
 #include "client.h"
+#include "netclient.h"
 
 #ifndef SCORE_UPDATE_DELAY
 # define SCORE_UPDATE_DELAY	4
 #endif
-
-extern int		scoresChanged;
 
 void Input_loop(void)
 {
@@ -83,10 +95,10 @@ void Input_loop(void)
 	    tv.tv_usec = 0;
 	}
 	if ((n = select(max + 1, &rfds, NULL, NULL, &tv)) == -1) {
-	    error("Select failed");
 	    if (errno == EINTR) {
 		continue;
 	    }
+	    error("Select failed");
 	    return;
 	}
 	if (n == 0) {
@@ -210,4 +222,3 @@ int Join(char *server, int port, char *real, char *nick, char *display,
 
     return 0;
 }
-

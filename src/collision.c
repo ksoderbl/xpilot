@@ -1,12 +1,24 @@
-/* $Id: collision.c,v 3.18 1993/08/02 12:54:54 bjoerns Exp $
+/* $Id: collision.c,v 3.36 1993/10/01 20:36:47 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "global.h"
@@ -16,10 +28,11 @@
 #include "saudio.h"
 #include "bit.h"
 #include "item.h"
+#include "netserver.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.18 1993/08/02 12:54:54 bjoerns Exp $";
+    "@(#)$Id: collision.c,v 3.36 1993/10/01 20:36:47 bert Exp $";
 #endif
 
 #define in_range(o1, o2, r)			\
@@ -37,6 +50,7 @@ static bool Landing(int ind, int point, int blockdir);
 static int Rate(int winner, int looser);
 static void ObjectCollision(int start, int max);
 static void PlayerCollision(int max_objs);
+static void LaserCollision(void);
 static void PlayerObjectCollision(int ind, int max_objs);
 
 
@@ -81,6 +95,7 @@ void Check_collision(void)
     }
     ObjectCollision(0, max_objs);
     PlayerCollision(max_objs);
+    LaserCollision();
     if (max_objs < NumObjs) {
 	ObjectCollision(max_objs, NumObjs);
     }
@@ -94,22 +109,23 @@ static void ObjectCollision(int start, int max)
 
     /* Shot - wall, and out of bounds */
     for (i = start; i < max; i++) {
+	object	*obj = Obj[i];
 	int sx, sy;
 	int dx, dy;
-	int placed = Obj[i]->placed;
-	int wrapped = Obj[i]->wrapped;
+	int placed = obj->placed;
+	int wrapped = obj->wrapped;
 	int start;
 
-	x = (int)Obj[i]->pos.x / BLOCK_SZ;
-	y = (int)Obj[i]->pos.y / BLOCK_SZ;
-	sx = (int)(Obj[i]->prevpos.x / BLOCK_SZ);
-	sy = (int)(Obj[i]->prevpos.y / BLOCK_SZ);
+	x = (int)obj->pos.x / BLOCK_SZ;
+	y = (int)obj->pos.y / BLOCK_SZ;
+	sx = (int)(obj->prevpos.x / BLOCK_SZ);
+	sy = (int)(obj->prevpos.y / BLOCK_SZ);
 	dx = x - sx;
 	dy = y - sy;
 
 	if (dx == 0 && dy == 0) {
 	    if (placed) {
-		WallCollide(Obj[i], sx, sy, 0, 0, 0);
+		WallCollide(obj, sx, sy, 0, 0, 0);
 	    }
 	} else {
 	    if (ABS(dx) > ABS(dy)) {
@@ -119,8 +135,8 @@ static void ObjectCollision(int start, int max)
 		    else
 			start = !placed;
 
-		    for (t = start; t <= dx && Obj[i]->life > 0; t++) {
-			WallCollide(Obj[i], sx + t, sy + dy * t/dx, t, dx, 1);
+		    for (t = start; t <= dx && obj->life > 0; t++) {
+			WallCollide(obj, sx + t, sy + dy * t/dx, t, dx, 1);
 		    }
 		} else {
 		    if (wrapped)
@@ -128,8 +144,8 @@ static void ObjectCollision(int start, int max)
 		    else
 			start = -!placed;
 
-		    for (t = start; t >= dx && Obj[i]->life > 0; t--) {
-			WallCollide(Obj[i], sx + t, sy + dy * t/dx, t, dx, 1);
+		    for (t = start; t >= dx && obj->life > 0; t--) {
+			WallCollide(obj, sx + t, sy + dy * t/dx, t, dx, 1);
 		    }
 		}
 	    } else {
@@ -139,8 +155,8 @@ static void ObjectCollision(int start, int max)
 		    else
 			start = !placed;
 
-		    for (t = start; t <= dy && Obj[i]->life > 0; t++) {
-			WallCollide(Obj[i], sx + dx * t/dy, sy + t, t, dy, 0);
+		    for (t = start; t <= dy && obj->life > 0; t++) {
+			WallCollide(obj, sx + dx * t/dy, sy + t, t, dy, 0);
 		    }
 		} else {
 		    if (wrapped)
@@ -148,8 +164,8 @@ static void ObjectCollision(int start, int max)
 		    else
 			start = -!placed;
 
-		    for (t = start; t >= dy && Obj[i]->life > 0; t--) {
-		        WallCollide(Obj[i], sx + dx * t/dy, sy + t, t, dy, 0);
+		    for (t = start; t >= dy && obj->life > 0; t--) {
+		        WallCollide(obj, sx + dx * t/dy, sy + t, t, dy, 0);
 		    }
 		}
 	    }
@@ -160,7 +176,7 @@ static void ObjectCollision(int start, int max)
 
 static void PlayerCollision(int max_objs)
 {
-    int		i, j, x, y, sc, t;
+    int		i, j, x, y, sc, sc2, t;
     player	*pl;
     int		xd, yd;
 
@@ -172,8 +188,8 @@ static void PlayerCollision(int max_objs)
 	    continue;
 
 	if (pl->pos.x < 0 || pl->pos.y < 0
-	    || pl->pos.x >= World.x * BLOCK_SZ
-	    || pl->pos.y >= World.y * BLOCK_SZ) {
+	    || pl->pos.x >= World.width
+	    || pl->pos.y >= World.height) {
 	    SET_BIT(pl->status, KILLED);
 	    sprintf(msg, "%s left the known universe.", pl->name);
 	    Set_message(msg);
@@ -214,14 +230,14 @@ static void PlayerCollision(int max_objs)
 					pl->name, Players[j]->name);
 				Set_message(msg);
 				sc = Rate(Players[j]->score, pl->score) / 3;
+				sc2 = Rate(pl->score, Players[j]->score) / 3;
 				sprintf(msg, "[%s]", Players[j]->name);
 				SCORE(i, -sc, 
 				      (int) pl->pos.x/BLOCK_SZ, 
 				      (int) pl->pos.y/BLOCK_SZ,
 				      msg);
-				sc = Rate(pl->score, Players[j]->score) / 3;
 				sprintf(msg, "[%s]", pl->name);
-				SCORE(j, -sc, 
+				SCORE(j, -sc2, 
 				      (int) Players[j]->pos.x/BLOCK_SZ, 
 				      (int) Players[j]->pos.y/BLOCK_SZ,
 				      msg);
@@ -262,12 +278,14 @@ static void PlayerCollision(int max_objs)
 			}
 
 			if (Players[j]->robot_mode != RM_NOT_ROBOT
+			    && Players[j]->robot_mode != RM_OBJECT
 			    && BIT(Players[j]->status, KILLED)
 			    && Players[j]->robot_lock == LOCK_PLAYER
 			    && Players[j]->robot_lock_id == pl->id)
 			    Players[j]->robot_lock = LOCK_NONE;
 
 			if (pl->robot_mode != RM_NOT_ROBOT
+			    && pl->robot_mode != RM_OBJECT
 			    && BIT(pl->status, KILLED)
 			    && pl->robot_lock == LOCK_PLAYER
 			    && pl->robot_lock_id == Players[j]->id)
@@ -337,13 +355,13 @@ static void PlayerCollision(int max_objs)
 		float ty = pl->pos.y + ships[pl->dir].pts[j].y;
 		if (BIT(World.rules->mode, WRAP_PLAY)) {
 		    if (tx < 0)
-			tx += World.x * BLOCK_SZ;
-		    if (tx >= World.x * BLOCK_SZ)
-			tx -= World.x * BLOCK_SZ;
+			tx += World.width;
+		    if (tx >= World.width)
+			tx -= World.width;
 		    if (ty < 0)
-			ty += World.y * BLOCK_SZ;
-		    if (ty >= World.y * BLOCK_SZ)
-			ty -= World.y * BLOCK_SZ;
+			ty += World.height;
+		    if (ty >= World.height)
+			ty -= World.height;
 		}
 		xd = (int) tx;
 		yd = (int) ty;
@@ -528,7 +546,7 @@ static void PlayerCollision(int max_objs)
 		&& pl->score < 0
 		&& pl->robot_mode != RM_NOT_ROBOT 
                 && pl->robot_mode != RM_OBJECT) {
-		pl->home_base = -1;
+		pl->home_base = 0;
 		Pick_startpos(i);
 	    }
 	}
@@ -588,7 +606,15 @@ static void PlayerObjectCollision(int i, int max_objs)
 	case OBJ_BACK_SHOT:
 	case OBJ_AFTERBURNER:
 	case OBJ_TRANSPORTER:
+	case OBJ_LASER:
 	    range = SHIP_SZ + ITEM_SIZE/2;
+	    if (BIT(pl->used, OBJ_SHIELD) && shieldedItemPickup == false) {
+		if (!in_range((object *)pl, obj, range))
+		    continue;
+		SET_BIT(obj->status, GRAVITY);
+		Delta_mv((object *)pl, (object *)obj);
+		continue;
+	    }
 	    break;
 
 	default:
@@ -600,17 +626,18 @@ static void PlayerObjectCollision(int i, int max_objs)
 	if (!in_range((object *)pl, obj, range))
 	    continue;
 
-	if ((obj->type == OBJ_SPARK && obj->id == pl->id)
-	    || (obj->type == OBJ_MINE && (obj->id != -1)
-		&& (obj->id == pl->id || TEAM(GetInd[obj->id], i))))
-	    continue;
+	if (obj->id != -1) {
+	    if (obj->id == pl->id) {
+		if (obj->type == OBJ_SPARK || obj->type == OBJ_MINE) {
+		    continue;
+		}
+	    }
+	    else if (TEAM(GetInd[obj->id], i)) {
+		continue;
+	    }
+	}
 
-	if ((obj->id != -1)
-	    && (TEAM(i, GetInd[obj->id]))
-	    && (pl->id != obj->id))
-	    continue;
-	else
-	    obj->life = 0;
+	obj->life = 0;
 	
 	Delta_mv((object *)pl, (object *)obj);
 
@@ -658,12 +685,17 @@ static void PlayerObjectCollision(int i, int max_objs)
 	    break;
 	case OBJ_ENERGY_PACK:
 	    Add_fuel(&(pl->fuel), ENERGY_PACK_FUEL);
-	    pl->fuel.count = FUEL_NOTIFY;
 	    sound_play_sensors(pl->pos.x, pl->pos.y, ENERGY_PACK_PICKUP_SOUND);
 	    break;
 	case OBJ_MINE_PACK:
 	    pl->mines += 1 + (rand()&1);
 	    sound_play_sensors(pl->pos.x, pl->pos.y, MINE_PACK_PICKUP_SOUND);
+	    break;
+	case OBJ_LASER:
+	    if (++pl->lasers > MAX_LASERS) {
+		pl->lasers = MAX_LASERS;
+	    }
+	    sound_play_sensors(pl->pos.x, pl->pos.y, LASER_PICKUP_SOUND);
 	    break;
 	case OBJ_TANK: {
 	    int c = pl->fuel.current;
@@ -682,7 +714,6 @@ static void PlayerObjectCollision(int i, int max_objs)
 		pl->emptymass += TANK_MASS;
 	    }
 	    Add_fuel(&(pl->fuel), TANK_FUEL(pl->fuel.current));
-	    pl->fuel.count = FUEL_NOTIFY;
 	    pl->fuel.current = c;
 	    sound_play_sensors(pl->pos.x, pl->pos.y, TANK_PICKUP_SOUND);
 	    break;
@@ -837,27 +868,7 @@ static void PlayerObjectCollision(int i, int max_objs)
 		    }
 		}
 		Set_message(msg);
-
-		if (pl->robot_mode != RM_NOT_ROBOT
-		    && pl->robot_mode != RM_OBJECT
-		    && killer != i
-		    && rand()%100 < Players[killer]->score-pl->score) {
-		    /* Give fuel for offensive */
-		    pl->fuel.sum = MAX_PLAYER_FUEL;
-
-		    if (pl->robot_lock != LOCK_PLAYER
-			|| pl->robot_lock_id != Players[killer]->id) {
-			for (k = 0; k < NumPlayers; k++) {
-			    if (Players[k]->conn != NOT_CONNECTED) {
-				Send_war(Players[k]->conn, pl->id, 
-					 Players[killer]->id);
-			    }
-			}
-			sound_play_all(DECLARE_WAR_SOUND);
-			pl->robot_lock_id = Players[killer]->id;
-			pl->robot_lock = LOCK_PLAYER;
-		    }
-		}
+		Robot_war(i, killer);
 		break;
 	    case OBJ_CANNON_SHOT:
 		SET_BIT(pl->status, KILLED);
@@ -1100,22 +1111,6 @@ static void WallCollide(object *obj, int x, int y,
 		}
 	    }
 
-#ifdef DEBUG
-	    /*
-	     * If debug, draw something to clarify things
-	     */
-	    player *dr = Players[0]; /* This better not be a robot */
-#define X(co)  ((int)((co) - dr->world.x))
-#define Y(co)  ((int)(FULL - ((co) - dr->world.y)))
-	    XSetForeground(dr->dpy, dr->gc, dr->colors[WHITE].pixel);
-	    XDrawLine(dr->dpy, dr->p_draw, dr->gc,
-		      X(ex), Y(ey), X(lx), Y(ly));
-	    XFlush(dr->dpy);
-#undef X
-#undef Y
-	    XSync(dr->dpy, False);
-#endif /* DEBUG */
-
 	    /*
 	     * By default, we have to keep recomputing for oddly-
 	     * shaped objects.
@@ -1241,13 +1236,13 @@ static bool Landing(int ind, int point, int blockdir)
     ty = pl->pos.y + ships[pl->dir].pts[point].y;
     if (BIT(World.rules->mode, WRAP_PLAY)) {
 	if (tx < 0)
-	    tx += World.x * BLOCK_SZ;
-	if (tx >= World.x * BLOCK_SZ)
-	    tx -= World.x * BLOCK_SZ;
+	    tx += World.width;
+	if (tx >= World.width)
+	    tx -= World.width;
 	if (ty < 0)
-	    ty += World.y * BLOCK_SZ;
-	if (ty >= World.y * BLOCK_SZ)
-	    ty -= World.y * BLOCK_SZ;
+	    ty += World.height;
+	if (ty >= World.height)
+	    ty -= World.height;
     }
     x = (int) tx;
     y = (int) ty;
@@ -1307,9 +1302,9 @@ static bool Landing(int ind, int point, int blockdir)
 	pl->vel.x = ABS(pl->vel.x);
 	if (BIT(World.rules->mode, WRAP_PLAY)) {
 	    if (pl->pos.x < 0)
-		pl->pos.x += World.x * BLOCK_SZ;
-	    if (pl->pos.x >= World.x * BLOCK_SZ)
-		pl->pos.x -= World.x * BLOCK_SZ;
+		pl->pos.x += World.width;
+	    if (pl->pos.x >= World.width)
+		pl->pos.x -= World.width;
 	}
     }
     if (landdir > RES/4 && landdir < 3*RES/4) {
@@ -1317,9 +1312,9 @@ static bool Landing(int ind, int point, int blockdir)
 	pl->vel.x = -ABS(pl->vel.x);
 	if (BIT(World.rules->mode, WRAP_PLAY)) {
 	    if (pl->pos.x < 0)
-		pl->pos.x += World.x * BLOCK_SZ;
-	    if (pl->pos.x >= World.x * BLOCK_SZ)
-		pl->pos.x -= World.x * BLOCK_SZ;
+		pl->pos.x += World.width;
+	    if (pl->pos.x >= World.width)
+		pl->pos.x -= World.width;
 	}
     }
     if (landdir > 0 && landdir < RES/2) {
@@ -1327,9 +1322,9 @@ static bool Landing(int ind, int point, int blockdir)
 	pl->vel.y = ABS(pl->vel.y);
 	if (BIT(World.rules->mode, WRAP_PLAY)) {
 	    if (pl->pos.y < 0)
-		pl->pos.y += World.y * BLOCK_SZ;
-	    if (pl->pos.y >= World.y * BLOCK_SZ)
-		pl->pos.y -= World.y * BLOCK_SZ;
+		pl->pos.y += World.height;
+	    if (pl->pos.y >= World.height)
+		pl->pos.y -= World.height;
 	}
     }
     if (landdir > RES/2 && landdir < RES) {
@@ -1337,9 +1332,9 @@ static bool Landing(int ind, int point, int blockdir)
 	pl->vel.y = -ABS(pl->vel.y);
 	if (BIT(World.rules->mode, WRAP_PLAY)) {
 	    if (pl->pos.y < 0)
-		pl->pos.y += World.y * BLOCK_SZ;
-	    if (pl->pos.y >= World.y * BLOCK_SZ)
-		pl->pos.y -= World.y * BLOCK_SZ;
+		pl->pos.y += World.height;
+	    if (pl->pos.y >= World.height)
+		pl->pos.y -= World.height;
 	}
     }
  
@@ -1367,4 +1362,258 @@ int wormXY(int x, int y)
 	    break;
 
     return i;
+}
+
+
+static void LaserCollision(void)
+{
+    typedef struct victim {
+	int			ind;	/* player index */
+	position		pos;
+	float			prev_dist;
+    } victim_t;
+
+    int				ind, i, j, k, max, hits, sc,
+				max_victims = 0,
+				num_victims = 0;
+    unsigned			size;
+    victim_t			*victims = NULL;
+    float			x, y, x1, x2, y1, y2, dx, dy, dist;
+    player			*pl, *vic;
+    pulse_t			*pulse;
+    object			obj;
+    char			msg[MSG_LEN];
+
+    if (itemLaserProb <= 0) {
+	return;
+    }
+    for (ind = 0; ind < NumPlayers; ind++) {
+	pl = Players[ind];
+	if (BIT(pl->used, OBJ_LASER) != 0) {
+	    if (BIT(pl->status, PLAYING|GAME_OVER|KILLED|PAUSE) != PLAYING
+		|| pl->lasers <= 0) {
+		CLR_BIT(pl->used, OBJ_LASER);
+	    }
+	    else if (pl->lasers > pl->num_pulses
+		&& pl->velocity < PULSE_SPEED - PULSE_SAMPLE_DISTANCE) {
+		if (pl->fuel.sum <= -ED_LASER) {
+		    CLR_BIT(pl->used, OBJ_LASER);
+		} else {
+		    Add_fuel(&(pl->fuel), ED_LASER);
+		    if (pl->num_pulses >= pl->max_pulses) {
+			size = pl->lasers * sizeof(pulse_t);
+			if (pl->max_pulses <= 0) {
+			    pl->pulses = (pulse_t *)malloc(size);
+			    pl->num_pulses = 0;
+			} else {
+			    pl->pulses = (pulse_t *)realloc(pl->pulses, size);
+			}
+			if (pl->pulses == NULL) {
+			    pl->max_pulses = 0;
+			    pl->num_pulses = 0;
+			    continue;
+			}
+			pl->max_pulses = pl->lasers;
+		    }
+		    pulse = &pl->pulses[pl->num_pulses++];
+		    pulse->dir = pl->dir;
+		    pulse->len = PULSE_LENGTH;
+		    pulse->life = PULSE_LIFE(pl->lasers);
+		    pulse->pos.x = pl->pos.x + ships[pl->dir].pts[0].x
+			- PULSE_SPEED * tcos(pulse->dir);
+		    pulse->pos.y = pl->pos.y + ships[pl->dir].pts[0].y
+			- PULSE_SPEED * tsin(pulse->dir);
+		    sound_play_sensors(pulse->pos.x, pulse->pos.y, FIRE_LASER_SOUND);
+		}
+	    }
+	}
+	for (k = 0; k < pl->num_pulses; k++) {
+	    pulse = &pl->pulses[k];
+	    if (--pulse->life < 0) {
+		if (--pl->num_pulses > k) {
+		    pl->pulses[k] = pl->pulses[pl->num_pulses];
+		    k--;
+		}
+		continue;
+	    }
+	    if (pulse->len < PULSE_LENGTH) {
+		pulse->len = 0;
+		continue;
+	    }
+
+	    pulse->pos.x += tcos(pulse->dir) * PULSE_SPEED;
+	    pulse->pos.y += tsin(pulse->dir) * PULSE_SPEED;
+	    if (BIT(World.rules->mode, WRAP_PLAY)) {
+		if (pulse->pos.x < 0) {
+		    pulse->pos.x += World.width;
+		}
+		else if (pulse->pos.x >= World.width) {
+		    pulse->pos.x -= World.width;
+		}
+		if (pulse->pos.y < 0) {
+		    pulse->pos.y += World.height;
+		}
+		else if (pulse->pos.y >= World.height) {
+		    pulse->pos.y -= World.height;
+		}
+		x1 = pulse->pos.x;
+		y1 = pulse->pos.y;
+		x2 = x1 + tcos(pulse->dir) * pulse->len;
+		y2 = y1 + tsin(pulse->dir) * pulse->len;
+	    } else {
+		x1 = pulse->pos.x;
+		y1 = pulse->pos.y;
+		if (x1 < 0 || x1 >= World.width
+		    || y1 < 0 || y1 >= World.height) {
+		    pulse->len = 0;
+		    continue;
+		}
+		x2 = x1 + tcos(pulse->dir) * pulse->len;
+		if (x2 < 0) {
+		    pulse->len = pulse->len * (0 - x1) / (x2 - x1);
+		    x2 = x1 + tcos(pulse->dir) * pulse->len;
+		}
+		if (x2 >= World.width) {
+		    pulse->len = pulse->len * (World.width - 1 - x1)
+			/ (x2 - x1);
+		    x2 = x1 + tcos(pl->dir) * pulse->len;
+		}
+		y2 = y1 + tsin(pl->dir) * pulse->len;
+		if (y2 < 0) {
+		    pulse->len = pulse->len * (0 - y1) / (y2 - y1);
+		    x2 = x1 + tcos(pl->dir) * pulse->len;
+		    y2 = y1 + tsin(pl->dir) * pulse->len;
+		}
+		if (y2 > World.height) {
+		    pulse->len = pulse->len * (World.height - 1 - y1)
+			/ (y2 - y1);
+		    x2 = x1 + tcos(pl->dir) * pulse->len;
+		    y2 = y1 + tsin(pl->dir) * pulse->len;
+		}
+		if (pulse->len <= 0) {
+		    pulse->len = 0;
+		    continue;
+		}
+	    }
+
+	    num_victims = 0;
+	    for (i = 0; i < NumPlayers; i++) {
+		vic = Players[i];
+		if (BIT(vic->status, PLAYING|GAME_OVER|KILLED|PAUSE)
+		    != PLAYING) {
+		    continue;
+		}
+		if (TEAM(i, ind) || PSEUDO_TEAM(i, ind)) {
+		    continue;
+		}
+		if (Wrap_length(vic->pos.x - x1, vic->pos.y - y1)
+		    >= pulse->len + SHIP_SZ) {
+		    continue;
+		}
+		if (max_victims == 0) {
+		    victims = (victim_t *) malloc(NumPlayers * sizeof(victim_t));
+		    if (victims == NULL) {
+			break;
+		    }
+		    max_victims = NumPlayers;
+		}
+		victims[num_victims].ind = i;
+		victims[num_victims].pos = vic->pos;
+		victims[num_victims].prev_dist = 1e10;
+		num_victims++;
+	    }
+	    obj.type = OBJ_SHOT;
+	    obj.life = 1;
+	    obj.owner = pl->id;
+	    obj.id = pl->id;
+	    obj.count = 0;
+	    dx = x2 - x1;
+	    dy = y2 - y1;
+	    max = MAX(ABS(dx), ABS(dy));
+	    if (max == 0) {
+		continue;
+	    }
+
+	    for (i = hits = 0; i <= max; i += PULSE_SAMPLE_DISTANCE) {
+
+		x = x1 + (i * dx) / max;
+		y = y1 + (i * dy) / max;
+		if (BIT(World.rules->mode, WRAP_PLAY)) {
+		    if (x < 0) {
+			x += World.width;
+		    }
+		    else if (x >= World.width) {
+			x -= World.width;
+		    }
+		    if (y < 0) {
+			y += World.height;
+		    }
+		    else if (y >= World.height) {
+			y -= World.height;
+		    }
+		}
+		obj.pos.x = obj.prevpos.x = x;
+		obj.pos.y = obj.prevpos.y = y;
+		WallCollide(&obj,
+			    (int)(x / BLOCK_SZ), (int)(y / BLOCK_SZ),
+			    0, 0, 0);
+		if (obj.life == 0) {
+		    break;
+		}
+		for (j = 0; j < num_victims; j++) {
+		    dist = Wrap_length(x - victims[j].pos.x,
+				       y - victims[j].pos.y);
+		    if (dist <= SHIP_SZ) {
+			hits++;
+			vic = Players[victims[j].ind];
+			vic->forceVisible++;
+			sound_play_sensors(vic->pos.x, vic->pos.y, PLAYER_EAT_LASER_SOUND);
+			if (laserIsStunGun == true) {
+			    if (BIT(vic->used, OBJ_SHIELD|OBJ_LASER|OBJ_FIRE)
+				|| BIT(vic->status, THRUSTING)) {
+				sprintf(msg,
+					"%s got paralysed by %s's stun gun.",
+					vic->name, pl->name);
+				Set_message(msg);
+				CLR_BIT(vic->used,
+					OBJ_SHIELD|OBJ_LASER|OBJ_FIRE);
+				CLR_BIT(vic->status, THRUSTING);
+			    }
+			} else {
+			    Add_fuel(&(vic->fuel), ED_LASER_HIT);
+			    if (BIT(vic->used, OBJ_SHIELD) == 0) {
+				SET_BIT(vic->status, KILLED);
+				sc = Rate(pl->score, vic->score);
+				SCORE(ind, sc, x / BLOCK_SZ, y / BLOCK_SZ,
+				      vic->name);
+				SCORE(victims[j].ind, -sc, x / BLOCK_SZ,
+				      y / BLOCK_SZ, pl->name);
+				sound_play_sensors(vic->pos.x, vic->pos.y, PLAYER_ROASTED_SOUND);
+				sprintf(msg,
+					"%s got roasted alive by %s's laser.",
+					vic->name, pl->name);
+				Set_message(msg);
+				Robot_war(victims[j].ind, ind);
+			    }
+			}
+		    }
+		    else if (dist >= victims[j].prev_dist) {
+			victims[j] = victims[--num_victims];
+			j--;
+		    } else {
+			victims[j].prev_dist = dist;
+		    }
+		}
+		if (hits > 0) {
+		    break;
+		}
+	    }
+	    if (i < max) {
+		pulse->len = (pulse->len * i) / max;
+	    }
+	}
+    }
+    if (max_victims > 0 && victims != NULL) {
+	free(victims);
+    }
 }

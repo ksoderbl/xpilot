@@ -1,12 +1,24 @@
-/* $Id: proto.h,v 3.6 1993/08/02 12:55:30 bjoerns Exp $
+/* $Id: proto.h,v 3.12 1993/09/20 18:44:13 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	PROTO_H
@@ -21,11 +33,17 @@
  */
 extern void Check_collision(void);
 extern int wormXY(int x, int y);
+extern void SCORE(int, int, int, int, char *);
 
 /*
  * Prototypes for error.c
  */
 #include "error.h"
+
+/*
+ * Prototypes for event.c
+ */
+extern int Handle_keyboard(int);
 
 /*
  * Prototypes for map.c
@@ -85,6 +103,10 @@ extern void Explode_object(float x, float y, int real_dir,
 			   int spread, int intensity);
 extern void Explode(int ind);
 extern void Throw_items(player*);
+extern void do_transporter(player *pl);
+extern void do_ecm(player *pl);
+extern void Move_ball(int ind);
+extern void Punish_team(int ind, int treasureNum);
 
 /*
  * Prototypes for player.c
@@ -105,6 +127,7 @@ extern void Kill_player(int ind);
  */
 extern void Init_robot(int ind);
 extern void Update_robots(void);
+extern void Robot_war(int ind, int killer);
 
 /*
  * Prototypes for rules.c
@@ -123,11 +146,25 @@ extern bool Owner(char *name);
 extern void Handle_signal(int sig_no);
 extern void Log_game(char *heading);
 extern void Server_info(char *, unsigned);
+extern void Game_Over(void);
+extern void Send_meta_server(void);
+
+/*
+ * Prototypes for frame.c
+ */
+extern void Frame_update(void);
+extern void Set_message(char *message);
 
 /*
  * Prototypes for syslimit.c
  */
 extern bool Is_allowed(void);
+
+/*
+ * Prototypes for timer.c
+ */
+extern void block_timer(void);
+extern void allow_timer(void);
 
 /*
  * Prototypes for update.c

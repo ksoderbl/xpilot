@@ -1,12 +1,24 @@
-/* $Id: map.c,v 3.9 1993/08/02 12:55:04 bjoerns Exp $
+/* $Id: map.c,v 3.14 1993/10/02 00:36:14 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -23,7 +35,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.9 1993/08/02 12:55:04 bjoerns Exp $";
+    "@(#)$Id: map.c,v 3.14 1993/10/02 00:36:14 bjoerns Exp $";
 #endif
 
 
@@ -119,8 +131,6 @@ void Init_map(void)
 
 void Free_map(void)
 {
-    int x;
-
     if (World.block) free(World.block);
     if (World.gravity) free(World.gravity);
     if (World.grav) free(World.grav);
@@ -229,120 +239,124 @@ void Grok_map(void)
     Set_world_rules();
 
     if (!mapData) {
+	errno = 0;
 	error("Generating random map");
 	Generate_random_map();
-    } else {
-	s = mapData;
-	while (y >= 0) {
-		
-	    x++;
-	    done_line = false;
+	if (!mapData) {
+	    return;
+	}
+    }
 
-	    if (extraBorder && (x == 0 || x == World.x - 1
-		|| y == 0 || y == World.y - 1)) {
-		if (x >= World.x) {
-		    x = -1;
-		    y--;
-		    continue;
-		} else {
-		    /* make extra border of solid rock */
-		    c = 'x';
-		}
-	    }
-	    else {
-		c = *s;
-		if (c == '\0' || c == EOF) {
-		    if (x < World.x) {
-			/* not enough map data on this line */
-			Map_error(World.y - y);
-			c = ' ';
-		    } else {
-			c = '\n';
-		    }
-		} else {
-		    if (c == '\n' && x < World.x) {
-			/* not enough map data on this line */
-			Map_error(World.y - y);
-			c = ' ';
-		    } else {
-			s++;
-		    }
-		}
-	    }
-	    if (x >= World.x || c == '\n') {
-		y--; x = -1;
-		done_line = true;
-		if (c != '\n') {			/* Get rest of line */
-		    error("Map file contains extranous characters");
-		    while (c != '\n' && c != EOF)	/* from file. */
-			fputc(c = *s++, stderr);
-		}
-	    }
-	    if (done_line)
+    s = mapData;
+    while (y >= 0) {
+	    
+	x++;
+	done_line = false;
+
+	if (extraBorder && (x == 0 || x == World.x - 1
+	    || y == 0 || y == World.y - 1)) {
+	    if (x >= World.x) {
+		x = -1;
+		y--;
 		continue;
-
-	    switch (World.block[x][y] = c) {
-	    case 'r':
-	    case 'd':
-	    case 'f':
-	    case 'c':
-		World.NumCannons++;
-		break;
-	    case '*':
-		if (BIT(World.rules->mode, TEAM_PLAY))
-		    World.NumTreasures++;
-		else
-		    World.block[x][y] = ' ';
-		break;
-	    case '#': 
-		World.NumFuels++;
-		break;
-	    case '!':
-		if (BIT(World.rules->mode, TEAM_PLAY))
-		    World.NumTargets++;
-		else
-		    World.block[x][y] = ' ';
-		break;
-	    case '_':
-	    case '0':
-	    case '1':
-	    case '2':
-	    case '3':
-	    case '4':
-	    case '5':
-	    case '6':
-	    case '7':
-	    case '8':
-	    case '9':
-		World.NumBases++;
-		break;
-	    case '+':
-	    case '-':
-	    case '>':
-	    case '<':
-		World.NumGravs++;
-		break;
-	    case '@':
-	    case '(':
-	    case ')':
-		World.NumWormholes++;
-		break;
-            case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-            case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
-            case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-            case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-            case 'Y': case 'Z':
-		if (BIT(World.rules->mode, TIMING))
-		    World.NumChecks++;
-		break;
-	    default:
-		break;
+	    } else {
+		/* make extra border of solid rock */
+		c = 'x';
 	    }
 	}
+	else {
+	    c = *s;
+	    if (c == '\0' || c == EOF) {
+		if (x < World.x) {
+		    /* not enough map data on this line */
+		    Map_error(World.y - y);
+		    c = ' ';
+		} else {
+		    c = '\n';
+		}
+	    } else {
+		if (c == '\n' && x < World.x) {
+		    /* not enough map data on this line */
+		    Map_error(World.y - y);
+		    c = ' ';
+		} else {
+		    s++;
+		}
+	    }
+	}
+	if (x >= World.x || c == '\n') {
+	    y--; x = -1;
+	    done_line = true;
+	    if (c != '\n') {			/* Get rest of line */
+		error("Map file contains extranous characters");
+		while (c != '\n' && c != EOF)	/* from file. */
+		    fputc(c = *s++, stderr);
+	    }
+	}
+	if (done_line)
+	    continue;
 
-	free (mapData);
-	mapData = NULL;
+	switch (World.block[x][y] = c) {
+	case 'r':
+	case 'd':
+	case 'f':
+	case 'c':
+	    World.NumCannons++;
+	    break;
+	case '*':
+	    if (BIT(World.rules->mode, TEAM_PLAY))
+		World.NumTreasures++;
+	    else
+		World.block[x][y] = ' ';
+	    break;
+	case '#': 
+	    World.NumFuels++;
+	    break;
+	case '!':
+	    if (BIT(World.rules->mode, TEAM_PLAY))
+		World.NumTargets++;
+	    else
+		World.block[x][y] = ' ';
+	    break;
+	case '_':
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+	    World.NumBases++;
+	    break;
+	case '+':
+	case '-':
+	case '>':
+	case '<':
+	    World.NumGravs++;
+	    break;
+	case '@':
+	case '(':
+	case ')':
+	    World.NumWormholes++;
+	    break;
+	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+	case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+	case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+	case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+	case 'Y': case 'Z':
+	    if (BIT(World.rules->mode, TIMING))
+		World.NumChecks++;
+	    break;
+	default:
+	    break;
+	}
     }
+
+    free (mapData);
+    mapData = NULL;
 
     /*
      * Get space for special objects.
@@ -444,7 +458,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
-		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
 		    World.cannon[World.NumCannons].last_change = loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
@@ -455,7 +469,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
-		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
 		    World.cannon[World.NumCannons].last_change = loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
@@ -466,7 +480,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
-		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
 		    World.cannon[World.NumCannons].last_change = loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
@@ -477,7 +491,7 @@ void Grok_map(void)
 		    World.cannon[World.NumCannons].pos.x = x;
 		    World.cannon[World.NumCannons].pos.y = y;
 		    World.cannon[World.NumCannons].dead_time = 0;
-		    World.cannon[World.NumCannons].conn_mask = -1;
+		    World.cannon[World.NumCannons].conn_mask = (unsigned)-1;
 		    World.cannon[World.NumCannons].last_change = loops;
 		    World.cannon[World.NumCannons].active = false;
 		    World.NumCannons++;
@@ -488,7 +502,7 @@ void Grok_map(void)
 		    World.fuel[World.NumFuels].pos.x = x*BLOCK_SZ+BLOCK_SZ/2;
 		    World.fuel[World.NumFuels].pos.y = y*BLOCK_SZ+BLOCK_SZ/2;
 		    World.fuel[World.NumFuels].fuel = START_STATION_FUEL;
-		    World.fuel[World.NumFuels].conn_mask = -1;
+		    World.fuel[World.NumFuels].conn_mask = (unsigned)-1;
 		    World.fuel[World.NumFuels].last_change = loops;
 		    World.NumFuels++;
 		    break;
@@ -516,7 +530,7 @@ void Grok_map(void)
 		     */
 		    World.targets[World.NumTargets].dead_time = 0;
 		    World.targets[World.NumTargets].damage = TARGET_DAMAGE;
-		    World.targets[World.NumTargets].conn_mask = -1;
+		    World.targets[World.NumTargets].conn_mask = (unsigned)-1;
 		    World.targets[World.NumTargets].last_change = loops;
 		    World.NumTargets++;
 		    break;
@@ -590,16 +604,15 @@ void Grok_map(void)
 		    World.wormHoles[World.NumWormholes].pos.y = y;
 		    World.wormHoles[World.NumWormholes].countdown = 0;
 		    if (c == '@') {
-			c = WORM_NORMAL;
+			World.wormHoles[World.NumWormholes].type = WORM_NORMAL;
 			worm_norm++;
 		    } else if (c == '(') {
-			c = WORM_IN;
+			World.wormHoles[World.NumWormholes].type = WORM_IN;
 			worm_in++;
 		    } else {
-			c = WORM_OUT;
+			World.wormHoles[World.NumWormholes].type = WORM_OUT;
 			worm_out++;
 		    }
-		    World.wormHoles[World.NumWormholes].type = c;
 		    line[y] = WORMHOLE;
 		    World.NumWormholes++;
 		    break;
@@ -690,122 +703,81 @@ void Grok_map(void)
  */
 void Generate_random_map(void)
 {
-    int x, y, i = 0;
+    int			x,
+			y,
+			i,
+			size,
+			num_bases = 30,
+			num_fuels = (World.x * World.y) / (1000 + rand()%1000),
+			num_cannons = (World.x * World.y) / (100 + rand()%100),
+			num_blocks = (World.x * World.y) / (25 + rand()%25),
+			num_gravs = (World.x * World.y) / (2500 + rand()%2500),
+			num_worms = (World.x * World.y) / (2500 + rand()%2500);
     
-
-    Init_map();
-    Alloc_map();
-
-#ifndef	SILENT
-    puts("Creating random map.");
-#endif
 
     strcpy(World.name, "Random Land");
     strcpy(World.author, "The Computer");
 
-    for (x=0; x<World.x; x++) {
-        u_byte *line=World.block[x];
-
-        for (y=World.y-1; y >= 0 ; y--) {
-	    if ((y==World.y-1) || (y==0) || (x==0) || (x==World.x-1))
-		line[y] = 'x';
-	    else if (((rand()%20)==0) && ((x==1)||(x==World.x-2))) {
-		if (x==1)
-		    line[y] = 's';
-		else
-		    line[y] = 'a';
-	    } else
-		switch (rand()%11137) {
-		case 0:
-		case 1:
-		    line[y] = '#';
-                    World.NumFuels++;
-		    break;
-		case 10:
-		case 11:
-		    line[y] = 'x';
-		    break;
-		case 20:
-		    line[y] = 's';
-		    break;
-		case 30:
-		    line[y] = 'a';
-		    break;
-		case 40:
-		    if (rand()%2)
-			line[y] = 'w';
-		    else
-			line[y] = 'q';
-		    break;
-		case 50:
-	            line[y] = '-';
-                    World.NumGravs++;
-		    break;
-                case 51:
-	            line[y] = '-';
-                    World.NumGravs++;
-		    break;
-                case 52:
-	            line[y] = '<';
-                    World.NumGravs++;
-		    break;
-                case 53:
-	            line[y] = '>';
-                    World.NumGravs++;
-		    break;
-                case 60:
-	            line[y] = '(';
-                    World.NumWormholes++;
-		    break;
-                case 61:
-	            line[y] = ')';
-                    World.NumWormholes++;
-		    break;
-                case 62:
-	            line[y] = '@';
-                    World.NumWormholes++;
-		    break;
-                case 80:
-                    line[y] = 'r';
-                    World.NumCannons++;
-                    break;
-                case 81:
-                    line[y] = 'd';
-                    World.NumCannons++;
-                    break;
-                case 82:
-                    line[y] = 'f';
-                    World.NumCannons++;
-                    break;
-                case 83:
-                    line[y] = 'c';
-                    World.NumCannons++;
-                    break;
-		default:
-		    line[y] = ' ';
-		    break;
-		}
-	}
+    size = (World.x + 1) * World.y + 1;
+    if ((mapData = (char *)malloc(size)) == NULL) {
+	error("Can't allocate map");
+	return;
     }
+    memset(mapData, ' ', size);
 
-    for (x=1; x<World.x-1; x++) {
-        u_byte *line = World.block[x];
-
-        for (y=1; y<World.y-1; y++) {
-	    i = line[y-1];
-	    if ((i == 'x' || i == 's' || i == 'a' || i == '#')
-		&& (rand()%27) == 0) {
-
-		line[y] = '_';
-	    }
+    while (--num_blocks >= 0) {
+	switch (rand()%5) {
+	case 0: i = 'a'; break;
+	case 1: i = 'w'; break;
+	case 2: i = 'q'; break;
+	case 3: i = 's'; break;
+	default: i = 'x'; break;
 	}
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
     }
-    
+    while (--num_cannons >= 0) {
+	switch (rand()%4) {
+	case 0: i = 'd'; break;
+	case 1: i = 'f'; break;
+	case 2: i = 'r'; break;
+	default: i = 'c'; break;
+	}
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
+    }
+    while (--num_gravs >= 0) {
+	switch (rand()%4) {
+	case 0: i = '+'; break;
+	case 1: i = '-'; break;
+	case 2: i = '<'; break;
+	default: i = '>'; break;
+	}
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
+    }
+    while (--num_fuels >= 0) {
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = '#';
+    }
+    while (--num_worms >= 0) {
+	switch (rand()%3) {
+	case 0: i = '('; break;
+	case 1: i = ')'; break;
+	default: i = '@'; break;
+	}
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
+    }
+    while (--num_bases >= 0) {
+	i = '0' + num_bases % 10;
+	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
+    }
     for (i='A'; i<='Z'; i++) {
         x = rand() % (World.x-2) + 1;
         y = rand() % (World.y-2) + 1;
-        World.block[x][y] = i;
+        mapData[x + y * (World.x + 1)] = i;
     }
+    for (y = 0; y < World.y; y++) {
+	mapData[(y + 1) * (World.x + 1) - 1] = '\n';
+    }
+
+    mapData[size - 1] = '\0';
 }
 
 
@@ -827,7 +799,7 @@ void Find_base_direction(void)
 	if (dx == 0.0 && dy == 0.0) {	/* Undefined direction? */
 	    dir = DIR_UP;	/* Should be set to direction of gravity! */
 	} else {
-	    dir = findDir(-dx, -dy);
+	    dir = (int)findDir(-dx, -dy);
 	    dir = ((dir + RES/8) / (RES/4)) * (RES/4);	/* round it */
 	    dir = MOD2(dir, RES);
 	}

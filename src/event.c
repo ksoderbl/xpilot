@@ -1,24 +1,38 @@
-/* $Id: event.c,v 3.12 1993/08/03 11:53:37 bjoerns Exp $
+/* $Id: event.c,v 3.24 1993/10/01 20:38:30 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "global.h"
 #include "score.h"
 #include "map.h"
+#include "robot.h"
 #include "keys.h"
 #include "saudio.h"
 #include "bit.h"
+#include "netserver.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.12 1993/08/03 11:53:37 bjoerns Exp $";
+    "@(#)$Id: event.c,v 3.24 1993/10/01 20:38:30 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -77,14 +91,16 @@ int Handle_keyboard(int ind)
 	pressed = BITV_ISSET(pl->last_keyv, key) != 0;
 	BITV_TOGGLE(pl->prev_keyv, key);
 
-	if (!BIT(pl->status, PLAYING))		/* Allow these functions */
-	    switch (key) {			/* while you're 'dead'. */
+	/*
+	 * Allow these functions while you're 'dead'.
+	 */
+	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
+	    switch (key) {
 	    case KEY_PAUSE:
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
 	    case KEY_LOCK_CLOSE:
 	    case KEY_ID_MODE:
-	    case KEY_TOGGLE_VELOCITY:
 	    case KEY_TOGGLE_COMPASS:
 	    case KEY_SWAP_SETTINGS:
 	    case KEY_INCREASE_POWER:
@@ -107,7 +123,6 @@ int Handle_keyboard(int ind)
 	    case KEY_TANK_PREV:
 		if (pl->fuel.num_tanks) {
 		    pl->fuel.current += (key==KEY_TANK_NEXT) ? 1 : -1;
-		    pl->fuel.count = FUEL_NOTIFY;
 		    if (pl->fuel.current < 0)
 			pl->fuel.current = pl->fuel.num_tanks;
 		    else if (pl->fuel.current > pl->fuel.num_tanks)
@@ -184,9 +199,11 @@ int Handle_keyboard(int ind)
 		    msg[0] = '\0';
 		    for (i=0; i<World.NumBases; i++) {
 			if (World.base[i].pos.x == xi
-			    && World.base[i].pos.y == yi
-			    && i != pl->home_base) {
+			    && World.base[i].pos.y == yi) {
 
+			    if (i == pl->home_base) {
+				break;
+			    }
 			    if (World.base[i].team != TEAM_NOT_SET
 				&& World.base[i].team != pl->team)
 				break;
@@ -198,6 +215,7 @@ int Handle_keyboard(int ind)
 		    }
 		    for (i=0; i<NumPlayers; i++)
 			if (i != ind
+			    && Players[i]->robot_mode != RM_OBJECT
 			    && pl->home_base == Players[i]->home_base) {
 			    Pick_startpos(i);
 			    sprintf(msg, "%s has taken over %s's home base.",
@@ -220,6 +238,7 @@ int Handle_keyboard(int ind)
 	    case KEY_SHIELD:
 		if (BIT(pl->have, OBJ_SHIELD)) {
 		    SET_BIT(pl->used, OBJ_SHIELD);
+		    CLR_BIT(pl->used, OBJ_LASER);	/* don't remove! */
 		}
 		break;
 
@@ -266,17 +285,31 @@ int Handle_keyboard(int ind)
 		}
 		break;
 
+	    case KEY_FIRE_LASER:
+		if (pl->lasers > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
+		    SET_BIT(pl->used, OBJ_LASER);
+		}
+		break;
+
 	    case KEY_DROP_MINE:
-		if (pl->mines > 0) {
+		if (pl->mines > 0
+		    && pl->fuel.sum > -ED_MINE
+		    && (!BIT(pl->used, OBJ_SHIELD)
+			|| shieldedMining == true)) {
 		    Place_mine(ind);
 		    pl->mines--;
+		    Add_fuel(&(pl->fuel), ED_MINE);
 		}
 		break;
 
 	    case KEY_DETACH_MINE:
-		if (pl->mines > 0) {
-		    Place_moving_mine(ind, pl->vel.x,pl->vel.y);
+		if (pl->mines > 0
+		    && pl->fuel.sum > -ED_MINE
+		    && (!BIT(pl->used, OBJ_SHIELD)
+			|| shieldedMining == true)) {
+		    Place_moving_mine(ind, pl->vel.x, pl->vel.y);
 		    pl->mines--;
+		    Add_fuel(&(pl->fuel), ED_MINE);
 		}
 		break;
 
@@ -305,28 +338,36 @@ int Handle_keyboard(int ind)
 		    && (World.base[pl->home_base].pos.x == xi
 			&& World.base[pl->home_base].pos.y == yi)) {
 		    if (!BIT(pl->status, PAUSE)) { /* Turn pause mode on */
-			pl->count = MIN_PAUSE;
+			pl->count = 30;/*MIN_PAUSE;*/
 			pl->updateVisibility = 1;
 			SET_BIT(pl->status, PAUSE);
 			CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
-		    } else
+			pl->mychar = 'P';
+			updateScores = true;
+			if (BIT(pl->mode, LIMITED_LIVES)) {
+			    pl->prev_life = pl->life = 0;
+			}
+		    } else {
 			if (pl->count <= 0) {
 			    CLR_BIT(pl->status, PAUSE);
-			    if (!BIT(pl->status, GAME_OVER)) {
+			    updateScores = true;
+			    if (!BIT(pl->mode, LIMITED_LIVES)) {
+				pl->mychar = ' ';
 				Go_home(ind);
 				SET_BIT(pl->status, PLAYING);
 				BITV_SET(pl->last_keyv, key);
 				BITV_SET(pl->prev_keyv, key);
 				return 1;
+			    } else {
+				pl->prev_life = pl->life = 0;
+				pl->mychar = 'D';
+				SET_BIT(pl->status, GAME_OVER);
 			    }
 			}
+		    }
 		}
 		break;
 		
-	    case KEY_TOGGLE_VELOCITY:
-		TOGGLE_BIT(pl->status, VELOCITY_GAUGE);
-		break;
-
 	    case KEY_SWAP_SETTINGS:
 		if (pl->turnacc == 0.0) {
 		    SWAP(pl->power, pl->power_s);
@@ -336,7 +377,6 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_REFUEL:
-		pl->fuel.count = FUEL_NOTIFY;
 		Refuel(ind);
 		break;
 
@@ -415,7 +455,6 @@ int Handle_keyboard(int ind)
 
 	    case KEY_REFUEL:
 		CLR_BIT(pl->used, OBJ_REFUEL);
-		pl->fuel.count = FUEL_NOTIFY;
 		break;
 
 	    case KEY_CONNECTOR:
@@ -423,11 +462,15 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_SHIELD:
-		CLR_BIT(pl->used, OBJ_SHIELD);
+		CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER);
 		break;
 
 	    case KEY_FIRE_SHOT:
 		CLR_BIT(pl->used, OBJ_FIRE);
+		break;
+
+	    case KEY_FIRE_LASER:
+		CLR_BIT(pl->used, OBJ_LASER);
 		break;
 
 	    case KEY_THRUST:

@@ -1,12 +1,24 @@
-/* $Id: client.h,v 3.21 1993/08/03 21:09:13 bjoerns Exp $
+/* $Id: client.h,v 3.33 1993/09/26 19:46:13 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef CLIENT_H
@@ -37,6 +49,13 @@
 
 #define MAX_SCORE_OBJECTS	10
 
+#define MAX_SPARK_SIZE		8
+#define MIN_SPARK_SIZE		1
+#define DEF_SPARK_SIZE		2
+#define MAX_MAP_POINT_SIZE	8
+#define MIN_MAP_POINT_SIZE	0
+#define DEF_MAP_POINT_SIZE	2
+
 typedef struct {
     float	ratio;
     short	id;
@@ -48,6 +67,8 @@ typedef struct {
     short	name_width;	/* In pixels */
     short	name_len;	/* In bytes */
     char	name[MAX_CHARS];
+    char	real[MAX_CHARS];
+    char	host[MAX_CHARS];
 } other_t;
 
 typedef struct {
@@ -112,6 +133,7 @@ extern short 	numTransporters;
 extern short	numFrontShots;
 extern short	numBackShots;
 extern short	numAfterburners;
+extern short	numLasers;
 
 extern short	lock_id;		/* Id of player locked onto */
 extern short	lock_dir;		/* Direction of lock */
@@ -123,7 +145,10 @@ extern short	destruct;		/* If self destructing */
 extern short	shutdown_delay;
 extern short	shutdown_count;
 
+extern int	RadarHeight;
 extern int	map_point_distance;	/* spacing of navigation points */
+extern int	map_point_size;		/* size of navigation points */
+extern int	spark_size;		/* size of sparks and debris */
 extern long	control_count;		/* Display control for how long? */
 
 extern long	fuelSum;		/* Sum of fuel in all tanks */
@@ -141,6 +166,7 @@ extern float	turnspeed;		/* How fast player acc-turns */
 extern float	turnspeed_s;		/* Saved turnspeed */
 extern float	turnresistance;		/* How much is lost in % */
 extern float	turnresistance_s;	/* Saved (see above) */
+extern float	spark_prob;		/* Sparkling effect configurable */
 
 extern float	hud_move_fact;		/* scale the hud-movement (speed) */
 extern float	ptr_move_fact;		/* scale the speed pointer length */
@@ -151,13 +177,17 @@ extern int	packet_drop;		/* dropped packets per second */
 extern char	*packet_measure;	/* packet measurement in a second */
 extern long	packet_loop;		/* start of measurement */
 
+extern bool	showRealName;		/* Show realname instead of nickname */
 extern char	name[MAX_CHARS];	/* Nick-name of player */
 extern char	realname[MAX_CHARS];	/* Real name of player */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
+extern int	scoresChanged;
+
 
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
+extern char 	audioServer[MAX_CHARS];	/* audio server */
 extern int 	maxVolume;		/* maximum volume (in percent) */
 #endif /* SOUND */
 
@@ -174,8 +204,9 @@ int Check_pos_by_index(int ind, int *xp, int *yp);
 int Check_index_by_pos(int x, int y);
 other_t *Other_by_id(int id);
 int Handle_leave(int id);
-int Handle_player(int id, int team, int mychar, char *player_name);
-int Handle_score(int id, int score, int life);
+int Handle_player(int id, int team, int mychar, char *player_name,
+		  char *real_name, char *host_name);
+int Handle_score(int id, int score, int life, int mychar);
 int Handle_score_object(int score, int x, int y, char *msg);
 int Handle_war(int robot_id, int killer_id);
 int Handle_seek(int programmer_id, int robot_id, int sought_id);
@@ -189,7 +220,10 @@ int Client_fd(void);
 int Client_input(int);
 void Client_flush(void);
 void Client_sync(void);
+int Client_wrap_mode(void);
 int xevent(int);
+int Key_init(void);
+int Key_update(void);
 
 #endif
 

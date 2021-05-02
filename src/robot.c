@@ -1,16 +1,26 @@
-/* $Id: robot.c,v 3.9 1993/08/03 11:53:39 bjoerns Exp $
+/* $Id: robot.c,v 3.15 1993/10/02 00:36:24 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *      Thanks to Maurice Abraham for this piece of code.
- *      Note that some modifications have been done.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/* Robot code submitted by Maurice Abraham. */
 
 #include "global.h"
 #include "map.h"
@@ -18,6 +28,8 @@
 #include "draw.h"
 #include "robot.h"
 #include "bit.h"
+#include "saudio.h"
+#include "netserver.h"
 
 #ifndef	lint
 static char sourceid[] = "@(#)robot.c,v 1.3 1992/06/26 15:25:46 bjoerns Exp";
@@ -167,6 +179,7 @@ static void New_robot(void)
 
     strcpy(robot->name, rob->name);
     strcpy(robot->realname, "robot");
+    strcpy(robot->hostname, "robots.org");
 
     robot->color = WHITE;
     robot->turnspeed = MAX_PLAYER_TURNSPEED;
@@ -202,7 +215,8 @@ static void New_robot(void)
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, robot->id, robot->team,
-			robot->mychar, robot->name);
+			robot->mychar, robot->name,
+			robot->realname, robot->hostname);
 	    Send_base(Players[i]->conn, robot->id, robot->home_base);
 	}
     }
@@ -556,8 +570,8 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
      * Limit the look ahead.  For very high speeds the current code
      * is ineffective and much too inefficient.
      */
-    if (stop_dist > 6 * BLOCK_SZ) {
-	stop_dist = 6 * BLOCK_SZ;
+    if (stop_dist > 10 * BLOCK_SZ) {
+	stop_dist = 10 * BLOCK_SZ;
     }
     evade = false;
 
@@ -761,12 +775,10 @@ static bool Check_robot_evade(int ind, int mine_i, int ship_i)
     return true;
 }
 
-
 static bool Check_robot_target(int ind,
 			       int item_x, int item_y,
 			       int new_mode, int attack_level)
 {
-    int         i;
     player     *pl;
     long        item_dist;
     int         item_dir;
@@ -915,6 +927,42 @@ static bool Check_robot_target(int ind,
 	    pl->transporters--;
 	    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
 	}
+	else if (pl->lasers > pl->num_pulses
+	    && pl->robot_lock == LOCK_PLAYER
+	    && -ED_LASER < pl->fuel.sum - pl->fuel.l3) {
+	    player	*ship = Players[GetInd[pl->robot_lock_id]];
+	    float	x1, y1, x3, y3, x4, y4, x5, y5;
+	    float	ship_dist, dir3, dir4, dir5;
+
+	    if (BIT(ship->status, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
+
+		x1 = pl->pos.x + pl->vel.x + ships[pl->dir].pts[0].x;
+		y1 = pl->pos.y + pl->vel.y + ships[pl->dir].pts[0].y;
+		x3 = ship->pos.x + ship->vel.x;
+		y3 = ship->pos.y + ship->vel.y;
+
+		ship_dist = Wrap_length(x3 - x1, y3 - y1);
+
+		if (ship_dist < PULSE_SPEED*PULSE_LIFE(pl->lasers) + SHIP_SZ) {
+		    dir3 = Wrap_findDir(x3 - x1, y3 - y1);
+		    x4 = x3 + tcos((int)(dir3 - RES/4)) * SHIP_SZ;
+		    y4 = y3 + tsin((int)(dir3 - RES/4)) * SHIP_SZ;
+		    x5 = x3 + tcos((int)(dir3 + RES/4)) * SHIP_SZ;
+		    y5 = y3 + tsin((int)(dir3 + RES/4)) * SHIP_SZ;
+		    dir4 = Wrap_findDir(x4 - x1, y4 - y1);
+		    dir5 = Wrap_findDir(x5 - x1, y5 - y1);
+		    if ((dir4 > dir5)
+			? (pl->dir >= dir4 || pl->dir <= dir5)
+			: (pl->dir >= dir4 && pl->dir <= dir5)) {
+
+			SET_BIT(pl->used, OBJ_LASER);
+		    }
+		}
+	    }
+	}
+	if (BIT(pl->used, OBJ_LASER)) {
+	    pl->turnacc = 0.0;
+	}
 	else if ((pl->robot_count % 10) == 0 && pl->missiles > 0) {
 	  if((pl->missiles > NUKE_MIN_SMART/2) && (rand() & allowNukes))
 	    Fire_shot(ind, OBJ_NUKE, pl->dir);
@@ -922,8 +970,8 @@ static bool Check_robot_target(int ind,
 	    Fire_shot(ind,
 		      (rand() & 1) ? OBJ_SMART_SHOT : OBJ_HEAT_SHOT,
 		      pl->dir);
-
-	} else if ((pl->robot_count % 2) == 0
+	}
+	else if ((pl->robot_count % 2) == 0
 		   && item_dist < VISIBILITY_DISTANCE
 		   && (pl->robot_lock == LOCK_PLAYER /* robot has a target */
 		       || (pl->robot_count
@@ -1026,9 +1074,10 @@ void Update_robots(void)
     player     *pl, *ship;
     object     *shot;
     float      distance, mine_dist, item_dist, ship_dist,
-    		enemy_dist, cannon_dist, fuel_dist, fx, fy;
+		enemy_dist, cannon_dist, fuel_dist, fx, fy,
+		speed, x_speed, y_speed;
     int         i, j, mine_i, item_i, ship_i,
-                enemy_i, cannon_i, fuel_i;
+		enemy_i, cannon_i, fuel_i, x, y;
     long        dx, dy;
     bool        harvest_checked;
     bool        fuel_checked;
@@ -1092,7 +1141,7 @@ void Update_robots(void)
 	    }
 	}
 
-	if (!BIT(pl->status, PLAYING))
+	if (BIT(pl->status, PLAYING|GAME_OVER) != PLAYING)
 	    continue;
 
 	if (pl->robot_count <= 0)
@@ -1100,7 +1149,7 @@ void Update_robots(void)
 
 	pl->robot_count--;
 
-	CLR_BIT(pl->used, OBJ_SHIELD | OBJ_CLOAKING_DEVICE);
+	CLR_BIT(pl->used, OBJ_SHIELD | OBJ_CLOAKING_DEVICE | OBJ_LASER);
 	harvest_checked = false;
 	fuel_checked = false;
 	evade_checked = false;
@@ -1129,6 +1178,7 @@ void Update_robots(void)
 	    case OBJ_ECM:
 	    case OBJ_AFTERBURNER:
 	    case OBJ_TANK:
+	    case OBJ_LASER:
 		if ((dx = shot->pos.x - pl->pos.x, dx = WRAP_DX(dx),
 			ABS(dx)) < item_dist
 		    && (dy = shot->pos.y - pl->pos.y, dy = WRAP_DY(dy),
@@ -1187,9 +1237,35 @@ void Update_robots(void)
 		}
 	    }
 	}
+	if (itemLaserProb > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
+	    for (j = 0; j < NumPlayers; j++) {
+		ship = Players[j];
+		if (j == i || BIT(ship->status, PLAYING|GAME_OVER) != PLAYING)
+		    continue;
+		if (ship->num_pulses > 0) {
+		    distance = Wrap_length(pl->pos.x - ship->pos.x,
+					   pl->pos.y - ship->pos.y);
+		    if (PULSE_SPEED*PULSE_LIFE(ship->lasers) + 2*SHIP_SZ
+			>= distance) {
+			int delta_dir = Wrap_findDir(pl->pos.x - ship->pos.x,
+						     pl->pos.y - ship->pos.y),
+			    ship_dir = ship->dir + (ship->turnvel
+				+ ship->turnacc) * ship->turnresistance;
+			if ((delta_dir - ship_dir < 0)
+			    ? (ship_dir - delta_dir < RES/8
+				|| delta_dir + RES - ship_dir < RES/8)
+			    : (delta_dir - ship_dir < RES/8
+				|| ship_dir + RES - delta_dir < RES/8)) {
+			    SET_BIT(pl->used, OBJ_SHIELD);
+			    break;
+			}
+		    }
+		}
+	    }
+	}
 
 	/* Note: Only take time to navigate if not being shot at */
-	if (!BIT(pl->used, OBJ_SHIELD)
+	if (!(BIT(pl->used, OBJ_SHIELD) && SET_BIT(pl->status, THRUSTING))
 	    && Check_robot_navigate(i, &evade_checked)) {
 	    if (playerShielding == 0
 		&& playerStartsShielded != 0
@@ -1210,7 +1286,7 @@ void Update_robots(void)
 
 	for (j = 0; j < NumPlayers; j++) {
 	    ship = Players[j];
-	    if (j == i || !BIT(ship->status, PLAYING))
+	    if (j == i || BIT(ship->status, PLAYING|GAME_OVER) != PLAYING)
 		continue;
 
 	    dx = ship->pos.x - pl->pos.x, dx = WRAP_DX(dx);
@@ -1406,7 +1482,15 @@ void Update_robots(void)
 	    SET_BIT(pl->used, OBJ_SHIELD);
 	}
 
-	if (pl->vel.y < (-NORMAL_ROBOT_SPEED) || (pl->robot_count % 64) < 32) {
+	x = pl->pos.x/BLOCK_SZ;
+	y = pl->pos.y/BLOCK_SZ;
+	LIMIT(x, 0, World.x);
+	LIMIT(y, 0, World.y);
+	x_speed = pl->vel.x - 2 * World.gravity[x][y].x;
+	y_speed = pl->vel.y - 2 * World.gravity[x][y].y;
+	speed = LENGTH(x_speed, y_speed);
+
+	if (y_speed < (-NORMAL_ROBOT_SPEED) || (pl->robot_count % 64) < 32) {
 
 	    pl->robot_mode = RM_ROBOT_CLIMB;
 	    pl->turnspeed = MAX_PLAYER_TURNSPEED / 2;
@@ -1418,10 +1502,10 @@ void Update_robots(void)
 	    } else {
 		pl->turnacc = 0.0;
 	    }
-	    if (pl->vel.y < NORMAL_ROBOT_SPEED / 2
+	    if (y_speed < NORMAL_ROBOT_SPEED / 2
 		&& pl->velocity < ATTACK_ROBOT_SPEED)
 		SET_BIT(pl->status, THRUSTING);
-	    if (pl->vel.y > NORMAL_ROBOT_SPEED)
+	    else if (y_speed > NORMAL_ROBOT_SPEED)
 		CLR_BIT(pl->status, THRUSTING);
 	    continue;
 	}
@@ -1431,9 +1515,42 @@ void Update_robots(void)
 	pl->turnacc = 0;
 	pl->power = MAX_PLAYER_POWER / 2;
 	CLR_BIT(pl->status, THRUSTING);
-	if (pl->velocity < NORMAL_ROBOT_SPEED / 2)
+	if (speed < NORMAL_ROBOT_SPEED / 2)
 	    SET_BIT(pl->status, THRUSTING);
-	if (pl->velocity > NORMAL_ROBOT_SPEED)
+	else if (speed > NORMAL_ROBOT_SPEED)
 	    CLR_BIT(pl->status, THRUSTING);
+    }
+}
+
+
+void Robot_war(int ind, int killer)
+{
+    player		*pl = Players[ind];
+    int			k;
+    char		msg[MSG_LEN];
+
+    if (pl->robot_mode == RM_NOT_ROBOT
+	|| pl->robot_mode == RM_OBJECT) {
+	return;
+    }
+    if (killer != ind
+	&& rand()%100 < Players[killer]->score - pl->score) {
+	/*
+	 * Give fuel for offensive.
+	 */
+	pl->fuel.sum = MAX_PLAYER_FUEL;
+
+	if (pl->robot_lock != LOCK_PLAYER
+	    || pl->robot_lock_id != Players[killer]->id) {
+	    for (k = 0; k < NumPlayers; k++) {
+		if (Players[k]->conn != NOT_CONNECTED) {
+		    Send_war(Players[k]->conn, pl->id, 
+			     Players[killer]->id);
+		}
+	    }
+	    sound_play_all(DECLARE_WAR_SOUND);
+	    pl->robot_lock_id = Players[killer]->id;
+	    pl->robot_lock = LOCK_PLAYER;
+	}
     }
 }

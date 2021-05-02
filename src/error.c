@@ -1,4 +1,4 @@
-/* $Id: error.c,v 3.1 1993/08/02 12:41:12 bjoerns Exp $
+/* $Id: error.c,v 3.3 1993/10/02 19:17:26 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -11,7 +11,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: error.c,v 3.1 1993/08/02 12:41:12 bjoerns Exp $";
+    "@(#)$Id: error.c,v 3.3 1993/10/02 19:17:26 bert Exp $";
 #endif
 
 
@@ -37,9 +37,7 @@ static char		progname[MAX_PROG_LENGTH];
 /*
  * Functions.
  */
-void
-    init_error(prog)
-char *prog;
+void init_error(char *prog)
 {
     char *p = strrchr(prog, '/');
 
@@ -48,7 +46,7 @@ char *prog;
 
 
 
-#if defined(__STDC__) && !defined(__sun__)
+#if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
 
 /*
  * Ok, let's do it the ANSI C way.

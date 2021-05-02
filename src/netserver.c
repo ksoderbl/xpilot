@@ -1,12 +1,24 @@
-/* $Id: netserver.c,v 3.22 1993/08/02 12:55:14 bjoerns Exp $
+/* $Id: netserver.c,v 3.40 1993/10/02 18:53:02 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 /*
@@ -94,6 +106,7 @@
 
 #include "global.h"
 #include "version.h"
+#include "types.h"
 #include "map.h"
 #include "pack.h"
 #include "error.h"
@@ -107,7 +120,7 @@
 #undef NETSERVER_C
 #include "robot.h"
 #include "saudio.h"
-
+#include "draw.h"
 
 #define MAX_SELECT_FD	(sizeof(int) * 8 - 1)
 
@@ -196,8 +209,8 @@ static int Init_setup(void)
 		    }
 		    switch (World.wormHoles[i].type) {
 		    case WORM_NORMAL: *mapptr = SETUP_WORM_NORMAL; break;
-		    case WORM_IN:     *mapptr = SETUP_WORM_NORMAL; break;
-		    case WORM_OUT:    *mapptr = SETUP_SPACE; break;
+		    case WORM_IN:     *mapptr = SETUP_WORM_IN; break;
+		    case WORM_OUT:    *mapptr = SETUP_WORM_OUT; break;
 		    default:
 			error("Wrong type of wormhole (%d) at (%d,%d).",
 			    World.wormHoles[i].type, x, y);
@@ -271,7 +284,7 @@ static int Init_setup(void)
 		    break;
 		}
 		if (i >= World.NumBases) {
-		    error("No treasure for position (%d,%d).", x, y);
+		    error("No base for position (%d,%d).", x, y);
 		    free(mapdata);
 		    return -1;
 		}
@@ -335,7 +348,7 @@ static int Init_setup(void)
 	    free(mapdata);
 	    return -1;
 	}
-	if ((mapdata = realloc(mapdata, size)) == NULL) {
+	if ((mapdata = (unsigned char *)realloc(mapdata, size)) == NULL) {
 	    error("Can't reallocate mapdata");
 	    return -1;
 	}
@@ -388,6 +401,7 @@ void Init_receive(void)
     drain_receive[PKT_QUIT]			= Receive_quit;
     drain_receive[PKT_ACK]			= Receive_ack;
     drain_receive[PKT_VERIFY]			= Receive_discard;
+    drain_receive[PKT_PLAY]			= Receive_discard;
 
     login_receive[PKT_PLAY]			= Receive_play;
     login_receive[PKT_QUIT]			= Receive_quit;
@@ -400,6 +414,7 @@ void Init_receive(void)
     login_receive[PKT_TURNSPEED_S]		= Receive_power;
     login_receive[PKT_TURNRESISTANCE]		= Receive_power;
     login_receive[PKT_TURNRESISTANCE_S]		= Receive_power;
+    login_receive[PKT_DISPLAY]			= Receive_display;
 
     playing_receive[PKT_ACK]			= Receive_ack;
     playing_receive[PKT_VERIFY]			= Receive_discard;
@@ -417,6 +432,7 @@ void Init_receive(void)
     playing_receive[PKT_ACK_FUEL]		= Receive_ack_fuel;
     playing_receive[PKT_ACK_TARGET]		= Receive_ack_target;
     playing_receive[PKT_TALK]			= Receive_talk;
+    playing_receive[PKT_DISPLAY]		= Receive_display;
 }
 
 /*
@@ -500,6 +516,9 @@ void Destroy_connection(int ind, char *file, int line)
     ch = PKT_QUIT;
     write(sock, &ch, 1);
     close(sock);
+
+    /* Tell the meta server */
+    Send_meta_server();
 }
 
 /*
@@ -574,15 +593,15 @@ int Setup_connection(char *real, char *nick, char *dpy,
 	return -1;
     }
     if (SetSocketNonBlocking(sock, 1) == -1) {
-	error("Can't make socket non-blocking");
+	error("Can't make client socket non-blocking");
 	close(sock);
 	return -1;
     }
-    if (SetSocketSendBufferSize(sock, SERVER_SEND_SIZE + 16) == -1) {
-	error("Can't set send buffer size to %d", SERVER_SEND_SIZE + 16);
-    }
     if (SetSocketReceiveBufferSize(sock, SERVER_RECV_SIZE + 16) == -1) {
 	error("Can't set receive buffer size to %d", SERVER_RECV_SIZE + 16);
+    }
+    if (SetSocketSendBufferSize(sock, SERVER_SEND_SIZE + 16) == -1) {
+	error("Can't set send buffer size to %d", SERVER_SEND_SIZE + 16);
     }
 
     Sockbuf_init(&connp->w, sock, SERVER_SEND_SIZE,
@@ -615,6 +634,10 @@ int Setup_connection(char *real, char *nick, char *dpy,
     connp->rtt_timeouts = 0;
     connp->acks = 0;
     connp->setup = 0;
+    connp->view_width = DEF_VIEW_SIZE;
+    connp->view_height = DEF_VIEW_SIZE;
+    connp->debris_colors = 0;
+    connp->spark_rand = DEF_SPARK_RAND;
     strncpy(connp->host, host, sizeof(connp->host) - 1);
     if (connp->w.buf == NULL
 	|| connp->r.buf == NULL
@@ -674,7 +697,8 @@ static int Handle_listening(int ind)
 	return -1;
     }
 #ifndef SILENT
-    printf("Connected to %s/%d\n", connp->host, connp->his_port);
+    printf("Connected to %s/%d using version 0x%04x\n", connp->host,
+	   connp->his_port, connp->version);
 #endif
     if (connp->r.ptr[0] != PKT_VERIFY) {
 	errno = 0;
@@ -845,7 +869,7 @@ static int Handle_login(int ind)
     pl = Players[NumPlayers];
     strcpy(pl->name, connp->nick);
     strcpy(pl->realname, connp->real);
-    strcpy(pl->dispname, connp->host);
+    strcpy(pl->hostname, connp->host);
     if (connp->team != TEAM_NOT_SET) {
 	pl->team = connp->team;
     }
@@ -881,18 +905,22 @@ static int Handle_login(int ind)
     /*
      * Tell him about himself first.
      */
-    Send_player(pl->conn, pl->id, pl->team, pl->mychar, pl->name);
-    Send_score(pl->conn, pl->id, pl->score, pl->life);
+    Send_player(pl->conn, pl->id, pl->team, pl->mychar, pl->name,
+		pl->realname, pl->hostname);
+    Send_score(pl->conn, pl->id, pl->score, pl->life, pl->mychar);
     Send_base(pl->conn, pl->id, pl->home_base);
     /*
      * And tell him about all the others.
      */
     for (i = 0; i < NumPlayers - 1; i++) {
 	Send_player(pl->conn, Players[i]->id,
-		    Players[i]->team, Players[i]->mychar, Players[i]->name);
+		    Players[i]->team, Players[i]->mychar, Players[i]->name,
+		    Players[i]->realname, Players[i]->hostname);
 	Send_score(pl->conn, Players[i]->id,
-		   Players[i]->score, Players[i]->life);
-	Send_base(pl->conn, Players[i]->id, Players[i]->home_base);
+		   Players[i]->score, Players[i]->life, Players[i]->mychar);
+	if (Players[i]->robot_mode != RM_OBJECT) {
+	    Send_base(pl->conn, Players[i]->id, Players[i]->home_base);
+	}
     }
     /*
      * And tell all the others about him.
@@ -900,14 +928,17 @@ static int Handle_login(int ind)
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
 	    Send_player(Players[i]->conn, pl->id,
-			pl->team, pl->mychar, pl->name);
-	    Send_score(Players[i]->conn, pl->id, pl->score, pl->life);
+			pl->team, pl->mychar, pl->name,
+			pl->realname, pl->hostname);
+	    Send_score(Players[i]->conn, pl->id, pl->score,
+		       pl->life, pl->mychar);
 	    Send_base(Players[i]->conn, pl->id, pl->home_base);
 	}
 	/*
 	 * And tell him about the relationships others have with eachother.
 	 */
 	else if (Players[i]->robot_mode != RM_NOT_ROBOT
+	    && Players[i]->robot_mode != RM_OBJECT
 	    && Players[i]->robot_lock == LOCK_PLAYER) {
 	    Send_war(pl->conn, Players[i]->id, Players[i]->robot_lock_id);
 	}
@@ -976,10 +1007,10 @@ static int Handle_login(int ind)
 static int Handle_input(int ind)
 {
     connection_t	*connp = &Conn[ind];
-    int			(**receive_tbl)(int),
-			type,
+    int			type,
 			login = 0,
-			result;
+			result,
+			(**receive_tbl)(int ind);
 
     if (connp->state == CONN_PLAYING
 	|| connp->state == CONN_READY) {
@@ -1344,15 +1375,17 @@ int Send_self(int ind,
     int lock_id, int lock_dist, int lock_dir,
     int check, int cloaks, int sensors, int mines,
     int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int num_tanks, int current_tank,
-    int fuel_sum, int fuel_max)
+    int afterburners, int lasers, int num_tanks, int current_tank,
+    int fuel_sum, int fuel_max, long status)
 {
-    int			pw, ts, tr;
+    connection_t	*connp = &Conn[ind];
+    int			pw, ts, tr, n;
+    u_byte		stat;
 
     pw = (int) (power + 0.5);
     ts = (int) (turnspeed + 0.5);
     tr = (int) (turnresistance * 255.0 + 0.5);
-    return Packet_printf(&Conn[ind].w, "%c" "%hd%hd%hd%hd%c" "%c%c%c"
+    n = Packet_printf(&connp->w, "%c" "%hd%hd%hd%hd%c" "%c%c%c"
 	"%hd%hd%c" "%c%c%c%c" "%c%c%c%c%c" "%c%c%c" "%hd%hd",
 	PKT_SELF,
 	x, y, vx, vy, dir,
@@ -1362,6 +1395,23 @@ int Send_self(int ind,
 	missiles, ecms, transporters, extra_shots, back_shots,
 	afterburners, num_tanks, current_tank,
 	fuel_sum >> FUEL_SCALE_BITS, fuel_max >> FUEL_SCALE_BITS);
+    if (n <= 0) {
+	return n;
+    }
+    if (connp->version >= 0x3041) {
+	n = Packet_printf(&connp->w, "%c%hd%hd%c", lasers,
+			  connp->view_width, connp->view_height,
+			  connp->debris_colors, connp->spark_rand);
+	if (n <= 0) {
+	    return n;
+	}
+	if (connp->version >= 0x3042) {
+	    stat = status;
+
+	    n = Packet_printf(&connp->w, "%c", stat);
+	}
+    } 
+    return n;
 }
 
 /*
@@ -1420,7 +1470,8 @@ int Send_seek(int ind, int programmer_id, int robot_id, int sought_id)
 /*
  * Somebody is joining the game.
  */
-int Send_player(int ind, int id, int team, int mychar, char *name)
+int Send_player(int ind, int id, int team, int mychar, char *name,
+		char *real, char *host)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -1431,14 +1482,18 @@ int Send_player(int ind, int id, int team, int mychar, char *name)
 	    connp->state, connp->id);
 	return 0;
     }
-    return Packet_printf(&connp->c, "%c%hd%c%c%s", PKT_PLAYER,
-	id, team, mychar, name);
+    if (connp->version < 0x3041) {
+	return Packet_printf(&connp->c, "%c%hd%c%c%s", PKT_PLAYER,
+			     id, team, mychar, name);
+    }
+    return Packet_printf(&connp->c, "%c%hd%c%c%s%s%s", PKT_PLAYER,
+			 id, team, mychar, name, real, host);
 }
 
 /*
  * Send the new score for some player to a client.
  */
-int Send_score(int ind, int id, int score, int life)
+int Send_score(int ind, int id, int score, int life, int mychar)
 {
     connection_t	*connp = &Conn[ind];
 
@@ -1449,8 +1504,12 @@ int Send_score(int ind, int id, int score, int life)
 	    connp->state, connp->id);
 	return 0;
     }
-    return Packet_printf(&connp->c, "%c%hd%hd%hd", PKT_SCORE,
-	id, score, life);
+    if (connp->version < 0x3040) {
+	return Packet_printf(&connp->c, "%c%hd%hd%hd", PKT_SCORE,
+			     id, score, life);
+    }
+    return Packet_printf(&connp->c, "%c%hd%hd%hd%c", PKT_SCORE,
+			 id, score, life, mychar);
 }
 
 /*
@@ -1536,11 +1595,6 @@ int Send_debris(int ind, int type, unsigned char *p, int n)
 
 int Send_shot(int ind, int x, int y, int color)
 {
-    if (color < 0 || color >= NUM_COLORS) {
-	errno = 0;
-	error("Bad shot color %d", color);
-	return -1;
-    }
     return Packet_printf(&Conn[ind].w, "%c%hd%hd", PKT_SHOT + color, x, y);
 }
 
@@ -1604,6 +1658,17 @@ int Send_connector(int ind, int x0, int y0, int x1, int y1)
 	x0, y0, x1, y1);
 }
 
+int Send_laser(int ind, int color, int x, int y, int len, int dir)
+{
+    connection_t *connp = &Conn[ind];
+
+    if (connp->version < 0x3043) {
+	return 1;
+    }
+    return Packet_printf(&connp->w, "%c%c%hd%hd%hd%c", PKT_LASER,
+			 color, x, y, len, dir);
+}
+
 int Send_radar(int ind, int x, int y)
 {
     return Packet_printf(&Conn[ind].w, "%c%hd%hd", PKT_RADAR, x, y);
@@ -1616,7 +1681,38 @@ int Send_damaged(int ind, int damaged)
 
 int Send_audio(int ind, int type, int vol)
 {
-    return Packet_printf(&Conn[ind].w, "%c%c%c", PKT_AUDIO, type, vol);
+    connection_t *connp = &Conn[ind];
+
+    if (connp->w.size - connp->w.len <= 32) {
+	return 0;
+    }
+    return Packet_printf(&connp->w, "%c%c%c", PKT_AUDIO, type, vol);
+}
+
+int Send_time_left(int ind, long sec)
+{
+    connection_t *connp = &Conn[ind];
+
+    /*
+    * Send only to clients that support this packet type.
+    */
+    if (connp->version < 0x3040) {
+	return 1;
+    }
+    return Packet_printf(&connp->w, "%c%ld", PKT_TIME_LEFT, sec);
+}
+
+int Send_eyes(int ind, int id)
+{
+    connection_t *connp = &Conn[ind];
+
+    /*
+    * Send only to clients that support this packet type.
+    */
+    if (connp->version < 0x3043) {
+	return 1;
+    }
+    return Packet_printf(&connp->w, "%c%hd", PKT_EYES, id);
 }
 
 int Send_message(int ind, char *msg)
@@ -1791,6 +1887,7 @@ static int Receive_quit(int ind)
     error("Got quit packet from %s=%s@%s|%s",
 	connp->nick, connp->real, connp->host, connp->dpy);
     Destroy_connection(ind, __FILE__, __LINE__);
+
     return -1;
 }
 
@@ -1838,6 +1935,9 @@ static int Receive_play(int ind)
 	return -1;
     }
 
+    /* Tell the meta server */
+    Send_meta_server();
+   
     return 2;
 }
 
@@ -2238,9 +2338,49 @@ static int Receive_talk(int ind)
 	    return n;
 	}
 	connp->talk_sequence_num = seq;
-	sprintf(msg, " <<%s talks>> %s", connp->nick, str);
+	sprintf(msg, "%s [%s]", str, connp->nick);
 	Set_message(msg);
     }
     return 1;
 }
 
+static int Receive_display(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+    unsigned char	ch, debris_colors, spark_rand;
+    short		width, height;
+    int			n;
+
+    if ((n = Packet_scanf(&connp->r, "%c%hd%hd%c%c", &ch, &width, &height,
+			  &debris_colors, &spark_rand)) <= 0) {
+	if (n == -1) {
+	    Destroy_connection(ind, __FILE__, __LINE__);
+	}
+	return n;
+    }
+    LIMIT(width, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+    LIMIT(height, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
+    connp->view_width = width;
+    connp->view_height = height;
+    connp->debris_colors = debris_colors;
+    connp->spark_rand = spark_rand;
+    return 1;
+}
+
+void Get_display_parameters(int ind, int *width, int *height,
+			    int *debris_colors, int *spark_rand)
+{
+    connection_t	*connp = &Conn[ind];
+
+    *width = connp->view_width;
+    *height = connp->view_height;
+    *debris_colors = connp->debris_colors;
+    *spark_rand = connp->spark_rand;
+}
+
+int Get_player_id(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+
+    return connp->id;
+}

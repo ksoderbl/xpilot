@@ -1,15 +1,26 @@
-/* $Id: audio.h,v 3.4 1993/08/03 12:02:24 bjoerns Exp $
+/* $Id: audio.h,v 3.7 1993/10/01 19:58:10 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *	This piece of code was provided by Greg Renda (greg@ncd.com).
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+/* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
 #ifndef _audio_h
 #define _audio_h
@@ -60,6 +71,10 @@ enum {
     NUKE_LAUNCH_SOUND,
     NUKE_EXPLOSION_SOUND,
     PLAYER_RAN_OVER_PLAYER_SOUND,
+    LASER_PICKUP_SOUND,
+    FIRE_LASER_SOUND,
+    PLAYER_ROASTED_SOUND,
+    PLAYER_EAT_LASER_SOUND,
     MAX_SOUNDS,
 };
 
@@ -112,6 +127,10 @@ static char    *soundNames[] =
     "nuke_launch",
     "nuke_explosion",
     "player_ran_over_player",
+    "laser_pickup",
+    "fire_laser",
+    "player_roasted",
+    "player_eat_laser",
 };
 
 #endif						/* _CAUDIO_C_ */

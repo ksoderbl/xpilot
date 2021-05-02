@@ -1,12 +1,24 @@
-/* $Id: play.c,v 3.11 1993/08/02 12:55:28 bjoerns Exp $
+/* $Id: play.c,v 3.22 1993/10/02 00:36:22 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -18,10 +30,11 @@
 #include "robot.h"
 #include "saudio.h"
 #include "bit.h"
+#include "netserver.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.11 1993/08/02 12:55:28 bjoerns Exp $";
+    "@(#)$Id: play.c,v 3.22 1993/10/02 00:36:22 bjoerns Exp $";
 #endif
 
 
@@ -33,11 +46,14 @@ void Thrust(int ind)
 {
     player *pl = Players[ind];
     object *spark;
-    int dir, num_sparks, the_color, alt_thrust;
+    int dir, num_sparks, the_color, alt_thrust, spread;
     float the_mass;
-    const int spread = RES*0.3;
-    const int spreadoffset = spread/2;
-    float x, y;
+    const int max_spread = 1 + RES*0.4;
+    const int half_spread = max_spread / 2;
+    const int spreadoffset = pl->dir + RES/2 - half_spread;
+    const int max_speed = 1 + (int)(pl->power * 0.14);
+    const int max_life = 1 + (int)(pl->power * 0.35);
+    float x, y, speed;
 
     sound_play_sensors(pl->pos.x, pl->pos.y, THRUST_SOUND);
     num_sparks = (pl->power*0.3) + (rand()%3) + 2;
@@ -51,25 +67,24 @@ void Thrust(int ind)
     y = pl->pos.y + (ships[pl->dir].pts[1].y + ships[pl->dir].pts[2].y) / 2;
 
     for (;num_sparks && NumObjs<MAX_TOTAL_SHOTS; NumObjs++) {
-	spark	= Obj[NumObjs];
-	dir	= pl->dir + (RES/2) + (rand()%(1+spread)) - spreadoffset - 1;
-	spark->color	= the_color;
-	spark->id	= pl->id;
+	spread		= rand() % max_spread;
+	dir		= MOD2(spreadoffset + spread, RES);
+	speed		= 1 + rand() % max_speed;
+	spark		= Obj[NumObjs];
+	spark->dir	= dir;
+	spark->vel.x	= pl->vel.x + tcos(dir) * speed;
+	spark->vel.y	= pl->vel.y + tsin(dir) * speed;
 	spark->pos.x	= x;
 	spark->pos.y	= y;
 	spark->prevpos  = spark->pos;
 	spark->placed   = 1;
-	spark->vel.x	= pl->vel.x + tcos(dir) *
-					(1+rand()%(int)(1+pl->power*0.2));
-	spark->vel.y	= pl->vel.y + tsin(dir) *
-					(1+rand()%(int)(1+pl->power*0.2));
 	spark->status	= GRAVITY;
 	spark->acc.x	= spark->acc.y = 0.0;
-	/* spark->dir	= mod(spark->dir, RES); */
-	spark->dir	= MOD2(dir, RES);
 	spark->mass	= the_mass;
 	spark->type	= OBJ_SPARK;
-	spark->life	= 3 + (rand()%(int)(1+pl->power*0.3));
+	spark->life	= 3 + (rand() % max_life);
+	spark->color	= the_color;
+	spark->id	= pl->id;
         if (--num_sparks==alt_thrust) {
             the_color = BLUE;
             the_mass = THRUST_MASS*ALT_SPARK_MASS_FACT;
@@ -131,6 +146,7 @@ void Recoil(object *ship, object *shot)
 /* Calculates the effect of a collision between to objects */
 void Delta_mv(object *ship, object *obj)
 {
+#if OLD_DELTA_MV
     float	dvx, dvy;
     int		ship_theta, obj_theta;
     float	dm;
@@ -161,6 +177,17 @@ void Delta_mv(object *ship, object *obj)
 
     obj->vel.x += tcos(ship_theta) * dvx / dm;
     obj->vel.y += tsin(ship_theta) * dvy / dm;
+#else
+    float	vx, vy, m;
+
+    m = ship->mass + obj->mass;
+    vx = (ship->vel.x * ship->mass + obj->vel.x * obj->mass) / m;
+    vy = (ship->vel.y * ship->mass + obj->vel.y * obj->mass) / m;
+    ship->vel.x = vx;
+    ship->vel.y = vy;
+    obj->vel.x = vx;
+    obj->vel.y = vy;
+#endif
 }
 
 
@@ -178,7 +205,7 @@ void Obj_repel(object *obj1, object *obj2, int repel_dist)
  
     force = MIN(force, 10);
  
-    obj_theta = findDir(xd, yd);
+    obj_theta = (int)findDir(xd, yd);
  
     dm = obj1->mass/obj2->mass;
     obj2->vel.x += tcos(obj_theta) * force * dm;
@@ -204,6 +231,7 @@ void Item_damage(int ind)
     pl->ecms		= rand() % (pl->ecms + 1);
     pl->cloaks		= rand() % (pl->cloaks + 1);
     pl->sensors		= rand() % (pl->sensors + 1);
+    pl->lasers		= rand() % (pl->lasers + 1);
  
     if (pl->cloaks <= 0) {
 	CLR_BIT(pl->used, OBJ_CLOAKING_DEVICE);
@@ -269,13 +297,14 @@ void Place_item(int type, player *pl)
         } while (World.block[x][y] != SPACE);
     }
     if (grav) {
-        vx = ((rand()&7)-3)/4;
-        vy = ((rand()&7)-3)/4;
-	vy -= Gravity * 12;
+        vx = (rand()&7)-3;
+        vy = (rand()&7)-3;
         if (pl) {
             vx += pl->vel.x;
             vy += pl->vel.y;
-        }
+        } else {
+	    vy -= Gravity * 12;
+	}
     }
 
     item->color = RED;
@@ -327,6 +356,9 @@ void Place_item(int type, player *pl)
     case ITEM_TRANSPORTER:
 	item->type = OBJ_TRANSPORTER;
 	break;
+    case ITEM_LASER:
+	item->type = OBJ_LASER;
+	break;
     default:
 	item->type = OBJ_ROCKET_PACK;
 	break;
@@ -368,6 +400,9 @@ void Throw_items(player *pl)
     for (i=pl->mines; i>0; i-=2)
         if ((rand()&127) < ThrowItemOnKillRand)
             Place_item(ITEM_MINE_PACK, pl);
+    for (i=pl->lasers; i; i--)
+        if ((rand()&127) < ThrowItemOnKillRand)
+            Place_item(ITEM_LASER, pl);
 }
 
 
@@ -543,8 +578,8 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 	shot->mass = pl->shot_mass;
 	shot->max_speed = SPEED_LIMIT;
  	Add_fuel(&(pl->fuel), ED_SHOT);
-	shot->vel.x = pl->vel.x + ((tcos(dir) * pl->shot_speed));
-	shot->vel.y = pl->vel.y + ((tsin(dir) * pl->shot_speed));
+	shot->vel.x = pl->vel.x + tcos(dir) * pl->shot_speed;
+	shot->vel.y = pl->vel.y + tsin(dir) * pl->shot_speed;
 	break;
 
     case OBJ_NUKE:
@@ -619,8 +654,6 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 	    shot->info = lock;
 	    Add_fuel(&(pl->fuel), ED_SMART_SHOT);
 	    pl->missiles--;
-	    shot->vel.x = pl->vel.x + tcos(dir) * pl->shot_speed;
-	    shot->vel.y = pl->vel.y + tsin(dir) * pl->shot_speed;
 	    if (type == OBJ_HEAT_SHOT) {
 		shot->max_speed = SMART_SHOT_MAX_SPEED * HEAT_SPEED_FACT;
 		shot->turnspeed = SMART_TURNSPEED * HEAT_SPEED_FACT;
@@ -628,9 +661,15 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
 		    pl->vel.x + tcos(dir) * pl->shot_speed * HEAT_SPEED_FACT;
 		shot->vel.y =
 		    pl->vel.y + tsin(dir) * pl->shot_speed * HEAT_SPEED_FACT;
+	    } else {
+		shot->vel.x = pl->vel.x + (tcos(dir) * pl->shot_speed);
+		shot->vel.y = pl->vel.y + (tsin(dir) * pl->shot_speed);
 	    }
 	    break;
 	}
+
+    default:
+	return;
     }
     shot->type	= type;
     shot->id	= pl->id;
@@ -639,8 +678,6 @@ void Fire_shot(int ind, int type, int dir) /* Initializes a new shot */
     shot->pos.y = pl->pos.y + ships[dir].pts[0].y;
     shot->prevpos = shot->pos;
     shot->placed = 1;
-    shot->vel.x = pl->vel.x + ((tcos(dir) * pl->shot_speed));
-    shot->vel.y = pl->vel.y + ((tsin(dir) * pl->shot_speed));
     shot->status= GRAVITY;
     shot->acc.x = shot->acc.y = 0;
     shot->dir	= dir;
@@ -713,9 +750,9 @@ void Delete_shot(int ind)
     case OBJ_TORPEDO:
     case OBJ_SMART_SHOT:
 	Explode_object(shot->pos.x, shot->pos.y, 0, RES, 30);
+    case OBJ_SHOT:
         if (shot->id == -1)
 	    break;
-    case OBJ_SHOT:
 	Players[GetInd[shot->id]]->shots--;
 	break;
 
@@ -744,6 +781,9 @@ void Delete_shot(int ind)
 	break;
     case OBJ_TRANSPORTER:
 	World.items[ITEM_TRANSPORTER].num--;
+	break;
+    case OBJ_LASER:
+	World.items[ITEM_LASER].num--;
 	break;
     case OBJ_CLOAKING_DEVICE:
 	World.items[ITEM_CLOAKING_DEVICE].num--;
@@ -820,13 +860,13 @@ void Delete_shot(int ind)
 		 * be towards the center of the map, but add just a bit
 		 * of randomness so that it doesn't get boring...
 		 */
-	heat->vel.x = ((float)(World.x * BLOCK_SZ / 2 - xh)
-			 / (World.x * BLOCK_SZ / 2)
+	heat->vel.x = ((float)(World.width / 2 - xh)
+			 / (World.width / 2)
 			 * SMART_SHOT_MAX_SPEED);
  	  + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
 	     - SMART_SHOT_MAX_SPEED / 12);
-	heat->vel.y = ((float)(World.y * BLOCK_SZ / 2 - yh)
-			 / (World.y * BLOCK_SZ / 2)
+	heat->vel.y = ((float)(World.height / 2 - yh)
+			 / (World.height / 2)
 			 * SMART_SHOT_MAX_SPEED);
 	  + ((rand() >> 2) % (int)(SMART_SHOT_MAX_SPEED / 6)
 	     - SMART_SHOT_MAX_SPEED / 12);
@@ -835,7 +875,7 @@ void Delete_shot(int ind)
 	heat->color = WHITE;
 	heat->pos.x = xh;
 	heat->pos.y = yh;
-        heat->dir = findDir (heat->vel.x, heat->vel.y);
+        heat->dir = (int)findDir(heat->vel.x, heat->vel.y);
         heat->acc.x=heat->acc.y = 0;
     }
 }
@@ -857,7 +897,7 @@ void do_transporter(player *pl)
 	p = Players[i];
 
 	if (p != pl
-	    && BIT(p->status, PLAYING|PAUSE) == PLAYING
+	    && BIT(p->status, PLAYING|PAUSE|GAME_OVER) == PLAYING
 	    && p->robot_mode != RM_OBJECT
 	    && (l = Wrap_length((pl->pos.x - p->pos.x), (pl->pos.y - p->pos.y)))
 		< closestLength)
@@ -933,6 +973,9 @@ void do_transporter(player *pl)
 	    case OBJ_TRANSPORTER:
 		STEAL(transporters, "a transporter");
 		break;
+	    case OBJ_LASER:
+		STEAL(lasers, "a laser");
+		break;
 	    case OBJ_TANK:
 		{
 		    int             no,c,
@@ -961,7 +1004,6 @@ void do_transporter(player *pl)
 		    pl->fuel.tank[no] = 0;
 		    pl->emptymass += TANK_MASS;
 		    Add_fuel(&(pl->fuel), p->fuel.tank[t]);
-		    p->fuel.count = pl->fuel.count = FUEL_NOTIFY;
 		    pl->fuel.current = c;
 
 		    what = "a tank";
@@ -977,13 +1019,12 @@ void do_transporter(player *pl)
 
 		    percent = ((rand() % (MAX_FUEL_STEAL - MIN_FUEL_STEAL) +
 				MIN_FUEL_STEAL) / 100.0);
-		    amount = p->fuel.sum * percent;
+		    amount = (long)(p->fuel.sum * percent);
 		    sprintf(msg, "%s stole %d units (%d%%) of fuel from %s",
 			    pl->name, amount >> FUEL_SCALE_BITS,
 			    (int) (percent * 100.0 + 0.5), p->name);
 		    Add_fuel(&(pl->fuel), amount);
 		    Add_fuel(&(p->fuel), -amount);
-		    pl->fuel.count = p->fuel.count = FUEL_NOTIFY;
 		    Set_message(msg);
 		    return;
 		}
@@ -1033,9 +1074,13 @@ void do_ecm(player *pl)
 	    int c = rand() % ECM_DAMAGE_COUNT;
 	    p->forceVisible += c;
 
-	    if (p->robot_mode == RM_NOT_ROBOT || p->robot_mode == RM_OBJECT)
+	    if (p->robot_mode == RM_NOT_ROBOT || p->robot_mode == RM_OBJECT) {
 		p->damaged += c;
-	    else
+		/* ECM destroys lasers */
+		if (p->lasers > 0) {
+		    p->lasers = (c * p->lasers) / ECM_DAMAGE_COUNT;
+		}
+	    } else
 		if (pl->lock.tagged == LOCK_PLAYER
 		    && (pl->lock.distance < pl->sensor_range
 			|| !BIT(World.rules->mode, LIMITED_VISIBILITY))
@@ -1366,8 +1411,7 @@ void Move_smart_shot(int ind)
  * Maybe use more than one of tank to store the fuel.
  */
 void Add_fuel(pl_fuel_t *ft, long fuel)
-{   int x, c, t;
-
+{
     if (ft->sum + fuel > ft->max)
         fuel = ft->max - ft->sum;
     else if (ft->sum + fuel < 0)
@@ -1493,6 +1537,7 @@ void Tank_handle_detach(player *pl)
     updateScores	= true;
     dummy->count	= -1;		/* Don't commit suicide :) */
     dummy->conn		= NOT_CONNECTED;
+    dummy->audio	= NULL;
 
     /* Fuel is the one from choosen tank */
     dummy->fuel.sum     =
@@ -1504,6 +1549,12 @@ void Tank_handle_detach(player *pl)
     /* No after burner */
     dummy->afterburners = 0;
 
+    /* No lasers */
+    dummy->lasers = 0;
+    dummy->num_pulses = 0;
+    dummy->max_pulses = 0;
+    dummy->pulses = NULL;
+
     /* Mass is only tank + fuel */
     dummy->mass = (dummy->emptymass = ShipMass) + FUEL_MASS(dummy->fuel.sum);
     dummy->have = DEF_HAVE;
@@ -1513,6 +1564,7 @@ void Tank_handle_detach(player *pl)
 
     /* Remember whose tank this is */
     dummy->robot_lock_id = pl->id;
+    dummy->robot_lock = LOCK_NONE;
 
     /* Handling the id's and the Tables */
     dummy->id = Id;
@@ -1523,7 +1575,13 @@ void Tank_handle_detach(player *pl)
     updateScores = true;
 
     /* The tank uses shield and thrust */
-    SET_BIT(dummy->status, THRUSTING|OBJ_SHIELD);
+    dummy->status = (DEF_BITS & ~KILL_BITS) | PLAYING | GRAVITY | THRUSTING;
+    dummy->have = DEF_HAVE;
+    dummy->used = (DEF_USED & ~USED_KILL & pl->have) | OBJ_SHIELD;
+    if (playerShielding == 0) {
+	dummy->shield_time = 3 * FPS;
+	dummy->have |= OBJ_SHIELD;
+    }
     
     /* Maybe heat-seekers to retarget? */
     for (i=0; i < NumObjs; i++)
@@ -1544,13 +1602,13 @@ void Tank_handle_detach(player *pl)
     if (pl->fuel.current)
 	pl->fuel.current--;
 
-    pl->fuel.count = FUEL_NOTIFY;
-
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
-	    Send_player(Players[i]->conn, dummy->id, dummy->team, dummy->mychar,
-		dummy->name);
-	    Send_score(Players[i]->conn, dummy->id, dummy->score, dummy->life);
+	    Send_player(Players[i]->conn, dummy->id, dummy->team,
+			dummy->mychar, dummy->name,
+			dummy->realname, dummy->hostname);
+	    Send_score(Players[i]->conn, dummy->id, dummy->score, dummy->life,
+		       dummy->mychar);
 	}
     }
 }

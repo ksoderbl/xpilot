@@ -1,12 +1,24 @@
-/* $Id: draw.h,v 3.6 1993/06/28 20:53:35 bjoerns Exp $
+/* $Id: draw.h,v 3.14 1993/10/02 18:53:00 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef	DRAW_H
@@ -14,6 +26,10 @@
 
 #include "types.h"
 
+/*
+ * The server supports only 4 colors, except for spark/debris, which
+ * may have 8 different colors.
+ */
 #define NUM_COLORS	    4
 
 #define BLACK		    0
@@ -21,8 +37,20 @@
 #define BLUE		    2
 #define RED		    3
 
-#define FULL		    768
-#define CENTER		    (FULL/2)
+/*
+ * The minimum and maximum playing window sizes supported by the server.
+ */
+#define MIN_VIEW_SIZE	    512
+#define MAX_VIEW_SIZE	    1024
+#define DEF_VIEW_SIZE	    768
+
+/*
+ * Spark rand limits.
+ */
+#define MIN_SPARK_RAND	    0		/* Not display spark */
+#define MAX_SPARK_RAND	    0x80	/* Always display spark */
+#define DEF_SPARK_RAND	    0x55	/* 66% */
+
 #define SMART_SHOT_LEN	    15
 #define DSIZE		    4	    /* Size of diamond (on radar) */
 
@@ -50,6 +78,8 @@
 typedef struct {
     char txt[MSG_LEN];
     short len;
+    short pixelLen;
+    enum { RIGHT, LEFT } alignment;    
     long life;
 } message_t;
 
@@ -64,6 +94,5 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
      || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
 
 #define FRAC(py)	    ((int)((py) * 1024.0/768.0))
-
 
 #endif

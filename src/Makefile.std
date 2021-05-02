@@ -1,9 +1,30 @@
-# $Id: Makefile.std,v 3.6 1993/08/02 12:54:47 bjoerns Exp $
+# $Id: Makefile.std,v 3.13 1993/10/01 20:47:09 bjoerns Exp $
+#
+# XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
+#
+#      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+#      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+#      Bert Gÿsbers         (bert@mc.bio.uva.nl)
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
 #
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.0.3
+VERSION=3.0.4
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -39,13 +60,16 @@ APOLLO_XLIB =
 # We don't use +w1 as the source contains too much to complain about. :-/
 #
 HPPA_CC = cc
+HPPA_CPLUS = g++
 HPPA_CFLAGS = $(DEFS) $(INCS) -Aa -D_HPUX_SOURCE +ESlit +w2 -z -I/usr/include/X11R5
 HPPA_OPT = +O3 +OS
 #HPPA_OPT =
 HPPA_DEBUG = -g
 HPPA_PROF = -G
+HPPA_PLUS = $(DEFS) $(INCS) -x c++ -O2 -I/usr/include/X11R5
+HPPA_LPLUS = $(DEFS) $(INCS) -O2
 HPPA_XLIB = -L/usr/lib/X11R5 -lX11
-HPPA_MLIB = -lm
+HPPA_MLIB = -lM
 
 #
 # Flags for Sun with GCC.
@@ -58,10 +82,20 @@ SUN_MLIB = -lm
 SUN_XLIB = -lX11
 
 #
+# Flags for Sun CMW with GCC.
+#
+SUNCMW_CC = gcc
+SUNCMW_CFLAGS = $(DEFS) -DSUNCMW $(INCS) -I/usr/openwin/include -I/apps/include
+SUNCMW_OPT = -O2
+SUNCMW_DEBUG = -g
+SUNCMW_MLIB = -lm -lcmw
+SUNCMW_XLIB = -L/usr/openwin/lib -lX11
+
+#
 # Flags to use with SGI boxes.
 # 
 SGI_CC = cc
-SGI_CFLAGS = $(DEFS) $(INCS)
+SGI_CFLAGS = $(DEFS) $(INCS) -xansi -prototypes -D__STDC__
 SGI_OPT = -O2
 SGI_PROF = 
 SGI_XLIB = -lX11
@@ -85,10 +119,15 @@ AIX_XLIB = -lX11
 # to join a non-Linux server due to different (smaller) packet sizes.
 #
 LINUX_CC = gcc
-LINUX_CFLAGS = $(DEFS) $(INCS)
-LINUX_OPT = -O2 -m486 -W -Wstrict-prototypes
-LINUX_DEBUG = -O2 -m486 -W -Wstrict-prototypes -g
-LINUX_PROF = -O2 -m486 -pg
+LINUX_CPLUSPLUS = g++
+LINUX_CFLAGS = $(DEFS) $(INCS) -O2 -m486
+LINUX_OPT = -W -Wstrict-prototypes
+LINUX_DEBUG = -W -Wstrict-prototypes -g
+LINUX_PROF = -pg
+LINUX_CHECKER = -checker
+LINUX_LCHECKER = $(LINUX_CFLAGS) -checker /usr/lib/libchecker.o
+LINUX_PLUS = -g -x c++
+LINUX_LPLUS = $(LINUX_CFLAGS)
 LINUX_MLIB = -lm
 LINUX_XLIB = -lX11
 
@@ -163,13 +202,19 @@ USLEEP_OBJ = usleep.o
 #
 # Uncomment this line if you don't have strcasecmp() (case insensitive compare)
 #
-# STRCASECMP_OBJ = strcasecmp.o */
+#STRCASECMP_OBJ = strcasecmp.o
 
 #
 # Uncomment this line if your system doesn't have strdup().
-# Ultrix and AIX need it.
+# Ultrix, AIX and Sequent need it.
 #
 #STRDUP_OBJ = strdup.o
+
+#
+# Uncomment this line if your system is Trusted Solaris CMW 1.0
+# You also need to #define SUNCMW
+#
+#SUNCMW_OBJ = cmw.o
 
 #
 # Server program, xpilots...
@@ -177,7 +222,7 @@ USLEEP_OBJ = usleep.o
 OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
         play.o player.o rules.o update.o collision.o error.o frame.o \
         robot.o option.o socklib.o timer.o saudio.o \
-        $(USLEEP_OBJ) $(STRCASECMP_OBJ) $(STRDUP_OBJ)
+        $(USLEEP_OBJ) $(STRCASECMP_OBJ) $(STRDUP_OBJ) $(SUNCMW_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
         play.c player.c rules.c update.c collision.c error.c frame.c \
         robot.c option.c socklib.c timer.c saudio.c
@@ -187,13 +232,13 @@ SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
 #
 OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
 	default.o math.o xevent.o syslimit.o error.o socklib.o $(USLEEP_OBJ) \
-	caudio.o $(AUDIOOBJ)
+	configure.o widget.o caudio.o $(AUDIOOBJ) $(STRDUP_OBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
 	default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
-	$(AUDIOSRC)
+	configure.c widget.c $(AUDIOSRC)
 
 all:
-	@echo "Please specify your system (apollo/hppa/sun/aix/linux/sonynews)."
+	@echo "Please specify your system (apollo/hppa/sun/suncmw/aix/linux/sonynews/sgi/ultrix)."
 
 apollo:
 	@make targets "CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_OPT)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
@@ -210,11 +255,20 @@ hppa-debug:
 hppa-prof:
 	@make targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT) $(HPPA_PROF)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
+hppa-plus:
+	@make targets "CC=$(HPPA_CPLUS)" "CFLAGS=$(HPPA_PLUS)" "LFLAGS=$(HPPA_LPLUS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+
 sun:
 	@make targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_OPT)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
 
 sun-debug:
 	@make targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_DEBUG)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
+
+suncmw:
+	@make targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_OPT)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
+
+suncmw-debug:
+	@make targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_DEBUG)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
 
 aix:
 	@make xpilots "CC=$(AIX_CC)" "CFLAGS=$(AIX_CFLAGS) $(AIX_OPT)" "MLIB=$(AIX_MLIB)" "XLIB=$(AIX_XLIB)"
@@ -228,31 +282,50 @@ linux-debug:
 linux-prof:
 	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PROF)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
 
+linux-checker:
+	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_CHECKER)" "LFLAGS=$(LINUX_LCHECKER)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+  
+linux-plus:
+	@make targets "CC=$(LINUX_CPLUSPLUS)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PLUS)" "LFLAGS=$(LINUX_LPLUS)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+
 sonynews:
 	@make targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_OPT)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
 
 sonynews-debug:
 	@make targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_DEBUG)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
 
+sgi:
+	@make targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_OPT)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
+
+sgi-debug:
+	@make targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_DEBUG)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
+
 ultrix:
-	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_OPT)" "MLIB=$(U
+	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_OPT)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
 
 ultrix-debug:
-	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_DEBUG)" "MLIB=$
+	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_DEBUG)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
 
+#
+# If LFLAGS is specified on the command line then
+# that will override the following default.
+# CFLAGS will be defined by the command line arguments
+# of the recursive make.
+#
+LFLAGS=$(CFLAGS)
 
 targets: xpilot xpilots
 
 xpilots: $(OBJS1)
 	rm -f xpilots
-	$(CC) $(CFLAGS) -o $@ $(OBJS1) $(MLIB)
+	$(CC) $(LFLAGS) -o $@ $(OBJS1) $(MLIB)
 
 xpilot: $(OBJS2)
 	rm -f xpilot
-	$(CC) $(CFLAGS) -o $@ $(OBJS2) $(AUDIOLIB) $(XLIB) $(MLIB)
+	$(CC) $(LFLAGS) -o $@ $(OBJS2) $(AUDIOLIB) $(XLIB) $(MLIB)
 
 install:
-	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews"
+	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews or install-suncmw"
 
 install-apollo: apollo
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).apollo
@@ -282,9 +355,40 @@ install-sun: sun
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sun
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sun
 
+install-suncmw: sun
+	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv a=all $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f=file_dac_read      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+file_dac_write     $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+file_downgrade_il  $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+file_mac_read      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+file_mac_write     $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+file_upgrade_il    $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+net_allowaccess    $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+net_boot           $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+net_broadcast      $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+net_mac_override   $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv f+win_admin          $(INSTALLDIR)/xpilot-$(VERSION).suncmw
+	chpriv a=all $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f=file_dac_read      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+file_dac_write     $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+file_downgrade_il  $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+file_mac_read      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+file_mac_write     $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+file_upgrade_il    $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+net_allowaccess    $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+net_boot           $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+net_broadcast      $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+	chpriv f+net_mac_override   $(INSTALLDIR)/xpilots-$(VERSION).suncmw
+
 install-sonynews: sonynews
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sonynews
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sonynews
+
+install-sgi: sgi
+	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sgi
+	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sgi
 
 install-ultrix: ultrix
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).ultrix
@@ -298,6 +402,8 @@ install-hppa-debug: hppa-debug install-hppa
 install-sun-debug: sun-debug install-sun
 
 install-sonynews-debug: sonynews-debug install-sonynews
+
+install-sgi-debug: sgi-debug install-sgi
 
 install-ultrix-debug: ultrix-debug install-ultrix
 
@@ -317,140 +423,82 @@ restore-hppa:
 	rm -f *.o xpilot xpilots
 	mv ../hp/*.o ../hp/xpilot ../hp/xpilots .
 
+# usleep.o strcasecmp.o and strdup.o declared here in case they are
+# commented out for another platform
+
 clean:
-	rm -f $(OBJS1) $(OBJS2) xpilot xpilots
+	rm -f $(OBJS1) $(OBJS2) usleep.o strcasecmp.o strdup.o xpilot xpilots core
 
 ctags:
 	ctags *.h *.c
 
-###############################################################################
-client.o : client.c version.h client.h const.h types.h keys.h dbuff.h \
-        setup.h error.h rules.h bit.h netclient.h paint.h 
-cmdline.o : cmdline.c global.h config.h types.h rules.h object.h const.h \
-        bit.h keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        robot.h defaults.h 
-collision.o : collision.c global.h config.h types.h rules.h object.h const.h \
-        bit.h keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h robot.h saudio.h audio.h 
-dbuff.o : dbuff.c client.h const.h types.h keys.h dbuff.h draw.h bit.h
-default.o : default.c const.h object.h types.h bit.h keys.h client.h dbuff.h \
-        pack.h socklib.h netclient.h config.h
-error.o : error.c error.h
-event.o : event.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h saudio.h audio.h 
-frame.o : frame.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        netserver.h 
-join.o : join.c version.h error.h client.h const.h types.h keys.h dbuff.h 
-map.o : map.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h
-math.o : math.c global.h config.h types.h rules.h object.h const.h \
-        bit.h keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h
-net.o : net.c version.h error.h net.h socklib.h const.h packet.h bit.h 
-netclient.o : netclient.c version.h net.h socklib.h const.h netclient.h \
-        setup.h packet.h bit.h paint.h pack.h types.h draw.h client.h
-netserver.o : netserver.c global.h config.h types.h rules.h object.h const.h \
-        bit.h keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        netserver.h net.h setup.h packet.h robot.h
-option.o : option.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h robot.h defaults.h 
-paint.o : paint.c version.h client.h const.h types.h keys.h dbuff.h error.h \
-        draw.h setup.h rules.h bit.h paint.h netclient.h 
-play.o : play.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h robot.h saudio.h audio.h 
-player.o : player.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h robot.h 
-robot.o : robot.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h robot.h 
-rules.o : rules.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h
-server.o : server.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        robot.h saudio.h audio.h netserver.h 
-socklib.o : socklib.c socklib.h 
-strcasecmp.o : strcasecmp.c 
-syslimit.o : syslimit.c
-timer.o : timer.c
-update.o : update.c global.h config.h types.h rules.h object.h const.h bit.h \
-        keys.h map.h draw.h version.h proto.h pack.h socklib.h error.h \
-        score.h robot.h saudio.h audio.h
-usleep.o : usleep.c
-xevent.o : xevent.c client.h const.h types.h keys.h dbuff.h xinit.h draw.h \
-        bit.h setup.h netclient.h 
-xinit.o : xinit.c version.h icon.h client.h const.h types.h keys.h dbuff.h \
-        draw.h xinit.h bit.h 
-xpilot.o : xpilot.c config.h pack.h socklib.h const.h types.h bit.h version.h 
-
 ###
-caudio.o: config.h types.h audio.h client.h const.h keys.h dbuff.h
-client.o: version.h client.h const.h types.h keys.h dbuff.h setup.h error.h \
-	rules.h bit.h netclient.h paint.h
-cmdline.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	robot.h defaults.h
-collision.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	score.h robot.h saudio.h audio.h
-dbuff.o: client.h const.h types.h keys.h dbuff.h draw.h bit.h
-default.o: config.h const.h object.h types.h bit.h keys.h client.h dbuff.h \
-	paint.h pack.h socklib.h netclient.h
-error.o: error.h
-event.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	score.h saudio.h audio.h
-frame.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	netserver.h
-join.o: version.h error.h client.h const.h types.h keys.h dbuff.h
-map.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h map.h \
-	item.h draw.h version.h proto.h pack.h socklib.h error.h
-math.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h map.h \
-	item.h draw.h version.h proto.h pack.h socklib.h error.h
-ncdaudio.o: audio.h
-net.o: version.h error.h net.h socklib.h const.h packet.h bit.h
-netclient.o: version.h net.h socklib.h const.h netclient.h types.h setup.h \
-	packet.h bit.h paint.h dbuff.h keys.h client.h pack.h draw.h
-netserver.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h net.h \
-	netserver.h packet.h setup.h robot.h saudio.h audio.h
-option.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	robot.h defaults.h
-paint.o: version.h client.h const.h types.h keys.h dbuff.h error.h draw.h \
-	item.h xinit.h setup.h rules.h bit.h paint.h net.h socklib.h \
-	netclient.h
-play.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h map.h \
-	item.h draw.h version.h proto.h pack.h socklib.h error.h score.h \
-	robot.h saudio.h audio.h
-player.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	score.h robot.h
-robot.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	score.h robot.h
-rplayaudio.o: audio.h
-rules.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h
-saudio.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h
-server.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	robot.h saudio.h audio.h netserver.h
-socklib.o: socklib.h
-syslimit.o: types.h
-update.o: global.h config.h types.h rules.h object.h const.h bit.h keys.h \
-	map.h item.h draw.h version.h proto.h pack.h socklib.h error.h \
-	score.h robot.h saudio.h audio.h
-xevent.o: client.h const.h types.h keys.h dbuff.h xinit.h draw.h paint.h \
-	bit.h setup.h netclient.h
-xinit.o: version.h icon.h client.h const.h types.h keys.h dbuff.h paint.h \
-	draw.h xinit.h bit.h item.h items/itemRocketPack.xbm \
-	items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
-	items/itemWideangleShot.xbm items/itemRearShot.xbm \
-	items/itemMinePack.xbm items/itemSensorPack.xbm items/itemTank.xbm \
-	items/itemEcm.xbm items/itemAfterburner.xbm items/itemTransporter.xbm
-xpilot.o: config.h pack.h socklib.h const.h types.h bit.h version.h
+caudio.o : caudio.c 
+client.o : client.c version.h client.h const.h types.h keys.h dbuff.h setup.h \
+  error.h rules.h bit.h netclient.h paint.h xinit.h 
+cmdline.o : cmdline.c global.h config.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
+cmw.o : cmw.c cmw.h
+collision.o : collision.c global.h config.h types.h rules.h object.h const.h \
+  bit.h keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h \
+  netserver.h 
+configure.o : configure.c version.h client.h const.h types.h keys.h dbuff.h \
+  paint.h draw.h xinit.h bit.h netclient.h widget.h configure.h error.h 
+dbuff.o : dbuff.c client.h const.h types.h keys.h dbuff.h draw.h bit.h 
+default.o : default.c version.h config.h const.h client.h types.h keys.h dbuff.h \
+  paint.h draw.h pack.h socklib.h bit.h netclient.h xinit.h error.h 
+error.o : error.c error.h 
+event.o : event.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h score.h saudio.h netserver.h 
+frame.o : frame.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h netserver.h saudio.h 
+join.o : join.c version.h types.h error.h client.h const.h keys.h dbuff.h netclient.h 
+map.o : map.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h 
+math.o : math.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h 
+ncdaudio.o : ncdaudio.c 
+net.o : net.c version.h error.h net.h socklib.h const.h packet.h bit.h 
+netclient.o : netclient.c version.h types.h error.h net.h socklib.h const.h \
+  netclient.h setup.h packet.h bit.h paint.h dbuff.h keys.h client.h xinit.h pack.h \
+  draw.h 
+netserver.o : netserver.c global.h config.h types.h rules.h object.h const.h \
+  bit.h keys.h map.h item.h draw.h version.h proto.h error.h pack.h socklib.h \
+  net.h netserver.h packet.h setup.h robot.h saudio.h 
+option.o : option.c global.h config.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
+paint.o : paint.c version.h client.h const.h types.h keys.h dbuff.h error.h \
+  draw.h item.h paint.h xinit.h setup.h rules.h bit.h net.h socklib.h netclient.h 
+play.o : play.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
+player.o : player.c global.h config.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h netserver.h 
+robot.o : robot.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
+rules.o : rules.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+  map.h item.h draw.h version.h proto.h error.h 
+saudio.o : saudio.c global.h config.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h netserver.h 
+server.o : server.c config.h global.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h socklib.h pack.h robot.h \
+  saudio.h net.h netserver.h 
+socklib.o : socklib.c socklib.h types.h 
+strcasecmp.o : strcasecmp.c 
+strdup.o : strdup.c 
+syslimit.o : syslimit.c 
+timer.o : timer.c error.h 
+update.o : update.c global.h config.h types.h rules.h object.h const.h bit.h \
+  keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h 
+usleep.o : usleep.c types.h 
+widget.o : widget.c version.h client.h const.h types.h keys.h dbuff.h paint.h \
+  draw.h xinit.h bit.h error.h widget.h 
+xevent.o : xevent.c client.h const.h types.h keys.h dbuff.h paint.h xinit.h \
+  draw.h bit.h setup.h netclient.h widget.h error.h 
+xinit.o : xinit.c version.h const.h rules.h draw.h types.h icon.h client.h keys.h \
+  dbuff.h paint.h xinit.h bit.h setup.h widget.h configure.h error.h netclient.h \
+  item.h items/itemRocketPack.xbm items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
+  items/itemWideangleShot.xbm items/itemRearShot.xbm items/itemMinePack.xbm items/itemSensorPack.xbm \
+  items/itemTank.xbm items/itemEcm.xbm items/itemAfterburner.xbm items/itemTransporter.xbm \
+  items/itemLaser.xbm 
+xpilot.o : xpilot.c version.h config.h types.h pack.h socklib.h const.h bit.h \
+  error.h net.h 

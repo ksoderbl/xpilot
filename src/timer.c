@@ -1,12 +1,24 @@
-/* $Id: timer.c,v 3.6 1993/08/02 12:41:46 bjoerns Exp $
+/* $Id: timer.c,v 3.10 1993/09/20 18:47:13 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -14,6 +26,8 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <stdlib.h>
+
+#include "error.h"
 
 #ifdef _SONYNEWS_SOURCE
 /*
@@ -50,7 +64,6 @@ static int __sigtemp;           /* For use with sigprocmask */
 
 
 extern int  framesPerSecond;
-int         error(const char *, ...);
 
 
 #undef BUSYLOOP
@@ -100,15 +113,14 @@ static volatile long   timer_count,	/* SIGALRMs that have occurred */
  * If any system calls other than pause(2) would get interrupted because
  * of the SIGALRM signal occuring, than that would be an undesirable
  * side effect or bug.  Be aware of the possibility.
- * E.g., select(2) will be interrupted (X event polling uses select(2)).
+ * E.g., select(2) will be interrupted.
  * If this happens to be a problem, two functions are provided to
  * temporarily block and unblock the timer interrupt.
  * Note that this is still experimental.  It is unclear to me if setitimer(2)
  * is accurate enough.  If not than this whole idea may be thrown away or
  * we have to come up with something better.  How about using gettimeofday(2)
  * to measure if any timer-interrupts are missed and adjusting `timer_count'
- * accordingly?  If the SIGALRM handler should return very fast
- * in order to reduce the chance of missing signals.
+ * accordingly?
  */
 static void catch_timer(int signum)
 {

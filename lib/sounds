@@ -40,9 +40,13 @@ player_eat_shot		arrp.au
 transporter_pickup	meep.au
 transporter_success	trans.au
 transporter_fail	beep_spring.au
-transporter_pickup    meep.au
-transporter_success   trans.au
-transporter_fail      beep_spring.au
+transporter_pickup	meep.au
+transporter_success	trans.au
+transporter_fail	beep_spring.au
 nuke_launch		nuke.snd
 nuke_explosion		Explosion.au
 player_ran_over_player	tireskid.snd
+fire_laser		molfart.au
+laser_pickup		magic.au
+player_roasted		ayaah.au
+player_eat_laser	bats.au

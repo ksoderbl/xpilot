@@ -1,12 +1,24 @@
-/* $Id: xinit.c,v 3.25 1993/08/03 11:53:42 bjoerns Exp $
+/* $Id: xinit.c,v 3.45 1993/10/02 19:35:25 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <X11/Xproto.h>
@@ -21,19 +33,33 @@
 #    include <string.h>
 #endif
 #include <limits.h>
+#include <errno.h>
 
 #include "version.h"
+#include "const.h"
+#include "rules.h"
+#include "draw.h"
 #include "icon.h"
 #include "client.h"
 #include "paint.h"
-#include "draw.h"
 #include "xinit.h"
 #include "bit.h"
+#include "setup.h"
+#include "widget.h"
+#include "configure.h"
+#include "error.h"
+#include "netclient.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.25 1993/08/03 11:53:42 bjoerns Exp $";
+    "@(#)$Id: xinit.c,v 3.45 1993/10/02 19:35:25 bert Exp $";
 #endif
+
+#if defined(__cplusplus)
+#define class c_class
+#endif
+
+#define MAX_VISUAL_CLASS	6
 
 extern message_t	*Msg[];
 extern int		RadarHeight;
@@ -44,15 +70,24 @@ extern int		RadarHeight;
 int	ButtonHeight;
 Atom	ProtocolAtom, KillAtom;
 bool	talk_mapped;
+int	buttonColor, windowColor, borderColor;
+int	quitting = false;
+char	visualName[MAX_VISUAL_NAME];
+Visual	*visual;
+int	dispDepth;
+bool	mono;
+bool	colorSwitch;
+int	top_width, top_height;
+int	draw_width, draw_height;
+char	*geometry;
 
 
 static XFontStruct	*font;
 static message_t	*MsgBlock;
 static char		*keyHelpList = NULL, *keyHelpDesc = NULL;
-static int		buttonColor, windowColor;
 static int		KeyDescOffset;
 static bool		about_created;
-static bool		help_created;
+static bool		keys_created;
 static bool		talk_created;
 static char		talk_str[MAX_CHARS];
 static struct {
@@ -77,10 +112,11 @@ static struct {
 #include "items/itemEcm.xbm"
 #include "items/itemAfterburner.xbm"
 #include "items/itemTransporter.xbm"
+#include "items/itemLaser.xbm"
 /* NB!  Is dependent on the order of the items in item.h */
 static struct {
     char*	data;
-    char*	helpText;
+    char*	keysText;
 } itemBitmapData[NUM_ITEMS] = {
     {	itemEnergyPack_bits,
 	    "Extra energy/fuel"					},
@@ -89,10 +125,10 @@ static struct {
     {	itemRearShot_bits,
 	    "Extra rear cannon"					},
     {	itemAfterburner_bits,
-	    "Afterburner; makes your engines more efficient"	},
+	    "Afterburner; makes your engines more powerful"	},
     {	itemCloakingDevice_bits,
 	    "Cloaking device; "
-	    "makes you invisible, both on radar and on screen"	},
+	    "makes you almost invisible, both on radar and on screen"	},
     {	itemSensorPack_bits,
 	    "Sensor; "
 	    "enables you to see cloaked opponents more easily"	},
@@ -115,6 +151,11 @@ static struct {
 	    "can be used to disturb electronic equipment, for instance "
 	    "can it be used to confuse smart missiles and reprogram "
 	    "robots to seak certain players"			},
+    {	itemLaser_bits,
+	    "Laser; "
+	    "limited range laser beam, "
+	    "having more laser items increases the range of the laser, "
+	    "they can be irrepairably damaged by ECMs" },
 };
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
     
@@ -129,20 +170,59 @@ char dashes[NUM_DASHES] = { 8, 4 };
 
 /* Information window dimensions */
 #define ABOUT_WINDOW_WIDTH	600
-#define ABOUT_WINDOW_HEIGHT	768
+#define ABOUT_WINDOW_HEIGHT	700
 #define TALK_TEXT_HEIGHT	(textFont->ascent + textFont->descent)
 #define TALK_OUTSIDE_BORDER	2
 #define TALK_INSIDE_BORDER	3
 #define TALK_WINDOW_HEIGHT	(TALK_TEXT_HEIGHT + 2 * TALK_INSIDE_BORDER)
 #define TALK_WINDOW_X		(50 - TALK_OUTSIDE_BORDER)
-#define TALK_WINDOW_Y		(768*3/4 - TALK_WINDOW_HEIGHT/2)
-#define TALK_WINDOW_WIDTH	(768 - 2*(TALK_WINDOW_X + TALK_OUTSIDE_BORDER))
+#define TALK_WINDOW_Y		(draw_width*3/4 - TALK_WINDOW_HEIGHT/2)
+#define TALK_WINDOW_WIDTH	(draw_height \
+				    - 2*(TALK_WINDOW_X + TALK_OUTSIDE_BORDER))
 
 #define CTRL(c)			((c) & 0x1F)
 
 static void createAboutWindow(void);
-static void createHelpWindow(void);
+static void createKeysWindow(void);
 static void createTalkWindow(void);
+static int Quit_callback(int, void *, char **);
+static int About_callback(int, void *, char **);
+static int Keys_callback(int, void *, char **);
+static int Config_callback(int, void *, char **);
+static int Score_callback(int, void *, char **);
+static int Player_callback(int, void *, char **);
+
+/*
+ * Visual names.
+ */
+static struct visual_class_name {
+    int		visual_class;
+    char	*visual_name;
+} visual_class_names[MAX_VISUAL_CLASS] = {
+    { StaticGray,	"StaticGray"  },
+    { GrayScale,	"GrayScale"   },
+    { StaticColor,	"StaticColor" },
+    { PseudoColor,	"PseudoColor" },
+    { TrueColor,	"TrueColor"   },
+    { DirectColor,	"DirectColor" }
+};
+
+/*
+ * Default colors.
+ */
+char		color_names[MAX_COLORS][MAX_COLOR_LEN];
+static char	*color_defaults[MAX_COLORS] = {
+    "#000000", "#FFFFFF", "#4E7CFF", "#FF3A27",
+    "#440000", "#992200", "#BB7700", "#EE9900",
+    "#770000", "#CC4400", "#DD8800", "#FFBB11",
+    "", "", "", ""
+};
+static char	*gray_defaults[MAX_COLORS] = {
+    "#000000", "#FFFFFF", "#AAAAAA", "#CCCCCC",
+    "#666666", "#888888", "#AAAAAA", "#CCCCCC",
+    "#777777", "#999999", "#BBBBBB", "#DDDDDD",
+    "", "", "", ""
+};
 
 
 /*
@@ -170,19 +250,241 @@ XFontStruct* Set_font(Display* dpy, GC gc, char* fontName)
 int Parse_colors(Colormap cmap)
 {
     int			i;
+    char		**def;
 
-    for (i = 0; i < 4; i++) {
-	if (XParseColor(dpy, cmap, color_names[i], &colors[i]) == 0) {
-	    printf("Can't parse color %d \"%s\"\n",
-		   i, color_names[i]);
-	    if (XParseColor(dpy, cmap, color_defaults[i], &colors[i]) == 0) {
-		printf("Can't parse default color %d \"%s\"\n",
-		       i, color_defaults[i]);
-		return -1;
+    /*
+     * Get the color definitions.
+     */
+    if (mono == true) {
+	colors[0].red = colors[0].green = colors[0].blue = 0;
+	colors[0].flags = DoRed | DoGreen | DoBlue;
+	colors[1].red = colors[1].green = colors[1].blue = 0xFFFF;
+	colors[1].flags = DoRed | DoGreen | DoBlue;
+	colors[3] = colors[2] = colors[1];
+	return 0;
+    }
+    if (visual->class == StaticGray || visual->class == GrayScale) {
+	def = &gray_defaults[0];
+    } else {
+	def = &color_defaults[0];
+    }
+    for (i = 0; i < maxColors; i++) {
+	if (color_names[i][0] != '\0') {
+	    if (XParseColor(dpy, cmap, color_names[i], &colors[i])) {
+		continue;
 	    }
+	    printf("Can't parse color %d \"%s\"\n", i, color_names[i]);
+	}
+	if (def[i] != NULL && def[i][0] != '\0') {
+	    if (XParseColor(dpy, cmap, def[i], &colors[i])) {
+		continue;
+	    }
+	    printf("Can't parse default color %d \"%s\"\n", i, def[i]);
+	}
+	if (i < NUM_COLORS) {
+	    return -1;
+	} else {
+	    colors[i] = colors[i % NUM_COLORS];
 	}
     }
     return 0;
+}
+
+
+/*
+ * If we have a private colormap and color switching is on then
+ * copy the first few colors from the default colormap into it
+ * to prevent ugly color effects on the rest of the screen.
+ */
+static void Fill_colormap(void)
+{
+    int			i,
+			cells_needed,
+			max_fill;
+    unsigned long	pixels[256];
+    XColor		acolor[256];
+
+    if (colormap == 0 || colorSwitch != true) {
+	return;
+    }
+    cells_needed = (maxColors == 16) ? 256
+	: (maxColors == 8) ? 64
+	: 16;
+    max_fill = MAX(256, visual->map_entries) - cells_needed - 2;
+    if (max_fill <= 0) {
+	return;
+    }
+    if (XAllocColorCells(dpy, colormap, False, NULL, 0, pixels, max_fill)
+	== False) {
+	errno = 0;
+	error("Can't pre-alloc color cells");
+	return;
+    }
+    for (i = 0; i < max_fill; i++) {
+	acolor[i].pixel = pixels[i];
+    }
+    XQueryColors(dpy, DefaultColormap(dpy, DefaultScreen(dpy)),
+		 acolor, max_fill);
+    XStoreColors(dpy, colormap, acolor, max_fill);
+}
+
+
+/*
+ * Create a private colormap.
+ */
+static void Get_colormap(void)
+{
+    printf("Creating a private colormap\n");
+    colormap = XCreateColormap(dpy, DefaultRootWindow(dpy),
+			       visual, AllocNone);
+}
+
+
+/*
+ * Convert a visual class to its name.
+ */
+static char *Visual_class_name(int visual_class)
+{
+    int			i;
+
+    for (i = 0; i < MAX_VISUAL_CLASS; i++) {
+	if (visual_class_names[i].visual_class == visual_class) {
+	    return visual_class_names[i].visual_name;
+	}
+    }
+    return "UnknownVisual";
+}
+
+
+/*
+ * List the available visuals for the default screen.
+ */
+void List_visuals(void)
+{
+    int				i,
+				num;
+    XVisualInfo			*vinfo_ptr,
+				my_vinfo;
+    long			mask;
+
+    num = 0;
+    mask = 0;
+    my_vinfo.screen = DefaultScreen(dpy);
+    mask |= VisualScreenMask;
+    vinfo_ptr = XGetVisualInfo(dpy, mask, &my_vinfo, &num);
+    printf("Listing all visuals:\n");
+    for (i = 0; i < num; i++) {
+	printf("Visual class       %12s\n",
+	       Visual_class_name(vinfo_ptr[i].class));
+	printf("    id                     0x%02x\n", vinfo_ptr[i].visualid);
+	printf("    screen             %8d\n", vinfo_ptr[i].screen);
+	printf("    depth              %8d\n", vinfo_ptr[i].depth);
+	printf("    red_mask           0x%06x\n", vinfo_ptr[i].red_mask);
+	printf("    green_mask         0x%06x\n", vinfo_ptr[i].green_mask);
+	printf("    blue_mask          0x%06x\n", vinfo_ptr[i].blue_mask);
+	printf("    colormap_size      %8d\n", vinfo_ptr[i].colormap_size);
+	printf("    bits_per_rgb       %8d\n", vinfo_ptr[i].bits_per_rgb);
+    }
+    XFree((void *) vinfo_ptr);
+}
+
+
+/*
+ * Support all available visuals.
+ */
+static void Get_visual_info(void)
+{
+    int				i,
+				num,
+				best_size,
+				cmap_size,
+				visual_id,
+				visual_class;
+    XVisualInfo			*vinfo_ptr,
+				my_vinfo,
+				*best_vinfo;
+    long			mask;
+
+    visual_id = -1;
+    visual_class = -1;
+    if (visualName[0] != '\0') {
+	if (strncmp(visualName, "0x", 2) == 0) {
+	    if (sscanf(visualName, "%x", &visual_id) < 1) {
+		errno = 0;
+		error("Bad visual id \"%s\", using default\n", visualName);
+		visual_id = -1;
+	    }
+	} else {
+	    for (i = 0; i < MAX_VISUAL_CLASS; i++) {
+		if (strncasecmp(visualName, visual_class_names[i].visual_name,
+				strlen(visual_class_names[i].visual_name))
+				== 0) {
+		    visual_class = visual_class_names[i].visual_class;
+		    break;
+		}
+	    }
+	    if (visual_class == -1) {
+		errno = 0;
+		error("Unknown visual class named \"%s\", using default\n",
+		    visualName);
+	    }
+	}
+    }
+    if (visual_class < 0 && visual_id < 0) {
+    	visual = DefaultVisual(dpy, DefaultScreen(dpy));
+    	if (visual->class == TrueColor || visual->class == DirectColor) {
+	    visual_class = PseudoColor;
+	}
+    }
+    if (visual_class >= 0 || visual_id >= 0) {
+	mask = 0;
+	my_vinfo.screen = DefaultScreen(dpy);
+	mask |= VisualScreenMask;
+	if (visual_class >= 0) {
+	    my_vinfo.class = visual_class;
+	    mask |= VisualClassMask;
+	}
+	if (visual_id >= 0) {
+	    my_vinfo.visualid = visual_id;
+	    mask |= VisualIDMask;
+	}
+	num = 0;
+	if ((vinfo_ptr = XGetVisualInfo(dpy, mask, &my_vinfo, &num)) == NULL
+	    || num <= 0) {
+	    errno = 0;
+	    error("No visuals available with class name \"%s\", using default",
+		visualName);
+	    visual_class = -1;
+	}
+	else {
+	    best_vinfo = vinfo_ptr;
+	    for (i = 1; i < num; i++) {
+		best_size = best_vinfo->colormap_size;
+		cmap_size = vinfo_ptr[i].colormap_size;
+		if (cmap_size > best_size) {
+		    if (best_size < 256) {
+			best_vinfo = &vinfo_ptr[i];
+		    }
+		}
+		else if (cmap_size >= 256) {
+		    best_vinfo = &vinfo_ptr[i];
+		}
+	    }
+	    visual = best_vinfo->visual;
+	    visual_class = best_vinfo->class;
+	    dispDepth = best_vinfo->depth;
+	    XFree((void *) vinfo_ptr);
+	    printf("Using visual %s with depth %d and %d colors\n",
+		   Visual_class_name(visual->class), dispDepth,
+		   visual->map_entries);
+	    Get_colormap();
+	}
+    }
+    if (visual_class < 0) {
+	visual = DefaultVisual(dpy, DefaultScreen(dpy));
+	dispDepth = DefaultDepth(dpy, DefaultScreen(dpy));
+	colormap = 0;
+    }
 }
 
 
@@ -193,76 +495,189 @@ int Parse_colors(Colormap cmap)
  */
 int Init_window(void)
 {
-    int			i, p, values;
-    XGCValues		xgc;
-    char		msg[256];
-
-
-    /*
-     * Get misc. display info.
-     */
-    dpy_type = DT_IS_DISPLAY;
-    if (HavePlanes(dpy))
-	SET_BIT(dpy_type, DT_HAVE_PLANES | DT_HAVE_COLOR);
+    int				i, p, values,
+				num_planes,
+				top_flags,
+				top_x, top_y,
+				x, y;
+    unsigned			w, h;
+    XGCValues			xgc;
+    char			msg[256];
+    int				button_form,
+				menu_button;
+    XSetWindowAttributes	sattr;
+    unsigned long		mask;
 
 
     colormap = 0;
 
+    Get_visual_info();
+
+    /*
+     * Get misc. display info.
+     */
+    if (visual->class == StaticGray ||
+	visual->class == StaticColor ||
+	visual->class == TrueColor) {
+	colorSwitch = false;
+    }
+    if (colorSwitch == true) {
+	maxColors = (maxColors >= 16 && visual->map_entries >= 256) ? 16
+	    : (maxColors >= 8 && visual->map_entries >= 64) ? 8
+	    : 4;
+	if (visual->map_entries < 16) {
+	    colorSwitch = false;
+	}
+    } else {
+	maxColors = (maxColors >= 16 && visual->map_entries >= 16) ? 16
+	    : (maxColors >= 8 && visual->map_entries >= 8) ? 8
+	    : 4;
+    }
+    if (visual->map_entries < 4) {
+	mono = true;
+    }
+    if (mono == true) {
+	/* Color switching doesn't work for mono, needs at least 4 planes. */
+	colorSwitch = false;
+	maxColors = 4;
+    }
+    num_planes = (mono == true) ? 1
+	: (maxColors == 16) ? 4
+	: (maxColors == 8) ? 3
+	: 2;
+
     if (Parse_colors(DefaultColormap(dpy, DefaultScreen(dpy))) == -1) {
+	printf("Color parsing failed\n");
 	return -1;
     }
 
+    if (colormap != 0) {
+	Fill_colormap();
+    }
+
     /*
-     * Initializes the double buffering routine.
+     * Initialize the double buffering routine.
      */
     dbuf_state = start_dbuff(dpy,
-			     DefaultColormap(dpy,
-					     DefaultScreen(dpy)),
-			     BIT(dpy_type, DT_HAVE_COLOR)
-			     ? COLOR_SWITCH : PIXMAP_COPY,
-			     BIT(dpy_type, DT_HAVE_COLOR) ? 2 : 1,
+			     (colormap != 0)
+				 ? colormap
+				 : DefaultColormap(dpy,
+						   DefaultScreen(dpy)),
+			     (colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY,
+			     num_planes,
 			     colors);
 
-    if (dbuf_state == NULL) {
+    if (dbuf_state == NULL && colormap == 0) {
 
-	error("Short of colors, creating private cmap for '%s'", name);
 	/*
 	 * Create a private colormap if we can't allocate enough colors.
 	 */
-	colormap = XCreateColormap(dpy, DefaultRootWindow(dpy),
-				   DefaultVisual(dpy,
-						 DefaultScreen(dpy)),
-				   AllocNone);
+	Get_colormap();
+	Fill_colormap();
+
 	/*
 	 * Try to initialize the double buffering again.
 	 */
 	dbuf_state = start_dbuff(dpy, colormap,
-				 BIT(dpy_type, DT_HAVE_COLOR)
-				 ? COLOR_SWITCH : PIXMAP_COPY,
-				 BIT(dpy_type, DT_HAVE_COLOR) ? 2 : 1,
+				 (colorSwitch) ? COLOR_SWITCH : PIXMAP_COPY,
+				 num_planes,
 				 colors);
     }
 
     if (dbuf_state == NULL) {
 	/* Can't setup double buffering */
+	errno = 0;
+	error("Can't setup colors with visual %s and %d colormap entries",
+	    Visual_class_name(visual->class), visual->map_entries);
 	return -1;
+    }
+
+    for (i = maxColors; i < MAX_COLORS; i++) {
+	colors[i] = colors[i % maxColors];
     }
 
 
     about_created = false;
-    help_created = false;
+    keys_created = false;
     talk_created = false;
     talk_mapped = false;
     talk_str[0] = '\0';
 
 
     /*
+     * Get toplevel geometry.
+     */
+    top_flags = 0;
+    if (version >= 0x3041
+	&& geometry != NULL
+	&& geometry[0] != '\0') {
+	mask = XParseGeometry(geometry, &x, &y, &w, &h);
+    } else {
+	mask = 0;
+    }
+    if ((mask & WidthValue) != 0) {
+	top_width = w;
+	top_flags |= USSize;
+    } else {
+	top_width = DEF_TOP_WIDTH;
+	top_flags |= PSize;
+    }
+    LIMIT(top_width, MIN_TOP_WIDTH, MAX_TOP_WIDTH);
+    if ((mask & HeightValue) != 0) {
+	top_height = h;
+	top_flags |= USSize;
+    } else {
+	top_height = DEF_TOP_HEIGHT;
+	top_flags |= PSize;
+    }
+    LIMIT(top_height, MIN_TOP_HEIGHT, MAX_TOP_HEIGHT);
+    if ((mask & XValue) != 0) {
+	if ((mask & XNegative) != 0) {
+	    top_x = DisplayWidth(dpy, DefaultScreen(dpy)) - top_width + x;
+	} else {
+	    top_x = x;
+	}
+	top_flags |= USPosition;
+    } else {
+	top_x = (DisplayWidth(dpy, DefaultScreen(dpy)) - top_width) /2;
+	top_flags |= PPosition;
+    }
+    if ((mask & YValue) != 0) {
+	if ((mask & YNegative) != 0) {
+	    top_y = DisplayHeight(dpy, DefaultScreen(dpy)) - top_height + y;
+	} else {
+	    top_y = y;
+	}
+	top_flags |= USPosition;
+    } else {
+	top_y = (DisplayHeight(dpy, DefaultScreen(dpy)) - top_height) /2;
+	top_flags |= PPosition;
+    }
+    if (geometry != NULL) {
+	free(geometry);
+	geometry = NULL;
+    }
+
+
+    /*
      * Create toplevel window (we need this first so that we can create GCs)
      */
-    top = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0,
-			      1026, 768, 0, 0, colors[WHITE].pixel);
-    if (colormap)
-	XSetWindowColormap(dpy, top, colormap);
+    mask = 0;
+    sattr.background_pixel = colors[WHITE].pixel;
+    mask |= CWBackPixel;
+    sattr.border_pixel = colors[WHITE].pixel;
+    mask |= CWBorderPixel;
+    if (colormap != 0) {
+	sattr.colormap = colormap;
+	mask |= CWColormap;
+    }
+    top = XCreateWindow(dpy,
+			DefaultRootWindow(dpy),
+			top_x, top_y,
+			top_width, top_height,
+			0, dispDepth,
+			InputOutput, visual,
+			mask, &sattr);
 
 
     /*
@@ -338,7 +753,7 @@ int Init_window(void)
 	      GXcopy, AllPlanes);
 
     
-    if (BIT(dpy_type, DT_HAVE_PLANES))
+    if (colorSwitch)
 	XSetPlaneMask(dpy, gc, dbuf_state->drawing_planes);
 
 
@@ -352,25 +767,30 @@ int Init_window(void)
 	for (i=0; i<32; i++)
 	    if (!((1<<i)&dbuf_state->masks[p]))
 		if (dpl_1[p])
-		    dpl_2[p] = 1<<i;
+		    dpl_2[p] |= 1<<i;
 		else
-		    dpl_1[p] = 1<<i;
+		    dpl_1[p] |= 1<<i;
     }
 
 
     /*
      * Creates the windows.
      */
-    if (BIT(dpy_type, DT_HAVE_COLOR)) {
-	windowColor = BLUE;
-	buttonColor = RED;
-    } else {
+    if (mono) {
 	buttonColor = BLACK;
 	windowColor = BLACK;
+	borderColor = WHITE;
+    } else {
+	windowColor = BLUE;
+	buttonColor = RED;
+	borderColor = WHITE;
     }
 
+    draw_width = top_width - (256 + 2);
+    draw_height = top_height;
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
-			       768, 768, 0, 0, colors[BLACK].pixel);
+			       draw_width, draw_height,
+			       0, 0, colors[BLACK].pixel);
     radar = XCreateSimpleWindow(dpy, top, 0, 0,
 				256, RadarHeight, 0, 0,
 				colors[BLACK].pixel);
@@ -380,41 +800,50 @@ int Init_window(void)
     ButtonHeight
 	= buttonFont->ascent + buttonFont->descent + 2*BTN_BORDER;
 
-    quit_b
-	= XCreateSimpleWindow(dpy, top,
-			      1 + 0*BUTTON_WIDTH, RadarHeight+1,
-			      BUTTON_WIDTH, ButtonHeight, 0, 0,
-			      colors[buttonColor].pixel);
-    about_b
-	= XCreateSimpleWindow(dpy, top,
-			      2 + 1*BUTTON_WIDTH, RadarHeight+1,
-			      BUTTON_WIDTH, ButtonHeight, 0, 0,
-			      colors[buttonColor].pixel);
-    help_b
-	= XCreateSimpleWindow(dpy, top,
-			      3 + 2*BUTTON_WIDTH, RadarHeight+1,
-			      BUTTON_WIDTH, ButtonHeight, 0, 0,
-			      colors[buttonColor].pixel);
+    button_form
+	= Widget_create_form(0, top,
+			     0, RadarHeight,
+			     256, ButtonHeight + 2,
+			     0);
+    Widget_create_activate(button_form,
+			   0 + 0*BUTTON_WIDTH, 0,
+			   BUTTON_WIDTH, ButtonHeight,
+			   1, "QUIT",
+			   Quit_callback, NULL);
+    Widget_create_activate(button_form,
+			   1 + 1*BUTTON_WIDTH, 0,
+			   BUTTON_WIDTH, ButtonHeight,
+			   1, "ABOUT",
+			   About_callback, NULL);
+    menu_button
+	= Widget_create_menu(button_form,
+			     2 + 2*BUTTON_WIDTH, 0,
+			     BUTTON_WIDTH, ButtonHeight,
+			     1, "MENU");
+    Widget_add_pulldown_entry(menu_button,
+			      "KEYS", Keys_callback, NULL);
+    Widget_add_pulldown_entry(menu_button,
+			      "CONFIG", Config_callback, NULL);
+    Widget_add_pulldown_entry(menu_button,
+			      "SCORE", Score_callback, NULL);
+    Widget_add_pulldown_entry(menu_button,
+			      "PLAYER", Player_callback, NULL);
+    Widget_map_sub(button_form);
 
     /* Create score list window */
     players
-	= XCreateSimpleWindow(dpy, top, 0, RadarHeight+ButtonHeight+2,
-			      256, 768 - (RadarHeight - ButtonHeight - 2),
+	= XCreateSimpleWindow(dpy, top, 0, RadarHeight + ButtonHeight + 2,
+			      256, top_height
+				  - (RadarHeight + ButtonHeight + 2),
 			      0, 0,
 			      colors[windowColor].pixel);
 
     /*
-     * Selecting events the we can handle.
+     * Selecting the events we can handle.
      */
     XSelectInput(dpy, top,
 		 KeyPressMask | KeyReleaseMask
 		 | FocusChangeMask | StructureNotifyMask);
-    XSelectInput(dpy, quit_b,
-		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(dpy, about_b,
-		 ButtonPressMask | ButtonReleaseMask| ExposureMask);
-    XSelectInput(dpy, help_b,
-		 ButtonPressMask | ButtonReleaseMask | ExposureMask);
     XSelectInput(dpy, radar, ExposureMask);
     XSelectInput(dpy, players, ExposureMask);
     XSelectInput(dpy, draw, 0);
@@ -437,11 +866,19 @@ int Init_window(void)
 						   (char *)icon_bits,
 						   icon_width, icon_height);
 
-	xsh.flags = (PPosition|PSize|PMinSize|PMaxSize|PBaseSize);
-	xsh.width = xsh.base_width = xsh.min_width = xsh.max_width = 1026;
-	xsh.height = xsh.base_height = xsh.min_height = xsh.max_height = 768;
-	xsh.x = (DisplayWidth(dpy, DefaultScreen(dpy)) - xsh.width) /2;
-	xsh.y = (DisplayHeight(dpy, DefaultScreen(dpy)) - xsh.height) /2;
+	xsh.flags = (top_flags|PMinSize|PMaxSize|PBaseSize|PResizeInc);
+	xsh.width = top_width;
+	xsh.base_width =
+	xsh.min_width = (version >= 0x3041) ? MIN_TOP_WIDTH : DEF_TOP_WIDTH;
+	xsh.max_width = (version >= 0x3041) ? MAX_TOP_WIDTH : DEF_TOP_WIDTH;
+	xsh.width_inc = 1;
+	xsh.height = top_height;
+	xsh.base_height =
+	xsh.min_height = (version >= 0x3041) ? MIN_TOP_HEIGHT : DEF_TOP_HEIGHT;
+	xsh.max_height = (version >= 0x3041) ? MAX_TOP_HEIGHT : DEF_TOP_HEIGHT;
+	xsh.height_inc = 1;
+	xsh.x = top_x;
+	xsh.y = top_y;
 
 	xclh.res_name = NULL;	/* NULL: Automatically uses Argv[0], */
 	xclh.res_class = "XPilot"; /* stripped of directory prefixes. */
@@ -474,23 +911,18 @@ int Init_window(void)
 
 
     /*
-     * Initialize misc. pixmaps if this is monochrome.
+     * Initialize misc. pixmaps if we're not color switching.
      */
-    if (!BIT(dpy_type, DT_HAVE_PLANES)) {
-	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, 1);
-	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, 1);
-	p_draw  = XCreatePixmap(dpy, draw, 768, 768, 1);
+    if (colorSwitch == false) {
+	p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+	s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
+	p_draw  = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
     }
     else {
-	if (BIT(instruments, SHOW_SLIDING_RADAR) != 0) {
-	    s_radar = XCreatePixmap(dpy, radar,
-				    256, RadarHeight,
-				    DefaultDepth(dpy, DefaultScreen(dpy)));
-	} else {
-	    s_radar = radar;
-	}
+	s_radar = radar;
 	p_radar = s_radar;
 	p_draw = draw;
+	Paint_sliding_radar();
     }
 
     XAutoRepeatOff(dpy);	/* We don't want any autofire, yet! */
@@ -499,12 +931,7 @@ int Init_window(void)
     /*
      * Maps the windows, makes the visible. Voila!
      */
-    XMapWindow(dpy, draw);
-    XMapWindow(dpy, radar);
-    XMapWindow(dpy, quit_b);
-    XMapWindow(dpy, about_b);
-    XMapWindow(dpy, help_b);
-    XMapWindow(dpy, players);
+    XMapSubwindows(dpy, top);
     XMapWindow(dpy, top);
 
 
@@ -625,7 +1052,7 @@ void Expose_about_window(void)
 
     switch (about_page) {
     case 0: {
-	int	i, y;
+	int	i, y, old_y, box_start, box_end;
 	y = DrawShadowText(dpy, about_w, textGC,
 			   BORDER, BORDER,
 			   "BONUS ITEMS\n"
@@ -637,26 +1064,39 @@ void Expose_about_window(void)
 			   "new equipment.  If a fighter explodes, some of "
 			   "its equipment might be found among the debris.",
 			   colors[WHITE].pixel, colors[BLACK].pixel);
-	y += ITEM_SIZE + BORDER;
+	y += BORDER;
+	box_start = y;
+	y += BORDER / 2;
 	for (i=0; i<NUM_ITEMS; i++) {
-	    int old_y = y;
+
+	    y += BORDER / 2;
 
 	    /* Draw description text */
+	    old_y = y;
 	    y = DrawShadowText(dpy, about_w, textGC,
-			       5*BORDER + 2*ITEM_SIZE, y,
-			       itemBitmapData[i].helpText,
+			       5*BORDER + 2*ITEM_SIZE, old_y,
+			       itemBitmapData[i].keysText,
 			       colors[WHITE].pixel, colors[BLACK].pixel);
+	    if (y - old_y < 2 * ITEM_TRIANGLE_SIZE) {
+		y = old_y + 2 * ITEM_TRIANGLE_SIZE;
+	    }
+	    box_end = y + BORDER / 2;
+	    if (i == NUM_ITEMS - 1) {
+		box_end += BORDER / 2;
+	    }
 
 	    /* Paint the item on the left side */
 	    XSetForeground(dpy, textGC, colors[BLACK].pixel);
 	    XFillRectangle(dpy, about_w, textGC,
-			   BORDER, old_y - (ITEM_SIZE + BORDER)/2,
-			   2*ITEM_SIZE+2*BORDER, y-old_y+BORDER+ITEM_SIZE);
+			   BORDER, box_start,
+			   2*ITEM_SIZE+2*BORDER, box_end - box_start);
 	    XSetForeground(dpy, textGC, colors[RED].pixel);
-	    Paint_item(i, about_w, textGC, 2*BORDER + ITEM_SIZE, (y+old_y)/2);
+	    Paint_item(i, about_w, textGC, 2*BORDER + ITEM_SIZE,
+		       old_y + ITEM_TRIANGLE_SIZE);
 	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
 
-	    y += ITEM_SIZE + BORDER;
+	    y = box_end;
+	    box_start = box_end;
 	}
     }
 	break;
@@ -718,28 +1158,36 @@ static void createAboutWindow(void)
 				    + buttonFont->ascent + buttonFont->descent,
 				windowHeight = ABOUT_WINDOW_HEIGHT;
     int				textWidth;
-    XSetWindowAttributes	setAttr;
+    XSetWindowAttributes	sattr;
+    unsigned long		mask;
 
 
     /*
      * Create the window and initialize window name.
      */
+    mask = 0;
+    sattr.background_pixel = colors[windowColor].pixel;
+    mask |= CWBackPixel;
+    sattr.border_pixel = colors[borderColor].pixel;
+    mask |= CWBorderPixel;
+    if (colormap != 0) {
+	sattr.colormap = colormap;
+	mask |= CWColormap;
+    }
+    sattr.backing_store = Always;
+    mask |= CWBackingStore;
+
     about_w
-	= XCreateSimpleWindow(dpy, DefaultRootWindow(dpy),
-			      0, 0,
-			      windowWidth, windowHeight,
-			      2, colors[WHITE].pixel, 
-			      colors[windowColor].pixel);
-    if (colormap)
-	XSetWindowColormap(dpy, about_w, colormap);
+	= XCreateWindow(dpy,
+			DefaultRootWindow(dpy),
+			0, 0,
+			windowWidth, windowHeight,
+			2, dispDepth,
+			InputOutput, visual,
+			mask, &sattr);
     XStoreName(dpy, about_w, "XPilot - information");
     XSetIconName(dpy, about_w, "XPilot/info");
-
-    /*
-     * Enable backing store if possible.
-     */
-    setAttr.backing_store = Always;
-    XChangeWindowAttributes(dpy, about_w, CWBackingStore, &setAttr);
+    XSetTransientForHint(dpy, about_w, top);
 
     textWidth = XTextWidth(buttonFont, "CLOSE", 5);
     about_close_b
@@ -780,10 +1228,12 @@ static void createAboutWindow(void)
     XSelectInput(dpy, about_w, ExposureMask);
 
     Expose_about_window();
+
+    XMapSubwindows(dpy, about_w);
 }
 
 
-static void createHelpWindow(void)
+static void createKeysWindow(void)
 {
     const int			buttonWindowHeight = 2*BTN_BORDER
 				    + buttonFont->ascent + buttonFont->descent;
@@ -791,8 +1241,9 @@ static void createHelpWindow(void)
 				windowHeight = 0,
 				maxKeyNameLen = 0,
 				maxKeyDescLen = 0;
-    XSetWindowAttributes	setAttr;
-    extern char* Get_keyhelpstring(keys_t);
+    XSetWindowAttributes	sattr;
+    unsigned long		mask;
+    extern char*		Get_keyhelpstring(keys_t);
 
     if (keyHelpList == NULL) {
 	int	sizeList = 1, sizeDesc = 1, i = 0;
@@ -800,9 +1251,9 @@ static void createHelpWindow(void)
 	/*
 	 * Make sure the strings are empty and null terminated.
 	 */
-	keyHelpList = malloc(1);
+	keyHelpList = (char *)malloc(1);
 	keyHelpList[0] = '\0';
-	keyHelpDesc = malloc(1);
+	keyHelpDesc = (char *)malloc(1);
 	keyHelpDesc[0] = '\0';
 
 	/*
@@ -818,7 +1269,7 @@ static void createHelpWindow(void)
 	     */
 	    str = XKeysymToString(keyDefs[i].keysym);
 	    sizeList += strlen(str) + 1;
-	    keyHelpList = realloc(keyHelpList, sizeList);
+	    keyHelpList = (char *)realloc(keyHelpList, sizeList);
 	    strcat(keyHelpList, str);
 	    keyHelpList[sizeList-2] = '\n';
 	    keyHelpList[sizeList-1] = '\0';
@@ -831,9 +1282,11 @@ static void createHelpWindow(void)
 	    /*
 	     * Description of action invoked for this key
 	     */
-	    str = Get_keyhelpstring(keyDefs[i].key);
+	    if ((str = Get_keyhelpstring(keyDefs[i].key)) == NULL) {
+		continue;
+	    }
 	    sizeDesc += strlen(str) + 1;
-	    keyHelpDesc = realloc(keyHelpDesc, sizeDesc);
+	    keyHelpDesc = (char *)realloc(keyHelpDesc, sizeDesc);
 	    strcat(keyHelpDesc, str);
 	    keyHelpDesc[sizeDesc-2] = '\n';
 	    keyHelpDesc[sizeDesc-1] = '\0';
@@ -856,30 +1309,37 @@ static void createHelpWindow(void)
     KeyDescOffset = 3*BORDER + maxKeyNameLen;
 
     /*
-     * Create main window.
+     * Create the window and initialize window name.
      */
-    help_w
-	= XCreateSimpleWindow(dpy, DefaultRootWindow(dpy),
-			      0, 0,
-			      windowWidth, windowHeight,
-			      2, colors[WHITE].pixel,
-			      colors[windowColor].pixel);
-    if (colormap)
-	XSetWindowColormap(dpy, help_w, colormap);
-    XStoreName(dpy, help_w, "XPilot - key reference");
-    XSetIconName(dpy, help_w, "XPilot/keys");
+    mask = 0;
+    sattr.background_pixel = colors[windowColor].pixel;
+    mask |= CWBackPixel;
+    sattr.border_pixel = colors[borderColor].pixel;
+    mask |= CWBorderPixel;
+    if (colormap != 0) {
+	sattr.colormap = colormap;
+	mask |= CWColormap;
+    }
+    sattr.backing_store = Always;
+    mask |= CWBackingStore;
 
-    /*
-     * Enable backing store if possible.
-     */
-    setAttr.backing_store = Always;
-    XChangeWindowAttributes(dpy, help_w, CWBackingStore, &setAttr);
+    keys_w
+	= XCreateWindow(dpy,
+			DefaultRootWindow(dpy),
+			0, 0,
+			windowWidth, windowHeight,
+			2, dispDepth,
+			InputOutput, visual,
+			mask, &sattr);
+    XStoreName(dpy, keys_w, "XPilot - key reference");
+    XSetIconName(dpy, keys_w, "XPilot/keys");
+    XSetTransientForHint(dpy, keys_w, top);
 
     /*
      * Create buttons.
      */
-    help_close_b
-	= XCreateSimpleWindow(dpy, help_w,
+    keys_close_b
+	= XCreateSimpleWindow(dpy, keys_w,
 			      BORDER,
 			      (windowHeight - BORDER - buttonWindowHeight - 4),
 			      (XTextWidth(buttonFont,
@@ -887,22 +1347,24 @@ static void createHelpWindow(void)
 			      buttonWindowHeight,
 			      0, 0,
 			      colors[buttonColor].pixel);
-    XSelectInput(dpy, help_close_b,
+    XSelectInput(dpy, keys_close_b,
 		 ExposureMask | ButtonPressMask | ButtonReleaseMask);
-    XSelectInput(dpy, help_w, ExposureMask);
+    XSelectInput(dpy, keys_w, ExposureMask);
 
-    Expose_help_window();
+    Expose_keys_window();
+
+    XMapSubwindows(dpy, keys_w);
 }
 
     
-void Expose_help_window(void)
+void Expose_keys_window(void)
 {
-    XClearWindow(dpy, help_w);
+    XClearWindow(dpy, keys_w);
 
-    DrawShadowText(dpy, help_w, textGC,
+    DrawShadowText(dpy, keys_w, textGC,
 		   BORDER, BORDER, keyHelpList,
 		   colors[WHITE].pixel, colors[BLACK].pixel);
-    DrawShadowText(dpy, help_w, textGC,
+    DrawShadowText(dpy, keys_w, textGC,
 		   KeyDescOffset, BORDER, keyHelpDesc,
 		   colors[WHITE].pixel, colors[BLACK].pixel);
 }
@@ -910,7 +1372,14 @@ void Expose_help_window(void)
 
 void Expose_button_window(int color, Window w)
 {
-    if (BIT(dpy_type, DT_HAVE_COLOR)) {
+    if (w != about_close_b
+	&& w != about_next_b
+	&& w != about_prev_b
+	&& w != keys_close_b) {
+	return;
+    }
+
+    if (mono == false) {
 	XWindowAttributes	wattr;			/* Get window height */
 	XGetWindowAttributes(dpy, w, &wattr);	/* and width */
 
@@ -920,21 +1389,6 @@ void Expose_button_window(int color, Window w)
     } else
 	XClearWindow(dpy, w);
 
-    if (w == quit_b)
-	ShadowDrawString(dpy, w, buttonGC,
-			 (BUTTON_WIDTH
-			  - XTextWidth(buttonFont, "QUIT", 4)) / 2,
-			 BTN_BORDER + buttonFont->ascent,
-			 "QUIT",
-			 colors[WHITE].pixel, colors[BLACK].pixel);
-
-    if (w == about_b)
-	ShadowDrawString(dpy, w, buttonGC,
-			 (BUTTON_WIDTH
-			  - XTextWidth(buttonFont, "ABOUT", 5)) / 2,
-			 BTN_BORDER + buttonFont->ascent,
-			 "ABOUT", 
-			 colors[WHITE].pixel, colors[BLACK].pixel);
     if (w == about_close_b)
 	ShadowDrawString(dpy, w, buttonGC,
 			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
@@ -951,14 +1405,7 @@ void Expose_button_window(int color, Window w)
 			 "PREV",
 			 colors[WHITE].pixel, colors[BLACK].pixel);
 
-    if (w == help_b)
-	ShadowDrawString(dpy, w, buttonGC,
-			 (BUTTON_WIDTH
-			  - XTextWidth(buttonFont, "KEYS", 4)) / 2,
-			 BTN_BORDER + buttonFont->ascent,
-			 "KEYS",
-			 colors[WHITE].pixel, colors[BLACK].pixel);
-    if (w == help_close_b)
+    if (w == keys_close_b)
 	ShadowDrawString(dpy, w, buttonGC,
 			 BTN_BORDER, buttonFont->ascent + BTN_BORDER,
 			 "CLOSE",
@@ -972,12 +1419,8 @@ void About(Window w)
 	createAboutWindow();
 	about_created = true;
     }
-    if (w == about_b) {
-	XMapWindow(dpy, about_w);
-	XMapSubwindows(dpy, about_w);
-    } else if (w == about_close_b) {
+    if (w == about_close_b) {
 	about_page = 0;
-	XUnmapSubwindows(dpy, about_w);
 	XUnmapWindow(dpy, about_w);
     } else if (w == about_next_b) {
 	about_page++;
@@ -993,19 +1436,73 @@ void About(Window w)
 }
 
 
-void Help(Window w)
+static int About_callback(int widget_desc, void *data, char **str)
 {
-    if (help_created == false) {
-	createHelpWindow();
-	help_created = true;
+    if (about_created == false) {
+	createAboutWindow();
+	about_created = true;
     }
-    if (w == help_b) {
-	XMapWindow(dpy, help_w);
-	XMapSubwindows(dpy, help_w);
-    } else if (w == help_close_b) {
-	XUnmapSubwindows(dpy, help_w);
-	XUnmapWindow(dpy, help_w);
+    XMapWindow(dpy, about_w);
+    return 0;
+}
+
+
+void Keys(Window w)
+{
+    if (keys_created == false) {
+	createKeysWindow();
+	keys_created = true;
     }
+    if (w == keys_close_b) {
+	XUnmapWindow(dpy, keys_w);
+    }
+}
+
+
+static int Keys_callback(int widget_desc, void *data, char **str)
+{
+    if (keys_created == false) {
+	createKeysWindow();
+	keys_created = true;
+    }
+    XMapWindow(dpy, keys_w);
+    return 0;
+}
+
+
+static int Config_callback(int widget_desc, void *data, char **str)
+{
+    Config(true);
+    return 0;
+}
+
+
+static int Score_callback(int widget_desc, void *data, char **str)
+{
+    Config(false);
+    if (showRealName != false) {
+	showRealName = false;
+	scoresChanged = 1;
+    }
+    return 0;
+}
+
+
+static int Player_callback(int widget_desc, void *data, char **str)
+{
+    Config(false);
+    if (showRealName != true) {
+	showRealName = true;
+	scoresChanged = 1;
+    }
+    return 0;
+}
+
+
+static int Quit_callback(int widget_desc, void *data, char **str)
+{
+    quitting = true;
+    return 0;
 }
 
 
@@ -1167,6 +1664,39 @@ void Talk_event(XEvent *event)
 }
 
 
+void Resize(Window w, int width, int height)
+{
+    if (w != top) {
+	return;
+    }
+    /* ignore illegal resizes */
+    LIMIT(width, MIN_TOP_WIDTH, MAX_TOP_WIDTH);
+    LIMIT(height, MIN_TOP_HEIGHT, MAX_TOP_HEIGHT);
+    if (width == top_width && height == top_height) {
+	return;
+    }
+    top_width = width;
+    top_height = height;
+    draw_width = top_width - 258;
+    draw_height = top_height;
+    Send_display();
+    Net_flush();
+    XResizeWindow(dpy, draw, draw_width, draw_height);
+    if (p_draw != draw) {
+	XFreePixmap(dpy, p_draw);
+	p_draw = XCreatePixmap(dpy, draw, draw_width, draw_height, dispDepth);
+    }
+    XResizeWindow(dpy, players,
+		  256, top_height - (RadarHeight + ButtonHeight + 2));
+    if (talk_created) {
+	XMoveResizeWindow(dpy, talk_w,
+			  TALK_WINDOW_X, TALK_WINDOW_Y,
+			  TALK_WINDOW_WIDTH, TALK_WINDOW_HEIGHT);
+    }
+    Config_resize();
+}
+
+
 /*
  * Cleanup player structure, close the display etc.
  */
@@ -1174,10 +1704,6 @@ void Quit(void)
 {
     if (dpy != NULL) {
 	XAutoRepeatOn(dpy);
-	if (quit_b) {
-	    Expose_button_window(RED, quit_b);
-	    quit_b = 0;
-	}
 	if (dbuf_state) {
 	    end_dbuff(dbuf_state);
 	    dbuf_state = NULL;
@@ -1200,4 +1726,5 @@ int FatalError(Display *dpy)
      * It's already a fatal I/O error, nothing to cleanup.
      */
     exit(0);
+    return(0);
 }

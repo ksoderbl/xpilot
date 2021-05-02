@@ -1,12 +1,24 @@
-/* $Id: frame.c,v 3.11 1993/08/02 12:41:13 bjoerns Exp $
+/* $Id: frame.c,v 3.25 1993/10/02 00:36:13 bjoerns Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -15,19 +27,32 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #include "global.h"
 #include "version.h"
 #include "bit.h"
 #include "netserver.h"
+#include "saudio.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.11 1993/08/02 12:41:13 bjoerns Exp $";
+    "@(#)$Id: frame.c,v 3.25 1993/10/02 00:36:13 bjoerns Exp $";
 #endif
 
-#define BLOCK_FULL	((FULL + (BLOCK_SZ - 1)) / BLOCK_SZ)
-#define BLOCK_CENTER	((CENTER + (BLOCK_SZ - 1)) / BLOCK_SZ)
+
+/*
+ * Structure for calculating if a pixel is visible by a player.
+ */
+typedef struct {
+    position	world;			/* Lower left hand corner is this */
+					/* world coordinate */
+    position	realWorld;		/* If the player is on the edge of
+					   the screen, these are the world
+					   coordinates before adjustment... */
+    int		wrappedWorld;		/* Nonzero if we're near the edge
+					   of the world (realWorld != world) */
+} pixel_visibility_t;
 
 /*
  * Structure with player position info measured in blocks instead of pixels.
@@ -46,56 +71,65 @@ typedef struct {
 
 long			loops = 0;
 
-
+static pixel_visibility_t pv;
+static int		view_width,
+			view_height,
+			horizontal_blocks,
+			vertical_blocks,
+			debris_x_areas,
+			debris_y_areas,
+			debris_areas,
+			debris_colors,
+			spark_rand;
 static debris_t		*debris_ptr[DEBRIS_TYPES];
 static int		debris_num[DEBRIS_TYPES],
 			debris_max[DEBRIS_TYPES];
 
 
-static int inview(player *pl, float x, float y)
+static int inview(float x, float y)
 {
-    if (x > pl->world.x
-	&& x < pl->world.x + FULL
-	&& y > pl->world.y
-	&& y < pl->world.y + FULL) {
+    if (x > pv.world.x
+	&& x < pv.world.x + view_width
+	&& y > pv.world.y
+	&& y < pv.world.y + view_height) {
 	return 1;
     }
-    if (!pl->wrappedWorld) {
+    if (!pv.wrappedWorld) {
 	return 0;
     }
-    if ((pl->wrappedWorld & 1) && x > FULL) {
-	x -= World.x * BLOCK_SZ;
+    if ((pv.wrappedWorld & 1) && x > view_width) {
+	x -= World.width;
     }
-    if ((pl->wrappedWorld & 2) && y > FULL) {
-	y -= World.y * BLOCK_SZ;
+    if ((pv.wrappedWorld & 2) && y > view_height) {
+	y -= World.height;
     }
-    return (x > pl->realWorld.x
-	&& x < pl->realWorld.x + FULL
-	&& y > pl->realWorld.y
-	&& y < pl->realWorld.y + FULL);
+    return (x > pv.realWorld.x
+	&& x < pv.realWorld.x + view_width
+	&& y > pv.realWorld.y
+	&& y < pv.realWorld.y + view_height);
 }
 
 static int block_inview(block_visibility_t *pl, int x, int y)
 {
     if (x >= pl->world.x
-	&& x <= pl->world.x + BLOCK_FULL
+	&& x <= pl->world.x + horizontal_blocks
 	&& y >= pl->world.y
-	&& y <= pl->world.y + BLOCK_FULL) {
+	&& y <= pl->world.y + vertical_blocks) {
 	return 1;
     }
     if (!pl->wrappedWorld) {
 	return 0;
     }
-    if ((pl->wrappedWorld & 1) && x > BLOCK_FULL) {
+    if ((pl->wrappedWorld & 1) && x > horizontal_blocks) {
 	x -= World.x;
     }
-    if ((pl->wrappedWorld & 2) && y > BLOCK_FULL) {
+    if ((pl->wrappedWorld & 2) && y > vertical_blocks) {
 	y -= World.y;
     }
     return (x >= pl->realWorld.x
-	&& x <= pl->realWorld.x + BLOCK_FULL
+	&& x <= pl->realWorld.x + horizontal_blocks
 	&& y >= pl->realWorld.y
-	&& y <= pl->realWorld.y + BLOCK_FULL);
+	&& y <= pl->realWorld.y + vertical_blocks);
 }
 
 static void debris_store(float xf, float yf, int color)
@@ -109,35 +143,24 @@ static void debris_store(float xf, float yf, int color)
 			yd;
 
     if (xf < 0) {
-	xf += World.x * BLOCK_SZ;
+	xf += World.width;
     }
     if (yf < 0) {
-	yf += World.y * BLOCK_SZ;
+	yf += World.height;
     }
     xd = (int) (xf + 0.5);
     yd = (int) (yf + 0.5);
-    if ((unsigned) xd >= FULL || (unsigned) yd >= FULL) {
+    if ((unsigned) xd >= view_width || (unsigned) yd >= view_height) {
 	/*
 	 * There's some rounding error or so somewhere.
 	 * Should be possible to resolve it.
 	 */
-	if (xd == FULL) {
-	    xd--;
-	}
-	if (yd == FULL) {
-	    yd--;
-	}
-#ifndef SILENT
-	if ((unsigned) xd >= FULL || (unsigned) yd >= FULL) {
-	    printf("debris %d,%d\n", xd, yd);
-	}
-#endif
 	return;
     }
 
-    i = color * 9
-	+ (((yd >> 8) % 3) * 3)
-	+ ((xd >> 8) % 3);
+    i = color * debris_areas
+	+ (((yd >> 8) % debris_y_areas) * debris_x_areas)
+	+ ((xd >> 8) % debris_x_areas);
 
     if (num >= 255) {
 	return;
@@ -177,10 +200,11 @@ static void debris_end(int conn)
     }
 }
 
-static void Frame_status(int conn, int ind)
+static int Frame_status(int conn, int ind)
 {
     player		*pl = Players[ind];
-    int			lock_ind,
+    int			n,
+			lock_ind,
 			lock_id = -1,
 			lock_dist = 0,
 			lock_dir = 0;
@@ -204,7 +228,7 @@ static void Frame_status(int conn, int ind)
 #endif
 	    && BIT(Players[lock_ind]->status, PLAYING|GAME_OVER) == PLAYING
 	    && (playersOnRadar
-	    || inview(pl, Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
+	    || inview(Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
 	    && pl->lock.distance != 0) {
 	    lock_dir = Wrap_findDir(Players[lock_ind]->pos.x - pl->pos.x,
 				    Players[lock_ind]->pos.y - pl->pos.y);
@@ -212,7 +236,7 @@ static void Frame_status(int conn, int ind)
 	}
     }
 
-    Send_self(conn,
+    n = Send_self(conn,
 	(int) (pl->pos.x + 0.5),
 	(int) (pl->pos.y + 0.5),
 	(int) pl->vel.x,
@@ -234,10 +258,15 @@ static void Frame_status(int conn, int ind)
 	pl->extra_shots,
 	pl->back_shots,
 	pl->afterburners,
+	pl->lasers,
 	pl->fuel.num_tanks,
 	pl->fuel.current,
 	pl->fuel.sum,
-	pl->fuel.max);
+	pl->fuel.max,
+	Players[GetInd[Get_player_id(conn)]]->status);
+    if (n <= 0) {
+	return 0;
+    }
 
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count > 0) {
 	Send_destruct(conn, pl->count);
@@ -245,6 +274,7 @@ static void Frame_status(int conn, int ind)
     if (Shutdown != -1) {
 	Send_shutdown(conn, Shutdown, ShutdownDelay);
     }
+    return 1;
 }
 
 static void Frame_map(int conn, int ind)
@@ -258,22 +288,22 @@ static void Frame_map(int conn, int ind)
 
     x = pl->pos.x / BLOCK_SZ;
     y = pl->pos.y / BLOCK_SZ;
-    bv.world.x = x - BLOCK_CENTER;
-    bv.world.y = y - BLOCK_CENTER;
+    bv.world.x = x - (horizontal_blocks >> 1);
+    bv.world.y = y - (vertical_blocks >> 1);
     bv.wrappedWorld = 0;
     if (BIT(World.rules->mode, WRAP_PLAY)) {
 	bv.realWorld = bv.world;
 	if (bv.world.x < 0) {
 	    bv.wrappedWorld |= 1;
 	    bv.world.x += World.x;
-	} else if (bv.world.x + BLOCK_FULL > World.x) {
+	} else if (bv.world.x + horizontal_blocks > World.x) {
 	    bv.realWorld.x -= World.x;
 	    bv.wrappedWorld |= 1;
 	}
 	if (bv.world.y < 0) {
 	    bv.wrappedWorld |= 2;
 	    bv.world.y += World.y;
-	} else if (bv.world.y + BLOCK_FULL > World.y) {
+	} else if (bv.world.y + vertical_blocks > World.y) {
 	    bv.realWorld.y -= World.y;
 	    bv.wrappedWorld |= 2;
 	}
@@ -297,7 +327,7 @@ static void Frame_map(int conn, int ind)
 		Send_cannon(conn, i, World.cannon[i].dead_time);
 	    }
 	    if (World.cannon[i].dead_time <= 0) {
-		World.cannon[i].active = 1;
+		World.cannon[i].active = true;
 	    }
 	}
     }
@@ -317,35 +347,65 @@ static void Frame_map(int conn, int ind)
 static void Frame_shots(int conn, int ind)
 {
     player		*pl = Players[ind];
-    int			i, color, x, y;
+    int			i, color, x, y, fuzz = 0;
     object		*shot;
 
     for (i = 0; i < NumObjs; i++) {
 	shot = Obj[i];
-	if (!inview(pl, shot->pos.x, shot->pos.y)) {
+	if (!inview(shot->pos.x, shot->pos.y)) {
 	    continue;
 	}
 	x = (int) (shot->pos.x + 0.5);
 	y = (int) (shot->pos.y + 0.5);
-	if (BIT(shot->type, OBJ_SPARK|OBJ_DEBRIS|OBJ_SHOT)
-	    && shot->id != -1
-	    && shot->id != pl->id
-	    && TEAM(ind, GetInd[shot->id])) {
-	    color = BLUE;
-	} else {
-	    if ((color = shot->color) == BLACK) {
-		color = WHITE;
-	    }
+	if ((color = shot->color) == BLACK) {
+	    printf("black %d,%d\n", shot->type, shot->id);
+	    color = WHITE;
 	}
 	switch (shot->type) {
 	case OBJ_SPARK:
 	case OBJ_DEBRIS:
 	case OBJ_CANNON_DEBRIS:
-	    debris_store(shot->pos.x - pl->world.x,
-			 shot->pos.y - pl->world.y,
-			 color);
+	    if ((fuzz >>= 7) < 0x40) {
+		fuzz = rand();
+	    }
+	    if ((fuzz & 0x7F) >= spark_rand) {
+		/*
+		 * produce a sparkling effect by not displaying
+		 * particles every frame.
+		 */
+		break;
+	    }
+	    if (debris_colors >= 3) {
+		if (debris_colors > 4) {
+		    if (color == BLUE) {
+			color = (shot->life >> 1);
+		    } else {
+			color = (shot->life >> 2);
+		    }
+		} else {
+		    if (color == BLUE) {
+			color = (shot->life >> 2);
+		    } else {
+			color = (shot->life >> 3);
+		    }
+
+		}
+		if (color >= debris_colors) {
+		    color = debris_colors - 1;
+		}
+	    }
+
+	    debris_store(shot->pos.x - pv.world.x,
+			 shot->pos.y - pv.world.y,
+                         color);
 	    break;
 	case OBJ_SHOT:
+	    if (shot->id != -1
+		&& shot->id != pl->id
+		&& TEAM(ind, GetInd[shot->id])) {
+		color = BLUE;
+	    }
+	    /*FALLTHROUGH*/
 	case OBJ_CANNON_SHOT:
 	    Send_shot(conn, x, y, color);
 	    break;
@@ -394,6 +454,11 @@ static void Frame_shots(int conn, int ind)
 	case OBJ_TRANSPORTER:
 	    Send_item(conn, x, y, ITEM_TRANSPORTER);
 	    break;
+	case OBJ_LASER:
+	    if (pl->version >= 0x3041) {
+		Send_item(conn, x, y, ITEM_LASER);
+	    }
+	    break;
 	default:
 	    error("Frame_shots: Shot type %d not defined.", shot->type);
 	    break;
@@ -405,7 +470,9 @@ static void Frame_ships(int conn, int ind)
 {
     player		*pl = Players[ind],
 			*pl_i;
-    int			i, flag;
+    pulse_t		*pulse;
+    int			i, j, flag, color, dir;
+    float		x, y;
 
     for (i = 0; i < NumPlayers; i++) {
 	pl_i = Players[i];
@@ -415,7 +482,66 @@ static void Frame_ships(int conn, int ind)
 	if (BIT(pl_i->status, GAME_OVER)) {
 	    continue;
 	}
-	if (!inview(pl, pl_i->pos.x, pl_i->pos.y)) {
+	for (j = 0; j < pl_i->num_pulses; j++) {
+	    pulse = &pl_i->pulses[j];
+	    if (pulse->len <= 0) {
+		continue;
+	    }
+	    x = pulse->pos.x;
+	    y = pulse->pos.y;
+	    if (BIT (World.rules->mode, WRAP_PLAY)) {
+		if (x < 0) {
+		    x += World.width;
+		}
+		else if (x >= World.width) {
+		    x -= World.width;
+		}
+		if (y < 0) {
+		    y += World.height;
+		}
+		else if (y >= World.height) {
+		    y -= World.height;
+		}
+	    }
+	    if (inview(x, y)) {
+		dir = pulse->dir;
+	    } else {
+		x += tcos(pulse->dir) * pulse->len;
+		y += tsin(pulse->dir) * pulse->len;
+		if (BIT (World.rules->mode, WRAP_PLAY)) {
+		    if (x < 0) {
+			x += World.width;
+		    }
+		    else if (x >= World.width) {
+			x -= World.width;
+		    }
+		    if (y < 0) {
+			y += World.height;
+		    }
+		    else if (y >= World.height) {
+			y -= World.height;
+		    }
+		}
+		if (inview(x, y)) {
+		    dir = MOD2(pulse->dir + RES/2, RES);
+		}
+		else {
+		    continue;
+		}
+	    }
+	    if (TEAM(ind, i) && ind != i) {
+		color = BLUE;
+	    } else {
+		color = RED;
+	    }
+	    Send_laser(conn,
+		color,
+		(int) (x + 0.5),
+		(int) (y + 0.5),
+		pulse->len,
+		dir);
+	}
+	if (!inview(pl_i->pos.x, pl_i->pos.y)) {
 	    continue;
 	}
 	if (BIT(pl_i->status, PAUSE)) {
@@ -437,25 +563,25 @@ static void Frame_ships(int conn, int ind)
 		       (int) (pl_i->pos.x + 0.5), (int) (pl_i->pos.y + 0.5));
 	}
 
-	/* Don't transmit inforation is fighter is invisible */
-	if (!pl->visibility[i].canSee
-	    && i != ind
-	    && !TEAM(i, ind)) {
-	    continue;
+	/* Don't transmit information is fighter is invisible */
+	if (pl->visibility[i].canSee
+	    || i == ind
+	    || TEAM(i, ind)) {
+	    /*
+	     * Transmit ship information
+	     */
+	    Send_ship(conn,
+		(int) (pl_i->pos.x + 0.5),
+		(int) (pl_i->pos.y + 0.5),
+		pl_i->id,
+		pl_i->dir,
+		BIT(pl_i->used, OBJ_SHIELD) != 0,
+		BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0
+	    );
 	}
-
-	/* Transmit ship information */
-	Send_ship(conn,
-	    (int) (pl_i->pos.x + 0.5),
-	    (int) (pl_i->pos.y + 0.5),
-	    pl_i->id,
-	    pl_i->dir,
-	    BIT(pl_i->used, OBJ_SHIELD) != 0,
-	    BIT(pl_i->used, OBJ_CLOAKING_DEVICE) != 0
-	);
 	if (BIT(pl_i->used, OBJ_REFUEL)) {
-	    if (inview(pl, World.fuel[pl_i->fs].pos.x,
-			   World.fuel[pl_i->fs].pos.y)) {
+	    if (inview(World.fuel[pl_i->fs].pos.x,
+		       World.fuel[pl_i->fs].pos.y)) {
 		Send_refuel(conn,
 		    (int) (World.fuel[pl_i->fs].pos.x + 0.5),
 		    (int) (World.fuel[pl_i->fs].pos.y + 0.5),
@@ -464,8 +590,7 @@ static void Frame_ships(int conn, int ind)
 	    }
 	}
 	if (pl_i->ball != NULL
-	    /* && BIT(pl_i->used, OBJ_CONNECTOR) */
-	    && inview(pl, pl_i->ball->pos.x, pl_i->ball->pos.y)) {
+	    && inview(pl_i->ball->pos.x, pl_i->ball->pos.y)) {
 	    Send_connector(conn,
 		(int) (pl_i->ball->pos.x + 0.5),
 		(int) (pl_i->ball->pos.y + 0.5),
@@ -525,16 +650,66 @@ static void Frame_radar(int conn, int ind)
     }
 }
 
+static void Frame_parameters(int conn, int ind)
+{
+    player		*pl = Players[ind];
+
+    Get_display_parameters(conn, &view_width, &view_height,
+			   &debris_colors, &spark_rand);
+    debris_x_areas = (view_width + 255) >> 8;
+    debris_y_areas = (view_height + 255) >> 8;
+    debris_areas = debris_x_areas * debris_y_areas;
+    horizontal_blocks = (view_width + (BLOCK_SZ - 1)) / BLOCK_SZ;
+    vertical_blocks = (view_height + (BLOCK_SZ - 1)) / BLOCK_SZ;
+
+    pv.world.x = pl->pos.x - view_width / 2;	/* Scroll */
+    pv.world.y = pl->pos.y - view_height / 2;
+    pv.wrappedWorld = 0;
+    if (BIT (World.rules->mode, WRAP_PLAY)) {
+	pv.realWorld = pv.world;
+	if (pv.world.x < 0) {
+	    pv.wrappedWorld |= 1;
+	    pv.world.x += World.width;
+	} else if (pv.world.x + view_width >= World.width) {
+	    pv.realWorld.x -= World.width;
+	    pv.wrappedWorld |= 1;
+	}
+
+	if (pv.world.y < 0) {
+	    pv.wrappedWorld |= 2;
+	    pv.world.y += World.height;
+	} else if (pv.world.y + view_height >= World.height) {
+	    pv.realWorld.y -= World.height;
+	    pv.wrappedWorld |= 2;
+	}
+    }
+}
+
 void Frame_update(void)
 {
     int			i,
 			conn,
 			ind;
     player		*pl;
-    static int		firstTime = 1, startOfFrameRet = 0;
-
+    time_t		newTimeLeft = 0;
+    static time_t	oldTimeLeft;
+    static bool		game_over_called = false;
+    
     if (++loops >= LONG_MAX)	/* Used for misc. timing purposes */
 	loops = 0;
+
+    if (gameDuration > 0.0
+	&& game_over_called == false
+	&& oldTimeLeft != (newTimeLeft = gameOverTime - time(NULL))) {
+	/*
+	 * Do this once a second.
+	 */
+	if (newTimeLeft <= 0) {
+	    Game_Over();
+	    Shutdown = 30 * FPS;	/* Shutdown in 30 seconds */
+	    game_over_called = true;
+	}
+    }
 
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
@@ -545,6 +720,9 @@ void Frame_update(void)
 	if (Send_start_of_frame(conn) == -1) {
 	    continue;
 	}
+	if (newTimeLeft != oldTimeLeft) {
+	    Send_time_left(conn, newTimeLeft);
+	}
 	/*
 	 * If status is GAME_OVER, the user may look through the other
 	 * players 'eyes'.  This is done by using two indexes, one
@@ -554,6 +732,7 @@ void Frame_update(void)
 	if (BIT(pl->status, GAME_OVER|PLAYING) == (GAME_OVER|PLAYING)
 	    && (pl->lock.tagged == LOCK_PLAYER)) {
 	    ind = GetInd[pl->lock.pl_id];
+	    Send_eyes(conn, pl->lock.pl_id);
 	} else {
 	    ind = i;
 	}
@@ -561,18 +740,20 @@ void Frame_update(void)
 	    Send_damaged(conn, Players[ind]->damaged);
 	    Players[ind]->damaged--;
 	} else {
-	    Frame_status(conn, ind);
+	    if (Frame_status(conn, ind) <= 0) {
+		continue;
+	    }
+	    Frame_parameters(conn, ind);
 	    Frame_map(conn, ind);
 	    Frame_shots(conn, ind);
 	    Frame_ships(conn, ind);
 	    Frame_radar(conn, ind);
 	    debris_end(conn);
 	}
-#ifdef SOUND
 	sound_play_queued(Players[ind]);
-#endif /* SOUND */
 	Send_end_of_frame(conn);
     }
+    oldTimeLeft = newTimeLeft;
 }
 
 void Set_message(char *message)

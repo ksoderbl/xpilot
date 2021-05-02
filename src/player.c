@@ -1,12 +1,24 @@
-/* $Id: player.c,v 3.10 1993/06/30 15:43:10 bjoerns Exp $
+/* $Id: player.c,v 3.25 1993/10/01 20:44:42 bert Exp $
  *
- *	This file is part of the XPilot project, written by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
- *	    Bjørn Stabell (bjoerns@staff.cs.uit.no)
- *	    Ken Ronny Schouten (kenrsc@stud.cs.uit.no)
- *	    Bert Gÿsbers (bert@mc.bio.uva.nl)
+ *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
+ *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
+ *      Bert Gÿsbers         (bert@mc.bio.uva.nl)
  *
- *	Copylefts are explained in the LICENSE file.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -15,10 +27,11 @@
 #include "score.h"
 #include "robot.h"
 #include "bit.h"
+#include "netserver.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.10 1993/06/30 15:43:10 bjoerns Exp $";
+    "@(#)$Id: player.c,v 3.25 1993/10/01 20:44:42 bert Exp $";
 #endif
 
 
@@ -38,6 +51,10 @@ void Pick_startpos(int ind)
     static int	prev_num_bases = 0;
     static char	*free_bases = NULL;
 
+    if (pl->robot_mode == RM_OBJECT) {
+	pl->home_base = 0;
+	return;
+    }
     if (prev_num_bases != World.NumBases) {
 	prev_num_bases = World.NumBases;
 	if (free_bases != NULL) {
@@ -59,7 +76,9 @@ void Pick_startpos(int ind)
 	}
     }
     for (i = 0; i < NumPlayers; i++) {
-	if (i != ind && free_bases[Players[i]->home_base] != 0) {
+	if (i != ind
+	    && Players[i]->robot_mode != RM_OBJECT
+	    && free_bases[Players[i]->home_base] != 0) {
 	    free_bases[Players[i]->home_base] = 0;
 	    num_free--;
 	}
@@ -83,7 +102,7 @@ void Pick_startpos(int ind)
 		    if (BIT(pl->status, PLAYING) == 0) {
 			pl->count = RECOVERY_DELAY;
 		    }
-		    else if (BIT(pl->status, PAUSE)) {
+		    else if (BIT(pl->status, PAUSE|GAME_OVER)) {
 			Go_home(ind);
 		    }
 		}
@@ -101,7 +120,7 @@ void Pick_startpos(int ind)
 void Go_home(int ind)
 {
     player	*pl = Players[ind];
-    int		x, y;
+    int		i, x, y;
 
 
     x = World.base[pl->home_base].pos.x;
@@ -128,6 +147,11 @@ void Go_home(int ind)
 	}
     }
     CLR_BIT(pl->status, THRUSTING);
+    pl->updateVisibility = 1;
+    for (i = 0; i < NumPlayers; i++) {
+	pl->visibility[i].lastChange = 0;
+	Players[i]->visibility[ind].lastChange = 0;
+    }
 
     if (pl->robot_mode != RM_NOT_ROBOT)
 	pl->robot_mode = RM_TAKE_OFF;
@@ -141,7 +165,6 @@ void Init_player(int ind)
     int i;
 
 
-    pl->world.x = pl->world.y	= 0.0;
     pl->vel.x	= pl->vel.y	= 0.0;
     pl->acc.x	= pl->acc.y	= 0.0;
     pl->dir	= pl->float_dir = DIR_UP;
@@ -182,7 +205,6 @@ void Init_player(int ind)
     pl->best_run	= 0;
     pl->best_lap	= 0;
     pl->count		= -1;
-    pl->fuel.count	= 0;
     pl->shield_time	= 0;
 
     pl->type		= OBJ_PLAYER;
@@ -203,9 +225,14 @@ void Init_player(int ind)
     pl->shot_mass	= ShotsMass;
     pl->color		= WHITE;
     pl->score		= 0;
+    pl->prev_score	= 0;
     pl->fs		= 0;
     pl->name[0]		= '\0';
     pl->ecms 		= 0;
+    pl->lasers 		= 0;
+    pl->num_pulses	= 0;
+    pl->max_pulses	= 0;
+    pl->pulses		= NULL;
     pl->ecmInfo.size	= 0;
     pl->damaged 	= 0;
 
@@ -219,7 +246,10 @@ void Init_player(int ind)
         pl->pseudo_team = pseudo_team_no++;
     }
     pl->mychar		= ' ';
+    pl->prev_mychar	= pl->mychar;
     pl->life		= World.rules->lives;
+    pl->prev_life	= pl->life;
+    pl->ball 		= NULL;
 
     /*
      * If limited lives and if nobody has lost a life yet, you may enter
@@ -227,12 +257,13 @@ void Init_player(int ind)
      */
     if (BIT(pl->mode, LIMITED_LIVES)) {
 	for (i=0; i<NumPlayers; i++)
-	    if (Players[i]->life < 0)
+	    /* If anybody has lost a life, then it's too late to join */
+	    if (Players[i]->life < World.rules->lives)
 		too_late = true;
 	if (too_late) {
 	    pl->mychar	= 'W';
-	    pl->life	= 0;
-	    pl->status |= GAME_OVER;
+	    pl->prev_life = pl->life = 0;
+	    SET_BIT(pl->status, GAME_OVER);
 	}
     }
 
@@ -303,19 +334,20 @@ void Update_score_table(void)
     int			i, j;
     player		*pl, *tmp;
 
-    for (i = 0; i < NumPlayers; i++) {
-	pl = Players[i];
-	if (pl->conn == NOT_CONNECTED) {
-	    continue;
-	}
-	for (j = 0; j < NumPlayers; j++) {
-	    tmp = Players[j];
-	    if (tmp->score != tmp->prev_score ||
-		tmp->life != tmp->prev_life) {
-		if (Send_score(pl->conn, tmp->id,
-		    tmp->score, tmp->life) == -1) {
-		    break;
+    for (j = 0; j < NumPlayers; j++) {
+	pl = Players[j];
+	if (pl->score != pl->prev_score
+	    || pl->life != pl->prev_life
+	    || pl->mychar != pl->prev_mychar) {
+	    pl->prev_score = pl->score;
+	    pl->prev_life = pl->life;
+	    pl->prev_mychar = pl->mychar;
+	    for (i = 0; i < NumPlayers; i++) {
+		tmp = Players[i];
+		if (tmp->conn == NOT_CONNECTED) {
+		    continue;
 		}
+		Send_score(tmp->conn, pl->id, pl->score, pl->life, pl->mychar);
 	    }
 	}
     }
@@ -329,11 +361,14 @@ void Reset_all_players(void)
     for (i=0; i<NumPlayers; i++) {
 	CLR_BIT(Players[i]->status, GAME_OVER);
 	CLR_BIT(Players[i]->have, OBJ_BALL);
-	Players[i]->life = World.rules->lives;
+	if (Players[i]->mychar != 'P') {
+	    Players[i]->mychar = ' ';
+	    Players[i]->life = World.rules->lives;
+	}
 	if (Players[i]->robot_mode != RM_NOT_ROBOT)
 	    Players[i]->mychar = 'R';
-	else
-	    Players[i]->mychar = ' ';
+	if (Players[i]->robot_mode == RM_OBJECT)
+	    Players[i]->mychar = 'T';
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 
@@ -362,10 +397,11 @@ void Reset_all_players(void)
 
 void Compute_game_status(void)
 {
-    int i;
+    int i, x;
     int team[MAX_TEAMS];
     int	teams = 0;
     int num_teams = 0;
+    int numActivePlayers = 0;
 
     /* Do we have a winning team ? */
 
@@ -377,8 +413,7 @@ void Compute_game_status(void)
 	}
 
 	for (i=0; i < NumPlayers && teams < 2; i++) {
-	    if (!BIT(Players[i]->status, GAME_OVER)
-		|| Players[i]->life > 0)
+	    if (!BIT(Players[i]->status, GAME_OVER))
 		if (team[Players[i]->team] == 0) {
 		    team[Players[i]->team]++;
 		    teams++;
@@ -388,12 +423,19 @@ void Compute_game_status(void)
 	if ((teams == 1) && (num_teams > 1)) {
 	    for (i=0; team[i] <= 0; i++)
 		;
-	    sprintf(msg, "Team %d has won the game !", i);
+	    sprintf(msg, "Team %d has won the game!", i);
 	    Set_message(msg);
+	    for (x=0; x < NumPlayers; x++) {
+		if (Players[x]->team == i) {
+		    SCORE(x, PTS_GAME_WON, 
+			  (int) Players[x]->pos.x/ BLOCK_SZ,
+			  (int) Players[x]->pos.y/BLOCK_SZ, "Winner");
+		}
+	    }
 	    /* Start up all player's again */
 	    Reset_all_players();    
 	} else if (teams == 0) {
-	    sprintf(msg, "No teams has won !", i);
+	    sprintf(msg, "We have a draw!", i);
 	    Set_message(msg);
 	    /* Start up all player's again */
 	    Reset_all_players();    
@@ -401,26 +443,53 @@ void Compute_game_status(void)
     } else {	    
 
     /* Do we have a winner ? (No team play) */
-	int num_players = 0;
+	int num_alive_players = 0;
+	int num_active_players = 0;
+	int num_alive_robots = 0;
+	int num_active_humans = 0;
 	int ind;
 
-	for(i=0; i < NumPlayers; i++) 
-	    if (!BIT(Players[i]->status, GAME_OVER)
-		|| Players[i]->life > 0) {
-		num_players++;
-		ind = i; 	/* Tag player that's alive */
+	for (i=0; i < NumPlayers; i++)  {
+	    if (!BIT(Players[i]->status, PAUSE)) {
+		if (!BIT(Players[i]->status, GAME_OVER)) {
+		    num_alive_players++;
+		    if (Players[i]->robot_mode != RM_NOT_ROBOT
+			&& Players[i]->robot_mode != RM_OBJECT) {
+			num_alive_robots++;
+		    }
+		    ind = i; 	/* Tag player that's alive */
+		}
+		else if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+		    num_active_humans++;
+		}
+		num_active_players++;
 	    }
+	}
 
-	if (num_players == 1 && NumPlayers > 1) {
-	    sprintf(msg, "%s has won the game !", Players[ind]->name);
+	if (num_alive_players == 1 && num_active_players > 1) {
+	    sprintf(msg, "%s has won the game!", Players[ind]->name);
 	    Set_message(msg);
+	    SCORE(ind, PTS_GAME_WON, (int) Players[ind]->pos.x/ BLOCK_SZ,
+		  (int) Players[ind]->pos.y/BLOCK_SZ, "Winner");
 	    /* Start up all player's again */
 	    Reset_all_players();    
-	} else if (num_players == 0) {
-	    sprintf(msg, "We have a draw !");
+	} else if (num_alive_players == 0 && num_active_players > 1) {
+	    sprintf(msg, "We have a draw!");
 	    Set_message(msg);
 	    /* Start up all player's again */
 	    Reset_all_players();    	    
+	}
+	else if (num_alive_robots > 1
+	    && num_alive_players == num_alive_robots
+	    && num_active_humans > 0) {
+	    Set_message("The robots have won the game!");
+	    for (i = 0; i < NumPlayers; i++)  {
+		if (!BIT(Players[i]->status, PAUSE|GAME_OVER)) {
+		    Players[i]->score += PTS_GAME_WON;
+		}
+	    }
+	    /* Start up all player's again */
+	    Reset_all_players();    
 	}
     }
 }
@@ -437,6 +506,13 @@ void Delete_player(int ind)
     for (i=0; i<NumObjs; i++)		/* Delete all remaining shots */
 	if (Obj[i]->id == id)
 	    Delete_shot(i);
+
+    if (pl->max_pulses > 0 && pl->pulses != NULL) {
+	free(pl->pulses);
+	pl->max_pulses = 0;
+	pl->num_pulses = 0;
+	pl->pulses = NULL;
+    }
 
 #ifdef SOUND
     sound_close(pl);
@@ -475,8 +551,6 @@ void Delete_player(int ind)
     }
 }
 
-
-
 void Kill_player(int ind)
 {
     player *pl;
@@ -488,7 +562,7 @@ void Kill_player(int ind)
     pl->vel.x		= pl->vel.y	= 0.0;
     pl->acc.x		= pl->acc.y	= 0.0;
     pl->emptymass	= pl->mass	= ShipMass;
-    pl->status		|= WAITING_SHOTS | DEF_BITS;
+    pl->status		|= DEF_BITS;
     pl->status		&= ~(KILL_BITS);
     pl->extra_shots	= 0;
     pl->back_shots	= 0;
@@ -506,6 +580,7 @@ void Kill_player(int ind)
     pl->count		= RECOVERY_DELAY;
     pl->ecms 		= 0;
     pl->ecmInfo.size	= 0;
+    pl->lasers 		= 0;
     pl->damaged 	= 0;
     pl->lock.distance	= 0;
 
@@ -520,6 +595,12 @@ void Kill_player(int ind)
     pl->afterburners	= 0;
     pl->transporters    = 0;
     pl->transInfo.count	= 0;
+
+    if (pl->max_pulses > 0 && pl->num_pulses == 0) {
+	free(pl->pulses);
+	pl->pulses = NULL;
+	pl->max_pulses = 0;
+    }
 
     if (BIT(World.rules->mode, TIMING))
 	pl->fuel.sum = pl->fuel.tank[0] = RACE_PLAYER_FUEL;
