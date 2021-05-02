@@ -1,6 +1,6 @@
-/* $Id: guiobjects.c,v 4.8 2000/10/15 13:09:54 bert Exp $
+/* $Id: guiobjects.c,v 4.12 2001/03/31 12:21:01 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,21 +23,25 @@
  */
 
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winBitmap.h"
-#include "NT/winClient.h"
-#include <math.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <time.h>
 #include <limits.h>
+#include <math.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winBitmap.h"
+# include "NT/winClient.h"
 #endif
 
 #include "version.h"
@@ -134,20 +138,24 @@ void Gui_paint_ball_connecter(int x1, int y1, int x2, int y2)
 {
     x2 = X(x2);
     y2 = Y(y2);
-    x1  = X(x1);
-    y1  = Y(y1);
+    x1 = X(x1);
+    y1 = Y(y1);
     Segment_add(WHITE, x1, y1, x2, y2);
 }
 
 /* used by Paint_mine */
 static void Gui_paint_mine_name(int x, int y, char *name) 
 {
-    int name_len, name_width;
+    int		name_len, name_width;
+
+    if (!name) {
+	return;
+    }
 
     name_len = strlen(name);
     name_width = XTextWidth(gameFont, name, name_len);
 
-    if (name!=NULL) {
+    if (name != NULL) {
 	rd.drawString(dpy, p_draw, gc,
 		    WINSCALE(x) - name_width / 2,
 		    WINSCALE(y + 4) + gameFont->ascent + 1,
@@ -163,7 +171,6 @@ static void Gui_paint_mine_name(int x, int y, char *name)
 void Gui_paint_mine(int x, int y, int teammine, char *name)
 {
     if (!blockBitmaps) {
-	int			i;
 	static DFLOAT	lastScaleFactor;
 	static XPoint	mine_points[21];
 	static XPoint	world_mine_points[21] = {
@@ -192,6 +199,7 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 
     #ifdef WINDOWSCALING
 	if (lastScaleFactor != scaleFactor) {
+	    int			i;
 	    lastScaleFactor = scaleFactor;
 	    for (i = 1; i < 21; ++i) {
 		mine_points[i].x = WINSCALE(world_mine_points[i].x);
@@ -240,8 +248,9 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 			WINSCALE(21), WINSCALE(15), 0);
 	}
 
-	if (name)
+	if (name) {
 	    Gui_paint_mine_name(x, y, name);
+	}
     }
 }
 

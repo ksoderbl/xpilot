@@ -1,6 +1,6 @@
-/* $Id: texture.c,v 4.4 2000/09/21 18:19:59 bert Exp $
+/* $Id: texture.c,v 4.7 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -21,12 +21,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#ifndef	_WINDOWS
-#ifdef VMS
-#include <unixio.h>
-#endif
-#include <unistd.h>
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,11 +28,18 @@
 #include <errno.h>
 #include <limits.h>
 
-#ifndef	_WINDOWS
-#include <X11/Xlib.h>
-#else
-#include "NT/winX.h"
-#include <io.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+#endif
+
+#ifdef VMS
+# include <unixio.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include <io.h>
 #endif
 
 #include "version.h"
@@ -110,7 +111,7 @@ static texture_info_t ball_texture_info = {
  */
 static Pixmap Texture_load_from_file(char *filename)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     char		*dir, *colon;
     int			len;
     char		path[PATH_MAX + 1];
@@ -161,7 +162,7 @@ static Pixmap Texture_load(texture_info_t *ti)
 {
     Pixmap		pixmap = None;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (ti->status == TextureLoaded) {
 	pixmap = ti->pixmap;
     }

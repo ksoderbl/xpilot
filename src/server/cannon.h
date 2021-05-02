@@ -1,6 +1,6 @@
-/* $Id: cannon.h,v 1.1 1998/08/29 20:26:16 bert Exp $
+/* $Id: cannon.h,v 1.3 2001/03/16 22:42:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -61,7 +61,7 @@ extern long CANNON_USE_ITEM;
 #define CANNON_SHOT_MASS	0.4
 #define CANNON_MINE_MASS	(MINE_MASS * 0.6)
 /* lifetime in ticks (frames) of shots, missiles and mines */
-#define CANNON_SHOT_LIFE	(25 + (rand() & 0x17))
+#define CANNON_SHOT_LIFE	(25 + (randomMT() & 0x17))
 /* maximum lifetime (only used in aiming) */
 #define CANNON_SHOT_LIFE_MAX	(25 + 0x17)
 /* number of laser pulses used in calculation of pulse lifetime */

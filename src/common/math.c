@@ -1,6 +1,6 @@
-/* $Id: math.c,v 4.3 2000/04/02 09:50:54 bert Exp $
+/* $Id: math.c,v 4.5 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,7 +23,9 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 
 #include "version.h"
@@ -37,7 +39,7 @@ char math_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 4.3 2000/04/02 09:50:54 bert Exp $";
+    "@(#)$Id: math.c,v 4.5 2001/03/20 18:37:59 bert Exp $";
 #endif
 
 

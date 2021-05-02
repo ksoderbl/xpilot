@@ -1,6 +1,6 @@
-/* $Id: robot.c,v 4.9 1999/10/16 13:12:25 bert Exp $
+/* $Id: robot.c,v 4.11 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,15 +23,19 @@
  */
 /* Robot code originally submitted by Maurice Abraham. */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <limits.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER

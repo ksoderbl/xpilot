@@ -1,6 +1,6 @@
-/* $Id: default.c,v 4.28 2000/09/21 18:19:59 bert Exp $
+/* $Id: default.c,v 4.38 2001/03/28 16:33:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,40 +22,32 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winXXPilot.h"
-extern	char	**Argv;
-extern	int		Argc;
-#endif
-
-#include "types.h"
-
-#ifndef	_WINDOWS
-#include <X11/Xos.h>
-#include <X11/keysym.h>
-#include <X11/Xlib.h>
-#include <X11/Xresource.h>
-#include <sys/types.h>
-#endif
-#ifdef	__apollo
-#    include <X11/ap_keysym.h>
-#endif
-#ifdef VMS
-#include "strcasecmp.h"
-#else
-#ifndef	_WINDOWS
-#include <unistd.h>
-#include <sys/param.h>
-#endif
-#endif
-#include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xos.h>
+# include <X11/keysym.h>
+# include <X11/Xlib.h>
+# include <X11/Xresource.h>
+# ifdef	__apollo
+#  include <X11/ap_keysym.h>
+# endif
+# ifndef VMS
+#  include <sys/param.h>
+# endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winXXPilot.h"
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -67,9 +59,20 @@ extern	int		Argc;
 #include "netclient.h"
 #include "xinit.h"
 #include "error.h"
+#include "types.h"
 #include "protoclient.h"
 #include "audio.h"
 #include "talk.h"
+#include "commonproto.h"
+
+#ifdef VMS
+# include "strcasecmp.h"
+#endif
+
+#ifdef _WINDOWS
+extern	char	**Argv;
+extern	int	Argc;
+#endif
 
 char default_version[] = VERSION;
 
@@ -79,7 +82,7 @@ char *talk_fast_temp_buf_big;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 4.28 2000/09/21 18:19:59 bert Exp $";
+    "@(#)$Id: default.c,v 4.38 2001/03/28 16:33:20 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -107,7 +110,7 @@ static char sourceid[] =
 #define TALK_FONT	"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
 #define KEY_LIST_FONT	"-*-fixed-medium-r-*-*-10-*-*-*-c-*-iso8859-1"
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 #define MOTD_FONT	"-*-courier-bold-r-*--14-*-*-*-*-*-iso8859-1"
 #else
 #define MOTD_FONT	"-*-courier-bold-r-*-*-14-*-*-*-*-*-iso8859-1"
@@ -120,8 +123,12 @@ char			myClass[] = "XPilot";
 char  frameBuffer[MAX_CHARS]; /* frame buffer */
 #endif
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 const char*	winHelpFile;
+#endif
+
+#if DEVELOPMENT
+static void Start_testing(char *testBuffer);
 #endif
 
 keys_t buttonDefs[MAX_POINTER_BUTTONS];
@@ -185,7 +192,7 @@ struct option {
     {
 	"autoServerMotdPopup",
 	NULL,
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	"No",			/* temporary till i straighten out the motd woes. */
 #else
 	"Yes",
@@ -817,7 +824,7 @@ struct option {
     {
 	"maxColors",
 	NULL,
-	"4",
+	"8",
 	KEY_DUMMY,
 	"The number of colors to use.  Valid values are 4, 8 and 16.\n"
     },
@@ -1023,6 +1030,13 @@ struct option {
 	KEY_DUMMY,
 	"Which color number to use for drawing decorations on the radar.\n"
 	"Valid values are all even numbers smaller than maxColors.\n"
+    },
+    {   
+	"oldMessagesColor",
+	NULL,
+	"1",
+	KEY_DUMMY,
+	"Which color number to use for drawing old messages.\n"
     },
     {
 	"outlineDecor",
@@ -2144,7 +2158,7 @@ static void Usage(void)
     exit(1);
 }
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 void	GetWindowsProfileString(const char* section, const char* key,
 								const char* def, char* result, int size)
 {
@@ -2165,7 +2179,7 @@ static int Find_resource(XrmDatabase db, const char *resource,
 			 char *result, unsigned size, int *index)
 {
     int			i;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     int			len;
     char		str_name[80],
 			str_class[80],
@@ -2186,7 +2200,7 @@ static int Find_resource(XrmDatabase db, const char *resource,
     }
     sprintf(str_name, "%s.%s", myName, resource);
     sprintf(str_class, "%s.%c%s", myClass,
-	    isupper(*resource) ? toupper(*resource) : *resource, resource + 1);
+	    islower(*resource) ? toupper(*resource) : *resource, resource + 1);
 
     if (XrmGetResource(db, str_name, str_class, str_type, &rmValue) == True) {
 	if (rmValue.addr == NULL) {
@@ -2289,7 +2303,7 @@ static void Get_float_resource(XrmDatabase db,
     char		resValue[MAX_CHARS];
 
     Find_resource(db, resource, resValue, sizeof resValue, &index);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (sscanf(resValue, "%f", result) <= 0) {
 #else
     if (sscanf(resValue, "%lf", result) <= 0) {
@@ -2297,7 +2311,7 @@ static void Get_float_resource(XrmDatabase db,
 	errno = 0;
 	error("Bad value \"%s\" for option \"%s\", using default...",
 	      resValue, resource);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	sscanf(options[index].fallback, "%f", result);
 #else
 	sscanf(options[index].fallback, "%lf", result);
@@ -2328,7 +2342,7 @@ static void Get_bit_resource(XrmDatabase db, const char *resource,
     }
 }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 void Get_xpilotrc_file(char *path, unsigned size)
 {
     const char		*home = getenv("HOME");
@@ -2417,7 +2431,7 @@ char* Get_xpilotini_file(int level)
 }
 #endif
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 
 static void Get_file_defaults(XrmDatabase *rDBptr)
 {
@@ -2527,8 +2541,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     int			firstKeyDef;
     keys_t		key;
     KeySym		ks;
-#ifndef	_WINDOWS
-#endif
 
 #ifdef VMS
     char		resValue[PATH_MAX + 1];
@@ -2538,7 +2550,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     XrmDatabase		argDB = 0, rDB = 0;
 
     extern void		Record_init(char *filename);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     XrmOptionDescRec	*xopt;
     int			size;
 
@@ -2657,7 +2669,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     XrmMergeDatabases(argDB, &rDB);
 
     Get_string_resource(rDB, "geometry", resValue, sizeof resValue);
-    geometry = strdup(resValue);
+    geometry = xp_strdup(resValue);
 #else	/* _WINDOWS */
     /* Windows needs to know about -serverIni first */
 #endif	/* _WINDOWS */
@@ -2666,7 +2678,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
         for (i = 0; i < TALK_FAST_NR_OF_MSGS; ++i) {
             sprintf (talk_fast_temp_buf, "msg%d", i + 1);
             Get_resource(rDB, talk_fast_temp_buf, talk_fast_temp_buf_big, TALK_FAST_MSG_SIZE);
-            talk_fast_msgs[i] = strdup (talk_fast_temp_buf_big);
+            talk_fast_msgs[i] = xp_strdup (talk_fast_temp_buf_big);
         }
         free (talk_fast_temp_buf_big);
     }
@@ -2700,7 +2712,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     strncpy(realname, realName, sizeof(realname) - 1);
     strncpy(name, nickName, sizeof(name) - 1);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     if (*name == '\0') {
 	/* Windows can have no default name */
 	strcpy(name, "NoName");
@@ -2734,7 +2746,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     refreshMotd = (i != 0) ? true : false;
 
     Get_resource(rDB, "shipShape", resValue, sizeof resValue);
-    shipShape = strdup(resValue);
+    shipShape = xp_strdup(resValue);
     if (shipShape && *shipShape && !strchr(shipShape, '(' )) {
 	/* so it must be the name of shipshape defined in the shipshapefile. */
 	Get_resource(rDB, "shipShapeFile", resValue, sizeof resValue);
@@ -2758,15 +2770,15 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 			    if (ptr != NULL) {
 				*ptr = ')';
 			    }
-			    shipShape = strdup(line);
+			    shipShape = xp_strdup(line);
 			    break;
 			}
 		    }
 		}
-	    }
-#ifndef	_WINDOWS
-	    fclose(fp);
+#ifndef _WINDOWS
+		fclose(fp);
 #endif
+	    }
 	}
     }
     Validate_shape_str(shipShape);
@@ -2819,7 +2831,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     colorSwitch = (i != 0) ? true : false;
     Get_bool_resource(rDB, "multibuffer", &i);
     multibuffer = (i != 0) ? true : false;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	/* Windows already derived maxColors in InitWinX */
     Get_int_resource(rDB, "maxColors", &maxColors);
 #endif
@@ -2844,6 +2856,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_int_resource(rDB, "decorColor", &decorColor);
     Get_int_resource(rDB, "decorRadarColor", &decorRadarColor);
     Get_int_resource(rDB, "targetRadarColor", &targetRadarColor);
+    Get_int_resource(rDB, "oldMessagesColor", &oldMessagesColor);
     Get_resource(rDB, "sparkColors", sparkColors, MSG_LEN);
 
     instruments = 0;
@@ -2907,13 +2920,13 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_resource(rDB, "recordFile", resValue, sizeof resValue);
     Record_init(resValue);
     Get_resource(rDB, "texturePath", resValue, sizeof resValue);
-    texturePath = strdup(resValue);
+    texturePath = xp_strdup(resValue);
     Get_resource(rDB, "wallTextureFile", resValue, sizeof resValue);
-    wallTextureFile = strdup(resValue);
+    wallTextureFile = xp_strdup(resValue);
     Get_resource(rDB, "decorTextureFile", resValue, sizeof resValue);
-    decorTextureFile = strdup(resValue);
+    decorTextureFile = xp_strdup(resValue);
     Get_resource(rDB, "ballTextureFile", resValue, sizeof resValue);
-    ballTextureFile = strdup(resValue);
+    ballTextureFile = xp_strdup(resValue);
 
     Get_int_resource(rDB, "maxFPS", &maxFPS);
     oldMaxFPS = maxFPS;
@@ -2951,7 +2964,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
 #ifdef DEVELOPMENT
     {
-	static void Start_testing(char testBuffer[]);
 	char testBuffer[256];
 	Get_string_resource(rDB, "test", testBuffer, sizeof testBuffer);
 	Start_testing(testBuffer);
@@ -3002,7 +3014,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		}
 	    }
 
-#ifndef NO_KEYSORT
 	    /* insertion sort. */
 	    for (j = num; j > 0; j--) {
 		if (ks >= keyDefs[j - 1].keysym) {
@@ -3017,11 +3028,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		printf("bug key 0\n");
 		exit(1);
 	    }
-#else
-	    keyDefs[num].keysym = ks;
-	    keyDefs[num].key = key;
-	    num++;
-#endif
 	}
     }
     if (num < maxKeyDefs) {
@@ -3058,7 +3064,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	}
     }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     XrmDestroyDatabase(rDB);
 
     free(xopt);
@@ -3071,7 +3077,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
 void	defaultCleanup(void)
 {
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     Get_xpilotini_file(-1);
 #endif
 
@@ -3131,7 +3137,7 @@ static void X_after(Display *display)
     }
 }
 
-static void Start_testing(char testBuffer[])
+static void Start_testing(char *testBuffer)
 {
     char	*s;
 

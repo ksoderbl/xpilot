@@ -1,6 +1,6 @@
-/* $Id: list.c,v 1.7 2000/05/20 11:09:44 bert Exp $
+/* $Id: list.c,v 1.9 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -27,6 +27,7 @@
  */
 
 #include <stdlib.h>
+
 #include "list.h"
 
 /* store a list node. */

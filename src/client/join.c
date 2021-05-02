@@ -1,6 +1,6 @@
-/* $Id: join.c,v 4.2 1998/04/18 12:53:01 bert Exp $
+/* $Id: join.c,v 4.6 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,32 +22,30 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include <winsock.h>
-#include "NT/winClient.h"
-#endif
-
-#include "types.h"
-#ifndef	_WINDOWS
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/types.h>
 
-#ifndef	_WINDOWS
-#ifdef _AIX
-#include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# ifdef _AIX
+#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
+# endif
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
 #endif
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
 
-#if !defined(__hpux) 
-#include <sys/time.h>
-#endif
+#ifdef _WINDOWS
+# include <winsock.h>
+# include "NT/winClient.h"
 #endif
 
 #include "version.h"
@@ -55,6 +53,7 @@
 #include "const.h"
 #include "error.h"
 #include "client.h"
+#include "types.h"
 #include "netclient.h"
 #include "protoclient.h"
 #include "portability.h"
@@ -70,7 +69,7 @@ void xpilotShutdown(void);
 extern void Record_cleanup(void);
 
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 static void Input_loop(void)
 {
     fd_set		rfds;
@@ -212,7 +211,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 {
     signal(SIGINT, sigcatch);
     signal(SIGTERM, sigcatch);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
 #endif
@@ -262,7 +261,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 	return -1;
     }
 
-#ifndef	_WINDOWS	/* windows continues to run at this point */
+#ifndef _WINDOWS	/* windows continues to run at this point */
     Input_loop();
     xpilotShutdown();
 #endif

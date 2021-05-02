@@ -2,7 +2,7 @@
 .\"
 .\" @<COPYRIGHT>@ & Steven Singer.
 .\"
-.TH XP-REPLAY @<MANEXT>@ "Requires The X Window System"
+.TH XP-REPLAY @<MANEXT>@ "Requires X11"
 .ds )H GNU Public License 2.0 applies
 .ds ]W XPilot @<VERSION>@: @<RELEASEDATE>@
 .if n .ad l	\" If nroff formatter, adjust left margin only

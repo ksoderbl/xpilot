@@ -1,6 +1,6 @@
-/* $Id: net.c,v 4.1 1998/04/16 17:40:44 bert Exp $
+/* $Id: net.c,v 4.5 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,40 +22,33 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_WINDOWS
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#if defined(__hpux) || defined(_WINDOWS)
 #include <time.h>
-#else
-#include <sys/time.h>
-#endif
 
-#if defined(_WINDOWS)
-#include "../client/NT/winClient.h"
-#include "NT/winNet.h"
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
-
-#ifndef	_WINDOWS
-#include <netdb.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
 #endif
 
 #ifdef __sgi
-#include <bstring.h>
+# include <bstring.h>
 #endif
 
-#ifdef	_WINDOWS
-#undef	va_start		/* there are bad versions in windows.h's "stdarg.h" */
-#undef	va_end
-#include <varargs.h>
+#ifdef _WINDOWS
+# include "../client/NT/winClient.h"
+# include "NT/winNet.h"
+# undef	va_start		/* there are bad versions in windows.h's "stdarg.h" */
+# undef	va_end
+# include <varargs.h>
 #endif
 
 #include "version.h"
@@ -71,12 +64,16 @@ char net_version[] = VERSION;
 
 int last_packet_of_frame;
 
-int Sockbuf_init(sockbuf_t *sbuf, int sock, int size, int state)
+int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, int size, int state)
 {
     if ((sbuf->buf = sbuf->ptr = (char *) malloc(size)) == NULL) {
 	return -1;
     }
-    sbuf->sock = sock;
+    if (sock != (sock_t *) NULL) {
+	sbuf->sock = *sock;
+    } else {
+	sock_init(&sbuf->sock);
+    }
     sbuf->state = state;
     sbuf->len = 0;
     sbuf->size = size;
@@ -213,7 +210,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    len = sbuf->len;
 	else
 #endif
-	while ((len = send(sbuf->sock, sbuf->buf, sbuf->len, 0)) <= 0) {
+	while ((len = sock_write(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
 	    if (len == 0
 		|| errno == EWOULDBLOCK
 		|| errno == EAGAIN) {
@@ -241,8 +238,8 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 		    error("send (%d)", i);
 		}
 	    }
-	    if (GetSocketError(sbuf->sock) == -1) {
-		error("GetSocketError send");
+	    if (sock_get_error(&sbuf->sock) == -1) {
+		error("sock_get_error send");
 		return -1;
 	    }
 	    errno = 0;
@@ -254,7 +251,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	Sockbuf_clear(sbuf);
     } else {
 	errno = 0;
-	while ((len = DgramWrite(sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
+	while ((len = sock_write(&sbuf->sock, sbuf->buf, sbuf->len)) <= 0) {
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;
@@ -332,11 +329,11 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    len = sbuf->len;
 	else
 #endif
-	while ((len = DgramRead(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	while ((len = sock_read(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
 	    if (len == 0) {
 		return 0;
 	    }
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 		errno = WSAGetLastError();
 #endif
 	    if (errno == EINTR) {
@@ -354,7 +351,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    }
 #endif
 /*
-		Trace("errno=%d (%s) len = %d during DgramRead\n", 
+		Trace("errno=%d (%s) len = %d during sock_read\n", 
 			errno, _GetWSockErrText(errno), len);
 */			
 	    if (++i > MAX_SOCKBUF_RETRIES) {
@@ -366,7 +363,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 		    error("recv (%d)", i);
 		}
 	    }
-	    if (GetSocketError(sbuf->sock) == -1) {
+	    if (sock_get_error(&sbuf->sock) == -1) {
 		error("GetSocketError recv");
 		return -1;
 	    }
@@ -375,7 +372,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	sbuf->len += len;
     } else {
 	errno = 0;
-	while ((len = DgramRead(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	while ((len = sock_read(&sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
 	    if (len == 0) {
 		return 0;
 	    }

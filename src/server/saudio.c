@@ -1,6 +1,6 @@
-/* $Id: saudio.c,v 4.2 1998/08/30 12:15:34 bert Exp $
+/* $Id: saudio.c,v 4.4 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,11 +23,11 @@
  */
 /* This piece of code was provided by Greg Renda (greg@ncd.com). */
 
-#ifdef	_WINDOWS
-#include <windows.h>
-#else
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef _WINDOWS
+# include <windows.h>
 #endif
 
 #define SERVER

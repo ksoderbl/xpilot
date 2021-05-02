@@ -1,6 +1,6 @@
-/* $Id: xeventhandlers.c,v 4.4 2000/03/24 12:47:01 bert Exp $
+/* $Id: xeventhandlers.c,v 4.7 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,24 +23,27 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
-
-#ifndef	_WINDOWS
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
-#include <X11/keysym.h>
-#include <X11/Xatom.h>
-#include <X11/Xmd.h>
-#ifdef	__apollo
-#    include <X11/ap_keysym.h>
-#endif
-#else
 #include <math.h>
-#include "NT/winX.h"
-#include "NT/winAudio.h"
-#include "NT/winClient.h"
-#include "NT/winXKey.h"
+
+#ifndef _WINDOWS
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+# include <X11/Xutil.h>
+# include <X11/keysym.h>
+# include <X11/Xatom.h>
+# include <X11/Xmd.h>
+# ifdef	__apollo
+#  include <X11/ap_keysym.h>
+# endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winAudio.h"
+# include "NT/winClient.h"
+# include "NT/winXKey.h"
 #endif
 
 #include "version.h"

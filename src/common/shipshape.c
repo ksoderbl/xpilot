@@ -1,6 +1,6 @@
-/* $Id: shipshape.c,v 1.5 1999/12/13 01:25:57 bert Exp $
+/* $Id: shipshape.c,v 1.7 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,6 +22,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <ctype.h>
+#include <math.h>
+
 #if defined(_WINDOWS)
 	/* need this for printf wrappers. */
 #	ifdef	_XPILOTNTSERVER_
@@ -30,13 +37,7 @@
 #		include "NT/winX.h"
 #		include "../client/NT/winClient.h"
 #	endif
-#else
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #endif
-
-#include <math.h>
 
 #include "version.h"
 #include "config.h"
@@ -48,7 +49,7 @@ char shipshape_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shipshape.c,v 1.5 1999/12/13 01:25:57 bert Exp $";
+    "@(#)$Id: shipshape.c,v 1.7 2001/03/20 18:37:59 bert Exp $";
 #endif
 
 

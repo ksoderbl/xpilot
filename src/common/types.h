@@ -1,6 +1,6 @@
-/* $Id: types.h,v 4.1 1998/04/16 17:40:59 bert Exp $
+/* $Id: types.h,v 4.6 2001/03/25 21:31:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,35 +25,7 @@
 #ifndef	TYPES_H
 #define	TYPES_H
 
-#include <sys/types.h>
-
-#ifdef VMS
-typedef char byte;
-#else
-#ifndef	_WINDOWS
-typedef signed char	byte;
-#endif
-#endif
 typedef unsigned char	u_byte;
-
-#ifdef VMS
-#if !defined(CADDR_T) && !defined(__CADDR_T) && !defined(__SOCKET_TYPEDEFS)
-typedef char *caddr_t;
-#define CADDR_T
-#define __CADDR_T
-#endif
-#ifndef __SOCKET_TYPEDEFS
-typedef unsigned short  u_short;
-typedef unsigned short  u_long;
-typedef unsigned short  u_char;
-#define __SOCKET_TYPEDEFS
-#endif
-#endif
-
-
-#if (_SEQUENT_)
-typedef unsigned short	u_short;
-#endif
 
 /*
  * On some systems an enum is smaller than an int.
@@ -71,7 +43,7 @@ typedef unsigned short	u_short;
  * Windows does all its FPU work in doubles.  Using floats gives warnings
  * and causes everything to be promoted to doubles anyway...
  */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 typedef	float	DFLOAT;
 #else
 typedef	double	DFLOAT;
@@ -82,8 +54,9 @@ typedef vector			position;
 typedef struct { int x, y; }	ivec;
 typedef ivec			ipos;
 
-#ifdef	_WINDOWS
-#define	strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
-#define	strcasecmp(__s, __t)	stricmp(__s, __t)
+#ifdef _WINDOWS
+# define strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
+# define strcasecmp(__s, __t)	stricmp(__s, __t)
 #endif
+
 #endif

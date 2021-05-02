@@ -1,6 +1,6 @@
-/* $Id: record.c,v 4.1 1998/04/16 17:39:41 bert Exp $
+/* $Id: record.c,v 4.5 2001/03/27 12:50:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,21 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_WINDOWS
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <ctype.h>
 #include <time.h>
 
-#ifndef	_WINDOWS
-#include <X11/X.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xos.h>
-#else
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/X.h>
+# include <X11/Xlib.h>
+# include <X11/Xutil.h>
+# include <X11/Xos.h>
+#endif
+
+#ifdef _WINDOWS
 #include "winX.h"
 #endif
 
@@ -50,6 +51,7 @@
 #include "record.h"
 #include "recordfmt.h"
 #include "xpmread.h"
+#include "commonproto.h"
 
 char record_version[] = VERSION;
 
@@ -871,7 +873,7 @@ void Record_init(char *filename)
 {
     rd = Xdrawing;
     if (filename != NULL && filename[0] != '\0') {
-	record_filename = strdup(filename);
+	record_filename = xp_strdup(filename);
     }
 }
 

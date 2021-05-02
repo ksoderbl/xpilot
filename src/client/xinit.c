@@ -1,6 +1,6 @@
-/* $Id: xinit.c,v 4.29 2000/09/05 22:09:21 bert Exp $
+/* $Id: xinit.c,v 4.34 2001/03/28 16:33:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,22 +22,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_WINDOWS
-#include <unistd.h>
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
-#else
-#include "../common/NT/winX.h"
-#include "NT/winclient.h"
-#include "NT/winXXPilot.h"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+# include <X11/Xutil.h>
+#endif
+
+#ifdef _WINDOWS
+# include "../common/NT/winX.h"
+# include "NT/winclient.h"
+# include "NT/winXXPilot.h"
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -60,7 +62,7 @@
  * If you add an item here then please make sure you also add
  * the item in the proper place in ../replay/xp-replay.c.
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #pragma warning(disable : 4305)
 #endif
 #include "items/itemRocketPack.xbm"
@@ -89,7 +91,7 @@ char xinit_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 4.29 2000/09/05 22:09:21 bert Exp $";
+    "@(#)$Id: xinit.c,v 4.34 2001/03/28 16:33:20 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -245,7 +247,7 @@ static struct {
 	"absorbs shots in the absence of shields"
     },
 };
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 Pixmap	itemBitmaps[NUM_ITEMS][2];	/* Bitmaps for the items in 2 colors */
 #else
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
@@ -278,7 +280,7 @@ static XFontStruct* Set_font(Display* dpy, GC gc,
 {
     XFontStruct*	font;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if ((font = XLoadQueryFont(dpy, fontName)) == NULL) {
 	error("Couldn't find font '%s' for %s, using default font",
 	      fontName, resName);
@@ -354,7 +356,7 @@ static void Init_spark_colors(void)
 /*
  * Initialize miscellaneous window hints and properties.
  */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 static void Init_disp_prop(Display *d, Window win,
 			   int w, int h, int x, int y,
 			   int flags)
@@ -432,7 +434,7 @@ static void Init_disp_prop(Display *d, Window win,
  */
 int Init_top(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     int					i;
     int					top_x, top_y;
     int					x, y;
@@ -492,6 +494,9 @@ int Init_top(void)
 	|| ((targetRadarColor & 1) && colorSwitch)) {
 	targetRadarColor = BLUE;
     }
+    if (oldMessagesColor >= maxColors || oldMessagesColor < 0) {
+	oldMessagesColor = WHITE;
+    }
     if (decorColor >= maxColors || decorColor <= 0) {
 	decorColor = RED;
     }
@@ -506,7 +511,7 @@ int Init_top(void)
     /*
      * Get toplevel geometry.
      */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     top_flags = 0;
     if (geometry != NULL && geometry[0] != '\0') {
 	mask = XParseGeometry(geometry, &x, &y, &w, &h);
@@ -607,7 +612,7 @@ int Init_top(void)
 	}
 #endif	/* _WINDOWS */
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     /*
      * Create item bitmaps
      */
@@ -712,7 +717,7 @@ int Init_top(void)
  */
 int Init_playing_windows(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     unsigned			w, h;
     Pixmap			pix;
     GC				cursorGC;
@@ -746,7 +751,7 @@ int Init_playing_windows(void)
 				256, RadarHeight, 0, 0,
 				colors[BLACK].pixel);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     WinXSetEventMask(draw, NoEventMask);
     radar_exposures = 1;
     radarGC = WinXCreateWinDC(radar);
@@ -840,7 +845,7 @@ int Init_playing_windows(void)
 			      players_width, players_height,
 			      0, 0,
 			      colors[windowColor].pixel);
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     scoreListGC = WinXCreateWinDC(players);
     scoreListFont
 	= Set_font(dpy, scoreListGC, scoreListFontName, "scoreListFont");
@@ -851,7 +856,7 @@ int Init_playing_windows(void)
      */
     XSelectInput(dpy, radar, ExposureMask);
     XSelectInput(dpy, players, ExposureMask);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (!selectionAndHistory) {
 	XSelectInput(dpy, draw, 0);
     } else {
@@ -924,7 +929,7 @@ int Init_playing_windows(void)
     return 0;
 }
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 void WinXCreateItemBitmaps()
 {
     int			i;
@@ -1075,7 +1080,7 @@ void Resize(Window w, int width, int height)
     players_height = top_height - (RadarHeight + ButtonHeight + 2);
     XResizeWindow(dpy, players,
 		  players_width, players_height);
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     WinXResize();
 #endif
     Talk_resize();
@@ -1088,7 +1093,7 @@ void Resize(Window w, int width, int height)
  */
 void Quit(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (dpy != NULL) {
 	XAutoRepeatOn(dpy);
 	Colors_cleanup();

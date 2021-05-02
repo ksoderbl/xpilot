@@ -1,6 +1,6 @@
-/* $Id: option.c,v 4.10 2000/09/21 18:19:59 bert Exp $
+/* $Id: option.c,v 4.13 2001/03/27 12:50:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,16 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include <windows.h>
-#else
-#include "types.h"
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
+#include <errno.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
+
+#ifdef _WINDOWS
+# include <windows.h>
+# include <io.h>
+# define read(__a, __b, __c)	_read(__a, __b, __c)
 #endif
 
 #define SERVER
@@ -43,12 +49,8 @@
 #include "map.h"
 #include "defaults.h"
 #include "error.h"
-
-#ifdef	_WINDOWS
-#include <io.h>
-#define	read(__a, __b, __c)	_read(__a, __b, __c)
-#endif
-
+#include "types.h"
+#include "commonproto.h"
 
 char option_version[] = VERSION;
 
@@ -538,7 +540,7 @@ static int copyFilename(const char *file)
     if (FileName) {
 	free(FileName);
     }
-    FileName = strdup(file);
+    FileName = xp_strdup(file);
     return (FileName != 0);
 }
 
@@ -951,7 +953,7 @@ void parseOptions(void)
 }
 
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 /* clear the hashArray in case we're restarted */
 void	FreeOptions()
 {

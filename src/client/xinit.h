@@ -1,6 +1,6 @@
-/* $Id: xinit.h,v 4.9 2000/09/05 22:09:21 bert Exp $
+/* $Id: xinit.h,v 4.11 2001/03/20 18:37:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -103,7 +103,7 @@ extern int Motd_callback(int, void *, const char **);
 extern void Motd_destroy(void);
 extern void Expose_about_window(void);
 extern void Scale_dashes(void);
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 extern int Credits_callback(int, void *, const char **);
 #endif
 extern int Startup_server_motd(void);

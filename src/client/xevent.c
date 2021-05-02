@@ -1,6 +1,6 @@
-/* $Id: xevent.c,v 4.26 2000/10/15 13:09:54 bert Exp $
+/* $Id: xevent.c,v 4.31 2001/03/20 20:05:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,24 +23,27 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
-
-#ifndef	_WINDOWS
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
-#include <X11/keysym.h>
-#include <X11/Xatom.h>
-#include <X11/Xmd.h>
-#ifdef	__apollo
-#    include <X11/ap_keysym.h>
-#endif
-#else
 #include <math.h>
-#include "NT/winX.h"
-#include "NT/winAudio.h"
-#include "NT/winClient.h"
-#include "NT/winXKey.h"
+
+#ifndef _WINDOWS
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+# include <X11/Xutil.h>
+# include <X11/keysym.h>
+# include <X11/Xatom.h>
+# include <X11/Xmd.h>
+# ifdef	__apollo
+#  include <X11/ap_keysym.h>
+# endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winAudio.h"
+# include "NT/winClient.h"
+# include "NT/winXKey.h"
 #endif
 
 #include "version.h"
@@ -157,7 +160,6 @@ keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     keys_t ret = KEY_DUMMY;
     static int i = 0;
 
-#ifndef NO_KEYSORT
     if (reset) {
 	/* binary search since keyDefs is sorted on keysym. */
 	int lo = 0, hi = maxKeyDefs - 1;
@@ -184,19 +186,7 @@ keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
 	    i++;
 	}
     }
-#else
 
-    if (reset)
-	i = 0;
-
-    for (; i < maxKeyDefs; i++) {
-	if (keyDefs[i].keysym == ks) {
-	    ret = keyDefs[i].key;
-	    i++;
-	    break;
-	}
-    }
-#endif
     IFWINDOWS( Trace("Lookup_key: got key ks=%04X ret=%d\n", ks, ret); )
 
 #ifdef DEVELOPMENT
@@ -244,9 +234,10 @@ void Pointer_control_set_state(int onoff)
 	else
 	    XSelectInput(dpy, draw, ButtonPressMask | ButtonReleaseMask);
     }
+    XFlush(dpy);
 }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 
 static void Talk_set_state(bool onoff)
 {
@@ -749,7 +740,7 @@ XEvent	talk_key_repeat_event;
 
 void xevent_keyboard(int queued)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     int			i, n;
     XEvent		event;
 #endif
@@ -763,7 +754,7 @@ void xevent_keyboard(int queued)
 	}
     }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (kdpy) {
 	n = XEventsQueued(kdpy, queued);
 	for (i = 0; i < n; i++) {
@@ -803,7 +794,7 @@ int	movement;	/* horizontal mouse movement. */
 
 void xevent_pointer()
 { 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     XEvent		event;
 #endif
 
@@ -831,7 +822,7 @@ void xevent_pointer()
 		if (ABS(delta.x) > 3 * draw_width / 8
 		    || ABS(delta.y) > 1 * draw_height / 8) {
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 		    memset(&event, 0, sizeof(event));
 		    event.type = MotionNotify;
 		    event.xmotion.display = dpy;
@@ -850,14 +841,14 @@ void xevent_pointer()
     }
 }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 int xevent(int new_input)
 #else
 int xevent(XEvent event)
 #endif
 {
     int			queued = 0;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     int			i, n;
     XEvent		event;
 #endif
@@ -872,7 +863,7 @@ int xevent(XEvent event)
 
     movement = 0;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     switch (new_input) {
     case 0: queued = QueuedAlready; break;
     case 1: queued = QueuedAfterReading; break;
@@ -888,7 +879,7 @@ int xevent(XEvent event)
 #endif
 	switch (event.type) {
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	    /*
 	     * after requesting a selection we are notified that we
 	     * can access it.
@@ -971,7 +962,7 @@ int xevent(XEvent event)
 	default:
 	    break;
 	}
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     }
 #endif
 

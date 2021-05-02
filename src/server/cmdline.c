@@ -1,6 +1,6 @@
-/* $Id: cmdline.c,v 4.27 2000/10/15 13:09:55 bert Exp $
+/* $Id: cmdline.c,v 4.34 2001/03/27 12:50:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,12 +23,13 @@
  */
 /* Options parsing code contributed by Ted Lemon <mellon@ncd.com> */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#else
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -40,12 +41,13 @@
 #include "defaults.h"
 #include "error.h"
 #include "portability.h"
+#include "commonproto.h"
 
 char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 4.27 2000/10/15 13:09:55 bert Exp $";
+    "@(#)$Id: cmdline.c,v 4.34 2001/03/27 12:50:33 bert Exp $";
 #endif
 
 DFLOAT		Gravity;		/* Power of gravity */
@@ -80,6 +82,7 @@ int		mapHeight;		/* Height of the universe */
 char		*mapName;		/* Name of the universe */
 char		*mapAuthor;		/* Name of the creator */
 int		contactPort;		/* Contact port number */
+char		*serverHost;		/* Host name (for multihomed hosts) */
 
 bool		crashWithPlayer;	/* Can players overrun other players? */
 bool		bounceWithPlayer;	/* Can players bounce other players? */
@@ -236,6 +239,8 @@ bool		pLockServer;		/* Is server swappable out of memory?  */
 bool		ignore20MaxFPS;		/* ignore client maxFPS request if 20 */
 int		timerResolution;	/* OS timer resolution (times/sec) */
 char		*password;		/* password for operator status */
+int		clientPortStart;	/* First UDP port for clients */
+int		clientPortEnd;		/* Last one (these are for firewalls) */
 
 extern char	conf_default_map_string[];	/* from common/config.c */
 extern char	conf_robotfile_string[];	/* from common/config.c */
@@ -243,6 +248,17 @@ extern char	conf_robotfile_string[];	/* from common/config.c */
 #define	MAP(_x)		_x
 /* #define	MAP(_x)	 */
 
+/*
+** Two functions which can be used if an option
+** does not have its own function which should
+** be called after the option value has been
+** changed during runtime.  The tuner_none
+** function should be specified when an option
+** cannot be changed at all during runtime.
+** The tuner_dummy can be specified if it
+** is OK to modify the option during runtime
+** and no follow up action is needed.
+*/
 static void tuner_none(void)  {}
 static void tuner_dummy(void) {}
 
@@ -482,7 +498,7 @@ static optionDesc options[] = {
     {
 	"noQuit",
 	"noQuit",
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	"true",
 #else
 	"false",
@@ -521,7 +537,8 @@ static optionDesc options[] = {
 	&mapFileName,
 	valString,
 	tuner_none,
-	"The filename of the map to use.\n",
+	"The filename of the map to use.\n"
+	"Or \"wild\" if you want a map by The Wild Map Generator.\n",
 	MAP(NULL)
     },
     {
@@ -553,6 +570,16 @@ static optionDesc options[] = {
 	tuner_none,
 	"The server contact port number.\n",
 	MAP("General")
+    },
+    {
+	"serverHost",
+	"serverHost",
+	NULL,
+	&serverHost,
+	valString,
+	tuner_none,
+	"The server's fully qualified domain name (for multihomed hosts).\n",
+	MAP(NULL)
     },
     {
 	"mapData",
@@ -2593,6 +2620,26 @@ static optionDesc options[] = {
 	"The password needed to obtain operator privileges.\n",
 	MAP(NULL)
     },
+    {
+	"clientPortStart",
+	"clientPortStart",
+	"0",
+	&clientPortStart,
+	valInt,
+	tuner_dummy,
+	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	MAP(NULL)
+    },
+    {
+	"clientPortEnd",
+	"clientPortEnd",
+	"0",
+	&clientPortEnd,
+	valInt,
+	tuner_dummy,
+	"Use UDP ports clientPortStart - clientPortEnd (for firewalls)\n",
+	MAP(NULL)
+    },
 
 };
 
@@ -2768,6 +2815,7 @@ int Parse_list(int *index, char *buf)
 int Parser(int argc, char **argv)
 {
     int			i, j;
+    int			status;
     char		*fname;
 
 
@@ -2834,7 +2882,7 @@ int Parser(int argc, char **argv)
      */
     if (!(fname = getOption("mapData"))) {
 	if ((fname = getOption("mapFileName")) != NULL) {
-	    if (!parseMapFile(fname)) {
+	    if (strcasecmp(fname, "wild") && !parseMapFile(fname)) {
 		xpprintf("Unable to read %s, trying to open %s\n", fname, Conf_default_map());
 		if (!parseMapFile(Conf_default_map()))
 		    xpprintf("Unable to read %s\n", Conf_default_map());
@@ -2857,8 +2905,9 @@ int Parser(int argc, char **argv)
     for (j = 0; j < NELEM(options); j++)
 	addOption(options[j].name, options[j].defaultValue, 0, &options[j]);
     parseOptions();
-    Grok_map();
-    return(TRUE);
+    status = Grok_map();
+
+    return status;
 }
 
 
@@ -2914,7 +2963,7 @@ int Tune_option(char *opt, char *val)
 	case valString:
 	    /* this is dubious and results in unfreed memory: */
 	    {
-		char *s = strdup(val);
+		char *s = xp_strdup(val);
 		if (!s) {
 		    return 0;
 		}

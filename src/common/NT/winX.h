@@ -1,6 +1,6 @@
-/* $Id: winX.h,v 4.3 1998/04/17 11:06:46 dick Exp $
+/* $Id: winX.h,v 4.4 2001/02/19 23:36:45 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -28,7 +28,7 @@
 *  This file is the public interface to the Winodoze -> X11 translator.		*
 *  Any function that has a unix man page belongs in this file.				*
 *																			*
-*  $Id: winX.h,v 4.3 1998/04/17 11:06:46 dick Exp $							*
+*  $Id: winX.h,v 4.4 2001/02/19 23:36:45 bert Exp $							*
 \***************************************************************************/
 #ifndef	_WINX_H_
 #define	_WINX_H_

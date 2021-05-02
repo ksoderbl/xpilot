@@ -1,3 +1,5 @@
+/* $Id: Imakefile,v 1.7 2001/04/01 10:33:30 bert Exp $ */
+
 TOP=../..
 
 #include "Local.config"

@@ -1,6 +1,6 @@
-/* $Id: proto.h,v 4.12 2000/05/03 19:51:38 bert Exp $
+/* $Id: proto.h,v 4.16 2001/03/25 17:24:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -69,12 +69,8 @@ bool team_dead(int team);
 /*
  * Prototypes for map.c
  */
-void Print_map(void)			/* Debugging only. */;
-void Init_map(void);
 void Free_map(void);
-void Alloc_map(void);
-void Grok_map(void);
-void Generate_random_map(void);
+int Grok_map(void);
 void Find_base_direction(void);
 void Compute_gravity(void);
 DFLOAT Wrap_findDir(DFLOAT dx, DFLOAT dy);
@@ -122,15 +118,15 @@ void General_tractor_beam(int ind, DFLOAT x, DFLOAT y,
 			  int items, int target, bool pressor);
 void Place_mine(int ind);
 void Place_moving_mine(int ind);
-void Place_general_mine(int ind, u_short team, long status, DFLOAT x, DFLOAT y,
+void Place_general_mine(int ind, unsigned short team, long status, DFLOAT x, DFLOAT y,
   			DFLOAT vx, DFLOAT vy, modifiers mods);
 void Detonate_mines(int ind);
 char *Describe_shot(int type, long status, modifiers mods, int hit);
 void Fire_ecm(int ind);
-void Fire_general_ecm(int ind, u_short team, DFLOAT x, DFLOAT y);
+void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y);
 void Move_ball(int ind);
 void Fire_shot(int ind, int type, int dir);
-void Fire_general_shot(int ind, u_short team, bool cannon, DFLOAT x, DFLOAT y,
+void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLOAT y,
 		       int type, int dir, DFLOAT speed, modifiers mods,
 		       int target);
 void Fire_normal_shots(int ind);
@@ -144,7 +140,7 @@ void Make_treasure_ball(int treasure);
 int Punish_team(int ind, int t_destroyed, int t_target);
 void Delete_shot(int ind);
 void Fire_laser(int ind);
-void Fire_general_laser(int ind, u_short team, DFLOAT x, DFLOAT y, int dir,
+void Fire_general_laser(int ind, unsigned short team, DFLOAT x, DFLOAT y, int dir,
 			modifiers mods);
 void Do_deflector(int ind);
 void Do_transporter(int ind);
@@ -158,7 +154,7 @@ void Make_debris(
 	    /* pos.x, pos.y   */ DFLOAT  x,          DFLOAT y,
 	    /* vel.x, vel.y   */ DFLOAT  velx,       DFLOAT vely,
 	    /* owner id       */ int    id,
-	    /* owner team     */ u_short team,
+	    /* owner team     */ unsigned short team,
 	    /* type           */ int    type,
 	    /* mass           */ DFLOAT  mass,
 	    /* status         */ long   status,
@@ -173,7 +169,7 @@ void Make_wreckage(
 	    /* pos.x, pos.y   */ DFLOAT x,          DFLOAT y,
 	    /* vel.x, vel.y   */ DFLOAT velx,       DFLOAT vely,
 	    /* owner id       */ int    id,
-	    /* owner team     */ u_short team,
+	    /* owner team     */ unsigned short team,
 	    /* min,max mass   */ DFLOAT min_mass,   DFLOAT max_mass,
 	    /* total mass     */ DFLOAT total_mass,
 	    /* status         */ long   status,
@@ -273,7 +269,7 @@ void Main_loop(void);
  * Prototypes for contact.c
  */
 void Contact_cleanup(void);
-int Contact_init(void);
+void Contact_init(void);
 void Contact(int fd, void *arg);
 void Queue_loop(void);
 int Queue_advance_player(char *name, char *msg);
@@ -286,7 +282,7 @@ void Set_deny_hosts(void);
 void Meta_send(char *mesg, int len);
 int Meta_from(char *addr, int port);
 void Meta_gone(void);
-void Meta_init(int fd);
+void Meta_init(void);
 void Meta_update(int change);
 
 /*

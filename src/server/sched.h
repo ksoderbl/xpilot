@@ -1,6 +1,6 @@
-/* $Id: sched.h,v 4.1 1998/04/16 17:41:59 bert Exp $
+/* $Id: sched.h,v 4.3 2001/03/20 18:47:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -27,7 +27,7 @@
 
 void block_timer(void);
 void allow_timer(void);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 void install_timer_tick(void (*func)(void), int freq);
 #else
 extern	void install_timer_tick(void (__stdcall *func)(void *,unsigned int ,unsigned int ,unsigned long ), int freq);

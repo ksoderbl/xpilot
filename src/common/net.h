@@ -1,6 +1,6 @@
-/* $Id: net.h,v 4.1 1998/04/16 17:40:46 bert Exp $
+/* $Id: net.h,v 4.3 2001/02/19 23:36:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,6 +25,10 @@
 #ifndef	NET_H
 #define	NET_H
 
+#ifndef SOCKLIB_H
+/* need sock_t */
+#include "socklib.h"
+#endif
 
 #define MIN_SOCKBUF_SIZE	1024
 #define MAX_SOCKBUF_SIZE	(50*1024)
@@ -65,7 +69,7 @@
  * the number of network packets.
  */
 typedef struct {
-    int		sock;		/* socket filedescriptor */
+    sock_t	sock;		/* socket descriptor */
     char	*buf;		/* i/o data buffer */
     int		size;		/* size of buffer */
     int		len;		/* amount of data in buffer (writing/reading) */
@@ -73,7 +77,7 @@ typedef struct {
     int		state;		/* read/write/locked/error status flags */
 } sockbuf_t;
 
-int Sockbuf_init(sockbuf_t *sbuf, int sock, int size, int state);
+int Sockbuf_init(sockbuf_t *sbuf, sock_t *sock, int size, int state);
 int Sockbuf_cleanup(sockbuf_t *sbuf);
 int Sockbuf_clear(sockbuf_t *sbuf);
 int Sockbuf_advance(sockbuf_t *sbuf, int len);

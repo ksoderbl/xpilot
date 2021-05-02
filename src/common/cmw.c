@@ -1,6 +1,6 @@
-/* $Id: cmw.c,v 4.1 1998/04/16 17:40:35 bert Exp $
+/* $Id: cmw.c,v 4.3 2001/03/27 13:55:36 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -109,4 +109,7 @@ cmw_priv_deassert_netaccess(void)
     return;
 }
 
+#else
+/* many compilers refuse to compile empty files */
+void cmw_dummy() { ; }
 #endif /* SUNCMW */

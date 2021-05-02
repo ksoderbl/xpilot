@@ -1,6 +1,6 @@
-/* $Id: paintobjects.c,v 4.31 2000/10/15 13:09:54 bert Exp $
+/* $Id: paintobjects.c,v 4.35 2001/03/31 12:21:01 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,19 +23,23 @@
  */
 
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winClient.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <time.h>
 #include <limits.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winClient.h"
 #endif
 
 #include "version.h"
@@ -120,7 +124,7 @@ static int wrap(int *xp, int *yp)
 void Paint_item_symbol(u_byte type, Drawable d, GC mygc, int x, int y, int color)
 {
     if (!blockBitmaps) {
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     rd.paintItemSymbol(type, d, mygc, x, y, color);
 #else
     gcv.stipple = itemBitmaps[type];
@@ -264,7 +268,7 @@ static void Paint_mines(void)
 			if (mine_ptr[i].id == EXPIRED_MINE_ID) {
 			    static char expired_name[] = "Expired";
 			    name = expired_name;
-			} else if ((other=Other_by_id(mine_ptr[i].id))!=NULL) {
+			} else if ((other = Other_by_id(mine_ptr[i].id)) != NULL) {
 			    name = other->name;
 			} else {
 			    static char unknown_name[] = "Not of this world!";

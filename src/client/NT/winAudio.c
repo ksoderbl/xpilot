@@ -1,6 +1,6 @@
-/* $Id: winAudio.c,v 4.1 1998/04/16 17:40:18 bert Exp $
+/* $Id: winAudio.c,v 4.2 2001/02/19 23:36:43 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

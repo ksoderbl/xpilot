@@ -1,6 +1,6 @@
-/* $Id: client.h,v 4.11 2000/03/20 10:01:58 bert Exp $
+/* $Id: client.h,v 4.15 2001/03/25 21:31:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,7 +25,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #ifndef	_WINSOCKAPI_
 #include <winsock.h>
 #endif
@@ -140,9 +140,9 @@ typedef struct {
 } cannontime_t;
 
 typedef struct {
-    int		pos;		/* Block index */
-    short	dead_time;	/* Frames inactive */
-    u_short	damage;		/* Damage to target */
+    int			pos;		/* Block index */
+    short		dead_time;	/* Frames inactive */
+    unsigned short	damage;		/* Damage to target */
 } target_t;
 
 typedef struct {
@@ -291,7 +291,7 @@ extern bool	useErase;		/* use the Erase hack for slow X */
 extern int	maxFPS;			/* Client's own FPS */
 extern int 	oldMaxFPS;
 
-extern byte	lose_item;		/* flag and index to drop item */
+extern u_byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */
 
 #ifdef SOUND
@@ -346,7 +346,7 @@ void Set_auto_shield(int onoff);
 #ifdef XlibSpecificationRelease
 void Key_event(XEvent *event);
 #endif
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 int xevent(int);
 #else
 int xevent(XEvent event);

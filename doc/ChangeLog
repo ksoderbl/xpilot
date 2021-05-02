@@ -3,6 +3,101 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.3.1 compared to release 4.3.0.
+
+Some .mak files in the NT subdirectories were removed because it was too
+hard too keep them synchronised with the rest of the source tree.
+
+The file src/common/socklib.c was rewritten from scratch to get rid
+of some old non-GPL copyright stuff.  Now everything in XPilot should
+be under the GPL copyright.
+
+Applied Jarno van der Kolk's fix for improving sliding radar performance
+under Windows.
+
+Replaced the existing map generator with wildmap, which generates much
+better maps if the default map could not be found, or if "-map wild"
+was specified on the command line.
+
+If the client stopped receiving frames, you couldn't disable
+mouse control unless you managed to free the mouse pointer with
+something like WM key shortcuts. Fixed this problem thans to Uoti.
+
+Ben Jackson submitted code which adds a button to the welcome screen
+with which you can ping all the servers.  The sort criteria for the
+list of servers is then augmented with the ping times.
+
+Ben Jackson submitted partially finished code to measure the speed
+of different graphics features.  He didn't commit yet to any
+further work on this.
+
+Juha Lindström submitted code to fix the new socklib library
+for Windows peculiarities.  He adds the following remark:
+
+	It seems that the current 4.3.1alpha doesn't compile on windows due to a few
+	issues in socklib.c and wildmap.c. Attached is a patch I used to get the
+	windows version working. Below is a short explanation of the socklib issue
+	as it was more complex.
+	  Currently the windows part of function sock_get_host_by_name expects that it
+	is called from a thread that does not own the window notifyWnd. This is the
+	case when the function is being used by the server but as the client usually
+	contains only one thread it will block forever in the function. In previous
+	xpilot versions this was handled so that the client never used GetAddrByName
+	(the old name for sock_get_host_by_name) but instead used gethostbyname
+	directly. In this new version every host name lookup is done with
+	sock_get_host_by_name and this causes the client to freeze.
+	  The patch fixes this problem in the following manner. The function still
+	uses WSAAsyncGetHostByName to do the lookup to solve the long timeout
+	problem with gethostbyname. After calling WSAAsyncGetHostByName the calling
+	thread enters a loop and starts polling its message queue for a
+	WM_GETHOSTNAME message indicating that the lookup is ready. If the calling
+	thread is the owner of notifyWnd (as is the case with the client), windows
+	will deliver this message to the queue. If the calling thread is the worker
+	thread of the server , windows will deliver the message to the message queue
+	of the main thread because it is the owner of notifyWnd. Upon receiving this
+	message, the main thread will forward it to the worker thread using
+	PostThreadMessage thereby letting the worker thread exit the loop.
+	  As I'm not at all experienced in windows programming, I'd suggest that
+	someone who is reviews that stuff before any of it is included in the
+	release.
+	-- Juha
+
+Ben Armstrong submitted a patch to limit the UDP ports which the
+server uses for client connections in a predefined range.
+For this the server has two new options: -clientPortStart and -clientPortEnd.
+When the server is started with e.g.:
+    -clientPortStart 40000 -clientPortEnd 41000
+then the server will use this range for UDP ports to communicate with clients.
+This is useful for sites which are behind a firewall.
+
+Fixed compilation problems for Linux with glibc 2.2.2.
+
+Ben Jackson supplied a patch to the server, which adds a new -serverHost
+option.  With this option you can specify the hostname and IP address
+the server will use if the machine has more than one network interfaces.
+
+Fixed a bug which caused the client to crash when the shipshape file was
+specified in the ~/.xpilotrc file, but the shipshape file did not exist.
+
+Ben Armstrong submitted an updated manual page for the xpilot client.
+
+The default value for maxColors has been changed from 4 to 8.
+On some old and cheap graphics hardware this may slow down the
+client a bit, so in that case players may need to explicitly set
+the value of maxColors to 4 in their XPilot defaults file.
+
+Ben Jackson submitted a patch to have XPilot compile under Sun Solaris.
+
+Ben Armstrong submitted a patch which adds an option to the client
+which controls the color of old messages.  The option is -oldMessagesColor.
+It can be configured in the "config" window.
+
+The doc/README.sounds file has been updated to the current state of affairs.
+The XPilot sounds file is now located as LIBDIR/sounds instead of
+the erroneous definition of SOUNDDIR/sounds.
+
+===============================================================================
+
 This is a summary of changes of release 4.3.0 compared to release 4.2.1.
 
 Changes to be able to support many more colors.
@@ -4045,6 +4140,6 @@ Changes in 3.0.5 compared to 3.0.4:
 * Several other small bug fixes
 
 ===============================================================================
-==== $Id: ChangeLog,v 4.42 2000/10/29 17:19:35 bert Exp $
+==== $Id: ChangeLog,v 4.54 2001/04/01 13:56:17 bert Exp $
 ===============================================================================
 

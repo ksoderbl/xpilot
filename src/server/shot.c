@@ -1,6 +1,6 @@
-/* $Id: shot.c,v 4.9 2000/03/24 14:21:52 bert Exp $
+/* $Id: shot.c,v 4.13 2001/03/25 17:24:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,16 +22,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
-#endif
-
 #include <stdio.h>
+#include <errno.h>
 #include <math.h>
+#include <limits.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+#endif
 
 #define SERVER
 #include "version.h"
@@ -45,12 +45,13 @@
 #include "objpos.h"
 #include "netserver.h"
 #include "error.h"
+#include "commonproto.h"
 
 char shot_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: shot.c,v 4.9 2000/03/24 14:21:52 bert Exp $";
+    "@(#)$Id: shot.c,v 4.13 2001/03/25 17:24:51 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -131,7 +132,7 @@ void Place_moving_mine(int ind)
 		       pl->pos.x, pl->pos.y, pl->vel.x, pl->vel.y, pl->mods);
 }
 
-void Place_general_mine(int ind, u_short team, long status, DFLOAT x, DFLOAT y,
+void Place_general_mine(int ind, unsigned short team, long status, DFLOAT x, DFLOAT y,
 			DFLOAT vx, DFLOAT vy, modifiers mods)
 {
     char		msg[MSG_LEN];
@@ -526,7 +527,7 @@ void Fire_right_rshot(int ind, int type, int dir, int gun)
 
 }
 
-void Fire_general_shot(int ind, u_short team, bool cannon, DFLOAT x, DFLOAT y,
+void Fire_general_shot(int ind, unsigned short team, bool cannon, DFLOAT x, DFLOAT y,
 		       int type, int dir, DFLOAT speed, modifiers mods,
 		       int target)
 {
@@ -1416,7 +1417,7 @@ void Fire_laser(int ind)
     }
 }
 
-void Fire_general_laser(int ind, u_short team, DFLOAT x, DFLOAT y,
+void Fire_general_laser(int ind, unsigned short team, DFLOAT x, DFLOAT y,
 			int dir, modifiers mods)
 {
     player		*pl = ((ind == -1) ? NULL : Players[ind]);

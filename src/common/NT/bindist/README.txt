@@ -1,8 +1,8 @@
-$Id: README.txt,v 1.45 2000/10/29 17:11:37 bert Exp $
+$Id: README.txt,v 1.60 2001/04/01 10:30:09 bert Exp $
 
-This is the README for XPilot.exe and XPilots.exe  4.3.0-NT13.
+This is the README for XPilot.exe and XPilots.exe  4.3.1-NT13.
 
-Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
+Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska.
 
 Following are notes for building the
 Windows version of XPilot.  See INSTALL in the XPilot root

@@ -1,6 +1,6 @@
-/* $Id: cannon.c,v 1.11 2000/03/22 21:21:56 bert Exp $
+/* $Id: cannon.c,v 1.14 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,15 +23,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <math.h>
+#include <limits.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -48,12 +48,13 @@
 #include "walls.h"
 #include "cannon.h"
 #include "netserver.h"
+#include "commonproto.h"
 
 char cannon_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cannon.c,v 1.11 2000/03/22 21:21:56 bert Exp $";
+    "@(#)$Id: cannon.c,v 1.14 2001/03/20 18:37:59 bert Exp $";
 #endif
 
 #ifdef	SOUND

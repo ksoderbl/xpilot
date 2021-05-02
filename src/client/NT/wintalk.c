@@ -1,6 +1,6 @@
-/* $Id: wintalk.c,v 1.1 1999/11/06 16:33:47 bert Exp $
+/* $Id: wintalk.c,v 1.2 2001/02/19 23:36:43 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -42,7 +42,7 @@ char talk_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: wintalk.c,v 1.1 1999/11/06 16:33:47 bert Exp $";
+    "@(#)$Id: wintalk.c,v 1.2 2001/02/19 23:36:43 bert Exp $";
 #endif
 
 

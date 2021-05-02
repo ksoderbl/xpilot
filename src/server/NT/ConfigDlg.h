@@ -1,6 +1,6 @@
-/* $Id: ConfigDlg.h,v 1.2 1998/04/16 17:42:11 bert Exp $
+/* $Id: ConfigDlg.h,v 1.3 2001/02/19 23:36:49 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

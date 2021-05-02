@@ -1,6 +1,6 @@
-/* $Id: talk.h,v 4.7 1999/10/09 01:28:19 svenske Exp $
+/* $Id: talk.h,v 4.8 2001/02/19 23:36:41 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

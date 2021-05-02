@@ -1,6 +1,6 @@
-/* $Id: metaserver.c,v 4.8 2000/03/23 17:06:52 bert Exp $
+/* $Id: metaserver.c,v 4.12 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,19 +22,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <time.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <time.h>
-#if !defined(__hpux)
-#include <sys/time.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
 #endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -64,7 +68,7 @@ char metaserver_version[] = VERSION;
 
 #ifndef	lint
 char sourceid[] =
-    "@(#)$Id: metaserver.c,v 4.8 2000/03/23 17:06:52 bert Exp $";
+    "@(#)$Id: metaserver.c,v 4.12 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 struct MetaServer {
@@ -82,7 +86,7 @@ struct MetaServer	meta_servers[2] = {
     },
 };
 
-static int	Socket = -1;
+extern sock_t	contactSocket;
 static char	msg[MSG_LEN];
 
 extern int	NumPlayers, NumRobots, NumPseudoPlayers, NumQueuedPlayers;
@@ -98,9 +102,9 @@ void Meta_send(char *mesg, int len)
     }
 
     for (i = 0; i < NELEM(meta_servers); i++) {
-	if (DgramSend(Socket, meta_servers[i].addr, META_PORT, mesg, len) != len) {
-	    GetSocketError(Socket);
-	    DgramSend(Socket, meta_servers[i].addr, META_PORT, mesg, len);
+	if (sock_send_dest(&contactSocket, meta_servers[i].addr, META_PORT, mesg, len) != len) {
+	    sock_get_error(&contactSocket);
+	    sock_send_dest(&contactSocket, meta_servers[i].addr, META_PORT, mesg, len);
 	}
     }
 }
@@ -125,12 +129,10 @@ void Meta_gone(void)
     }
 }
 
-void Meta_init(int fd)
+void Meta_init(void)
 {
     int			i;
     char		*addr;
-
-    Socket = fd;
 
     if (!reportToMetaServer) {
 	return;
@@ -140,7 +142,7 @@ void Meta_init(int fd)
     xpprintf("%s Locating Internet Meta server... ", showtime()); fflush(stdout);
 #endif
     for (i = 0; i < NELEM(meta_servers); i++) {
-	addr = GetAddrByName(meta_servers[i].name);
+	addr = sock_get_addr_by_name(meta_servers[i].name);
 	if (addr) {
 	    strncpy(meta_servers[i].addr, addr,
 		    sizeof(meta_servers[i].addr));

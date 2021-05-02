@@ -1,6 +1,6 @@
-/* $Id: painthud.c,v 4.20 2000/04/02 22:21:31 bert Exp $
+/* $Id: painthud.c,v 4.26 2001/03/28 16:33:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,18 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winClient.h"
-#include <math.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
+#include <math.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winClient.h"
 #endif
 
 #include "version.h"
@@ -67,6 +71,7 @@ extern XGCValues	gcv;
 
 int	hudColor;		/* Color index for HUD drawing */
 int	hudLockColor;		/* Color index for lock on HUD drawing */
+int	oldMessagesColor;	/* Color index for old messages */
 DFLOAT	charsPerTick = 0.0;	/* Output speed of messages */
 
 message_t	*TalkMsg[MAX_MSGS], *GameMsg[MAX_MSGS];
@@ -465,7 +470,7 @@ void Paint_HUD(void)
     rect_x = horiz_pos;
     rect_y = vert_pos;
 
-    for (i=0; i<NUM_ITEMS; i++) {
+    for (i = 0; i < NUM_ITEMS; i++) {
 	int num = numItems[i];
 
 	if (i == ITEM_FUEL)
@@ -768,10 +773,12 @@ void Paint_messages(void)
 	}
 	len = (int)(charsPerTick * (MSG_DURATION - msg->life));
 	len = MIN(msg->len, len);
-	if (msg->life > MSG_FLASH)
+	if (msg->life > MSG_FLASH) {
 	    msg_color = RED;
-	else
-	    msg_color = WHITE;
+	}
+	else {
+	    msg_color = oldMessagesColor;
+	}
 
 #ifndef _WINDOWS
 	/*

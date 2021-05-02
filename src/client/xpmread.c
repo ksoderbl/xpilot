@@ -1,6 +1,6 @@
-/* $Id: xpmread.c,v 4.1 1998/04/16 17:39:58 bert Exp $
+/* $Id: xpmread.c,v 4.5 2001/03/27 12:50:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -21,7 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <unistd.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,8 +31,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xutil.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -40,6 +43,7 @@
 #include "paint.h"
 #include "xinit.h"
 #include "error.h"
+#include "commonproto.h"
 
 #define XPM_READ_C
 #include "xpmread.h"
@@ -179,14 +183,14 @@ static char *xpm_next_string(XPM_read *xpmr)
 	/* point to next string. */
 	xpmr->static_data++;
 	/* static_data may point to read-only memory (Linux). */
-	xpmr->token = strdup(*xpmr->static_data);
+	xpmr->token = xp_strdup(*xpmr->static_data);
     }
     else {
 	/* skip any non-string tokens. */
 	while (xpm_next_token(xpmr)) {
 	    if (xpmr->token[0] == '"') {
 		/* strip the string double quotes. */
-		char *str = strdup(xpmr->token + 1);
+		char *str = xp_strdup(xpmr->token + 1);
 		free(xpmr->token);
 		xpmr->token = str;
 		if (str && (str = strchr(str, '"')) != NULL) {
@@ -257,7 +261,7 @@ static int xpm_parse_data(XPM_read *xpmr)
 			 /* key already defined for this color! */
 			 break;
 		     }
-		     xpmr->xpm->colors[i].keys[k] = strdup(str);
+		     xpmr->xpm->colors[i].keys[k] = xp_strdup(str);
 		     num_keys++;
 		     break;
 		 }
@@ -413,7 +417,7 @@ static int xpm_read_xpm_from_data(const char **data, XPM *xpm)
     memset(&xpmr, 0, sizeof(xpmr));
     xpmr.xpm = xpm;
     xpmr.static_data = data;
-    xpmr.token = strdup(*xpmr.static_data);
+    xpmr.token = xp_strdup(*xpmr.static_data);
 
     xpm_parse_data(&xpmr);
     xpm_free_xpmr(&xpmr);

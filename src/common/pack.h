@@ -1,6 +1,6 @@
-/* $Id: pack.h,v 4.10 2000/10/15 13:09:54 bert Exp $
+/* $Id: pack.h,v 4.11 2001/02/19 23:36:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

@@ -1,6 +1,6 @@
-/* $Id: paint.c,v 4.16 2000/09/15 13:22:11 bert Exp $
+/* $Id: paint.c,v 4.20 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,23 +23,26 @@
  */
 
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winClient.h"
-#include "NT/winXXPilot.h"
-#include "netclient.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <limits.h>
+#include <time.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
 #endif
 
-#include <time.h>
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winClient.h"
+# include "NT/winXXPilot.h"
+# include "netclient.h"
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -86,7 +89,7 @@ char	motdFontName[FONT_LEN];
 Display	*dpy;			/* Display of player (pointer) */
 Display	*kdpy;			/* Keyboard display */
 short	about_page;		/* Which page is the player on? */
-u_short	team;			/* What team is the player on? */
+unsigned short	team;		/* What team is the player on? */
 
 GC	gc;			/* GC for the game area */
 GC	messageGC;		/* GC for messages in the game area */
@@ -101,7 +104,7 @@ XGCValues	gcv;
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
 Window	keyboard;		/* Keyboard window */
-#ifdef	_WINDOWS		/* Windows needs some dummy windows (size 0,0) */
+#ifdef _WINDOWS		/* Windows needs some dummy windows (size 0,0) */
 				/* so we can store the active fonts.  Windows only */
 				/* supports 1 active font per window */
 Window	textWindow;		/* for the GC into the config window */
@@ -173,7 +176,7 @@ void Paint_frame(void)
     static int		prev_damaged = 0;
     static int		prev_prev_damaged = 0;
 
-#ifdef	_WINDOWS	/* give any outgoing data a head start to the server */
+#ifdef _WINDOWS	/* give any outgoing data a head start to the server */
     Net_flush();	/* send anything to the server before returning to Windows */
 #endif
 
@@ -198,7 +201,7 @@ void Paint_frame(void)
        with an XSetForeground(white) confusing SET_FG */
     SET_FG(colors[BLACK].pixel);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     p_draw = draw;		/* let's try this */
     XSetForeground(dpy, gc, colors[BLACK].pixel);
     XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
@@ -285,7 +288,7 @@ void Paint_frame(void)
     if (p_radar != radar && radar_exposures > 0) {
 	if (BIT(instruments, SHOW_SLIDING_RADAR) == 0
 	    || BIT(Setup->mode, WRAP_PLAY) == 0) {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      0, 0, 256, RadarHeight, 0, 0);
 #else
@@ -315,7 +318,7 @@ void Paint_frame(void)
 	    w = 256 - x;
 	    h = RadarHeight - y;
 
-#ifndef	_WINDOWS	
+#ifndef _WINDOWS	
 	    XCopyArea(dpy, p_radar, radar, gc,
 		      0, 0, x, y, w, h);
 	    XCopyArea(dpy, p_radar, radar, gc,
@@ -357,7 +360,7 @@ void Paint_frame(void)
 	     * DBE's XdbeBackground switch option is
 	     * probably faster than XFillRectangle.
 	     */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	    if (dbuf_state->multibuffer_type != MULTIBUFFER_DBE) {
 		SET_FG(colors[BLACK].pixel);
 		XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
@@ -366,7 +369,7 @@ void Paint_frame(void)
 	}
     }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (talk_mapped == true) {
 	static bool toggle;
 	static long last_toggled;
@@ -379,7 +382,7 @@ void Paint_frame(void)
     }
 #endif
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     Client_score_table();
     PaintWinClient();
 #endif

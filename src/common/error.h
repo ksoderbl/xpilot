@@ -1,5 +1,27 @@
-/* $Id: error.h,v 4.2 2000/03/24 09:45:07 bert Exp $
+/* $Id: error.h,v 4.5 2001/03/27 12:50:33 bert Exp $
  *
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
+ *
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+/*
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
  * Gaute Nessan, University of Tromsoe (gaute@staff.cs.uit.no).
@@ -11,62 +33,25 @@
 #ifndef	ERROR_H
 #define	ERROR_H
 
-/*
- * Prototypes and include files.
- */
-#include <errno.h>
-#include <stdio.h>
-
-#ifndef	_WINDOWS
-#if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
-#   include <stdarg.h>
+#ifndef _WINDOWS
+# if defined(__STDC__) && !defined(__sun__) || defined(__cplusplus)
+#  include <stdarg.h>
     extern void error(const char *fmt, ...);
-#else
-#   include <varargs.h>
+# else
+#  include <varargs.h>
     extern void error();
+# endif
 #endif
 
-#else
+#ifdef _WINDOWS
     extern void error();
-#ifdef	_DEBUG
-#define	Trace _Trace
-#else
-#define	Trace
-#endif
+# ifdef	_DEBUG
+#  define	Trace _Trace
+# else
+#  define	Trace
+# endif
 #endif
 
 extern void init_error(const char *prog);
-
-#ifdef	_WINDOWS
-/* extern	HWND	alarmWnd;		Window for alarm timers */
-#endif
-/*
- * memory leak checking
- */
-#if (defined(_WINDOWS) && defined(_DEBUG)) || !defined(_WINDOWS)
-
-/*#define	_MEMPOD	1*/
-
-#ifdef	_MEMPOD
-extern	void xpmemShutdown();
-
-extern	void* xpmalloc(size_t, char*, int);
-extern	void  xpfree(void*, char*, int);
-extern	void* xprealloc(void*, size_t, char*, int);
-extern	char* xpstrdup(const char*, char*, int);
-extern	void* xpcalloc(size_t num, size_t size, char*, int);
-
-#define	malloc(__m) \
-	(xpmalloc(__m, __FILE__, __LINE__))
-#define	realloc(__m, __s) \
-	(xprealloc(__m, __s, __FILE__, __LINE__))
-#define	calloc(__m, __s) \
-	(xpcalloc(__m, __s, __FILE__, __LINE__))
-#define	free(__m) \
-	(xpfree(__m, __FILE__, __LINE__))
-#define	strdup(__s) \
-	(xpstrdup(__s, __FILE__, __LINE__))
-#endif
-#endif
 
 #endif	/* ERROR_H */

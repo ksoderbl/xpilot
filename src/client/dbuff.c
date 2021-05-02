@@ -1,6 +1,6 @@
-/* $Id: dbuff.c,v 4.8 2000/10/15 15:46:38 bert Exp $
+/* $Id: dbuff.c,v 4.10 2001/03/20 14:02:48 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -40,25 +40,13 @@
 # include "paint.h"
 #endif
 
-#if 0
-#ifdef SPARC_CMAP_HACK
-# include <fcntl.h>
-# include <sys/ioctl.h>
-# if defined(SVR4) || defined(__svr4__)
-#  include <sys/fbio.h>
-# else
-#  include <sun/fbio.h>
-# endif
-#endif
-#endif
-
 
 char dbuff_version[] = VERSION;
 
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 4.8 2000/10/15 15:46:38 bert Exp $";
+    "@(#)$Id: dbuff.c,v 4.10 2001/03/20 14:02:48 bert Exp $";
 #endif
 
 

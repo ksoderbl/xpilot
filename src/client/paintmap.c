@@ -1,6 +1,6 @@
-/* $Id: paintmap.c,v 4.13 2000/10/15 13:09:54 bert Exp $
+/* $Id: paintmap.c,v 4.16 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,16 +22,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
 #endif
 
 #include "version.h"

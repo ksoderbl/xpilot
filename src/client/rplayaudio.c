@@ -1,6 +1,6 @@
-/* $Id: rplayaudio.c,v 4.1 1998/04/16 17:39:45 bert Exp $
+/* $Id: rplayaudio.c,v 4.5 2001/03/27 12:50:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -31,12 +31,16 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <sys/param.h>
-#include <netdb.h>
+
+#if !defined(_WINDOWS) && !defined(VMS)
+# include <netdb.h>
+# include <sys/param.h>
+#endif
 
 #include "version.h"
 #include "rplay.h"
 #include "audio.h"
+#include "commonproto.h"
 
 char audio_version[] = VERSION;
 
@@ -77,7 +81,7 @@ void audioDevicePlay(char *filename, int type, int volume, void **private)
 	    name = filename;
 	}
 	*p = rplay_create(RPLAY_PLAY);
-	rplay_set(*p, RPLAY_INSERT, 0, RPLAY_SOUND, strdup(name), NULL);
+	rplay_set(*p, RPLAY_INSERT, 0, RPLAY_SOUND, xp_strdup(name), NULL);
     }
 
     rplay_set(*p, RPLAY_CHANGE, 0, RPLAY_VOLUME, volume, NULL);

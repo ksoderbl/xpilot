@@ -1,6 +1,6 @@
-/* $Id: xpilot.c,v 4.17 2000/03/26 18:34:14 bert Exp $
+/* $Id: xpilot.c,v 4.23 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,24 +22,26 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_WINDOWS
-# include <unistd.h>
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#ifndef	_WINDOWS
-# include <sys/types.h>
+#include <time.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
 # include <sys/param.h>
-# include <sys/time.h>
 # include <netdb.h>
-#else
+#endif
+
+#ifdef _WINDOWS
 # include "NT/winNet.h"
 # include "NT/winClient.h"
-# include <time.h>
 #endif
 
 #include "version.h"
@@ -64,7 +66,7 @@ char xpilot_version[] = VERSION;
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 4.17 2000/03/26 18:34:14 bert Exp $";
+    "@(#)$Id: xpilot.c,v 4.23 2001/03/20 18:47:19 bert Exp $";
 #endif
 
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */
@@ -140,7 +142,7 @@ int main(int argc, char *argv[])
 
     init_error(argv[0]);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     srand( (unsigned)time( NULL ) );
 #else
     srand( (unsigned)time((time_t *)0) * getpid());
@@ -161,7 +163,7 @@ int main(int argc, char *argv[])
 	strncpy(hostname, cp, sizeof(hostname) - 1);
     }
     else {
-        GetLocalHostName(hostname, sizeof hostname, 0);
+        sock_get_local_hostname(hostname, sizeof hostname, 0);
     }
     if (Check_host_name(hostname) == NAME_ERROR) {
 	xpprintf("fixing host from \"%s\" ", hostname);
@@ -223,6 +225,11 @@ int main(int argc, char *argv[])
     if (!list_servers && Is_allowed(conpar->disp_name) == false)
 	exit (-1);
 #endif
+#ifdef SIMULATING_ONLY
+Simulate_init();
+Simulate_frames();
+exit(0);
+#endif
 
 #if 0 || _WINDOWS
     if (list_servers)
@@ -263,7 +270,7 @@ int main(int argc, char *argv[])
  */
 static void Check_client_versions(void)
 {
-#ifndef	_WINDOWS	/* gotta put this back in before source released */
+#ifndef _WINDOWS	/* gotta put this back in before source released */
 #ifdef SOUND
     extern char		audio_version[];
 #endif

@@ -1,6 +1,6 @@
-/* $Id: object.h,v 4.7 2000/03/23 17:06:53 bert Exp $
+/* $Id: object.h,v 4.11 2001/03/25 21:31:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -46,7 +46,7 @@
 #include "click.h"
 #endif
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #include "NT/winNet.h"
 #endif
 
@@ -162,45 +162,45 @@ struct _objposition {
 
 typedef struct _object object;
 struct _object {
-    byte	color;			/* Color of object */
-    u_byte	dir;			/* Direction of acceleration */
-    int		id;			/* For shots => id of player */
-    u_short	team;			/* Team of player or cannon */
-    objposition	pos;			/* World coordinates */
-    ipos	prevpos;		/* Object's previous position... */
-    vector	vel;
-    vector	acc;
-    DFLOAT	max_speed;
-    DFLOAT	mass;
-    int		type;
-    long	info;			/* Miscellaneous info */
-    long	life;			/* No of ticks left to live */
-    int		count;			/* Misc timings */
-    long	status;
-    modifiers	mods;			/* Modifiers to this object */
+    u_byte		color;		/* Color of object */
+    u_byte		dir;		/* Direction of acceleration */
+    int			id;		/* For shots => id of player */
+    unsigned short	team;		/* Team of player or cannon */
+    objposition		pos;		/* World coordinates */
+    ipos		prevpos;	/* Object's previous position... */
+    vector		vel;
+    vector		acc;
+    DFLOAT		max_speed;
+    DFLOAT		mass;
+    int			type;
+    long		info;		/* Miscellaneous info */
+    long		life;		/* No of ticks left to live */
+    int			count;		/* Misc timings */
+    long		status;
+    modifiers		mods;		/* Modifiers to this object */
 
     /* up to here all object types (including players!) should be the same. */
 
-    DFLOAT	turnspeed;		/* for missiles only */
-    long	fuselife;		/* Ticks left when considered fused */
+    DFLOAT		turnspeed;	/* for missiles only */
+    long		fuselife;	/* Ticks left when considered fused */
 
-    object	*cell_list;		/* linked list for cell lookup */
+    object		*cell_list;	/* linked list for cell lookup */
 
-    int 	owner;			/* Who's object is this ? */
+    int 		owner;		/* Who's object is this ? */
 					/* (spare for id)*/
-    int		treasure;		/* Which treasure does ball belong */
-    int		new_info;		/* smart re-lock id after confusion */
-    DFLOAT	length;			/* Distance between ball and player */
-    DFLOAT	ecm_range;		/* Range from last ecm center */
-    int		spread_left;		/* how much spread time left */
-    int		pl_range;		/* distance to player for collision. */
-    int		pl_radius;		/* distance to player for hit. */
+    int			treasure;	/* Which treasure does ball belong */
+    int			new_info;	/* smart re-lock id after confusion */
+    DFLOAT		length;		/* Distance between ball and player */
+    DFLOAT		ecm_range;	/* Range from last ecm center */
+    int			spread_left;	/* how much spread time left */
+    int			pl_range;	/* distance to player for collision. */
+    int			pl_radius;	/* distance to player for hit. */
 
-    u_byte	size;			/* Size of object (wreckage) */
-    u_byte	rotation;		/* Rotation direction */
+    u_byte		size;		/* Size of object (wreckage) */
+    u_byte		rotation;	/* Rotation direction */
 
 #ifdef __cplusplus
-		_object() {}
+			_object() {}
 #endif
 };
 
@@ -235,14 +235,14 @@ typedef struct {
  * Structure holding the info for one pulse of a laser.
  */
 typedef struct {
-    position	pos;
-    int		dir;
-    int		len;
-    int		life;
-    int		id;
-    u_short	team;
-    modifiers	mods;
-    bool	refl;
+    position		pos;
+    int			dir;
+    int			len;
+    int			life;
+    int			id;
+    unsigned short	team;
+    modifiers		mods;
+    bool		refl;
 } pulse_t;
 
 /*
@@ -278,10 +278,10 @@ struct robot_data;
  */
 typedef struct player player;
 struct player {
-    byte	color;			/* Color of object */
+    u_byte	color;			/* Color of object */
     u_byte	dir;			/* Direction of acceleration */
     int		id;			/* Unique id of object */
-    u_short	team;			/* What team is the player on? */
+    unsigned short	team;		/* What team is the player on? */
     objposition	pos;			/* World coordinates */
     ipos	prevpos;		/* Previous position... */
     vector	vel;			/* Velocity of object */
@@ -380,7 +380,7 @@ struct player {
     char	name[MAX_CHARS];	/* Nick-name of player */
     char	realname[MAX_CHARS];	/* Real name of player */
     char	hostname[MAX_CHARS];	/* Hostname of client player uses */
-    u_short	pseudo_team;		/* Which team is used for my tanks */
+    unsigned short	pseudo_team;	/* Which team is used for my tanks */
 					/* (detaching!) */
     object	*ball;
 

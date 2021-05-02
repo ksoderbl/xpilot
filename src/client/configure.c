@@ -1,6 +1,6 @@
-/* $Id: configure.c,v 4.18 2000/10/29 17:11:36 bert Exp $
+/* $Id: configure.c,v 4.23 2001/03/28 16:33:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -54,17 +54,6 @@
  *    xpilot@xpilot.org.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winClient.h"
-#include "NT/winXXPilot.h"
-#else
-#ifdef VMS
-#include "strcasecmp.h"
-#else
-#include <unistd.h>
-#include <pwd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,9 +61,22 @@
 #include <errno.h>
 #include <limits.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <pwd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+# include <X11/Xutil.h>
+#endif
+
+#ifdef VMS
+# include "strcasecmp.h"
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winClient.h"
+# include "NT/winXXPilot.h"
 #endif
 
 #include "version.h"
@@ -91,6 +93,7 @@
 #include "error.h"
 #include "protoclient.h"
 #include "portability.h"
+#include "commonproto.h"
 
 char configure_version[] = VERSION;
 
@@ -146,6 +149,7 @@ static int Config_create_texturedBalls(int widget_desc, int *height);
 static int Config_create_maxFPS(int widget_desc, int *height);
 static int Config_create_maxMessages(int widget_desc, int *height);
 static int Config_create_reverseScroll(int widget_desc, int *height);
+static int Config_create_oldMessagesColor(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
 #endif
@@ -160,7 +164,7 @@ static int Config_create_packetDropMeter(int widget_desc, int *height);
 static int Config_create_clock(int widget_desc, int *height);
 static int Config_create_clockAMPM(int widget_desc, int *height);
 static int Config_create_markingLights(int widget_desc, int *height);
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 static int Config_create_threadedDraw(int widget_desc, int *height);
 #endif
 #ifdef	WINDOWSCALING
@@ -238,6 +242,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_showMessages,
     Config_create_maxMessages,
     Config_create_reverseScroll,
+    Config_create_oldMessagesColor,
     Config_create_showHUD,
     Config_create_horizontalHUDLine,
     Config_create_verticalHUDLine,
@@ -262,7 +267,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_markingLights,
     Config_create_toggleShield,
     Config_create_autoShield,
-	Config_create_showNastyShots,
+    Config_create_showNastyShots,
     Config_create_shotSize,
     Config_create_teamShotSize,
     Config_create_hudColor,
@@ -288,11 +293,11 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_packetDropMeter,
     Config_create_clock,
     Config_create_clockAMPM,
-#ifdef	_WINDOWS
-	Config_create_threadedDraw,
+#ifdef _WINDOWS
+    Config_create_threadedDraw,
 #endif
 #ifdef	WINDOWSCALING
-	Config_create_scaleFactor,
+    Config_create_scaleFactor,
     Config_create_altScaleFactor,
 #endif
     Config_create_save			/* must be last */
@@ -684,6 +689,13 @@ static int Config_create_reverseScroll(int widget_desc, int *height)
 				? true : false,
 			    Config_update_instruments,
 			    (void *) SHOW_REVERSE_SCROLL);
+}
+
+static int Config_create_oldMessagesColor(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "oldMessagesColor", &oldMessagesColor, 0, maxColors - 1,
+			   NULL, NULL);
 }
 
 static int Config_create_showHUD(int widget_desc, int *height)
@@ -1082,7 +1094,7 @@ static int Config_create_clockAMPM(int widget_desc, int *height)
 			      (void *) SHOW_CLOCK_AMPM_FORMAT);
 }
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 static int Config_create_threadedDraw(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "threadedDraw",
@@ -1318,7 +1330,7 @@ static void Config_save_failed(const char *reason, const char **strptr)
     *strptr = "Saving failed...";
 }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 static int Xpilotrc_add(char *line)
 {
     int			size;
@@ -1351,7 +1363,7 @@ static int Xpilotrc_add(char *line)
 	    return -1;
 	}
     }
-    if ((str = strdup(line)) == NULL) {
+    if ((str = xp_strdup(line)) == NULL) {
 	return -1;
     }
     xpilotrc_ptr[num_xpilotrc].line = str;
@@ -1397,7 +1409,7 @@ static void Xpilotrc_use(char *line)
 
 static void Config_save_resource(FILE *fp, const char *resource, char *value)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     char		buf[256];
 
     sprintf(buf, "xpilot.%s:\t\t%s\n", resource, value);
@@ -1454,7 +1466,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Widget_draw(widget_desc);
     Client_flush();
 
-#ifndef	_WINDOWS	/* Windows does no file handling on its own.  fp=undefined */
+#ifndef _WINDOWS	/* Windows does no file handling on its own.  fp=undefined */
 #ifndef VMS
     Get_xpilotrc_file(oldfile, sizeof(oldfile));
     if (oldfile[0] == '\0') {
@@ -1497,6 +1509,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "showMineName", BIT(instruments, SHOW_MINE_NAME));
     Config_save_bool(fp, "showMessages", BIT(instruments, SHOW_MESSAGES));
     Config_save_int(fp, "maxMessages", maxMessages);
+    Config_save_int(fp, "oldMessagesColor", oldMessagesColor);
     Config_save_bool(fp, "reverseScroll", BIT(instruments, SHOW_REVERSE_SCROLL));
     Config_save_bool(fp, "showHUD", BIT(instruments, SHOW_HUD_INSTRUMENTS));
     Config_save_bool(fp, "verticalHUDLine", BIT(instruments, SHOW_HUD_VERTICAL));
@@ -1541,7 +1554,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     Config_save_bool(fp, "threadedDraw", ThreadedDraw);
 #endif
 #ifdef	WINDOWSCALING
@@ -1571,7 +1584,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 	sprintf(buf, "modifierBank%d", i + 1);
 	Config_save_resource(fp, buf, modBankStr[i]);
     }
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     Xpilotrc_end(fp);
     fclose(fp);
 #endif
@@ -1583,7 +1596,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     rename(newfile, oldfile);
 #endif
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     /* save our window's position */
     {
 	WINDOWPLACEMENT	wp;

@@ -1,6 +1,6 @@
-/* $Id: netserver.c,v 4.32 2000/10/15 13:09:55 bert Exp $
+/* $Id: netserver.c,v 4.42 2001/03/27 12:50:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -89,54 +89,38 @@
  * if the acknowledgement timer expires.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <io.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#else
-
-#include "types.h"
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-#if !defined(VMS)
-# include <sys/param.h>
-#endif
-#if defined(__hpux)
-# include <time.h>
-#else
-# if defined(_AIX)
-#  if !defined(_BSD_INCLUDES)
-#   define _BSD_INCLUDES
-#  endif
-#  include <time.h>
-# endif
-# ifdef sco
-#  include <time.h>
-# endif
-#ifndef	_WINDOWS
-# include <sys/time.h>
-#endif
-#endif
-#ifdef	_WINDOWS
-#include "winNet.h"
-#include <io.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#endif
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef VMS
+#  include <sys/param.h>
+# endif
+# ifdef _AIX
+#  ifndef _BSD_INCLUDES
+#   define _BSD_INCLUDES
+#  endif
+# endif
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
 #endif
 
-#include <ctype.h>
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+# include <io.h>
+#endif
 
 #define SERVER
 #include "version.h"
@@ -147,6 +131,7 @@
 #include "map.h"
 #include "pack.h"
 #include "bit.h"
+#include "types.h"
 #include "socklib.h"
 #include "sched.h"
 #include "net.h"
@@ -159,6 +144,7 @@
 #include "saudio.h"
 #include "checknames.h"
 #include "server.h"
+#include "commonproto.h"
 
 char netserver_version[] = VERSION;
 
@@ -560,8 +546,8 @@ void Destroy_connection(int ind, const char *reason)
 {
     connection_t	*connp = &Conn[ind];
     int			id,
-			len,
-			sock;
+			len;
+    sock_t		*sock;
     char		pkt[MAX_CHARS];
 
     if (connp->state == CONN_FREE) {
@@ -570,16 +556,16 @@ void Destroy_connection(int ind, const char *reason)
 	return;
     }
 
-    sock = connp->w.sock;
-    remove_input(sock);
+    sock = &connp->w.sock;
+    remove_input(sock->fd);
 
     strncpy(&pkt[1], reason, sizeof(pkt) - 2);
     pkt[sizeof(pkt) - 1] = '\0';
     pkt[0] = PKT_QUIT;
     len = strlen(pkt) + 1;
-    if (DgramWrite(sock, pkt, len) != len) {
-	GetSocketError(sock);
-	DgramWrite(sock, pkt, len);
+    if (sock_write(sock, pkt, len) != len) {
+	sock_get_error(sock);
+	sock_write(sock, pkt, len);
     }
 #ifndef SILENT
     xpprintf("%s Goodbye %s=%s@%s|%s (\"%s\")\n",
@@ -617,15 +603,16 @@ void Destroy_connection(int ind, const char *reason)
     Sockbuf_cleanup(&connp->w);
     Sockbuf_cleanup(&connp->r);
     Sockbuf_cleanup(&connp->c);
-    memset(connp, 0, sizeof(*connp));
 
     num_logouts++;
 
-    if (DgramWrite(sock, pkt, len) != len) {
-	GetSocketError(sock);
-	DgramWrite(sock, pkt, len);
+    if (sock_write(sock, pkt, len) != len) {
+	sock_get_error(sock);
+	sock_write(sock, pkt, len);
     }
-    DgramClose(sock);
+    sock_close(sock);
+
+    memset(connp, 0, sizeof(*connp));
 }
 
 int Check_connection(char *real, char *nick, char *dpy, char *addr)
@@ -661,8 +648,8 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 {
     int			i,
 			free_conn_index = max_connections,
-			my_port,
-			sock;
+			my_port;
+    sock_t		sock;
     connection_t	*connp;
 
     for (i = 0; i < max_connections; i++) {
@@ -700,57 +687,63 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
     }
     connp = &Conn[free_conn_index];
 
-    if ((sock = CreateDgramSocket(0)) == -1) {
-	error("Cannot create datagram socket (%d)", sl_errno);
-	return -1;
+    if (!clientPortStart || !clientPortEnd || (clientPortStart > clientPortEnd)) {
+        if (sock_open_udp(&sock, serverAddr, 0) == SOCK_IS_ERROR) {
+            error("Cannot create datagram socket (%d)", sock.error.error);
+            return -1;
+        }
     }
-#if 0
-	/* this shouldn't be an issue with the newfangled use of select */
-    if (sock >= MAX_SELECT_FD) {
-	/* Not handled with our current oldfashioned use of select(2). */
-	errno = 0;
-	error("Socket filedescriptor too big");
-	DgramClose(sock);
-	return -1;
+    else {
+	int found_socket = 0;
+        for (i = clientPortStart; i <= clientPortEnd; i++) {
+            if (sock_open_udp(&sock, serverAddr, i) != SOCK_IS_ERROR) {
+		found_socket = 1;
+                break;
+	    }
+	}
+	if (found_socket == 0) {
+	    error("Could not find a usable port in given port range");
+	    return -1;
+	}
     }
-#endif
-    if ((my_port = GetPortNum(sock)) == -1) {
+
+    if ((my_port = sock_get_port(&sock)) == -1) {
 	error("Cannot get port from socket");
-	DgramClose(sock);
+	sock_close(&sock);
 	return -1;
     }
-    if (SetSocketNonBlocking(sock, 1) == -1) {
+    if (sock_set_non_blocking(&sock, 1) == -1) {
 	error("Cannot make client socket non-blocking");
-	DgramClose(sock);
+	sock_close(&sock);
 	return -1;
     }
-    if (SetSocketReceiveBufferSize(sock, SERVER_RECV_SIZE + 256) == -1) {
+    if (sock_set_receive_buffer_size(&sock, SERVER_RECV_SIZE + 256) == -1) {
 	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
     }
-    if (SetSocketSendBufferSize(sock, SERVER_SEND_SIZE + 256) == -1) {
+    if (sock_set_send_buffer_size(&sock, SERVER_SEND_SIZE + 256) == -1) {
 	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
     }
 
-    Sockbuf_init(&connp->w, sock, SERVER_SEND_SIZE,
+    Sockbuf_init(&connp->w, &sock, SERVER_SEND_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_DGRAM);
 
-    Sockbuf_init(&connp->r, sock, SERVER_RECV_SIZE,
+    Sockbuf_init(&connp->r, &sock, SERVER_RECV_SIZE,
 		 SOCKBUF_READ | SOCKBUF_DGRAM);
 
-    Sockbuf_init(&connp->c, -1, MAX_SOCKBUF_SIZE,
+    Sockbuf_init(&connp->c, (sock_t *) NULL, MAX_SOCKBUF_SIZE,
 		 SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK);
 
     connp->my_port = my_port;
-    connp->real = strdup(real);
-    connp->nick = strdup(nick);
-    connp->dpy = strdup(dpy);
-    connp->addr = strdup(addr);
-    connp->host = strdup(host);
+    connp->real = xp_strdup(real);
+    connp->nick = xp_strdup(nick);
+    connp->dpy = xp_strdup(dpy);
+    connp->addr = xp_strdup(addr);
+    connp->host = xp_strdup(host);
     connp->ship = NULL;
     connp->team = team;
     connp->version = version;
     connp->start = main_loops;
-    connp->magic = rand() + my_port + sock + team + main_loops;
+    connp->magic = randomMT() + my_port + sock.fd + team + main_loops;
     connp->id = -1;
     connp->timeout = LISTEN_TIMEOUT;
     connp->last_key_change = 0;
@@ -786,7 +779,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	return -1;
     }
 
-    install_input(Handle_input, sock, (void *)free_conn_index);
+    install_input(Handle_input, sock.fd, (void *)free_conn_index);
 
     return my_port;
 }
@@ -808,7 +801,7 @@ static int Handle_listening(int ind)
     }
     Sockbuf_clear(&connp->r);
     errno = 0;
-    n = DgramReceiveAny(connp->r.sock, connp->r.buf, connp->r.size);
+    n = sock_receive_any(&connp->r.sock, connp->r.buf, connp->r.size);
     if (n <= 0) {
 	if (n == 0
 	    || errno == EWOULDBLOCK
@@ -821,19 +814,25 @@ static int Handle_listening(int ind)
 	return n;
     }
     connp->r.len = n;
-    connp->his_port = DgramLastport();
-    if (DgramConnect(connp->w.sock, connp->addr, connp->his_port) == -1) {
-	error("Cannot connect datagram socket (%s,%d,%d)",
-	      connp->addr, connp->his_port, sl_errno);
-	if (GetSocketError(connp->w.sock)) {
-	    error("GetSocketError fails too, giving up");
+    connp->his_port = sock_get_last_port(&connp->r.sock);
+    if (sock_connect(&connp->w.sock, connp->addr, connp->his_port) == -1) {
+	error("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
+	      connp->addr, connp->his_port,
+	      connp->w.sock.error.error,
+	      connp->w.sock.error.call,
+	      connp->w.sock.error.line);
+	if (sock_get_error(&connp->w.sock)) {
+	    error("sock_get_error fails too, giving up");
 	    Destroy_connection(ind, "connect error");
 	    return -1;
 	}
 	errno = 0;
-	if (DgramConnect(connp->w.sock, connp->addr, connp->his_port) == -1) {
-	    error("Still cannot connect datagram socket (%s,%d,%d)",
-		  connp->addr, connp->his_port, sl_errno);
+	if (sock_connect(&connp->w.sock, connp->addr, connp->his_port) == -1) {
+	    error("Still cannot connect datagram socket (%s,%d,%d,%d,%d)",
+		  connp->addr, connp->his_port,
+		  connp->w.sock.error.error,
+		  connp->w.sock.error.call,
+		  connp->w.sock.error.line);
 	    Destroy_connection(ind, "connect error");
 	    return -1;
 	}
@@ -841,10 +840,11 @@ static int Handle_listening(int ind)
 #ifndef SILENT
     xpprintf("%s Welcome %s=%s@%s|%s (%s/%d)", showtime(), connp->nick,
 	   connp->real, connp->host, connp->dpy, connp->addr, connp->his_port);
-    if (connp->version != MY_VERSION)
-		xpprintf(" (version %04x)\n", connp->version);
-	else
-		xpprintf("\n");
+    if (connp->version != MY_VERSION) {
+	xpprintf(" (version %04x)\n", connp->version);
+    } else {
+	xpprintf("\n");
+    }
 #endif
     if (connp->r.ptr[0] != PKT_VERIFY) {
 	Send_reply(ind, PKT_VERIFY, PKT_FAILURE);
@@ -2865,7 +2865,7 @@ static int Receive_motd(int ind)
  * If this MOTD buffer hasn't been accessed for a while
  * then on the next access the MOTD file is checked for changes.
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #define	close(__a)	_close(__a)
 #endif
 int Get_motd(char *buf, int offset, int maxlen, int *size_ptr)

@@ -1,6 +1,6 @@
-/* $Id: client.c,v 4.18 2000/03/20 10:01:58 bert Exp $
+/* $Id: client.c,v 4.23 2001/03/25 21:31:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,22 +23,25 @@
  */
 
 
-#ifdef	_WINDOWS
-#include "NT/winClient.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
-
-#if defined(__hpux)
 #include <time.h>
-#else
-#include <sys/time.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <X11/Xlib.h>
 #endif
-#endif	/* _WINDOWS */
+
+#ifdef _WINDOWS
+# include "NT/winClient.h"
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -152,7 +155,7 @@ int     auto_shield = 1;        /* shield drops for fire */
 int	maxFPS;			/* Client's own FPS */
 int	oldMaxFPS;
 
-byte	lose_item;		/* index for dropping owned item */
+u_byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */
 
 #ifdef	WINDOWSCALING
@@ -1156,7 +1159,7 @@ int Handle_score(int id, int score, int life, int mychar)
 
     if ((other = Other_by_id(id)) == NULL) {
 	errno = 0;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	error("Can't update score for non-existing player %d,%d,%d", id, score, life);
 #endif
 	return 0;
@@ -1528,7 +1531,7 @@ void Client_cleanup(void)
 
 int Client_fd(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     return ConnectionNumber(dpy);
 #else
     return 0;
@@ -1537,7 +1540,7 @@ int Client_fd(void)
 
 int Client_input(int new_input)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     return xevent(new_input);
 #else
     return 0;
@@ -1545,14 +1548,14 @@ int Client_input(int new_input)
 }
 void Client_flush(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     XFlush(dpy);
 #endif
 }
 
 void Client_sync(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     XSync(dpy, False);
 #endif
 }

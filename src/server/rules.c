@@ -1,6 +1,6 @@
-/* $Id: rules.c,v 4.5 2000/05/03 19:51:38 bert Exp $
+/* $Id: rules.c,v 4.7 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,11 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include <windows.h>
-#else
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef _WINDOWS
+# include <windows.h>
 #endif
 
 #define SERVER
@@ -44,7 +44,7 @@ char rules_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 4.5 2000/05/03 19:51:38 bert Exp $";
+    "@(#)$Id: rules.c,v 4.7 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 #define MAX_FUEL                10000

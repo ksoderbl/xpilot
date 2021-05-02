@@ -1,6 +1,6 @@
-/* $Id: afaudio.c,v 4.1 1998/04/16 17:39:09 bert Exp $
+/* $Id: afaudio.c,v 4.5 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -71,10 +71,11 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef	_WINDOWS
-#include <sys/file.h>
-#endif
 #include <AF/AFlib.h>
+
+#ifndef _WINDOWS
+# include <sys/file.h>
+#endif
 
 #include "version.h"
 #include "audio.h"
@@ -106,8 +107,8 @@ typedef struct
     unsigned    info1;              /* "info" field of unspecified nature */
     unsigned    info2;              /* (totalling hdr_size - 24) */
 } Sun_Audio_Hdr;
-#define SUN_MAGIC       ((u_long) 0x2e736e64)   /* Really '.snd' */
-#define SUN_INV_MAGIC   ((u_long) 0x646e732e)
+#define SUN_MAGIC       ((unsigned long) 0x2e736e64)   /* Really '.snd' */
+#define SUN_INV_MAGIC   ((unsigned long) 0x646e732e)
 #define SUN_AUDIO_ENCODING_ULAW (1)
 
 static struct SoundCache soundCache[CACHE_ENTRIES];

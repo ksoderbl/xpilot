@@ -1,6 +1,6 @@
-/* $Id: xpilotView.cpp,v 4.1 1998/04/16 17:40:28 bert Exp $
+/* $Id: xpilotView.cpp,v 4.3 2001/03/11 22:37:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -27,7 +27,7 @@
 *																			*
 *  XPilot.exe uses the standard MFC doc/view model in an SDI format.		*
 *  The view (and this file) are the primary interface into the XPilot code.	*
-*  $Id: xpilotView.cpp,v 4.1 1998/04/16 17:40:28 bert Exp $					*
+*  $Id: xpilotView.cpp,v 4.3 2001/03/11 22:37:39 bert Exp $					*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -43,6 +43,7 @@
 #define _XPDOC
 #include "winClient.h"
 #include "winXXPilot.h"
+#include "winNet.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -179,6 +180,7 @@ void CXpilotView::OnDraw(CDC* pDC)
 		// Here is where we call xpilot proper.
 		// This gives Windows/MFC time to setup/settle down before we do fun things
 		TRACE("Eat Me\n");
+		notifyWnd = GetSafeHwnd();
 		ret = main(argc, argv);
 
 		for (int i=0; i<args; i++)

@@ -1,6 +1,6 @@
-/* $Id: event.c,v 4.14 2000/03/22 21:29:53 bert Exp $
+/* $Id: event.c,v 4.16 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,14 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#else
 #include <stdlib.h>
-#endif
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+#endif
 
 #define SERVER
 #include "version.h"
@@ -47,7 +47,7 @@ char event_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 4.14 2000/03/22 21:29:53 bert Exp $";
+    "@(#)$Id: event.c,v 4.16 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}

@@ -1,6 +1,6 @@
-/* $Id: global.h,v 4.15 2000/10/15 13:09:55 bert Exp $
+/* $Id: global.h,v 4.20 2001/03/25 15:48:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -49,7 +49,6 @@ typedef struct {
 /*
  * Global data.
  */
-#ifdef SERVER
 #define FPS		framesPerSecond
 
 extern player		**Players;
@@ -81,10 +80,6 @@ extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
 extern int		GetInd[];
-#endif
-extern DFLOAT		tbl_sin[];
-extern DFLOAT		tbl_cos[];
-#ifdef SERVER
 extern int		ShutdownServer, ShutdownDelay;
 extern bool		RawMode;
 extern bool		NoQuit;
@@ -98,6 +93,8 @@ extern int		mapHeight;
 extern char		*mapName;
 extern char		*mapAuthor;
 extern int 		contactPort;
+extern char		*serverHost;
+extern char		*serverAddr;
 extern bool		crashWithPlayer;
 extern bool		bounceWithPlayer;
 extern bool		playerKillings;
@@ -223,7 +220,6 @@ extern int		itemConcentratorRadius;
 extern DFLOAT		itemConcentratorProb;
 extern DFLOAT		gameDuration;
 extern bool		allowViewing;
-extern time_t		gameOverTime;
 extern int		game_lock;
 
 extern char	       	*scoreTableFileName;
@@ -252,7 +248,8 @@ extern bool		useWreckage;
 extern bool		ignore20MaxFPS;
 extern char		*password;
 
-#endif
+extern int		clientPortStart;
+extern int		clientPortEnd;
 
 #endif /* GLOBAL_H */
 

@@ -1,6 +1,6 @@
-/* $Id: winSvrThread.c,v 4.5 1999/01/14 09:08:10 dick Exp $
+/* $Id: winSvrThread.c,v 4.7 2001/03/11 22:37:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  winSvrThread.c - The worker thread for the XPilot server on NT			*
 *																			*
-*  $Id: winSvrThread.c,v 4.5 1999/01/14 09:08:10 dick Exp $					*
+*  $Id: winSvrThread.c,v 4.7 2001/03/11 22:37:39 bert Exp $					*
 \***************************************************************************/
 
 /* Entry point for Windows Server Thread */
@@ -115,7 +115,11 @@ UINT ServerThreadProc(LPVOID pParam)
 		// need to free zargv, add later.
 
 		notifyWnd = pServerInfo->m_hwndNotifyProgress;
-		hostnameFound = &pServerInfo->m_hostNameFound;
+		// force the system to create a message queue for this thread
+		{ 
+			MSG msg;
+			PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
+		}
 		// Exit the thread if the main application sets the "kill server"
 		// event. The main application will set the "start game" event
 		// before setting the "kill server" event.

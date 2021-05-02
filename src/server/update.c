@@ -1,6 +1,6 @@
-/* $Id: update.c,v 4.16 1999/11/10 21:06:36 bert Exp $
+/* $Id: update.c,v 4.19 2001/03/25 17:24:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,13 +22,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <stdio.h>
-#else
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -50,7 +49,7 @@ char update_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 4.16 1999/11/10 21:06:36 bert Exp $";
+    "@(#)$Id: update.c,v 4.19 2001/03/25 17:24:51 bert Exp $";
 #endif
 
 
@@ -587,7 +586,7 @@ void Update_objects(void)
 		World.targets[i].last_change = frame_loops;
 
 		if (targetSync) {
-		    u_short team = World.targets[i].team;
+		    unsigned short team = World.targets[i].team;
 
 		    for (j = 0; j < World.NumTargets; j++) {
 			if (World.targets[j].team == team) {

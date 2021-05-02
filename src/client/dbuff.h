@@ -1,6 +1,6 @@
-/* $Id: dbuff.h,v 4.6 2000/03/24 11:35:11 bert Exp $
+/* $Id: dbuff.h,v 4.7 2001/02/19 23:36:40 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

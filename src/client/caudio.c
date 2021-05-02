@@ -1,6 +1,6 @@
-/* $Id: caudio.c,v 4.3 1999/11/07 11:57:30 bert Exp $
+/* $Id: caudio.c,v 4.6 2001/03/27 12:50:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/types.h>
 
 #include "version.h"
 #include "config.h"
@@ -43,6 +45,7 @@
 #include "audio.h"
 #include "client.h"
 #include "error.h"
+#include "commonproto.h"
 
 char caudio_version[] = VERSION;
 
@@ -87,7 +90,7 @@ void audioInit(char *display)
 		j = 0;
 		while (ifile && j < MAX_RANDOM_SOUNDS) {
 		    if (*ifile == '/')
-			table[i].filenames[j] = strdup(ifile);
+			table[i].filenames[j] = xp_strdup(ifile);
 		    else if (table[i].filenames[j] =
 			     (char *)malloc(strlen(Conf_sounddir()) + strlen(ifile) + 1)) {
 			strcpy(table[i].filenames[j], Conf_sounddir());

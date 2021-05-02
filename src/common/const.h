@@ -1,6 +1,6 @@
-/* $Id: const.h,v 4.14 1999/11/10 21:03:55 bert Exp $
+/* $Id: const.h,v 4.18 2001/03/27 12:50:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,15 +25,18 @@
 #ifndef CONST_H
 #define	CONST_H
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 #include <limits.h>
 #include <math.h>
 #endif
 
+#ifndef TYPES_H
 #include "types.h"
+#endif
+
 /*
- * FLT_MAX and RAND_MAX is ANSI C standard, but some systems (BSD) use
- * MAXFLOAT and INT_MAX instead.
+ * FLT_MAX is ANSI C standard, but some systems (BSD) use
+ * MAXFLOAT instead.
  */
 #ifndef	FLT_MAX
 #   if defined(__sgi) || defined(__FreeBSD__)
@@ -53,16 +56,6 @@
 #	    define FLT_MAX	1e30f	/* should suffice :-) */
 #	endif
 #   endif
-#endif
-#ifndef	RAND_MAX
-    /*
-     * Ough!  If this is possible then we shouldn't be using RAND_MAX!
-     * Older systems which don't have RAND_MAX likely should have it
-     * to be defined as 32767, not as INT_MAX!
-     * We better get our own pseudo-random library to overcome this mess
-     * and get a uniform solution for everything.
-     */
-#   define  RAND_MAX	INT_MAX
 #endif
 
 /* Not everyone has PI (or M_PI defined). */
@@ -419,10 +412,5 @@ extern DFLOAT		tbl_cos[];
 #  define srand(s)	srandom(s)
 #  define rand()	random()
 #endif /* __sun__ */
-
-#if defined(ultrix) || defined(AIX)
-/* STDRUP_OBJ should be uncomented in Makefile also */
-extern char* strdup(const char*);
-#endif
 
 #endif

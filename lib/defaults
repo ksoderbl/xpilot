@@ -37,3 +37,9 @@ framesPerSecond:	14
 
 #
 password:	not
+
+maxUnshieldedWallBounceSpeed:		180
+maxShieldedWallBounceSpeed:		180
+maxUnshieldedPlayerWallBounceAngle:	180
+maxShieldedPlayerWallBounceAngle:	180
+

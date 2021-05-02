@@ -1,36 +1,80 @@
-/* -*-C-*-
+/* $Id: socklib.c,v 4.22 2001/03/20 18:47:20 bert Exp $
  *
- * Project :	 TRACE
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
- * File    :	 socklib.c
+ *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      Bert Gijsbers        <bert@xpilot.org>
+ *      Dick Balaska         <dick@xpilot.org>
  *
- * Description
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * Copyright (C) 1991 by Arne Helme, The TRACE project
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Rights to use this source is granted for all non-commercial and research
- * uses. Creation of derivate forms of this software may be subject to
- * restriction. Please obtain written permission from the author.
- *
- * This software is provided "as is" without any express or implied warranty.
- *
- * RCS:      $Id: socklib.c,v 4.14 2000/10/15 13:09:54 bert Exp $
- *
- * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
- * XPilot v1.0
- *
- * Revision 1.2  91/10/02  08:38:01  08:38:01  arne (Arne Helme)
- * "ANSI C prototypes added.
- * Timeout interface changed."
- *
- * Revision 1.1  91/10/02  08:34:45  08:34:45  arne (Arne Helme)
- * Initial revision
- *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef lint
-static char sourceid[] =
-    "@(#)$Id: socklib.c,v 4.14 2000/10/15 13:09:54 bert Exp $";
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <errno.h>
+#include <time.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifdef _AIX
+#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
+# endif
+# include <sys/param.h>
+# include <sys/ioctl.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netinet/tcp.h>
+# include <arpa/inet.h>
+# include <netdb.h>
+#endif
+
+#ifdef SVR4
+# include <sys/filio.h>
+#endif
+
+#ifdef _SEQUENT_
+# include <sys/fcntl.h>
+#else
+# include <fcntl.h>
+#endif
+
+#ifdef __sun__
+# include <arpa/nameser.h>
+# include <resolv.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winNet.h"
+  /* Windows needs specific system calls for sockets: */
+# undef close
+# define close(x__) closesocket(x__)
+# undef ioctl
+# define ioctl(x__, y__, z__) ioctlsocket(x__, y__, z__)
+# undef read
+# define read(x__, y__, z__) recv(x__, y__, z__,0)
+# undef write
+# define write(x__, y__, z__) send(x__, y__, z__,0)
 #endif
 
 #ifdef TERMNET
@@ -38,776 +82,199 @@ static char sourceid[] =
 #include "termnet.h"
 #endif
 
-/* _SOCKLIB_LIBSOURCE must be defined int this file */
-#define _SOCKLIB_LIBSOURCE
-
-/* Include files */
-#ifndef	_WINDOWS
-#include <unistd.h>
-#endif
-#include <sys/types.h>
-#ifdef VMS
-#include <ucx$inetdef.h>
-#else
-#ifndef	_WINDOWS
-#ifdef _AIX
-#include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
-#endif
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#endif
-#endif
-#if (SVR4)
-#include <sys/filio.h>
-#endif
-#if (_SEQUENT_)
-#include <sys/fcntl.h>
-#else
-#include <fcntl.h>
-#endif
-#if defined(__hpux) || defined(_WINDOWS)
-#include <time.h>
-#else
-#include <sys/time.h>
-#endif
-
-#if defined(_WINDOWS)
-#include "NT/winNet.h"
-/* Windows needs specific system calls for sockets: */
-#undef close
-#define close(x__) closesocket(x__)
-#undef ioctl
-#define ioctl(x__, y__, z__) ioctlsocket(x__, y__, z__)
-#undef read
-#define read(x__, y__, z__) recv(x__, y__, z__,0)
-#undef write
-#define write(x__, y__, z__) send(x__, y__, z__,0)
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <signal.h>
-#include <setjmp.h>
-#include <errno.h>
-#if defined(__sun__)
-#include <arpa/nameser.h>
-#include <resolv.h>
-#endif
-
 /* Socklib Includes And Definitions */
 #include "version.h"
 #include "socklib.h"
-#ifdef SUNCMW
-#include "cmw.h"
-#else
-#define cmw_priv_assert_netaccess() /* empty */
-#define cmw_priv_deassert_netaccess() /* empty */
-#endif /* SUNCMW */
-
-char socklib_version[] = VERSION;
 
 /* Debug macro */
 #ifdef DEBUG
-#define DEB(x) x
+# define DEB(x) x
 #else
-#define DEB(x)
+# define DEB(x)
 #endif
 
-/* Default timeout value of socklib_timeout */
-#define DEFAULT_S_TIMEOUT_VALUE		10
-#define DEFAULT_US_TIMEOUT_VALUE	0
-
-/* Default retry value of sl_default_retries */
-#define DEFAULT_RETRIES			5
-
-/* Environment buffer for setjmp and longjmp */
-static			jmp_buf env;
-
-/* Global socklib errno variable */
-int			sl_errno = 0;
-
-/* Global timeout variable. May be modified by users */
-int			sl_timeout_s = DEFAULT_S_TIMEOUT_VALUE;
-int			sl_timeout_us = DEFAULT_US_TIMEOUT_VALUE;
-
-/* Global default retries variable used by DgramSendRec */
-int			sl_default_retries = DEFAULT_RETRIES;
-
-/* Global broadcast enable variable (super-user only), default disabled */
-int			sl_broadcast_enabled = 0;
-
-/* Local variable containing the last address from DgramReceiveAny */
-static struct sockaddr_in	sl_dgram_lastaddr;
-
-#ifdef	_WINDOWS
-char	gethostbuf[MAXGETHOSTSTRUCT+1];
-BOOL	hostnameCancelled;
-BOOL	*hostnameFound;
-HANDLE	gethosthandle;
+#ifndef timerclear
+# define timerclear(tvp)   ((tvp)->tv_sec = (tvp)->tv_usec = 0)
 #endif
-
-/*
- *******************************************************************************
- *
- *	SetTimeout()
- *
- *******************************************************************************
- * Description
- *	Sets the global timout value to s + us.
- *
- * Input Parameters
- *	s			- Timeout value in seconds
- *	us			- Timeout value in useconds
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	void
- *
- * Globals Referenced
- *	sl_timeout_us		- Timeout value in useconds
- *	sl_timeout_s		- Timeout value in seconds
- *
- * External Calls
- *	None
- *
- * Called By
- *	User applications
- *
- * Originally coded by Arne Helme
- */
-void SetTimeout(int s, int us)
+
+#ifndef lint
+static char sourceid[] =
+    "@(#)$Id: socklib.c,v 4.22 2001/03/20 18:47:20 bert Exp $";
+#endif
+
+
+#define SOCK_GETHOST_TIMEOUT	6
+
+
+char socklib_version[] = VERSION;
+
+
+static jmp_buf		env;
+
+
+static struct hostent *sock_get_host_by_name(const char *name);
+static struct hostent *sock_get_host_by_addr(const char *addr, int len, int type);
+
+
+static void sock_flags_add(sock_t *sock, int bits)
 {
-    sl_timeout_us = us;
-    sl_timeout_s = s;
-} /* SetTimeout */
+    sock->flags |= bits;
+}
 
-
-/*
- *******************************************************************************
- *
- *	CreateServerSocket()
- *
- *******************************************************************************
- * Description
- *	Creates a TCP/IP server socket in the Internet domain.
- *
- * Input Parameters
- *	port		- Server's listen port.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The function returns the socket descriptor, or -1 if
- *	any errors occured.
- *
- * Globals Referenced
- *	sl_errno	- if errors occured: SL_ESOCKET, SL_EBIND,
- *			  SL_ELISTEN
- *
- * External Calls
- *	socket
- *	bind
- *	listen
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int CreateServerSocket(int port)
+static void sock_flags_set(sock_t *sock, int bits)
 {
-    struct sockaddr_in	addr_in;
-    int			fd;
-    int			retval;
+    sock->flags = bits;
+}
 
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
-    {
-	sl_errno = SL_ESOCKET;
-	return (-1);
-    }
-    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in.sin_family		= AF_INET;
-    addr_in.sin_addr.s_addr	= INADDR_ANY;
-    addr_in.sin_port		= htons((u_short)port);
+static void sock_flags_remove(sock_t *sock, int bits)
+{
+    sock->flags &= ~bits;
+}
 
-    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
-    if (retval < 0)
+static int sock_flags_test_all(sock_t *sock, int bits)
+{
+    return (sock->flags & bits) == bits;
+}
+
+static int sock_flags_test_any(sock_t *sock, int bits)
+{
+    return (sock->flags & bits) != 0;
+}
+
+static int sock_set_error(sock_t *sock, int error, sock_call_t call, int line)
+{
+    DEB(printf("set error %d, %d, %d.  \"%s\"\n", error, call, line, strerror(error));)
+
+    sock->error.error = error;
+    sock->error.call = call;
+    sock->error.line = line;
+
+    return SOCK_IS_ERROR;
+}
+
+static int sock_check(sock_t *sock)
+{
+    if (!sock_flags_test_all(sock, SOCK_FLAG_INIT))
     {
-	sl_errno = SL_EBIND;
-	close(fd);
-	return (-1);
+	return sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
     }
 
-    retval = listen(fd, 5);
-    if (retval < 0)
-    {
-	sl_errno = SL_ELISTEN;
-	close(fd);
-	return (-1);
-    }
+    return SOCK_IS_OK;
+}
 
-    return (fd);
-} /* CreateServerSocket */
-
-
-/*
- *******************************************************************************
- *
- *	GetPortNum()
- *
- *******************************************************************************
- * Description
- *	Returns the port number of a socket connection.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The port number on host standard format.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	getsockname
- *
- * Called By
- *	User applications
- *
- * Originally coded by Arne Helme
- */
-int GetPortNum(int fd)
+static int sock_alloc_hostname(sock_t *sock)
 {
-    int			len;
-    struct sockaddr_in	addr;
-
-    len = sizeof(struct sockaddr_in);
-    if (getsockname(fd, (struct sockaddr *)&addr, &len) < 0)
-	return (-1);
-
-    return (ntohs(addr.sin_port));
-} /* GetPortNum */
-
-
-/*
- *******************************************************************************
- *
- *	GetSockAddr()
- *
- *******************************************************************************
- * Description
- *	Returns the address of a socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The address of the socket as a string.
- *	Note that this string is contained in a static area
- *	and must be saved by the caller before the next call
- *	to a socket function.
- *
- * Globals Referenced
- *	Stacic memory in inet_ntoa() containing the string.
- *
- * External Calls
- *	getsockname
- *	inet_ntoa
- *
- * Called By
- *	User applications
- *
- * Originally coded by Bert Gijsbers
- */
-char *GetSockAddr(int fd)
-{
-    int			len;
-    struct sockaddr_in	addr;
-
-    len = sizeof(struct sockaddr_in);
-    if (getsockname(fd, (struct sockaddr *)&addr, &len) < 0)
-	return (NULL);
-
-    return (inet_ntoa(addr.sin_addr));
-} /* GetSockAddr */
-
-
-/*
- *******************************************************************************
- *
- *	GetRemoteHostName()
- *
- *******************************************************************************
- * Description
- *	Returns the hostname of the peer of connected stream socket.
- *
- * Input Parameters
- *	fd		- The connected stream socket descriptor.
- *	namelen		- Maximum length of the peer name.
- *
- * Output Parameters
- *	The hostname of the peer in a byte array.
- *
- * Return Value
- *	-1 on failure, 0 on success.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	getpeername
- *	gethostbyaddr
- *	inet_ntoa
- *
- * Called By
- *	User applications
- *
- * Originally coded by Bert Gijsbers
- */
-int GetRemoteHostName(int fd, char *name, int namelen)
-{
-    int			len;
-    struct sockaddr_in	addr;
-    struct hostent	*hp;
-
-    len = sizeof(struct sockaddr_in);
-    if (getpeername(fd, (struct sockaddr *)&addr, &len) < 0)
-	return (-1);
-
-    hp = gethostbyaddr((char *)&addr.sin_addr.s_addr, 4, AF_INET);
-    if (hp != NULL)
-    {
-	strncpy(name, hp->h_name, namelen);
-    }
-    else
-    {
-	strncpy(name, inet_ntoa(addr.sin_addr), namelen);
-    }
-    name[namelen - 1] = '\0';
-
-    return (0);
-} /* GetRemoteHostName */
-
-
-/*
- *******************************************************************************
- *
- *	CreateClientSocket()
- *
- *******************************************************************************
- * Description
- *	Creates a client TCP/IP socket in the Internet domain.
- *
- * Input Parameters
- *	host		- Pointer to string containing name of the peer
- *			  host on either dot-format or ascii-name format.
- *	port		- The requested port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	Returns the socket descriptor or the error value -1.
- *
- * Globals Referenced
- *	sl_errno	- If errors occured: SL_EHOSTNAME, SL_ESOCKET,
- *			  SL_ECONNECT.
- *
- * External Calls
- *	memset
- *	gethostbyname
- *	socket
- *	connect
- *	close
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int CreateClientSocket(char *host, int port)
-{
-    struct sockaddr_in	peer;
-    struct hostent	*hp;
-    int			fd;
-
-    memset((char *)&peer, 0, sizeof(struct sockaddr_in));
-    peer.sin_family = AF_INET;
-    peer.sin_port   = htons((u_short)port);
-    peer.sin_addr.s_addr = inet_addr(host);
-    if (peer.sin_addr.s_addr == (int)-1)
-    {
-	hp = gethostbyname(host);
-	if (hp == NULL)
-	{
-	    sl_errno = SL_EHOSTNAME;
-	    return (-1);
+    if (!sock->hostname) {
+	sock->hostname = (char *) malloc(SOCK_HOSTNAME_LENGTH);
+	if (!sock->hostname) {
+	    sock_set_error(sock, errno, SOCK_CALL_ANY, __LINE__);
 	}
-	else
-	    peer.sin_addr.s_addr = ((struct in_addr*)(hp->h_addr))->s_addr;
-    }
-
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
-    {
-	sl_errno = SL_ESOCKET;
-	return (-1);
-    }
-
-    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0)
-    {
-	sl_errno = SL_ECONNECT;
-	close(fd);
-	return (-1);
-    }
-
-    return (fd);
-} /* CreateClientSocket */
-
-
-/*
- *******************************************************************************
- *
- *	CreateClientSocketNonBlocking()
- *
- *******************************************************************************
- * Description
- *	Creates a client TCP/IP socket in the Internet domain,
- *	but using non-blocking mode.  The programmer will have to wait
- *	for select to indicate that the connection has been established.
- *
- * Input Parameters
- *	host		- Pointer to string containing name of the peer
- *			  host on either dot-format or ascii-name format.
- *	port		- The requested port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	Returns the socket descriptor or the error value -1.
- *
- * Globals Referenced
- *	sl_errno	- If errors occured: SL_EHOSTNAME, SL_ESOCKET,
- *			  SL_ECONNECT.
- *
- * External Calls
- *	memset
- *	gethostbyname
- *	socket
- *	connect
- *	close
- *	SetSocketNonBlocking
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers, derived from CreateClientSocket.
- */
-int CreateClientSocketNonBlocking(char *host, int port)
-{
-    struct sockaddr_in	peer;
-    struct hostent	*hp;
-    int			fd;
-
-    memset((char *)&peer, 0, sizeof(struct sockaddr_in));
-    peer.sin_family = AF_INET;
-    peer.sin_port   = htons((u_short)port);
-    peer.sin_addr.s_addr = inet_addr(host);
-    if (peer.sin_addr.s_addr == (int)-1)
-    {
-	hp = gethostbyname(host);
-	if (hp == NULL)
-	{
-	    sl_errno = SL_EHOSTNAME;
-	    return (-1);
+	else {
+	    sock->hostname[0] = '\0';
 	}
-	else
-	    peer.sin_addr.s_addr = ((struct in_addr*)(hp->h_addr))->s_addr;
     }
 
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
-    {
-	sl_errno = SL_ESOCKET;
-	return (-1);
+    return (sock->hostname) ? SOCK_IS_OK : SOCK_IS_ERROR;
+}
+
+static void sock_free_hostname(sock_t *sock)
+{
+    if (sock->hostname) {
+	free(sock->hostname);
+	sock->hostname = NULL;
+    }
+}
+
+static int sock_alloc_lastaddr(sock_t *sock)
+{
+    if (!sock->lastaddr) {
+	sock->lastaddr = (void *) calloc(1, sizeof(struct sockaddr_in));
+	if (!sock->lastaddr) {
+	    sock_set_error(sock, errno, SOCK_CALL_ANY, __LINE__);
+	}
     }
 
-    /* no need to check return code since a message would be printed already. */
-    SetSocketNonBlocking(fd, 1);
+    return (sock->lastaddr) ? SOCK_IS_OK : SOCK_IS_ERROR;
+}
 
-#ifndef _WINDOWS
-    if (connect(fd, (struct sockaddr *)&peer, sizeof(struct sockaddr_in)) < 0
-	&& errno != EINPROGRESS)
-    {
-	sl_errno = SL_ECONNECT;
-	close(fd);
-	return (-1);
+static void sock_free_lastaddr(sock_t *sock)
+{
+    if (sock->lastaddr) {
+	free(sock->lastaddr);
+	sock->lastaddr = NULL;
     }
-#endif
+}
 
-    return (fd);
-} /* CreateClientSocketNonBlocking */
-
-
-/*
- *******************************************************************************
- *
- *	SocketAccept()
- *
- *******************************************************************************
- * Description
- *	This function is called in a TCP/IP server to accept incoming calls.
- *
- * Input Parameters
- *	fd		- The listen socket.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The functions returns a new descriptor which is used to the
- *	actual data transfer.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	none
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme.
- */
-int SocketAccept(int fd)
+int sock_init(sock_t *sock)
 {
-    int		retval;
+    memset(sock, 0, sizeof(*sock));
 
-    cmw_priv_assert_netaccess();
-    retval = accept(fd, NULL, 0);
-    cmw_priv_deassert_netaccess();
+    sock_flags_set(sock, SOCK_FLAG_INIT);
+    sock->fd = SOCK_FD_INVALID;
+    sock->hostname = (char *) NULL;
+    sock->lastaddr = (void *) NULL;
+    sock->timeout.seconds = SOCK_TIMEOUT_SECONDS;
 
-    return retval;
-} /* SocketAccept */
+    return sock_check(sock);
+}
 
-
-/*
- *******************************************************************************
- *
- *	SocketLinger()
- *
- *******************************************************************************
- * Description
- *	This function is called on a stream socket to set the linger option.
- *
- * Input Parameters
- *	fd		- The stream socket to set the linger option on.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	setsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme, but moved out of SocketAccept by Bert.
- */
-int SocketLinger(int fd)
+static int sock_close_tcp(sock_t *sock)
 {
-#if defined(LINUX0) || !defined(SO_LINGER)
-    /*
-     * As of 0.99.12 Linux doesn't have LINGER stuff.
-     */
-    return 0;
-#else
-#ifdef	__hp9000s300
-    long			linger = 1;
-    int				lsize  = sizeof(long);
-#else
-    static struct linger	linger = {1, 300};
-    int				lsize  = sizeof(struct linger);
-#endif
-    return setsockopt(fd, SOL_SOCKET, SO_LINGER, (void *)&linger, lsize);
-#endif
-} /* SocketLinger */
+    int			status = SOCK_IS_OK;
 
-
-/*
- *******************************************************************************
- *
- *	SetSocketReceiveBufferSize()
- *
- *******************************************************************************
- * Description
- *	Set the receive buffer size for either a stream or a datagram socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor to operate on.
- *	size		- The new buffer size to use by the kernel.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	none
- *
- * External Calls
- *	setsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int SetSocketReceiveBufferSize(int fd, int size)
+    if (close(sock->fd) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_CLOSE, __LINE__);
+	status = SOCK_IS_ERROR;
+    }
+    sock_flags_remove(sock, SOCK_FLAG_TCP);
+    sock->fd = SOCK_FD_INVALID;
+
+    return status;
+}
+
+static int sock_close_udp(sock_t *sock)
 {
-    return (setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
-		       (void *)&size, sizeof(size)));
-} /* SetSocketReceiveBufferSize */
+    int			status = SOCK_IS_OK;
 
-
-/*
- *******************************************************************************
- *
- *	SetSocketSendBufferSize()
- *
- *******************************************************************************
- * Description
- *	Set the send buffer size for either a stream or a datagram socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor to operate on.
- *	size		- The new buffer size to use by the kernel.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	none
- *
- * External Calls
- *	setsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int SetSocketSendBufferSize(int fd, int size)
+    if (close(sock->fd) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_CLOSE, __LINE__);
+	status = SOCK_IS_ERROR;
+    }
+    sock_flags_remove(sock, SOCK_FLAG_UDP);
+    sock->fd = SOCK_FD_INVALID;
+
+    return status;
+}
+
+int sock_close(sock_t *sock)
 {
-    return (setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
-		       (void *)&size, sizeof(size)));
-} /* SetSocketSendBufferSize */
+    sock_free_hostname(sock);
+    sock_free_lastaddr(sock);
+    if (sock_flags_test_any(sock, SOCK_FLAG_UDP)) {
+	return sock_close_udp(sock);
+    }
+    if (sock_flags_test_any(sock, SOCK_FLAG_TCP)) {
+	return sock_close_tcp(sock);
+    }
+    return sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
+}
 
-
-/*
- *******************************************************************************
- *
- *	SetSocketNoDelay()
- *
- *******************************************************************************
- * Description
- *	Set the TCP_NODELAY option on a connected stream socket.
- *
- * Input Parameters
- *	fd		- The stream socket descriptor to operate on.
- *	flag		- One to turn it on, zero to turn it off.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	none
- *
- * External Calls
- *	setsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-#ifdef TCP_NODELAY
-int SetSocketNoDelay(int fd, int flag)
+static int sock_open_tcp(sock_t *sock)
 {
-    /*
-     * The fcntl(O_NDELAY) option has nothing to do
-     * with the setsockopt(TCP_NODELAY) option.
-     * They control completely different features!
-     */
-    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
-		      (void *)&flag, sizeof(flag));
-} /* SetSocketNoDelay */
-#endif
+    if (sock_init(sock)) {
+	return SOCK_IS_ERROR;
+    }
 
-
-/*
- *******************************************************************************
- *
- *	SetSocketNonBlocking()
- *
- *******************************************************************************
- * Description
- *	Set the nonblocking option on a socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor to operate on.
- *	flag		- One to turn it on, zero to turn it off.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	none
- *
- * External Calls
- *	ioctl
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int SetSocketNonBlocking(int fd, int flag)
+    if ((sock->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	return sock_set_error(sock, errno, SOCK_CALL_SOCKET, __LINE__);
+    }
+
+    sock_flags_add(sock, SOCK_FLAG_TCP);
+
+    return SOCK_IS_OK;
+}
+
+int sock_set_non_blocking(sock_t *sock, int flag)
 {
 /*
  * There are some problems on some particular systems (suns) with
@@ -858,1289 +325,311 @@ int SetSocketNonBlocking(int fd, int flag)
     char buf[128];
 
 #ifdef USE_FCNTL_FNDELAY
-    if (fcntl(fd, F_SETFL, (flag != 0) ? FNDELAY : 0) != -1)
-	return 0;
+    if (fcntl(sock->fd, F_SETFL, (flag != 0) ? FNDELAY : 0) != -1) {
+	return SOCK_IS_OK;
+    }
+    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl FNDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
 
 #ifdef USE_IOCTL_FIONBIO
-    if (ioctl(fd, FIONBIO, &flag) == 0)
-	return 0;
+    if (ioctl(sock->fd, FIONBIO, &flag) == 0) {
+	return SOCK_IS_OK;
+    }
+    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "ioctl FIONBIO failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
 
 #ifdef USE_FCNTL_O_NONBLOCK
-    if (fcntl(fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1)
-	return 0;
+    if (fcntl(sock->fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1) {
+	return SOCK_IS_OK;
+    }
+    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl O_NONBLOCK failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
 
 #ifdef USE_FCNTL_O_NDELAY
-    if (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1)
-	return 0;
+    if (fcntl(sock->fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1) {
+	return SOCK_IS_OK;
+    }
+    sock_set_error(sock, errno, SOCK_CALL_FCNTL, __LINE__);
     sprintf(buf, "fcntl O_NDELAY failed in socklib.c line %d", __LINE__);
     perror(buf);
 #endif
 
-    return (-1);
-} /* SetSocketNonBlocking */
+    return SOCK_IS_ERROR;
+}
 
-
-/*
- *******************************************************************************
- *
- *	SetSocketBroadcast()
- *
- *******************************************************************************
- * Description
- *	Enable broadcasting on a datagram socket.
- *
- * Input Parameters
- *	fd		- The stream socket descriptor to operate on.
- *	flag		- One to turn it on, zero to turn it off.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	none
- *
- * External Calls
- *	setsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int SetSocketBroadcast(int fd, int flag)
+int sock_open_tcp_connected_non_blocking(sock_t *sock, char *host, int port)
 {
-    return setsockopt(fd, SOL_SOCKET, SO_BROADCAST,
-		      (void *)&flag, sizeof(flag));
-} /* SetSocketBroadcast */
+    struct sockaddr_in	dest;
+    struct hostent	*hp;
 
-
-/*
- *******************************************************************************
- *
- *	GetSocketError()
- *
- *******************************************************************************
- * Description
- *	Clear the error status for the socket and return the error in errno.
- *
- * Input Parameters
- *	fd		- The socket descriptor to operate on.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on failure, 0 on success
- *
- * Globals Referenced
- *	errno
- *
- * External Calls
- *	getsockopt
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int GetSocketError(int fd)
-{
-    int	error, size;
-
-    size = sizeof(error);
-    if (getsockopt(fd, SOL_SOCKET, SO_ERROR,
-	(char *)&error, &size) == -1) {
-	return -1;
+    if (sock_open_tcp(sock)) {
+	return SOCK_IS_ERROR;
     }
-    errno = error;
-    return 0;
-} /* GetSocketError */
 
-
-/*
- *******************************************************************************
- *
- *	SocketReadable()
- *
- *******************************************************************************
- * Description
- *	Checks if data have arrived on the TCP/IP socket connection.
- *
- * Input Parameters
- *	fd		- The socket descriptor to be checked.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	TRUE (non-zero) or FALSE (zero) (or -1 if select() fails).
- *
- * Globals Referenced
- *	socket_timeout
- *
- * External Calls
- *	select
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int SocketReadable(int fd)
-{
-    fd_set		readfds;
-    struct timeval	timeout;
-
-#ifndef timerclear
-#define timerclear(tvp)   (tvp)->tv_sec = (tvp)->tv_usec = 0
-#endif
-    timerclear(&timeout); /* macro function */
-    timeout.tv_sec = sl_timeout_s;
-    timeout.tv_usec = sl_timeout_us;
-
-#if a_very_bad_idea
-    memset(&readfds, 0, (fd / 8) + 1);
-#else
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
-#endif
-    if (select(fd + 1, &readfds, NULL, NULL, &timeout) == -1)
-	return ((errno == EINTR) ? 0 : -1);
-
-    if (FD_ISSET(fd, &readfds))
-	return (1);
-
-    return (0);
-} /* SocketReadable */
-
-
-/*
- *******************************************************************************
- *
- *	inthandler()
- *
- *******************************************************************************
- * Description
- *	Library routine used to jump to a previous state.
- *
- * Input Parameters
- *	None
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	None
- *
- * Globals Referenced
- *	env
- *
- * External Calls
- *	longjmp
- *
- * Called By
- *	SocketRead
- *
- * Originally coded by Arne Helme
- */
-#if defined(__STDC__) || defined(__cplusplus) || defined(_WINDOWS)
-static void inthandler(int signum)
-#else
-static inthandler()
-#endif /* __STDC__ */
-{
-    DEB(fprintf(stderr, "Connection interrupted, timeout\n"));
-    (void) longjmp(env, 1);
-} /* inthandler */
-
-
-/*
- *******************************************************************************
- *
- *	SocketRead()
- *
- *******************************************************************************
- * Description
- *	Receives <size> bytes and put them into buffer <buf> from
- *	socket <fd>.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	size		- The expected amount of data to receive.
- *
- * Output Parameters
- *	buf		- Pointer to a message buffer.
- *
- * Return Value
- *	The number of bytes received or -1 if any errors occured.
- *
- * Globals Referenced
- *	sl_timeout
- *
- * External Calls
- *	setjmp
- *	alarm
- *	signal
- *	read
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int SocketRead(int fd, char *buf, int size)
-{
-    int	ret, ret1;
-
-    if (setjmp(env))
-    {
-#ifndef	_WINDOWS
-	(void) alarm(0);
-	(void) signal(SIGALRM, SIG_DFL);
-#else
-	alarm(0, NULL);
-#endif
-	return (-1);
-    }
-    ret = 0;
-    cmw_priv_assert_netaccess();
-    while (ret < size)
-    {
-#ifndef	_WINDOWS
-	(void) signal(SIGALRM, inthandler);
-	(void) alarm(sl_timeout_s);
-#else
-	(void) alarm(sl_timeout_s, inthandler);
-#endif
-	ret1 = recv(fd, &buf[ret], size - ret, 0);
-	DEB(fprintf(stderr, "Read %d bytes\n", ret1));
-#ifndef	_WINDOWS
-	(void) alarm(0);
-	(void) signal(SIGALRM, SIG_DFL);
-#else
-	(void) alarm(0, NULL);
-#endif
-	ret += ret1;
-	if (ret1 <= 0)
-	    return (-1);
-    }
-    cmw_priv_deassert_netaccess();
-    return (ret);
-} /* SocketRead */
-
-
-/*
- *******************************************************************************
- *
- *	SocketWrite()
- *
- *******************************************************************************
- * Description
- *	Writes <size> bytes from buffer <buf> onto socket <fd>.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	buf		- Pointer to a send buffer.
- *	size		- The amount of data to send.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The number of bytes sent or -1 if any errors occured.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	write
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int SocketWrite(int fd, char *buf, int size)
-{
-    int		retval;
-
-    cmw_priv_assert_netaccess();
     /*
-     * A SIGPIPE exception may occur if the peer entity has disconnected.
+     * On error a message will have been printed
+     * and we want to continue regardless.
      */
-    retval = send(fd, buf, size, 0);
-    cmw_priv_deassert_netaccess();
+    sock_set_non_blocking(sock, 1);
 
-    return retval;
-} /* SocketWrite */
-
-
-/*
- *******************************************************************************
- *
- *	SocketClose()
- *
- *******************************************************************************
- * Description
- *	performs a gracefule shutdown and close on a TCP/IP socket. May
- * 	cause errounous behaviour when used on the same connection from
- *	more than one process.
- *
- * Input Parameters
- *	fd		- The socket to be closed.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 if any errors occured, else 1.
- *
- * Globals Referenced
- *	sl_errno	- If any errors occured: SL_ESHUTD, SL_ECLOSE.
- *
- * External Calls
- *	shutdown
- *	close
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int SocketClose(int fd)
-{
-    if (shutdown(fd, 2) == -1)
-    {
-	sl_errno = SL_ESHUTD;
-	/* return (-1);  ***BG: need close always */
-    }
-
-    if (close(fd) == -1)
-    {
-	sl_errno = SL_ECLOSE;
-	return (-1);
-    }
-    return (1);
-} /* SocketClose */
-
-
-/*
- *******************************************************************************
- *
- *	CreateDgramSocket()
- *
- *******************************************************************************
- * Description
- *	Creates a UDP/IP datagram socket in the Internet domain.
- *
- * Input Parameters
- *	port		- The port number. A value of zero may be specified in
- *			  clients to assign any available port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	A UDP/IP datagram socket descriptor.
- *
- * Globals Referenced
- *	sl_errno	- If any errors occured: SL_ESOCKET, SL_EBIND.
- *
- * External Calls
- *	socket
- *	memset
- *	bind
- *	close
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int CreateDgramSocket(int port)
-{
-    struct sockaddr_in	addr_in;
-    int			fd;
-    int			retval;
-
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0)
-    {
-	sl_errno = SL_ESOCKET;
-	return (-1);
-    }
-
-    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in.sin_family		= AF_INET;
-    addr_in.sin_addr.s_addr	= INADDR_ANY;
-    addr_in.sin_port		= htons((u_short)port);
-    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
-    if (retval < 0)
-    {
-	sl_errno = SL_EBIND;
-	retval = errno;
-	close(fd);
-	errno = retval;
-	return (-1);
-    }
-
-    return (fd);
-} /* CreateDgramSocket */
-
-
-/*
- *******************************************************************************
- *
- *	CreateDgramAddrSocket()
- *
- *******************************************************************************
- * Description
- *	Creates a UDP/IP datagram socket on a know interface address.
- *
- * Input Parameters
- *	dotaddr		- Pointer to string containing of IP address in dot-format.
- *			  This value may be set to NULL.
- *	port		- The port number. A value of zero may be specified in
- *			  clients to assign any available port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	A UDP/IP datagram socket descriptor, or -1 on error.
- *
- * Globals Referenced
- *	sl_errno	- If any errors occured: SL_ESOCKET, SL_EBIND.
- *
- * External Calls
- *	socket
- *	memset
- *	bind
- *	close
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers, adapted from CreateDgramSocket().
- */
-int CreateDgramAddrSocket(char *dotaddr, int port)
-{
-    struct sockaddr_in	addr_in;
-    int			fd;
-    int			retval;
-
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd < 0)
-    {
-	sl_errno = SL_ESOCKET;
-	return (-1);
-    }
-
-    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in.sin_family		= AF_INET;
-    addr_in.sin_port		= htons((u_short)port);
-    if (dotaddr != NULL) {
-	addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
-    }
-    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
-    if (retval < 0)
-    {
-	sl_errno = SL_EBIND;
-	retval = errno;
-	close(fd);
-	errno = retval;
-	return (-1);
-    }
-
-    return (fd);
-} /* CreateDgramAddrSocket */
-
-
-/*
- *******************************************************************************
- *
- *	DgramBind()
- *
- *******************************************************************************
- * Description
- *	Bind a UDP/IP datagram socket to a local interface address.
- *
- * Input Parameters
- *	fd		- Filedescriptor of existing datagram socket.
- *	dotaddr		- Pointer to string containing of IP address in dot-format.
- *	port		- The port number. A value of zero may be specified in
- *			  clients to assign any available port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The UDP/IP datagram socket descriptor, or -1 on error.
- *
- * Globals Referenced
- *	sl_errno	- If any errors occured: SL_ESOCKET, SL_EBIND.
- *
- * External Calls
- *	memset
- *	bind
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers, adapted from CreateDgramAddrSocket().
- */
-int DgramBind(int fd, char *dotaddr, int port)
-{
-    struct sockaddr_in	addr_in;
-    int			retval;
-
-    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in.sin_family		= AF_INET;
-    addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
-    addr_in.sin_port		= htons((u_short)port);
-    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
-    if (retval < 0)
-    {
-	sl_errno = SL_EBIND;
-	return (-1);
-    }
-
-    return (fd);
-} /* DgramBind */
-
-
-/*
- *******************************************************************************
- *
- *	DgramConnect()
- *
- *******************************************************************************
- * Description
- *	Associate a datagram socket with a peer.
- *
- * Input Parameters
- *	fd		- The socket to operate on.
- *	host		- The host name.
- *	port		- The port number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	-1 on error, 0 on success
- *
- * Globals Referenced
- *	sl_errno	- If any errors occured: SL_EHOSTNAME, SL_ECONNECT.
- *
- * External Calls
- *	connect
- *	gethostbyname
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int DgramConnect(int fd, char *host, int port)
-{
-    struct sockaddr_in	addr_in;
-    struct hostent	*hp;
-    int			retval;
-
-    memset((char *)&addr_in, 0, sizeof(addr_in));
-    addr_in.sin_addr.s_addr 	= inet_addr(host);
-    if (addr_in.sin_addr.s_addr == (unsigned long)-1)
-    {
-	hp = gethostbyname(host);
-	if (hp == NULL)
-	{
-	    sl_errno = SL_EHOSTNAME;
-	    return (-1);
+    memset(&dest, 0, sizeof(dest));
+    dest.sin_family      = AF_INET;
+    dest.sin_port        = htons((unsigned short)port);
+    dest.sin_addr.s_addr = inet_addr(host);
+    if ((dest.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
+	/*
+	 * Cannot use h_errno because of portability problems.
+	 * Let's hope errno is meaningful too.
+	 */
+	errno = 0;
+	if ((hp = sock_get_host_by_name(host)) == NULL) {
+	    sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME, __LINE__);
+	    sock_close(sock);
+	    return SOCK_IS_ERROR;
 	}
-	else
-	    addr_in.sin_addr.s_addr =
-		((struct in_addr*)(hp->h_addr))->s_addr;
+
+	dest.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
     }
-    addr_in.sin_family		= AF_INET;
-    addr_in.sin_port		= htons((u_short)port);
-    retval = connect(fd, (struct sockaddr *)&addr_in, sizeof(addr_in));
-    if (retval < 0)
+
+#ifndef _WINDOWS
+    if (connect(sock->fd, (struct sockaddr *)&dest, sizeof(struct sockaddr_in)) < 0
+	&& errno != EINPROGRESS)
     {
-	sl_errno = SL_ECONNECT;
-	return (-1);
+	sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+	sock_close(sock);
+	return SOCK_IS_ERROR;
     }
-
-    return (0);
-} /* DgramConnect */
-
-
-/*
- *******************************************************************************
- *
- *	DgramSend()
- *
- *******************************************************************************
- * Description
- *	Transmits a UDP/IP datagram.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	host		- Pointer to string containing destination host name.
- *	port		- Destination port.
- *	sbuf		- Pointer to the message to be sent.
- *	size		- Message size.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The number of bytes sent or -1 if any errors occured.
- *
- * Globals Referenced
- *	sl_broadcast_enabled
- *	sl_errno	- If any errors occured: SL_EHOSTNAME.
- *
- * External Calls
- *	memset
- *	inet_addr
- *	gethostbyname
- *	sendto
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int DgramSend(int fd, char *host, int port, char *sbuf, int size)
-{
-    int			retval;
-    struct sockaddr_in	the_addr;
-    struct hostent	*hp;
-
-    sl_errno = 0;
-    (void) memset((char *)&the_addr, 0, sizeof(struct sockaddr_in));
-    the_addr.sin_family		= AF_INET;
-    the_addr.sin_port		= htons((u_short)port);
-    if (sl_broadcast_enabled)
-	the_addr.sin_addr.s_addr	= INADDR_BROADCAST;
-    else
-    {
-	the_addr.sin_addr.s_addr 	= inet_addr(host);
-	if (the_addr.sin_addr.s_addr == (int)-1)
-	{
-	    hp = gethostbyname(host);
-	    if (hp == NULL)
-	    {
-		sl_errno = SL_EHOSTNAME;
-		return (-1);
-	    }
-	    else
-		the_addr.sin_addr.s_addr =
-		    ((struct in_addr*)(hp->h_addr))->s_addr;
-	}
-    }
-    cmw_priv_assert_netaccess();
-    retval = sendto(fd, sbuf, size, 0, (struct sockaddr *)&the_addr,
-		   sizeof(struct sockaddr_in));
-    cmw_priv_deassert_netaccess();
-    return retval;
-} /* DgramSend */
-
-
-/*
- *******************************************************************************
- *
- *	DgramReceiveAny()
- *
- *******************************************************************************
- * Description
- *	Receives a datagram from any sender.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	size		- Expected message size.
- *
- * Output Parameters
- *	rbuf		- Pointer to a message buffer.
- *
- * Return Value
- *	The number of bytes received or -1 if any errors occured.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *
- * External Calls
- *	memset
- *
- * Called By
- *	User applications
- *
- * Originally coded by Arne Helme
- */
-int DgramReceiveAny(int fd, char *rbuf, int size)
-{
-    int		retval;
-    int		addrlen = sizeof(struct sockaddr_in);
-
-    (void) memset((char *)&sl_dgram_lastaddr, 0, addrlen);
-    cmw_priv_assert_netaccess();
-    retval = recvfrom(fd, rbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
-	&addrlen);
-    cmw_priv_deassert_netaccess();
-    return retval;
-} /* DgramReceiveAny */
-
-
-/*
- *******************************************************************************
- *
- *	DgramReceive()
- *
- *******************************************************************************
- * Description
- *	Receive a datagram from a specifc host. If a message from another
- *	host arrives, an error value is returned.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	from		- Pointer to the specified hostname.
- *	size		- Expected message size.
- *
- * Output Parameters
- *	rbuf		- Pointer to message buffer.
- *
- * Return Value
- *	The number of bytes received or -1 if any errors occured.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *	sl_errno	- If any errors occured: SL_EHOSTNAME, SL_EWRONGHOST.
- *
- * External Calls
- *	inet_addr
- *	gethostbyname
- *	DgramReceiveAny
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int DgramReceive(int fd, char *from, char *rbuf, int size)
-{
-    struct sockaddr_in	tmp_addr;
-    struct hostent	*hp;
-    int			retval;
-
-    tmp_addr.sin_addr.s_addr = inet_addr(from);
-    if (tmp_addr.sin_addr.s_addr == (int)-1)
-    {
-	hp = gethostbyname(from);
-	if (hp == NULL)
-	{
-	    sl_errno = SL_EHOSTNAME;
-	    return (-1);
-	}
-	else
-	    tmp_addr.sin_addr.s_addr =
-		((struct in_addr*)(hp->h_addr))->s_addr;
-    }
-    retval = DgramReceiveAny(fd, rbuf, size);
-    if (retval == -1 ||
-	tmp_addr.sin_addr.s_addr != sl_dgram_lastaddr.sin_addr.s_addr)
-    {
-	sl_errno = SL_EWRONGHOST;
-	return (-1);
-    }
-    return (retval);
-} /* DgramReceive */
-
-
-/*
- *******************************************************************************
- *
- *	DgramReply()
- *
- *******************************************************************************
- * Description
- *	Transmits a UDP/IP datagram to the host/port the most recent datagram
- *	was received from.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	host		- Pointer to string containing destination host name.
- *	size		- Message size.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The number of bytes sent or -1 if any errors occured.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *
- * External Calls
- *	sendto
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int DgramReply(int fd, char *sbuf, int size)
-{
-    int			retval;
-
-    cmw_priv_assert_netaccess();
-    retval = sendto(fd, sbuf, size, 0, (struct sockaddr *)&sl_dgram_lastaddr,
-		   sizeof(struct sockaddr_in));
-    cmw_priv_deassert_netaccess();
-    return retval;
-} /* DgramReply */
-
-
-/*
- *******************************************************************************
- *
- *	DgramRead()
- *
- *******************************************************************************
- * Description
- *	Receives a datagram on a connected datagram socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	size		- Expected message size.
- *
- * Output Parameters
- *	rbuf		- Pointer to a message buffer.
- *
- * Return Value
- *	The number of bytes received or -1 if any errors occured.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	recv()
- *
- * Called By
- *	User applications
- *
- * Originally coded by Bert Gijsbers
- */
-int DgramRead(int fd, char *rbuf, int size)
-{
-    int		retval;
-
-    cmw_priv_assert_netaccess();
-    retval = recv(fd, rbuf, size, 0);
-    cmw_priv_deassert_netaccess();
-    return retval;
-} /* DgramRead */
-
-
-/*
- *******************************************************************************
- *
- *	DgramWrite()
- *
- *******************************************************************************
- * Description
- *	Sends a datagram on a connected datagram socket.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	wbuf		- Pointer to a message buffer.
- *	size		- Expected message size.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The number of bytes sent or -1 if any errors occured.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	send()
- *
- * Called By
- *	User applications
- *
- * Originally coded by Bert Gijsbers
- */
-int DgramWrite(int fd, char *wbuf, int size)
-{
-    int		retval;
-
-    cmw_priv_assert_netaccess();
-    retval = send(fd, wbuf, size, 0);
-    cmw_priv_deassert_netaccess();
-    return retval;
-} /* DgramWrite */
-
-
-/*
- *******************************************************************************
- *
- *	DgramInthandler()
- *
- *******************************************************************************
- * Description
- *	Library routine used by DgramSendRec to handle alarm interrupts.
- *
- * Input Parameters
- *	None
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	None
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	signal
- *
- * Called By
- *	DgramSendRec
- *
- * Originally coded by Arne Helme
- */
-#if defined(__STDC__) || defined(__cplusplus) || defined(_WINDOWS)
-static void DgramInthandler(int signum)
-#else
-static DgramInthandler()
-#endif /* __STDC__ */
-{
-#ifndef	_WINDOWS	/* hah?  This appears to do nothing. (unblock receive??) */
-    (void) signal(SIGALRM, DgramInthandler);
 #endif
-} /* DgramInthandler */
 
-
-/*
- *******************************************************************************
- *
- *	DgramSendRec()
- *
- *******************************************************************************
- * Description
- *	Sends a message to a specified host and receives a reply from the
- *	same host. Messages arriving from other hosts when this routine is
- *	called will be discarded. Timeouts and retries can be modified
- * 	by setting the global variables sl_timeout and sl_default_retries.
- *
- * Input Parameters
- *	fd		- The socket descriptor.
- *	host		- Pointer to string contaning a hostname.
- *	port		- The specified port.
- *	sbuf		- Pointer to buffer containing message to be sent.
- *	sbuf_size	- The size of the outgoing message.
- *	rbuf_size	- Expected size of incoming message.
- *
- * Output Parameters
- *	rbuf		- Pointer to message buffer.
- *
- * Return Value
- *	The number of bytes received from the specified host or -1 if any
- *	errors occured.
- *
- * Globals Referenced
- *	errno
- *	sl_errno
- *	sl_timeout
- *	sl_default_retries
- *
- * External Calls
- *	alarm
- *	signal
- *	DgramSend
- *	DgramReceive
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int DgramSendRec(int fd, char *host, int port, char *sbuf,
-	     int sbuf_size, char *rbuf, int rbuf_size)
+    sock_flags_add(sock, SOCK_FLAG_CONNECT);
+
+    return SOCK_IS_OK;
+}
+
+int sock_open_udp(sock_t *sock, char *dotaddr, int port)
 {
-    int		retval = -1;
-    int		retry = sl_default_retries;
+    struct sockaddr_in	addr;
 
-#ifndef	_WINDOWS
-    (void) signal(SIGALRM, DgramInthandler);
-#endif
-    while (retry > 0)
-    {
-	if (DgramSend(fd, host, port, sbuf, sbuf_size) == -1)
-	    return (-1);
-
-#ifndef	_WINDOWS
-	(void) alarm(sl_timeout_s);
-#else
-	(void) alarm(sl_timeout_s, DgramInthandler);
-#endif
-	retval = DgramReceive(fd, host, rbuf, rbuf_size);
-	if (retval == -1) {
-	    if (errno == EINTR || sl_errno == SL_EWRONGHOST) {
-		/* We have a timeout or a message from wrong host */
-		if (--retry) {
-		    continue;	/* Try one more time */
-		}
-		else {
-		    sl_errno = SL_ENORESP;
-		    break;	/* Unable to get response */
-		}
-	    }
-	    else {
-		sl_errno = SL_ERECEIVE;
-		break;		/* Unable to receive response */
-	    }
-	}
-	else {
-	    break;		/* Datagram from <host> arrived */
-	}
+    if (sock_init(sock)) {
+	return SOCK_IS_ERROR;
     }
-#ifndef	_WINDOWS
-    (void) alarm(0);
-    (void) signal(SIGALRM, SIG_DFL);
-#else
-	alarm(0, NULL);
-#endif
-    return (retval);
-} /* DgramInthandler */
 
-
-/*
- *******************************************************************************
- *
- *	DgramLastaddr()
- *
- *******************************************************************************
- * Description
- *	Extracts the last host address from the global variable
- *	sl_dgram_lastaddr.
- *
- * Input Parameters
- *	None
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	Pointer to string containing the host address. Warning, the string
- *	resides in static memory area.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *
- * External Calls
- *	inet_ntoa
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-char * DgramLastaddr(void)
-{
-    return (inet_ntoa(sl_dgram_lastaddr.sin_addr));
-} /* DgramLastaddr */
+    if ((sock->fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+	return sock_set_error(sock, errno, SOCK_CALL_SOCKET, __LINE__);
+    }
 
-
-/*
- *******************************************************************************
- *
- *	DgramLastname()
- *
- *******************************************************************************
- * Description
- *	Does a name lookup for the last host address from the
- *	global variable sl_dgram_lastaddr.  If this nameserver
- *	query fails then it resorts to DgramLastaddr().
- *
- * Input Parameters
- *	None
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	Pointer to string containing the hostname. Warning, the string
- *	resides in static memory area.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *
- * External Calls
- *	inet_ntoa
- *	gethostbyaddr
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-char *DgramLastname(void)
+    sock_flags_add(sock, SOCK_FLAG_UDP);
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family	 = AF_INET;
+    addr.sin_port	 = htons((unsigned short)port);
+    addr.sin_addr.s_addr = (dotaddr) ? inet_addr(dotaddr) : INADDR_ANY;
+    if (bind(sock->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_BIND, __LINE__);
+	sock_close(sock);
+	return SOCK_IS_ERROR;
+    }
+
+    return SOCK_IS_OK;
+}
+
+int sock_connect(sock_t *sock, char *host, int port)
 {
-    struct hostent	*he;
+    struct sockaddr_in		dest;
+    struct hostent		*hp;
+
+    memset(&dest, 0, sizeof(dest));
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons((unsigned short) port);
+    dest.sin_addr.s_addr = inet_addr(host);
+    if ((dest.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
+	errno = 0;
+	if ((hp = sock_get_host_by_name(host)) == NULL) {
+	    sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME, __LINE__);
+	    return SOCK_IS_ERROR;
+	}
+
+	dest.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
+    }
+
+    if (connect(sock->fd, (struct sockaddr *)&dest, sizeof(dest)) < 0) {
+	return sock_set_error(sock, errno, SOCK_CALL_CONNECT, __LINE__);
+    }
+
+    sock_flags_add(sock, SOCK_FLAG_CONNECT);
+
+    return SOCK_IS_OK;
+}
+
+int sock_get_last_port(sock_t *sock)
+{
+    struct sockaddr_in	*lastaddr;
+
+    if (sock->lastaddr) {
+	lastaddr = (struct sockaddr_in *)(sock->lastaddr);
+	return ntohs(lastaddr->sin_port);
+    }
+
+    sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
+
+    return 0;
+}
+
+char * sock_get_last_addr(sock_t *sock)
+{
+    static char		error_addr[] = "255.255.255.255";
     char		*str;
+    struct sockaddr_in	*lastaddr;
 
-    he = gethostbyaddr((char *)&sl_dgram_lastaddr.sin_addr,
-		       sizeof(struct in_addr), AF_INET);
-    if (he == NULL) {
-	str = inet_ntoa(sl_dgram_lastaddr.sin_addr);
-    } else {
-	str = (char *) he->h_name;
+    if (sock->lastaddr) {
+	lastaddr = (struct sockaddr_in *)(sock->lastaddr);
+	str = inet_ntoa(lastaddr->sin_addr);
+	if (sock_alloc_hostname(sock)) {
+	    return str;
+	}
+	strcpy(sock->hostname, str);
+	return sock->hostname;
     }
-    return str;
-} /* DgramLastname */
 
-
-/*
- *******************************************************************************
- *
- *	DgramLastport()
- *
- *******************************************************************************
- * Description
- *	Extracts the last host port from the global variable sl_dgram_lastaddr.
- *
- * Input Parameters
- *	None
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The last port number on host standard format.
- *
- * Globals Referenced
- *	sl_dgram_lastaddr
- *
- * External Calls
- *	None
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Arne Helme
- */
-int DgramLastport(void)
+    sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
+
+    return error_addr;
+}
+
+char * sock_get_last_name(sock_t *sock)
 {
-    return ((int)ntohs((u_short)sl_dgram_lastaddr.sin_port));
-} /* DgramLastport */
+    static char		error_addr[] = "255.255.255.255";
+    char		*str;
+    struct hostent	*hp;
+    struct sockaddr_in	*lastaddr;
 
-
-/*
- *******************************************************************************
- *
- *	DgramClose()
- *
- *******************************************************************************
- * Description
- *	performs a close on a UDP/IP datagram socket.
- *
- * Input Parameters
- *	fd		- The datagram socket to be closed.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	None.
- *
- * Globals Referenced
- *	None.
- *
- * External Calls
- *	close
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-void DgramClose(int fd)
+    if (sock->lastaddr) {
+	lastaddr = (struct sockaddr_in *)(sock->lastaddr);
+	hp = sock_get_host_by_addr((char *)&(lastaddr->sin_addr),
+				   sizeof(lastaddr->sin_addr), AF_INET);
+	if (hp == NULL) {
+	    str = inet_ntoa(lastaddr->sin_addr);
+	} else {
+	    str = hp->h_name;
+	}
+	if (sock_alloc_hostname(sock)) {
+	    return str;
+	}
+	strcpy(sock->hostname, str);
+	return sock->hostname;
+    }
+
+    sock_set_error(sock, EINVAL, SOCK_CALL_ANY, __LINE__);
+
+    return error_addr;
+}
+
+int sock_read(sock_t *sock, char *buf, int len)
 {
-    close(fd);
-} /* DgramClose */
+    int			count;
 
-
-/*
- *******************************************************************************
- *
- *	GetLocalHostName()
- *
- *******************************************************************************
- * Description
- *	Returns the Fully Qualified Domain Name for the local host.
- *
- * Input Parameters
- *	Size of output array.
- *	Flag to request searching domain for xpilot.domain.edu.
- *
- * Output Parameters
- *	Array of size bytes to store the hostname.
- *
- * Return Value
- *	None
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	gethostbyname
- *	gethostbyaddr
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-#ifdef VMS
-#define MAXHOSTNAMELEN  256
-#endif
-void GetLocalHostName(char *name, unsigned size,
-		      int search_domain_for_xpilot)
+    count = recv(sock->fd, buf, len, 0);
+    if (count < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    }
+
+    return count;
+}
+
+int sock_receive_any(sock_t *sock, char *buf, int len)
+{
+    int			count;
+    int			addrlen;
+
+    if (sock_alloc_lastaddr(sock)) {
+	return SOCK_IS_ERROR;
+    }
+    addrlen = sizeof(struct sockaddr_in);
+    count = recvfrom(sock->fd, buf, len, 0, (struct sockaddr *)(sock->lastaddr), &addrlen);
+    if (count < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    }
+
+    return count;
+}
+
+int sock_send_dest(sock_t *sock, char *host, int port, char *buf, int len)
+{
+    struct sockaddr_in		dest;
+    struct hostent		*hp;
+    int				count;
+
+    memset(&dest, 0, sizeof(dest));
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons((unsigned short) port);
+    dest.sin_addr.s_addr = inet_addr(host);
+    if ((dest.sin_addr.s_addr & 0xFFFFFFFF) == 0xFFFFFFFF) {
+	errno = 0;
+	if ((hp = sock_get_host_by_name(host)) == NULL) {
+	    return sock_set_error(sock, errno, SOCK_CALL_GETHOSTBYNAME, __LINE__);
+	}
+
+	dest.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
+    }
+
+    count = sendto(sock->fd, buf, len, 0, (struct sockaddr *) &dest, sizeof(dest));
+    if (count < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    }
+
+    return count;
+}
+
+int sock_write(sock_t *sock, char *buf, int len)
+{
+    int			count;
+
+    count = send(sock->fd, buf, len, 0);
+    if (count < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_IO, __LINE__);
+    }
+
+    return count;
+}
+
+char *sock_get_addr_by_name(const char *name)
+{
+    struct hostent	*hp;
+
+    hp = sock_get_host_by_name(name);
+
+    if (!hp) {
+	return (char *) NULL;
+    }
+
+    return inet_ntoa(*(struct in_addr *)(hp->h_addr_list[0]));
+}
+
+unsigned long sock_get_inet_by_addr(char *dotaddr)
+{
+    return inet_addr(dotaddr);
+}
+
+void sock_get_local_hostname(char *name, unsigned size,
+			     int search_domain_for_xpilot)
 {
     struct hostent	*he = NULL;
     struct hostent 	*xpilot_he = NULL;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     int			xpilot_len;
     char		*dot;
-    char		xpilot_hostname[MAXHOSTNAMELEN];
+    char		xpilot_hostname[SOCK_HOSTNAME_LENGTH];
 #endif
     static const char	xpilot[] = "xpilot";
-#ifdef VMS
-    char                vms_inethost[MAXHOSTNAMELEN]   = "UCX$INET_HOST";
-    char                vms_inetdomain[MAXHOSTNAMELEN] = "UCX$INET_DOMAIN";
-    char                vms_host[MAXHOSTNAMELEN];
-    char                vms_domain[MAXHOSTNAMELEN];
-    int                 namelen;
-#endif
 
     gethostname(name, size);
-    if ((he = gethostbyname(name)) == NULL) {
+    if ((he = sock_get_host_by_name(name)) == NULL) {
 	return;
     }
     strncpy(name, he->h_name, size);
@@ -2151,28 +640,17 @@ void GetLocalHostName(char *name, unsigned size,
      * and if the address is of the normal Internet type
      * then we try to get the FQDN via the backdoor of the IP address.
      * Let's hope it works :)
-     * XXX I don't see why we must limit addrtype, why not just pass it
-     * back into gethostbyaddr blindly?  Could be IPv6 soon...
      */
     if (strchr(he->h_name, '.') == NULL
-	&& he->h_addrtype == AF_INET
-	&& he->h_length == 4) {
-	unsigned long a = 0;
-	memcpy((void *)&a, he->h_addr_list[0], 4);
-	if ((he = gethostbyaddr((char *)&a, 4, AF_INET)) != NULL
+	&& he->h_addrtype == AF_INET) {
+	struct in_addr in;
+	memcpy((void *)&in, he->h_addr_list[0], sizeof(in));
+	if ((he = sock_get_host_by_addr((char *)&in, sizeof(in), AF_INET)) != NULL
 	    && strchr(he->h_name, '.') != NULL) {
 	    strncpy(name, he->h_name, size);
 	    name[size - 1] = '\0';
 	}
 	else {
-#if defined(VMS)
-            vms_trnlnm(vms_inethost, namelen, vms_host);
-            vms_trnlnm(vms_inetdomain, namelen, vms_domain);
-            strcpy(name, vms_host);
-            strcat(name, ".");
-            strcat(name, vms_domain);
-            return;
-#else
 	    /* Let's try to find the domain from /etc/resolv.conf. */
 	    FILE *fp = fopen("/etc/resolv.conf", "r");
 	    if (fp) {
@@ -2188,10 +666,9 @@ void GetLocalHostName(char *name, unsigned size,
 		}
 		fclose(fp);
 	    }
-#endif
 	}
 	/* make sure this is a valid FQDN. */
-	if ((he = gethostbyname(name)) == NULL) {
+	if ((he = sock_get_host_by_name(name)) == NULL) {
 	    gethostname(name, size);
 	    return;
 	}
@@ -2201,7 +678,7 @@ void GetLocalHostName(char *name, unsigned size,
 	return;
     }
 
-#ifndef	_WINDOWS	/* the lookup of xpilot can take FOREVER! zzzz...  */
+#ifndef _WINDOWS	/* the lookup of xpilot can take FOREVER! zzzz...  */
 
     /* if name starts with "xpilot" then we're done. */
     xpilot_len = strlen(xpilot);
@@ -2220,7 +697,7 @@ void GetLocalHostName(char *name, unsigned size,
 	     * FQDN we guessed above.  It is hard to know our IP to know
 	     * that an A record points to us.
 	     */
-	    if ((xpilot_he = gethostbyname(xpilot_hostname)) != NULL &&
+	    if ((xpilot_he = sock_get_host_by_name(xpilot_hostname)) != NULL &&
 		!strcmp(name, xpilot_he->h_name))
 		break;
 	    xpilot_he = NULL;
@@ -2232,263 +709,192 @@ void GetLocalHostName(char *name, unsigned size,
     }
 
 #endif
-} /* GetLocalHostName */
-
-
-/*
- *******************************************************************************
- *
- *	GetInetAddr()
- *
- *******************************************************************************
- * Description
- *	Convert a dotted decimal address to unsigned long.
- *
- * Input Parameters
- *	Dotted decimal address.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	The Internet address as unsigned long.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	inet_addr
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-unsigned long GetInetAddr(char *name)
-{
-    return inet_addr(name);
 }
 
-
-/*
- *******************************************************************************
- *
- *	ResolveTimeout()
- *
- *******************************************************************************
- * Description
- *	Catch SIGALRM and do a longjmp.
- *
- * Input Parameters
- *	The signal number.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	None
- *
- * Globals Referenced
- *	env
- *
- * External Calls
- *	longjmp
- *
- * Called By
- *	GetAddrByName and GetNameByAddr.
- *
- * Originally coded by Bert Gijsbers
- */
-#if defined(__STDC__) || defined(__cplusplus) || defined(_WINDOWS)
-static void ResolveTimeout(int signum)
-#else
-static ResolveTimeout()
-#endif /* __STDC__ */
+int sock_get_port(sock_t *sock)
 {
-    DEB(fprintf(stderr, "Resolve timeout\n"));
-#ifdef	_WINDOWS
-	WSACancelAsyncRequest(gethosthandle);
-	hostnameCancelled=TRUE;
-	alarm(0,NULL);
-#else
-    (void) longjmp(env, 1);
-#endif
+    struct sockaddr_in	addr;
+    int			len = sizeof(addr);
+    unsigned short	port;
+
+    if (getsockname(sock->fd, (struct sockaddr *)&addr, &len) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_GETSOCKNAME, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+
+    port = ntohs(addr.sin_port);
+
+    return port;
 }
 
-
-/*
- *******************************************************************************
- *
- *	GetAddrByName()
- *
- *******************************************************************************
- * Description
- *	Convert a hostname to its dotted decimal address.
- *
- * Input Parameters
- *	The name of the host.
- *
- * Output Parameters
- *	None
- *
- * Return Value
- *	On success a pointer to static memory containing the address.
- *	On failure a NULL pointer.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	gethostbyname
- *	signal
- *	setjmp
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-#ifndef	_WINDOWS
-char *GetAddrByName(const char *name)
+int sock_get_error(sock_t *sock)
 {
+    int			error;
+    int			size = sizeof(error);
+
+    if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, (void *)&error, &size) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_GETSOCKOPT, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+    errno = error;
+    return SOCK_IS_OK;
+}
+
+int sock_set_broadcast(sock_t *sock, int flag)
+{
+    if (setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST,
+		   (void *)&flag, sizeof(flag)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
+int sock_set_receive_buffer_size(sock_t *sock, int size)
+{
+    if (setsockopt(sock->fd, SOL_SOCKET, SO_RCVBUF,
+		   (void *)&size, sizeof(size)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
+int sock_set_send_buffer_size(sock_t *sock, int size)
+{
+    if (setsockopt(sock->fd, SOL_SOCKET, SO_SNDBUF,
+		   (void *)&size, sizeof(size)) < 0) {
+	sock_set_error(sock, errno, SOCK_CALL_SETSOCKOPT, __LINE__);
+	return SOCK_IS_ERROR;
+    }
+    return SOCK_IS_OK;
+}
+
+int sock_set_timeout(sock_t *sock, int seconds, int useconds)
+{
+    sock->timeout.seconds = seconds;
+    sock->timeout.useconds = useconds;
+
+    return SOCK_IS_OK;
+}
+
+int sock_readable(sock_t *sock)
+{
+    int			n;
+    fd_set		readfds;
+    struct timeval	timeout;
+
+    timerclear(&timeout); /* macro */
+    timeout.tv_sec = sock->timeout.seconds;
+    timeout.tv_usec = sock->timeout.useconds;
+
+    FD_ZERO(&readfds);
+    FD_SET(sock->fd, &readfds);
+
+    n = select(sock->fd + 1, &readfds, NULL, NULL, &timeout);
+    if (n == -1) {
+	if (errno != EINTR) {
+	    sock_set_error(sock, errno, SOCK_CALL_SELECT, __LINE__);
+	    return SOCK_IS_ERROR;
+	}
+	return SOCK_IS_OK;
+    }
+
+    if ((n > 0) && FD_ISSET(sock->fd, &readfds)) {
+	return 1;
+    }
+
+    return SOCK_IS_OK;
+}
+
+static void sock_catch_alarm(int signum)
+{
+    printf("DNS lookup cancelled\n");
+
+    longjmp(env, 1);
+}
+
+static struct hostent *sock_get_host_by_name(const char *name)
+{
+#ifndef _WINDOWS
+
     struct hostent	*hp;
 
     if (setjmp(env)) {
-	sl_errno = SL_ETIMEOUT;
 	alarm(0);
 	signal(SIGALRM, SIG_DFL);
-	return 0;
+	return (struct hostent *) NULL;
     }
-    signal(SIGALRM, ResolveTimeout);
-    alarm(6);
+
+    signal(SIGALRM, sock_catch_alarm);
+    alarm(SOCK_GETHOST_TIMEOUT);
 
     hp = gethostbyname(name);
 
     alarm(0);
     signal(SIGALRM, SIG_DFL);
-    if (!hp) {
-	sl_errno = SL_EHOSTNAME;
-	return 0;
-    }
-    return inet_ntoa(*(struct in_addr *)(hp->h_addr));
-}
+
+    return hp;
+
 #else
-char *GetAddrByName(const char *name)
-{
-	/* If you aren't connected to the net, then gethostbyname()
-	can take many minutes to time out.  WSACancelBlockingCall()
-	doesn't affect it.
-	*/
-	char	chp[MAXGETHOSTSTRUCT+1];
-	struct hostent* hp = (struct hostent*)&chp;
-	alarm(6, ResolveTimeout);
-	hostnameCancelled = FALSE;
-	*hostnameFound = FALSE;
-	gethosthandle = WSAAsyncGetHostByName(notifyWnd, WM_GETHOSTNAME, name, 
-								   chp, MAXGETHOSTSTRUCT);
-/*	hp = gethostbyname(name); */
-	while (!hostnameCancelled && !*hostnameFound)
-		Sleep(1000);
-	alarm(0, NULL);
-    if (!*hostnameFound)
-	{
-		sl_errno = SL_EHOSTNAME;
-		return 0;
+    
+    /*
+     * If you aren't connected to the net, then gethostbyname()
+     * can take many minutes to time out.  WSACancelBlockingCall()
+     * doesn't affect it.
+     */
+    
+    static char     chp[MAXGETHOSTSTRUCT+1];
+    struct hostent* hp = (struct hostent*)&chp;
+    HANDLE h;
+    MSG msg;
+    int i;
+    
+    h = WSAAsyncGetHostByName(notifyWnd, WM_GETHOSTNAME, name, 
+        chp, MAXGETHOSTSTRUCT);
+    
+    for(i = 0; i < SOCK_GETHOST_TIMEOUT; i++) {
+        if (PeekMessage(&msg, NULL, WM_GETHOSTNAME, WM_GETHOSTNAME, PM_REMOVE)) {
+            return (WSAGETASYNCERROR(msg.lParam)) ? NULL : hp;
+        }
+        Sleep(1000);
     }
-    return inet_ntoa(*(struct in_addr *)(hp->h_addr));
-}
+    WSACancelAsyncRequest(h);
+    return NULL;
+
 #endif
-
-/*
- *******************************************************************************
- *
- *	GetNameByAddr()
- *
- *******************************************************************************
- * Description
- *	Convert a dotted decimal address to its hostname.
- *
- * Input Parameters
- *	The dotted decimal address.
- *
- * Output Parameters
- *	The name of the host.
- *
- * Return Value
- *	On success a 0.
- *	On failure a -1.
- *
- * Globals Referenced
- *	None
- *
- * External Calls
- *	gethostbyaddr
- *	signal
- *	setjmp
- *
- * Called By
- *	User applications.
- *
- * Originally coded by Bert Gijsbers
- */
-int GetNameByAddr(const char *addr, char *name, int size)
+}
+
+static struct hostent *sock_get_host_by_addr(const char *addr, int len, int type)
 {
+#ifndef _WINDOWS
+
     struct hostent	*hp;
-    struct sockaddr_in	saddr;
 
-    saddr.sin_addr.s_addr = inet_addr(addr);
-    if (saddr.sin_addr.s_addr == (unsigned long)-1) {
-	sl_errno = SL_EADDR;
-	return -1;
-    }
     if (setjmp(env)) {
-	sl_errno = SL_ETIMEOUT;
-#ifndef	_WINDOWS
+	alarm(0);
 	signal(SIGALRM, SIG_DFL);
-#endif
-	return -1;
+	return (struct hostent *) NULL;
     }
-#ifndef	_WINDOWS
-    alarm(0);
-    signal(SIGALRM, ResolveTimeout);
-    alarm(6);
-#else
-    alarm(0, NULL);
-    alarm(6, ResolveTimeout);
-#endif
 
-    hp = gethostbyaddr((char *)&saddr.sin_addr.s_addr, 4, AF_INET);
-#ifndef	_WINDOWS
+    signal(SIGALRM, sock_catch_alarm);
+    alarm(SOCK_GETHOST_TIMEOUT);
+
+    hp = gethostbyaddr(addr, len, type);
+
     alarm(0);
     signal(SIGALRM, SIG_DFL);
+
+    return hp;
+
 #else
-    alarm(0, NULL);
+
+    struct hostent	*hp;
+
+    hp = gethostbyaddr(addr, len, type);
+
+    return hp;
+
 #endif
-    if (!hp) {
-	sl_errno = SL_EHOSTNAME;
-	return -1;
-    }
-    strncpy(name, hp->h_name, size);
-    name[size - 1] = '\0';
-    return 0;
 }
 
-
-#if defined(__sun__)
-/*
- * A workaround for a bug in inet_ntoa() on Suns.
- */
-char *inet_ntoa (struct in_addr in)
-{
-	unsigned long addr = ntohl (in.s_addr);
-	static char ascii[16];
-
-	sprintf (ascii, "%d.%d.%d.%d",
-		addr >> 24 & 0xFF,
-		addr >> 16 & 0xFF,
-		addr >> 8 & 0xFF,
-		addr & 0xFF);
-
-	return ascii;
-}
-#endif

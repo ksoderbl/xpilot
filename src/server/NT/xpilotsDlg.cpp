@@ -1,6 +1,6 @@
-/* $Id: xpilotsDlg.cpp,v 4.3 1999/01/14 08:47:42 dick Exp $
+/* $Id: xpilotsDlg.cpp,v 4.5 2001/03/11 22:37:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -25,7 +25,7 @@
 /***************************************************************************\
 *  xpilotsDlg.cpp - The main dialog wrapper for xpilots						*
 *																			*
-*  $Id: xpilotsDlg.cpp,v 4.3 1999/01/14 08:47:42 dick Exp $				*
+*  $Id: xpilotsDlg.cpp,v 4.5 2001/03/11 22:37:39 bert Exp $				*
 \***************************************************************************/
 
 #include "stdafx.h"
@@ -502,9 +502,9 @@ afx_msg LONG CXpilotsDlg::OnUpdateScores(UINT unused, LONG unused1)
 	return(0);
 
 }
-afx_msg LONG CXpilotsDlg::OnGetHostName(UINT unused, LONG unused1)
+afx_msg LRESULT CXpilotsDlg::OnGetHostName(WPARAM wParam, LPARAM lParam)
 {
-	m_ServerThreadInfo.m_hostNameFound = TRUE;
+	m_pServerWorkerThread->PostThreadMessage(WM_GETHOSTNAME, wParam, lParam);
 	return(0);
 }
 afx_msg LONG CXpilotsDlg::OnStartTimer(UINT unused, LONG fps)

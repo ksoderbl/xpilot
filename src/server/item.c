@@ -1,6 +1,6 @@
-/* $Id: item.c,v 4.9 2000/09/06 13:27:44 bert Exp $
+/* $Id: item.c,v 4.13 2001/03/25 21:31:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,15 +22,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <errno.h>
+#include <limits.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -53,7 +53,7 @@ char item_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: item.c,v 4.9 2000/09/06 13:27:44 bert Exp $";
+    "@(#)$Id: item.c,v 4.13 2001/03/25 21:31:31 bert Exp $";
 #endif
 
 
@@ -874,8 +874,8 @@ void do_hyperjump(player *pl)
 
 void do_lose_item(int ind)
 {
-    int item;
-    player *pl = (ind == -1 ? NULL : Players[ind]);
+    int		item;
+    player	*pl = (ind == -1 ? NULL : Players[ind]);
 
     if (!pl)
 	return;
@@ -902,7 +902,7 @@ void do_lose_item(int ind)
 }
 
 
-void Fire_general_ecm(int ind, u_short team, DFLOAT x, DFLOAT y)
+void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
 {
     object		*shot;
     object		*closest_mine = NULL;

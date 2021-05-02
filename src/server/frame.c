@@ -1,6 +1,6 @@
-/* $Id: frame.c,v 4.19 2000/10/15 13:09:55 bert Exp $
+/* $Id: frame.c,v 4.25 2001/03/25 15:48:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,21 +22,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <time.h>
-#include <limits.h>
-#else
-#include <unistd.h>
-#include <sys/types.h>
-#if !defined(VMS)
-#include <sys/param.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <errno.h>
 #include <time.h>
+#include <limits.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# ifndef VMS
+#  include <unistd.h>
+#  include <sys/param.h>
+# endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -49,12 +52,13 @@
 #include "netserver.h"
 #include "saudio.h"
 #include "error.h"
+#include "commonproto.h"
 
 char frame_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 4.19 2000/10/15 13:09:55 bert Exp $";
+    "@(#)$Id: frame.c,v 4.25 2001/03/25 15:48:23 bert Exp $";
 #endif
 
 
@@ -89,6 +93,7 @@ typedef struct {
 } radar_t;
 
 
+extern time_t		gameOverTime;
 long			frame_loops = 1;
 static long		last_frame_shuffle;
 static unsigned short	object_shuffle[MAX_TOTAL_SHOTS];
@@ -572,7 +577,7 @@ static void Frame_shots(int conn, int ind)
 	case OBJ_SPARK:
 	case OBJ_DEBRIS:
 	    if ((fuzz >>= 7) < 0x40) {
-		fuzz = rand();
+		fuzz = randomMT();
 	    }
 	    if ((fuzz & 0x7F) >= spark_rand) {
 		/*

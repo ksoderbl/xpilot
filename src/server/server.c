@@ -1,6 +1,6 @@
-/* $Id: server.c,v 4.18 2000/10/15 13:09:55 bert Exp $
+/* $Id: server.c,v 4.27 2001/03/27 12:50:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,29 +22,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include "NT/winSvrThread.h"
-#include <time.h>
-#include <limits.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <signal.h>
+#include <errno.h>
 #include <time.h>
-#if !defined(__hpux) && !defined(_WINDOWS)
-#include <sys/time.h>
-#endif
-#include <pwd.h>
+#include <limits.h>
+#include <sys/types.h>
 
-#if !defined(VMS)
-#include <sys/param.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <pwd.h>
+# include <sys/param.h>
 #endif
-
-#endif	/* _WINDOWS */
 
 #ifdef PLOCKSERVER
 # if defined(__linux__)
@@ -52,6 +47,11 @@
 # else
 #  include <sys/lock.h>
 # endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+# include "NT/winSvrThread.h"
 #endif
 
 #define	SERVER
@@ -69,13 +69,14 @@
 #include "error.h"
 #include "portability.h"
 #include "server.h"
+#include "commonproto.h"
 
 char server_version[] = VERSION;
 
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 4.18 2000/10/15 13:09:55 bert Exp $";
+    "@(#)$Id: server.c,v 4.27 2001/03/27 12:50:33 bert Exp $";
 #endif
 
 /*
@@ -95,13 +96,13 @@ trans_t			*Transporters[MAX_TOTAL_TRANSPORTERS];
 int			GetInd_1;
 int			GetInd[NUM_IDS+1];
 server_t		Server;
+char			*serverAddr;
 int			ShutdownServer = -1;
 int			ShutdownDelay = 1000;
 char			ShutdownReason[MAX_CHARS];
 int 			framesPerSecond = 18;
 long			main_loops = 0;		/* needed in events.c */
 
-static int		serverSocket;
 #ifdef LOG
 static bool		Log = true;
 #endif
@@ -120,7 +121,7 @@ static void Handle_signal(int sig_no);
 int main(int argc, char **argv)
 {
     int			timer_tick_rate;
-
+    char		*addr;
 
     /*
      * Make output always linebuffered.  By default pipes
@@ -143,9 +144,10 @@ int main(int argc, char **argv)
 #endif /* SUNCMW */
     init_error(argv[0]);
     srand(time((time_t *)0) * Get_process_id());
+    seedMT(time((time_t *)0) * Get_process_id());
     Check_server_versions();
     if (!Parser(argc, argv))
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 		exit(0);
 #else
 		return(0);
@@ -175,9 +177,20 @@ int main(int argc, char **argv)
     /*
      * Get server's official name.
      */
-    GetLocalHostName(Server.host, sizeof Server.host,
-		     (reportToMetaServer != 0 &&
-		      searchDomainForXPilot != 0));
+    if (serverHost) {
+	addr = sock_get_addr_by_name(serverHost);
+	if (addr == NULL) {
+	    errno = 0;
+	    error("Failed name lookup on: %s", serverHost);
+	    return 1;
+	}
+	serverAddr = xp_strdup(addr);
+	strncpy(Server.host, serverHost, sizeof(Server.host) - 1);
+    } else {
+	sock_get_local_hostname(Server.host, sizeof Server.host,
+				(reportToMetaServer != 0 &&
+				 searchDomainForXPilot != 0));
+    }
 
     Get_login_name(Server.owner, sizeof Server.owner);
 
@@ -186,14 +199,14 @@ int main(int argc, char **argv)
      */
     Log_game("START");
 
-    serverSocket = Contact_init();
+    Contact_init();
 
-    Meta_init(serverSocket);
+    Meta_init();
 
     if (Setup_net_server() == -1) {
 	End_game();
     }
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (NoQuit) {
 	signal(SIGHUP, SIG_IGN);
     } else {
@@ -221,7 +234,7 @@ int main(int argc, char **argv)
     else {
 	timer_tick_rate = FPS;
     }
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     /* Windows returns here, we let the worker thread call sched() */
     install_timer_tick(ServerThreadTimerProc, timer_tick_rate);
 #else
@@ -333,7 +346,7 @@ void End_game(void)
     Free_cells();
     Log_game("END");			    /* Log end */
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     exit (0);
 #endif
 }
@@ -572,7 +585,7 @@ static void Handle_signal(int sig_no)
 {
     errno = 0;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     switch (sig_no) {
 
     case SIGHUP:

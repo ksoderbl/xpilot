@@ -1,6 +1,6 @@
-/* $Id: player.c,v 4.15 2000/03/24 14:14:58 bert Exp $
+/* $Id: player.c,v 4.18 2001/03/25 17:24:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,13 +22,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#else
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <stdio.h>
+#include <errno.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -49,7 +50,7 @@ char player_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 4.15 2000/03/24 14:14:58 bert Exp $";
+    "@(#)$Id: player.c,v 4.18 2001/03/25 17:24:51 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -440,7 +441,7 @@ int Init_player(int ind, wireobj *ship)
 	pl->lockbank[i] = NOT_CONNECTED;
 
     {
-	static u_short	pseudo_team_no = 0;
+	static unsigned short	pseudo_team_no = 0;
 	pl->pseudo_team = pseudo_team_no++;
     }
     pl->mychar		= ' ';
@@ -599,7 +600,7 @@ void Update_score_table(void)
 	}
     }
     updateScores = false;
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     SendDialogUpdate();
 #endif
 }

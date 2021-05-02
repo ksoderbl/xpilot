@@ -1,6 +1,6 @@
-/* $Id: checknames.c,v 1.8 1998/04/28 13:20:44 bert Exp $
+/* $Id: checknames.c,v 1.11 2001/03/20 18:47:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,14 +22,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	_WINDOWS
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
 
 #include "version.h"
 #include "config.h"

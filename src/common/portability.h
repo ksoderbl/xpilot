@@ -1,6 +1,6 @@
-/* $Id: portability.h,v 4.4 2000/09/07 21:16:02 bert Exp $
+/* $Id: portability.h,v 4.7 2001/03/20 18:47:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -79,7 +79,7 @@ extern int sigprocmask(int how, const sigset_t *set, sigset_t *oset);
  * In Windows, just exiting won't tell the user the reason.
  * So, try to gracefully shutdown just the server thread
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 extern	int ServerKilled;
 #define	ServerExit() ServerKilled = TRUE; return;
 #else
@@ -89,13 +89,13 @@ extern	int ServerKilled;
 /*
  * Macros to block out Windows only code (and never Windows code)
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #define IFWINDOWS(x)	x
 #else
 #define IFWINDOWS(x)
 #endif
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 #define IFNWINDOWS(x)	x
 #else
 #define IFNWINDOWS(x)

@@ -1,4 +1,4 @@
-/* $Id: error.c,v 4.0 1998/03/18 15:17:47 bert Exp $
+/* $Id: error.c,v 4.3 2001/03/27 12:50:33 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -10,11 +10,13 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: error.c,v 4.0 1998/03/18 15:17:47 bert Exp $";
+    "@(#)$Id: error.c,v 4.3 2001/03/27 12:50:33 bert Exp $";
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #if defined(_WINDOWS)
 #	ifdef	_XPILOTNTSERVER_
@@ -59,7 +61,7 @@ static char		progname[MAX_PROG_LENGTH];
  */
 void init_error(const char *prog)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 #ifdef VMS
     char *p = strrchr(prog, ']');
 #else
@@ -82,7 +84,7 @@ void error(const char *fmt, ...)
 {
     va_list	 ap;			/* Argument pointer */
     int		 e = errno;		/* Store errno */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	char	s[512];
 #endif
 #ifdef VMS
@@ -95,7 +97,7 @@ void error(const char *fmt, ...)
     if (progname[0] != '\0')
 	fprintf(stderr, "%s: ", progname);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
     vsprintf(s, fmt, ap);
 #else
     vfprintf(stderr, fmt, ap);
@@ -105,7 +107,7 @@ void error(const char *fmt, ...)
 	fprintf(stderr, " (%s)", strerror(e));
 
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	IFWINDOWS( Trace("Error: %s\n", s); )
 /*	inerror = TRUE; */
 	{
@@ -166,139 +168,3 @@ va_dcl		/* Note that the format argument cannot be separately	*
 
 #endif
 
-/***************************************************************************\
-* memory management stuff - i.e. debug leak detection						*
-\***************************************************************************/
-#if	defined(_DEBUG)
-#define	MAXMEMPOD	1000				/* number of entries in each list */
-typedef struct	mempod {
-	void*	mem;	/* address returned */
-	size_t	size;	/* size of request */
-	char*	file;	/* file that malloced the memory */
-	int		line;	/* line number of the malloc */
-} mempod;
-
-typedef	struct memlink memlink;
-typedef struct memlink {
-	memlink*	nextlink;
-	int			nextslot;
-	mempod		mem[MAXMEMPOD];
-};
-
-memlink*	memanchor = NULL;
-memlink*	curmemblock = NULL;
-
-#undef	malloc
-#undef	realloc
-#undef	free
-#undef	strdup
-
-void*	xpmalloc(size_t amount, char* file, int line)
-{
-	void*	tptr;
-	tptr = malloc(amount);
-
-	if (!memanchor)
-	{
-		memanchor = malloc(sizeof(memlink));
-		curmemblock = memanchor;
-		memset(curmemblock, 0, sizeof(memlink));
-	}
-	if (curmemblock->nextslot == MAXMEMPOD)
-	{
-		xpprintf("Mallocing mempod block\n");
-		curmemblock->nextlink = malloc(sizeof(memlink));
-		memset(curmemblock, 0, sizeof(memlink));
-	}
-	curmemblock->mem[curmemblock->nextslot].mem  = tptr;
-	curmemblock->mem[curmemblock->nextslot].size = amount;
-	curmemblock->mem[curmemblock->nextslot].file = file;
-	curmemblock->mem[curmemblock->nextslot].line = line;
-
-	_Trace("malloc: %p %5d bytes from %4d of %s\n", 
-		curmemblock->mem[curmemblock->nextslot].mem, 
-		curmemblock->mem[curmemblock->nextslot].size, 
-		curmemblock->mem[curmemblock->nextslot].line, 
-		curmemblock->mem[curmemblock->nextslot].file);
-	curmemblock->nextslot++;
-	return(tptr);
-}
-
-void*  xprealloc(void* tptr, size_t size, char* file, int line)
-{
-	memlink*	l = curmemblock;
-	int			i;
-	while(l)
-	{
-		for (i=0; i<l->nextslot; i++)
-		{
-			if (l->mem[i].mem == tptr)
-			{
-				tptr = realloc(tptr, size);
-				l->mem[i].mem  = tptr;
-				l->mem[i].size = size;
-				l->mem[i].file = file;
-				l->mem[i].line = line;
-				_Trace("realloc: %p %5d bytes from %4d of %s\n", 
-					l->mem[i].mem, l->mem[i].size, l->mem[i].line, l->mem[i].file);
-				return (tptr);
-			}
-		}
-		l = l->nextlink;
-	}
-	error("Can't match memblock %p", tptr);
-	return(NULL);
-}
-
-void*	xpcalloc(size_t size, size_t amount, char* file, int line)
-{
-	void*	t = xpmalloc(size*amount, file, line);
-	return(t);
-}
-
-void	xpfree(void* tptr, char* file, int line)
-{
-	memlink*	l = curmemblock;
-	int			i;
-	while(l)
-	{
-		for (i=0; i<l->nextslot; i++)
-		{
-			if (l->mem[i].mem == tptr)
-			{
-				l->mem[i].mem = NULL;
-				free(tptr);
-				return;
-			}
-		}
-		l = l->nextlink;
-	}
-}
-
-char*	xpstrdup(const char* s, char* file, int line)
-{
-	char*	t = xpmalloc(strlen(s)+1, file, line);
-	strcpy(t, s);
-	return(t);
-}
-
-void	xpmemShutdown()
-{
-	memlink*	l = curmemblock;
-	int			i;
-	int			hits = 0;
-	while(l)
-	{
-		for (i=0; i<l->nextslot; i++)
-		{
-			if (l->mem[i].mem)
-				_Trace("leak: %p %5d bytes from %4d of %s\n", 
-					l->mem[i].mem, l->mem[i].size, l->mem[i].line, l->mem[i].file);
-		}
-		hits += l->nextslot;
-		l = l->nextlink;
-	}
-	IFWINDOWS( Trace("xpmem tracked %d mallocs\n", hits); )
-}
-
-#endif

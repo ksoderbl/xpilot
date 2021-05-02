@@ -1,6 +1,6 @@
-/* $Id: objpos.c,v 4.1 1998/04/16 17:41:43 bert Exp $
+/* $Id: objpos.c,v 4.3 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,11 +22,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include <windows.h>
-#else
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef _WINDOWS
+# include <windows.h>
 #endif
 
 #define SERVER
@@ -43,7 +43,7 @@ char objpos_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: objpos.c,v 4.1 1998/04/16 17:41:43 bert Exp $";
+    "@(#)$Id: objpos.c,v 4.3 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 void Object_position_set_clicks(object *obj, int cx, int cy)

@@ -1,8 +1,3 @@
-/*
-#ifndef lint
-static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
-#endif
-*/
 /*-
  * usleep.c - OS dependant implementation of usleep().
  *
@@ -17,20 +12,25 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
  *	Changed usleep into micro_delay to forego any possible prototype clashes.
  */
 
-#if defined(_WINDOWS)
 #include <time.h>
-#include "NT/winNet.h"
-#else
-#include <unistd.h>
 #include <sys/types.h>
-#include <sys/time.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winNet.h"
 #endif
 
 #include "types.h"
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 4.0 1998/03/18 15:16:21 bert Exp $";
+    "@(#)$Id: usleep.c,v 4.2 2001/03/20 18:37:58 bert Exp $";
 #endif
 
 int micro_delay(unsigned usec);

@@ -1,6 +1,6 @@
-/* $Id: portability.c,v 4.4 2000/09/07 21:14:14 bert Exp $
+/* $Id: portability.c,v 4.7 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -26,18 +26,17 @@
  * This file contains function wrappers around OS specific services.
  */
 
-#if !defined(_WINDOWS) && !defined(VMS)
-#include <unistd.h>
-#include <pwd.h>
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-/* KOERBER */
+#if !defined(_WINDOWS) && !defined(VMS)
+# include <unistd.h>
+# include <pwd.h>
+#endif
+
 #ifdef VMS
-#include "username.h"
+# include "username.h"
 #endif
 
 #ifdef PLOCKSERVER
@@ -48,14 +47,14 @@
 # endif
 #endif
 
+#ifdef _WINDOWS
+# include <windows.h>
+# include <process.h>
+#endif
+
 #include "version.h"
 #include "config.h"
 #include "portability.h"
-
-#ifdef	_WINDOWS
-#include <windows.h>
-#include <process.h>
-#endif
 
 
 char portability_version[] = VERSION;

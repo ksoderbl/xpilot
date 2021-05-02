@@ -1,6 +1,6 @@
-/* $Id: protoclient.h,v 4.8 2000/03/25 22:12:16 bert Exp $
+/* $Id: protoclient.h,v 4.11 2001/03/20 18:37:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -35,7 +35,7 @@
 extern int Handle_motd(long off, char *buf, int len, long filesize);
 extern void aboutCleanup(void);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 extern	void Motd_destroy();
 extern	void Keys_destroy();
 #endif
@@ -54,13 +54,6 @@ void Colors_cleanup(void);
 void Colors_debug(void);
 
 /*
- * datagram.c
- */
-int create_dgram_addr_socket(char *dotaddr, int port);
-int create_dgram_socket(int port);
-void close_dgram_socket(int fd);
-
-/*
  * default.c
  */
 extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
@@ -69,7 +62,7 @@ extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 			  char *nickName, char *dispName, char *shut_msg);
 extern void defaultCleanup(void);				/* memory cleanup */
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 extern void Get_xpilotrc_file(char *, unsigned);
 #else
 extern	char* Get_xpilotini_file(int level);
@@ -106,7 +99,9 @@ extern int Init_wreckage(void);
 /*
  * query.c
  */
-extern int Query_all(int sockfd, int port, char *msg, int msglen);
+#ifdef SOCKLIB_H
+extern int Query_all(sock_t *sockfd, int port, char *msg, int msglen);
+#endif
 
 #ifdef	LIMIT_ACCESS
 extern bool		Is_allowed(char *);
@@ -153,14 +148,14 @@ void Widget_cleanup(void);
 /*
  * xinit.c
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 extern	void WinXCreateItemBitmaps();
 #endif
 
 /*
  * winX - The Windows X emulator
  */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #define	WinXFlush(__w)	WinXFlush(__w)
 #else
 #define	WinXFlush(__w)

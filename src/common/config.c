@@ -1,6 +1,6 @@
-/* $Id: config.c,v 1.7 2000/09/06 13:15:22 bert Exp $
+/* $Id: config.c,v 1.10 2001/04/01 13:50:06 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -45,7 +45,7 @@
 #endif
 
 #ifndef	DEFAULT_MAP
-#    ifdef	_WINDOWS
+#    ifdef _WINDOWS
 #         define DEFAULT_MAP		"default.xp"
 #    else
 #         define DEFAULT_MAP		"globe.xp"
@@ -131,14 +131,10 @@
 
 #ifndef SOUNDFILE
 #    if defined(_WINDOWS)
-#        define SOUNDFILE	SOUNDDIR "sounds.txt"
+#        define SOUNDFILE	LIBDIR "sounds.txt"
 #    else
-#        define SOUNDFILE	SOUNDDIR "sounds"
+#        define SOUNDFILE	LIBDIR "sounds"
 #    endif
-#endif
-
-#ifndef SOUNDDIR
-#    define SOUNDDIR	LIBDIR "sound/"
 #endif
 
 #ifndef ZCAT_EXT
@@ -162,7 +158,7 @@ char config_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: config.c,v 1.7 2000/09/06 13:15:22 bert Exp $";
+    "@(#)$Id: config.c,v 1.10 2001/04/01 13:50:06 bert Exp $";
 #endif
 
 

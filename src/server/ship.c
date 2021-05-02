@@ -1,6 +1,6 @@
-/* $Id: ship.c,v 4.7 2000/03/22 17:59:33 bert Exp $
+/* $Id: ship.c,v 4.11 2001/03/25 17:24:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,15 +22,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <math.h>
+#include <limits.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -43,12 +43,13 @@
 #include "error.h"
 #include "objpos.h"
 #include "netserver.h"
+#include "commonproto.h"
 
 char ship_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: ship.c,v 4.7 2000/03/22 17:59:33 bert Exp $";
+    "@(#)$Id: ship.c,v 4.11 2001/03/25 17:24:51 bert Exp $";
 #endif
 
 
@@ -66,7 +67,7 @@ void Thrust(int ind)
     static int		keep_rand;
     int			this_rand = (((keep_rand >>= 2)
 					? (keep_rand)
-					: (keep_rand = rand())) & 0x03);
+					: (keep_rand = randomMT())) & 0x03);
     int			tot_sparks = (int)((pl->power * 0.15) + this_rand + 1);
     DFLOAT		x = pl->pos.x + pl->ship->engine[pl->dir].x;
     DFLOAT		y = pl->pos.y + pl->ship->engine[pl->dir].y;
@@ -496,7 +497,7 @@ void Make_wreckage(
     /* pos.x, pos.y     */ DFLOAT x,            DFLOAT y,
     /* vel.x, vel.y     */ DFLOAT velx,         DFLOAT vely,
     /* owner id         */ int    id,
-    /* owner team	*/ u_short team,
+    /* owner team	*/ unsigned short team,
     /* min,max mass     */ DFLOAT min_mass,     DFLOAT max_mass,
     /* total mass       */ DFLOAT total_mass,
     /* status           */ long   status,
@@ -596,7 +597,7 @@ void Make_wreckage(
 	if ( size > 255 )
 	    size = 255;
 	wreckage->size = size;
-	wreckage->info = rand();
+	wreckage->info = randomMT();
 
 	radius = wreckage->size * 16 / 256;
 	if ( radius < 8 ) radius = 8;

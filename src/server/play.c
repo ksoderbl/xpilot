@@ -1,6 +1,6 @@
-/* $Id: play.c,v 4.21 2000/03/12 11:13:54 bert Exp $
+/* $Id: play.c,v 4.24 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,16 +22,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
-#endif
-
 #include <stdio.h>
+#include <limits.h>
 #include <math.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+#endif
 
 #define SERVER
 #include "version.h"
@@ -47,7 +46,7 @@ char play_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 4.21 2000/03/12 11:13:54 bert Exp $";
+    "@(#)$Id: play.c,v 4.24 2001/03/25 17:24:50 bert Exp $";
 #endif
 
 extern int Rate(int winner, int looser);
@@ -152,7 +151,7 @@ void Make_debris(
     /* pos.x, pos.y   */ DFLOAT  x,          DFLOAT y,
     /* vel.x, vel.y   */ DFLOAT  velx,       DFLOAT vely,
     /* owner id       */ int    id,
-    /* owner team     */ u_short team,
+    /* owner team     */ unsigned short team,
     /* type           */ int    type,
     /* mass           */ DFLOAT  mass,
     /* status         */ long   status,

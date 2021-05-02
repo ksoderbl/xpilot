@@ -1,6 +1,6 @@
-/* $Id: robotdef.c,v 4.17 2000/10/29 17:11:37 bert Exp $
+/* $Id: robotdef.c,v 4.19 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -24,15 +24,19 @@
 /* Robot code originally submitted by Maurice Abraham. */
 
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <limits.h>
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
+#include <errno.h>
+#include <limits.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -52,7 +56,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: robotdef.c,v 4.17 2000/10/29 17:11:37 bert Exp $";
+    "@(#)$Id: robotdef.c,v 4.19 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 #define WITHIN(NOW,THEN,DIFF) (NOW<=THEN && (THEN-NOW)<DIFF)

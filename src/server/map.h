@@ -1,6 +1,6 @@
-/* $Id: map.h,v 4.4 1998/09/04 15:04:22 dick Exp $
+/* $Id: map.h,v 4.6 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -115,9 +115,9 @@ typedef struct {
 } grav_t;
 
 typedef struct {
-    ipos	pos;
-    int		dir;
-    u_short	team;
+    ipos		pos;
+    int			dir;
+    unsigned short	team;
 } base_t;
 
 typedef struct {
@@ -126,18 +126,18 @@ typedef struct {
 } baseorder_t;
 
 typedef struct {
-    ipos	blk_pos;
-    position	pix_pos;
-    int		dir;
-    int		dead_time;
-    unsigned	conn_mask;
-    long	last_change;
-    int		item[NUM_ITEMS];
-    int		damaged;
-    int		tractor_target;
-    int		tractor_count;
-    bool	tractor_is_pressor;
-    u_short	team;
+    ipos		blk_pos;
+    position		pix_pos;
+    int			dir;
+    int			dead_time;
+    unsigned		conn_mask;
+    long		last_change;
+    int			item[NUM_ITEMS];
+    int			damaged;
+    int			tractor_target;
+    int			tractor_count;
+    bool		tractor_is_pressor;
+    unsigned short	team;
 } cannon_t;
 
 typedef struct {
@@ -164,20 +164,20 @@ typedef struct {
 } wormhole_t;
 
 typedef struct {
-    ipos	pos;
-    bool	have;		/* true if this treasure has ball in it */
-    u_short	team;		/* team of this treasure */
-    int 	destroyed;	/* number of times this treasure destroyed */
+    ipos		pos;
+    bool		have;		/* true if this treasure has ball in it */
+    unsigned short	team;		/* team of this treasure */
+    int 		destroyed;	/* number of times this treasure destroyed */
 } treasure_t;
 
 typedef struct {
-    ipos	pos;
-    u_short	team;
-    int		dead_time;
-    int		damage;
-    unsigned	conn_mask;
-    unsigned 	update_mask;
-    long	last_change;
+    ipos		pos;
+    unsigned short	team;
+    int			dead_time;
+    int			damage;
+    unsigned		conn_mask;
+    unsigned 		update_mask;
+    long		last_change;
 } target_t;
 
 typedef struct {
@@ -194,44 +194,47 @@ typedef struct {
 } item_concentrator_t;
 
 typedef struct {
-    int		x, y;		/* Size of world in blocks */
-    int		diagonal;	/* Diagonal length in blocks */
-    int		width, height;	/* Size of world in pixels (optimization) */
-    int		hypotenuse;	/* Diagonal length in pixels (optimization) */
-    rules_t	*rules;
-    char	name[MAX_CHARS];
-    char	author[MAX_CHARS];
+    int			x, y;		/* Size of world in blocks */
+    int			diagonal;	/* Diagonal length in blocks */
+    int			width, height;	/* Size of world in pixels (optimization) */
+    int			hypotenuse;	/* Diagonal length in pixels (optimization) */
+    rules_t		*rules;
+    char		name[MAX_CHARS];
+    char		author[MAX_CHARS];
 
-    u_byte	**block;        /* type of item in each block */
-    u_short	**itemID;       /* index into cannon/fuel/targets/treasure/itemConcentrator/bases/grav/wormhole, depending on value of corresponding block, -1 for space, walls, etc */
+    u_byte		**block;        /* type of item in each block */
 
-    vector	**gravity;
+			/* index into mapobject depending on value of corresponding block,
+			** -1 for space, walls, etc */
+    unsigned short	**itemID;
 
-    item_t	items[NUM_ITEMS];
+    vector		**gravity;
 
-    team_t	teams[MAX_TEAMS];
+    item_t		items[NUM_ITEMS];
 
-    int		NumTeamBases;      /* How many 'different' teams are allowed */
-    int		NumBases;
-    base_t	*base;
-    baseorder_t	*baseorder;
-    int		NumFuels;
-    fuel_t	*fuel;
-    int		NumGravs;
-    grav_t	*grav;
-    int		NumCannons;
-    cannon_t	*cannon;
-    int		NumChecks;
-    ipos	check[MAX_CHECKS];
-    int		NumWormholes;
-    wormhole_t	*wormHoles;
-    int		NumTreasures;
-    treasure_t	*treasures;
-    int         NumTargets;
-    target_t    *targets;
-    int		NumItemConcentrators;
+    team_t		teams[MAX_TEAMS];
+
+    int			NumTeamBases;      /* How many 'different' teams are allowed */
+    int			NumBases;
+    base_t		*base;
+    baseorder_t		*baseorder;
+    int			NumFuels;
+    fuel_t		*fuel;
+    int			NumGravs;
+    grav_t		*grav;
+    int			NumCannons;
+    cannon_t		*cannon;
+    int			NumChecks;
+    ipos		check[MAX_CHECKS];
+    int			NumWormholes;
+    wormhole_t		*wormHoles;
+    int			NumTreasures;
+    treasure_t		*treasures;
+    int			NumTargets;
+    target_t		*targets;
+    int			NumItemConcentrators;
     item_concentrator_t	*itemConcentrators;
-    long	nextEvent;
+    long		nextEvent;
 } World_map;
 
 #endif

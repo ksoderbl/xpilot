@@ -1,6 +1,6 @@
-/* $Id: hpaudio.c,v 4.1 1998/04/16 17:39:23 bert Exp $
+/* $Id: hpaudio.c,v 4.3 2001/03/20 18:37:57 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -30,10 +30,13 @@
  * The problem is that sounds are lagging behind all the time.
  */
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
 
 #include "version.h"
 

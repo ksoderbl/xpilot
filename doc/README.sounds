@@ -1,15 +1,15 @@
 
 XPilot README.sounds
-last update: Thu Jan 27 19:10:17 GMT 1994
+
+    #($Id: README.sounds,v 4.1 2001/04/01 13:54:42 bert Exp $)#
 
 XPilot currently has rplay, NCD, DEC AudioFile and HP Aserver sound support.  
-See the Imakefile and/or the Makefile.std files in the src directory 
-for details on how to compile XPilot with sound support enabled.
+See the Local.config in the toplevel directory or the Makefile.std in the
+src directory for details on how to compile XPilot with sound support enabled.
 
 rplay 3.1.x supports SunOS 4.1.x, Solaris 2.x, Linux, 386bsd, BSDI/386,
-HP-UX, and SGI Indigo.  It can be obtained from ftp.sdsu.edu in
-the /pub/rplay directory or ftp.x.org in /contrib/rplay.  
-Email rplay questions to boyns@sdsu.edu.
+HP-UX, and SGI Indigo.  It can be obtained from ftp.rplay.org in
+the /pub/rplay directory.  Email rplay questions to boyns@doit.org.
 
 For NCD sound support the NCD MCX X terminals must be running release 3.1
 or later of the NCD software.  Email NCD questions to gred@ncd.com.
@@ -18,9 +18,8 @@ DEC AudioFile sound support was provided by Tom de Pauw.
 
 HP Aserver sound support is NOT working well on a HP 715.
 
-Most sound files can be obtained from ftp.sdsu.edu in the /pub/xpilot-sounds
-directory.  Note that if rplay is used with ftp.sdsu.edu as an RPTP server,
-sound files will be transferred automagically.
+Most sound files can be obtained from ftp.rplay.org in the /pub/xpilot-sounds
+directory.
 
 XPilot sound events are defined in a file with the following format:
 
@@ -127,6 +126,6 @@ available.  Known XPilots sounds are:
 
 * Star Trek the Next Generation
 
-This file was written by Mark Boyns <boyns@sdsu.edu>.
+This file was written by Mark Boyns <boyns@doit.org>.
 If you have any questions or comments or suggestions, please let me know.
 

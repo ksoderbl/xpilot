@@ -1,6 +1,6 @@
-/* $Id: debugaudio.c,v 1.1 1998/08/30 12:13:36 bert Exp $
+/* $Id: debugaudio.c,v 1.3 2001/03/20 18:37:57 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -28,10 +28,13 @@
  * Hence this file to monitor what's going on.
  */
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
 
 #include "version.h"
 #include "audio.h"

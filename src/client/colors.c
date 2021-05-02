@@ -1,6 +1,6 @@
-/* $Id: colors.c,v 4.20 2000/09/26 16:44:46 bert Exp $
+/* $Id: colors.c,v 4.23 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,19 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xutil.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xos.h>
+# include <X11/Xutil.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
 #endif
 
 #include "version.h"
@@ -53,7 +56,7 @@ char colors_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: colors.c,v 4.20 2000/09/26 16:44:46 bert Exp $";
+    "@(#)$Id: colors.c,v 4.23 2001/03/20 18:47:19 bert Exp $";
 #endif
 
 
@@ -94,7 +97,7 @@ bool		colorSwitch;
 bool		multibuffer;
 bool		blockBitmaps;		/* Whether to draw everything as bitmaps. */
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 
 /*
  * Dimensions of color cubes in decreasing

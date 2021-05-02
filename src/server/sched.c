@@ -1,6 +1,6 @@
-/* $Id: sched.c,v 4.7 2000/03/24 10:52:36 bert Exp $
+/* $Id: sched.c,v 4.11 2001/03/20 18:47:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,22 +22,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include "NT/winSvrThread.h"
-#include <signal.h>
-#include <time.h>
-#else
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
-#ifdef _AIX
-#include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
+#include <time.h>
+#include <sys/types.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# ifdef _AIX
+#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
+# endif
 #endif
 
 #ifdef _OS2_
@@ -47,6 +47,9 @@
 	#include <os2emx.h>
 #endif
 
+#ifdef _WINDOWS
+# include "NT/winServer.h"
+# include "NT/winSvrThread.h"
 #endif
 
 #define	SERVER
@@ -67,7 +70,7 @@ int sched_running = false;
 volatile long	timer_ticks;	/* SIGALRMs that have occurred */
 static long		timers_used;	/* SIGALRMs that have been used */
 static long		timer_freq;	/* rate at which timer ticks. (in FPS) */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 static void		(*timer_handler)(void);
 #else
 static	TIMERPROC	timer_handler;
@@ -76,7 +79,7 @@ static time_t		current_time;
 static int		ticks_till_second;
 
 /* Windows incorrectly uses u_int in FD_CLR */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 typedef	u_int	FDTYPE;
 #else
 typedef	int		FDTYPE;
@@ -105,7 +108,7 @@ static void sig_ok(int signum, int flag)
  */
 void block_timer(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     sig_ok(SIGALRM, 0);
 #endif
 }
@@ -116,7 +119,7 @@ void block_timer(void)
  */
 void allow_timer(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     sig_ok(SIGALRM, 1);
 #endif
 }
@@ -242,7 +245,7 @@ void timerThread( void *arg )
  */
 static void setup_timer(void)
 {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 
 #ifndef _OS2_
     struct itimerval itv;
@@ -323,7 +326,7 @@ static void setup_timer(void)
 /*
  * Configure timer tick callback.
  */
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 void install_timer_tick(void (*func)(void), int freq)
 {
     timer_handler = func;
@@ -463,7 +466,7 @@ static void timeout_chime(void)
     }
 }
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 #define NUM_SELECT_FD		((int)sizeof(int) * 8)
 #else
 /*
@@ -502,7 +505,7 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
     if (input_inited == false) {
 	input_inited = true;
 	FD_ZERO(&input_mask);
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	min_fd = fd;
 #else
 	min_fd = 0;
@@ -514,7 +517,7 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
 	    input_handlers[i].arg = 0;
 	}
     }
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);
 #endif
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
@@ -577,7 +580,7 @@ void sched(void)
     int			i, n, io_todo = 3;
     struct timeval	tv, *tvp = &tv;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     if (sched_running) {
 	error("sched already running");
 	exit(1);
@@ -611,7 +614,7 @@ void sched(void)
 	if (io_todo == 0 && timers_used < timer_ticks) {
 	    io_todo = 1 + (timer_ticks - timers_used);
 	    tvp = &tv;
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 	    if (timer_handler) {
 		(*timer_handler)();
 	    }
@@ -631,7 +634,7 @@ void sched(void)
 	    n = select(max_fd + 1, &readmask, 0, 0, tvp);
 	    if (n <= 0) {
 		if (n == -1 && errno != EINTR) {
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
 		    error("sched select error");
 #else
 			char	s[80];
@@ -663,7 +666,7 @@ void sched(void)
 	    }
 #endif
 	}
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     }
 #endif
 }

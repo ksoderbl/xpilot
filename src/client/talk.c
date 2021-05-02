@@ -1,6 +1,6 @@
-/* $Id: talk.c,v 4.8 1999/11/09 19:47:47 bert Exp $
+/* $Id: talk.c,v 4.10 2001/03/20 18:37:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,17 +22,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xatom.h>
-#include <X11/Xmd.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+# include <X11/Xutil.h>
+# include <X11/Xatom.h>
+# include <X11/Xmd.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -49,7 +51,7 @@ char talk_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: talk.c,v 4.8 1999/11/09 19:47:47 bert Exp $";
+    "@(#)$Id: talk.c,v 4.10 2001/03/20 18:37:58 bert Exp $";
 #endif
 
 /* avoid trouble with Atoms and 64 bit archs */

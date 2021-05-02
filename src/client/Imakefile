@@ -1,4 +1,4 @@
-/* $Id: Imakefile,v 4.15 2000/04/02 09:14:39 bert Exp $ */
+/* $Id: Imakefile,v 4.16 2001/03/11 22:29:56 bert Exp $ */
 
 TOPDIR=../..
 COMMON = ../common/
@@ -100,7 +100,7 @@ SRCS = \
 	gfx2d.c gfx3d.c guimap.c guiobjects.c \
 	join.c netclient.c \
 	paint.c paintdata.c painthud.c paintmap.c \
-	paintobjects.c paintradar.c query.c record.c \
+	paintobjects.c paintradar.c query.c record.c sim.c \
 	syslimit.c talk.c talkmacros.c textinterface.c texture.c \
 	usleep.c welcome.c widget.c xeventhandlers.c \
 	xevent.c xinit.c xpilot.c xpmread.c \
@@ -114,7 +114,7 @@ OBJS = \
 	gfx2d.o gfx3d.o guimap.o guiobjects.o \
 	join.o netclient.o \
 	paint.o paintdata.o painthud.o paintmap.o \
-	paintobjects.o paintradar.o query.o record.o \
+	paintobjects.o paintradar.o query.o record.o sim.o \
 	syslimit.o talk.o talkmacros.o textinterface.o texture.o \
 	usleep.o welcome.o widget.o xeventhandlers.o \
 	xevent.o xinit.o xpilot.o xpmread.o \

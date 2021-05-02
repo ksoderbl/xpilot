@@ -1,6 +1,6 @@
-/* $Id: config.h,v 4.5 2000/03/21 10:37:22 bert Exp $
+/* $Id: config.h,v 4.7 2001/03/20 18:37:59 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -62,7 +62,7 @@
 #    define COMPRESSED_MAPS
 #endif
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #	ifdef	_DEBUG
 #		define	DEBUG	1
 #		define	D(x)	{x;}
@@ -80,7 +80,7 @@
 /* Windows doesn't play with stdin/out well at all... */
 /* So for the client i route the "debug" printfs to the debug stream */
 /* The server gets 'real' messages routed to the messages window */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 #	ifdef	_XPILOTNTSERVER_
 #	define	xpprintf	xpprintfW
 /*#	define	xpprintf	_Trace */

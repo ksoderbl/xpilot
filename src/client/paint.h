@@ -1,6 +1,6 @@
-/* $Id: paint.h,v 4.12 2000/09/26 16:44:46 bert Exp $
+/* $Id: paint.h,v 4.17 2001/03/28 16:33:20 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -24,10 +24,6 @@
 
 #ifndef PAINT_H
 #define PAINT_H
-
-#ifndef	_WINDOWS
-#include <X11/Xlib.h>
-#endif
 
 #ifndef TYPES_H
 /* need u_byte */
@@ -94,14 +90,14 @@ extern char motdFontName[FONT_LEN];
 extern Display	*dpy;			/* Display of player (pointer) */
 extern Display	*kdpy;			/* Keyboard display */
 extern short	about_page;		/* Which page is the player on? */
-extern u_short	team;			/* What team is the player on? */
+extern unsigned short	team;		/* What team is the player on? */
 extern bool	players_exposed;	/* Is score window exposed? */
 extern int	radar_exposures;	/* Is radar window exposed? */
 
 					/* windows has 2 sets of item bitmaps */
 #define	ITEM_HUD	0		/* one color for the HUD */
 #define	ITEM_PLAYFIELD	1		/* and one color for the playfield */
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 extern Pixmap	itemBitmaps[][2];
 #else
 extern Pixmap	itemBitmaps[];
@@ -111,7 +107,7 @@ extern GC	gc, messageGC, radarGC, buttonGC, scoreListGC, textGC, talkGC;
 extern GC	motdGC;
 extern XGCValues gcv;
 extern Window	top, draw, keyboard, radar, players;
-#ifdef	_WINDOWS				/* see paint.c for details */
+#ifdef _WINDOWS				/* see paint.c for details */
 extern Window	textWindow, msgWindow, buttonWindow;
 #endif
 extern Pixmap	p_draw, p_radar, s_radar;
@@ -127,6 +123,7 @@ extern int	wallRadarColor;		/* Color index for walls on radar */
 extern int	targetRadarColor;	/* Color index for targets on radar */
 extern int	decorColor;		/* Color index for decoration drawing */
 extern int	decorRadarColor;	/* Color index for decorations on radar */
+extern int	oldMessagesColor;	/* Color index for old message strings */
 extern bool	gotFocus;
 extern bool	talk_mapped;
 extern short	view_width, view_height;	/* Visible area from server */

@@ -1,6 +1,6 @@
-/* $Id: syslimit.c,v 4.1 1998/04/16 17:39:46 bert Exp $
+/* $Id: syslimit.c,v 4.3 2001/03/20 18:37:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -29,6 +29,7 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <sys/types.h>
 
 #include "types.h"
 
@@ -42,7 +43,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 4.1 1998/04/16 17:39:46 bert Exp $";
+    "@(#)$Id: syslimit.c,v 4.3 2001/03/20 18:37:58 bert Exp $";
 #endif
 
 

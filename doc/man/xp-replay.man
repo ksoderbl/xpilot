@@ -1,10 +1,10 @@
 .\" -*-Text-*-
 .\"
-.\" Copyright © 1991-2000 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska & Steven Singer.
+.\" Copyright © 1991-2001 by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska & Steven Singer.
 .\"
-.TH XP-REPLAY  "Requires The X Window System"
+.TH XP-REPLAY 6 "Requires X11"
 .ds )H GNU Public License 2.0 applies
-.ds ]W XPilot 4.3.0: Oct 29th, 2000
+.ds ]W XPilot 4.3.1: Apr 1, 2001
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
@@ -27,7 +27,7 @@ xp-replay \- Playback an XPilot session.
 .SH OVERVIEW
 
 xp-replay is a program to view an XPilot recording. It takes record files
-produced by \fIxpilot()\fP and allows the user to replay them and make
+produced by \fIxpilot(6)\fP and allows the user to replay them and make
 snapshots of frames.
 
 .SS Options
@@ -220,7 +220,7 @@ Bugs can be mailed to \fBxpilot@xpilot.org\fP.
 
 
 .SH SEE ALSO
-xpilot(), xpilots(), ppm(5), compress(1), gzip(1)
+xpilot(6), xpilots(6), ppm(5), compress(1), gzip(1)
 .\"
 .\" index		\fIxpilot\fP \- multiplayer war game
 .\" index		\fIxpilots\fP \- server module for xpilot

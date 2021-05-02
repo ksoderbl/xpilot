@@ -2,14 +2,14 @@
 .\"
 .\" @<COPYRIGHT>@.
 .\"
-.TH XPILOTS @<MANEXT>@ "Requires UDP/IP and The X Window System"
+.TH XPILOTS @<MANEXT>@ "Requires UDP and X11"
 .ds )H GNU Public License 2.0 applies
 .ds ]W XPilot @<VERSION>@: @<RELEASEDATE>@
 .if n .ad l	\" If nroff formatter, adjust left margin only
 .if t .ad b	\" If troff formatter, adjust both margins
 
 .SH NAME
-xpilots \- XPilot/UX  Multiplayer gravity war game server
+xpilots \- XPilot multiplayer gravity war game server
 
 .SH SYNOPSIS
 
@@ -21,7 +21,11 @@ xpilots \- XPilot/UX  Multiplayer gravity war game server
 [\fB-noquit\fP]
 [\fB-help\fP]
 [\fB-version\fP]
-
+[\fB-password\fP \fIpassword\fP]
+[\fB-serverHost\fP \fIhostname\fP]
+[\fB-reportMeta\fP]
+[\fB-clientPortStart\fP \fIport-number\fP]
+[\fB-clientPortEnd\fP \fIport-number\fP]
 
 .SH DESCRIPTION
 
@@ -52,11 +56,16 @@ or the equivalent
 .B -map blackhole.map
 is passed as command line arguments, the server will try to locate a file
 called \fBblackhole.map\fP in the current directory, or in a predefined
-directory (default is /usr/local/games/lib/xpilot/maps/).
+directory (default is @<INSTLIBDIR>@/maps/).
 
 .TP 15
-.B -help
+.B -help 
 Prints a short help, including the supported commandline options.
+
+[\fIcommand\fP]
+Without a parameter, this displays a brief message, listing the
+supported commandline options.  Specifying a \fIcommand\fP displays
+help for the command.
 
 .TP 15
 .B -version
@@ -82,6 +91,59 @@ Note however that there will always be room for one new player, the robots
 will be kicked out of the game to accomodate for new players, they will
 also enter the game when there is space for them.
 
+.TP 15
+.B -password \fIpassword\fP
+Allows operator privileges to be gained during a game by those who know
+the password via commands typed in the client's message window.  See
+the \fBMessage-window commands\fP section below.
+
+Note that specifying this on the command line is not secure unless you
+are the sole user of the host xpilots is started on, as \fBps(1)\fP may
+be used to retrieve the options passed on the command-line when the
+server was started.  A more secure way of starting a passworded server
+is to set the password in the mapfile and protect the mapfile with
+\fBchmod(1)\fP to keep it private.
+
+.TP 15
+.B -serverHost \fIFQDN\fP
+Specifies to the meta server the FQDN (fully qualified domain name) of
+the server.  This is helpful if the system has multiple identities and
+one is preferred over the other.  Also, this option may be used to bind
+xpilots to a specific IP number on \fImultihomed\fP hosts (hosts with
+more than one IP number) such as virtual hosting sites.  Otherwise, the
+default behaviour of xpilots is to listen to any IP number on the host
+and to try by various methods, starting with the value returned by
+\fBgethostname(2)\fP to determine the host's FQDN (fully qualified
+domain name) and report that to the meta servers.
+
+.TP 15
+.B -reportMeta
+The default for xpilots is \fB-reportMeta\fP.  Specify \fB+reportMeta\fB
+to suppress reporting the xpilots server to the xpilot meta server so
+that other players on the Internet may find it.  This should be done
+whenever a server is unreachable either due to a firewall that is not
+configured to allow access to it, or when the connection to the server
+is so poor that players on the Internet would not enjoy playing on it,
+as is arguably the case with any dialup ISP connection.
+
+.TP 15
+.B -clientPortStart \fIport-number\fP
+When the xpilots server is behind an IP masquerading or NAT firewall,
+the UDP ports used for client connections (as distinct from the contact
+port, which by default is 15345/udp) must be defined by the server, and
+the firewall must be configured to forward the defined port range to the
+xpilots server host.  Use this switch with \fB-clientPortEnd\fP to
+define the range.  For example, start the server with \fBxpilots
+-clientPortStart 40000 -clientPortEnd 40009\fP and on the firewall
+redirect ports 40000/udp through 40009/udp to the host that xpilots is
+running on.  One port must be reserved for each client, so reserve the
+same number of ports as there are bases on the map.
+
+.TP 15
+.B -clientPortEnd \fIport-number\fP
+Used with \fB-clientPortStart\fR to reserve a range of UDP ports for
+client connections.
+
 .SS Prompt options (owner only)
 If you are the owner of a server you have successfully connected to (with
 \fIxpilot(@<MANEXT>@)\fP), you have several special commands available, all of which
@@ -104,6 +166,89 @@ shutdown delay (in seconds) and transmit these to the server.  A timer will
 appear showing how much time is left before the game goes down.  If you
 don't specify a delay, you will be canceling an already initiated shutdown.
 
+.SS Message-window commands
+The server now supports commands typed via the client's message window
+while in the game.  This provides a more convenient way to communicate
+with the server than the old command-prompt interface, as it does not
+require the user to leave the game window to operate the controls.
+
+All such message-window commands start with the slash (/) character.
+These are divided into two groups, those which can be typed by ordinary
+players and those which are only accessible to operators who have first
+supplied the correct password with the \fB/password\fR message-window
+command.  If a password is not set on the server by the owner, the
+operator commands are not usable.
+
+Where a \fIname\fP is specified in the following commands, only leading
+characters in the name need to be typed.  If two names start with the
+same characters, type as many characters as are needed to uniquely identify
+the player.
+
+.TP 15
+.B Player message-window commands
+.RS 5
+
+.TP 15
+.B /help [\fIcommand\fP]
+Without a parameter, this displays a brief message, listing the
+supported commandline options.  Specifying \fB/help\fP \fIcommand\fP
+displays brief help for the command.
+
+.TP 15
+.B /team \fInumber\fP
+Swaps you to the specified team \fInumber\fP.
+
+.TP 15
+.B /queue
+Show the names of the players waiting on the queue to enter the game.
+See also \fB/advance\fP.
+
+.TP 15
+.B /version
+Displays the server version number.
+
+.RS -5
+
+.TP 15
+.B Operator message-window commands
+.RS 5
+
+.TP 15
+.B /password \fIpassword\fP
+When the correct password is given, the player is granted operator privilege
+for the server.  Subsequently, any of the other operator commands listed
+here may be executed by the player.
+
+.TP 15
+.B /advance \fIname\fR
+Moves the named player to the front of the queue.  See also \fB/queue\fP.
+
+.TP 15
+.B /kick \fIname\fR
+Kicks the named player from the game.
+
+.TP 15
+.B /lock [\fIvalue\fR]
+Without a parameter, this displays the lock status of the game.
+Specify \fB/lock 0\fR to unlock the game or \fB/lock 1\fR to lock
+the game so that no more players may enter.
+
+.TP 15
+.B /pause \fIname\fR
+Pauses the named player.
+
+.TP 15
+.B /reset [all]
+Resets the current round number to 1.  If \fB/reset all\fP is
+specified, all scores are set to 0 as well.
+
+.TP 15
+.B /set \fIoption value\fR
+Sets the named \fIoption\fR to the specified \fIvalue\fR.  Note that some
+server options cannot be changed at runtime.  The server will notify
+you if you cannot change a value, or if you specify an invalid value.
+
+.RS -5
 
 .SH WARNINGS AND BUGS
 
@@ -114,8 +259,9 @@ See \fIxpilot(@<MANEXT>@)\fP.
 
 \fBXPilot\fP was developed by
 Bjørn Stabell <bjoern@xpilot.org> and
-Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, and
-Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam.
+Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø,
+Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam,
+and Dick Balaska <dick@xpilot.org> from BuckoSoft.COM.
 
 
 .SH CREDITS
@@ -133,10 +279,10 @@ for details see the provided LICENSE file.
 
 .PD 0
 .TP 40
-.B @<MAPDIR>@/*.map
+.B @<INSTLIBDIR>@/maps/
 Miscellaneous maps.
 .TP 40
-.B @<LIBDIR>@/log
+.B @<INSTLIBDIR>@/log
 Log file.
 .PD
 

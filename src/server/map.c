@@ -1,6 +1,6 @@
-/* $Id: map.c,v 4.10 2000/03/11 20:17:16 bert Exp $
+/* $Id: map.c,v 4.15 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,16 +22,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <errno.h>
 #include <sys/types.h>
-#include <sys/file.h>
 #include <sys/stat.h>
+
+#ifndef _WINDOWS
+# include <sys/file.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -50,7 +54,7 @@ char map_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 4.10 2000/03/11 20:17:16 bert Exp $";
+    "@(#)$Id: map.c,v 4.15 2001/03/25 17:24:50 bert Exp $";
 #endif
 
 
@@ -60,12 +64,16 @@ static char sourceid[] =
 World_map World;
 
 
-static u_short Find_closest_team(int posx, int posy);
+static void Init_map(void);
+static void Alloc_map(void);
+static void Generate_random_map(void);
+
+static unsigned short Find_closest_team(int posx, int posy);
 static void Find_base_order(void);
 
 
 #ifdef DEBUG
-void Print_map(void)			/* Debugging only. */
+static void Print_map(void)			/* Debugging only. */
 {
     int x, y;
 
@@ -88,7 +96,7 @@ void Print_map(void)			/* Debugging only. */
 #endif
 
 
-void Init_map(void)
+static void Init_map(void)
 {
     World.x		= 256;
     World.y		= 256;
@@ -148,7 +156,7 @@ void Free_map(void)
 }
 
 
-void Alloc_map(void)
+static void Alloc_map(void)
 {
     int x;
 
@@ -159,8 +167,8 @@ void Alloc_map(void)
 	(unsigned char **)malloc(sizeof(unsigned char *)*World.x
 				 + World.x*sizeof(unsigned char)*World.y);
     World.itemID =
-	(u_short **)malloc(sizeof(u_short *)*World.x
-				 + World.x*sizeof(u_short)*World.y);
+	(unsigned short **)malloc(sizeof(unsigned short *)*World.x
+				 + World.x*sizeof(unsigned short)*World.y);
     World.gravity =
 	(vector **)malloc(sizeof(vector *)*World.x
 			  + World.x*sizeof(vector)*World.y);
@@ -180,15 +188,15 @@ void Alloc_map(void)
     } else {
 	unsigned char *map_line;
 	unsigned char **map_pointer;
-	u_short *item_line;
-	u_short **item_pointer;
+	unsigned short *item_line;
+	unsigned short **item_pointer;
 	vector *grav_line;
 	vector **grav_pointer;
 
 	map_pointer = World.block;
 	map_line = (unsigned char*) ((unsigned char**)map_pointer + World.x);
 	item_pointer = World.itemID;
-	item_line = (u_short*) ((u_short**)item_pointer + World.x);
+	item_line = (unsigned short*) ((unsigned short**)item_pointer + World.x);
 	grav_pointer = World.gravity;
 	grav_line = (vector*) ((vector**)grav_pointer + World.x);
 
@@ -226,7 +234,7 @@ static void Map_error(int line_num)
 }
 
 
-void Grok_map(void)
+int Grok_map(void)
 {
     int i, x, y, c;
     char *s;
@@ -255,6 +263,15 @@ void Grok_map(void)
     strncpy(World.author, mapAuthor, sizeof(World.author) - 1);
     World.author[sizeof(World.author) - 1] = '\0';
 
+    if (!mapData) {
+	errno = 0;
+	error("Generating random map");
+	Generate_random_map();
+	if (!mapData) {
+	    return FALSE;
+	}
+    }
+
     Alloc_map();
 
     x = -1;
@@ -266,15 +283,6 @@ void Grok_map(void)
     if (BIT(World.rules->mode, TEAM_PLAY|TIMING) == (TEAM_PLAY|TIMING)) {
 	error("Cannot teamplay while in race mode -- ignoring teamplay");
 	CLR_BIT(World.rules->mode, TEAM_PLAY);
-    }
-
-    if (!mapData) {
-	errno = 0;
-	error("Generating random map");
-	Generate_random_map();
-	if (!mapData) {
-	    return;
-	}
     }
 
     s = mapData;
@@ -470,12 +478,12 @@ void Grok_map(void)
 
 	for (x=0; x<World.x; x++) {
 	    u_byte *line = World.block[x];
-	    u_short *itemID = World.itemID[x];
+	    unsigned short *itemID = World.itemID[x];
 
 	    for (y=0; y<World.y; y++) {
 		char c = line[y];
 
-		itemID[y] = (u_short) -1;
+		itemID[y] = (unsigned short) -1;
 
 		switch (c) {
 		case ' ':
@@ -799,7 +807,7 @@ void Grok_map(void)
 				[World.wormHoles[i].pos.y] = SPACE;
 			World.itemID
 				[World.wormHoles[i].pos.x]
-				[World.wormHoles[i].pos.y] = (u_short) -1;
+				[World.wormHoles[i].pos.y] = (unsigned short) -1;
 		}
 	    World.NumWormholes = 0;
 	}
@@ -825,7 +833,7 @@ void Grok_map(void)
 	 * treasure.
 	 */
 	if (BIT(World.rules->mode, TEAM_PLAY)) {
-	    u_short team = TEAM_NOT_SET;
+	    unsigned short team = TEAM_NOT_SET;
 	    for (i=0; i<World.NumTreasures; i++) {
 		team = Find_closest_team(World.treasures[i].pos.x,
 					 World.treasures[i].pos.y);
@@ -885,89 +893,21 @@ void Grok_map(void)
 #endif
 
     D( Print_map(); )
+
+    return TRUE;
 }
 
 
 /*
- * Stupid random map routine, only to be used if the game can't open any
- * map file. :)
+ * Use wildmap to generate a random map.
  */
-void Generate_random_map(void)
+static void Generate_random_map(void)
 {
-    int			x,
-			y,
-			i,
-			size,
-			num_bases = 25,
-			num_fuels = (World.x * World.y) / (1000 * (1.0f + rfrac())),
-			num_cannons = (World.x * World.y) / (100 * (1.0f + rfrac())),
-			num_blocks = (World.x * World.y) / (50 * (1.0f + rfrac())),
-			num_gravs = (World.x * World.y) / (2000 * (1.0f + rfrac())),
-			num_worms = (World.x * World.y) / (2000 * (1.0f + rfrac()));
+    extern int Wildmap(World_map *world, char **data);
 
-    strcpy(World.name, "Random Land");
-    strcpy(World.author, "The Computer");
+    edgeWrap = TRUE;
 
-    size = (World.x + 1) * World.y + 1;
-    if ((mapData = (char *)malloc(size)) == NULL) {
-	error("Can't allocate map");
-	return;
-    }
-    memset(mapData, ' ', size);
-
-    while (--num_blocks >= 0) {
-	switch ((int)(rfrac() * 5)) {
-	case 0: i = 'a'; break;
-	case 1: i = 'w'; break;
-	case 2: i = 'q'; break;
-	case 3: i = 's'; break;
-	default: i = 'x'; break;
-	}
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
-    }
-    while (--num_cannons >= 0) {
-	switch (rand()%4) {
-	case 0: i = 'd'; break;
-	case 1: i = 'f'; break;
-	case 2: i = 'r'; break;
-	default: i = 'c'; break;
-	}
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
-    }
-    while (--num_gravs >= 0) {
-	switch (rand()%4) {
-	case 0: i = '+'; break;
-	case 1: i = '-'; break;
-	case 2: i = '<'; break;
-	default: i = '>'; break;
-	}
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
-    }
-    while (--num_fuels >= 0) {
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = '#';
-    }
-    while (--num_worms >= 0) {
-	switch (rand()%3) {
-	case 0: i = '('; break;
-	case 1: i = ')'; break;
-	default: i = '@'; break;
-	}
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
-    }
-    while (--num_bases >= 0) {
-	i = '0' + num_bases % 10;
-	mapData[(rand() % World.x) + (rand() % World.y) * (World.x + 1)] = i;
-    }
-    for (i='A'; i<='Z'; i++) {
-	x = rand() % (World.x-2) + 1;
-	y = rand() % (World.y-2) + 1;
-	mapData[x + y * (World.x + 1)] = i;
-    }
-    for (y = 0; y < World.y; y++) {
-	mapData[(y + 1) * (World.x + 1) - 1] = '\n';
-    }
-
-    mapData[size - 1] = '\0';
+    Wildmap(&World, &mapData);
 }
 
 
@@ -1060,9 +1000,9 @@ void Find_base_direction(void)
 /*
  * Return the team that is closest to this position.
  */
-static u_short Find_closest_team(int posx, int posy)
+static unsigned short Find_closest_team(int posx, int posy)
 {
-    u_short team = TEAM_NOT_SET;
+    unsigned short team = TEAM_NOT_SET;
     int i;
     DFLOAT closest = FLT_MAX, l;
 
@@ -1362,7 +1302,7 @@ void remove_temp_wormhole(int ind)
 
     hole = World.wormHoles[ind];
     World.block[hole.pos.x][hole.pos.y] = SPACE;
-    World.itemID[hole.pos.x][hole.pos.y] = (u_short) -1;
+    World.itemID[hole.pos.x][hole.pos.y] = (unsigned short) -1;
     World.NumWormholes--;
     if (ind != World.NumWormholes) {
 	World.wormHoles[ind] = World.wormHoles[World.NumWormholes];

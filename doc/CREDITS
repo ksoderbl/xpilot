@@ -9,7 +9,10 @@ Release 4.3 credits:
 	Marcus Sundberg			Radar color fix + localnet fix.
 	Jarrod Miller			Fix base orientation, update mapeditor.
 	Peder Herborg			Fixes for sliding radar under Windows.
-	Ben Jackson			Several fixes.
+	Ben Jackson			Several fixes + ping button.
+	Jarno van der Kolk		Windows sliding radar performance fix.
+	Juha Lindström			Windows fixes for new socklib.
+	Ben Armstrong			UDP port range + ideas + documentation.
 
 Release 4.2 credits:
 

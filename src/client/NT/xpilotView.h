@@ -1,6 +1,6 @@
-/* $Id: xpilotView.h,v 4.1 1998/04/16 17:40:29 bert Exp $
+/* $Id: xpilotView.h,v 4.2 2001/02/19 23:36:43 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -26,7 +26,7 @@
 *  xpilotView.h : interface of the CXpilotView class						*
 *																			*
 *  XPilotNT uses the standard MFC doc/view model in an SDI format.			*
-*  $Id: xpilotView.h,v 4.1 1998/04/16 17:40:29 bert Exp $						*
+*  $Id: xpilotView.h,v 4.2 2001/02/19 23:36:43 bert Exp $						*
 \***************************************************************************/
 
 #define	WSA_EVENT		WM_USER+300			// from WSAAsyncSelect

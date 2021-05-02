@@ -1,6 +1,6 @@
-/* $Id: query.c,v 4.1 1998/04/16 17:39:40 bert Exp $
+/* $Id: query.c,v 4.6 2001/03/25 17:24:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,39 +22,42 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winClient.h"
-#include "NT/winNet.h"
-#define	QUERY_FUDGED
-
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
+#include <sys/types.h>
 
-#ifdef VMS
-# include <socket.h>
-# include <in.h>
-# include <inet.h>
-#else
-# include <sys/types.h>
+#if !defined(_WINDOWS) && !defined(VMS)
+# include <unistd.h>
 # include <sys/param.h>
 # include <sys/socket.h>
 # include <sys/ioctl.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
+# include <netdb.h>
+# if defined(SVR4) || defined(__svr4__)
+#  include <sys/sockio.h>
+# endif
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# ifndef LINUX0
+#  include <net/if.h>
+# endif
 #endif
-#if defined(SVR4) || defined(__svr4__)
-# include <sys/sockio.h>
+
+#ifdef _WINDOWS
+# include "NT/winClient.h"
+# include "NT/winNet.h"
 #endif
-#include <sys/time.h>
-#ifndef LINUX0
-# include <net/if.h>
+
+#ifdef VMS
+# include <socket.h>
+# include <in.h>
+# include <inet.h>
 #endif
-#include <netdb.h>
-#endif		/* _WINDOWS */
 
 #include "version.h"
 #include "config.h"
@@ -66,10 +69,10 @@ char query_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: query.c,v 4.1 1998/04/16 17:39:40 bert Exp $";
+    "@(#)$Id: query.c,v 4.6 2001/03/25 17:24:50 bert Exp $";
 #endif
 
-#if defined(LINUX0) || defined(VMS)
+#if defined(LINUX0) || defined(VMS) || defined(_WINDOWS)
 # ifndef QUERY_FUDGED
 #  define QUERY_FUDGED
 # endif
@@ -95,7 +98,7 @@ static char sourceid[] =
  * bits in the host part of the subnet mask.
  * Subnets with irregular subnet bits are properly handled (I hope).
  */
-static int Query_subnet(int sockfd,
+static int Query_subnet(sock_t *sock,
 			struct sockaddr_in *host_addr,
 			struct sockaddr_in *mask_addr,
 			char *msg,
@@ -145,8 +148,8 @@ static int Query_subnet(int sockfd,
     for (i=1; i <= max; i++) {
 	dest = (host & ~hostmask) | hostbits[i];
 	addr.sin_addr.s_addr = htonl(dest);
-	GetSocketError(sockfd);
-	sendto(sockfd, msg, msglen, 0,
+	sock_get_error(sock);
+	sendto(sock->fd, msg, msglen, 0,
 	       (struct sockaddr *)&addr, sizeof(addr));
 	D( printf("sendto %s/%d\n",
 		  inet_ntoa(addr.sin_addr), ntohs(addr.sin_port)); );
@@ -162,7 +165,7 @@ static int Query_subnet(int sockfd,
 }
 
 
-static int Query_fudged(int sockfd, int port, char *msg, int msglen)
+static int Query_fudged(sock_t *sock, int port, char *msg, int msglen)
 {
     int			i, count = 0;
     unsigned char	*p;
@@ -185,21 +188,21 @@ static int Query_fudged(int sockfd, int port, char *msg, int msglen)
     for (i = 0; h->h_addr_list[i]; i++) {
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = (u_short)htons((u_short)port);
+	addr.sin_port = (unsigned short)htons((unsigned short)port);
 	p = (unsigned char *) h->h_addr_list[i];
 	addrmask = p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
 	addr.sin_addr.s_addr = htonl(addrmask);
 	subnet = addr;
 	if (addrmask == 0x7F000001) {
-	    GetSocketError(sockfd);
-	    if (sendto(sockfd, msg, msglen, 0,
+	    sock_get_error(sock);
+	    if (sendto(sock->fd, msg, msglen, 0,
 		       (struct sockaddr *)&addr, sizeof(addr)) != -1) {
 		count++;
 	    }
 	} else {
 	    netmask = 0xFFFFFF00;
 	    subnet.sin_addr.s_addr = htonl(netmask);
-	    if (Query_subnet(sockfd, &addr, &subnet, msg, msglen) != -1) {
+	    if (Query_subnet(sock, &addr, &subnet, msg, msglen) != -1) {
 		count++;
 	    }
 	}
@@ -226,10 +229,10 @@ static int Query_fudged(int sockfd, int port, char *msg, int msglen)
 static int		contact_port = SERVER_PORT;
 #endif
 
-int Query_all(int sockfd, int port, char *msg, int msglen)
+int Query_all(sock_t *sock, int port, char *msg, int msglen)
 {
 #ifdef QUERY_FUDGED
-    return Query_fudged(sockfd, port, msg, msglen);
+    return Query_fudged(sock, port, msg, msglen);
 #else
 
     int         	fd, len, ifflags, count = 0, broadcasts = 0, haslb = 0;
@@ -240,7 +243,7 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
     /*
      * Broadcasting on a socket must be explicitly enabled.
      */
-    if (SetSocketBroadcast(sockfd, 1) == -1) {
+    if (sock_set_broadcast(sock, 1) == -1) {
 	error("set broadcast");
 	return (-1);
     }
@@ -262,7 +265,7 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
     if (ioctl(fd, SIOCGIFCONF, (char *)&ifconf) == -1) {
 	error("ioctl SIOCGIFCONF");
 	close(fd);
-	return Query_fudged(sockfd, port, msg, msglen);
+	return Query_fudged(sock, port, msg, msglen);
     }
     for (len = 0; len + sizeof(struct ifreq) <= ifconf.ifc_len;) {
 	ifreqp = (struct ifreq *)&ifconf.ifc_buf[len];
@@ -351,7 +354,7 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
 	     * Well, we have an address (at last).
 	     */
 	    addr.sin_port = htons(port);
-	    if (sendto(sockfd, msg, msglen, 0,
+	    if (sendto(sock->fd, msg, msglen, 0,
 		       (struct sockaddr *)&addr, sizeof addr) == msglen) {
 		D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
 		/*
@@ -396,7 +399,7 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
 	D( printf("\tmask %s\n", inet_ntoa(mask.sin_addr)); );
 
 	addr.sin_port = htons(port);
-	if (Query_subnet(sockfd, &addr, &mask, msg, msglen) != -1) {
+	if (Query_subnet(sock, &addr, &mask, msg, msglen) != -1) {
 	    count++;
 	    broadcasts++;
 	}
@@ -409,7 +412,7 @@ int Query_all(int sockfd, int port, char *msg, int msglen)
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_addr = loopback.sin_addr;
 	addr.sin_port = htons(port);
-	if (sendto(sockfd, msg, msglen, 0,
+	if (sendto(sock->fd, msg, msglen, 0,
 		   (struct sockaddr *)&addr, sizeof addr) == msglen) {
 	    D(printf("\tsendto %s/%d\n", inet_ntoa(addr.sin_addr), port););
 	    count++;

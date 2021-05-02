@@ -1,6 +1,6 @@
-/* $Id: audio.h,v 4.3 1999/10/10 18:44:48 bert Exp $
+/* $Id: audio.h,v 4.4 2001/02/19 23:36:43 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

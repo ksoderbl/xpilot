@@ -1,6 +1,6 @@
-/* $Id: collision.c,v 4.23 1999/11/08 04:56:08 dick Exp $
+/* $Id: collision.c,v 4.25 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,15 +22,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#include <math.h>
-#include <limits.h>
-#else
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <time.h>
+#include <math.h>
+#include <limits.h>
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -52,7 +53,7 @@ char collision_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 4.23 1999/11/08 04:56:08 dick Exp $";
+    "@(#)$Id: collision.c,v 4.25 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 #if 0

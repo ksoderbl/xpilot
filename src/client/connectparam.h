@@ -1,6 +1,6 @@
-/* $Id: connectparam.h,v 4.1 1999/10/16 18:39:02 bert Exp $
+/* $Id: connectparam.h,v 4.2 2001/02/19 23:36:40 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>

@@ -1,6 +1,6 @@
-/* $Id: id.c,v 4.1 1998/04/16 17:41:34 bert Exp $
+/* $Id: id.c,v 4.3 2001/03/20 18:38:00 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,12 +22,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winServer.h"
-#else
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
+
+#ifndef _WINDOWS
+# include <unistd.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winServer.h"
 #endif
 
 #define SERVER
@@ -41,7 +45,7 @@ char id_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: id.c,v 4.1 1998/04/16 17:41:34 bert Exp $";
+    "@(#)$Id: id.c,v 4.3 2001/03/20 18:38:00 bert Exp $";
 #endif
 
 static int		ID_queue[NUM_IDS];

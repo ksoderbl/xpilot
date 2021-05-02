@@ -1,6 +1,6 @@
-/* $Id: wsockerrs.c,v 4.1 1998/04/16 17:41:12 bert Exp $
+/* $Id: wsockerrs.c,v 4.2 2001/02/19 23:36:45 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -29,7 +29,7 @@
 *  works without the express written consent of BuckoSoft, Inc.				*
 *																			*
 *																			*
-*  $Id: wsockerrs.c,v 4.1 1998/04/16 17:41:12 bert Exp $				*
+*  $Id: wsockerrs.c,v 4.2 2001/02/19 23:36:45 bert Exp $				*
 \***************************************************************************/
 #include <winsock.h>
 

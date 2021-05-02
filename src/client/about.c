@@ -1,6 +1,6 @@
-/* $Id: about.c,v 4.4 1999/11/07 11:57:30 bert Exp $
+/* $Id: about.c,v 4.6 2001/03/20 18:37:57 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -22,19 +22,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef	_WINDOWS
-#include "NT/winX.h"
-#include "NT/winXXPilot.h"
-#else
-
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
 
-#include <X11/Xlib.h>
+#ifndef _WINDOWS
+# include <unistd.h>
+# include <X11/Xlib.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winX.h"
+# include "NT/winXXPilot.h"
 #endif
 
 #include "version.h"
@@ -54,7 +55,7 @@ char about_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: about.c,v 4.4 1999/11/07 11:57:30 bert Exp $";
+    "@(#)$Id: about.c,v 4.6 2001/03/20 18:37:57 bert Exp $";
 #endif
 
 /* How far away objects should be placed from each other etc... */
@@ -643,7 +644,7 @@ void aboutCleanup(void)
     }
 }
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 int Credits_callback(int widget_desc, void *data, const char **unused)
 {
     extern	void DoWinAboutBox();

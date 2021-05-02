@@ -1,6 +1,6 @@
-/* $Id: netclient.c,v 4.37 2000/10/15 13:09:54 bert Exp $
+/* $Id: netclient.c,v 4.43 2001/03/20 18:47:19 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-98 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
@@ -23,44 +23,38 @@
  */
 
 
-#ifdef	_WINDOWS
-#include "NT/winclient.h"
-#include "NT/winNet.h"
-#include "NT/winAudio.h"
-#include "NT/winX.h"
-#include "NT/winXThread.h"
-#include "NT/winXXPilot.h"
-#endif
-
-#include "types.h"
-
-#ifndef	_WINDOWS
-#include <unistd.h>
-#ifndef VMS
-#include <sys/param.h>
-#endif
-#endif
-#if defined(__hpux) || defined(_WINDOWS)
-#include <time.h>
-#else
-#include <sys/time.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
+#include <sys/types.h>
+
+#if !defined(_WINDOWS) && !defined(VMS)
+# include <unistd.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netdb.h>
+# include <sys/param.h>
+# ifndef __hpux
+#  include <sys/time.h>
+# endif
+# include <X11/Xlib.h>
+#endif
+
+#ifdef _WINDOWS
+# include "NT/winclient.h"
+# include "NT/winNet.h"
+# include "NT/winAudio.h"
+# include "NT/winX.h"
+# include "NT/winXThread.h"
+# include "NT/winXXPilot.h"
+#endif
+
 #ifdef VMS
-#include <socket.h>
-#include <in.h>
-#else
-#ifndef	_WINDOWS
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
-#endif
-#ifndef	_WINDOWS
-#include <netdb.h>
+# include <socket.h>
+# include <in.h>
 #endif
 
 #include "version.h"
@@ -75,13 +69,14 @@
 #include "paint.h"
 #include "xinit.h"
 #include "pack.h"
+#include "types.h"
 #include "socklib.h"
 #include "protoclient.h"
 #include "portability.h"
 #include "talk.h"
 
 #ifdef	SOUND
-#include "audio.h"
+# include "audio.h"
 #endif
 
 char netclient_version[] = VERSION;
@@ -103,7 +98,7 @@ typedef struct {
 setup_t			*Setup;
 int			receive_window_size;
 long			last_loops;
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 int			received_self = FALSE;
 #endif
 /*
@@ -386,8 +381,8 @@ int Net_setup(void)
 			  retries, todo, cbuf.len - (cbuf.ptr - cbuf.buf));
 		    return -1;
 		}
-		SetTimeout(2, 0);
-		while (SocketReadable(rbuf.sock) > 0) {
+		sock_set_timeout(&rbuf.sock, 2, 0);
+		while (sock_readable(&rbuf.sock) > 0) {
 		    Sockbuf_clear(&rbuf);
 		    if (Sockbuf_read(&rbuf) == -1) {
 			error("Can't read all setup data");
@@ -396,7 +391,7 @@ int Net_setup(void)
 		    if (rbuf.len > 0) {
 			break;
 		    }
-		    SetTimeout(0, 0);
+		    sock_set_timeout(&rbuf.sock, 0, 0);
 		}
 		if (rbuf.len > 0) {
 		    break;
@@ -455,8 +450,8 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 	    }
 #endif
 	}
-	SetTimeout(1, 0);
-	if (SocketReadable(rbuf.sock) == 0) {
+	sock_set_timeout(&rbuf.sock, 1, 0);
+	if (sock_readable(&rbuf.sock) == 0) {
 	    continue;
 	}
 	Sockbuf_clear(&rbuf);
@@ -525,37 +520,40 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
  * 2) rbuf is used for receiving packets in (read/scanf).
  * 3) cbuf is used to copy the reliable data stream
  *    into from the raw and unreliable rbuf packets.
+ *
+ * server == NULL sets up for internal simulation
  */
 int Net_init(char *server, int port)
 {
     int			i,
-			sock;
+			status;
     unsigned		size;
+    sock_t		sock;
 
-#ifndef	_WINDOWS
+#ifndef _WINDOWS
     signal(SIGPIPE, SIG_IGN);
 #endif
 
     Receive_init();
 
-    if ((sock = CreateDgramSocket(0)) == -1) {
+    if ((status = sock_open_udp(&sock, NULL, 0)) == -1) {
 	error("Can't create datagram socket");
 	return -1;
     }
-    if (DgramConnect(sock, server, port) == -1) {
+    if (server && sock_connect(&sock, server, port) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
-	DgramClose(sock);
+	sock_close(&sock);
 	return -1;
     }
     wbuf.sock = sock;
-    if (SetSocketNonBlocking(sock, 1) == -1) {
+    if (sock_set_non_blocking(&sock, 1) == -1) {
 	error("Can't make socket non-blocking");
 	return -1;
     }
-    if (SetSocketSendBufferSize(sock, CLIENT_SEND_SIZE + 256) == -1) {
+    if (sock_set_send_buffer_size(&sock, CLIENT_SEND_SIZE + 256) == -1) {
 	error("Can't set send buffer size to %d", CLIENT_SEND_SIZE + 256);
     }
-    if (SetSocketReceiveBufferSize(sock, CLIENT_RECV_SIZE + 256) == -1) {
+    if (sock_set_receive_buffer_size(&sock, CLIENT_RECV_SIZE + 256) == -1) {
 	error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 256);
     }
 
@@ -566,7 +564,7 @@ int Net_init(char *server, int port)
     }
     for (i = 0; i < receive_window_size; i++) {
 	Frames[i].loops = 0;
-	if (Sockbuf_init(&Frames[i].sbuf, sock, CLIENT_RECV_SIZE,
+	if (Sockbuf_init(&Frames[i].sbuf, &sock, CLIENT_RECV_SIZE,
 			 SOCKBUF_READ | SOCKBUF_DGRAM) == -1) {
 	    error("No memory for read buffer (%u)", CLIENT_RECV_SIZE);
 	    return -1;
@@ -574,14 +572,14 @@ int Net_init(char *server, int port)
     }
 
     /* reliable data buffer, not a valid socket filedescriptor needed */
-    if (Sockbuf_init(&cbuf, -1, CLIENT_RECV_SIZE,
+    if (Sockbuf_init(&cbuf, NULL, CLIENT_RECV_SIZE,
 		     SOCKBUF_WRITE | SOCKBUF_READ | SOCKBUF_LOCK) == -1) {
 	error("No memory for control buffer (%u)", CLIENT_RECV_SIZE);
 	return -1;
     }
 
     /* write buffer */
-    if (Sockbuf_init(&wbuf, sock, CLIENT_SEND_SIZE,
+    if (Sockbuf_init(&wbuf, &sock, CLIENT_SEND_SIZE,
 		     SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for write buffer (%u)", CLIENT_SEND_SIZE);
 	return -1;
@@ -608,15 +606,15 @@ int Net_init(char *server, int port)
  */
 void Net_cleanup(void)
 {
-    int		i,
-		sock = wbuf.sock;
+    int		i;
+    sock_t	sock = wbuf.sock;
     char	ch;
 
-    if (sock > 2) {
+    if (sock.fd > 2) {
 	ch = PKT_QUIT;
-	if (DgramWrite(sock, &ch, 1) != 1) {
-	    GetSocketError(sock);
-	    DgramWrite(sock, &ch, 1);
+	if (sock_write(&sock, &ch, 1) != 1) {
+	    sock_get_error(&sock);
+	    sock_write(&sock, &ch, 1);
 	}
 	micro_delay((unsigned)50*1000);
     }
@@ -637,18 +635,18 @@ void Net_cleanup(void)
 	free(Setup);
 	Setup = NULL;
     }
-    if (sock > 2) {
+    if (sock.fd > 2) {
 	ch = PKT_QUIT;
-	if (DgramWrite(sock, &ch, 1) != 1) {
-	    GetSocketError(sock);
-	    DgramWrite(sock, &ch, 1);
+	if (sock_write(&sock, &ch, 1) != 1) {
+	    sock_get_error(&sock);
+	    sock_write(&sock, &ch, 1);
 	}
 	micro_delay((unsigned)50*1000);
-	if (DgramWrite(sock, &ch, 1) != 1) {
-	    GetSocketError(sock);
-	    DgramWrite(sock, &ch, 1);
+	if (sock_write(&sock, &ch, 1) != 1) {
+	    sock_get_error(&sock);
+	    sock_write(&sock, &ch, 1);
 	}
-	DgramClose(sock);
+	sock_close(&sock);
     }
 }
 
@@ -692,7 +690,7 @@ int Net_flush(void)
  */
 int Net_fd(void)
 {
-    return rbuf.sock;
+    return rbuf.sock.fd;
 }
 
 /*
@@ -738,9 +736,9 @@ int Net_start(void)
 	if (cbuf.ptr > cbuf.buf) {
 	    Sockbuf_advance(&cbuf, cbuf.ptr - cbuf.buf);
 	}
-	SetTimeout(2, 0);
+	sock_set_timeout(&rbuf.sock, 2, 0);
 	while (cbuf.len <= 0
-	    && SocketReadable(rbuf.sock) != 0) {
+	    && sock_readable(&rbuf.sock) != 0) {
 	    Sockbuf_clear(&rbuf);
 	    if (Sockbuf_read(&rbuf) == -1) {
 		error("Error reading play reply");
@@ -1118,7 +1116,7 @@ int Net_input(void)
 	    }
 	}
 	if ((i == receive_window_size - 1 && i > 0)
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 		|| drawPending
 		|| (ThreadedDraw && 
 				!WaitForSingleObject(dinfo.eventNotDrawing, 0) == WAIT_OBJECT_0)
@@ -1602,7 +1600,7 @@ int Receive_self(void)
 		num_items,
 		currentTank, fuelSum, fuelMax, rbuf.len);
 
-#ifdef	_WINDOWS
+#ifdef _WINDOWS
 	received_self = TRUE;
 #endif
     return 1;
@@ -2554,9 +2552,14 @@ int Send_display(void)
 	return 0;
     }
 
-    if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
-		      width_wanted, height_wanted,
-		      num_spark_colors, spark_rand) == -1) {
+    if (simulating) {
+	view_width = width_wanted;
+	view_height = height_wanted;
+	Check_view_dimensions();
+    }
+    else if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
+			   width_wanted, height_wanted,
+			   num_spark_colors, spark_rand) == -1) {
 	return -1;
     }
 
