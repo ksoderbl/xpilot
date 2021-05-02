@@ -1,6 +1,6 @@
-/* $Id: timer.c,v 3.11 1993/10/21 11:13:09 bert Exp $
+/* $Id: timer.c,v 3.16 1994/04/10 15:58:16 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -40,37 +40,53 @@
 
 #include "error.h"
 
-#ifdef _SONYNEWS_SOURCE
+#ifdef sony_news
 /*
  * Sony NEWS doesn't have the sigset family.
  */
 typedef unsigned int    sigset_t;
+
 #define sigemptyset(set)        (*(set) = 0)
 #define sigfillset(set)         (*(set) = ~(sigset_t)0, 0)
 #define sigaddset(set,signo)    (*(set) |= sigmask(signo), 0)
 #define sigdelset(set,signo)    (*(set) &= ~sigmask(signo), 0)
 #define sigismember(set,signo)  ((*(set) & sigmask(signo)) != 0)
 
-#define SIG_BLOCK       1
-#define SIG_UNBLOCK     2
-#define SIG_SETMASK     3
+#define SIG_BLOCK		1
+#define SIG_UNBLOCK		2
+#define SIG_SETMASK		3
 
-static int __sigtemp;           /* For use with sigprocmask */
+int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
+{
+    int			mask;
 
-#define sigprocmask(how,set,oset) \
-	((__sigtemp = (((how) == SIG_BLOCK) ? \
-	sigblock(0) | *(set) : (((how) == SIG_UNBLOCK) ? \
-	sigblock(0) & ~(*(set)) : ((how) == SIG_SETMASK ? \
-	*(set) : sigblock(0))))), ((oset) ? \
-	(*(oset) = sigsetmask(__sigtemp)) : sigsetmask(__sigtemp)), 0)
+    if (how == SIG_BLOCK) {
+	mask = sigblock(0) | *set;
+    }
+    else if (how == SIG_UNBLOCK) {
+	mask = sigblock(0) & ~(*set);
+    }
+    else if (how == SIG_SETMASK) {
+	mask = *set;
+    }
+    else {
+	mask = sigblock(0);
+    }
+    mask = sigsetmask(mask);
+    if (oset != NULL) {
+	*oset = mask;
+    }
+
+    return 0;
+}
 
 /*
  * Sony NEWS doesn't have sigaction(), using sigvec() instead.
  */
-#define sigaction sigvec
-#define sa_handler sv_handler
-#define sa_mask sv_mask
-#define sa_flags sv_flags
+#define sigaction	sigvec
+#define sa_handler	sv_handler
+#define sa_mask		sv_mask
+#define sa_flags	sv_flags
 #endif
 
 
@@ -124,18 +140,7 @@ static volatile long   timer_count,	/* SIGALRMs that have occurred */
                        timers_used;	/* SIGALRMs that have been used */
 
 /*
- * Catch the SIGALRM signal.
- * If any system calls other than pause(2) would get interrupted because
- * of the SIGALRM signal occuring, than that would be an undesirable
- * side effect or bug.  Be aware of the possibility.
- * E.g., select(2) will be interrupted.
- * If this happens to be a problem, two functions are provided to
- * temporarily block and unblock the timer interrupt.
- * Note that this is still experimental.  It is unclear to me if setitimer(2)
- * is accurate enough.  If not than this whole idea may be thrown away or
- * we have to come up with something better.  How about using gettimeofday(2)
- * to measure if any timer-interrupts are missed and adjusting `timer_count'
- * accordingly?
+ * Catch SIGALRM.
  */
 static void catch_timer(int signum)
 {
@@ -148,20 +153,10 @@ static void catch_timer(int signum)
 static void sig_ok(int signum, int flag)
 {
     sigset_t    sigset;
-#ifdef _SONYNEWS_SOURCE
-    /* Dummy variable */
-    sigset_t	osigset;
-    int		flag_block;
-#endif
 
     sigemptyset(&sigset);
     sigaddset(&sigset, signum);
-#ifdef _SONYNEWS_SOURCE
-    flag_block = (flag) ? SIG_UNBLOCK : SIG_BLOCK;
-    if (sigprocmask(flag_block, &sigset, &osigset) == -1) {
-#else
     if (sigprocmask((flag) ? SIG_UNBLOCK : SIG_BLOCK, &sigset, NULL) == -1) {
-#endif
 	error("sigprocmask(%d,%d)", signum, flag);
 	exit(1);
     }
@@ -195,7 +190,7 @@ static void setup_timer(void)
     struct sigaction act;
 
     /*
-     * Prevent SIGALRMs from disturbing the initialisation.
+     * Prevent SIGALRMs from disturbing the initialization.
      */
     block_timer();
 
@@ -204,6 +199,9 @@ static void setup_timer(void)
      */
     act.sa_handler = catch_timer;
     act.sa_flags = 0;
+#ifdef SA_RESTART
+    act.sa_flags |= SA_RESTART;		/* restart system calls. */
+#endif
     sigemptyset(&act.sa_mask);
     sigaddset(&act.sa_mask, SIGALRM);
     if (sigaction(SIGALRM, &act, (struct sigaction *)NULL) == -1) {

@@ -1,6 +1,6 @@
-/* $Id: server.c,v 3.51 1993/12/16 22:39:50 bert Exp $
+/* $Id: server.c,v 3.80 1994/04/14 11:46:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -30,6 +30,7 @@
 #include <unistd.h>
 #endif
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
@@ -49,6 +50,7 @@
 #include <inet.h>
 #else
 #include <pwd.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -74,7 +76,7 @@
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.51 1993/12/16 22:39:50 bert Exp $";
+    "@(#)$Id: server.c,v 3.80 1994/04/14 11:46:39 bert Exp $";
 #endif
 
 
@@ -84,7 +86,6 @@ static char sourceid[] =
 int			NumPlayers = 0;
 int			NumPseudoPlayers = 0;
 int			NumObjs = 0;
-int			Num_alive = 0;
 player			**Players;
 object			*Obj[MAX_TOTAL_SHOTS];
 long			Id = 1;		    /* Unique ID for each object */
@@ -100,15 +101,17 @@ static int		Socket;
 static sockbuf_t	ibuf;
 static char		msg[MSG_LEN];
 static char		meta_address[16];
+static char		meta_address_two[16];
 static bool		Log = true;
 static bool		NoPlayersEnteredYet = true;
 static bool		lock = false;
 static void		Wait_for_new_players(void);
 time_t			gameOverTime = 0;
-
+time_t			serverTime = 0;
 extern int		login_in_progress;
 
 void Send_meta_server(void);
+static bool Owner(char *name, char *in_host);
 
 static void catch_alarm(int signum)
 {
@@ -122,6 +125,13 @@ int main(int argc, char *argv[])
 
 
     /*
+     * Make output always linebuffered.  By default pipes
+     * and remote shells cause stdout to be fully buffered.
+     */
+    setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+    setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
+
+    /*
      * --- Output copyright notice ---
      */
     printf("  Copyright " COPYRIGHT ".\n"
@@ -129,22 +139,13 @@ int main(int argc, char *argv[])
 	      "for details see the\n"
 	   "  provided LICENSE file.\n\n");
 
-#ifdef __apollo
-    signal(SIGFPE, SIG_IGN);
-#endif
     Argc = argc; Argv = argv;
 #ifdef SUNCMW
     cmw_priv_init();
 #endif /* SUNCMW */
     init_error(argv[0]);
-    srand(time((time_t *)0));		/* Take seed from timer. */
+    srand(time((time_t *)0) * getpid());
     Parser(argc, argv);
-    if (FPS <= 0) {
-	errno = 0;
-	error("Can't run with %d frames per second, should be positive\n",
-	    FPS);
-	End_game();
-    }
     Make_table();			/* Make trigonometric tables */
     Compute_gravity();
     Find_base_direction();
@@ -152,43 +153,55 @@ int main(int argc, char *argv[])
     /* Allocate memory for players, shots and messages */
     Alloc_players(World.NumBases + MAX_PSEUDO_PLAYERS);
     Alloc_shots(MAX_TOTAL_SHOTS);
+    Alloc_cells();
 
-    Make_ships();
+    Move_init();
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	int i;
 	for(i=0; i < World.NumTreasures; i++)
-	    Make_ball(-1,
-		      World.treasures[i].pos.x * BLOCK_SZ+(BLOCK_SZ/2),
-		      World.treasures[i].pos.y * BLOCK_SZ+10,
-		      false, i);
+	    if (World.treasures[i].team != TEAM_NOT_SET)
+		Make_treasure_ball(i);
     }
 
     /*
      * Get server's official name.
      */
-    gethostname(Server.host, 80);
-    if ((hinfo = gethostbyname(Server.host)) == NULL) {
-	error("gethostbyname %s", Server.host);
-    } else {
-	strcpy(Server.host, hinfo->h_name);
-    }
+    GetLocalHostName(Server.host, sizeof Server.host);
 
     /*
      * Get meta server's address.
      */
-    signal(SIGALRM, catch_alarm);
-    alarm(10);
-    hinfo = gethostbyname(META_HOST);
-    alarm(0);
-    signal(SIGALRM, SIG_IGN);
-    if (hinfo == NULL) {
-	error("gethostbyname %s", META_HOST);
-	strncpy(meta_address, META_IP, sizeof meta_address);
-    } else {
-	strncpy(meta_address,
-		inet_ntoa(*((struct in_addr *)(hinfo->h_addr))),
-		sizeof meta_address);
+    if (reportToMetaServer) {
+	signal(SIGALRM, catch_alarm);
+	alarm(5);
+	hinfo = gethostbyname(META_HOST);
+	alarm(0);
+	if (hinfo == NULL) {
+	    strncpy(meta_address, META_IP, sizeof meta_address);
+	} else {
+	    strncpy(meta_address,
+		    inet_ntoa(*((struct in_addr *)(hinfo->h_addr))),
+		    sizeof meta_address);
+	}
+	meta_address[sizeof meta_address - 1] = '\0';
+
+	signal(SIGALRM, catch_alarm);
+	alarm(5);
+	hinfo = gethostbyname(META_HOST_TWO);
+	alarm(0);
+	signal(SIGALRM, SIG_IGN);
+	if (hinfo == NULL) {
+	    /* This should be changed since we now send to meta host 1.
+	     * But there is no harm that there are sent two packets to the 
+	     * same meta server. */
+	    strncpy(meta_address_two, META_IP, sizeof meta_address_two);
+	} else {
+	    strncpy(meta_address_two,
+		    inet_ntoa(*((struct in_addr *)(hinfo->h_addr))),
+		    sizeof meta_address_two);
+	}
+	meta_address_two[sizeof meta_address_two - 1] = '\0';
     }
 
     /*
@@ -228,7 +241,7 @@ int main(int argc, char *argv[])
 
     SetTimeout(0, 0);
 
-    if (Setup_net_server(World.NumBases) == -1) {
+    if (Setup_net_server(World.NumBases, Socket) == -1) {
 	End_game();
     }
 
@@ -237,6 +250,17 @@ int main(int argc, char *argv[])
     }
     signal(SIGTERM, Handle_signal);
     signal(SIGINT, Handle_signal);
+    signal(SIGUSR1, Handle_signal);
+    signal(SIGPIPE, SIG_IGN);
+#ifdef IGNORE_FPE
+    signal(SIGFPE, SIG_IGN);
+#endif
+
+    /*
+     * Set the time the server started 
+     */
+
+    serverTime = time(NULL);
 
     /* 
      * Report to Meta server
@@ -260,8 +284,8 @@ int main(int argc, char *argv[])
     }
  
     if (gameDuration > 0.0) {
-      printf("Server will stop in %g minutes.\n", gameDuration);
-      gameOverTime = (time_t)(gameDuration * 60) + time((time_t *)NULL);
+	printf("Server will stop in %g minutes.\n", gameDuration);
+	gameOverTime = (time_t)(gameDuration * 60) + time((time_t *)NULL);
     }
     
     Main_Loop();			    /* Entering main loop. */
@@ -271,10 +295,19 @@ int main(int argc, char *argv[])
 
 void Send_meta_server(void)
 {
+#ifdef SOUND
+#define SOUND_SUPPORT_STR	"yes"
+#else
+#define SOUND_SUPPORT_STR	"no"
+#endif
+
     char 	string[MAX_STR_LEN];
     char 	status[MAX_STR_LEN];
     int		i;
     bool	first = true;
+
+    if (!reportToMetaServer)
+	return;
 
     Server_info(status, sizeof(status));
 
@@ -288,40 +321,34 @@ void Send_meta_server(void)
 	    "add bases %d\n"
 	    "add fps %d\n"
 	    "add port %d\n"
-	    "add mode %s\n",
+	    "add mode %s\n"
+	    "add stime %ld\n"
+	    "add sound " SOUND_SUPPORT_STR "\n",
 	    Server.host, NumPlayers - NumRobots, 
 	    VERSION, World.name, World.x, World.y, World.author, 
 	    World.NumBases, FPS, contactPort,
-	    (lock && ShutdownServer == -1) ? "locked" :
-	    (!lock && ShutdownServer != -1) ? "shutting down" :
-	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok");
+	    (lock && ShutdownServer == -1) ? "locked"
+		: (!lock && ShutdownServer != -1) ? "shutting down"
+		: (lock && ShutdownServer != -1) ? "locked and shutting down"
+		: "ok",
+	    time(NULL) - serverTime);
 
-    strcat(string, "add sound ");
-#ifdef SOUND
-    strcat(string, "yes\n");
-#else
-    strcat(string, "no\n");
-#endif
 
-		
     for(i=0; i < NumPlayers; i++) {
 	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
-	    if (first)
-		strcat(string,"add players ");
-	    else
-		strcat(string,",");
+	    sprintf(string + strlen(string),
+		    "%s%s=%s@%s",
+		    (first) ? "add players " : ",",
+		    Players[i]->name,
+		    Players[i]->realname,
+		    Players[i]->hostname);
 	    first = false;
-	    strcat(string, Players[i]->name);	
-	    strcat(string,"=");
-	    strcat(string,Players[i]->realname);
-	    strcat(string,"@");
-	    strcat(string,Players[i]->hostname);
 	}
     }
     
     strcat(string,"\nadd status ");
     if (strlen(string) + strlen(status) >= sizeof(string)) {
-	/* Prevent string overflow */
+	/* Prevent array overflow */
 	strcpy(&status[sizeof(string) - (strlen(string) + 2)], "\n");
     }
     strcat(string, status);
@@ -329,6 +356,13 @@ void Send_meta_server(void)
     i = strlen(string)+1;
     if (DgramSend(Socket, meta_address, META_PORT, string, i) != i) {
 	GetSocketError(Socket);
+	DgramSend(Socket, meta_address, META_PORT, string, i);
+    }
+    if (meta_address_two[0] != '\0'
+	&& strcmp(meta_address, meta_address_two)
+	&& DgramSend(Socket, meta_address_two, META_PORT, string, i) != i) {
+	GetSocketError(Socket);
+	DgramSend(Socket, meta_address_two, META_PORT, string, i);
     }
 }
 
@@ -388,7 +422,7 @@ void Main_Loop(void)
 	    Loop_delay();
 	}
 
-	if (Input(Socket) > 0) {
+	if (Input() > 0) {
 	    NoPlayersEnteredYet = false;
 	}
     }
@@ -417,7 +451,7 @@ static void Wait_for_new_players(void)
     start_loops = loops;
     while (new_players == false) {
 	if (login_in_progress > 0) {
-	    if (Input(-1) > 0) {
+	    if (Input() > 0) {
 		NoPlayersEnteredYet = false;
 		new_players = true;
 		continue;
@@ -442,9 +476,11 @@ static void Wait_for_new_players(void)
 void End_game(void)
 {
     player	*pl;
-    char	string[50];
+    int		len;
+    char	string[80];
 
     if (ShutdownServer == 0) {
+	errno = 0;
 	error("Shutting down...");
     }
 
@@ -458,19 +494,75 @@ void End_game(void)
     }
 
     /* Tell meta serve that we are gone */
-    sprintf(string,"server %s\nremove",Server.host);
-    DgramSend(Socket, meta_address, META_PORT, string, sizeof(string));
+    if (reportToMetaServer) {
+	sprintf(string, "server %s\nremove", Server.host);
+	len = strlen(string) + 1;
+	DgramSend(Socket, meta_address, META_PORT, string, len);
+	if (meta_address_two[0] != '\0'
+	    && strcmp(meta_address, meta_address_two)) {
+	    DgramSend(Socket, meta_address_two, META_PORT, string, len);
+	}
+    }
 
     SocketClose(Socket);
     Free_players();
-    Free_ships();
     Free_shots();
     Free_map();
+    Free_cells();
     Log_game("END");			    /* Log end */
 
     exit (0);
 }
 
+/*
+ * Return a good team number for a player. 
+ *
+ * If the team is not specified, the player is assigned
+ * to a non-empty team which has space.  The team chosen
+ * is one with the least number of players.
+ * 
+ * If all non-empty teams are full, the player is assigned
+ * to the first available team.
+ *
+ * Note:  Team zero is not part of this algorithm as that
+ * team is reserved for the robots.
+ */
+static int Pick_team(void)
+{
+    int	i, teammin, min;
+
+    /*
+     * Find first non-empty team with least number of players that has room
+     * for more...
+     */
+    min = NumPlayers + 1;
+    teammin = TEAM_NOT_SET;
+
+    for (i = 1; i < MAX_TEAMS; i++) {
+	if (! World.teams[i].NumMembers
+	    || World.teams[i].NumMembers >= World.teams[i].NumBases)
+	    break;
+	if (World.teams[i].NumMembers < min) {
+	    min = World.teams[i].NumMembers;
+	    teammin = i;
+	}
+    }
+
+    if (teammin != TEAM_NOT_SET)
+	return teammin;
+
+    /*
+     * Find first available team...
+     */
+    for (i = 1; i < MAX_TEAMS; i++)
+	if (World.teams[i].NumMembers < World.teams[i].NumBases)
+	    return i;
+
+    /*
+     * There is no team to enter...
+     */
+    return TEAM_NOT_SET;
+}
 
 void Contact(void)
 {
@@ -490,7 +582,28 @@ void Contact(void)
     char		real_name[MAX_CHARS],
 			disp_name[MAX_CHARS],
 			nick_name[MAX_CHARS],
-			str[MAX_CHARS];
+			host_name[MAX_CHARS],
+			str[MSG_LEN];
+    static struct tunable_int_options_t {
+	char *opt;
+	int *val;
+    } tune_iopt[] = {
+	{ "initialFuel",             &initialFuel },
+	{ "initialTanks",            &initialTanks },
+	{ "initialECMs",             &initialECMs },
+	{ "initialMines",            &initialMines },
+	{ "initialMissiles",         &initialMissiles },
+	{ "initialCloaks",           &initialCloaks },
+	{ "initialSensors",          &initialSensors },
+	{ "initialWideangles",       &initialWideangles },
+	{ "initialRearshots",        &initialRearshots },
+	{ "initialAfterburners",     &initialAfterburners },
+	{ "initialTransporters",     &initialTransporters },
+	{ "initialLasers",           &initialLasers },
+	{ "initialEmergencyThrusts", &initialEmergencyThrusts },
+	{ "initialTractorBeams",     &initialTractorBeams },
+	{ "initialAutopilots",       &initialAutopilots }
+    };
 
     /*
      * Someone connected to us, now try and deschiffer the message :)
@@ -540,7 +653,7 @@ void Contact(void)
     real_name[MAX_NAME_LEN - 1] = '\0';
 
     /*
-     * Now see if we have the same (or compatible) version.
+     * Now see if we have the same (or a compatible) version.
      * If the client request was only a contact request (to see
      * if there is a server running on this host) then we don't
      * care about version incompatibilities, so that the client
@@ -558,17 +671,18 @@ void Contact(void)
 	}
 	return;
     }
+
     /*
      * Support some older clients, which don't know
      * that they can join the current version.
+     *
+     * IMPORTANT! Adjust the next code if you're changing version numbers.
      */
-    if (version == 0x3020
-	|| version == 0x3030
-	|| (version >= 0x3041 && version <= 0x3043)) {
+    if (version >= 0x3100 && version <= MY_VERSION) {
 	my_magic = VERSION2MAGIC(version);
-    } else {
+    } else
 	my_magic = MAGIC;
-    }
+
 
     status = SUCCESS;
 
@@ -581,12 +695,14 @@ void Contact(void)
 	/*
 	 * Someone wants to enter the game.
 	 */
-	if (Packet_scanf(&ibuf, "%s%s%d", nick_name, disp_name, &team) <= 0) {
+	if (Packet_scanf(&ibuf, "%s%s%s%d", nick_name, disp_name, host_name,
+			 &team) <= 0) {
 	    D(printf("Incomplete login from %s@%s", real_name, in_host);)
 	    return;
 	}
-	nick_name[MAX_NAME_LEN - 1] = '\0';
-	disp_name[MAX_DISP_LEN - 1] = '\0';
+	nick_name[sizeof(nick_name) - 1] = '\0';
+	disp_name[sizeof(disp_name) - 1] = '\0';
+	host_name[sizeof(host_name) - 1] = '\0';
 
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c", my_magic, reply_to);
@@ -596,6 +712,7 @@ void Contact(void)
 	 */
 	if (nick_name[0] == 0
 	    || real_name[0] == 0
+	    || host_name[0] == 0
 	    || nick_name[0] < 'A'
 	    || nick_name[0] > 'Z') {
 #ifndef SILENT
@@ -608,7 +725,7 @@ void Contact(void)
 	/*
 	 * Game locked?
 	 */
-	else if (lock && !Owner(real_name)) {
+	else if (lock && !Owner(real_name, in_host)) {
 	    status = E_GAME_LOCKED;
 	}
 
@@ -624,10 +741,11 @@ void Contact(void)
 	 */
 	else if (BIT(World.rules->mode, TEAM_PLAY)) {
 	    if (team == TEAM_NOT_SET || team >= MAX_TEAMS || team < 0) {
-		status = E_TEAM_NOT_SET;
+		if (!teamAssign || (team = Pick_team()) == TEAM_NOT_SET)
+		    status = E_TEAM_NOT_SET;
 	    }
 	    else if (World.teams[team].NumMembers
-		     >= World.teams[team].NumBases) {
+		  >= World.teams[team].NumBases) {
 		status = E_TEAM_FULL;
 	    }
 	}
@@ -651,7 +769,8 @@ void Contact(void)
 	if (status == SUCCESS) {
 	    if ((login_port = Setup_connection(real_name, nick_name,
 					       disp_name, team,
-					       in_host, version)) > 0) {
+					       in_host, host_name,
+					       version)) > 0) {
 		/*
 		 * Tell the client which port to use for logging in.
 		 */
@@ -688,7 +807,7 @@ void Contact(void)
 	 * Someone wants to transmit a message to the server.
 	 */
 
-	if (!Owner(real_name)) {
+	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
@@ -710,7 +829,7 @@ void Contact(void)
 	 * Someone wants to lock the game so that no more players can enter.
 	 */
 
-	if (!Owner(real_name)) {
+	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	} else {
 	    lock = lock ? false : true;
@@ -738,7 +857,7 @@ void Contact(void)
 	 * Shutdown the entire server.
 	 */
 
-	if (!Owner(real_name)) {
+	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%d%s", &delay, str) <= 0) {
@@ -768,7 +887,7 @@ void Contact(void)
 	 */
 	int			found = -1;
 
-	if (!Owner(real_name)) {
+	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
@@ -807,13 +926,97 @@ void Contact(void)
     }
 	break;
 
+    case OPTION_TUNE_pack:		{
+	/*
+	 * Tune a server option.  (only owner)
+	 * The option-value pair is encoded in a string as:
+	 *
+	 *    optionName:newValue
+	 *
+	 */
+
+	char		*opt, *val;
+	int		ival;
+
+	if (!Owner(real_name, in_host)) {
+	    status = E_NOT_OWNER;
+	}
+	else if (Packet_scanf(&ibuf, "%S", str) <= 0
+		 || (opt = strtok(str, ":")) == NULL
+		 || (val = strtok(NULL, "")) == NULL
+		) {
+	    status = E_INVAL;
+	}
+	else {
+	    status = E_INVAL;
+	    if (sscanf(val, "%d", &ival) > 0) {
+		for (i = 0; i < NELEM(tune_iopt); i++) {
+		    if (!strcasecmp(tune_iopt[i].opt, opt)) {
+			*tune_iopt[i].val = ival;
+			Set_initial_resources();
+			status = SUCCESS;
+			break;
+		    }
+		}
+	    }
+	}
+	Sockbuf_clear(&ibuf);
+	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+    }
+	break;
+
+    case OPTION_LIST_pack:		{
+	/*
+	 * List the server options and their current values.
+	 */
+	bool		bad = false, full, change;
+
+	i = 0;
+	do {
+	    Sockbuf_clear(&ibuf);
+	    Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
+
+	    for (change = false, full = false; !full && !bad; ) {
+		switch (Parse_list(&i, str)) {
+		case -1:
+		    bad = true;
+		    break;
+		case 0:
+		    i++;
+		    break;
+		default:
+		    switch (Packet_printf(&ibuf, "%s", str)) {
+		    case 0:
+			full = true;
+			bad = (change) ? false : true;
+			break;
+		    case -1:
+			bad = true;
+			break;
+		    default:
+			change = true;
+			i++;
+			break;
+		    }
+		    break;
+		}
+	    }
+	    if (change
+		&& DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
+		GetSocketError(Socket);
+		bad = true;
+	    }
+	} while (!bad);
+    }
+	return;
+
     case MAX_ROBOT_pack:	{
 	/*
 	 * Set the maximum of robots wanted in the server
 	 */
 	int	ind;
 
-	if (!Owner(real_name)) {
+	if (!Owner(real_name, in_host)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
@@ -883,14 +1086,14 @@ void Server_info(char *str, unsigned max_size)
 
     sprintf(str,
 	    "SERVER VERSION...: %s\n"
-	    "STARTED BY.......: %s\n"
+	    /* security: "STARTED BY.......: %s\n" */
 	    "STATUS...........: %s\n"
 	    "MAX SPEED........: %d fps\n"
 	    "WORLD (%3dx%3d)..: %s\n"
 	    "      AUTHOR.....: %s\n"
 	    "PLAYERS (%2d/%2d)..:\n",
 	    TITLE,
-	    Server.name,
+	    /* security: Server.name, */
 	    (lock && ShutdownServer == -1) ? "locked" :
 	    (!lock && ShutdownServer != -1) ? "shutting down" :
 	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok",
@@ -946,7 +1149,7 @@ void Server_info(char *str, unsigned max_size)
 	pl = order[i];
 	strcpy(name, pl->name);
 	if (pl->robot_mode != RM_NOT_ROBOT
-	    && pl->robot_lock == LOCK_PLAYER) {
+	    && BIT(pl->robot_lock, LOCK_PLAYER)) {
 	    sprintf(name + strlen(name), " (%s)",
 		Players[GetInd[pl->robot_lock_id]]->name);
 	    if (strlen(name) >= 19) {
@@ -972,26 +1175,53 @@ void Server_info(char *str, unsigned max_size)
 /*
  * Returns true if <name> has owner status of this server.
  */
-bool Owner(char *name)
+static bool Owner(char *name, char *in_host)
 {
-    if ((strcmp(name, Server.name) == 0)
-	|| (strcmp(name, "kenrsc") == 0)
-	|| (strcmp(name, "bjoerns") == 0)
-	|| (strcmp(name, "bert") == 0)
-	|| (strcmp(name, "root") == 0))
-	return (true);
-    else
-	return (false);
+    bool		valid = false;
+    char		*local = NULL;
+    char		host[MAX_CHARS];
+
+    strncpy(host, in_host, sizeof host);
+    host[sizeof host - 1] = '\0';
+    if (!strcmp(name, Server.name)) {
+	if (!(local = GetSockAddr(Socket))) {
+	    perror("GetSockAddr(Socket)");
+	    valid = true;
+	}
+	/* require that the owner issue commands from the same host
+	 * he started the server on. */
+	else if (!strcmp(host, local)
+	      || !strcmp(local, "0.0.0.0")	/* fix later */
+	      || !strcmp(host, "127.0.0.1")) {
+	    valid = true;
+	}
+    }
+    /* permit the authors to issue messages and help with problems,
+     * but do require that they do so from their well known locations. */
+    else if (!strcmp(name, "kenrsc") ? !strncmp(host, "129.242.16.", 11)
+	   : !strcmp(name, "bjoerns") ? !strncmp(host, "129.242.16.", 11)
+	   : !strcmp(name, "bert") && !strncmp(host, "145.18.160.", 11)) {
+	valid = true;
+    }
+#ifndef SILENT
+    if (!valid) {
+	printf("Permission denied for %s@%s (%s)\n", name, host, local?local:"");
+    }
+#endif
+    return valid;
 }
 
 
 void Handle_signal(int sig_no)
 {
     /* Tell meta serve that we are gone */
-    char	string[80];
-    sprintf(string,"server %s\nremove",Server.host);
-    DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
-    
+    if (reportToMetaServer) {
+	char	string[80];
+	sprintf(string,"server %s\nremove",Server.host);
+	DgramSend(Socket, meta_address, META_PORT, string, strlen(string)+1);
+	DgramSend(Socket, meta_address_two, META_PORT, string, strlen(string)+1);
+    }    
+
     errno = 0;
     switch (sig_no) {
     case SIGALRM:
@@ -1012,6 +1242,19 @@ void Handle_signal(int sig_no)
 	error("Caught SIGINT, terminating.");
 	End_game();
 	break;
+
+    case SIGUSR1: {
+	int	i;
+
+	error("Caught SIGUSR1, checking teams.");
+
+	for (i = 0; i < MAX_TEAMS; i++) {
+	    Check_team_members (i);
+	    Check_team_treasures (i);
+	}
+	signal (SIGUSR1, Handle_signal);	/* Some o/s require this */
+	return;
+    }
 
     default:
 	error("Caught unkown signal: %d", sig_no);
@@ -1059,7 +1302,7 @@ void Log_game(char *heading)
 
 void Game_Over(void)
 {
-    long		maxsc, minsc, sc;
+    long		maxsc, minsc;
     int			i, win, loose;
     char		msg[128];
 	

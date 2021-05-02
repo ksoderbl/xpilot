@@ -14,8 +14,29 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * RCS:      $Header: /home/bert/xpilot/tromsoe/cvsroot/xpilot/src/socklib.h,v 3.5 1993/10/24 22:33:59 bert Exp $
+ * RCS:      $Header: /usr/local/tromsoe/cvsroot/xpilot/src/socklib.h,v 3.10 1994/04/10 13:21:24 bert Exp $
  * Log:      $Log: socklib.h,v $
+ * Revision 3.10  1994/04/10  13:21:24  bert
+ * Extended the way sockets are made non-blocking by trying three different
+ * possibilities depending upon which system include file constants are defined.
+ * Now fcntl(O_NDELAY), fcntl(FNDELAY) and ioctl(FIONBIO) are all tried until
+ * one of them succeeds.
+ * Improved GetLocalHostName for suns.
+ *
+ * Log:      $Log: socklib.h,v $
+ * Revision 3.9  1994/03/23  08:45:00  bert
+ * Fixed GetLocalHostName by adding a size parameter.
+ *
+ * Revision 3.8  1994/01/27  22:28:16  bert
+ * Added a new call GetLocalHostName() to get the fully qualified local hostname.
+ *
+ * Revision 3.7  1994/01/23  14:16:03  bert
+ * Added a SetSocketBroadcast() function.
+ *
+ * Revision 3.6  1994/01/20  21:19:48  bert
+ * Changes to get the prototypes when compiling with C++.
+ * Small change for C++ functionprototypes and the select system call.
+ *
  * Revision 3.5  1993/10/24  22:33:59  bert
  * Added prototypes for the new DgramReply() routine.
  *
@@ -86,6 +107,9 @@
 #ifndef _SOCKLIB_LIBSOURCE
 #ifdef VMS
 #include <in.h>			/* for sockaddr_in */
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN		64
+#endif
 #else
 #include <netinet/in.h>			/* for sockaddr_in */
 #endif
@@ -97,10 +121,18 @@ extern int
     sl_broadcast_enabled;
 extern struct sockaddr_in
     sl_dgram_lastaddr;
+
+#ifdef __cplusplus
+#ifndef __STDC__
+#define __STDC__	1
+#endif
+#endif
+
 #ifdef __STDC__
 extern void	SetTimeout(int, int);
 extern int	CreateServerSocket(int);
 extern int	GetPortNum(int);
+extern char	*GetSockAddr(int);
 extern int	GetPeerName(int, char *, int);
 extern int	CreateClientSocket(char *, int);
 extern int	SocketAccept(int);
@@ -109,6 +141,7 @@ extern int	SetSocketReceiveBufferSize(int, int);
 extern int	SetSocketSendBufferSize(int, int);
 extern int	SetSocketNoDelay(int, int);
 extern int	SetSocketNonBlocking(int, int);
+extern int	SetSocketBroadcast(int, int);
 extern int	GetSocketError(int);
 extern int	SocketReadable(int);
 extern int	SocketRead(int, char *, int);
@@ -124,10 +157,12 @@ extern int	DgramSendRec(int, char *, int, char *, int, char *, int);
 extern char	*DgramLastaddr(void);
 extern char	*DgramLastname(void);
 extern int	DgramLastport(void);
+extern void	GetLocalHostName(char *, unsigned);
 #else /* __STDC__ */
 extern void	SetTimeout();
 extern int	CreateServerSocket();
 extern int	GetPortNum();
+extern char	*GetSockAddr();
 extern int	GetPeerName();
 extern int	CreateClientSocket();
 extern int	SocketAccept();
@@ -136,6 +171,7 @@ extern int	SetSocketReceiveBufferSize();
 extern int	SetSocketSendBufferSize();
 extern int	SetSocketNoDelay();
 extern int	SetSocketNonBlocking();
+extern int	SetSocketBroadcast();
 extern int	GetSocketError();
 extern int	SocketReadable();
 extern int	SocketRead();
@@ -151,6 +187,12 @@ extern int	DgramSendRec();
 extern char	*DgramLastaddr();
 extern char	*DgramLastname();
 extern int	DgramLastport();
+extern void	GetLocalHostName();
 #endif /* __STDC__ */
+
+#ifdef __cplusplus
+int select(size_t n, fd_set *r, fd_set *w, fd_set *e, const struct timeval *t);
+#endif
+
 #endif /* _SOCKLIB_LIBSOURCE */
 #endif /* _SOCKLIB_INCLUDED */

@@ -1,6 +1,6 @@
-/* $Id: default.c,v 3.49 1993/11/11 23:20:56 bert Exp $
+/* $Id: default.c,v 3.68 1994/04/12 13:43:07 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,10 +24,11 @@
 #include "types.h"
 #include <X11/Xos.h>
 #include <X11/keysym.h>
+#include <X11/Xlib.h>
+#include <X11/Xresource.h>
 #ifdef	__apollo
 #    include <X11/ap_keysym.h>
 #endif
-#include <X11/Intrinsic.h>
 #include <sys/types.h>
 #ifdef VMS
 #include "strcasecmp.h"
@@ -42,6 +43,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+
 #include "version.h"
 #include "config.h"
 #include "const.h"
@@ -56,11 +58,11 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.49 1993/11/11 23:20:56 bert Exp $";
+    "@(#)$Id: default.c,v 3.68 1994/04/12 13:43:07 bjoerns Exp $";
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX	1024
+#ifndef MAXPATHLEN
+#define MAXPATHLEN	1024
 #endif
 
 /*
@@ -72,6 +74,8 @@ static char sourceid[] =
 #define BUTTON_FONT		"-*-*-bold-o-*-*-14-*-*-*-*-*-iso8859-1"
 #define TEXT_FONT		"-*-*-bold-i-*-*-14-*-*-*-p-*-iso8859-1"
 #define TALK_FONT		"-*-fixed-bold-*-*-*-15-*-*-*-c-*-iso8859-1"
+#define KEY_LIST_FONT		"-*-fixed-medium-r-*-*-10-*-*-*-c-*-iso8859-1"
+#define MOTD_FONT		"-*-courier-bold-r-*--14-*-*-*-*-*-iso8859-1"
 
 static struct _keyResources
 {
@@ -86,7 +90,7 @@ static struct _keyResources
 	KEY_TURN_RIGHT,			"Turn right (clockwise)" },
     { "keyThrust",			"Shift_R Shift_L",
 	KEY_THRUST,			"Thrust" },
-    { "keyShield",			"space Meta_R",
+    { "keyShield",			"space Caps_Lock",
 	KEY_SHIELD,			"Raise shield" },
     { "keyFireShot",			"Return Linefeed",
 	KEY_FIRE_SHOT,			"Fire shot" },
@@ -96,23 +100,23 @@ static struct _keyResources
 	KEY_FIRE_TORPEDO,		"Fire unguided torpedo" },
     { "keyFireHeat",			"semicolon",
 	KEY_FIRE_HEAT,			"Fire heat seaking missile" },
-    { "keyFireNuke",			"n",
-	KEY_FIRE_NUKE,			"Fire nuclear missile" },
     { "keyFireLaser",			"slash",
 	KEY_FIRE_LASER,			"Activate laser beam" },
     { "keyDropMine",			"Tab",
 	KEY_DROP_MINE,			"Drop a mine (bomb)" },
     { "keyDetachMine",			"bracketright",
 	KEY_DETACH_MINE,		"Detach a mine" },
-    { "keyLockClose",			"Select Up Down",
+    { "keyLockClose",			"Select Up",
 	KEY_LOCK_CLOSE,			"Lock on closest player" },
+    { "keyLockNextClose",		"Down",
+	KEY_LOCK_NEXT_CLOSE,		"Lock on next closest player" },
     { "keyLockNext",			"Next Right",
 	KEY_LOCK_NEXT,			"Lock on next player" },
     { "keyLockPrev",			"Prior Left",
 	KEY_LOCK_PREV,			"Lock on previous player" },
-    { "keyRefuel",			"f Control_L Control_R Caps_Lock",
+    { "keyRefuel",			"f Control_L Control_R",
 	KEY_REFUEL,			"Refuel" },
-    { "keyRepair",			"x",
+    { "keyRepair",			"f",
 	KEY_REPAIR,			"Repair target" },
     { "keyCloak",			"Delete BackSpace",
 	KEY_CLOAK,			"Toggle cloakdevice" },
@@ -120,8 +124,8 @@ static struct _keyResources
 	KEY_ECM,			"Use ECM" },
     { "keySelfDestruct",		"q",
 	KEY_SELF_DESTRUCT,		"Toggle self destruct" },
-    { "keyIdMode",			"i",
-	KEY_ID_MODE,			"Toggle ID mode (show realname)" },
+    { "keyIdMode",			"u",
+	KEY_ID_MODE,			"Toggle User mode (show realname)" },
     { "keyPause",			"p Pause",
 	KEY_PAUSE,			"Toggle pause mode" },
     { "keySwapSettings",		"Escape",
@@ -138,20 +142,58 @@ static struct _keyResources
 	KEY_TANK_PREV,			"Shift to previous tank" },
     { "keyTankDetach",			"r",
 	KEY_TANK_DETACH,		"Detach tank" },
-    { "keyIncreasePower",		"KP_Multiply KP_F1",
+    { "keyIncreasePower",		"KP_Multiply",
 	KEY_INCREASE_POWER,		"Increase power" },
-    { "keyDecreasePower",		"KP_Divide KP_F2",
+    { "keyDecreasePower",		"KP_Divide",
 	KEY_DECREASE_POWER,		"Decrease power" },
-    { "keyIncreaseTurnspeed",		"KP_Add KP_F3",
+    { "keyIncreaseTurnspeed",		"KP_Add",
 	KEY_INCREASE_TURNSPEED,		"Increase turnspeed" },
-    { "keyDecreaseTurnspeed",		"KP_Subtract KP_F4",
+    { "keyDecreaseTurnspeed",		"KP_Subtract",
 	KEY_DECREASE_TURNSPEED,		"Decrease turnspeed" },
     { "keyTransporter",			"t",
 	KEY_TRANSPORTER,		"Use transporter" },
     { "keyTalk",			"m",
 	KEY_TALK,			"Enable/disable talk window" },
-    { "keyToggleCompass",		"c",
-	KEY_TOGGLE_COMPASS,		"Enable/disable locking on players" }
+    { "keyToggleNuclear",		"n",
+	KEY_TOGGLE_NUCLEAR,		"Toggle nuclear weapon mode" },
+    { "keyToggleCluster",		"c",
+	KEY_TOGGLE_CLUSTER,		"Toggle cluster weapon mode" },
+    { "keyToggleImplosion",		"i",
+	KEY_TOGGLE_IMPLOSION,		"Toggle implosion weapon mode" },
+    { "keyToggleVelocity",		"v",
+	KEY_TOGGLE_VELOCITY,		"Toggle explosion velocity mode" },
+    { "keyToggleMini",			"x",
+	KEY_TOGGLE_MINI,		"Toggle mini weapon mode" },
+    { "keyToggleSpread",		"z",
+	KEY_TOGGLE_SPREAD,		"Toggle spread weapon mode" },
+    { "keyTogglePower",			"b",
+	KEY_TOGGLE_POWER,		"Toggle power weapon mode" },
+    { "keyToggleCompass",		"y",
+	KEY_TOGGLE_COMPASS,		"Toggle HUD/radar compass lock" },
+    { "keyToggleAutoPilot",		"h",
+	KEY_TOGGLE_AUTOPILOT,		"Toggle automatic pilot mode" },
+    { "keyToggleLaser",			"l",
+	KEY_TOGGLE_LASER,		"Toggle laser modifier" },
+    { "keyEmergencyThrust",		"j",
+	KEY_EMERGENCY_THRUST,		"Pull emergency thrust handle" },
+    { "keyTractorBeam",			"comma",
+	KEY_TRACTOR_BEAM,		"Use tractor beam in attract mode" },
+    { "keyPressorBeam",			"period",
+	KEY_PRESSOR_BEAM,		"Use tractor beam in repulse mode" },
+    { "keyClearModifiers",		"k",
+	KEY_CLEAR_MODIFIERS,		"Clear current modifiers" },
+    { "keyLoadModifiers1",		"1",
+	KEY_LOAD_MODIFIERS_1,		"Load modifiers in bank 1" },
+    { "keyLoadModifiers2",		"2",
+	KEY_LOAD_MODIFIERS_2,		"Load modifiers in bank 2" },
+    { "keyLoadModifiers3",		"3",
+	KEY_LOAD_MODIFIERS_3,		"Load modifiers in bank 3" },
+    { "keyLoadModifiers4",		"4",
+	KEY_LOAD_MODIFIERS_4,		"Load modifiers in bank 4" },
+    { "keyToggleOwnedItems",		"o",
+	KEY_TOGGLE_OWNED_ITEMS,		"Toggle list of owned items on HUD" },
+    { "keyToggleMessages",		"0",
+	KEY_TOGGLE_MESSAGES,		"Toggle showing of messages" },
 };
 
 
@@ -164,8 +206,10 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-join",				".join",
 	XrmoptionNoArg,				"True" },
-    { "-motd",				".motd",
+    { "-noLocalMotd",			".noLocalMotd",
 	XrmoptionNoArg,				"True" },
+    { "-autoServerMotdPopup",		".autoServerMotdPopup",
+    	XrmoptionSepArg,			NULL },
     { "-list",				".list",
 	XrmoptionNoArg,				"True" },
     { "-team",				".team",
@@ -186,6 +230,8 @@ static XrmOptionDescRec opts[] = {
     { "-audioServer",			".audioServer",
     	XrmoptionSepArg,			NULL },
 #endif
+    { "-shipShape",			".shipShape",
+    	XrmoptionSepArg,			NULL },
     { "-power",				".power",
     	XrmoptionSepArg,			NULL },
     { "-turnspeed",			".turnspeed",
@@ -245,7 +291,11 @@ static XrmOptionDescRec opts[] = {
     { "-textFont",			".textFont",
     	XrmoptionSepArg,			NULL },
     { "-talkFont",			".talkFont",
-        XrmoptionSepArg,			NULL },
+	XrmoptionSepArg,			NULL },
+    { "-keyListFont",			".keyListFont",
+	XrmoptionSepArg,			NULL },
+    { "-motdFont",			".motdFont",
+	XrmoptionSepArg,			NULL },
     { "-backGroundPointDist",		".backGroundPointDist",
 	XrmoptionSepArg,			NULL },
     { "-receiveWindowSize",		".receiveWindowSize",
@@ -298,6 +348,14 @@ static XrmOptionDescRec opts[] = {
     	XrmoptionSepArg,			NULL },
     { "-color15",			".color15",
     	XrmoptionSepArg,			NULL },
+    { "-modifierBank1",			".modifierBank1",
+    	XrmoptionSepArg,			NULL },
+    { "-modifierBank2",			".modifierBank2",
+    	XrmoptionSepArg,			NULL },
+    { "-modifierBank3",			".modifierBank3",
+    	XrmoptionSepArg,			NULL },
+    { "-modifierBank4",			".modifierBank4",
+    	XrmoptionSepArg,			NULL },
     { "-keyTurnLeft",			".keyTurnLeft",
 	XrmoptionSepArg,			NULL },
     { "-keyTurnRight",			".keyTurnRight",
@@ -314,8 +372,6 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-keyFireHeat",			".keyFireHeat",
 	XrmoptionSepArg,			NULL },
-    { "-keyFireNuke",			".keyFireNuke",
-	XrmoptionSepArg,			NULL },
     { "-keyFireLaser",			".keyFireLaser",
 	XrmoptionSepArg,			NULL },
     { "-keyDropMine",			".keyDropMine",
@@ -324,11 +380,15 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-keyLockClose",			".keyLockClose",
 	XrmoptionSepArg,			NULL },
+    { "-keyLockNextClose",		".keyLockNextClose",
+	XrmoptionSepArg,			NULL },
     { "-keyLockNext",			".keyLockNext",
 	XrmoptionSepArg,			NULL },
     { "-keyLockPrev",			".keyLockPrev",
 	XrmoptionSepArg,			NULL },
     { "-keyRefuel",			".keyRefuel",
+	XrmoptionSepArg,			NULL },
+    { "-keyRepair",			".keyRepair",
 	XrmoptionSepArg,			NULL },
     { "-keyCloak",			".keyCloak",
 	XrmoptionSepArg,			NULL },
@@ -366,12 +426,46 @@ static XrmOptionDescRec opts[] = {
 	XrmoptionSepArg,			NULL },
     { "-keyTalk",			".keyTalk",
 	XrmoptionSepArg,			NULL },
+    { "-keyToggleNuclear",		".keyToggleNuclear",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleCluster",		".keyToggleCluster",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleImplosion",		".keyToggleImplosion",
+	XrmoptionSepArg,			NULL },
     { "-keyToggleVelocity",		".keyToggleVelocity",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleMini",			".keyToggleMini",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleSpread",		".keyToggleSpread",
+	XrmoptionSepArg,			NULL },
+    { "-keyTogglePower",		".keyTogglePower",
 	XrmoptionSepArg,			NULL },
     { "-keyToggleCompass",		".keyToggleCompass",
 	XrmoptionSepArg,			NULL },
-    { "-toggleShield",			".toggleShield",
-	XrmoptionSepArg,			NULL }
+    { "-keyToggleAutoPilot",		".keyToggleAutoPilot",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleLaser",		".keyToggleLaser",
+	XrmoptionSepArg,			NULL },
+    { "-keyEmergencyThrust",		".keyEmergencyThrust",
+	XrmoptionSepArg,			NULL },
+    { "-keyTractorBeam",		".keyTractorBeam",
+	XrmoptionSepArg,			NULL },
+    { "-keyPressorBeam",		".keyPressorBeam",
+	XrmoptionSepArg,			NULL },
+    { "-keyClearModifiers",		".keyClearModifiers",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadModifiers1",		".keyLoadModifiers1",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadModifiers2",		".keyLoadModifiers2",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadModifiers3",		".keyLoadModifiers3",
+	XrmoptionSepArg,			NULL },
+    { "-keyLoadModifiers4",		".keyLoadModifiers4",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleOwnedItems",		".keyToggleOwnedItems",
+	XrmoptionSepArg,			NULL },
+    { "-keyToggleMessages",		".keyToggleMessages",
+	XrmoptionSepArg,			NULL },
 };
 
 
@@ -536,9 +630,6 @@ static void Get_int_resource(XrmDatabase db, char *myName, char *myClass,
 static void Get_file_defaults(XrmDatabase *rDBptr,
 			      char *myName, char *myClass)
 {
-#ifdef VMS
-#define MAXPATHLEN 1024
-#endif
     int			len;
     char		*ptr,
 			*lang = getenv("LANG"),
@@ -631,8 +722,8 @@ static void Get_file_defaults(XrmDatabase *rDBptr,
 }
 
 
-void Parse_options(int *argcp, char **argvp, char *realName, char *host,
-		   int *port, int *my_team, int *list, int *join, int *motd,
+void Parse_options(int *argcp, char **argvp, char *realName,
+		   int *port, int *my_team, int *list, int *join, int *noLocalMotd,
 		   char *nickName, char *dispName, char *shut_msg)
 {
     int			i,
@@ -645,7 +736,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 			*str,
 			*myName = "xpilot",
 			*myClass = "XPilot",
-			resValue[MAX_CHARS];
+			resValue[MSG_LEN];
     XrmDatabase		argDB, rDB;
 
     XrmInitialize();
@@ -659,7 +750,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     for (i = 1; i < *argcp; i++) {
 	if (argvp[i][0] == '-') {
 	    errno = 0;
-	    error("Unknown option '%s'", argvp[i]);
+	    error("Unknown or incomplete option '%s'", argvp[i]);
 	    error("Type: %s -help to see a list of options", argvp[0]);
 	    exit(1);
 	}
@@ -692,7 +783,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 	} else {
 #ifdef VMS
 	    strcpy(dispName, "::0.0");
-	    sprintf(dispName, "%s::0.0", host);
 #else
 	    strcpy(dispName, ":0.0");
 #endif
@@ -700,6 +790,17 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     }
     if ((dpy = XOpenDisplay(dispName)) == NULL) {
 	error("Can't open display '%s'", dispName);
+	if (strcmp(dispName, "NO_X") == 0) {
+	    /* user does not want X stuff.  experimental.  use at own risk. */
+	    strcpy(nickName, realName);
+	    *my_team = TEAM_NOT_SET;
+	    *port = SERVER_PORT;
+	    *list = false;
+	    *join = false;
+	    *shut_msg = '\0';
+	    *noLocalMotd = true;
+	    return;
+	}
 	exit(1);
     }
     Get_resource(argDB, myName, myClass, "visual", "",
@@ -734,10 +835,19 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 	*my_team = TEAM_NOT_SET;
     }
     team = *my_team;
+
     Get_int_resource(rDB, myName, myClass, "port", SERVER_PORT, port);
     Get_bool_resource(rDB, myName, myClass, "list", "False", list);
     Get_bool_resource(rDB, myName, myClass, "join", "False", join);
-    Get_bool_resource(rDB, myName, myClass, "motd", "True", motd);
+    Get_bool_resource(rDB, myName, myClass, "noLocalMotd", "False",
+		      noLocalMotd);
+    Get_bool_resource(rDB, myName, myClass, "autoServerMotdPopup", "True", &i);
+    autoServerMotdPopup = (i != 0) ? true : false;
+
+    Get_resource(rDB, myName, myClass, "shipShape", "", resValue,
+		 sizeof resValue);
+    shipShape = strdup(resValue);
+    Validate_shape_str(shipShape);
 
     Get_float_resource(rDB, myName, myClass, "power", 45.0, &power);
     Get_float_resource(rDB, myName, myClass, "turnSpeed", 35.0, &turnspeed);
@@ -764,6 +874,33 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_int_resource(rDB, myName, myClass, "sparkSize",
 		     DEF_SPARK_SIZE, &spark_size);
     LIMIT(spark_size, MIN_SPARK_SIZE, MAX_SPARK_SIZE);
+    Get_int_resource(rDB, myName, myClass, "shotSize",
+		     DEF_SHOT_SIZE, &shot_size);
+    LIMIT(shot_size, MIN_SHOT_SIZE, MAX_SHOT_SIZE);
+    Get_int_resource(rDB, myName, myClass, "teamShotSize",
+		     DEF_TEAMSHOT_SIZE, &teamshot_size);
+    LIMIT(teamshot_size, MIN_TEAMSHOT_SIZE, MAX_TEAMSHOT_SIZE);
+    Get_bool_resource(rDB, myName, myClass, "titleFlip", "True",
+		      &titleFlip);
+    /*
+     * This is a special value; default or not defined means choose depending
+     * on the display, otherwise its a boolean value.
+     */
+    Get_string_resource(rDB, myName, myClass, "shieldDrawSolid", "Default",
+		      resValue, sizeof resValue);
+    if (strncasecmp(resValue, "default", 7) == 0)
+	shieldDrawMode = -1;
+    else
+	shieldDrawMode = ON(resValue);
+
+    Get_resource(rDB, myName, myClass, "modifierBank1", "",
+		 modBankStr[0], sizeof modBankStr[0]);
+    Get_resource(rDB, myName, myClass, "modifierBank2", "",
+		 modBankStr[1], sizeof modBankStr[1]);
+    Get_resource(rDB, myName, myClass, "modifierBank3", "",
+		 modBankStr[2], sizeof modBankStr[2]);
+    Get_resource(rDB, myName, myClass, "modifierBank4", "",
+		 modBankStr[3], sizeof modBankStr[3]);
 
     Get_resource(rDB, myName, myClass, "visual", "",
 		 visualName, sizeof visualName);
@@ -774,13 +911,13 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_int_resource(rDB, myName, myClass, "maxColors", 4,
 		     &maxColors);
     Get_string_resource(rDB, myName, myClass, "black", "",
-			color_names[BLACK], sizeof(color_names[BLACK]));
+			color_names[0], sizeof(color_names[0]));
     Get_string_resource(rDB, myName, myClass, "white", "",
-			color_names[WHITE], sizeof(color_names[WHITE]));
+			color_names[1], sizeof(color_names[1]));
     Get_string_resource(rDB, myName, myClass, "blue", "",
-			color_names[BLUE], sizeof(color_names[BLUE]));
+			color_names[2], sizeof(color_names[2]));
     Get_string_resource(rDB, myName, myClass, "red", "",
-			color_names[RED], sizeof(color_names[RED]));
+			color_names[3], sizeof(color_names[3]));
     for (i = 0; i < MAX_COLORS; i++) {
 	char buf[8], def[MAX_COLOR_LEN];
 	sprintf(buf, "color%d", i);
@@ -793,6 +930,14 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     Get_bool_resource(rDB, myName, myClass, "showShipName", "True", &i);
     if (i) {
 	SET_BIT(instruments, SHOW_SHIP_NAME);
+    }
+    Get_bool_resource(rDB, myName, myClass, "showMineName", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_MINE_NAME);
+    }
+    Get_bool_resource(rDB, myName, myClass, "showMessages", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_MESSAGES);
     }
     Get_bool_resource(rDB, myName, myClass, "showHUD", "True", &i);
     if (i) {
@@ -842,10 +987,17 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
     if (i) {
 	SET_BIT(instruments, SHOW_OUTLINE_WORLD);
     }
+    Get_bool_resource(rDB, myName, myClass, "showItems", "True", &i);
+    if (i) {
+	SET_BIT(instruments, SHOW_ITEMS);
+    }
     Get_bool_resource(rDB, myName, myClass, "clock", "False", &i);
     if (i) {
 	SET_BIT(instruments, SHOW_CLOCK);
     }
+    Get_float_resource(rDB, myName, myClass, "showItemsTime", 
+		       DEF_SHOW_ITEMS_TIME, &showItemsTime);
+    LIMIT(showItemsTime, MIN_SHOW_ITEMS_TIME, MAX_SHOW_ITEMS_TIME);
 
     Get_float_resource(rDB, myName, myClass, "speedFactHUD", 0.0,
 		       &hud_move_fact);
@@ -867,6 +1019,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, char *host,
 		 textFontName, sizeof textFontName);
     Get_resource(rDB, myName, myClass, "talkFont", TALK_FONT,
 		 talkFontName, sizeof talkFontName);
+    Get_resource(rDB, myName, myClass, "keyListFont", KEY_LIST_FONT,
+		 keyListFontName, sizeof keyListFontName);
+    Get_resource(rDB, myName, myClass, "motdFont", MOTD_FONT,
+		 motdFontName, sizeof motdFontName);
 
     Get_int_resource(rDB, myName, myClass, "receiveWindowSize",
 		     DEF_RECEIVE_WINDOW_SIZE, &receive_window_size);

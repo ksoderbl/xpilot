@@ -1,6 +1,6 @@
-/* $Id: types.h,v 3.9 1993/12/19 19:06:43 bert Exp $
+/* $Id: types.h,v 3.11 1994/03/05 22:07:15 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -70,7 +70,7 @@ typedef ivec			ipos;
  * is used to prevent any integer vs. pointer clashes
  * and to allow for C++ compilation.
  */
-#if defined(__linux)
+#if defined(__linux__)
 #define select_t fd_set
 #define select(N, R, W, E, T)	select((N),		\
 	(select_t*)(R), (select_t*)(W), (select_t*)(E), (T))

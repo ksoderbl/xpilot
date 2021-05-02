@@ -1,6 +1,6 @@
-/* $Id: option.c,v 3.13 1993/11/07 23:17:45 bert Exp $
+/* $Id: option.c,v 3.18 1994/02/07 13:20:15 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -127,8 +127,8 @@ void addOption(char *name, char *value, int override, void *def)
     tmp = newOption(name, value);
     if (!tmp)
 	return;
-    tmp->next = hashArray[ix];
     tmp->def = def;
+    tmp->next = hashArray[ix];
     hashArray[ix] = tmp;
 }
 
@@ -377,6 +377,7 @@ static void parseLine(FILE *ifile)
     /*
      * if (multiline) free (value);
      */
+    if (multiline) free (value);
     free(name);
     free(head);
     return;
@@ -559,15 +560,33 @@ bool parseDefaultsFile(char *filename)
 void parseOptions(void)
 {
     int         i;
-    valPair    *tmp;
+    valPair    *tmp, *next;
+    char       *fpsstr;
     optionDesc *desc;
 
+    /*
+     * This must be done in order that FPS will return the eventual
+     * frames per second for computing valSec and valPerSec.
+     */
+    if ((fpsstr = getOption("framesPerSecond")) != NULL)
+	framesPerSecond = atoi(fpsstr);
+    if (FPS <= 0) {
+	errno = 0;
+	error("Can't run with %d frames per second, should be positive\n",
+	    FPS);
+	End_game();
+    }
+    
     for (i = 0; i < NHASH; i++)
 	for (tmp = hashArray[i]; tmp; tmp = tmp->next) {
 	    /* Does it have a default?   (If so, get a pointer to it) */
 	    if (desc = (optionDesc *)tmp->def) {
 		if (desc->variable) {
 		    switch (desc->type) {
+
+		    case valVoid:
+			break;
+
 		    case valInt:
 			{
 			    int        *ptr = desc->variable;
@@ -626,8 +645,37 @@ void parseOptions(void)
 			    *ptr = tmp->value;
 			    break;
 			}
+
+		    case valSec:
+			{
+			    int		*ptr = (int *)desc->variable;
+
+			    *ptr = (int)(atof(tmp->value) * FPS);
+			    break;
+			}
+
+		    case valPerSec:
+			{
+			    float	*ptr = (float *)desc->variable;
+
+			    *ptr = (float)(atof(tmp->value) / FPS);
+			    break;
+			}
 		    }
 		}
 	    }
 	}
+
+    for (i = 0; i < NHASH; i++) {
+	for (tmp = hashArray[i]; tmp; tmp = next) {
+	    free(tmp->name);
+	    next = tmp->next;
+	    memset((void *)tmp, 0, sizeof(*tmp));
+	    free(tmp);
+	}
+    }
 }
+
+
+
+

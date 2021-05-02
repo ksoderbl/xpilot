@@ -1,6 +1,6 @@
-/* $Id: configure.c,v 3.25 1993/11/23 22:08:14 bert Exp $
+/* $Id: configure.c,v 3.30 1994/03/30 16:53:02 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -96,6 +96,7 @@ static int Config_create_turnResistance(int widget_desc, int *height);
 static int Config_create_altPower(int widget_desc, int *height);
 static int Config_create_altTurnSpeed(int widget_desc, int *height);
 static int Config_create_altTurnResistance(int widget_desc, int *height);
+static int Config_create_showMessages(int widget_desc, int *height);
 static int Config_create_showHUD(int widget_desc, int *height);
 static int Config_create_horizontalHUDLine(int widget_desc, int *height);
 static int Config_create_verticalHUDLine(int widget_desc, int *height);
@@ -107,16 +108,21 @@ static int Config_create_fuelCritical(int widget_desc, int *height);
 static int Config_create_fuelGauge(int widget_desc, int *height);
 static int Config_create_outlineWorld(int widget_desc, int *height);
 static int Config_create_slidingRadar(int widget_desc, int *height);
+static int Config_create_showItems(int widget_desc, int *height);
+static int Config_create_showItemsTime(int widget_desc, int *height);
 static int Config_create_backgroundPointDist(int widget_desc, int *height);
 static int Config_create_backgroundPointSize(int widget_desc, int *height);
 static int Config_create_sparkSize(int widget_desc, int *height);
 static int Config_create_charsPerSecond(int widget_desc, int *height);
 static int Config_create_toggleShield(int widget_desc, int *height);
 static int Config_create_sparkProb(int widget_desc, int *height);
+static int Config_create_shotSize(int widget_desc, int *height);
+static int Config_create_teamShotSize(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
 #endif
 static int Config_create_showShipName(int widget_desc, int *height);
+static int Config_create_showMineName(int widget_desc, int *height);
 static int Config_create_fuelMeter(int widget_desc, int *height);
 static int Config_create_powerMeter(int widget_desc, int *height);
 static int Config_create_turnSpeedMeter(int widget_desc, int *height);
@@ -186,6 +192,7 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_altPower,
     Config_create_altTurnSpeed,
     Config_create_altTurnResistance,
+    Config_create_showMessages,
     Config_create_showHUD,
     Config_create_horizontalHUDLine,
     Config_create_verticalHUDLine,
@@ -197,6 +204,8 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_fuelGauge,
     Config_create_outlineWorld,
     Config_create_slidingRadar,
+    Config_create_showItems,
+    Config_create_showItemsTime,
     Config_create_backgroundPointDist,
     Config_create_backgroundPointSize,
     Config_create_sparkSize,
@@ -204,10 +213,13 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_charsPerSecond,
     Config_create_markingLights,
     Config_create_toggleShield,
+    Config_create_shotSize,
+    Config_create_teamShotSize,
 #ifdef SOUND
     Config_create_maxVolume,
 #endif
     Config_create_showShipName,
+    Config_create_showMineName,
     Config_create_fuelMeter,
     Config_create_powerMeter,
     Config_create_turnSpeedMeter,
@@ -578,6 +590,15 @@ static int Config_create_altTurnResistance(int widget_desc, int *height)
 			       Config_update_altTurnResistance, NULL);
 }
 
+static int Config_create_showMessages(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "showMessages",
+                            BIT(instruments, SHOW_MESSAGES)
+                                ? true : false,
+                            Config_update_instruments,
+                            (void *) SHOW_MESSAGES);
+}
+
 static int Config_create_showHUD(int widget_desc, int *height)
 {
     return Config_create_bool(widget_desc, height, "showHUD",
@@ -677,6 +698,24 @@ static int Config_create_backgroundPointDist(int widget_desc, int *height)
 			     Config_update_dots, NULL);
 }
 
+static int Config_create_showItems(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "showItems",
+                            BIT(instruments, SHOW_ITEMS)
+                                ? true : false,
+                            Config_update_instruments,
+                            (void *) SHOW_ITEMS);
+}
+
+static int Config_create_showItemsTime(int widget_desc, int *height)
+{
+    return Config_create_float(widget_desc, height,
+                             "showItemsTime", &showItemsTime,
+                             MIN_SHOW_ITEMS_TIME,
+                             MAX_SHOW_ITEMS_TIME,
+                             NULL, NULL);
+}
+
 static int Config_create_backgroundPointSize(int widget_desc, int *height)
 {
     return Config_create_int(widget_desc, height,
@@ -716,6 +755,22 @@ static int Config_create_toggleShield(int widget_desc, int *height)
 			      Config_update_toggleShield, NULL);
 }
 
+static int Config_create_shotSize(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+                           "shotSize", &shot_size,
+                           MIN_SHOT_SIZE, MAX_SHOT_SIZE,
+                           NULL, NULL);
+}
+
+static int Config_create_teamShotSize(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+                           "teamShotSize", &teamshot_size,
+                           MIN_TEAMSHOT_SIZE, MAX_TEAMSHOT_SIZE,
+                           NULL, NULL);
+}
+
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height)
 {
@@ -732,6 +787,15 @@ static int Config_create_showShipName(int widget_desc, int *height)
 				  ? true : false,
 			      Config_update_instruments,
 			      (void *) SHOW_SHIP_NAME);
+}
+
+static int Config_create_showMineName(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "showMineName",
+			      BIT(instruments, SHOW_MINE_NAME)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_MINE_NAME);
 }
 
 static int Config_create_fuelMeter(int widget_desc, int *height)
@@ -839,7 +903,7 @@ static int Config_create_save(int widget_desc, int *height)
  */
 static int Config_update_bool(int widget_desc, void *data, bool *val)
 {
-    bool*	client_data = data;
+    bool*	client_data = (bool *) data;
     *client_data = *val;
     return 0;
 }
@@ -1106,6 +1170,8 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_float(fp, "fuelWarning", fuelLevel2);
     Config_save_float(fp, "fuelCritical", fuelLevel1);
     Config_save_bool(fp, "showShipName", BIT(instruments, SHOW_SHIP_NAME));
+    Config_save_bool(fp, "showMineName", BIT(instruments, SHOW_MINE_NAME));
+    Config_save_bool(fp, "showMessages", BIT(instruments, SHOW_MESSAGES));
     Config_save_bool(fp, "showHUD", BIT(instruments, SHOW_HUD_INSTRUMENTS));
     Config_save_bool(fp, "verticalHUDLine", BIT(instruments, SHOW_HUD_VERTICAL));
     Config_save_bool(fp, "horizontalHUDLine", BIT(instruments, SHOW_HUD_HORIZONTAL));
@@ -1117,12 +1183,16 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_bool(fp, "packetLossMeter", BIT(instruments, SHOW_PACKET_LOSS_METER));
     Config_save_bool(fp, "packetDropMeter", BIT(instruments, SHOW_PACKET_DROP_METER));
     Config_save_bool(fp, "slidingRadar", BIT(instruments, SHOW_SLIDING_RADAR));
+    Config_save_bool(fp, "showItems", BIT(instruments, SHOW_ITEMS));
+    Config_save_float(fp, "showItemsTime", showItemsTime);
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
     Config_save_bool(fp, "clock", BIT(instruments, SHOW_CLOCK));
     Config_save_int(fp, "backgroundPointDist", map_point_distance);
     Config_save_int(fp, "backgroundPointSize", map_point_size);
     Config_save_int(fp, "sparkSize", spark_size);
     Config_save_float(fp, "sparkProb", spark_prob);
+    Config_save_int(fp, "shotSize", shot_size);
+    Config_save_int(fp, "teamShotSize", teamshot_size);
     Config_save_int(fp, "receiveWindowSize", receive_window_size);
     Config_save_int(fp, "charsPerSecond", charsPerSecond);
     Config_save_bool(fp, "markingLights", markingLights);
@@ -1147,6 +1217,10 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 	    strcat(buf, " ");
 	}
 	strcat(buf, str);
+    }
+    for (i = 0; i < NUM_MODBANKS; i++) {
+	sprintf(buf, "modifierBank%d", i + 1);
+	Config_save_resource(fp, buf, modBankStr[i]);
     }
     Xpilotrc_end(fp);
     fclose(fp);

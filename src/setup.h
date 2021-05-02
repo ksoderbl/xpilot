@@ -1,6 +1,6 @@
-/* $Id: setup.h,v 3.11 1993/10/20 00:04:09 bjoerns Exp $
+/* $Id: setup.h,v 3.12 1994/02/07 13:20:45 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)

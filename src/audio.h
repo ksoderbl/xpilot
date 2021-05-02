@@ -1,6 +1,6 @@
-/* $Id: audio.h,v 3.7 1993/10/01 19:58:10 bjoerns Exp $
+/* $Id: audio.h,v 3.10 1994/02/07 13:19:14 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,6 +24,9 @@
 
 #ifndef _audio_h
 #define _audio_h
+
+#define SOUND_MAX_VOLUME	100
+#define SOUND_MIN_VOLUME	10
 
 enum {
     START_SOUND,
@@ -72,7 +75,26 @@ enum {
     NUKE_EXPLOSION_SOUND,
     PLAYER_RAN_OVER_PLAYER_SOUND,
     LASER_PICKUP_SOUND,
+    EMERGENCY_THRUST_PICKUP_SOUND,
+    AUTOPILOT_PICKUP_SOUND,
+    TRACTOR_BEAM_PICKUP_SOUND,
+    PLAYER_BOUNCED_SOUND,
     FIRE_LASER_SOUND,
+    AUTOPILOT_ON_SOUND,
+    AUTOPILOT_OFF_SOUND,
+    EMERGENCY_THRUST_ON_SOUND,
+    EMERGENCY_THRUST_OFF_SOUND,
+    TRACTOR_BEAM_SOUND,
+    PRESSOR_BEAM_SOUND,
+    CONNECT_BALL_SOUND,
+    DROP_BALL_SOUND,
+    EXPLODE_BALL_SOUND,
+    DESTROY_BALL_SOUND,
+    DESTROY_TARGET_SOUND,
+    TEAM_WIN_SOUND,
+    TEAM_DRAW_SOUND,
+    PLAYER_WIN_SOUND,
+    PLAYER_DRAW_SOUND,
     PLAYER_ROASTED_SOUND,
     PLAYER_EAT_LASER_SOUND,
     MAX_SOUNDS,
@@ -128,7 +150,26 @@ static char    *soundNames[] =
     "nuke_explosion",
     "player_ran_over_player",
     "laser_pickup",
+    "emergency_thrust_pickup",
+    "autopilot_pickup",
+    "tractor_beam_pickup",
+    "player_bounced",
     "fire_laser",
+    "autopilot_on",
+    "autopilot_off",
+    "emergency_thrust_on",
+    "emergency_thrust_off",
+    "tractor_beam",
+    "pressor_beam",
+    "connect_ball",
+    "drop_ball",
+    "explode_ball",
+    "destroy_ball",
+    "destroy_target",
+    "team_win",
+    "team_draw",
+    "player_win",
+    "player_draw",
     "player_roasted",
     "player_eat_laser",
 };

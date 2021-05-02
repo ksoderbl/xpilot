@@ -2,6 +2,15 @@ This is a very abbreviated credit list.  We couldn't possibly enumerate
 all the people who have been involved in XPilot, especially since we have
 no such list at hand. :)
 
+Release 3.1 credits:
+
+	Harvey Thompson			Lots of first class wonderful new
+					features, ideas and cleanups.  Thanks!
+	Mark Boyns			Sound.
+	Stig Sæther Bakken		Imakefile, testing & feedback.
+	Scott W. Adkins			Ship shapes, item bitmaps.
+	Tony Plate			Missile length and names.
+
 Release 3.0 credits:
 
 	Maurice Abraham			Robots, more flexible bouncing etc.
@@ -10,8 +19,8 @@ Release 3.0 credits:
 					and added NCD sound support.
 	Dave Lemke
 	Curt Hjorring			VMS port.
-	Andrew Scherpbier		Random sound patch.
-	Stephen Singer
+	Andrew Scherpbier		Random sound patch.  Xpmtp.
+	Steven Singer			Sun tester & knowledge provider. :-)
 	Andy Skinner
 	Tero Kivinen			Outline world.
 	David Chatterton		Ultrix and SGI.
@@ -19,6 +28,7 @@ Release 3.0 credits:
 	Fred Hucht & Michael Staats	Several (big) patches
 	Maurice Abraham
 	Makoto Matsushita
+	Stig Sæther Bakken		patches & feedback.
 	& all the beta testers
 
 Version 2.0 credits:	(Never released)

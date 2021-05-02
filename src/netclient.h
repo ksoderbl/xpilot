@@ -1,6 +1,6 @@
-/* $Id: netclient.h,v 3.17 1993/10/28 21:15:01 bert Exp $
+/* $Id: netclient.h,v 3.23 1994/04/05 20:28:09 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -33,7 +33,7 @@
 extern int			receive_window_size;
 
 int Net_setup(void);
-int Net_verify(char *real, char *nick, char *dpy);
+int Net_verify(char *real, char *nick, char *dpy, int my_team);
 int Net_init(char *server, int port);
 void Net_cleanup(void);
 void Net_key_change(void);
@@ -46,18 +46,22 @@ int Receive_start(void);
 int Receive_end(void);
 int Receive_message(void);
 int Receive_self(void);
+int Receive_modifiers(void);
 int Receive_refuel(void);
 int Receive_connector(void);
 int Receive_laser(void);
-int Receive_smart(void);
+int Receive_missile(void);
 int Receive_ball(void);
 int Receive_ship(void);
 int Receive_mine(void);
 int Receive_item(void);
 int Receive_destruct(void);
 int Receive_shutdown(void);
+int Receive_thrusttime(void);
 int Receive_debris(void);
+int Receive_fastshot(void);
 int Receive_shot(void);
+int Receive_teamshot(void);
 int Receive_ecm(void);
 int Receive_trans(void);
 int Receive_paused(void);
@@ -79,6 +83,7 @@ int Receive_string(void);
 int Receive_reply(int *replyto, int *result);
 int Send_ack(long rel_loops);
 int Send_keyboard(u_byte *);
+int Send_shape(char *);
 int Send_power(float power);
 int Send_power_s(float power_s);
 int Send_turnspeed(float turnspeed);
@@ -89,9 +94,12 @@ int Receive_audio(void);
 int Receive_talk_ack(void);
 int Send_talk(void);
 int Send_display(void);
+int Send_modifier_bank(int);
 int Net_talk(char *str);
+int Net_ask_for_motd(long offset, long maxlen);
 int Receive_time_left(void);
 int Receive_eyes(void);
+int Receive_motd(void);
 int Receive_magic(void);
 
 #endif

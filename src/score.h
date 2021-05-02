@@ -1,6 +1,6 @@
-/* $Id: score.h,v 3.14 1993/09/27 02:08:18 bert Exp $
+/* $Id: score.h,v 3.20 1994/02/13 15:46:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -34,10 +34,11 @@
 #define ED_SHOT_HIT		(-25.0*FUEL_SCALE_FACT)
 #define ED_SMART_SHOT_HIT	(-120.0*FUEL_SCALE_FACT)
 #define ED_PL_CRASH		(-100.0*FUEL_SCALE_FACT)
+#define ED_BALL_HIT		(-50.0*FUEL_SCALE_FACT)
 #define ED_LASER		(-10.0*FUEL_SCALE_FACT)
 /* was 90 -> 2 -> 40 -> 20 -> 10 */
-#define ED_LASER_HIT		(-50.0*FUEL_SCALE_FACT)
-/* was 120 -> 80 -> 40 -> 50 */
+#define ED_LASER_HIT		(-100.0*FUEL_SCALE_FACT)
+/* was 120 -> 80 -> 40 -> 50 -> 60 -> 100 */
 
 #define PTS_PR_PL_KILL	    	13	/* Points if you kill a player */
 #define PTS_PR_CANNON_KILL  	1	/* Points if you smash a cannon */

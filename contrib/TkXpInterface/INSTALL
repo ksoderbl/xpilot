@@ -1,0 +1,25 @@
+#
+# Installation procedure for TkXpInterface-3.1.
+#
+# March 1994
+
+1) Install the "maps2image" package FIRST !
+   Edit its Makefile and choose :
+
+       FONT  =  helvR14.bdf
+
+2) Edit the Makefile in the ./TkXpInterface-3.1 directory.
+   Specify where you want everything to go 
+
+3) type :
+   "make"
+   "make install"
+   "make clean".
+
+4) Read the manual page, command :
+   
+   nroff -man TkXpInterface.1 | more
+
+5) Happy flying!
+
+6) Mail a greeting to the authors.

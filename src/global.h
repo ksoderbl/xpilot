@@ -1,6 +1,6 @@
-/* $Id: global.h,v 3.23 1993/12/16 22:37:44 bert Exp $
+/* $Id: global.h,v 3.49 1994/03/30 16:56:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -45,7 +45,6 @@
 #endif
 
 typedef struct {
-    int max_num;
     char name[80];
     char host[80];
 } server;
@@ -55,23 +54,21 @@ typedef struct {
  * Global data.
  */
 #ifdef SERVER
+#define FPS			framesPerSecond
 extern player		**Players;
 extern object		*Obj[];
-#endif
-extern wireobj		ships[];
-#ifdef SERVER
 extern long		loops;
 extern long		Id;
 extern int		NumPlayers;
 extern int		NumPseudoPlayers;
 extern int		NumObjs;
 extern int		NumRobots, WantedNumRobots;
-extern int		robotsLeave, robotLeaveLife;
+extern int		robotsTalk, robotsLeave, robotLeaveLife;
 extern int		robotLeaveScore, robotLeaveRatio;
 extern World_map	World;
 extern server		Server;
 extern float		ShotsMass, ShipMass, ShotsSpeed, Gravity;
-extern int		ShotsMax, ShotsLife, maxMissilesPerNuke;
+extern int		ShotsMax, ShotsLife;
 extern bool		ShotsGravity;
 extern int		fireRepeatRate;
 extern long		DEF_BITS, KILL_BITS, DEF_HAVE, DEF_USED, USED_KILL;
@@ -84,20 +81,46 @@ extern bool		RawMode;
 extern bool		NoQuit;
 extern int		framesPerSecond;
 extern char		*mapFileName;
+extern int		mapRule;
 extern char		*mapData;
 extern int		mapWidth;
 extern int		mapHeight;
 extern char		*mapName;
 extern char		*mapAuthor;
 extern int 		contactPort;
+extern char		*motd;
 extern bool		crashWithPlayer;
+extern bool		bounceWithPlayer;
 extern bool		playerKillings;
 extern bool		playerShielding;
 extern bool		playerStartsShielded;
+extern bool		shotsWallBounce;
+extern bool		ballsWallBounce;
+extern bool		minesWallBounce;
+extern bool		itemsWallBounce;
+extern bool		missilesWallBounce;
+extern bool		sparksWallBounce;
+extern bool		debrisWallBounce;
+extern bool		ecmsReprogramMines;
+extern float		maxObjectWallBounceSpeed;
+extern float		maxShieldedWallBounceSpeed;
+extern float		maxUnshieldedWallBounceSpeed;
+extern float		maxShieldedWallBounceAngle;
+extern float		maxUnshieldedWallBounceAngle;
+extern float		playerWallBrakeFactor;
+extern float		objectWallBrakeFactor;
+extern float		objectWallBounceLifeFactor;
+extern float		wallBounceFuelDrainMult;
+extern float		wallBounceDestroyItemProb;
+
+extern float		playerMinimumStartFuel;
+
 extern bool		limitedVisibility;
 extern bool		limitedLives;
 extern int		worldLives;
 extern bool		teamPlay;
+extern bool		teamAssign;
+extern bool		teamImmunity;
 extern bool		onePlayerOnly;
 extern bool		timing;
 extern bool		edgeWrap;
@@ -110,15 +133,36 @@ extern bool		gravityClockwise;
 extern bool		gravityAnticlockwise;
 extern int		MovingItemsRand;
 extern int 		ThrowItemOnKillRand;
+extern int		nukeMinSmarts;
+extern int		nukeMinMines;
+extern float		nukeClusterDamage;
+extern int		mineFuseTime;
+
 extern float		destroyItemInCollisionProb;
 extern bool		updateScores;
 extern bool 		allowNukes;
-extern bool		playersOnRadar;
-extern bool		missilesOnRadar;
+extern bool		allowClusters;
+extern bool		allowModifiers;
+extern bool		allowLaserModifiers;
+extern bool		allowShipShapes;
+
 extern bool		shieldedItemPickup;
 extern bool		shieldedMining;
 extern bool		laserIsStunGun;
 extern bool		targetKillTeam;
+extern bool		reportToMetaServer;
+
+extern bool		playersOnRadar;
+extern bool		missilesOnRadar;
+extern bool		minesOnRadar;
+extern bool		nukesOnRadar;
+extern bool 		identifyMines;
+extern bool		distinguishMissiles;
+extern bool		targetTeamCollision;
+extern bool		treasureKillTeam;
+extern bool		treasureCollisionDestroys;
+extern bool		treasureCollisionMayKill;
+
 extern float 		dropItemOnKillProb;
 extern float 		movingItemProb;
 extern float 		itemEnergyPackProb;
@@ -133,13 +177,19 @@ extern float		itemRearshotProb;
 extern float		itemAfterburnerProb;
 extern float		itemTransporterProb;
 extern float		itemLaserProb;
+extern float		itemEmergencyThrustProb;
+extern float		itemTractorBeamProb;
+extern float		itemAutopilotProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
-extern int 		initialFuel;
-extern int 		initialTanks;
+extern float		gameDuration;
+extern time_t		gameOverTime;
+
+extern int		initialFuel;
+extern int		initialTanks;
 extern int		initialECMs;
 extern int		initialMines;
-extern int 		initialMissiles;
+extern int		initialMissiles;
 extern int		initialCloaks;
 extern int		initialSensors;
 extern int		initialWideangles;
@@ -147,8 +197,12 @@ extern int		initialRearshots;
 extern int		initialAfterburners;
 extern int		initialTransporters;
 extern int		initialLasers;
-extern float		gameDuration;
-extern time_t		gameOverTime;
+extern int		initialEmergencyThrusts;
+extern int		initialTractorBeams;
+extern int		initialAutopilots;
+
+extern char	       	*scoreTableFileName;
 #endif
 
 #endif /* GLOBAL_H */
+

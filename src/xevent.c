@@ -1,6 +1,6 @@
-/* $Id: xevent.c,v 3.24 1993/11/16 22:50:00 bert Exp $
+/* $Id: xevent.c,v 3.30 1994/02/07 13:20:59 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -35,6 +35,7 @@
 #include "xinit.h"
 #include "draw.h"
 #include "keys.h"
+#include "packet.h"
 #include "bit.h"
 #include "setup.h"
 #include "netclient.h"
@@ -69,6 +70,12 @@ static keys_t Lookup_key(KeySym ks, bool reset)
 
 int Key_init(void)
 {
+    if (sizeof(keyv) != KEYBOARD_SIZE) {
+	error ("%s, %d: keyv size %d, KEYBOARD_SIZE is %d",
+	       __FILE__, __LINE__,
+	       sizeof(keyv), KEYBOARD_SIZE);
+	exit(1);
+    }
     memset(keyv, 0, sizeof keyv);
     return 0;
 }
@@ -127,6 +134,14 @@ static void Key_event(XEvent *event)
 		Talk_map_window((talk_mapped == false) ? true : false);
 		continue;	/* server doesn't need to know */
 
+	    case KEY_TOGGLE_OWNED_ITEMS:
+		TOGGLE_BIT(instruments, SHOW_ITEMS);
+		continue;	/* server doesn't need to know */
+
+	    case KEY_TOGGLE_MESSAGES:
+		TOGGLE_BIT(instruments, SHOW_MESSAGES);
+		continue;	/* server doesn't need to know */
+
 	    default:
 		break;
 	    }
@@ -137,6 +152,8 @@ static void Key_event(XEvent *event)
 	    switch (key) {
 	    case KEY_ID_MODE:
 	    case KEY_TALK:
+	    case KEY_TOGGLE_OWNED_ITEMS:
+	    case KEY_TOGGLE_MESSAGES:
 		continue;	/* server doesn't need to know */
 
 	    case KEY_SHIELD:
@@ -185,6 +202,8 @@ int xevent(int new_input)
     XEvent		event;
     XClientMessageEvent	*cmev;
     XConfigureEvent	*conf;
+    static int		talk_key_repeat_count;
+    static XEvent	talk_key_repeat_event;
 
 #ifdef SOUND
     audioEvents();
@@ -216,13 +235,24 @@ int xevent(int new_input)
 	    break;
 
 	case KeyPress:
+	    talk_key_repeat_count = 0;
 	case KeyRelease:
 	    if (event.xkey.window == top) {
 		Key_event(&event);
 	    }
 	    else if (event.xkey.window == talk_w) {
+		if (event.type == KeyPress) {
+		    talk_key_repeat_count = 1;
+		    talk_key_repeat_event = event;
+		}
+		else if (talk_key_repeat_count > 0
+		    && event.xkey.keycode
+			== talk_key_repeat_event.xkey.keycode) {
+		    talk_key_repeat_count = 0;
+		}
 		Talk_event(&event);
 	    }
+	    /* else : here we can add widget.c key uses. */
 	    break;
 
 	case ButtonPress:
@@ -230,6 +260,10 @@ int xevent(int new_input)
 		break;
 	    }
 	    Expose_button_window(BLACK, event.xbutton.window);
+	    break;
+
+	case MotionNotify:
+	    Widget_event(&event);
 	    break;
 
 	case ButtonRelease:
@@ -255,25 +289,38 @@ int xevent(int new_input)
 	    break;
 
 	case Expose:
-	    if (event.xexpose.count > 0)	/* We don't want any */
-		break;				/* subarea exposures */
-
 	    if (event.xexpose.window == players) {
-		players_exposed = true;
-		scoresChanged++;
+		if (event.xexpose.count == 0) {
+		    players_exposed = true;
+		    scoresChanged++;
+		}
 	    }
-	    else if (event.xexpose.window == about_w)
-		Expose_about_window();
-	    else if (event.xexpose.window == keys_w)
-		Expose_keys_window();
+	    else if (event.xexpose.window == about_w) {
+		if (event.xexpose.count == 0) {
+		    Expose_about_window();
+		}
+	    }
+	    else if (event.xexpose.window == keys_w) {
+		if (event.xexpose.count == 0) {
+		    Expose_keys_window();
+		}
+	    }
 	    else  if (event.xexpose.window == radar) {
-		radar_exposed = true;
-		Paint_world_radar();
+		if (event.xexpose.count == 0) {
+		    radar_exposed = true;
+		    Paint_world_radar();
+		}
 	    }
-	    else if (event.xexpose.window == talk_w)
-		Talk_event(&event);
-	    else if (Widget_event(&event) == 0)
-		Expose_button_window(RED, event.xexpose.window);
+	    else if (event.xexpose.window == talk_w) {
+		if (event.xexpose.count == 0) {
+		    Talk_event(&event);
+		}
+	    }
+	    else if (Widget_event(&event) == 0) {
+		if (event.xexpose.count == 0) {
+		    Expose_button_window(RED, event.xexpose.window);
+		}
+	    }
 	    break;
 
 	case EnterNotify:
@@ -300,11 +347,22 @@ int xevent(int new_input)
 
 	case ConfigureNotify:
 	    conf = &event.xconfigure;
-	    Resize(conf->window, conf->width, conf->height);
+	    if (conf->window == top) {
+		Resize(conf->window, conf->width, conf->height);
+	    }
+	    else {
+		Widget_event(&event);
+	    }
 	    break;
 
 	default:
 	    break;
+	}
+    }
+    if (talk_key_repeat_count > 0) {
+	if (talk_key_repeat_count++ >= FPS
+	    && talk_key_repeat_count % ((FPS + 3) / 4) == 0) {
+	    Talk_event(&talk_key_repeat_event);
 	}
     }
 

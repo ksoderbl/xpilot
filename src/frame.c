@@ -1,6 +1,6 @@
-/* $Id: frame.c,v 3.29 1993/12/17 16:05:50 bert Exp $
+/* $Id: frame.c,v 3.45 1994/03/30 19:41:58 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -45,7 +45,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.29 1993/12/17 16:05:50 bert Exp $";
+    "@(#)$Id: frame.c,v 3.45 1994/03/30 19:41:58 bert Exp $";
 #endif
 
 
@@ -92,7 +92,9 @@ static int		view_width,
 static debris_t		*debris_ptr[DEBRIS_TYPES];
 static int		debris_num[DEBRIS_TYPES],
 			debris_max[DEBRIS_TYPES];
-
+static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
+static int		fastshot_num[DEBRIS_TYPES * 2],
+			fastshot_max[DEBRIS_TYPES * 2];
 
 static int inview(float x, float y)
 {
@@ -140,58 +142,83 @@ static int block_inview(block_visibility_t *pl, int x, int y)
 	&& y <= pl->realWorld.y + vertical_blocks);
 }
 
+#define DEBRIS_STORE(xf,yf,color,offset) \
+    int			i,						  \
+			xd,						  \
+			yd;						  \
+    if (xf < 0) {							  \
+	xf += World.width;						  \
+    }									  \
+    if (yf < 0) {							  \
+	yf += World.height;						  \
+    }									  \
+    xd = (int) (xf + 0.5);						  \
+    yd = (int) (yf + 0.5);						  \
+    if ((unsigned) xd >= view_width || (unsigned) yd >= view_height) {	  \
+	/*								  \
+	 * There's some rounding error or so somewhere.			  \
+	 * Should be possible to resolve it.				  \
+	 */								  \
+	return;								  \
+    }									  \
+									  \
+    i = offset + color * debris_areas					  \
+	+ (((yd >> 8) % debris_y_areas) * debris_x_areas)		  \
+	+ ((xd >> 8) % debris_x_areas);					  \
+									  \
+    if (num >= 255) {							  \
+	return;								  \
+    }									  \
+    if (num >= max) {							  \
+	if (num == 0) {							  \
+	    ptr = (debris_t *) malloc((max = 16) * sizeof(*ptr));	  \
+	} else {							  \
+	    ptr = (debris_t *) realloc(ptr, (max += max) * sizeof(*ptr)); \
+	}								  \
+	if (ptr == 0) {							  \
+	    error("No memory for debris");				  \
+	    num = 0;							  \
+	    return;							  \
+	}								  \
+    }									  \
+    ptr[num].x = (unsigned char) xd;					  \
+    ptr[num].y = (unsigned char) yd;					  \
+    num++;
+
+static void fastshot_store(float xf, float yf, int color, int offset)
+{
+#define ptr		(fastshot_ptr[i])
+#define num		(fastshot_num[i])
+#define max		(fastshot_max[i])
+    DEBRIS_STORE(xf, yf, color, offset);
+#undef ptr
+#undef num
+#undef max
+}
+
 static void debris_store(float xf, float yf, int color)
 {
 #define ptr		(debris_ptr[i])
 #define num		(debris_num[i])
 #define max		(debris_max[i])
-
-    int			i,
-			xd,
-			yd;
-
-    if (xf < 0) {
-	xf += World.width;
-    }
-    if (yf < 0) {
-	yf += World.height;
-    }
-    xd = (int) (xf + 0.5);
-    yd = (int) (yf + 0.5);
-    if ((unsigned) xd >= view_width || (unsigned) yd >= view_height) {
-	/*
-	 * There's some rounding error or so somewhere.
-	 * Should be possible to resolve it.
-	 */
-	return;
-    }
-
-    i = color * debris_areas
-	+ (((yd >> 8) % debris_y_areas) * debris_x_areas)
-	+ ((xd >> 8) % debris_x_areas);
-
-    if (num >= 255) {
-	return;
-    }
-    if (num >= max) {
-	if (num == 0) {
-	    ptr = (debris_t *) malloc((max = 16) * sizeof(*ptr));
-	} else {
-	    ptr = (debris_t *) realloc(ptr, (max += max) * sizeof(*ptr));
-	}
-	if (ptr == 0) {
-	    error("No memory for debris");
-	    num = 0;
-	    return;
-	}
-    }
-    ptr[num].x = (unsigned char) xd;
-    ptr[num].y = (unsigned char) yd;
-    num++;
-
+    DEBRIS_STORE(xf, yf, color, 0);
 #undef ptr
 #undef num
 #undef max
+}
+
+static void fastshot_end(int conn)
+{
+    int			i;
+
+    for (i = 0; i < DEBRIS_TYPES * 2; i++) {
+	if (fastshot_num[i] != 0) {
+	    Send_fastshot(conn, i,
+			  (unsigned char *) fastshot_ptr[i],
+			  fastshot_num[i]);
+	    fastshot_num[i] = 0;
+	}
+    }
 }
 
 static void debris_end(int conn)
@@ -208,41 +235,80 @@ static void debris_end(int conn)
     }
 }
 
+/*
+ * Fast conversion of `num' into `str' starting at position `i', returns
+ * index of character after converted number.
+ */
+static int num2str(int num, char *str, int i)
+{
+    int	digits, t;
+
+    if (num < 0) {
+	str[i++] = '-';
+	num = -num;
+    }
+    if (num < 10) {
+	str[i++] = '0' + num;
+	return i;
+    }
+    for (t = num, digits = 0; t; t /= 10, digits++)
+	;
+    for (t = i+digits-1; t >= 0; t--) {
+	str[t] = num % 10;
+	num /= 10;
+    }
+    return i + digits;
+}
+
 static int Frame_status(int conn, int ind)
 {
+    static char		mods[MAX_CHARS];
     player		*pl = Players[ind];
     int			n,
 			lock_ind,
 			lock_id = -1,
 			lock_dist = 0,
-			lock_dir = 0;
+			lock_dir = 0,
+    			i,
+    			showautopilot;
 
-    if (pl->lock.tagged == LOCK_PLAYER) {
+    /*
+     * Don't make lock visible during this frame if;
+     * 0) we are not player locked or compass is not on.
+     * 1) we have limited visibility and the player is out of range.
+     * 2) the player is invisible and he's not in our team.
+     * 3) he's not actively playing.
+     * 4) we have blind mode and he's not on the visible screen.
+     * 5) his distance is zero.
+     */
+
+    CLR_BIT(pl->lock.tagged, LOCK_VISIBLE);
+    if (BIT(pl->lock.tagged, LOCK_PLAYER) && BIT(pl->used, OBJ_COMPASS)) {
 	lock_id = pl->lock.pl_id;
 	lock_ind = GetInd[lock_id];
-	/*
-	 * Don't send direction and distance if:
-	 * 1) we have limited visibility and the player is out of range.
-	 * 2) the player is invisible and he's not in our team.
-	 * 3) he's not actively playing.
-	 * 4) we have blind mode and he's not on the visible screen.
-	 * 5) his distance is zero.
-	 */
+
 	if ((!BIT(World.rules->mode, LIMITED_VISIBILITY)
-	    || pl->lock.distance <= pl->sensor_range)
+	     || pl->lock.distance <= pl->sensor_range)
 #ifndef SHOW_CLOAKERS_RANGE
-	    && (pl->visibility[lock_ind].canSee
-		|| TEAM(ind, lock_ind))
+	    && (pl->visibility[lock_ind].canSee || TEAM(ind, lock_ind))
 #endif
 	    && BIT(Players[lock_ind]->status, PLAYING|GAME_OVER) == PLAYING
 	    && (playersOnRadar
-	    || inview(Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
+		|| inview(Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
 	    && pl->lock.distance != 0) {
+	    SET_BIT(pl->lock.tagged, LOCK_VISIBLE);
 	    lock_dir = Wrap_findDir(Players[lock_ind]->pos.x - pl->pos.x,
 				    Players[lock_ind]->pos.y - pl->pos.y);
 	    lock_dist = pl->lock.distance;
 	}
     }
+
+    if (BIT(pl->status, HOVERPAUSE))
+	showautopilot = (pl->count <= 0 || (loops % 8) < 4);
+    else if (BIT(pl->used, OBJ_AUTOPILOT))
+	showautopilot = (loops % 8) < 4;
+    else
+	showautopilot = 0;
 
     n = Send_self(conn,
 	(int) (pl->pos.x + 0.5),
@@ -267,15 +333,62 @@ static int Frame_status(int conn, int ind)
 	pl->back_shots,
 	pl->afterburners,
 	pl->lasers,
+	pl->emergency_thrusts,
+	pl->tractor_beams,
+	pl->autopilots,
+	showautopilot,
 	pl->fuel.num_tanks,
 	pl->fuel.current,
 	pl->fuel.sum,
-	pl->fuel.max,
-	Players[GetInd[Get_player_id(conn)]]->status);
+	pl->fuel.max, Players[GetInd[Get_player_id(conn)]]->status);
     if (n <= 0) {
 	return 0;
     }
 
+    /*
+     * Don't forget to modify Receive_modifier_bank() in netserver.c
+     */
+    i = 0;
+    if (BIT(pl->mods.nuclear, FULLNUCLEAR))
+	mods[i++] = 'F';
+    if (BIT(pl->mods.nuclear, NUCLEAR))
+	mods[i++] = 'N';
+    if (BIT(pl->mods.warhead, CLUSTER))
+	mods[i++] = 'C';
+    if (BIT(pl->mods.warhead, IMPLOSION))
+	mods[i++] = 'I';
+    if (pl->mods.velocity) {
+	if (i) mods[i++] = ' ';
+	mods[i++] = 'V';
+	i = num2str (pl->mods.velocity, mods, i);
+    }
+    if (pl->mods.mini) {
+	if (i) mods[i++] = ' ';
+	mods[i++] = 'X';
+	i = num2str (pl->mods.mini + 1, mods, i);
+    }
+    if (pl->mods.spread) {
+	if (i) mods[i++] = ' ';
+	mods[i++] = 'Z';
+	i = num2str (pl->mods.spread, mods, i);
+    }
+    if (pl->mods.power) {
+	if (i) mods[i++] = ' ';
+	mods[i++] = 'B';
+	i = num2str (pl->mods.power, mods, i);
+    }
+    if (pl->mods.laser) {
+	if (i) mods[i++] = ' ';
+	mods[i++] = 'L';
+	mods[i++] = (BIT(pl->mods.laser, STUN) ? 'S' : 'B');
+    }
+    mods[i] = '\0';
+    Send_modifiers(conn, mods);
+
+    if (BIT(pl->used, OBJ_EMERGENCY_THRUST))
+	Send_thrusttime(conn,
+			pl->emergency_thrust_left,
+			pl->emergency_thrust_max);
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count > 0) {
 	Send_destruct(conn, pl->count);
     }
@@ -355,7 +468,7 @@ static void Frame_map(int conn, int ind)
 static void Frame_shots(int conn, int ind)
 {
     player		*pl = Players[ind];
-    int			i, color, x, y, fuzz = 0;
+    int			i, color, x, y, fuzz = 0, teamshot, len;
     object		*shot;
 
     for (i = 0; i < NumObjs; i++) {
@@ -372,7 +485,6 @@ static void Frame_shots(int conn, int ind)
 	switch (shot->type) {
 	case OBJ_SPARK:
 	case OBJ_DEBRIS:
-	case OBJ_CANNON_DEBRIS:
 	    if ((fuzz >>= 7) < 0x40) {
 		fuzz = rand();
 	    }
@@ -410,24 +522,62 @@ static void Frame_shots(int conn, int ind)
 	case OBJ_SHOT:
 	    if (shot->id != -1
 		&& shot->id != pl->id
-		&& TEAM(ind, GetInd[shot->id])) {
+		&& TEAM_IMMUNE(ind, GetInd[shot->id])) {
 		color = BLUE;
+		teamshot = DEBRIS_TYPES;
+	    } else if (shot->mods.nuclear && (loops & 2)) {
+		color = RED;
+		teamshot = DEBRIS_TYPES;
+	    } else {
+		teamshot = 0;
 	    }
-	    /*FALLTHROUGH*/
-	case OBJ_CANNON_SHOT:
-	    Send_shot(conn, x, y, color);
+
+	    fastshot_store(shot->pos.x - pv.world.x,
+			   shot->pos.y - pv.world.y,
+			   color, teamshot);
 	    break;
+
 	case OBJ_TORPEDO:
-	case OBJ_NUKE:
+	    len =(distinguishMissiles ? TORPEDO_LEN : MISSILE_LEN);
+	    Send_missile(conn, x, y, len, shot->dir);
+	    break;
 	case OBJ_SMART_SHOT:
+	    len =(distinguishMissiles ? SMART_SHOT_LEN : MISSILE_LEN);
+	    Send_missile(conn, x, y, len, shot->dir);
+	    break;
 	case OBJ_HEAT_SHOT:
-	    Send_smart(conn, x, y, shot->dir);
+	    len =(distinguishMissiles ? HEAT_SHOT_LEN : MISSILE_LEN);
+	    Send_missile(conn, x, y, len, shot->dir);
 	    break;
 	case OBJ_BALL:
 	    Send_ball(conn, x, y, shot->id);
 	    break;
 	case OBJ_MINE:
-	    Send_mine(conn, x, y);
+	    {
+	      int id = 0;
+	      int laid_by_team = 0;
+	      int confused = 0;
+	      /* calculate whether ownership of mine can be determined */
+	      if (identifyMines
+		  && (Wrap_length(pl->pos.x-shot->pos.x, pl->pos.y-shot->pos.y)
+		      < (SHIP_SZ + MINE_SENSE_BASE_RANGE
+			 + pl->sensors * MINE_SENSE_RANGE_FACTOR))) {
+		id = shot->id;
+		if (id==-1)
+		  id = EXPIRED_MINE_ID;
+		if (BIT(shot->status, CONFUSED))
+		  confused = 1;
+	      }
+	      laid_by_team = (shot->owner != -1 &&
+			((BIT(shot->status, OWNERIMMUNE)
+			  && shot->owner == pl->id)
+			 || TEAM_IMMUNE(ind, GetInd[shot->owner])));
+	      if (confused) {
+		id = 0;
+		laid_by_team = (rand()/3)%2;
+	      }
+	      Send_mine(conn, x, y, laid_by_team, id);
+	    }
 	    break;
 	case OBJ_WIDEANGLE_SHOT:
 	    Send_item(conn, x, y, ITEM_WIDEANGLE_SHOT);
@@ -463,9 +613,22 @@ static void Frame_shots(int conn, int ind)
 	    Send_item(conn, x, y, ITEM_TRANSPORTER);
 	    break;
 	case OBJ_LASER:
-	    if (pl->version >= 0x3041) {
-		Send_item(conn, x, y, ITEM_LASER);
-	    }
+	    Send_item(conn, x, y, ITEM_LASER);
+	    break;
+	case OBJ_EMERGENCY_THRUST:
+
+		Send_item(conn, x, y, ITEM_EMERGENCY_THRUST);
+
+	    break;
+	case OBJ_TRACTOR_BEAM:
+
+		Send_item(conn, x, y, ITEM_TRACTOR_BEAM);
+
+	    break;
+	case OBJ_AUTOPILOT:
+
+		Send_item(conn, x, y, ITEM_AUTOPILOT);
+
 	    break;
 	default:
 	    error("Frame_shots: Shot type %d not defined.", shot->type);
@@ -537,15 +700,15 @@ static void Frame_ships(int conn, int ind)
 		    continue;
 		}
 	    }
-	    if (TEAM(ind, i) && ind != i) {
+	    if (TEAM_IMMUNE(ind, i) && ind != i) {
 		color = BLUE;
 	    } else {
 		color = RED;
 	    }
 	    Send_laser(conn,
 		color,
-		(int) (x + 0.5),
-		(int) (y + 0.5),
+		(int) (x + 0.5f),
+		(int) (y + 0.5f),
 		pulse->len,
 		dir);
 	}
@@ -559,16 +722,19 @@ static void Frame_ships(int conn, int ind)
 		pl_i->count);
 	    continue;
 	}
-	if (pl_i->ecmInfo.size > 0) {
+	for (j = 0; j < pl_i->ecmInfo.count; j++) {
 	    Send_ecm(conn,
-		(int) (pl_i->ecmInfo.pos.x + 0.5),
-		(int) (pl_i->ecmInfo.pos.y + 0.5),
-		pl_i->ecmInfo.size);
+		     (int) (pl_i->ecmInfo.pos[j].x + 0.5f),
+		     (int) (pl_i->ecmInfo.pos[j].y + 0.5f),
+		     pl_i->ecmInfo.size[j]);
 	}
 	if (pl_i->transInfo.count) {
 	    player *pl = Players[GetInd[pl_i->transInfo.pl_id]];
-	    Send_trans(conn, (int) (pl->pos.x + 0.5), (int) (pl->pos.y + 0.5),
-		       (int) (pl_i->pos.x + 0.5), (int) (pl_i->pos.y + 0.5));
+	    Send_trans(conn,
+		       (int) (pl->pos.x + 0.5),
+		       (int) (pl->pos.y + 0.5),
+		       (int) (pl_i->pos.x + 0.5),
+		       (int) (pl_i->pos.y + 0.5));
 	}
 
 	/* Don't transmit information is fighter is invisible */
@@ -609,38 +775,75 @@ static void Frame_ships(int conn, int ind)
 		    (int) (x + 0.5), (int) (y + 0.5));
 	    }
 	}
+	if (pl_i->tractor != NULL
+	    /* && BIT(pl_i->used, OBJ_TRACTOR_BEAM) */
+	    && inview(pl_i->tractor->pos.x, pl_i->tractor->pos.y)) {
+	    player *t = pl_i->tractor;
+	    int j;
+
+	    for (j = 0; j < 3; j++) {
+		Send_connector(conn,
+		       (int) (t->pos.x + t->ship->pts[t->dir][j].x + 0.5),
+		       (int) (t->pos.y + t->ship->pts[t->dir][j].y + 0.5),
+		       (int) (pl_i->pos.x + 0.5),
+		       (int) (pl_i->pos.y + 0.5), 1);
+	    }
+	}
+
 	if (pl_i->ball != NULL
+	    /* && BIT(pl_i->used, OBJ_CONNECTOR) */
 	    && inview(pl_i->ball->pos.x, pl_i->ball->pos.y)) {
 	    Send_connector(conn,
 		(int) (pl_i->ball->pos.x + 0.5),
 		(int) (pl_i->ball->pos.y + 0.5),
 		(int) (pl_i->pos.x + 0.5),
-		(int) (pl_i->pos.y + 0.5));  
+		(int) (pl_i->pos.y + 0.5), 0);
 	}
     }
 }
 
 static void Frame_radar(int conn, int ind)
 {
-    int			i;
+    register int	i, mask, shownuke, s;
     player		*pl = Players[ind];
     object		*shot;
     float		x, y;
     
 #ifndef NO_SMART_MIS_RADAR
-    if (missilesOnRadar) {
-	if (loops & 1) {
-	    for (i = 0; i < NumObjs; i++) {
-		shot = Obj[i];
-		if (BIT(shot->type, (OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_NUKE
-				    |OBJ_HEAT_SHOT))) {
-		    x = shot->pos.x;
-		    y = shot->pos.y;
-		    if (Wrap_length(pl->pos.x - x,
-				    pl->pos.y - y) <= pl->sensor_range) {
-			Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5));
-		    }
-		}
+    if (nukesOnRadar) {
+	mask = OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_MINE;
+    } else {
+	mask = (missilesOnRadar ?
+		(OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT) : 0);
+	mask |= (minesOnRadar) ? OBJ_MINE : 0;
+    }
+
+    if (mask) {
+	for (i = 0; i < NumObjs; i++) {
+	    shot = Obj[i];
+	    if (! BIT(shot->type, mask))
+		continue;
+
+	    shownuke = (nukesOnRadar && (shot)->mods.nuclear);
+
+	    if (BIT(shot->type, OBJ_MINE)) {
+		if (!minesOnRadar && !shownuke)
+		    continue;
+		if (loops % 8 >= 6)
+		    continue;
+	    } else {
+		if (!missilesOnRadar && !shownuke)
+		    continue;
+		if (loops & 1)
+		    continue;
+	    }
+
+	    x = shot->pos.x;
+	    y = shot->pos.y;
+	    s = (((loops & 2) && shownuke) ? 3 : 0);
+	    if (Wrap_length(pl->pos.x - x,
+			    pl->pos.y - y) <= pl->sensor_range) {
+		Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5), s);
 	    }
 	}
     }
@@ -660,12 +863,12 @@ static void Frame_radar(int conn, int ind)
 		continue;
 	    }
 	    if (BIT(pl->used, OBJ_COMPASS)
-		&& pl->lock.tagged == LOCK_PLAYER
+		&& BIT(pl->lock.tagged, LOCK_PLAYER)
 		&& GetInd[pl->lock.pl_id] == i
 		&& loops % 5 >= 3) {
 		continue;
 	    }
-	    Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5));
+	    Send_radar(conn, (int) (x + 0.5), (int) (y + 0.5), 3);
 	}
     }
 }
@@ -682,8 +885,8 @@ static void Frame_parameters(int conn, int ind)
     horizontal_blocks = (view_width + (BLOCK_SZ - 1)) / BLOCK_SZ;
     vertical_blocks = (view_height + (BLOCK_SZ - 1)) / BLOCK_SZ;
 
-    pv.world.x = pl->pos.x - view_width / 2;	/* Scroll */
-    pv.world.y = pl->pos.y - view_height / 2;
+    pv.world.x = (int)(pl->pos.x + 0.5) - view_width / 2;	/* Scroll */
+    pv.world.y = (int)(pl->pos.y + 0.5) - view_height / 2;
     pv.wrappedWorld = 0;
     if (BIT (World.rules->mode, WRAP_PLAY)) {
 	pv.realWorld = pv.world;
@@ -737,12 +940,16 @@ void Frame_update(void)
 	if (conn == NOT_CONNECTED) {
 	    continue;
 	}
-	if (BIT(pl->status, PAUSE) && (loops & 0x01) == 0) {
+	if (BIT(pl->status, PAUSE|GAME_OVER)) {
 	    /*
-	     * Reduce the frame rate for paused players
+	     * Lower the frame rate for non-playing players
 	     * to reduce network load.
 	     */
-	    continue;
+	    if (BIT(pl->status, PAUSE)
+		? ((loops & 0x03) != 0)
+		: ((loops & 0x01) != 0)) {
+		continue;
+	    }
 	}
 	if (Send_start_of_frame(conn) == -1) {
 	    continue;
@@ -751,15 +958,25 @@ void Frame_update(void)
 	    Send_time_left(conn, newTimeLeft);
 	}
 	/*
-	 * If status is GAME_OVER, the user may look through the other
-	 * players 'eyes'.  This is done by using two indexes, one
+	 * If status is GAME_OVER or PAUSE'd, the user may look through the
+	 * other players 'eyes'.  If PAUSE'd this only works on team members.
+	 * We can't use TEAM() macro as it PAUSE'd players are always on
+	 * equivalent teams.
+	 * 
+	 * This is done by using two indexes, one
 	 * determining which data should be used (ind, set below) and
 	 * one determining which connection to send it to (conn).
 	 */
-	if (BIT(pl->status, GAME_OVER|PLAYING) == (GAME_OVER|PLAYING)
-	    && (pl->lock.tagged == LOCK_PLAYER)) {
-	    ind = GetInd[pl->lock.pl_id];
-	    Send_eyes(conn, pl->lock.pl_id);
+	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
+	    if ((BIT(pl->status, (GAME_OVER|PLAYING)) == (GAME_OVER|PLAYING))
+		|| (BIT(pl->status, PAUSE)
+		    && BIT(World.rules->mode, TEAM_PLAY)
+		    && pl->team != TEAM_NOT_SET
+		    && pl->team == Players[GetInd[pl->lock.pl_id]]->team)) {
+		ind = GetInd[pl->lock.pl_id];
+	    } else {
+		ind = i;
+	    }
 	} else {
 	    ind = i;
 	}
@@ -776,6 +993,7 @@ void Frame_update(void)
 	    Frame_ships(conn, ind);
 	    Frame_radar(conn, ind);
 	    debris_end(conn);
+	    fastshot_end(conn);
 	}
 	sound_play_queued(Players[ind]);
 	Send_end_of_frame(conn);
@@ -807,4 +1025,25 @@ void Set_message(char *message)
 	    Send_message(pl->conn, msg);
 	}
     }
+}
+
+void Set_player_message(player *pl, char *message)
+{
+    int			i;
+    char		*msg,
+			tmp[MSG_LEN];
+
+    if ((i = strlen(message)) >= MSG_LEN) {
+#ifndef SILENT
+	errno = 0;
+	error("Max message len exceed (%d,%s)", i, message);
+#endif
+	strncpy(tmp, message, MSG_LEN - 1);
+	tmp[MSG_LEN - 1] = '\0';
+	msg = tmp;
+    } else {
+	msg = message;
+    }
+    if (pl->conn != NOT_CONNECTED)
+	Send_message(pl->conn, msg);
 }

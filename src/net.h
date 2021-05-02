@@ -1,6 +1,6 @@
-/* $Id: net.h,v 3.10 1993/10/02 19:28:44 bert Exp $
+/* $Id: net.h,v 3.14 1994/03/06 20:39:07 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -27,19 +27,17 @@
 #include "socklib.h"
 #include "const.h"
 
-/*
- * We want to give the client the possibility to tune the performance
- * of the connection a little.  Therefore a few connection parameters
- * are configurable by the client, but within a reasonable range.
- */
 #define MIN_SOCKBUF_SIZE	1024
 #define MAX_SOCKBUF_SIZE	(50*1024)
+
 #define SERVER_RECV_SIZE	MIN_SOCKBUF_SIZE
 #if defined(LINUX) || defined(__linux__)
+/* bwahg, linux tcp/ip still has silly limitations in 0.99.15 */
 #define SERVER_SEND_SIZE	(3*512 + 3*128)
 #else
 #define SERVER_SEND_SIZE	(4*1024)
 #endif
+
 #define CLIENT_SEND_SIZE	SERVER_RECV_SIZE
 #define CLIENT_RECV_SIZE	SERVER_SEND_SIZE
 

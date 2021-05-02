@@ -1,6 +1,6 @@
-/* $Id: pack.h,v 3.21 1993/09/28 18:48:03 bert Exp $
+/* $Id: pack.h,v 3.29 1994/03/31 15:29:30 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -33,6 +33,7 @@
 #define SERVER_PORT	15345		/* Port which server listens to. */
 #define META_PORT	5500
 #define META_HOST	"xpilot.cs.uit.no"
+#define META_HOST_TWO	"xpilot.mc.bio.uva.nl"
 #define META_IP		"129.242.16.101"
 
 /*
@@ -45,6 +46,10 @@
  * These high bits only need to be changed when a new
  * client can't talk to an old server or vise versa.
  * Please don't change it more often than strictly necessary.
+ * PLEASE NOTE: if you make your own private incompatible changes
+ * justifying an increment of the version word then please
+ * set the 4th bit.  Like 0x3108 and 0x3109 till 0x310F, etc.
+ * This way we can use the lower 8 values for public releases.
  *
  * Reasons why it changed in the past:
  * 3.0.1: rewrite of contact pack protocol, because of
@@ -70,10 +75,15 @@
  * 3.0.4.2: new player-self status byte in self packet.
  * 3.0.4.3: different and incompatible laser packet.
  * New eyes packet to tell the client through wich players eyes we're
- * looking in case the client is in game over move and it is locked
+ * looking through in case the client is in game over move and it is locked
  * on someone else.
+ * 3.1.0.0: new big patches implementing loads of new incompatible features.
+ * Major cleanup.  Old clients (before 310) can't join new servers anymore.
+ * 3.1.0.1: key-change-ids are now send as longs instead of bytes.
+ * 3.1.0.2: different player status byte.
+ * 3.1.0.3: different mine packet.
  */
-#define	MAGIC		0x3043F4ED
+#define	MAGIC		0x3103F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))
@@ -82,19 +92,19 @@
 /*
  * Which client versions can join this server.
  */
-#define MIN_CLIENT_VERSION	0x3020
+#define MIN_CLIENT_VERSION	0x3103
 #define MAX_CLIENT_VERSION	MY_VERSION
 
 /*
  * Which server versions can this client join.
  */
-#define MIN_SERVER_VERSION	0x3020
+#define MIN_SERVER_VERSION	0x3103
 #define MAX_SERVER_VERSION	MY_VERSION
 
-#define	MAX_STR_LEN	4096
-#define	MAX_ARG_LEN	256
-#define	MAX_DISP_LEN	80
-#define	MAX_NAME_LEN	16
+#define	MAX_STR_LEN		4096
+#define	MAX_ARG_LEN		256
+#define	MAX_DISP_LEN		80
+#define	MAX_NAME_LEN		16
 
 /*
  * Different contact pack types.
@@ -107,6 +117,8 @@
 #define	SHUTDOWN_pack		0x24
 #define	KICK_PLAYER_pack	0x25
 #define	MAX_ROBOT_pack		0x26
+#define	OPTION_TUNE_pack	0x27
+#define	OPTION_LIST_pack	0x28
 #define	CORE_pack		0x30
 #define	CONTACT_pack		0x31
 

@@ -1,6 +1,6 @@
-/* $Id: packet.h,v 3.14 1993/09/13 19:10:02 bjoerns Exp $
+/* $Id: packet.h,v 3.21 1994/03/09 19:36:35 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -26,7 +26,7 @@
 
 #include "const.h"
 
-#define KEYBOARD_SIZE		5
+#define KEYBOARD_SIZE		8
 
 /*
  * Definition of various client/server packet types.
@@ -49,7 +49,7 @@
 #define PKT_ITEM		15
 #define PKT_MINE		16
 #define PKT_BALL		17
-#define PKT_SMART		18
+#define PKT_MISSILE		18
 #define PKT_SHUTDOWN		19
 #define PKT_STRING		20
 #define PKT_DESTRUCT		21
@@ -58,7 +58,7 @@
 #define PKT_KEYBOARD		24
 #define PKT_SEEK		25
 #define PKT_NODELAY		26
-#define PKT_SEND_BUFSIZE	27
+/* #define PKT_SEND_BUFSIZE	27 */
 #define PKT_PLAYER		28
 #define PKT_SCORE		29
 #define PKT_FUEL		30
@@ -88,7 +88,14 @@
 #define PKT_LASER		54
 #define PKT_DISPLAY		55
 #define PKT_EYES		56
+#define PKT_SHAPE		57
+#define PKT_MOTD		58
 #define PKT_SHOT		60		/* + color number */
+#define PKT_TEAMSHOT		64		/* + color number */
+#define PKT_MODIFIERS		68
+#define PKT_FASTSHOT		69		/* replaces SHOT/TEAMSHOT */
+#define PKT_THRUSTTIME		70
+#define PKT_MODIFIERBANK	71
 #define PKT_FAILURE		101
 #define PKT_SUCCESS		102
 #define PKT_DEBRIS		128		/* + color + x + y */

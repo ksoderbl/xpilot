@@ -1,6 +1,6 @@
-/* $Id: event.c,v 3.30 1993/12/14 19:58:14 bert Exp $
+/* $Id: event.c,v 3.43 1994/04/14 08:13:15 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -34,7 +34,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.30 1993/12/14 19:58:14 bert Exp $";
+    "@(#)$Id: event.c,v 3.43 1994/04/14 08:13:15 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -97,12 +97,80 @@ static void Repair(int ind)
     }
 }
 
+int Player_lock_closest(int ind, int next)
+{
+    player *pl = Players[ind];
+    int lock, i, newpl;
+    float dist, best, l;
+
+    if (!next)
+	CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
+	
+    if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
+	lock = GetInd[pl->lock.pl_id];
+	dist = Wrap_length(Players[lock]->pos.x - pl->pos.x,
+			   Players[lock]->pos.y - pl->pos.y);
+    } else {
+	lock = -1;
+	dist = 0.0;
+    }
+    newpl = -1;
+    best = FLT_MAX;
+    for (i = 0; i < NumPlayers; i++) {
+	if (lock == i || i == ind || TEAM(ind, i) ||
+	    BIT(Players[i]->status, PLAYING|GAME_OVER) != PLAYING)
+	    continue;
+	l = Wrap_length(Players[i]->pos.x - pl->pos.x,
+			Players[i]->pos.y - pl->pos.y);
+	if (l >= dist && l < best) {
+	    best = l;
+	    newpl = i;
+	}
+    }
+    if (newpl == -1)
+	return 0;
+    SET_BIT(pl->lock.tagged, LOCK_PLAYER);
+    pl->lock.pl_id = Players[newpl]->id;
+    return 1;
+}
+	
+
+void Pause_player(int ind, int onoff)
+{
+    player		*pl = Players[ind];
+
+    if (onoff) {
+	if (!BIT(pl->status, PAUSE)) { /* Turn pause mode on */
+	    pl->count = 10*FPS;
+	    pl->updateVisibility = 1;
+	    CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
+	    SET_BIT(pl->status, PAUSE);
+	    pl->mychar = 'P';
+	    updateScores = true;
+	}
+    } else {
+	if (pl->count <= 0) {
+	    CLR_BIT(pl->status, PAUSE);
+	    updateScores = true;
+	    if (!BIT(pl->mode, LIMITED_LIVES)) {
+		pl->mychar = ' ';
+		Go_home(ind);
+		SET_BIT(pl->status, PLAYING);
+	    } else {
+		pl->life = 0;
+		pl->mychar = 'W';
+		SET_BIT(pl->status, GAME_OVER);
+	    }
+	}
+    }
+}
+
 
 int Handle_keyboard(int ind)
 {
     player  	*pl = Players[ind];
-    int	    	i, k, key, pressed, xi, yi;
-    float  	dist, l;
+    int	    	i, j, k, key, pressed, xi, yi;
+    float  	minv;
 
 
     for (key = 0; key < NUM_KEYS; key++) {
@@ -125,14 +193,30 @@ int Handle_keyboard(int ind)
 	/*
 	 * Allow these functions while you're 'dead'.
 	 */
-	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING)
+	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE|HOVERPAUSE) != PLAYING) {
 	    switch (key) {
 	    case KEY_PAUSE:
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
 	    case KEY_LOCK_CLOSE:
+	    case KEY_LOCK_NEXT_CLOSE:
 	    case KEY_ID_MODE:
+	    case KEY_TOGGLE_NUCLEAR:
+	    case KEY_TOGGLE_CLUSTER:
+	    case KEY_TOGGLE_IMPLOSION:
+	    case KEY_TOGGLE_VELOCITY:
+	    case KEY_TOGGLE_MINI:
+	    case KEY_TOGGLE_SPREAD:
+	    case KEY_TOGGLE_POWER:
+	    case KEY_TOGGLE_LASER:
 	    case KEY_TOGGLE_COMPASS:
+	    case KEY_TOGGLE_OWNED_ITEMS:
+	    case KEY_TOGGLE_MESSAGES:
+	    case KEY_CLEAR_MODIFIERS:
+	    case KEY_LOAD_MODIFIERS_1:
+	    case KEY_LOAD_MODIFIERS_2:
+	    case KEY_LOAD_MODIFIERS_3:
+	    case KEY_LOAD_MODIFIERS_4:
 	    case KEY_SWAP_SETTINGS:
 	    case KEY_INCREASE_POWER:
 	    case KEY_DECREASE_POWER:
@@ -146,6 +230,7 @@ int Handle_keyboard(int ind)
 	    default:
 		continue;
 	    }
+	}
 
 	if (pressed) { /* --- KEYPRESS --- */
 	    switch (key) {
@@ -167,17 +252,21 @@ int Handle_keyboard(int ind)
 
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
-		i = GetInd[pl->lock.pl_id];
-		if (NumPlayers > 1)
-		    do {
-			if (key == KEY_LOCK_PREV)
-			    i--;
-			else
-			    i++;
-			i = mod(i, NumPlayers);
-			pl->lock.pl_id = Players[i]->id;
-			pl->lock.tagged = LOCK_PLAYER;
-		    } while (i == ind);
+		j = i = GetInd[pl->lock.pl_id];
+		do {
+		    if (key == KEY_LOCK_PREV)
+			i--;
+		    else
+			i++;
+		    i = mod(i, NumPlayers);
+		    if (i == j)
+			break;
+		} while (i == ind || BIT(Players[i]->status, GAME_OVER));
+		pl->lock.pl_id = Players[i]->id;
+		if (i == ind)
+		    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
+		else
+		    SET_BIT(pl->lock.tagged, LOCK_PLAYER);
 		break;
 
 	    case KEY_TOGGLE_COMPASS:
@@ -188,10 +277,10 @@ int Handle_keyboard(int ind)
 		    break;
 		}
 		/*
-		 * Verify if the lock has ever been initialised at all
+		 * Verify if the lock has ever been initialized at all
 		 * and if the lock is still valid.
 		 */
-		if (pl->lock.tagged == LOCK_PLAYER
+		if (BIT(pl->lock.tagged, LOCK_PLAYER)
 		    && NumPlayers > 1
 		    && (k = pl->lock.pl_id) > 0
 		    && k < Id
@@ -201,26 +290,14 @@ int Handle_keyboard(int ind)
 		    && i != ind) {
 		    break;
 		}
-		/*FALLTHROUGH*/
+		(void) Player_lock_closest(ind, 0);
+		break;
 
+	    case KEY_LOCK_NEXT_CLOSE:
+		if (Player_lock_closest(ind, 1))
+		    break;
 	    case KEY_LOCK_CLOSE:
-		dist = FLT_MAX;
-		pl->lock.tagged = LOCK_NONE;
-		for (i=0; i<NumPlayers; i++) {
-		    if (TEAM(ind, i)
-			|| BIT(Players[i]->status, PLAYING|GAME_OVER)
-			    != PLAYING)
-			continue;
-		    l = Wrap_length(Players[i]->pos.x - pl->pos.x,
-				    Players[i]->pos.y - pl->pos.y);
-		    if ((pl->lock.tagged == LOCK_NONE
-			 || dist > l)
-			&& i != ind) {
-			pl->lock.pl_id = Players[i]->id;
-			pl->lock.tagged = LOCK_PLAYER;
-			dist = l;
-		    }
-		}
+		(void) Player_lock_closest(ind, 0);
 		break;
 
 	    case KEY_CHANGE_HOME:
@@ -274,16 +351,8 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_DROP_BALL:
-		if (BIT(pl->have, OBJ_BALL)) {
-		    for (i = 0; i < NumObjs; i++) {
-			if (Obj[i]->type == OBJ_BALL) {
-			    if (Obj[i]->id == pl->id) {
-				Obj[i]->id = -1;
-			    }
-			}
-		    }
-		    CLR_BIT(pl->have, OBJ_BALL);
-		}
+		sound_play_sensors(pl->pos.x, pl->pos.y, DROP_BALL_SOUND);
+		Detach_ball(ind, -1);
 		break;
 
 	    case KEY_FIRE_SHOT:
@@ -302,7 +371,6 @@ int Handle_keyboard(int ind)
 	    case KEY_FIRE_HEAT:
 		if (pl->missiles > 0)
 		    Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
-
 		break;
 
 	    case KEY_FIRE_TORPEDO:
@@ -311,43 +379,123 @@ int Handle_keyboard(int ind)
 
 		break;
 
-	    case KEY_FIRE_NUKE:
-		if (BIT(World.rules->mode, ALLOW_NUKES)
-		    && pl->missiles > NUKE_MIN_SMART) {
-		    Fire_shot(ind, OBJ_NUKE, pl->dir);
-		}
-		break;
-
 	    case KEY_FIRE_LASER:
 		if (pl->lasers > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
 		    SET_BIT(pl->used, OBJ_LASER);
 		}
 		break;
 
-	    case KEY_DROP_MINE:
-		if (pl->mines > 0
-		    && pl->fuel.sum > -ED_MINE
-		    && (!BIT(pl->used, OBJ_SHIELD)
-			|| shieldedMining == true)) {
-		    Place_mine(ind);
-		    pl->mines--;
-		    Add_fuel(&(pl->fuel), ED_MINE);
+	    case KEY_TOGGLE_NUCLEAR:
+		if (BIT(World.rules->mode, ALLOW_NUKES)) {
+		    switch (pl->mods.nuclear) {
+		    case NUCLEAR:
+			pl->mods.nuclear |= FULLNUCLEAR;
+			break;
+		    case 0:
+			pl->mods.nuclear = NUCLEAR;
+			break;
+		    default:
+			pl->mods.nuclear = 0;
+			break;
+		    }
 		}
 		break;
 
-	    case KEY_DETACH_MINE:
-		if (pl->mines > 0
-		    && pl->fuel.sum > -ED_MINE
-		    && (!BIT(pl->used, OBJ_SHIELD)
-			|| shieldedMining == true)) {
-		    Place_moving_mine(ind, pl->vel.x, pl->vel.y);
-		    pl->mines--;
-		    Add_fuel(&(pl->fuel), ED_MINE);
+	    case KEY_TOGGLE_CLUSTER:
+		if (BIT(World.rules->mode, ALLOW_CLUSTERS)) {
+		    TOGGLE_BIT(pl->mods.warhead, CLUSTER);
 		}
+		break;
+
+	    case KEY_TOGGLE_IMPLOSION:
+		if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+		    TOGGLE_BIT(pl->mods.warhead, IMPLOSION);
+		}
+		break;
+
+	    case KEY_TOGGLE_VELOCITY:
+		if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+		    /* NB. These may be bit fields, dont modify this code */
+		    if (pl->mods.velocity == MODS_VELOCITY_MAX)
+			pl->mods.velocity = 0;
+		    else
+			pl->mods.velocity++;
+		}
+		break;
+
+	    case KEY_TOGGLE_MINI:
+		if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+		    /* NB. These may be bit fields, dont modify this code */
+		    if (pl->mods.mini == MODS_MINI_MAX)
+			pl->mods.mini = 0;
+		    else
+			pl->mods.mini++;
+		}
+		break;
+
+	    case KEY_TOGGLE_SPREAD:
+		if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+		    /* NB. These may be bit fields, dont modify this code */
+		    if (pl->mods.spread == MODS_SPREAD_MAX)
+			pl->mods.spread = 0;
+		    else
+			pl->mods.spread++;
+		}
+		break;
+
+	    case KEY_TOGGLE_LASER:
+		if (BIT(World.rules->mode, ALLOW_LASER_MODIFIERS)) {
+		    /* NB. These may be bit fields, dont modify this code */
+		    if (pl->mods.laser == MODS_LASER_MAX)
+			pl->mods.laser = 0;
+		    else
+			pl->mods.laser++;
+		}
+		break;
+
+	    case KEY_TOGGLE_POWER:
+		if (BIT(World.rules->mode, ALLOW_MODIFIERS)) {
+		    /* NB. These may be bit fields, dont modify this code */
+		    if (pl->mods.power == MODS_POWER_MAX)
+			pl->mods.power = 0;
+		    else
+			pl->mods.power++;
+		}
+		break;
+
+	    case KEY_CLEAR_MODIFIERS:
+		CLEAR_MODS(pl->mods);
+		break;
+
+	    case KEY_LOAD_MODIFIERS_1:
+	    case KEY_LOAD_MODIFIERS_2:
+	    case KEY_LOAD_MODIFIERS_3:
+	    case KEY_LOAD_MODIFIERS_4:
+		pl->mods = pl->modbank[key - KEY_LOAD_MODIFIERS_1];
+		break;
+
+	    case KEY_TOGGLE_AUTOPILOT:
+		if (BIT(pl->have, OBJ_AUTOPILOT))
+		    Autopilot(ind, !BIT(pl->used, OBJ_AUTOPILOT));
+		break;
+
+	    case KEY_EMERGENCY_THRUST:
+		if (BIT(pl->have, OBJ_EMERGENCY_THRUST))
+		    Emergency_thrust(ind,!BIT(pl->used, OBJ_EMERGENCY_THRUST));
+		break;
+
+	    case KEY_DROP_MINE:
+		Place_mine(ind);
+		break;
+
+	    case KEY_DETACH_MINE:
+		Place_moving_mine(ind);
 		break;
 
 	    case KEY_TURN_LEFT:
 	    case KEY_TURN_RIGHT:
+		if (BIT(pl->used, OBJ_AUTOPILOT))
+		    Autopilot(ind, 0);
 		pl->turnacc = 0;
 		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
 		    pl->turnacc += pl->turnspeed;
@@ -366,42 +514,84 @@ int Handle_keyboard(int ind)
 	    case KEY_PAUSE:
 		xi = (int)pl->pos.x / BLOCK_SZ;
 		yi = (int)pl->pos.y / BLOCK_SZ;
-		if ((pl->velocity < (0.5 + LENGTH(World.gravity[xi][yi].x,
-						  World.gravity[xi][yi].y)))
-		    && (World.base[pl->home_base].pos.x == xi
-			&& World.base[pl->home_base].pos.y == yi)) {
-		    if (!BIT(pl->status, PAUSE)) { /* Turn pause mode on */
-			pl->count = 30;/*MIN_PAUSE;*/
-			pl->updateVisibility = 1;
-			SET_BIT(pl->status, PAUSE);
-			CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
-			pl->mychar = 'P';
-			updateScores = true;
-			if (BIT(pl->mode, LIMITED_LIVES)) {
-			    pl->prev_life = pl->life = 0;
-			}
-		    } else {
-			if (pl->count <= 0) {
-			    CLR_BIT(pl->status, PAUSE);
-			    updateScores = true;
-			    if (!BIT(pl->mode, LIMITED_LIVES)) {
-				pl->mychar = ' ';
-				Go_home(ind);
-				SET_BIT(pl->status, PLAYING);
-				BITV_SET(pl->last_keyv, key);
-				BITV_SET(pl->prev_keyv, key);
-				return 1;
-			    } else {
-				pl->prev_life = pl->life = 0;
-				pl->mychar = 'W';
-				SET_BIT(pl->status, GAME_OVER);
-			    }
-			}
+		j = World.base[pl->home_base].pos.x;
+		k = World.base[pl->home_base].pos.y;
+		if (j == xi && k == yi) {
+		    minv = 1.0f;
+		    i = PAUSE;
+		} else {
+		    /*
+		     * Hover pause doesn't work within two squares of the
+		     * players home base, they would want the better pause.
+		     */
+		    if (ABS(j - xi) <= 2 && ABS(k - yi) <= 2)
+			break;
+		    minv = 5.0f;
+		    i = HOVERPAUSE;
+		}
+		minv += LENGTH(World.gravity[xi][yi].x,
+			       World.gravity[xi][yi].y);
+		if (pl->velocity > minv)
+		    break;
+
+		switch (i) {
+		case PAUSE:
+		    if (BIT(pl->status, HOVERPAUSE))
+			break;
+
+		    if (BIT(pl->used, OBJ_AUTOPILOT))
+			Autopilot(ind, 0);
+
+		    /* toggle pause mode */
+		    Pause_player(ind, !BIT(pl->status, PAUSE));
+		    if (BIT(pl->status, PLAYING)) {
+			BITV_SET(pl->last_keyv, key);
+			BITV_SET(pl->prev_keyv, key);
+			return 1;
 		    }
+		    break;
+
+		case HOVERPAUSE:
+		    if (BIT(pl->status, PAUSE))
+			break;
+
+		    if (!BIT(pl->status, HOVERPAUSE)) {
+			/*
+			 * Turn hover pause on, together with shields.
+			 */
+			pl->count = 5*FPS;
+			CLR_BIT(pl->status, SELF_DESTRUCT);
+			SET_BIT(pl->status, HOVERPAUSE);
+
+			if (BIT(pl->used, OBJ_EMERGENCY_THRUST))
+			    Emergency_thrust(ind, 0);
+
+			if (!BIT(pl->used, OBJ_AUTOPILOT))
+			    Autopilot(ind, 1);
+
+			/*
+			 * Don't allow firing while paused. Similar
+			 * reasons exist for refueling, connector and
+			 * tractor beams.  Other items are allowed (esp.
+			 * cloaking).
+			 */
+			CLR_BIT(pl->used, OBJ_FIRE|OBJ_CONNECTOR
+				|OBJ_REFUEL|OBJ_TRACTOR_BEAM|OBJ_LASER);
+			if (BIT(pl->have, OBJ_SHIELD))
+			    SET_BIT(pl->used, OBJ_SHIELD);
+		    } else if (pl->count <= 0) {
+			Autopilot(ind, 0);
+			CLR_BIT(pl->status, HOVERPAUSE);
+			CLR_BIT(pl->used, OBJ_SHIELD);
+		    }
+		    break;
 		}
 		break;
 		
 	    case KEY_SWAP_SETTINGS:
+		if (   BIT(pl->status, HOVERPAUSE)
+		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    break;
 		if (pl->turnacc == 0.0) {
 		    SWAP(pl->power, pl->power_s);
 		    SWAP(pl->turnspeed, pl->turnspeed_s);
@@ -422,29 +612,57 @@ int Handle_keyboard(int ind)
 		    SET_BIT(pl->used, OBJ_CONNECTOR);
 		break;
 
+	    case KEY_PRESSOR_BEAM:
+		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
+		    pl->tractor_pressor = 1;
+		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		}
+		break;
+
+	    case KEY_TRACTOR_BEAM:
+		if (BIT(pl->have, OBJ_TRACTOR_BEAM)) {
+		    pl->tractor_pressor = 0;
+		    SET_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		}
+		break;
+
 	    case KEY_INCREASE_POWER:
+		if (   BIT(pl->status, HOVERPAUSE)
+		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    break;
 		pl->power *= 1.10;
 		pl->power = MIN(pl->power, MAX_PLAYER_POWER);
 		break;
 
 	    case KEY_DECREASE_POWER:
+		if (   BIT(pl->status, HOVERPAUSE)
+		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    break;
 		pl->power *= 0.90;
 		pl->power = MAX(pl->power, MIN_PLAYER_POWER);
 		break;
 
 	    case KEY_INCREASE_TURNSPEED:
+		if (   BIT(pl->status, HOVERPAUSE)
+		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    break;
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 1.05;
 		pl->turnspeed = MIN(pl->turnspeed, MAX_PLAYER_TURNSPEED);
 		break;
 
 	    case KEY_DECREASE_TURNSPEED:
+		if (   BIT(pl->status, HOVERPAUSE)
+		    || BIT(pl->used, OBJ_AUTOPILOT))
+		    break;
 		if (pl->turnacc == 0.0)
 		    pl->turnspeed *= 0.95;
 		pl->turnspeed = MAX(pl->turnspeed, MIN_PLAYER_TURNSPEED);
 		break;
 
 	    case KEY_THRUST:
+		if (BIT(pl->used, OBJ_AUTOPILOT))
+		    Autopilot(ind, 0);
 		SET_BIT(pl->status, THRUSTING);
 		break;
 
@@ -457,12 +675,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_ECM:
-		if (pl->ecms > 0 && pl->fuel.sum > -ED_ECM) {
-		    SET_BIT(pl->used, OBJ_ECM);
-		    do_ecm(pl);
-		    pl->ecms--;
-		    Add_fuel(&(pl->fuel), ED_ECM);
-		}
+		Fire_ecm(ind);
 		break;
 
 	    case KEY_TRANSPORTER:
@@ -481,6 +694,8 @@ int Handle_keyboard(int ind)
 	    switch (key) {
 	    case KEY_TURN_LEFT:
 	    case KEY_TURN_RIGHT:
+		if (BIT(pl->used, OBJ_AUTOPILOT))
+		    Autopilot(ind, 0);
 		pl->turnacc = 0;
 		if (BITV_ISSET(pl->last_keyv, KEY_TURN_LEFT)) {
 		    pl->turnacc += pl->turnspeed;
@@ -502,6 +717,11 @@ int Handle_keyboard(int ind)
 		CLR_BIT(pl->used, OBJ_CONNECTOR);
 		break;
 
+	    case KEY_TRACTOR_BEAM:
+	    case KEY_PRESSOR_BEAM:
+		CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
+		break;
+
 	    case KEY_SHIELD:
 		CLR_BIT(pl->used, OBJ_SHIELD|OBJ_LASER);
 		break;
@@ -515,6 +735,8 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_THRUST:
+		if (BIT(pl->used, OBJ_AUTOPILOT))
+		    Autopilot(ind, 0);
 		CLR_BIT(pl->status, THRUSTING);
 		break;
 

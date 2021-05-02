@@ -8,3 +8,12 @@ of XPilot maps.  With some extra features.  Made by Andrew Scherpbier.
 wildmap.c is a new fancy XPilot map generator with a few options to tune
 the characteristics of the generated map.  Try wildmap -help.
 
+Maps2image takes a set of xpilot maps and builds a single PBM image
+from them.  Each image is labeled with the map's name below it.
+If you have a lot of xpilot maps, this is a simple way to remind
+yourself of what the different maps are/look like.
+
+TkXpInterface is a funky interface to various components of XPilot.
+You can use it to tune all the server parameters interactively before
+starting a server.  Or use it to join a server of your choice.
+It also provides a comfortable interface to the XPilot Meta server.

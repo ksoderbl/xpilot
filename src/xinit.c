@@ -1,6 +1,6 @@
-/* $Id: xinit.c,v 3.49 1993/11/13 19:06:51 bert Exp $
+/* $Id: xinit.c,v 3.61 1994/02/17 11:02:17 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -52,7 +52,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.49 1993/11/13 19:06:51 bert Exp $";
+    "@(#)$Id: xinit.c,v 3.61 1994/02/17 11:02:17 bert Exp $";
 #endif
 
 #if defined(__cplusplus)
@@ -70,16 +70,17 @@ extern int		RadarHeight;
 int	ButtonHeight;
 Atom	ProtocolAtom, KillAtom;
 bool	talk_mapped;
-int	buttonColor, windowColor, borderColor;
+int	buttonColor, windowColor, borderColor, hudColor;
 int	quitting = false;
 char	visualName[MAX_VISUAL_NAME];
 Visual	*visual;
 int	dispDepth;
 bool	mono;
 bool	colorSwitch;
-int	top_width, top_height;
+int	top_width, top_height, top_x, top_y, top_posmask;
 int	draw_width, draw_height;
 char	*geometry;
+bool	autoServerMotdPopup;
 
 
 static message_t	*MsgBlock;
@@ -113,6 +114,10 @@ static struct {
 #include "items/itemAfterburner.xbm"
 #include "items/itemTransporter.xbm"
 #include "items/itemLaser.xbm"
+#include "items/itemEmergencyThrust.xbm"
+#include "items/itemTractorBeam.xbm"
+#include "items/itemAutopilot.xbm"
+
 /* NB!  Is dependent on the order of the items in item.h */
 static struct {
     char*	data;
@@ -153,17 +158,26 @@ static struct {
 	    "robots to seak certain players"			},
     {	itemLaser_bits,
 	    "Laser; "
-	    "limited range laser pulse weapon, "
-	    "having more laser items increases the range and rate "
-	    "of the laser pulses, "
+	    "limited range laser beam, costs a lot of fuel, "
+	    "having more laser items increases the range of the laser, "
 	    "they can be irrepairably damaged by ECMs" },
+    {	itemEmergencyThrust_bits,
+	    "Emergency Thrust; "
+	    "gives emergency thrust capabilities for a limited period" },
+    {   itemTractorBeam_bits,
+	    "Tractor Beam; "
+	    "gives mutual attractive force to currently locked on ship, "
+	    "this means the heavier your ship, the less likely you will move "
+	    "when being tractored or using a tractor" },
+    {	itemAutopilot_bits,
+	    "Autopilot; "
+	    "when on, the ship will turn and thrust against the "
+            "direction of travel" },
 };
 Pixmap	itemBitmaps[NUM_ITEMS];		/* Bitmaps for the items */
     
-
-#ifndef NO_ROTATING_DASHES
 char dashes[NUM_DASHES] = { 8, 4 };
-#endif
+char cdashes[NUM_CDASHES] = { 3, 9 };
 
 /* How far away objects should be placed from each other etc... */
 #define BORDER	10
@@ -177,8 +191,8 @@ char dashes[NUM_DASHES] = { 8, 4 };
 #define TALK_INSIDE_BORDER	3
 #define TALK_WINDOW_HEIGHT	(TALK_TEXT_HEIGHT + 2 * TALK_INSIDE_BORDER)
 #define TALK_WINDOW_X		(50 - TALK_OUTSIDE_BORDER)
-#define TALK_WINDOW_Y		(draw_width*3/4 - TALK_WINDOW_HEIGHT/2)
-#define TALK_WINDOW_WIDTH	(draw_height \
+#define TALK_WINDOW_Y		(draw_height*3/4 - TALK_WINDOW_HEIGHT/2)
+#define TALK_WINDOW_WIDTH	(draw_width \
 				    - 2*(TALK_WINDOW_X + TALK_OUTSIDE_BORDER))
 
 #define CTRL(c)			((c) & 0x1F)
@@ -192,6 +206,7 @@ static int Keys_callback(int, void *, char **);
 static int Config_callback(int, void *, char **);
 static int Score_callback(int, void *, char **);
 static int Player_callback(int, void *, char **);
+static int Motd_callback(int, void *, char **);
 
 /*
  * Visual names.
@@ -231,12 +246,13 @@ static char	*gray_defaults[MAX_COLORS] = {
  * Return font that is used for this GC, even if setting a new
  * font failed (return default font in that case).
  */
-XFontStruct* Set_font(Display* dpy, GC gc, char* fontName)
+XFontStruct* Set_font(Display* dpy, GC gc, char* fontName, char *resName)
 {
     XFontStruct*	font;
 
     if ((font = XLoadQueryFont(dpy, fontName)) == NULL) {
-	error("Couldn't find font '%s', using default font", fontName);
+	error("Couldn't find font '%s' for %s, using default font",
+	      fontName, resName);
 	font = XQueryFont(dpy, XGContextFromGC(gc));
     } else
 	XSetFont(dpy, gc, font->fid);
@@ -547,6 +563,22 @@ int Init_window(void)
 	: (maxColors == 8) ? 3
 	: 2;
 
+    if (shieldDrawMode == -1) {
+	shieldDrawMode = 0;
+	/*
+	 * Default is solid for NCD X11 servers.  My NCD mono 19 inch
+	 * terminal, vendor release 2002 suffers from terrible slowness
+	 * when drawing dashed arcs with thick lines.
+	 */
+	if (strcmp (ServerVendor (dpy),
+		    "DECWINDOWS (Compatibility String) "
+		    "Network Computing Devices Inc.") == 0
+	    && ProtocolVersion (dpy) == 11)
+	    shieldDrawMode = 1;
+    }
+    shieldDrawMode = shieldDrawMode ? LineSolid : LineOnOffDash;
+    radarPlayerRectFN = (mono ? XDrawRectangle : XFillRectangle);
+
     if (Parse_colors(DefaultColormap(dpy, DefaultScreen(dpy))) == -1) {
 	printf("Color parsing failed\n");
 	return -1;
@@ -610,9 +642,7 @@ int Init_window(void)
      * Get toplevel geometry.
      */
     top_flags = 0;
-    if (version >= 0x3041
-	&& geometry != NULL
-	&& geometry[0] != '\0') {
+    if (geometry != NULL && geometry[0] != '\0') {
 	mask = XParseGeometry(geometry, &x, &y, &w, &h);
     } else {
 	mask = 0;
@@ -715,6 +745,10 @@ int Init_window(void)
 	= XCreateGC(dpy, top, values, &xgc);
     talkGC
 	= XCreateGC(dpy, top, values, &xgc);
+    keyListGC
+	= XCreateGC(dpy, top, values, &xgc);
+    motdGC
+	= XCreateGC(dpy, top, values, &xgc);
     gc
 	= XCreateGC(dpy, top, values, &xgc);
     XSetBackground(dpy, gc, colors[BLACK].pixel);
@@ -725,17 +759,21 @@ int Init_window(void)
      * Set fonts
      */
     gameFont
-	= Set_font(dpy, gc, gameFontName);
+	= Set_font(dpy, gc, gameFontName, "gameFont");
     messageFont
-	= Set_font(dpy, messageGC, messageFontName);
+	= Set_font(dpy, messageGC, messageFontName, "messageFont");
     scoreListFont
-	= Set_font(dpy, scoreListGC, scoreListFontName);
+	= Set_font(dpy, scoreListGC, scoreListFontName, "scoreListFont");
     buttonFont
-	= Set_font(dpy, buttonGC, buttonFontName);
+	= Set_font(dpy, buttonGC, buttonFontName, "buttonFont");
     textFont
-	= Set_font(dpy, textGC, textFontName);
+	= Set_font(dpy, textGC, textFontName, "textFont");
     talkFont
-	= Set_font(dpy, talkGC, talkFontName);
+	= Set_font(dpy, talkGC, talkFontName, "talkFont");
+    keyListFont
+	= Set_font(dpy, keyListGC, keyListFontName, "keyListFont");
+    motdFont
+	= Set_font(dpy, motdGC, motdFontName, "motdFont");
 
     XSetState(dpy, gc,
 	      WhitePixel(dpy, DefaultScreen(dpy)),
@@ -786,10 +824,12 @@ int Init_window(void)
 	buttonColor = BLACK;
 	windowColor = BLACK;
 	borderColor = WHITE;
+	hudColor    = WHITE;
     } else {
 	windowColor = BLUE;
 	buttonColor = RED;
 	borderColor = WHITE;
+	hudColor    = 2;
     }
 
     draw_width = top_width - (256 + 2);
@@ -834,6 +874,8 @@ int Init_window(void)
 			      "SCORE", Score_callback, NULL);
     Widget_add_pulldown_entry(menu_button,
 			      "PLAYER", Player_callback, NULL);
+    Widget_add_pulldown_entry(menu_button,
+			      "MOTD", Motd_callback, NULL);
     Widget_map_sub(button_form);
 
     /* Create score list window */
@@ -875,13 +917,13 @@ int Init_window(void)
 	xsh.flags = (top_flags|PMinSize|PMaxSize|PBaseSize|PResizeInc);
 	xsh.width = top_width;
 	xsh.base_width =
-	xsh.min_width = (version >= 0x3041) ? MIN_TOP_WIDTH : DEF_TOP_WIDTH;
-	xsh.max_width = (version >= 0x3041) ? MAX_TOP_WIDTH : DEF_TOP_WIDTH;
+	xsh.min_width = MIN_TOP_WIDTH;
+	xsh.max_width = MAX_TOP_WIDTH;
 	xsh.width_inc = 1;
 	xsh.height = top_height;
 	xsh.base_height =
-	xsh.min_height = (version >= 0x3041) ? MIN_TOP_HEIGHT : DEF_TOP_HEIGHT;
-	xsh.max_height = (version >= 0x3041) ? MAX_TOP_HEIGHT : DEF_TOP_HEIGHT;
+	xsh.min_height = MIN_TOP_HEIGHT;
+	xsh.max_height = MAX_TOP_HEIGHT;
 	xsh.height_inc = 1;
 	xsh.x = top_x;
 	xsh.y = top_y;
@@ -898,8 +940,11 @@ int Init_window(void)
 	/*
 	 * Now initialize icon and window title name.
 	 */
-	sprintf(msg,
-		"Successful connection to server at \"%s\".", servername);
+	if (titleFlip)
+	    sprintf(msg, "Successful connection to server at \"%s\".",
+		    servername);
+	else
+	    sprintf(msg, "%s -- Server at \"%s\".", TITLE, servername);
 	XStoreName(dpy, top, msg);
 
 	sprintf(msg, "%s:%s", name, servername);
@@ -1050,16 +1095,27 @@ int DrawShadowText(Display* dpy, Window w, GC gc,
 }
 
 
-#define NUM_ABOUT_PAGES	3
+#define NUM_ABOUT_PAGES		4
+
+/*
+ * This variable tells us what item comes last on page 0.  If -1 it hasn't
+ * been initialized yet (page 0 needs exposing to do this).  If it is
+ * NUM_ITEMS-1 then there is no need to split to page and the NEXT and PREV
+ * keys will automatically skip that page.
+ */
+static int itemsplit = -1;
 
 void Expose_about_window(void)
 {
+    int	i, y, old_y, box_start, box_end, first, last;
+
     XClearWindow(dpy, about_w);
 
     switch (about_page) {
-    case 0: {
-	int	i, y, old_y, box_start, box_end;
-	y = DrawShadowText(dpy, about_w, textGC,
+    case 0:
+    case 1:
+	if (about_page == 0) {
+	    y = DrawShadowText(dpy, about_w, textGC,
 			   BORDER, BORDER,
 			   "BONUS ITEMS\n"
 			   "\n"
@@ -1070,10 +1126,21 @@ void Expose_about_window(void)
 			   "new equipment.  If a fighter explodes, some of "
 			   "its equipment might be found among the debris.",
 			   colors[WHITE].pixel, colors[BLACK].pixel);
+	    first = 0;
+	    last = (itemsplit == -1) ? (NUM_ITEMS-1) : itemsplit;
+	} else {
+	    y = DrawShadowText(dpy, about_w, textGC,
+			   BORDER, BORDER,
+			   "BONUS ITEMS CONTINUED\n",
+			   colors[WHITE].pixel, colors[BLACK].pixel);
+	    first = itemsplit+1;
+	    last = (NUM_ITEMS-1);
+	}
+
 	y += BORDER;
 	box_start = y;
 	y += BORDER / 2;
-	for (i=0; i<NUM_ITEMS; i++) {
+	for (i = first; i <= last; i++) {
 
 	    y += BORDER / 2;
 
@@ -1087,7 +1154,7 @@ void Expose_about_window(void)
 		y = old_y + 2 * ITEM_TRIANGLE_SIZE;
 	    }
 	    box_end = y + BORDER / 2;
-	    if (i == NUM_ITEMS - 1) {
+	    if (i == last) {
 		box_end += BORDER / 2;
 	    }
 
@@ -1101,13 +1168,38 @@ void Expose_about_window(void)
 		       old_y + ITEM_TRIANGLE_SIZE);
 	    XSetForeground(dpy, textGC, colors[WHITE].pixel);
 
+	    /*
+	     * Check for items overlapping button window, if so then
+	     * remove this item, set itemsplit to previous item and
+	     * stop adding more items.
+	     */
+	    if (about_page == 0 && itemsplit == -1
+		&& box_end >= (ABOUT_WINDOW_HEIGHT - BORDER * 2 - 4
+			       - (2*BTN_BORDER + buttonFont->ascent
+				  + buttonFont->descent))) {
+		itemsplit = i-1;
+		XSetForeground(dpy, textGC, colors[windowColor].pixel);
+		XFillRectangle(dpy, about_w, textGC,
+			       BORDER, box_start,
+			       ABOUT_WINDOW_WIDTH, box_end - box_start);
+		XSetForeground(dpy, textGC, colors[WHITE].pixel);
+		break;
+	    }
+
 	    y = box_end;
 	    box_start = box_end;
+		
 	}
-    }
+	/*
+	 * No page split, obviously font is small enough or not enough
+	 * items.
+	 */
+	if (about_page == 0 && itemsplit == -1) {
+	    itemsplit = NUM_ITEMS-1;
+	}
 	break;
 	    
-    case 1:
+    case 2:
 	DrawShadowText(dpy, about_w, textGC,
 	BORDER, BORDER,
 	"GAME OBJECTIVE\n"
@@ -1130,12 +1222,12 @@ void Expose_about_window(void)
 	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;
 
-    case 2:
+    case 3:
 	DrawShadowText(dpy, about_w, textGC,
 	BORDER, BORDER,
 	"ABOUT XPILOT\n"
 	"\n"
-	"XPilot is still not a finished product, so please apology for "
+	"XPilot is still not a finished product, so apologies for "
 	"any bugs etc.  However, if you find any, we would greatly "
 	"appreciate that you reported to us.\n"
 	"\n"
@@ -1281,16 +1373,14 @@ static void createKeysWindow(void)
 	    keyHelpList[sizeList-1] = '\0';
 
 	    /* Store longest keysym name */
-	    len = XTextWidth(textFont, str, strlen(str));
+	    len = XTextWidth(keyListFont, str, strlen(str));
 	    if (len > maxKeyNameLen)
 		maxKeyNameLen = len;
 
 	    /*
 	     * Description of action invoked for this key
 	     */
-	    if ((str = Get_keyhelpstring(keyDefs[i].key)) == NULL) {
-		continue;
-	    }
+	    if (!(str = Get_keyhelpstring(keyDefs[i].key))) continue;
 	    sizeDesc += strlen(str) + 1;
 	    keyHelpDesc = (char *)realloc(keyHelpDesc, sizeDesc);
 	    strcat(keyHelpDesc, str);
@@ -1298,11 +1388,11 @@ static void createKeysWindow(void)
 	    keyHelpDesc[sizeDesc-1] = '\0';
 
 	    /* Store longest desc */
-	    len = XTextWidth(textFont, str, strlen(str));
+	    len = XTextWidth(keyListFont, str, strlen(str));
 	    if (len > maxKeyDescLen)
 		maxKeyDescLen = len;
 
-	    windowHeight += textFont->ascent + textFont->descent + 1;
+	    windowHeight += keyListFont->ascent + keyListFont->descent + 1;
 	}
     }
 
@@ -1367,10 +1457,10 @@ void Expose_keys_window(void)
 {
     XClearWindow(dpy, keys_w);
 
-    DrawShadowText(dpy, keys_w, textGC,
+    DrawShadowText(dpy, keys_w, keyListGC,
 		   BORDER, BORDER, keyHelpList,
 		   colors[WHITE].pixel, colors[BLACK].pixel);
-    DrawShadowText(dpy, keys_w, textGC,
+    DrawShadowText(dpy, keys_w, keyListGC,
 		   KeyDescOffset, BORDER, keyHelpDesc,
 		   colors[WHITE].pixel, colors[BLACK].pixel);
 }
@@ -1430,12 +1520,16 @@ void About(Window w)
 	XUnmapWindow(dpy, about_w);
     } else if (w == about_next_b) {
 	about_page++;
-	if (about_page == NUM_ABOUT_PAGES)
+	if (about_page == 1 && itemsplit >= NUM_ITEMS-1)
+	    about_page++;
+	if (about_page >= NUM_ABOUT_PAGES)
 	    about_page = 0;
 	Expose_about_window();
     } else if (w == about_prev_b) {
 	about_page--;
-	if (about_page == -1)
+	if (about_page == 1 && itemsplit >= NUM_ITEMS-1)
+	    about_page--;
+	if (about_page <= -1)
 	    about_page = NUM_ABOUT_PAGES-1;
 	Expose_about_window();
     }
@@ -1568,13 +1662,10 @@ void Talk_map_window(bool map)
 	XMapWindow(dpy, talk_w);
 	talk_mapped = true;
 
-#if !defined(TALK_WARP_POINTER) || (TALK_WARP_POINTER != 0)
 	XWarpPointer(dpy, None, talk_w,
 		     0, 0, 0, 0,
 		     TALK_WINDOW_WIDTH - 2,
 		     TALK_WINDOW_HEIGHT - 2);
-#endif
-
     }
     else if (talk_created == true) {
 	XUnmapWindow(dpy, talk_w);
@@ -1588,7 +1679,7 @@ void Talk_event(XEvent *event)
 {
     char		ch;
     bool		cursor_visible = talk_cursor.visible;
-    int			i, count, oldlen, newlen, onewidth, oldwidth, newwidth;
+    int			count, oldlen, newlen, onewidth, oldwidth;
     KeySym		keysym;
     XComposeStatus	compose;
     char		new_str[MAX_CHARS];
@@ -1634,11 +1725,7 @@ void Talk_event(XEvent *event)
 	     * Return.  Send the talk message to the server if there is text.
 	     */
 	    if (talk_str[0] != '\0') {
-		if (version < 0x3030) {
-		    Add_message("<<Talking is not supported by this server>>");
-		} else {
-		    Net_talk(talk_str);
-		}
+		Net_talk(talk_str);
 		talk_cursor.point = 0;
 		talk_str[0] = '\0';
 	    }
@@ -1836,6 +1923,7 @@ void Talk_event(XEvent *event)
 
 	    break;
 	}
+	XFlush(dpy);	/* needed in case we don't get frames to draw soon. */
 
 	/*
 	 * End of KeyPress.
@@ -1911,4 +1999,99 @@ int FatalError(Display *dpy)
      */
     exit(0);
     return(0);
+}
+
+
+#define MAX_MOTD_SIZE	(30*1024)
+
+static char		*motd_buf;
+static int		motd_size;
+static int		motd_viewer = NO_WIDGET;
+static int		motd_auto_popup;
+
+static int Motd_callback(int widget_desc, void *data, char **str)
+{
+    if (motd_buf == NULL) {
+	motd_auto_popup = 0;
+	Net_ask_for_motd(0, MAX_MOTD_SIZE);
+	Net_flush();
+    }
+    else if (motd_viewer != NO_WIDGET) {
+	Widget_map(motd_viewer);
+    }
+    return 0;
+}
+
+
+int Handle_motd(long off, char *buf, int len, long filesize)
+{
+    int			i;
+    static char		no_motd_msg[] = "\nServer has no MOTD\n\n";
+
+    if (!motd_buf) {
+	motd_size = MIN(filesize, MAX_MOTD_SIZE);
+	i = MAX(motd_size, sizeof no_motd_msg) + 1;
+	if (!(motd_buf = (char *) malloc(i))) {
+	    error("No memory for MOTD");
+	    return -1;
+	}
+	memset(motd_buf, ' ', motd_size);
+	for (i = 39; i < motd_size; i += 40) {
+	    motd_buf[i] = '\n';
+	}
+    }
+    else if (filesize < motd_size) {
+	motd_size = filesize;
+	motd_buf[motd_size] = '\0';
+    }
+    if (off < motd_size && len > 0) {
+	if (off + len > motd_size) {
+	    len = motd_size - off;
+	}
+	memcpy(motd_buf + off, buf, len);
+    }
+    else if (len == 0 && off > 0) {
+	return 0;
+    }
+    if (motd_size == 0) {
+	if (motd_auto_popup) {
+	    if (motd_buf != NULL) {
+		free(motd_buf);
+		motd_buf = NULL;
+	    }
+	    return 0;
+	}
+	strcpy(motd_buf, no_motd_msg);
+	motd_size = strlen(motd_buf);
+    }
+    if (motd_viewer == NO_WIDGET) {
+	char title[100];
+	sprintf(title, "XPilot motd from %s", servername);
+	motd_viewer =
+	    Widget_create_viewer(motd_buf,
+				 (off || len) ? (off + len) : strlen(motd_buf),
+				 2*DisplayWidth(dpy, DefaultScreen(dpy))/3,
+				 4*DisplayHeight(dpy, DefaultScreen(dpy))/5,
+				 2,
+				 title, "XPilot:motd",
+				 motdFont);
+	if (motd_viewer == NO_WIDGET) {
+	    errno = 0;
+	    error("Can't create MOTD viewer");
+	}
+    }
+    else if (len > 0) {
+	Widget_update_viewer(motd_viewer, motd_buf, off + len);
+    }
+
+    return 0;
+}
+
+int Startup_server_motd(void)
+{
+    if (autoServerMotdPopup) {
+	motd_auto_popup = 1;
+	return Net_ask_for_motd(0, MAX_MOTD_SIZE);
+    }
+    return 0;
 }

@@ -1,6 +1,6 @@
-/* $Id: netclient.c,v 3.45 1993/10/28 21:14:00 bert Exp $
+/* $Id: netclient.c,v 3.59 1994/04/05 20:28:40 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -98,8 +98,10 @@ static long		last_loops,
 			talk_last_send;
 static char		talk_str[MAX_CHARS];
 
+extern void usleep(unsigned long usec);
+
 /*
- * Initialise the function dispatch tables.
+ * Initialize the function dispatch tables.
  * There are two tables.  One for the semi-important unreliable
  * data like frame updates.
  * The other one is for the reliable data stream, which is
@@ -131,7 +133,7 @@ static void Receive_init(void)
     receive_tbl[PKT_ITEM]	= Receive_item;
     receive_tbl[PKT_MINE]	= Receive_mine;
     receive_tbl[PKT_BALL]	= Receive_ball;
-    receive_tbl[PKT_SMART]	= Receive_smart;
+    receive_tbl[PKT_MISSILE]	= Receive_missile;
     receive_tbl[PKT_SHUTDOWN]	= Receive_shutdown;
     receive_tbl[PKT_DESTRUCT]	= Receive_destruct;
     receive_tbl[PKT_FUEL]	= Receive_fuel;
@@ -144,10 +146,18 @@ static void Receive_init(void)
     receive_tbl[PKT_SHOT+1]	= Receive_shot;
     receive_tbl[PKT_SHOT+2]	= Receive_shot;
     receive_tbl[PKT_SHOT+3]	= Receive_shot;
+    receive_tbl[PKT_TEAMSHOT+0] = Receive_teamshot;
+    receive_tbl[PKT_TEAMSHOT+1] = Receive_teamshot;
+    receive_tbl[PKT_TEAMSHOT+2] = Receive_teamshot;
+    receive_tbl[PKT_TEAMSHOT+3] = Receive_teamshot;
+    receive_tbl[PKT_MODIFIERS]  = Receive_modifiers;
+    receive_tbl[PKT_FASTSHOT]	= Receive_fastshot;
+    receive_tbl[PKT_THRUSTTIME] = Receive_thrusttime;
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	receive_tbl[PKT_DEBRIS + i] = Receive_debris;
     }
 
+    reliable_tbl[PKT_MOTD]	= Receive_motd;
     reliable_tbl[PKT_MESSAGE]	= Receive_message;
     reliable_tbl[PKT_PLAYER]	= Receive_player;
     reliable_tbl[PKT_SCORE]	= Receive_score;
@@ -384,13 +394,15 @@ int Net_setup(void)
  * is from the right UDP connection, it already has 
  * this info from the ENTER_GAME_pack.
  */
-int Net_verify(char *real, char *nick, char *disp)
+int Net_verify(char *real, char *nick, char *disp, int my_team)
 {
     int		n,
 		type,
 		result,
 		retries;
     time_t	last;
+
+    team = my_team;
 
     for (retries = 0;;) {
 	if (retries == 0
@@ -504,11 +516,11 @@ int Net_init(char *server, int port)
 	error("Can't make socket non-blocking");
 	return -1;
     }
-    if (SetSocketSendBufferSize(sock, CLIENT_SEND_SIZE + 16) == -1) {
-	error("Can't set send buffer size to %d", CLIENT_SEND_SIZE + 16);
+    if (SetSocketSendBufferSize(sock, CLIENT_SEND_SIZE + 256) == -1) {
+	error("Can't set send buffer size to %d", CLIENT_SEND_SIZE + 256);
     }
-    if (SetSocketReceiveBufferSize(sock, CLIENT_RECV_SIZE + 16) == -1) {
-	error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 16);
+    if (SetSocketReceiveBufferSize(sock, CLIENT_RECV_SIZE + 256) == -1) {
+	error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 256);
     }
 
     size = receive_window_size * sizeof(frame_t);
@@ -605,21 +617,11 @@ void Net_cleanup(void)
 }
 
 /*
- * Calculate a new `keyboard-changed-id' which the server has
- * to ack.  To save space in the server-to-client packets only
- * a byte is used which gives some trouble with overflow.
+ * Calculate a new `keyboard-changed-id' which the server has to ack.
  */
 void Net_key_change(void)
 {
-    last_keyboard_change = ((last_keyboard_change + 1) & 0xFF);
-    if ((last_keyboard_change > last_keyboard_ack)
-	? (last_keyboard_change - last_keyboard_ack >= 128)
-	: (last_keyboard_change + 256 - last_keyboard_ack >= 128)) {
-	errno = 0;
-	error("Server is ignoring keys (%d,%d)",
-	    last_keyboard_change, last_keyboard_ack);
-	last_keyboard_change = ((last_keyboard_ack + 127) & 0xFF);
-    }
+    last_keyboard_change++;
     Key_update();
 }
 
@@ -653,7 +655,7 @@ int Net_fd(void)
 /*
  * Try to send a `start play' packet to the server and get an
  * acknowledgement from the server.  This is called after
- * we have initialised all our other stuff like the user interface
+ * we have initialized all our other stuff like the user interface
  * and we also have the map already.
  */
 int Net_start(void)
@@ -672,7 +674,8 @@ int Net_start(void)
 		return -1;
 	    }
 	    Sockbuf_clear(&wbuf);
-	    if (Packet_printf(&wbuf, "%c", PKT_PLAY) <= 0
+	    if (Send_shape(shipShape) == -1
+		|| Packet_printf(&wbuf, "%c", PKT_PLAY) <= 0
 		|| Client_power() == -1
 	    	|| Sockbuf_flush(&wbuf) == -1) {
 		error("Can't send start play packet");
@@ -1153,10 +1156,12 @@ int Receive_start(void)
 {
     int		n;
     long	loops;
-    u_byte	ch,
-		key_ack;
+    u_byte	ch;
+    long	key_ack;
 
-    if ((n = Packet_scanf(&rbuf, "%c%ld%c", &ch, &loops, &key_ack)) <= 0) {
+    if ((n = Packet_scanf(&rbuf,
+			  "%c%ld%ld",
+			  &ch, &loops, &key_ack)) <= 0) {
 	return n;
     }
     if (last_loops >= loops) {
@@ -1168,7 +1173,20 @@ int Receive_start(void)
 	return 0;
     }
     last_loops = loops;
-    last_keyboard_ack = (key_ack & 0xFF);
+    if (key_ack > last_keyboard_ack) {
+	if (key_ack > last_keyboard_change) {
+	    printf("Premature keyboard ack by server (%ld,%ld,%ld)\n",
+		   last_keyboard_change, last_keyboard_ack, key_ack);
+	    /*
+	     * Packet could be corrupt???
+	     * Some blokes turn off checksumming.
+	     */
+	    return 0;
+	}
+	else {
+	    last_keyboard_ack = key_ack;
+	}
+    }
     if ((n = Handle_start(loops)) == -1) {
 	return -1;
     }
@@ -1253,6 +1271,55 @@ int Receive_eyes(void)
 }
 
 /*
+ * Receive the server MOTD.
+ */
+int Receive_motd(void)
+{
+    u_byte		ch;
+    long		off,
+			size;
+    short		len;
+    int			n;
+    char		*cbuf_ptr = cbuf.ptr;
+
+    if ((n = Packet_scanf(&cbuf,
+			  "%c%ld%hd%ld",
+			  &ch, &off, &len, &size)) <= 0) {
+	return n;
+    }
+    if (cbuf.ptr + len > &cbuf.buf[cbuf.len]) {
+	cbuf.ptr = cbuf_ptr;
+	return 0;
+    }
+    Handle_motd(off, cbuf.ptr, (int)len, size);
+    cbuf.ptr += len;
+
+    return 1;
+}
+
+/*
+ * Ask the server to send us the server MOTD.
+ */
+int Net_ask_for_motd(long offset, long maxlen)
+{
+    if (offset < 0 || maxlen <= 0) {
+	errno = 0;
+	error("Bad motd request (%ld, %ld)", offset, maxlen);
+	return -1;
+    }
+    if (Packet_printf(&wbuf, "%c%ld%ld", PKT_MOTD, offset, maxlen) <= 0) {
+	errno = 0;
+	error("Can't ask motd");
+	return -1;
+    }
+#ifndef SILENT
+    printf("Asking for a motd\n");
+#endif
+
+    return 0;
+}
+
+/*
  * Receive the packet with all player information for the HUD.
  * If this packet is missing from the frame update then the player
  * isn't actively playing, which means he's either damaged, dead,
@@ -1264,69 +1331,78 @@ int Receive_self(void)
     short	x, y, vx, vy, lockId, lockDist,
     		fuelSum, fuelMax;
     u_byte	ch, heading, power, turnspeed, turnresistance,
-		nextCheckPoint, lockDir,
-    		numCloaks, numSensors, numMines, numRockets,
-    		numEcms, numTransporters, numFrontShots,
-    		numBackShots, numAfterburners, numLasers,
-    		num_tanks, currentTank, stat;
+		nextCheckPoint, lockDir, autopilotLight, currentTank, stat;
+    u_byte	num_items[NUM_ITEMS];
 
-    n = Packet_scanf(&rbuf, "%c" "%hd%hd%hd%hd%c" "%c%c%c"
-		     "%hd%hd%c" "%c%c%c%c" "%c%c%c%c%c" "%c%c%c" "%hd%hd",
+    n = Packet_scanf(&rbuf,
+		     "%c"
+		     "%hd%hd%hd%hd%c"
+		     "%c%c%c"
+		     "%hd%hd%c%c"
+		     "%c%c%c%c%c"
+		     "%c%c%c%c%c"
+		     "%c%c%c%c"
+		     "%c%hd%hd"
+		     "%hd%hd%c"
+		     "%c%c"
+		     ,
 		     &ch,
 		     &x, &y, &vx, &vy, &heading,
 		     &power, &turnspeed, &turnresistance,
-		     &lockId, &lockDist, &lockDir,
-		     &nextCheckPoint, &numCloaks, &numSensors, &numMines,
-		     &numRockets, &numEcms, &numTransporters,
-		     &numFrontShots, &numBackShots,
-		     &numAfterburners, &num_tanks, &currentTank,
-		     &fuelSum, &fuelMax);
+		     &lockId, &lockDist, &lockDir, &nextCheckPoint,
 
-    if (n <= 0) {
+		     &(num_items[ITEM_CLOAKING_DEVICE]),
+		     &(num_items[ITEM_SENSOR_PACK]),
+		     &(num_items[ITEM_MINE_PACK]),
+		     &(num_items[ITEM_ROCKET_PACK]),
+		     &(num_items[ITEM_ECM]),
+
+		     &(num_items[ITEM_TRANSPORTER]),
+		     &(num_items[ITEM_WIDEANGLE_SHOT]),
+		     &(num_items[ITEM_BACK_SHOT]),
+		     &(num_items[ITEM_AFTERBURNER]),
+		     &(num_items[ITEM_TANK]),
+
+		     &(num_items[ITEM_LASER]),
+		     &(num_items[ITEM_EMERGENCY_THRUST]),
+		     &(num_items[ITEM_TRACTOR_BEAM]),
+		     &(num_items[ITEM_AUTOPILOT]),
+
+		     &currentTank, &fuelSum, &fuelMax,
+		     &view_width, &view_height, &debris_colors,
+		     &stat, &autopilotLight
+		     );
+
+    if (debris_colors > 8) {
+	debris_colors = 8;
+    }
+    if (view_width != draw_width || view_height != draw_height) {
+	Send_display();
+    }
+    Game_over_action(stat);
+    Handle_self(x, y, vx, vy, heading,
+		(float) power,
+		(float) turnspeed,
+		(float) turnresistance / 255.0F,
+		lockId, lockDist, lockDir,
+		nextCheckPoint, autopilotLight,
+		num_items,
+		currentTank, fuelSum, fuelMax, rbuf.len);
+
+    return 1;
+}
+
+int Receive_modifiers(void)
+{
+    int		n;
+    char	mods[MAX_CHARS];
+    u_byte	ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%s", &ch, mods)) <= 0) {
 	return n;
     }
-    if (version >= 0x3041) {
-	n = Packet_scanf(&rbuf, "%c%hd%hd%c", &numLasers,
-			 &view_width, &view_height,
-			 &debris_colors, &spark_rand);
-	if (n <= 0) {
-	    return n;
-	}
-	if (debris_colors > 8) {
-	    debris_colors = 8;
-	}
-	if (view_width != draw_width || view_height != draw_height) {
-	    Send_display();
-	}
-
-	if (version >= 0x3042) {
-	    n = Packet_scanf(&rbuf, "%c", &stat);
-	    if (n <= 0) {
-		return n;
-	    }
-	    Game_over_action(stat);	
-	}
-    } else {
-	numLasers = 0;
-	view_width = DEF_VIEW_SIZE;
-	view_height = DEF_VIEW_SIZE;
-	debris_colors = 0;
-    }
-
-    n = Handle_self(x, y, vx, vy, heading,
-		    (float) power,
-		    (float) turnspeed,
-		    (float) turnresistance / 255.0F,
-		    lockId, lockDist, lockDir,
-		    nextCheckPoint, numCloaks, numSensors, numMines,
-		    numRockets, numEcms, numTransporters,
-		    numFrontShots, numBackShots,
-		    numAfterburners, numLasers,
-		    num_tanks, currentTank,
-		    fuelSum, fuelMax, rbuf.len);
-    if (n == -1) {
+    if ((n = Handle_modifiers(mods)) == -1)
 	return -1;
-    }
     return 1;
 }
 
@@ -1350,13 +1426,13 @@ int Receive_connector(void)
 {
     int		n;
     short	x0, y0, x1, y1;
-    u_byte	ch;
+    u_byte	ch, tractor;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%hd%hd",
-			  &ch, &x0, &y0, &x1, &y1)) <= 0) {
+    n = Packet_scanf(&rbuf, "%c%hd%hd%hd%hd%c",
+		     &ch, &x0, &y0, &x1, &y1, &tractor);
+    if (n <= 0)
 	return n;
-    }
-    if ((n = Handle_connector(x0, y0, x1, y1)) == -1) {
+    if ((n = Handle_connector(x0, y0, x1, y1, tractor)) == -1) {
 	return -1;
     }
     return 1;
@@ -1368,10 +1444,6 @@ int Receive_laser(void)
     short	x, y, len;
     u_byte	ch, color, dir;
 
-    if (version < 0x3043) {
-	rbuf.ptr += 1+1+2+2+2+2;
-	return 1;
-    }
     if ((n = Packet_scanf(&rbuf, "%c%c%hd%hd%hd%c",
 			  &ch, &color, &x, &y, &len, &dir)) <= 0) {
 	return n;
@@ -1382,16 +1454,16 @@ int Receive_laser(void)
     return 1;
 }
 
-int Receive_smart(void)
+int Receive_missile(void)
 {
     int		n;
     short	x, y;
-    u_byte	ch, dir;
+    u_byte	ch, dir, len;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c", &ch, &x, &y, &dir)) <= 0) {
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c%c", &ch, &x, &y, &len, &dir)) <= 0) {
 	return n;
     }
-    if ((n = Handle_smart(x, y, dir)) == -1) {
+    if ((n = Handle_missile(x, y, len, dir)) == -1) {
 	return -1;
     }
     return 1;
@@ -1418,8 +1490,10 @@ int Receive_ship(void)
     short	x, y, id;
     u_byte	ch, dir, flags;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%hd%c%c",
-			  &ch, &x, &y, &id, &dir, &flags)) <= 0) {
+    if ((n = Packet_scanf(&rbuf,
+			  "%c%hd%hd%hd" "%c%c",
+			  &ch, &x, &y, &id,
+			  &dir, &flags)) <= 0) {
 	return n;
     }
     shield = ((flags & 1) != 0);
@@ -1433,13 +1507,14 @@ int Receive_ship(void)
 int Receive_mine(void)
 {
     int		n;
-    short	x, y;
-    u_byte	ch;
+    short	x, y, id;
+    u_byte	ch, teammine;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
+    n = Packet_scanf(&rbuf, "%c%hd%hd%c%hd", &ch, &x, &y, &teammine, &id);
+    if (n <= 0) {
 	return n;
     }
-    if ((n = Handle_mine(x, y)) == -1) {
+    if ((n = Handle_mine(x, y, teammine, id)) == -1) {
 	return -1;
     }
     return 1;
@@ -1490,6 +1565,41 @@ int Receive_shutdown(void)
     return 1;
 }
 
+int Receive_thrusttime(void)
+{
+    int		n;
+    short	count, max;
+    u_byte	ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &count, &max)) <= 0) {
+	return n;
+    }
+    if ((n = Handle_thrusttime(count, max)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_fastshot(void)
+{
+    int			n, r, type;
+
+    rbuf.ptr++;	/* skip PKT_FASTSHOT packet id */
+
+    if (rbuf.ptr - rbuf.buf + 2 >= rbuf.len) {
+	return 0;
+    }
+    type = (*rbuf.ptr++ & 0xFF);
+    n = (*rbuf.ptr++ & 0xFF);
+    if (rbuf.ptr - rbuf.buf + (n * 2) > rbuf.len) {
+	return 0;
+    }
+    r = Handle_fastshot(type, (u_byte*)rbuf.ptr, n);
+    rbuf.ptr += n * 2;
+
+    return (r == -1) ? -1 : 1;
+}
+
 int Receive_debris(void)
 {
     int			n, r, type;
@@ -1519,6 +1629,27 @@ int Receive_shot(void)
     }
     color = ch - PKT_SHOT;
     if ((n = Handle_shot(x, y, color)) == -1) {
+	return -1;
+    }
+    return 1;
+}
+
+int Receive_teamshot(void)
+{
+    int		n, color;
+    short	x, y;
+    u_byte	ch;
+
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
+	return n;
+    }
+    color = ch - PKT_TEAMSHOT;
+    if (color < 0 || color >= NUM_COLORS) {
+	errno = 0;
+	error("Bad teamshot color %d (%d)", color, ch);
+	return -1;
+    }
+    if ((n = Handle_teamshot(x, y, color)) == -1) {
 	return -1;
     }
     return 1;
@@ -1574,13 +1705,14 @@ int Receive_radar(void)
 {
     int			n;
     short		x, y;
-    u_byte		ch;
+    u_byte		ch, size;
 
-    if ((n = Packet_scanf(&rbuf, "%c%hd%hd", &ch, &x, &y)) <= 0) {
+    if ((n = Packet_scanf(&rbuf, "%c%hd%hd%c", &ch, &x, &y, &size)) <= 0) {
 	return n;
     }
-    if ((n = Handle_radar(x, y)) == -1) {
-	return -1;
+	    
+    if ((n = Handle_radar(x, y, size)) == -1) {
+		    return -1;
     }
     return 1;
 }
@@ -1651,22 +1783,19 @@ int Receive_player(void)
     int			n;
     short		id;
     u_byte		ch, team, mychar;
-    char		name[MAX_CHARS], real[MAX_CHARS], host[MAX_CHARS];
+    char		name[MAX_CHARS],
+			real[MAX_CHARS],
+			host[MAX_CHARS],
+			shape[MSG_LEN];
 
-    if (version < 0x3041) {
-	if ((n = Packet_scanf(&cbuf, "%c%hd%c%c%s", &ch,
-			      &id, &team, &mychar, name)) <= 0) {
-	    return n;
-	}
-	real[0] = '\0';
-	host[0] = '\0';
-    } else {
-	if ((n = Packet_scanf(&cbuf, "%c%hd%c%c%s%s%s", &ch,
-			      &id, &team, &mychar, name, real, host)) <= 0) {
-	    return n;
-	}
+    if ((n = Packet_scanf(&cbuf,
+			  "%c%hd%c%c" "%s%s%s" "%S",
+			  &ch, &id, &team, &mychar,
+			  name, real, host,
+			  shape)) <= 0) {
+	return n;
     }
-    if ((n = Handle_player(id, team, mychar, name, real, host)) == -1) {
+    if ((n = Handle_player(id, team, mychar, name, real, host, shape)) == -1) {
 	return -1;
     }
     return 1;
@@ -1697,14 +1826,8 @@ int Receive_score(void)
     short		id, score, life;
     u_byte		ch, mychar;
 
-    if (version < 0x3040) {
-	n = Packet_scanf(&cbuf, "%c%hd%hd%hd", &ch,
-			 &id, &score, &life);
-	mychar = '\0';
-    } else {
-	n = Packet_scanf(&cbuf, "%c%hd%hd%hd%c", &ch,
-			 &id, &score, &life, &mychar);
-    }
+    n = Packet_scanf(&cbuf, "%c%hd%hd%hd%c", &ch,
+		     &id, &score, &life, &mychar);
     if (n <= 0) {
 	return n;
     }
@@ -1925,15 +2048,16 @@ int Receive_reply(int *replyto, int *result)
 
 int Send_keyboard(u_byte *keyboard_vector)
 {
-    if (wbuf.size - wbuf.len < KEYBOARD_SIZE + 2) {
+    const int	size = KEYBOARD_SIZE;
+
+    if (wbuf.size - wbuf.len < size + 1 + 4) {
 	errno = 0;
 	error("Not enough write buffer space for keyboard state");
 	return -1;
     }
-    wbuf.buf[wbuf.len++] = PKT_KEYBOARD;
-    wbuf.buf[wbuf.len++] = (last_keyboard_change & 0xFF);
-    memcpy(&wbuf.buf[wbuf.len], keyboard_vector, KEYBOARD_SIZE);
-    wbuf.len += KEYBOARD_SIZE;
+    Packet_printf(&wbuf, "%c%ld", PKT_KEYBOARD, last_keyboard_change);
+    memcpy(&wbuf.buf[wbuf.len], keyboard_vector, size);
+    wbuf.len += size;
     last_keyboard_update = last_loops;
     Send_talk();
     if (Sockbuf_flush(&wbuf) == -1) {
@@ -1944,10 +2068,19 @@ int Send_keyboard(u_byte *keyboard_vector)
     return 0;
 }
 
+int Send_shape(char *str)
+{
+    if (Packet_printf(&wbuf, "%c%S", PKT_SHAPE,
+		      (str) ? str : "") <= 0) {
+	return -1;
+    }
+    return 0;
+}
+
 int Send_power(float power)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_POWER,
-	(int) (power * 256.0)) == -1) {
+		      (int) (power * 256.0)) == -1) {
 	return -1;
     }
     return 0;
@@ -1956,7 +2089,7 @@ int Send_power(float power)
 int Send_power_s(float power_s)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_POWER_S,
-	(int) (power_s * 256.0)) == -1) {
+		      (int) (power_s * 256.0)) == -1) {
 	return -1;
     }
     return 0;
@@ -1965,7 +2098,7 @@ int Send_power_s(float power_s)
 int Send_turnspeed(float turnspeed)
 {
     if (Packet_printf(&wbuf, "%c%hd", PKT_TURNSPEED,
-	(int) (turnspeed * 256.0)) == -1) {
+		      (int) (turnspeed * 256.0)) == -1) {
 	return -1;
     }
     return 0;
@@ -2013,8 +2146,7 @@ int Receive_quit(void)
 	errno = 0;
 	error("Can't read quit packet");
     } else {
-	if (version < 0x3043
-	    || Packet_scanf(sbuf, "%s", reason) <= 0) {
+	if (Packet_scanf(sbuf, "%s", reason) <= 0) {
 	    strcpy(reason, "unknown reason");
 	}
 	errno = 0;
@@ -2087,9 +2219,6 @@ int Send_display(void)
 {
     int			num_col;
 
-    if (version < 0x3041) {
-	return 0;
-    }
     num_col = (maxColors == 8) ? 4
 	: (maxColors == 16) ? 8
 	: 0;
@@ -2097,5 +2226,16 @@ int Send_display(void)
 		      draw_width, draw_height, num_col, spark_rand) == -1) {
 	return -1;
     }
+    return 0;
+}
+
+
+int Send_modifier_bank(int bank)
+{
+    if (bank < 0 || bank >= NUM_MODBANKS)
+	return -1;
+    if (Packet_printf(&wbuf, "%c%c%s", PKT_MODIFIERBANK,
+		      bank, modBankStr[bank]) == -1)
+	return -1;
     return 0;
 }

@@ -1,6 +1,6 @@
-/* $Id: widget.h,v 3.5 1993/09/13 19:10:38 bjoerns Exp $
+/* $Id: widget.h,v 3.9 1994/02/07 13:20:58 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -39,11 +39,15 @@ typedef enum widget_type {
     WIDGET_INPUT_INT,
     WIDGET_INPUT_FLOAT,
     WIDGET_INPUT_STRING,
+    WIDGET_VIEWER,
+    WIDGET_SLIDER_HORI,
+    WIDGET_SLIDER_VERT,
     NUM_WIDGET_TYPES
 } widget_type_t;
 
 typedef struct widget {
     widget_type_t		type;		/* Widget sub type */
+    char			*name;		/* Widget name */
     int				parent_desc;	/* Widget parent if non-zero */
     Window			window;		/* X drawing window */
     int				width,		/* Window width */
@@ -118,6 +122,35 @@ typedef struct widget_string {
     char			*str;		/* Current input string */
 } widget_string_t;
 
+typedef struct view_line {
+    const char			*txt;
+    int				len;
+    int				txt_width;
+} viewer_line_t;
+
+typedef struct widget_viewer {
+    Window			overlay;
+    const char			*buf;
+    int				len,
+				vert_slider_desc,
+				hori_slider_desc,
+				close_button_desc,
+				visible_x,
+				visible_y,
+				real_width,
+				real_height,
+				max_width,
+				num_lines;
+    viewer_line_t		*line;
+    XFontStruct			*font;
+} widget_viewer_t;
+
+typedef struct widget_slider {
+    bool			pressed;	/* pressed or not */
+    bool			inside;		/* If pointer inside window */
+    int				viewer_desc;
+} widget_slider_t;
+
 void Widget_destroy(int widget_desc);
 Window Widget_window(int widget_desc);
 void Widget_draw(int widget_desc);
@@ -171,5 +204,10 @@ int Widget_map(int widget_desc);
 int Widget_raise(int widget_desc);
 int Widget_unmap(int widget_desc);
 int Widget_resize(int widget_desc, int width, int height);
+int Widget_create_viewer(const char *buf, int len,
+			 int width, int height, int border,
+			 char *window_name, char *icon_name,
+			 XFontStruct *font);
+int Widget_update_viewer(int popup_desc, const char *buf, int len);
 
 #endif

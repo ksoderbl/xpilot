@@ -1,6 +1,6 @@
-/* $Id: join.c,v 3.18 1993/10/24 22:16:57 bert Exp $
+/* $Id: join.c,v 3.22 1994/04/05 20:27:11 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -177,22 +177,22 @@ static void sigcatch(int signum)
     exit(1);
 }
 
-int Join(char *server, int port, char *real, char *nick, char *display,
-	 unsigned version)
+int Join(char *server_addr, char *server_name, int port, char *real,
+	 char *nick, int my_team, char *display, unsigned version)
 {
     signal(SIGINT, sigcatch);
     signal(SIGTERM, sigcatch);
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
 
-    if (Client_init(server, version) == -1) {
+    if (Client_init(server_name, version) == -1) {
 	return -1;
     }
-    if (Net_init(server, port) == -1) {
+    if (Net_init(server_addr, port) == -1) {
 	Client_cleanup();
 	return -1;
     }
-    if (Net_verify(real, nick, display) == -1) {
+    if (Net_verify(real, nick, display, my_team) == -1) {
 	Net_cleanup();
 	Client_cleanup();
 	return -1;

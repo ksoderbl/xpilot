@@ -1,6 +1,6 @@
-/* $Id: update.c,v 3.23 1993/11/16 22:49:37 bert Exp $
+/* $Id: update.c,v 3.37 1994/03/30 17:07:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -33,156 +33,25 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.23 1993/11/16 22:49:37 bert Exp $";
+    "@(#)$Id: update.c,v 3.37 1994/03/30 17:07:31 bert Exp $";
 #endif
 
 
-
-#define speed_limit(obj) {					\
-    if (ABS((obj).velocity>SPEED_LIMIT)) {			\
-	int theta = findDir((obj).vel.x, (obj).vel.y);		\
-	(obj).vel.x = tcos(theta) * SPEED_LIMIT;		\
-	(obj).vel.y = tsin(theta) * SPEED_LIMIT;		\
-    }								\
-}
-
-#define update_object_pos(obj)	{					\
-    int x=(int)((obj).pos.x/BLOCK_SZ), y=(int)((obj).pos.y/BLOCK_SZ);	\
-    (obj).wrapped = 0;                                               	\
-    if (x<0 || x>=World.x || y<0 || y>=World.y) {			\
-	LIMIT((obj).pos.x, 0.0, World.width-1.0);		    	\
-	LIMIT((obj).pos.y, 0.0, World.height-1.0);		    	\
+#define update_object_speed(OBJ)	{				\
+    int x=(int)((OBJ)->pos.x/BLOCK_SZ), y=(int)((OBJ)->pos.y/BLOCK_SZ);	\
+    if (BIT((OBJ)->status, GRAVITY)) {					\
+	(OBJ)->vel.x += (OBJ)->acc.x + World.gravity[x][y].x;		\
+	(OBJ)->vel.y += (OBJ)->acc.y + World.gravity[x][y].y;		\
     } else {								\
-	(obj).prevpos = (obj).pos;					\
-	if (BIT((obj).status, GRAVITY)) {				\
-	    (obj).pos.x += (obj).vel.x += (obj).acc.x +World.gravity[x][y].x;\
-	    (obj).pos.y += (obj).vel.y += (obj).acc.y +World.gravity[x][y].y;\
-	} else {							\
-	    (obj).pos.x += (obj).vel.x += (obj).acc.x;			\
-	    (obj).pos.y += (obj).vel.y += (obj).acc.y;			\
-	}								\
-	if ((obj).pos.x < 0 ||						\
-	    (obj).pos.x >= World.width ||				\
-	    (obj).pos.y < 0 ||						\
-	    (obj).pos.y >= World.height) {				\
-	    Limit_object_pos((object *)&(obj));				\
-	}								\
+	(OBJ)->vel.x += (OBJ)->acc.x;					\
+	(OBJ)->vel.y += (OBJ)->acc.y;					\
     }									\
-    /*  speed_limit(obj); */						\
-    (obj).velocity = LENGTH((obj).vel.x, (obj).vel.y);			\
 }
 
 
 static char msg[MSG_LEN];
 
 
-/*
- * This was part of the update_object_pos() macro first, but
- * some C preprocessor couldn't handle the length.
- * Because objects only very infrequently traverse the edge the
- * speed loss of moving this to a function is negligible.
- */
-static void Limit_object_pos(object *obj)
-{
-    if (!BIT(World.rules->mode, WRAP_PLAY)) {
-	if (obj->pos.x < 0) {
-	    if (edgeBounce) {
-		obj->pos.x = -obj->pos.x;
-		if (obj->vel.x < 0) {
-		    obj->vel.x = -obj->vel.x;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = MOD2(RES / 2 - obj->dir, RES);
-		    }
-		}
-	    } else {
-		obj->pos.x = 0;
-		if (obj->vel.x < 0) {
-		    obj->vel.x = 0;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = (obj->vel.y < 0) ? (3*RES/4) : RES/4;
-		    }
-		}
-	    }
-	}
-	if (obj->pos.x >= World.width) {
-	    if (edgeBounce) {
-		obj->pos.x = 2 * World.width - obj->pos.x;
-		if (obj->vel.x > 0) {
-		    obj->vel.x = -obj->vel.x;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = MOD2(RES / 2 - obj->dir, RES);
-		    }
-		}
-	    } else {
-		obj->pos.x = World.width - 1;    
-		if (obj->vel.x > 0) {
-		    obj->vel.x = 0;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = (obj->vel.y < 0) ? (3*RES/4) : RES/4;
-		    }
-		}
-	    }
-	}
-	if (obj->pos.y < 0) {
-	    if (edgeBounce) {
-		obj->pos.y = -obj->pos.y;
-		if (obj->vel.y < 0) {
-		    obj->vel.y = -obj->vel.y;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = MOD2(RES - obj->dir, RES);
-		    }
-		}
-	    } else {
-		obj->pos.y = 0;
-		if (obj->pos.y < 0) {
-		    obj->vel.y = 0;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = (obj->vel.x < 0) ? (RES/2) : 0;
-		    }
-		}
-	    }
-	}
-	if (obj->pos.y >= World.height) {
-	    if (edgeBounce) {
-		obj->pos.y = 2 * World.height - obj->pos.y;
-		if (obj->vel.y > 0) {
-		    obj->vel.y = -obj->vel.y;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = MOD2(RES - obj->dir, RES);
-		    }
-		}
-	    } else {
-		obj->pos.y = World.height - 1;
-		if (obj->vel.y > 0) {
-		    obj->vel.y = 0;
-		    if (obj->type != OBJ_PLAYER) {
-			obj->dir = (obj->vel.x < 0) ? (RES/2) : 0;
-		    }
-		}
-	    }
-	}
-    } else {
-	if (obj->pos.x < 0) {
-	    obj->pos.x += World.width;	    
-	    obj->wrapped |= 1;
-	}
-	if (obj->pos.x >= World.width) {
-	    obj->pos.x -= World.width;
-	    obj->wrapped |= 1;
-	}
-	if (obj->pos.y < 0) {
-	    obj->pos.y += World.height;
-	    obj->wrapped |= 2;
-	}
-	if (obj->pos.y >= World.height) {
-	    obj->pos.y -= World.height;
-	    obj->wrapped |= 2;
-	}
-    }
-}
-
-
-#ifndef OLD_TRANSPORT_TO_HOME
 static void Transport_to_home(int ind)
 {
     /*
@@ -209,7 +78,274 @@ static void Transport_to_home(int ind)
     pl->vel.x = dx * m;
     pl->vel.y = dy * m;
 }
-#endif
+
+/*
+ * Turn emergency thrust on or off.
+ */
+void Emergency_thrust (int ind, int on)
+{
+    player	*pl = Players[ind];
+    const int	emergency_thrust_time = 4 * FPS;
+
+    if (on) {
+	if (pl->emergency_thrust_left <= 0) {
+	    pl->emergency_thrust_left = emergency_thrust_time;
+	    pl->emergency_thrust_max = emergency_thrust_time;
+	    pl->emergency_thrusts--;
+	}
+	SET_BIT(pl->used, OBJ_EMERGENCY_THRUST);
+	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_ON_SOUND);
+    } else {
+	CLR_BIT(pl->used, OBJ_EMERGENCY_THRUST);
+	if (pl->emergency_thrust_left <= 0) {
+	    /*
+	     * If we have no emergency thrust left we also turn off autopilot
+	     * as that meant we were doing an emergency brake.
+	     */
+	    if (BIT(pl->used, OBJ_AUTOPILOT))
+		Autopilot(ind, 0);
+	    if (pl->emergency_thrusts <= 0)
+		CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
+	}
+	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_OFF_SOUND);
+    }
+}
+
+/*
+ * Turn autopilot on or off.  This always clears the thrusting bit.  During
+ * automatic pilot mode any changes to the current power, turnacc, turnspeed
+ * and turnresistance settings will be temporary.
+ */
+void Autopilot (int ind, int on)
+{
+    player	*pl = Players[ind];
+
+    CLR_BIT(pl->status, THRUSTING);
+    if (on) {
+	pl->auto_power_s = pl->power;
+	pl->auto_turnacc_s = pl->turnacc;
+	pl->auto_turnspeed_s = pl->turnspeed;
+	pl->auto_turnresistance_s = pl->turnresistance;
+	SET_BIT(pl->used, OBJ_AUTOPILOT);
+	pl->power = (MIN_PLAYER_POWER+MAX_PLAYER_POWER)/2.0;
+	pl->turnspeed = (MIN_PLAYER_TURNSPEED+MAX_PLAYER_TURNSPEED)/2.0;
+	pl->turnresistance = 0.2;
+	sound_play_sensors(pl->pos.x, pl->pos.y, AUTOPILOT_ON_SOUND);
+    } else {
+	pl->power = pl->auto_power_s;
+	pl->turnacc = pl->auto_turnacc_s;
+	pl->turnspeed = pl->auto_turnspeed_s;
+	pl->turnresistance = pl->auto_turnresistance_s;
+	CLR_BIT(pl->used, OBJ_AUTOPILOT);
+	sound_play_sensors(pl->pos.x, pl->pos.y, AUTOPILOT_OFF_SOUND);
+    }
+}
+
+/*
+ * Automatic pilot will try to hold the ship steady, turn to face away
+ * from direction of travel, if so then turn on thrust which will
+ * cause the ship to come to a rest within a short period of time.
+ * This code is fairly self contained.
+ */
+static void do_Autopilot (player *pl)
+{
+    int		vad;	/* Velocity Away Delta */
+    int		dir;
+    int		afterburners;
+    int		ix, iy;
+    float	gx, gy;
+    float	acc, vel;
+    float	delta;
+    float	turnspeed, power;
+    const float	emergency_thrust_settings_delta = 150.0 / FPS;
+    const float	auto_pilot_settings_delta = 15.0 / FPS;
+    const float	auto_pilot_turn_factor = 2.5;
+    const float	auto_pilot_dead_velocity = 0.5;
+
+    /*
+     * Having more autopilot items or using emergency thrust causes a much
+     * quicker deceleration to occur than during normal flight.  Having
+     * no autopilot items will cause minimum delta to occur, this is because
+     * the autopilot code is used by the pause code.
+     */
+    delta = auto_pilot_settings_delta;
+    if (pl->autopilots)
+	delta *= pl->autopilots;
+
+    if (BIT(pl->used, OBJ_EMERGENCY_THRUST)) {
+	afterburners = MAX_AFTERBURNER;
+	if (delta < emergency_thrust_settings_delta)
+	    delta = emergency_thrust_settings_delta;
+    } else {
+	afterburners = pl->afterburners;
+    }
+
+    ix = pl->pos.x/BLOCK_SZ;
+    iy = pl->pos.y/BLOCK_SZ;
+    gx = World.gravity[ix][iy].x;
+    gy = World.gravity[ix][iy].y;
+
+    /*
+     * Due to rounding errors if the velocity is very small we were probably
+     * on target to stop last time round, so we actually absolutely stop.
+     * This enables the ship to orient away from gravity and set up the
+     * thrust to conteract it.
+     */
+    if ((vel = LENGTH(pl->vel.x, pl->vel.y)) < auto_pilot_dead_velocity) {
+	pl->vel.x = pl->vel.y = vel = 0.0;
+	pl->pos = pl->prevpos;
+    }
+	
+    /*
+     * Calculate power needed to change instantaneously to stopped.  We
+     * must include gravity here for next time round the update loop.
+     */
+    acc = LENGTH(gx, gy) + vel;
+    power = acc * pl->mass;
+    if (afterburners)
+	power /= AFTER_BURN_POWER_FACTOR(afterburners);
+    
+    /*
+     * Calculate direction change needed to reduce velocity to zero.
+     */
+    if (vel == 0.0) {
+	vad = findDir(-gx, -gy);
+    } else {
+	vad = findDir(-pl->vel.x, -pl->vel.y);
+    }
+    vad = MOD2(vad - pl->dir, RES);
+    if (vad > RES/2) {
+	vad = RES - vad;
+	dir = -1;
+    } else {
+	dir = 1;
+    }
+
+    /*
+     * Calculate turnspeed needed to change direction instataneously by
+     * above direction change.
+     */
+    turnspeed = ((float)vad) / pl->turnresistance - pl->turnvel;
+    if (turnspeed < 0) {
+	turnspeed = -turnspeed;
+	dir = -dir;
+    }
+
+    /*
+     * Change the turnspeed setting towards the perfect value, and limit
+     * to the maximum only (limiting to the minimum causes oscillation).
+     */
+    if (turnspeed < pl->turnspeed) {
+	pl->turnspeed -= delta;
+	if (turnspeed > pl->turnspeed)
+	    pl->turnspeed = turnspeed;
+    } else if (turnspeed > pl->turnspeed) {
+	pl->turnspeed += delta;
+	if (turnspeed < pl->turnspeed)
+	    pl->turnspeed = turnspeed;
+    }
+    if (pl->turnspeed > MAX_PLAYER_TURNSPEED)
+	pl->turnspeed = MAX_PLAYER_TURNSPEED;
+
+    /*
+     * Decide if its wise to turn this time.
+     */
+    if (pl->turnspeed > (turnspeed*auto_pilot_turn_factor)) {
+	pl->turnacc = 0.0;
+	pl->turnvel = 0.0;
+    } else {
+	pl->turnacc = dir * pl->turnspeed;
+    }
+
+    /*
+     * Change the power setting towards the perfect value, and limit
+     * to the maximum only (limiting to the minimum causes oscillation).
+     */
+    if (power < pl->power) {
+	pl->power -= delta;
+	if (power > pl->power)
+	    pl->power = power;
+    } else if (power > pl->power) {
+	pl->power += delta;
+	if (power < pl->power)
+	    pl->power = power;
+    }
+    if (pl->power > MAX_PLAYER_POWER)
+	pl->power = MAX_PLAYER_POWER;
+
+    /*
+     * Don't thrust if the direction will not be absolutely correct and hasn't
+     * been very close last time.  The latter clause was added such that
+     * when a fine direction adjustment is needed, but the turnspeed is too
+     * high at the moment, it gets the ship slowing down even though it
+     * will impart some sideways velocity.
+     */
+    if (pl->turnspeed != turnspeed && vad > RES/32) {
+	CLR_BIT(pl->status, THRUSTING);
+	return;
+    }
+
+    /*
+     * Only thrust if the power setting is correct or less than correct,
+     * we don't want to over thrust.
+     */
+    if (pl->power > power) {
+	CLR_BIT(pl->status, THRUSTING);
+    } else {
+	SET_BIT(pl->status, THRUSTING);
+    }
+}
+
+/*
+ * Do tractor beam attraction between two players, where `pl' is doing
+ * the tractor beam and `to' is the target.
+ */
+void do_Tractor_beam (player *pl)
+{
+    player	*to;
+    float	maxdist, maxforce, percent;
+    float	xd, yd, force, mass;
+    long	cost;
+    int		theta;
+
+    maxdist = TRACTOR_MAX_RANGE(pl);
+
+    if (BIT(pl->lock.tagged, (LOCK_PLAYER|LOCK_VISIBLE)) != (LOCK_PLAYER
+							     |LOCK_VISIBLE)
+	|| pl->lock.distance >= maxdist) {
+	pl->tractor = NULL;
+	return;
+    }
+
+    maxforce = TRACTOR_MAX_FORCE(pl);
+    percent = TRACTOR_PERCENT(pl, maxdist);
+    cost = TRACTOR_COST(percent);
+    force = TRACTOR_FORCE(pl, percent, maxforce);
+
+    if (pl->fuel.sum < -cost) {
+	pl->tractor = NULL;
+	CLR_BIT(pl->used, OBJ_TRACTOR_BEAM);
+	return;
+    }
+
+    sound_play_sensors(pl->pos.x, pl->pos.y,
+		       force < 0 ? TRACTOR_BEAM_SOUND : PRESSOR_BEAM_SOUND);
+
+    to = pl->tractor = Players[GetInd[pl->lock.pl_id]];
+
+    Add_fuel(&(pl->fuel), cost);
+
+    xd = WRAP_DX(pl->pos.x - to->pos.x);
+    yd = WRAP_DY(pl->pos.y - to->pos.y);
+
+    theta = findDir(xd, yd);
+    mass = pl->mass + to->mass;
+
+    pl->vel.x += tcos(theta) * force / pl->mass;
+    pl->vel.y += tsin(theta) * force / pl->mass;
+    to->vel.x -= tcos(theta) * force / to->mass;
+    to->vel.y -= tsin(theta) * force / to->mass;
+}
 
 
 /********** **********
@@ -217,10 +353,9 @@ static void Transport_to_home(int ind)
  */
 void Update_objects(void)
 {
-    int i, j;
+    int i, j, ecm, necm;
     player *pl;
     object *obj;
-
 
     /*
      * Update robots.
@@ -284,14 +419,19 @@ void Update_objects(void)
     for (i=0; i<NumObjs; i++) {
 	obj = Obj[i];
 
-	update_object_pos(*obj);
+	update_object_speed(obj);
+	Move_object(i);
 
-	if (BIT(obj->type, OBJ_BALL) && obj->id != -1)
-	    Move_ball(i);
+	if (BIT(Obj[i]->type, OBJ_MINE))
+	    Move_mine(i);
 
-        if (BIT(obj->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT
-		|OBJ_TORPEDO|OBJ_NUKE))
+	else if (BIT(obj->type, OBJ_SMART_SHOT|OBJ_HEAT_SHOT|OBJ_TORPEDO))
 	    Move_smart_shot(i);
+
+	else if (BIT(obj->type, OBJ_BALL)) {
+	    if (obj->id != -1)
+		Move_ball(i);
+	}
     }
 
     /*
@@ -308,7 +448,7 @@ void Update_objects(void)
 	    continue;
 	}
 	if (World.cannon[i].active) {
-	    if (rand()%20 == 0)
+	    if (rand()%16 == 0)
 		Cannon_fire(i);
 	}
 	World.cannon[i].active = false;
@@ -319,9 +459,12 @@ void Update_objects(void)
      */
     for (i = 0; i < World.NumTargets; i++) {
 	if (World.targets[i].dead_time > 0) {
-	    World.targets[i].dead_time--;
-	    World.targets[i].conn_mask = 0;
-	    World.targets[i].last_change = loops;
+	    if (!--World.targets[i].dead_time) {
+		World.block[World.targets[i].pos.x][World.targets[i].pos.y]
+		    = TARGET;
+		World.targets[i].conn_mask = 0;
+		World.targets[i].last_change = loops;
+	    }
 	    continue;
 	}
 	else if (World.targets[i].damage == TARGET_DAMAGE) {
@@ -363,15 +506,9 @@ void Update_objects(void)
 	if (pl->count > 0) {
 	    pl->count--;
 	    if (!BIT(pl->status, PLAYING)) {
-#ifdef OLD_TRANSPORT_TO_HOME
-		pl->vel.x = WRAP_DX(BLOCK_SZ * World.base[pl->home_base].pos.x
-			     + BLOCK_SZ/2 - pl->pos.x) / (pl->count + 1);
-		pl->vel.y = WRAP_DY(BLOCK_SZ * World.base[pl->home_base].pos.y
-			     + BLOCK_SZ/2 - pl->pos.y) / (pl->count + 1);
-#else
 		Transport_to_home(i);
-#endif
-		goto update;
+		Move_player(i);
+		continue;
 	    }
 	}
 
@@ -387,6 +524,7 @@ void Update_objects(void)
 		Set_message(msg);
 		Throw_items(pl);
 		Kill_player(i);
+		updateScores = true;
 		pl->check = 0;
 		pl->round = 0;
 		pl->time  = 0;
@@ -406,10 +544,25 @@ void Update_objects(void)
 	    }
 	}
 
+	if (BIT(pl->used, OBJ_EMERGENCY_THRUST)) {
+	    if (pl->fuel.sum > 0
+		&& BIT(pl->status, THRUSTING)
+		&& --pl->emergency_thrust_left <= 0)
+		Emergency_thrust(i, 0);
+	}
+
+	/*
+	 * Only do autopilot code if switched on and player is not
+	 * damaged (ie. can see).
+	 */
+	if (   (BIT(pl->used, OBJ_AUTOPILOT))
+	    || (BIT(pl->status, HOVERPAUSE) && !pl->damaged)) {
+		do_Autopilot(pl);
+	}
+
 	/*
 	 * Compute turn
 	 */
-
 	pl->turnvel	+= pl->turnacc;
 	pl->turnvel	*= pl->turnresistance;
         
@@ -434,8 +587,7 @@ void Update_objects(void)
 	if (pl->float_dir >= RES)
 	    pl->float_dir -= RES;
 
-	pl->dir = pl->float_dir;
-	pl->dir %= RES;
+	Turn_player(i);
 
 
 	/*
@@ -546,12 +698,13 @@ void Update_objects(void)
 	 */
 	if (BIT(pl->status, THRUSTING)) {
             float power = pl->power;
-            float f = pl->power * 0.0006;
-            int a = pl->afterburners;
+            float f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
+            int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST) ? MAX_AFTERBURNER
+		     : pl->afterburners);
 
             if (a) {
                 power = AFTER_BURN_POWER(power, a);
-                f = AFTER_BURN_FUEL((int)f, a);
+                f = AFTER_BURN_FUEL(f, a);
             }
 	    pl->acc.x = power * tcos(pl->dir) / pl->mass;
 	    pl->acc.y = power * tsin(pl->dir) / pl->mass;
@@ -563,6 +716,7 @@ void Update_objects(void)
 	pl->mass = pl->emptymass + FUEL_MASS(pl->fuel.sum);
 
 	if (BIT(pl->status, WARPING)) {
+	    position w;
 	    int wx, wy, proximity,
 	    	nearestFront, nearestRear,
 	    	proxFront, proxRear;
@@ -588,6 +742,8 @@ void Update_objects(void)
 			  World.wormHoles[pl->wormHoleHit].pos.x) * BLOCK_SZ;
 		    wy = (World.wormHoles[j].pos.y - 
 			  World.wormHoles[pl->wormHoleHit].pos.y) * BLOCK_SZ;
+		    wx = WRAP_DX(wx);
+		    wy = WRAP_DX(wy);
 		    
 		    proximity = pl->vel.y * wx + pl->vel.x * wy;
 		    proximity = ABS(proximity);
@@ -612,15 +768,46 @@ void Update_objects(void)
 		else
 		    do
 			j = rand() % World.NumWormholes;
-		    while (World.wormHoles[j].type == WORM_IN);
+		    while (World.wormHoles[j].type == WORM_IN
+			   || j == pl->wormHoleHit);
 #endif /* RANDOM_REAR_WORM */
 	    }
 
             sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 
+	    w.x = World.wormHoles[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
+	    w.y = World.wormHoles[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
+
+	    /*
+	     * Don't connect to balls while warping.
+	     */
+	    if (BIT(pl->used, OBJ_CONNECTOR))
+		pl->ball = NULL;
+
+	    if (BIT(pl->have, OBJ_BALL)) {
+		object	*b;
+		int k;
+
+		/*
+		 * Take every ball associated with player through worm hole.
+		 * NB. the connector can cross a wall boundary this is
+		 * allowed, so long as the ball itself doesn't collide.
+		 */
+		for (k = 0; k < NumObjs; k++) {
+		    if (!BIT(Obj[k]->type, OBJ_BALL) || Obj[k]->id != pl->id)
+			continue;
+		    b = Obj[k];
+
+		    b->pos.x = w.x + b->pos.x - pl->pos.x;
+		    b->pos.y = w.y + b->pos.y - pl->pos.y;
+		    b->vel.x /= WORM_BRAKE_FACTOR;
+		    b->vel.y /= WORM_BRAKE_FACTOR;
+		    b->prevpos = b->pos;
+		}
+	    }
+
 	    pl->wormHoleDest = j;
-	    pl->pos.x = World.wormHoles[j].pos.x * BLOCK_SZ + BLOCK_SZ / 2;
-	    pl->pos.y = World.wormHoles[j].pos.y * BLOCK_SZ + BLOCK_SZ / 2;
+	    pl->pos = w;
 	    pl->vel.x /= WORM_BRAKE_FACTOR;
 	    pl->vel.y /= WORM_BRAKE_FACTOR;
 	    pl->prevpos = pl->pos;
@@ -638,21 +825,34 @@ void Update_objects(void)
             sound_play_sensors(pl->pos.x, pl->pos.y, WORM_HOLE_SOUND);
 	}
 
-	pl->ecmInfo.size >>= 1;
-
+	/*
+	 * Update ECM blasts
+	 */
+	for (necm = pl->ecmInfo.count, ecm = 0; ecm < necm; ecm++) {
+	    if ((pl->ecmInfo.size[ecm] >>= 1) == 0) {
+		necm--;
+		pl->ecmInfo.count--;
+		pl->ecmInfo.pos[ecm] = pl->ecmInfo.pos[necm];
+		pl->ecmInfo.size[ecm] = pl->ecmInfo.size[necm];
+	    }
+	}
 	if (BIT(pl->used, OBJ_ECM)) {
-	    pl->ecmInfo.pos.x = pl->pos.x;
-	    pl->ecmInfo.pos.y = pl->pos.y;
-	    pl->ecmInfo.size = ECM_DISTANCE * 2;
+	    if (necm < MAX_PLAYER_ECMS) {
+		pl->ecmInfo.pos[necm].x = pl->pos.x;
+		pl->ecmInfo.pos[necm].y = pl->pos.y;
+		pl->ecmInfo.size[necm] = ECM_DISTANCE;
+		pl->ecmInfo.count++;
+	    }
 	    CLR_BIT(pl->used, OBJ_ECM);
 	}
 
 	if (pl->transInfo.count)
 	    pl->transInfo.count--;
 
-    update:
-	if (!BIT(pl->status, PAUSE))
-	    update_object_pos(*pl);	    /* New position */
+	if (!BIT(pl->status, PAUSE)) {
+	    update_object_speed(pl);	    /* New position */
+	    Move_player(i);
+	}
 
 	if (BIT(pl->status, THRUSTING))
 	    Thrust(i);
@@ -678,18 +878,13 @@ void Update_objects(void)
 	    pl->time = 0;
 	}
 
-	switch (pl->lock.tagged) {
-	case LOCK_PLAYER:
+	if (BIT(pl->lock.tagged, LOCK_PLAYER)) {
 	    pl->lock.distance = Wrap_length(pl->pos.x -
 				     Players[GetInd[pl->lock.pl_id]]->pos.x,
 				     pl->pos.y -
 				     Players[GetInd[pl->lock.pl_id]]->pos.y);
 	    pl->sensor_range = MAX(pl->fuel.sum * ENERGY_RANGE_FACTOR,
 				   VISIBILITY_DISTANCE);
-	    break;
-
-	default:
-	    break;
 	}
 
 	pl->used &= pl->have;
@@ -700,14 +895,21 @@ void Update_objects(void)
 	   --World.wormHoles[i].countdown;
 	    
     for (i = 0; i < NumPlayers; i++) {
-	Players[i]->updateVisibility = 0;
+	player *pl = Players[i];
 
-	if (Players[i]->forceVisible) {
-	    Players[i]->forceVisible--;
+	pl->updateVisibility = 0;
 
-	    if (!Players[i]->forceVisible)
-		Players[i]->updateVisibility = 1;
+	if (pl->forceVisible) {
+	    pl->forceVisible--;
+
+	    if (!pl->forceVisible)
+		pl->updateVisibility = 1;
 	}
+
+	if (BIT(pl->used, OBJ_TRACTOR_BEAM))
+	    do_Tractor_beam (pl);
+	else
+	    pl->tractor = NULL;
     }
 
     /*
@@ -722,11 +924,11 @@ void Update_objects(void)
     for (i=NumPlayers-1; i>=0; i--) {
         player *pl = Players[i];
         
-	if (BIT(pl->status, PLAYING|PAUSE) == PLAYING)
+	if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) == PLAYING)
 	    Update_tanks(&(pl->fuel));
 	if (BIT(pl->status, KILLED)) {
+	    Throw_items(pl);
             if (pl->robot_mode != RM_OBJECT) {
-		Throw_items(pl);
 	        Kill_player(i);
             } else {
                 NumPseudoPlayers--;

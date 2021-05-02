@@ -1,6 +1,6 @@
-/* $Id: syslimit.c,v 3.5 1993/11/16 22:49:21 bert Exp $
+/* $Id: syslimit.c,v 3.6 1994/02/07 13:20:48 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -40,7 +40,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: syslimit.c,v 3.5 1993/11/16 22:49:21 bert Exp $";
+    "@(#)$Id: syslimit.c,v 3.6 1994/02/07 13:20:48 bjoerns Exp $";
 #endif
 
 

@@ -1,6 +1,6 @@
-/* $Id: caudio.c,v 3.9 1993/11/16 22:45:18 bert Exp $
+/* $Id: caudio.c,v 3.13 1994/04/04 17:16:16 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -28,7 +28,10 @@
 #ifdef SOUND
 
 #define	MAX_RANDOM_SOUNDS	6
+
+#ifndef SOUNDDIR
 #define SOUNDDIR LIBDIR "sound/"
+#endif
 
 #define _CAUDIO_C_
 
@@ -39,6 +42,7 @@
 #include "types.h"
 #include "audio.h"
 #include "client.h"
+#include "const.h"
 
 static int	audioEnabled;
 
@@ -96,7 +100,7 @@ void audioInit(char *display)
 
     fclose(fp);
 
-    audioEnabled = !audioDeviceInit(audioServer ? audioServer : display);
+    audioEnabled = !audioDeviceInit(audioServer[0] ? audioServer : display);
 }
 
 void audioEvents()
@@ -117,7 +121,7 @@ int Handle_audio(int type, int volume)
 	/*
 	 * Multiple sounds were specified.  Pick one at random.
 	 */
-	pick = random() % table[type].nsounds;
+	pick = rand() % table[type].nsounds;
     }
 
     if (!table[type].private[pick]) {
@@ -125,9 +129,11 @@ int Handle_audio(int type, int volume)
 
 	/* eliminate duplicate sounds */
 	for (i = 0; i < MAX_SOUNDS; i++)
-	    if (i != type && table[i].filenames && table[i].private[pick]
+	    if (i != type
+		&& table[i].filenames
+		&& table[i].private[pick]
 		&& strcmp(table[type].filenames[0], table[i].filenames[0]) == 0) 
-		{
+	    {
 		table[type].private[0] = table[i].private[0];
 		break;
 	    }

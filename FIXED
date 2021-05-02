@@ -1,0 +1,166 @@
+<BUG>	006
+<STATUS>fixed/low
+<VER>	3.0.4
+<DESC>	930910: kenrsc@stud.cs.uit.no
+	Mychar for robots 'R' disapears when robots has been dead in
+	limited lives.
+<WORK>	930911: bert@mc.bio.uva.nl
+	Fixed it I hope.
+
+<BUG>	007
+<STATUS>fixed/medium
+<VER>	3.0.3
+<DESC>	930909: alt.games.xpilot
+	If you release too many tanks at once the server hangs.
+<WORK>  930919: bert
+	Couldn't reproduce it.  My experiment was to see if it had
+	anything to do with not having enough bases.  I don't know if
+	tanks need bases at all.
+<DESC>	931001: Derek C. Richardson (dcr@mail.ast.cam.ac.uk)
+	Had that tank bug again yesterday: swa launched two tanks directly
+	in my face and the server froze with the message:
+	   Write socket buffer not big enough (4096,4085,"%c%c%c")
+	Has any progress been made with this problem? Has anyone else HAD the
+	problem? (we're running SunOS 4.1.x on Sparc IPX's and 10's here).
+	Also with tanks: when they're launched they show up in the player list,
+	with an amazing negative score (-500 or so). What happens if all the
+	bases are occupied so that there is actually no more room for players?
+	(this was the case last night). Could this be the origin of the problem?
+<WORK>  931001: bert
+	Made some small fixes which hopefully solve this problem.
+	Tanks weren't properly excluded from certain player calculations.
+	Tanks don't need (and didn't use) bases, but this wasn't properly
+	reckoned with at all places.
+	Clients shouldn't get homebase info for tanks.
+
+<BUG>	009
+<STATUS>fixed
+<VER> 	3.0.4
+<DESC>	930920:	kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+	If a player hit a mine you have placed somewhere the point of that
+	mine will show up on the position you are now. This is wrong. It 
+	should only show up on your hud.
+<WORK>	Fixed the problem. It was a reference to the player position instead
+        of the mine position in collision.c
+
+<BUG> 	010
+<STATUS>fixed
+<VER>	3.0.4
+<DESC>	930923: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+	If you iconify your window during limited lives it does not always
+	pop up again. I think this has something to do with the locking on
+	different people. I have never experienced this bug when not locking
+	on someone during a game.
+<WORK>  930928: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+        Fixed it I hope :) The status field for the player that was sent over
+        was for the player you where locked on when you where dead and not
+	the status field for yourself. Changed this and now it seems to work
+	just fine.
+
+<BUG> 	012
+<STATUS>fixed/low
+<VER>	3.0.4
+<DESC>	931001: Derek C. Richardson (dcr@mail.ast.cam.ac.uk)
+	Have you noticed that you can shoot your own tank down and get
+	points for it? Nice way to bump up your sccore ((this practice
+	is frowned upon here of course).
+<WORK>	931001: bert
+	This was true for maps without player shielding (noshields)
+	were tanks didn't have shields either.  Changed it to have
+	tanks three seconds of shields after they are released.
+	This makes it difficult to shoot your own tank.
+	The OBJ_SHIELD flag was set in the status field instead
+	of the used field.  Ouch!
+<WORK>	931116: bert
+	The issue that remains is that a detached tank has very little
+	fuel, so it can still be shot down easily if the player is
+	persistent enough.  Dunno if we should care about that.
+	Being able to cheat is something I tend to like in a nice game :-)
+
+<BUG> 	013
+<STATUS>fixed/high
+<VER>	3.0.4
+<DESC>	931004: snil@daimi.aau.dk (Sven Nielsen)
+	This Zombie BUG can be quite annoying! One evening I was playing
+	tournament on a norweigean server when it happened to Data. After I
+	had quit he was still in the game. I later came back (had to invent
+	the name Ups!) and saw that Zombie Mr. Data was really spoiling the
+	game. It didn't take long for the other players to find out that Data
+	and Ups!  where from the same host and I got accused of
+	cheating/ruining the game on purpose. I tried different things to
+	get my Zombie out but that was impossible. The owner of the server
+	process was not logged on so no-one had permission to kick him.
+	This BUG can be pretty annoying.
+	I don't know too much about the UDP protocol, but I imagine, that if
+	the packet containing QUIT! is lost then a thing like that may happen.
+	How about inventing an acknowledgement scheme or a way to kick your
+	*own* pilots ???
+<WORK>	931004: bert
+	The client/server protocol had a mechanism to automatically kick
+	players out of the game if they didn't respond for about 40 seconds.
+	I don't understand why this isn't working anymore (it used to work!).
+<WORK>	911116: bert
+	Fixed.  It was one of the most important fixes in 3.0.6.
+
+<BUG> 	015
+<STATUS>fixed/low
+<VER>	3.0.5
+<DESC>	931020: pery@hprnd.rose.hp.com (Pery Pearson)
+	I usually leave the xpilot server up for as long as it will stay up
+	(it tends to crash after a day or two 8).  I just pause when not
+	playing.  Sometimes my fuel will be depleted when I return even if I
+	had a full tank when I paused.
+<WORK>	931020: bert
+	It could be the case that at some places in the code
+	a check for the player being paused is missing.
+<WORK>	931021: Mr M J Cleaton
+	The solution is simple - deactivate your shields before pausing.
+<WORK>	931116: bert
+	If I remember correctly this has been fixed in 3.0.6.
+
+<BUG>	016
+<STATUS>open/low
+<VER>	3.0.6
+<DESC>	931110: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+	If you play in limited lives mode and commit suicide you will lose
+	a life but it will not show on the score list. I.e. if you commit
+	suicide once when you have 3 lives the score list will tell you 3
+	but you have only 2.
+<WORK> 940204: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
+	Fixed it. In update.c we have the test if the player comitted
+        suicide, but we forgot to add the line updateScores = true.
+
+<BUG>	020
+<STATUS>fixed
+<VER>	3.0.7
+<DESC>	940211: ferhati@aremihp.univ-lille1.fr ( Ramdane FERHATI )
+	Ramdane FERHATI: Story of a bug !    11 Feb 1994 11:35
+	I played yesterday, a tournament, my boss arrived in
+	my office, so I put my ship in the pause mode and
+	iconified the xpilot's window.
+	I used another working window to have a hidden icon.
+	I spoke with my boss, SUDDENLY, the tournament map
+	appeared in the full screen !!!!!!
+	AAAAAAAAAAAARRRRRRRRRRRRRRRRRRRRHHHHHHHHHHHHHHHHHHHHHH
+	(certainly because the current game was won by a player)
+	is-it possible to add a hot-key (Escape key), to avoid
+	a heart attack to my boss ?
+<WORK>	940211: bert
+	This should not happen.  Paused players should remain paused
+	even if the game is restarted.
+<DESC>  940213: kenrsc
+	We also have the problem in 3.1 that the popup does not work
+        at all. We also need a 'boss' button for this case. Next time 
+        he may not have time to land his ship and pause it :)
+<WORK> 940225: kenrsc
+        Fixed the popup bug in 3.1. It was due to that the status field
+        sent from server to client is a byte big. The GAME_OVER bit
+        was set to 11..... This was not the case in version 3.0.7, there
+        we had the following line.
+	   #define GAME_OVER 8    /* This must not be above 8 */
+        So my question is: How was it that moved it to 11 and removed the
+        comment ? I should think that a warning like that in the comment
+        should prevent it !
+<WORK>  940226: kenrsc
+        Fixed Ramdane Ferhati's problem :) We only popup the window if 
+        game is over and the player is NOT paused.

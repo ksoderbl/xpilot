@@ -1,6 +1,6 @@
-/* $Id: Imakefile,v 3.18 1993/12/23 12:39:45 bert Exp $
+/* $Id: Imakefile,v 3.29 1994/03/26 20:25:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -25,19 +25,33 @@
 # Imakefile - XPilot
 #
 
-INSTALLDIR = /usr/local/games
+##############################################################################
+#
+# This is where all installation changes are normally done:
+#
+PREFIX = /usr/local/games
+INSTALLDIR = $(PREFIX)
+BINDIR = $(PREFIX)
+LIBDIR = $(PREFIX)/lib/xpilot
+
+# Manual pages for games usually go to section 6.
+MANEXT = 6
+MANDIR = $(PREFIX)/man/man$(MANEXT)
+
+# Uncomment the nroff line instead if your system does not have groff.
+MANFILT = groff -Tlatin1 -man
+#MANFILT = nroff -man
+
+PROGRAMS = xpilot xpilots
+VERSION = 3.1.0
 
 /*
  * DEFS should be used for program specific defines.
  * Currently supported flags are:
  *
- *  LIMIT_ACCESS    		- extremely local,
- *				  cannot be used without modification.
  *  LOG				- try to log every server start
  *  TURN_THRUST			- makes turning drain fuel and gives
  *				  you a nice spark...
- *  CHEAT			- define this for fun,
- *				  but don't make it a habit... :)
  *  SILENT			- makes the server real silent.
  *  ERASE			- use a different, possible faster, frame
  *				  drawing technique which is not perfect yet.
@@ -55,10 +69,8 @@ INSTALLDIR = /usr/local/games
  *				  of xpilot on this site.
  *  LIBDIR			- define to where you want the help-files etc.
  *				  (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
- *  UPDATES_PR_FRAME=1		- number of 'ticks' per drawing (1 is default).
- *
  */
-DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\" -DLIBDIR=\"/usr/local/games/lib/xpilot/\"
+DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\"  -DLIBDIR=\"$(LIBDIR)/\"
 
 
 /*
@@ -68,7 +80,7 @@ DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\" -DLIBDIR=\"/usr/local/games/lib/xpilot/\
  * If you are still unsuccessful, try modifying and using Makefile.orig
  * insted of this file.
  */
-/* CC = cc -Aa -D_HPUX_SOURCE	/* HPUX */
+/* CC = cc -Aa -D_HPUX_SOURCE +FPD /* HPUX */
 /* CC = gcc			/* SUNs with gcc */
 /* CC = acc -fast		/* SUNs with acc */
 /* CC = cc			/* SGI Indigo (see CCOPTIONS below!) */
@@ -91,7 +103,7 @@ DEFS = -DLOCALGURU=\"xpilot@cs.uit.no\" -DLIBDIR=\"/usr/local/games/lib/xpilot/\
  */
 /* CDEBUGFLAGS = -g				/* General debug flag */
 /* CDEBUGFLAGS = -O				/* General optimize flag */
-/* CDEBUGFLAGS = +O3 +OS +ESlit			/* HPUX cc optimize flags */
+/* CDEBUGFLAGS = +O3 +ESlit +FPD		/* HPUX cc optimize flags */
 /* CDEBUGFLAGS = -g -z +w1			/* HPUX cc debug flags */
 /* CDEBUGFLAGS = -g2 -O2			/* SGI debug */
 /* CDEBUGFLAGS = -O2				/* SGI optimize */
@@ -116,8 +128,11 @@ NCDAUDIOLIB = -L/usr/local/lib -laudio
 
 /* #define RPLAY_SOUND			/* Uncomment for rplay sound support */
 RPLAYAUDIOINC = -I/usr/local/include
-RPLAYAUDIOLIB = -L/usr/local/lib -lrplay
+RPLAYAUDIOLIB = -L/usr/local/lib/rplay -lrplay
 
+/* #define AF_SOUND			/* Uncomment for AF sound support */
+AFAUDIOINC = -I/usr/include/AF
+AFAUDIOLIB = -lAF -lAFUtil
 
 /*
  * Miscellaneous.
@@ -131,6 +146,7 @@ USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
 
 /* TOP_INCLUDES =			/* Sun users with GCC need this */
 /* EXTRALIB = -ldnet_stub		/* DEC/OSF1 DECnet library required */
+/* EXTRALIB = -lsocket -lnsl		/* Solaris needs these */
 /* EXTRALIB =				/* normal */
 
 
@@ -154,6 +170,13 @@ USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
   AUDIOOBJ = rplayaudio.o
   DEFINES = $(DEFS) -DSOUND
 #else
+#if defined(AF_SOUND)
+  AUDIOINC = $(AFAUDIOINC)
+  AUDIOLIB = $(AFAUDIOLIB)
+  AUDIOSRC = afaudio.c
+  AUDIOOBJ = afaudio.o
+  DEFINES = $(DEFS) -DSOUND
+#else
   AUDIOINC =
   AUDIOLIB =
   AUDIOSRC =
@@ -161,8 +184,9 @@ USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
   DEFINES = $(DEFS)
 #endif
 #endif
+#endif
 
-LOCAL_INCLUDES = $(AUDIOINC)
+INCLUDES = $(AUDIOINC)
 
 /*
  * Now DEFINES and LOCAL_INCLUDES should've been set up properly.
@@ -193,12 +217,33 @@ SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
 #
 # Make handshake and server program
 #
-# Select one of the next two lines:
-#AllTarget(xpilot xpilots)
-PROGRAMS = xpilot xpilots
-
 ComplexProgramTarget_1(xpilots, $(AUDIOLIB), $(MATHLIB) $(EXTRALIB))
-ComplexProgramTarget_2(xpilot,  $(AUDIOLIB), $(MATHLIB) $(EXTRALIB) $(XLIB))
+ComplexProgramTarget_2(xpilot,  $(AUDIOLIB) $(XLIB), $(MATHLIB) $(EXTRALIB))
+
+#
+# Install the rest.
+#
+install::
+	@for prog in $(PROGRAMS); do \
+	    [ -r $(BINDIR)/$$prog-$(VERSION) ] && rm -f $(BINDIR)/$$prog-$(VERSION); \
+	    ( set -x ; ln $(BINDIR)/$$prog $(BINDIR)/$$prog-$(VERSION) ) \
+	done
+	@cd ../man6; for manpage in *.$(MANEXT); do \
+	    ( set -x ; $(MANFILT) < $$manpage > $(MANDIR)/xpilot.$(MANEXT) ) \
+	done
+	$(MKDIRHIER) $(LIBDIR)/maps;
+	@cd ../lib; for libfile in *; do \
+	    if [ -f $$libfile ]; then \
+		( rm -f $(LIBDIR)/$$libfile; \
+		  set -x; \
+		  $(INSTALL) -c $(INSTDATFLAGS) $$libfile $(LIBDIR) ) \
+	    fi \
+	done
+	@cd ../lib/maps; for mapfile in *; do \
+	    ( rm -f $(LIBDIR)/mmapaps/$$mapfile; \
+	      set -x; \
+	      $(INSTALL) -c $(INSTDATFLAGS) $$mapfile $(LIBDIR)/maps ) \
+	done
 
 #
 # Special rules

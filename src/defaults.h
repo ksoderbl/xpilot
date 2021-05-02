@@ -1,6 +1,6 @@
-/* $Id: defaults.h,v 3.5 1993/09/13 19:09:26 bjoerns Exp $
+/* $Id: defaults.h,v 3.9 1994/02/07 13:19:41 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -30,7 +30,16 @@ typedef struct _valPair {
     void *def;
 } valPair;
 
-enum valType { valInt, valReal, valBool, valIPos, valString };
+enum valType {
+	valVoid,	/* variable is not a variable */
+	valInt,		/* variable is type int */
+	valReal,	/* variable is type float */
+	valBool,	/* variable is type bool */
+	valIPos,	/* variable is type ipos */
+	valString,	/* variable is type char* */
+	valSec,		/* variable is type int (converted to frames) */
+	valPerSec	/* variable is type float (converted to per-frame) */
+};
 
 typedef struct {
     char *name;

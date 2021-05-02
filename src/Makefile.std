@@ -1,4 +1,4 @@
-# $Id: Makefile.std,v 3.18 1993/12/23 12:40:05 bert Exp $
+# $Id: Makefile.std,v 3.26 1994/03/26 20:26:19 bert Exp $
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
 #
@@ -24,7 +24,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.0.6
+VERSION=3.1.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -62,7 +62,7 @@ APOLLO_XLIB =
 HPPA_CC = cc
 HPPA_CPLUS = g++
 HPPA_CFLAGS = $(DEFS) $(INCS) -Aa -D_HPUX_SOURCE +ESlit +w2 -z -I/usr/include/X11R5
-HPPA_OPT = +O3 +OS
+HPPA_OPT = +O3 +FPD
 #HPPA_OPT =
 HPPA_DEBUG = -g
 HPPA_PROF = -G
@@ -121,7 +121,8 @@ AIX_XLIB = -lX11
 # Linux versions up to 0.99pl9 should define LINUX when compiling
 # as there are some network deficiences which are reportedly solved
 # in 0.99pl10.  Defining LINUX makes it impossible for a Linux client
-# to join a non-Linux server due to different (smaller) packet sizes.
+# to join a non-LINUX server due to different (smaller) packet sizes.
+# Flags for compiling by GNU C++ are provided also.
 #
 LINUX_CC = gcc
 LINUX_CPLUSPLUS = g++
@@ -254,70 +255,70 @@ all:
 	@echo "Please specify your system (apollo/hppa/sun/suncmw/aix/linux/sonynews/sgi/ultrix)."
 
 apollo:
-	@make targets "CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_OPT)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
+	@$(MAKE) targets "CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_OPT)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
 
 apollo-debug:
-	@make targets "CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_DEBUG)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
+	@$(MAKE) targets "CC=$(APOLLO_CC)" "CFLAGS=$(APOLLO_CFLAGS) $(APOLLO_DEBUG)" "MLIB=$(APOLLO_MLIB)" "XLIB=$(APOLLO_XLIB)"
 
 hppa:
-	@make targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+	@$(MAKE) targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 hppa-debug:
-	@make targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_DEBUG)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+	@$(MAKE) targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_DEBUG)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 hppa-prof:
-	@make targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT) $(HPPA_PROF)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+	@$(MAKE) targets "CC=$(HPPA_CC)" "CFLAGS=$(HPPA_CFLAGS) $(HPPA_OPT) $(HPPA_PROF)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 hppa-plus:
-	@make targets "CC=$(HPPA_CPLUS)" "CFLAGS=$(HPPA_PLUS)" "LFLAGS=$(HPPA_LPLUS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
+	@$(MAKE) targets "CC=$(HPPA_CPLUS)" "CFLAGS=$(HPPA_PLUS)" "LFLAGS=$(HPPA_LPLUS)" "MLIB=$(HPPA_MLIB)" "XLIB=$(HPPA_XLIB)"
 
 sun:
-	@make targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_OPT)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
+	@$(MAKE) targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_OPT)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
 
 sun-debug:
-	@make targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_DEBUG)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
+	@$(MAKE) targets "CC=$(SUN_CC)" "CFLAGS=$(SUN_CFLAGS) $(SUN_DEBUG)" "MLIB=$(SUN_MLIB)" "XLIB=$(SUN_XLIB)"
 
 suncmw:
-	@make targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_OPT)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
+	@$(MAKE) targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_OPT)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
 
 suncmw-debug:
-	@make targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_DEBUG)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
+	@$(MAKE) targets "CC=$(SUNCMW_CC)" "CFLAGS=$(SUNCMW_CFLAGS) $(SUNCMW_DEBUG)" "MLIB=$(SUNCMW_MLIB)" "XLIB=$(SUNCMW_XLIB)"
 
 aix:
-	@make xpilots "CC=$(AIX_CC)" "CFLAGS=$(AIX_CFLAGS) $(AIX_OPT)" "MLIB=$(AIX_MLIB)" "XLIB=$(AIX_XLIB)"
+	@$(MAKE) targets "CC=$(AIX_CC)" "CFLAGS=$(AIX_CFLAGS) $(AIX_OPT)" "MLIB=$(AIX_MLIB)" "XLIB=$(AIX_XLIB)"
 
 linux:
-	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_OPT)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+	@$(MAKE) targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_OPT)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
 
 linux-debug:
-	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_DEBUG)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+	@$(MAKE) targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_DEBUG)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
 
 linux-prof:
-	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PROF)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+	@$(MAKE) targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PROF)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
 
 linux-checker:
-	@make targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_CHECKER)" "LFLAGS=$(LINUX_LCHECKER)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+	@$(MAKE) targets "CC=$(LINUX_CC)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_CHECKER)" "LFLAGS=$(LINUX_LCHECKER)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
   
 linux-plus:
-	@make targets "CC=$(LINUX_CPLUSPLUS)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PLUS)" "LFLAGS=$(LINUX_LPLUS)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
+	@$(MAKE) targets "CC=$(LINUX_CPLUSPLUS)" "CFLAGS=$(LINUX_CFLAGS) $(LINUX_PLUS)" "LFLAGS=$(LINUX_LPLUS)" "MLIB=$(LINUX_MLIB)" "XLIB=$(LINUX_XLIB)"
 
 sonynews:
-	@make targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_OPT)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
+	@$(MAKE) targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_OPT)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
 
 sonynews-debug:
-	@make targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_DEBUG)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
+	@$(MAKE) targets "CC=$(SONYNEWS_CC)" "CFLAGS=$(SONYNEWS_CFLAGS) $(SONYNEWS_DEBUG)" "MLIB=$(SONYNEWS_MLIB)" "XLIB=$(SONYNEWS_XLIB)"
 
 sgi:
-	@make targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_OPT)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
+	@$(MAKE) targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_OPT)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
 
 sgi-debug:
-	@make targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_DEBUG)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
+	@$(MAKE) targets "CC=$(SGI_CC)" "CFLAGS=$(SGI_CFLAGS) $(SGI_DEBUG)" "MLIB=$(SGI_MLIB)" "XLIB=$(SGI_XLIB)"
 
 ultrix:
-	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_OPT)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
+	@$(MAKE) targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_OPT)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
 
 ultrix-debug:
-	@make targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_DEBUG)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
+	@$(MAKE) targets "CC=$(ULTRIX_CC)" "CFLAGS=$(ULTRIX_CFLAGS) $(ULTRIX_DEBUG)" "MLIB=$(ULTRIX_MLIB)" "XLIB=$(ULTRIX_XLIB)"
 
 #
 # If LFLAGS is specified on the command line then
@@ -344,10 +345,6 @@ install-apollo: apollo
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).apollo
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).apollo
 
-install-apollo-backup:
-	cp ../ap/xpilot $(INSTALLDIR)/xpilot-$(VERSION).apollo
-	cp ../ap/xpilots $(INSTALLDIR)/xpilots-$(VERSION).apollo
-
 install-hppa: hppa
 	cp xpilot xpilots $(INSTALLDIR)
 	strip $(INSTALLDIR)/xpilot*
@@ -359,10 +356,6 @@ install-hppa: hppa
 	chmod -R a+r $(LIBDIR) $(SOUNDSDIR)
 	cp ../man6/*.6 $(MANDIR)
 	chmod a+r $(MANDIR)/xpilot*.6
-
-install-hppa-backup:
-	cp ../hp/xpilot $(INSTALLDIR)/xpilot-$(VERSION).hppa
-	cp ../hp/xpilots $(INSTALLDIR)/xpilots-$(VERSION).hppa
 
 install-sun: sun
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sun
@@ -420,24 +413,10 @@ install-sgi-debug: sgi-debug install-sgi
 
 install-ultrix-debug: ultrix-debug install-ultrix
 
-backup-apollo:
-	rm -f ../ap/*.o ../ap/xpilot ../ap/xpilots
-	mv *.o xpilot xpilots ../ap/.
-
-backup-hppa:
-	rm -f ../hp/*.o ../hp/xpilot ../hp/xpilots
-	mv *.o xpilot xpilots ../hp/.
-
-restore-apollo:
-	rm -f *.o xpilot xpilots
-	mv ../ap/*.o ../ap/xpilot ../ap/xpilots .
-
-restore-hppa:
-	rm -f *.o xpilot xpilots
-	mv ../hp/*.o ../hp/xpilot ../hp/xpilots .
-
+#
 # usleep.o strcasecmp.o and strdup.o declared here in case they are
 # commented out for another platform
+#
 
 clean:
 	rm -f $(OBJS1) $(OBJS2) usleep.o strcasecmp.o strdup.o xpilot xpilots core
@@ -447,8 +426,8 @@ ctags:
 
 ###
 caudio.o : caudio.c 
-client.o : client.c version.h client.h const.h types.h keys.h dbuff.h setup.h \
-  error.h rules.h bit.h netclient.h paint.h xinit.h 
+client.o : client.c version.h client.h const.h types.h keys.h dbuff.h item.h \
+  setup.h error.h rules.h bit.h netclient.h paint.h xinit.h 
 cmdline.o : cmdline.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
 cmw.o : cmw.c 
@@ -456,16 +435,18 @@ collision.o : collision.c global.h config.h types.h rules.h object.h const.h \
   bit.h keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h \
   netserver.h 
 configure.o : configure.c version.h client.h const.h types.h keys.h dbuff.h \
-  paint.h draw.h xinit.h bit.h netclient.h widget.h configure.h setup.h error.h 
-dbuff.o : dbuff.c client.h const.h types.h keys.h dbuff.h draw.h bit.h 
+  item.h paint.h draw.h xinit.h bit.h netclient.h widget.h configure.h setup.h \
+  error.h 
+dbuff.o : dbuff.c client.h const.h types.h keys.h dbuff.h item.h draw.h bit.h 
 default.o : default.c types.h version.h config.h const.h client.h keys.h dbuff.h \
-  paint.h draw.h pack.h socklib.h bit.h netclient.h xinit.h error.h 
+  item.h paint.h draw.h pack.h socklib.h bit.h netclient.h xinit.h error.h 
 error.o : error.c error.h 
 event.o : event.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
 frame.o : frame.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h netserver.h saudio.h 
-join.o : join.c types.h version.h error.h client.h const.h keys.h dbuff.h netclient.h 
+join.o : join.c types.h version.h error.h client.h const.h keys.h dbuff.h item.h \
+  netclient.h 
 map.o : map.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h 
 math.o : math.c config.h types.h rules.h object.h const.h bit.h keys.h map.h \
@@ -473,20 +454,20 @@ math.o : math.c config.h types.h rules.h object.h const.h bit.h keys.h map.h \
 ncdaudio.o : ncdaudio.c 
 net.o : net.c version.h error.h net.h socklib.h const.h packet.h bit.h 
 netclient.o : netclient.c types.h version.h error.h net.h socklib.h const.h \
-  netclient.h setup.h packet.h bit.h paint.h dbuff.h keys.h client.h xinit.h pack.h \
-  draw.h 
+  netclient.h setup.h packet.h bit.h paint.h dbuff.h keys.h client.h item.h xinit.h \
+  pack.h draw.h 
 netserver.o : netserver.c types.h global.h config.h rules.h object.h const.h \
   bit.h keys.h map.h item.h draw.h version.h proto.h error.h pack.h socklib.h \
   net.h netserver.h packet.h setup.h robot.h saudio.h 
 option.o : option.c types.h global.h config.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h robot.h defaults.h 
-paint.o : paint.c version.h client.h const.h types.h keys.h dbuff.h error.h \
-  draw.h item.h paint.h xinit.h setup.h rules.h bit.h net.h socklib.h netclient.h 
+paint.o : paint.c version.h client.h const.h types.h keys.h dbuff.h item.h error.h \
+  draw.h paint.h xinit.h setup.h rules.h bit.h net.h socklib.h netclient.h 
 play.o : play.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
 player.o : player.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h netserver.h 
-robot.o : robot.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
+robot.o : robot.c types.h global.h config.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h netserver.h 
 rules.o : rules.c global.h config.h types.h rules.h object.h const.h bit.h keys.h \
   map.h item.h draw.h version.h proto.h error.h 
@@ -503,15 +484,16 @@ timer.o : timer.c types.h error.h
 update.o : update.c global.h config.h types.h rules.h object.h const.h bit.h \
   keys.h map.h item.h draw.h version.h proto.h error.h score.h robot.h saudio.h 
 usleep.o : usleep.c types.h 
-widget.o : widget.c version.h client.h const.h types.h keys.h dbuff.h paint.h \
-  draw.h xinit.h bit.h error.h widget.h 
-xevent.o : xevent.c client.h const.h types.h keys.h dbuff.h paint.h xinit.h \
-  draw.h bit.h setup.h netclient.h widget.h error.h 
+widget.o : widget.c version.h client.h const.h types.h keys.h dbuff.h item.h \
+  paint.h draw.h xinit.h bit.h error.h widget.h 
+xevent.o : xevent.c client.h const.h types.h keys.h dbuff.h item.h paint.h xinit.h \
+  draw.h packet.h bit.h setup.h netclient.h widget.h error.h 
 xinit.o : xinit.c version.h const.h rules.h draw.h types.h icon.h client.h keys.h \
-  dbuff.h paint.h xinit.h bit.h setup.h widget.h configure.h error.h netclient.h \
-  item.h items/itemRocketPack.xbm items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
+  dbuff.h item.h paint.h xinit.h bit.h setup.h widget.h configure.h error.h netclient.h \
+  items/itemRocketPack.xbm items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
   items/itemWideangleShot.xbm items/itemRearShot.xbm items/itemMinePack.xbm items/itemSensorPack.xbm \
   items/itemTank.xbm items/itemEcm.xbm items/itemAfterburner.xbm items/itemTransporter.xbm \
-  items/itemLaser.xbm 
+  items/itemLaser.xbm items/itemEmergencyThrust.xbm items/itemTractorBeam.xbm \
+  items/itemAutopilot.xbm 
 xpilot.o : xpilot.c version.h config.h types.h pack.h socklib.h const.h bit.h \
   error.h net.h 

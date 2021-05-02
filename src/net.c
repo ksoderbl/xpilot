@@ -1,6 +1,6 @@
-/* $Id: net.c,v 3.16 1993/11/07 23:13:51 bert Exp $
+/* $Id: net.c,v 3.21 1994/04/11 16:57:52 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -124,7 +124,7 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
 	sbuf->len = 0;
 	sbuf->ptr = sbuf->buf;
     } else {
-#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_)
+#if defined(__hpux) || defined(VMS) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV)
 	memmove(sbuf->buf, sbuf->buf + len, sbuf->len - len);
 #else
 	bcopy(sbuf->buf + len, sbuf->buf, sbuf->len - len);
@@ -193,14 +193,15 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	else
 #endif
 	while ((len = send(sbuf->sock, sbuf->buf, sbuf->len, 0)) <= 0) {
-	    if (errno == EINTR) {
-		errno = 0;
-		continue;
-	    }
-	    if (errno == EWOULDBLOCK
+	    if (len == 0
+		|| errno == EWOULDBLOCK
 		|| errno == EAGAIN) {
 		Sockbuf_clear(sbuf);
 		return 0;
+	    }
+	    if (errno == EINTR) {
+		errno = 0;
+		continue;
 	    }
 #if 0
 	    if (errno == ECONNREFUSED) {
@@ -311,6 +312,9 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	else
 #endif
 	while ((len = recv(sbuf->sock, sbuf->buf + sbuf->len, max, 0)) <= 0) {
+	    if (len == 0) {
+		return 0;
+	    }
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;
@@ -344,6 +348,9 @@ int Sockbuf_read(sockbuf_t *sbuf)
     } else {
 	errno = 0;
 	while ((len = read(sbuf->sock, sbuf->buf + sbuf->len, max)) <= 0) {
+	    if (len == 0) {
+		return 0;
+	    }
 	    if (errno == EINTR) {
 		errno = 0;
 		continue;
@@ -565,7 +572,7 @@ int Packet_printf(va_alist)
     if (failure != 0) {
 	count = -1;
 	if (failure == PRINTF_SIZE) {
-#ifndef SILENT
+#if 0
 	    static int before;
 	    if ((before++ & 0x0F) == 0) {
 		printf("Write socket buffer not big enough (%d,%d,\"%s\")\n",
@@ -820,7 +827,8 @@ int Packet_scanf(va_alist)
 			 */
 #ifndef SILENT
 			errno = 0;
-			error("Max input string size exceeded while scanning");
+			error("String overflow while scanning (%d,%d)",
+			      k, max_str_size);
 #endif
 			if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
 			    failure = 2;

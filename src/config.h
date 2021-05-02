@@ -1,6 +1,6 @@
-/* $Id: config.h,v 3.12 1993/11/07 23:02:24 bert Exp $
+/* $Id: config.h,v 3.15 1994/02/07 13:19:30 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -51,8 +51,11 @@
 #ifndef DEFAULTS_FILE_NAME
 #    define DEFAULTS_FILE_NAME	LIBDIR "defaults"
 #endif
-#ifndef MOTDFILE
-#    define MOTDFILE		LIBDIR "motd"
+#ifndef SERVERMOTDFILE
+#    define SERVERMOTDFILE	LIBDIR "servermotd"
+#endif
+#ifndef LOCALMOTDFILE
+#    define LOCALMOTDFILE	LIBDIR "localmotd"
 #endif
 #ifndef LOGFILE
 #    define LOGFILE		LIBDIR "log"
@@ -82,10 +85,6 @@
 
 #ifndef	UPDATES_PR_FRAME
 #    define UPDATES_PR_FRAME	1
-#endif
-
-#ifndef FPS
-#    define FPS	framesPerSecond
 #endif
 
 /*
@@ -122,7 +121,7 @@
 #ifdef	DEBUG
 #    define D(x)	{ {x}; fflush(stdout); }
 #else
-#    define D(x)	{ ; }
+#    define D(x)
 #endif
 
 #endif /* CONFIG_H */

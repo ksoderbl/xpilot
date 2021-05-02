@@ -1,31 +1,35 @@
 
 XPilot README.sounds
-last update: Fri Oct 22 19:12:08 GMT 1993
+last update: Thu Jan 27 19:10:17 GMT 1994
 
-
-XPilot currently has rplay and NCD sound support.  See the Imakefile
-and/or the Makefile.std files in the src directory for details on how
-to compile XPilot with sound support enabled.
+XPilot currently has rplay, NCD, and DEC AudioFile sound support.  
+See the Imakefile and/or the Makefile.std files in the src directory 
+for details on how to compile XPilot with sound support enabled.
 
 rplay 3.1.x supports SunOS 4.1.x, Solaris 2.x, Linux, 386bsd, BSDI/386,
 HP-UX, and SGI Indigo.  It can be obtained from sounds.sdsu.edu in
-the /pub/rplay directory.  Email rplay questions to boyns@sdsu.edu.
+the /pub/rplay directory or ftp.x.org in /contrib/rplay.  
+Email rplay questions to boyns@sdsu.edu.
 
 For NCD sound support the NCD MCX X terminals must be running release 3.1
 or later of the NCD software.  Email NCD questions to gred@ncd.com.
 
-Sound files can be obtained from sounds.sdsu.edu in the /pub/xpilot-sounds
+DEC AudioFile sound support was provided by Tom de Pauw.
+
+Most sound files can be obtained from sounds.sdsu.edu in the /pub/xpilot-sounds
 directory.  Note that if rplay is used with sounds.sdsu.edu as an RPTP server,
-sound files will be transfered automagically.
+sound files will be transferred automagically.
 
 XPilot sound events are defined in a file with the following format:
 
-SOUND_EVENT	SOUND_NAME
+SOUND_EVENT	SOUND_NAME[|SOUND_NAME ... ]
 
 Where SOUND_EVENT is one of the events listed below and SOUND_NAME
-is the name or complete pathname of an audio file.  Sound events
-that are not specified in the file are not used during the game.
-Lines that begin with the '#' character are considered comments.
+is the name or complete pathname of an audio file.  Different sounds
+for the same event must be separated by a '|' and will be chosen
+randomly.  Sound events that are not specified in the file are not 
+used during the game.  Lines that begin with the '#' character are 
+considered comments.
 
 The sound events file is by default located in LIBDIR/sounds, but
 can be changed using the xpilot*sounds X resource.  For example,
@@ -85,7 +89,26 @@ nuke_launch			A nuke is launched
 nuke_explosion			A nuke explodes
 player_ran_over_player		A player runs over another player
 laser_pickup			A laser is picked up
+emergency_thrust_pickup		An emergency thrust is picked up
+autopilot_pickup		A autopilot has been picked up
+tractor_beam_pickup		A tractor/pressor beam has been picked up
+player_bounced			A player bounces
 fire_laser			A laser pulse is fired
+autopilot_on			Autopilot is turned on
+autopilot_off			Autopilot is turned off
+emergency_thrust_on		Emergency thrust is turned on
+emergency_thrust_off		Emergency thrust is turned off
+tractor_beam			Tractor beam activated
+pressor_beam			Pressor beam activated
+connect_ball			Ball is connected
+drop_ball			Ball is dropped
+explode_ball			Ball explodes
+destroy_ball			Ball is destroyed
+destroy_target			A target is destroyed
+team_win			A team wins
+team_draw			There's a draw
+player_win			A player wins
+player_draw			There's a draw
 player_roasted			A player is roasted by a laser
 player_eat_laser		A player is hit by a laser
 
@@ -104,3 +127,4 @@ available.  Known XPilots sounds are:
 
 This file was written by Mark Boyns <boyns@sdsu.edu>.
 If you have any questions or comments or suggestions, please let me know.
+

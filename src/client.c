@@ -1,6 +1,6 @@
-/* $Id: client.c,v 3.45 1993/11/07 22:58:55 bert Exp $
+/* $Id: client.c,v 3.49 1994/03/09 12:05:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -62,16 +62,13 @@ ipos	realWorld;
 short	wrappedWorld;
 short	heading;
 short	nextCheckPoint;
-short	numCloaks;
-short	numSensors;
-short	numMines;
-short	numRockets;
-short	numEcms;
-short 	numTransporters;
-short	numFrontShots;
-short	numBackShots;
-short	numAfterburners;
-short	numLasers;
+
+u_byte	numItems[NUM_ITEMS];	/* Count of currently owned items */
+u_byte	lastNumItems[NUM_ITEMS];/* Last item count shown */
+int	numItemsTime[NUM_ITEMS];/* Number of frames to show this item count */
+float	showItemsTime;		/* How long to show changed item count for */
+
+short	autopilotLight;
 
 short	lock_id;		/* Id of player locked onto */
 short	lock_dir;		/* Direction of lock */
@@ -82,10 +79,14 @@ short	damaged;		/* Damaged by ECM */
 short	destruct;		/* If self destructing */
 short	shutdown_delay;
 short	shutdown_count;
+short	thrusttime;
+short	thrusttimemax;
 
 int	map_point_distance;	/* spacing of navigation points */
 int	map_point_size;		/* size of navigation points */
 int	spark_size;		/* size of debris and spark */
+int	shot_size;		/* size of shot */
+int	teamshot_size;		/* size of team shot */
 long	control_count;		/* Display control for how long? */
 
 long	fuelSum;			/* Sum of fuel in all tanks */
@@ -97,6 +98,7 @@ int	fuelLevel1;			/* Fuel critical level */
 int	fuelLevel2;			/* Fuel warning level */
 int	fuelLevel3;			/* Fuel notify level */
 
+char	*shipShape;		/* Shape of player's ship */
 float	power;			/* Force of thrust */
 float	power_s;		/* Saved power fiks */
 float	turnspeed;		/* How fast player acc-turns */
@@ -104,11 +106,12 @@ float	turnspeed_s;		/* Saved turnspeed */
 float	turnresistance;		/* How much is lost in % */
 float	turnresistance_s;	/* Saved (see above) */
 float	spark_prob;		/* Sparkling effect user configurable */
-int	charsPerSecond;		/* Message output speed (configurable) */
+int     charsPerSecond;         /* Message output speed (configurable) */
 
 float	hud_move_fact;		/* scale the hud-movement (speed) */
 float	ptr_move_fact;		/* scale the speed pointer length */
 long	instruments;		/* Instruments on screen (bitmask) */
+char	mods[MAX_CHARS];	/* Current modifiers in effect */
 int	packet_size;		/* Current frame update packet size */
 int	packet_loss;		/* lost packets per second */
 int	packet_drop;		/* dropped packets per second */
@@ -120,8 +123,8 @@ char	name[MAX_CHARS];	/* Nick-name of player */
 char	realname[MAX_CHARS];	/* Real name of player */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
-int	toggle_shield;		/* Are shields toggled by a press? */
-int	shields;		/* When shields are considered up */
+int     toggle_shield;          /* Are shields toggled by a press? */
+int     shields;                /* When shields are considered up */
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -848,6 +851,16 @@ other_t *Other_by_id(int id)
     return NULL;
 }
 
+wireobj *Ship_by_id(int id)
+{
+    other_t		*other;
+
+    if ((other = Other_by_id(id)) == NULL) {
+	return Default_ship();
+    }
+    return other->ship;
+}
+
 int Handle_leave(int id)
 {
     other_t		*other;
@@ -860,8 +873,10 @@ int Handle_leave(int id)
 	    error("Self left?!");
 	    self = NULL;
 	}
+	Free_ship_shape(other->ship);
+	other->ship = NULL;
 	/*
-	 * Ignore tanks and robots.
+	 * Silent about tanks and robots.
 	 */
 	if (other->mychar != 'T'
 	    && other->mychar != 'R') {
@@ -886,7 +901,7 @@ int Handle_leave(int id)
 }
 
 int Handle_player(int id, int team, int mychar, char *player_name,
-		  char *real_name, char *host_name)
+		  char *real_name, char *host_name, char *shape)
 {
     other_t		*other;
 
@@ -939,6 +954,7 @@ int Handle_player(int id, int team, int mychar, char *player_name,
     strncpy(other->host, host_name, sizeof(other->host));
     other->host[sizeof(other->host) - 1] = '\0';
     scoresChanged = 1;
+    other->ship = Convert_shape_str(shape);
 
     return 0;
 }
@@ -1010,12 +1026,10 @@ int Handle_score(int id, int score, int life, int mychar)
     }
     else if (other->score != score
 	|| other->life != life
-	|| other->mychar != mychar && version >= 0x3040) {
+	|| other->mychar != mychar) {
 	other->score = score;
 	other->life = life;
-	if (version >= 0x3040) {
-	    other->mychar = mychar;
-	}
+	other->mychar = mychar;
 	scoresChanged = 1;
     }
 
@@ -1108,12 +1122,10 @@ void Client_score_table(void)
 int Client_init(char *server, unsigned server_version)
 {
     extern void Make_table(void);
-    extern void Make_ships(void);
 
     version = server_version;
 
     Make_table();
-    Make_ships();
 
     strncpy(servername, server, sizeof(servername) - 1);
 
@@ -1141,15 +1153,21 @@ int Client_setup(void)
 
 int Client_power(void)
 {
+    int i;
     if (Send_power(power) == -1
 	|| Send_power_s(power_s) == -1
 	|| Send_turnspeed(turnspeed) == -1
 	|| Send_turnspeed_s(turnspeed_s) == -1
 	|| Send_turnresistance(turnresistance) == -1
 	|| Send_turnresistance_s(turnresistance_s) == -1
-	|| Send_display() == -1) {
+	|| Send_display() == -1
+	|| Startup_server_motd() == -1) {
 	return -1;
     }
+    for (i = 0; i < NUM_MODBANKS; i++)
+	if (Send_modifier_bank(i) == -1)
+	    return -1;
+
     return 0;
 }
 

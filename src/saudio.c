@@ -1,6 +1,6 @@
-/* $Id: saudio.c,v 3.10 1993/11/16 22:48:36 bert Exp $
+/* $Id: saudio.c,v 3.11 1994/02/07 13:20:40 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)

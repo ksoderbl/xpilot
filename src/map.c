@@ -1,6 +1,6 @@
-/* $Id: map.c,v 3.22 1993/11/07 23:13:16 bert Exp $
+/* $Id: map.c,v 3.29 1994/02/23 10:54:07 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -38,7 +38,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.22 1993/11/07 23:13:16 bert Exp $";
+    "@(#)$Id: map.c,v 3.29 1994/02/23 10:54:07 bert Exp $";
 #endif
 
 
@@ -368,8 +368,13 @@ void Grok_map(void)
     World.NumTreasures = 0;		/* into structures. */
     World.NumTargets = 0;
     World.NumBases = 0;
-    for (i=0; i<MAX_TEAMS; i++)
-	World.teams[i].NumMembers = World.teams[i].NumBases = 0;
+    for (i=0; i<MAX_TEAMS; i++) {
+	World.teams[i].NumMembers = 0;
+	World.teams[i].NumBases = 0;
+	World.teams[i].NumTreasures = 0;
+	World.teams[i].TreasuresDestroyed = 0;
+	World.teams[i].TreasuresLeft = 0;
+    }
 
     /*
      * Change read tags to internal data, create objects
@@ -466,8 +471,8 @@ void Grok_map(void)
 		    line[y] = TREASURE;
 		    World.treasures[World.NumTreasures].pos.x = x;
 		    World.treasures[World.NumTreasures].pos.y = y;
-		    World.treasures[World.NumTreasures].have = true;
-		    World.treasures[World.NumTreasures].count = 0;
+		    World.treasures[World.NumTreasures].have = false;
+		    World.treasures[World.NumTreasures].destroyed = 0;
 		    /*
 		     * Determining which team it belongs to is done later,
 		     * in Find_closest_team().
@@ -489,6 +494,9 @@ void Grok_map(void)
 		    World.targets[World.NumTargets].conn_mask = (unsigned)-1;
 		    World.targets[World.NumTargets].last_change = loops;
 		    World.NumTargets++;
+		    break;
+		case '$':
+		    line[y] = BASE_ATTRACTOR;
 		    break;
 		case '_':
 		case '0':
@@ -559,6 +567,8 @@ void Grok_map(void)
 		    World.wormHoles[World.NumWormholes].pos.x = x;
 		    World.wormHoles[World.NumWormholes].pos.y = y;
 		    World.wormHoles[World.NumWormholes].countdown = 0;
+		    World.wormHoles[World.NumWormholes].lastdest = -1;
+		    World.wormHoles[World.NumWormholes].lastplayer = -1;
 		    if (c == '@') {
 			World.wormHoles[World.NumWormholes].type = WORM_NORMAL;
 			worm_norm++;
@@ -595,8 +605,10 @@ void Grok_map(void)
 	 * any 'in' wormholes, and (less critical) if we have no 'in'
 	 * wormholes, make sure that we don't have any 'out' wormholes.
 	 */
-        if (worm_out == 0
-	    && (worm_norm == 1 || (worm_norm == 0 && worm_in > 0))) {
+	if ((worm_norm) ? (worm_norm + worm_out < 2)
+	    : (worm_in) ? (worm_out < 1)
+	    : (worm_out > 0)) {
+
             int i;
             
             error("Inconsistent use of wormholes, removing them");
@@ -616,11 +628,13 @@ void Grok_map(void)
 	    for (i=0; i<World.NumTreasures; i++) {
 		u_short team = Find_closest_team(World.treasures[i].pos.x,
 						 World.treasures[i].pos.y);
+		World.treasures[i].team = team;
 		if (team == TEAM_NOT_SET) {
 		    error("Couldn't find a matching team for the treasure.");
-		    World.treasures[i].have = false;
+		} else {
+		    World.teams[team].NumTreasures++;
+		    World.teams[team].TreasuresLeft++;
 		}
-		World.treasures[i].team = team;
 	    }
 	    for (i=0; i<World.NumTargets; i++) {
 		u_short team = Find_closest_team(World.targets[i].pos.x,
@@ -747,7 +761,8 @@ void Find_base_direction(void)
     for (i=0; i<World.NumBases; i++) {
 	int	x = World.base[i].pos.x,
 		y = World.base[i].pos.y,
-		dir;
+		dir,
+		att;
 	double	dx = World.gravity[x][y].x,
 	    	dy = World.gravity[x][y].y;
 
@@ -758,7 +773,39 @@ void Find_base_direction(void)
 	    dir = ((dir + RES/8) / (RES/4)) * (RES/4);	/* round it */
 	    dir = MOD2(dir, RES);
 	}
+	att = -1;
+	if (y < World.y - 1 && World.block[x][y + 1] == BASE_ATTRACTOR) {
+	    if (att == -1 || dir == DIR_UP) {
+		att = DIR_UP;
+	    }
+	}
+	if (y > 0 && World.block[x][y - 1] == BASE_ATTRACTOR) {
+	    if (att == -1 || dir == DIR_DOWN) {
+		att = DIR_DOWN;
+	    }
+	}
+	if (x < World.x - 1 && World.block[x + 1][y] == BASE_ATTRACTOR) {
+	    if (att == -1 || dir == DIR_RIGHT) {
+		att = DIR_RIGHT;
+	    }
+	}
+	if (x > 0 && World.block[x - 1][y] == BASE_ATTRACTOR) {
+	    if (att == -1 || dir == DIR_LEFT) {
+		att = DIR_LEFT;
+	    }
+	}
+	if (att != -1) {
+	    dir = att;
+	}
 	World.base[i].dir = dir;
+    }
+    for (i = 0; i < World.x; i++) {
+	int j;
+	for (j = 0; j < World.y; j++) {
+	    if (World.block[i][j] == BASE_ATTRACTOR) {
+		World.block[i][j] = SPACE;
+	    }
+	}
     }
 }
 

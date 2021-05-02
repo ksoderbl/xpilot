@@ -25,8 +25,47 @@
  * function into a separate function call.  When a socket is non-blocking
  * then lingering on close didn't seem like a good idea to me.
  *
- * RCS:      $Id: socklib.c,v 3.20 1993/12/23 12:29:46 bert Exp $
+ * RCS:      $Id: socklib.c,v 3.31 1994/04/14 09:44:19 bert Exp $
  * Log:      $Log: socklib.c,v $
+ * Revision 3.31  1994/04/14  09:44:19  bert
+ * Commented out _res usage for Solaris.
+ *
+ * Revision 3.30  1994/04/13  15:17:52  bert
+ * Changed conditional compilation for SetSocketNonBlocking.
+ *
+ * Revision 3.29  1994/04/11  12:22:26  bert
+ * Added another (the fourth!) way to make a socket non-blocking.
+ *
+ * Revision 3.28  1994/04/10  13:20:38  bert
+ * Extended the way sockets are made non-blocking by trying three different
+ * possibilities depending upon which system include file constants are defined.
+ * Now fcntl(O_NDELAY), fcntl(FNDELAY) and ioctl(FIONBIO) are all tried until
+ * one of them succeeds.
+ * Improved GetLocalHostName for suns.
+ *
+ * Revision 3.27  1994/03/23  08:46:21  bert
+ * Fixed GetLocalHostName by adding a size parameter.
+ *
+ * Revision 3.26  1994/03/22  19:01:40  bert
+ * Fixed MAXHOSTNAMELEN dependencies.
+ *
+ * Revision 3.25  1994/02/06  18:18:38  bert
+ * Fixed typo.
+ *
+ * Revision 3.24  1994/02/04  16:11:30  bjoerns
+ * Minor.
+ *
+ * Revision 3.23  1994/01/27  22:28:38  bert
+ * Added a new call GetLocalHostName() to get the fully qualified local hostname.
+ *
+ * Revision 3.22  1994/01/23  14:15:23  bert
+ * setsockopt needs a (void *) argument, not (char *).
+ * Added a SetSocketBroadcast() function.
+ *
+ * Revision 3.21  1994/01/20  21:20:09  bert
+ * Changes to get the prototypes when compiling with C++.
+ * Small change for C++ functionprototypes and the select system call.
+ *
  * Revision 3.20  1993/12/23  12:29:46  bert
  * Applied a patch from Stig Bakken for Solaris compatibility ifdefs.
  *
@@ -206,7 +245,7 @@
  *
  * Shots are now killed if they hit a cannon.
  *
- * In Move_smart_shot() `min' wasn't allways initialised before use.
+ * In Move_smart_shot() `min' wasn't allways initialized before use.
  *
  * The PacketDrawMeter is removed (was overkill).
  *
@@ -447,13 +486,18 @@ static char sourceid[] =
 #include <setjmp.h>
 #include <errno.h>
 #if defined(__sun__)
-#include <fcntl.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
+#endif
+
+#ifdef __cplusplus
+#ifndef __STDC__
+#define __STDC__	1
+#endif
 #endif
 
 /* Socklib Includes And Definitions */
 #include "socklib.h"
-#include "error.h"
-#include "types.h"
 #ifdef SUNCMW
 #include "cmw.h"
 #else
@@ -661,6 +705,58 @@ int	fd;
 
     return (ntohs(addr.sin_port));
 } /* GetPortNum */
+
+
+/*
+ *******************************************************************************
+ *
+ *	GetSockAddr()
+ *
+ *******************************************************************************
+ * Description
+ *	Returns the address of a socket.
+ *
+ * Input Parameters
+ *	fd		- The socket descriptor.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	The address of the socket as a string.
+ *	Note that this string is contained in a static area
+ *	and must be saved by the caller before the next call
+ *	to a socket function.
+ *
+ * Globals Referenced
+ *	Stacic memory in inet_ntoa() containing the string.
+ *
+ * External Calls
+ *	getsockname
+ *	inet_ntoa
+ *
+ * Called By
+ *	User applications
+ *
+ * Originally coded by Bert Gijsbers
+ */
+char * 
+#ifdef __STDC__
+GetSockAddr(int fd)
+#else
+GetSockAddr(fd)
+int	fd;
+#endif /* __STDC__ */
+{
+    int			len;
+    struct sockaddr_in	addr;
+
+    len = sizeof(struct sockaddr_in);
+    if (getsockname(fd, (struct sockaddr *)&addr, &len) < 0)
+	return (NULL);
+
+    return (inet_ntoa(addr.sin_addr));
+} /* GetSockAddr */
 
 
 /*
@@ -910,7 +1006,7 @@ int	fd;
     static struct linger	linger = {1, 300};
     int				lsize  = sizeof(struct linger);
 #endif
-    return setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *)&linger, lsize);
+    return setsockopt(fd, SOL_SOCKET, SO_LINGER, (void *)&linger, lsize);
 #endif
 } /* SocketLinger */
 
@@ -955,7 +1051,7 @@ int	size;
 #endif /* __STDC__ */
 {
     return (setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
-	(char *)&size, sizeof(size)));
+		       (void *)&size, sizeof(size)));
 } /* SetSocketReceiveBufferSize */
 
 
@@ -999,7 +1095,7 @@ int	size;
 #endif /* __STDC__ */
 {
     return (setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
-	(char *)&size, sizeof(size)));
+		       (void *)&size, sizeof(size)));
 } /* SetSocketSendBufferSize */
 
 
@@ -1049,7 +1145,7 @@ int	flag;
      * They achieve entirely different features!
      */
     return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
-		      (char *)&flag, sizeof(flag));
+		      (void *)&flag, sizeof(flag));
 } /* SetSocketNoDelay */
 #endif
 
@@ -1093,27 +1189,126 @@ int	fd;
 int	flag;
 #endif /* __STDC__ */
 {
-#if (_SEQUENT_) || defined(__svr4__) || defined(SVR4)
-    return (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY: 0 ));
-#else
-    int                       i;
+/*
+ * There are some problems on some particular systems (suns) with
+ * getting sockets to be non-blocking.  Just try all possible ways
+ * until one of them succeeds.  Please keep us informed by e-mail
+ * to xpilot@cs.uit.no.
+ */
+
+#ifndef USE_FCNTL_O_NONBLOCK
+# ifndef USE_FCNTL_O_NDELAY
+#  ifndef USE_FCNTL_FNDELAY
+#   ifndef USE_IOCTL_FIONBIO
+
+#    if defined(_SEQUENT_) || defined(__svr4__) || defined(SVR4)
+#     define USE_FCNTL_O_NDELAY
+#    elif defined(__sun__) && defined(FNDELAY)
+#     define USE_FCNTL_FNDELAY
+#    elif defined(FIONBIO)
+#     define USE_IOCTL_FIONBIO
+#    elif defined(FNDELAY)
+#     define USE_FCNTL_FNDELAY
+#    elif defined(O_NONBLOCK)
+#     define USE_FCNTL_O_NONBLOCK
+#    else
+#     define USE_FCNTL_O_NDELAY
+#    endif
+
+#    if 0
+#     if defined(FNDELAY) && defined(F_SETFL)
+#      define USE_FCNTL_FNDELAY
+#     endif
+#     if defined(O_NONBLOCK) && defined(F_SETFL)
+#      define USE_FCNTL_O_NONBLOCK
+#     endif
+#     if defined(FIONBIO)
+#      define USE_IOCTL_FIONBIO
+#     endif
+#     if defined(O_NDELAY) && defined(F_SETFL)
+#      define USE_FCNTL_O_NDELAY
+#     endif
+#    endif
+
+#   endif
+#  endif
+# endif
+#endif
+
+#ifdef USE_FCNTL_FNDELAY
+    if (fcntl(fd, F_SETFL, (flag != 0) ? FNDELAY : 0) != -1)
+	return 0;
+    fprintf(stderr, "fcntl FNDELAY failed in file \"%s\", line %d: %s\n",
+	    __FILE__, __LINE__, strerror(errno));
+#endif
  
-    i = ioctl(fd, FIONBIO, &flag);
-#if defined(__sun__)
-    if (i < 0) {
-	error("Check out file src/socklib.c at line number %d", __LINE__);
-	/*
-	 * Some Suns have problems getting ioctl(FIONBIO) to work.
-	 * This is almost certain due to not having run fixincludes
-	 * correctly after installing GCC (need root permission for that).
-	 * Using the fcntl(O_NDELAY) above may work.  Please let
-	 * us know at xpilot@cs.uit.no if that works for you or not.
-	 */
-    }
+#ifdef USE_IOCTL_FIONBIO
+    if (ioctl(fd, FIONBIO, &flag) != -1)
+	return 0;
+    fprintf(stderr, "ioctl FIONBIO failed in file \"%s\", line %d: %s\n",
+	    __FILE__, __LINE__, strerror(errno));
 #endif
-    return i;
+ 
+#ifdef USE_FCNTL_O_NONBLOCK
+    if (fcntl(fd, F_SETFL, (flag != 0) ? O_NONBLOCK : 0) != -1)
+	return 0;
+    fprintf(stderr, "fcntl O_NONBLOCK failed in file \"%s\", line %d: %s\n",
+	    __FILE__, __LINE__, strerror(errno));
 #endif
+ 
+#ifdef USE_FCNTL_O_NDELAY
+    if (fcntl(fd, F_SETFL, (flag != 0) ? O_NDELAY : 0) != -1)
+	return 0;
+    fprintf(stderr, "fcntl O_NDELAY failed in file \"%s\", line %d: %s\n",
+	    __FILE__, __LINE__, strerror(errno));
+#endif
+ 
+    return (-1);
 } /* SetSocketNonBlocking */
+
+
+/*
+ *******************************************************************************
+ *
+ *	SetSocketBroadcast()
+ *
+ *******************************************************************************
+ * Description
+ *	Enable broadcasting on a datagram socket.
+ *
+ * Input Parameters
+ *	fd		- The stream socket descriptor to operate on.
+ *	flag		- One to turn it on, zero to turn it off.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	-1 on failure, 0 on success
+ *
+ * Globals Referenced
+ *	none
+ *
+ * External Calls
+ *	setsockopt
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gÿsbers
+ */
+int 
+#ifdef __STDC__
+SetSocketBroadcast(int fd, int flag)
+#else
+SetSocketBroadcast(fd, flag)
+int	fd;
+int	flag;
+#endif /* __STDC__ */
+{
+    return setsockopt(fd, SOL_SOCKET, SO_BROADCAST,
+		      (void *)&flag, sizeof(flag));
+} /* SetSocketBroadcast */
 
 
 /*
@@ -2104,6 +2299,78 @@ DgramLastport()
     return (ntohs((int)sl_dgram_lastaddr.sin_port));
 } /* DgramLastport */
 
+
+/*
+ *******************************************************************************
+ *
+ *	GetLocalHostName()
+ *
+ *******************************************************************************
+ * Description
+ *	Returns the Fully Qualified Domain Name for the local host.
+ *
+ * Input Parameters
+ *	Size of output array.
+ *
+ * Output Parameters
+ *	Array of size bytes to store the hostname.
+ *
+ * Return Value
+ *	None
+ *
+ * Globals Referenced
+ *	None
+ *
+ * External Calls
+ *	gethostbyname
+ *	gethostbyaddr
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers
+ */
+#ifdef __STDC__
+void GetLocalHostName(char *name, unsigned size)
+#else
+void GetLocalHostName(name, size)
+    char		*name;
+    unsigned		size;
+#endif /* __STDC__ */
+{
+    struct hostent	*he;
+
+    gethostname(name, size);
+    if ((he = gethostbyname(name)) == NULL) {
+	return;
+    }
+    /*
+     * If there are no dots in the name then we don't have the FQDN,
+     * and if the address is of the normal Internet type
+     * then we try to get the FQDN via the backdoor of the IP address.
+     * Let's hope it works :)
+     */
+    if (strchr(he->h_name, '.') == NULL
+	&& he->h_addrtype == AF_INET
+	&& he->h_length == 4) {
+	unsigned long a = 0;
+	memcpy((void *)&a, he->h_addr_list[0], 4);
+	if ((he = gethostbyaddr((char *)&a, 4, AF_INET)) == NULL
+	    || strchr(he->h_name, '.') == NULL) {
+#if defined(__sun__) && !defined(__svr4__) && !defined(SVR4)
+	    /* bah.  play it dirty then, sun asks for it. */
+	    if (_res.defdname[0] != '\0') {
+		sprintf(name + strlen(name), "%s%s",
+			(_res.defdname[0] == '.') ? "" : ".",
+			_res.defdname);
+	    }
+#endif
+	    return;
+	}
+    }
+    strncpy(name, he->h_name, size);
+} /* GetLocalHostName */
+
 
 #if defined(__sun__)
 /*
@@ -2124,3 +2391,9 @@ char *inet_ntoa (struct in_addr in)
 }
 #endif
 
+#ifdef __cplusplus
+int select(size_t n, fd_set *r, fd_set *w, fd_set *e, const struct timeval *t)
+{
+    return select(n, (int *)r, (int *)w, (int *)e, t);
+}
+#endif

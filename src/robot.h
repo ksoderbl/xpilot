@@ -1,6 +1,6 @@
-/* $Id: robot.h,v 3.5 1993/09/13 19:10:16 bjoerns Exp $
+/* $Id: robot.h,v 3.7 1994/02/07 13:20:34 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -22,25 +22,39 @@
  */
 /* Robot code submitted by Maurice Abraham. */
 
+#ifndef ROBOT_H
+#define ROBOT_H
+
+/*
+ * We should have these configurable for experimentation.
+ */
 #define	NORMAL_ROBOT_SPEED	3.0
 #define	ATTACK_ROBOT_SPEED	12.0
 #define MAX_ROBOT_SPEED		20.0
 
-#define RM_OBJECT               255
-#define RM_NOT_ROBOT          	0
-#define RM_ROBOT_IDLE         	1
-#define RM_EVADE_LEFT         	2
-#define RM_EVADE_RIGHT          3
-#define RM_ROBOT_CLIMB          4
-#define RM_HARVEST            	5
-#define RM_ATTACK             	6
-#define RM_TAKE_OFF           	7
-#define RM_CANNON_KILL		8
-#define RM_REFUEL		9
-#define RM_NAVIGATE		10
+/*
+ * Players are not robots.
+ * Tanks are really objects.
+ * The rest are robots in different modes.
+ */
+#define RM_NOT_ROBOT          	(1 << 0)
+#define RM_OBJECT               (1 << 1)
+#define RM_ROBOT_IDLE         	(1 << 2)
+#define RM_EVADE_LEFT         	(1 << 3)
+#define RM_EVADE_RIGHT          (1 << 4)
+#define RM_ROBOT_CLIMB          (1 << 5)
+#define RM_HARVEST            	(1 << 6)
+#define RM_ATTACK             	(1 << 7)
+#define RM_TAKE_OFF           	(1 << 8)
+#define RM_CANNON_KILL		(1 << 9)
+#define RM_REFUEL		(1 << 10)
+#define RM_NAVIGATE		(1 << 11)
 
 typedef struct {
     char	*name;
     int		attack,		/* Attack + defense ~ 100 */
     		defense;
+    unsigned	used;		/* Number of times robot played in a game */
 } robot_t;
+
+#endif

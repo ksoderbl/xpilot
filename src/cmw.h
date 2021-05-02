@@ -1,6 +1,6 @@
-/* $Id: cmw.h,v 3.1 1993/10/01 20:47:12 bjoerns Exp $
+/* $Id: cmw.h,v 3.2 1994/02/07 13:19:25 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)

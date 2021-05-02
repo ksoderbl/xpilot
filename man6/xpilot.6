@@ -2,14 +2,14 @@
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .\"
 .\" File:         xpilot.6
-.\" Id:		  $Id: xpilot.6,v 3.20 1993/11/02 16:49:43 bert Exp $
+.\" Id:		  $Id: xpilot.6,v 3.24 1994/03/30 20:23:28 bert Exp $
 .\" Description:  XPilot man page
 .\" Author:       Bjoern Stabell, Ken Ronny Schouten & Bert Gijsbers
 .\" Modified:     910520
 .\" Language:     Text
 .\" Package:      xpilot
 .\"
-.\" (c) Copyright 1991-93, the XPilot authors.
+.\" (c) Copyright 1991-94, the XPilot authors.
 .\"
 .\";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .TH XPILOT 6 "Requires UDP/IP and The X Window System"
@@ -35,6 +35,7 @@ xpilot \- XPilot/UX  Multiplayer gravity war game client
 .B [-shutdown [\fImessage\fC]]
 .B [-display \fIstring\fC]
 .B [-port \fIport-number\fC]
+.B [\fIconfiguration-options]\fC
 .B [\fIserver-host ...\fC]
 
 
@@ -103,12 +104,16 @@ Specifies your wanted team number.
 Specifies which X server to contact.
 .TP 15
 .B -port \fInumber\fP
-Specifies the port number of the server.
+Specifies the port number to use when contacting a server.
+.TP 15
+.B \fIconfiguration-options\fP
+All the X resource values can be configured seperately from the command
+line.  For example to change the ecm key to just `z' use;
+.B -keyEcm z
 .TP 15
 .B \fIserver-host\fP
 Tries to connect to server at host \fIserver-host\fP.  The default is to
 send a broadcast query on your attached network.
-
 
 .SH PROMPT COMMANDS
 
@@ -135,7 +140,19 @@ This window is divided into three major areas:
 (Top left) This area shows the map the server you are playing on
 is using as well as the position of your fellow players (if they
 aren't cloaked).  In race mode the radar also outputs the
-position of the control posts.
+position of the control posts.  Players are shown as small rectangles
+The player you are currently locked onto is shown as a flashing
+rectangle.
+
+The server can optionally display missiles, mines and/or bombs (moving
+mines) on this radar, and will display them using different symbols;
+missiles are quick flashing small dots, mines and bombs slow flashing small
+dots.  If nuclear mines or missiles are launched the radar can detect the
+high energy radation emiited and will show these types of weapons on the
+radar as alternating small and large rectangles.  The radar always has a
+limited range for these objects, due to their small size.  The maximum
+range depends on how much fuel you are carrying.
+
 .TP 12
 .B Rating list
 (Bottom left) This area shows the list of players (sorted with
@@ -177,6 +194,9 @@ following information:
 .B Bonus items
 You may notice some symbols and numbers on the left side of the HUD,
 these indicate which, and what quantity, of extra equipment you have.
+This list can be turned off using the `o' key, then only items which
+you gain or loose will be briefly shown on the HUD.  Pressing `o'
+again will constantly show owned items.
 .TP 12
 .B Fuel
 A fuel meter will appear on the right side of the HUD when you
@@ -264,7 +284,7 @@ descriptions of some of the main concepts of the game.
 
 All objects in the game are affected by gravity - that is, they
 will accelerate in the direction the gravity is strongest.  The
-strength of the gravity is user configurable (see
+strength and direction of the gravity is user configurable (see
 \fIxpilots(6)\fP), and can even be set to 0.
 
 Some objects affect the gravity in a limited area, these are
@@ -272,7 +292,7 @@ called \fBgravs\fP and they exist in miscellaneous types
 (attractive, repulsive, clockwise, anti-clockwise).  Gravs are
 shown as red circles with some symbol inside which is different
 for each type of grav.  (For more information on how the affect
-they gravity, see \fIxpilots(6)\fP.)
+the gravity, see \fIxpilots(6)\fP.)
 
 .SS Wormholes
 
@@ -292,16 +312,16 @@ equipment use fuel/energy and some even work better the more fuel
 you have.
 
 You may gain fuel by picking up special `fuel cans' (see
-\fBbonus items\fP section) or by refueling at a refuel station.
+\fBbonus items\fP section) or refueling at a refuel station.
 Refuel stations may be found in blocks in the world, they differ
 from standard background blocks in that they have a red/black
 \fBF\fP in them, and they are partly or completely filled with
 red.  The amount of red determines how much fuel the station has
-available.  To refuel, you must hit the
+at available for you.  To refuel, you must hit the
 \fIkeyRefuel\fP key (see \fBcontrols\fP section).
 
 Fuel takes up mass and will also determine how big the explosion
-will be when (sorry, `if' :) you meet your destiny. 
+will be when (sorry, `if' :) you meet your destiny.
 
 
 .SS Combat
@@ -345,11 +365,16 @@ destroy a target.  Two missile hits will also destroy a target.
 Enemy treasures have to be stolen from the enemies and dropped on
 your own treasure.  You pick up a treasure by using \fIkeyConnector\fP
 when flying nearby the enemies treasure.  This will attach
-the treasure to your ship with a strong rubber band.
+the treasure to your ship with a strong rubber band. Now you have to move
+your ship away from the treasure while holding the \fIkeyConnector\fP
+down. When you reach a certain distance the rubber band will be drawn in
+a sollied line. This means that the treasure is attached to your ship.
 It is possible (in emergency situations :) to detach the enemy treasure
 by pressing \fIkeyDropBall\fP, but this will of course not gain you or
 your team any points.
 
+Certain maps may configure targets as passable by team members, in
+which case they can act as wall shields for team bases.
 
 .SS Shields
 
@@ -395,11 +420,29 @@ efficiently.
 .TP 12
 .B Rockets
 Pack of rockets.  These may be used as smart missiles, heat
-seaking missiles, nuclear missiles or just plain dumb torpedos.
+seaking missiles, or just plain dumb torpedos.  Usually these
+explode on impact with a small debris explosion.  However, if
+enabled, nuclear and/or cluster variants of each may be possible.
+See the description of \fIkeyToggleNuclear\fP, \fIkeyToggleCluster\fP
+and \fIkeyToggleModifier\fP.
 .TP 12
 .B Mine
 Pack of mines.  Can be dropped as either moving mine (bombing) or
-stationary mine (mining).
+stationary mine (mining).  Usually these will explode when someone else
+comes within a few blocks, causing a large debris explosion.  However, if
+enabled, nuclear and/or cluster variants of each may be possible.
+Mines have a little intelligence and will not explode for
+the player (or team members) who dropped them.  However, the
+targetting of mines can be effected by ECMs (unless the
+server option \fIecmsReprogramMines\fP is false).  If you
+get close enough to a mine, you will be able to sense who
+the mine is currently programmed by.  Mines dropped by
+different players have a different external appearance --
+mines dropped by you or your team show up hollow.
+Reprogramming does not change the appearance of a mine, so
+be careful because a hollow mine may not be safe.
+See the description of \fIkeyToggleNuclear\fP, \fIkeyToggleCluster\fP,
+and \fIkeyToggleModifier\fP.
 .TP 12
 .B Tank
 Additional fuel tank (perhaps with some spare fuel).  As you pick
@@ -428,11 +471,14 @@ Electronic Counter Measures.  ECM allows you to confuse and
 re-target smart missiles within a certain range of your ship.
 When missiles are zapped by ECM, they will become confused for a
 while and then have a high probability of going after the player
-who you were locked onto when you used the ECM.  If another ship
+who you were locked onto when you used the ECM.  The ECM will also
+cause within a certain range to either explode or be more likely 
+be temporarily be blinded such that they do not explode if you go
+near them.  The closest mine within ECM range may be reprogrammed
+to be safe for you and your team members. If another ship
 is within range of the ECM, all it's sensors will freeze for a
-while and the screen of that player will flash.
-If the ship was cloaked, it will become visible for some moments.
-The ECM is activated by pressing the \fIkeyECM\fP key.
+while and if the ship was cloaked, it will become visible for a
+while.  The ECM is activated by pressing the \fIkeyECM\fP key.
 .TP 12
 .B Transporter
 Enables you to steal equipment and energy/fuel from the closest
@@ -442,7 +488,29 @@ activate the transporter by pressing the \fIkeyTransporter\fP key.
 .B Laser
 Gives you a laser weapon with limited range.  Having more of these
 increases the range.
-
+.TP 12
+.B Emergency Thrust
+Gives you a limited amount of super thrusters, equivalent to a full
+complement of afterburners.  With a light ship this is equivalent
+to hitting hyperspace or warp factor 9.99.  Useful for stopping quickly
+or running away fast from a deadly encounter.  The extra thrust 
+capability is toggled on and off by a seperate key and can thus be
+saved, the amount of time remaining is shown by a status bar below the
+HUD.
+.TP 12
+.B Autopilot
+Gives you a hover capability.  When engaged an `Autopilot' light will flash
+above the HUD.  When engaged the autopilot computer will bring the ship
+to a hover by the quickest (perhaps not safest) method possible.  It will
+then leave you in a hover, unless in a strong gravity field where your
+engines cannot cope.  Useful for hovering next to a refuel depot.
+.TP 12
+.B Tractor Beam
+Not to be confused with a transporter, this enables you to push or pull
+the ship you are currently locked onto.  The force is mutual, and thus
+if your ship is lighter than your target you will move more towards him
+than him towards you.  Best used with heavy ships to pull then push
+annoying players into walls.
 
 .SH CONTROLS
 
@@ -527,11 +595,14 @@ If you have additional tanks, the current tank will be the previous tank.
 Detach the current tank (or the last additional tank).
 Heat-seeking missiles will hopefully follow this tank.
 .TP 12
-.B keyPause {p or Pause}
-Parking mode - you can only park while you're landed on your own
+.B keyPause {p}
+Park or paused hover mode - you can only park while you're landed on your own
 home base, and when you park, you cannot rejoin the game until
 the P has stopped blinking (to prevent users from using this
-option to run away from a battle).
+option to run away from a battle).  If you are not near your base and
+you are travelling very slowly the ship will be brought to a standstill
+on autopilot and cannot be unpaused until the `Autopilot' light stops
+blinking.
 .TP 12
 .B keyFireMissile {backslash}
 Fire smart missile if available.  The missile will home onto the player
@@ -547,53 +618,251 @@ navigating.
 Fire a missile without flight control. It runs very fast in shot
 direction.
 .TP 12
-.B keyFireNuke {n}
-Fire a nuclear missile without flight control.  It runs very fast
-in shot direction.
-.B keyFireLaser {slash}
-Activate the laser beam.
+.B keyFireLaser {/}
+Fires a laser weapon in the direction you are pointing.  Lasers have
+limited range and use a lot of fuel, but they are instantaneous and
+therefore much more deadly than normal shots.  The precise electronics
+of lasers can be irretrivially damaged by the high energy interference
+generated by enemy ECMs.
+
 .TP 12
-.B keyLockClose {Select}
+.B keyToggleNuclear {n}
+Pressing this key will toggle through the following indicators on your
+HUD (bottom left), only if nuclear weapons are allowed;
+.RS 12
+.TP 4
+.B N
+All missiles or mines launched from now are limited nuclear weapons.
+.TP 4
+.B FN
+All missiles or mines launched from now are full (or fusion) nuclear
+weapons.
+
+Pressing the key again clears the nuclear weapons mode.
+.RE
+.RS 12
+
+You must have eight or more missiles, or four or more mines to launch
+a nuclear missile or mine, and perhaps enough fuel as well.  If you do
+not a message will be displayed at the bottom of the game area explaining
+why and the weapon will not be fired.  
+
+Firing a full (or fusion) nuclear weapon completely depletes your stock
+of that weapon, limited nuclear weapons will deplete your stock by eight
+missiles or four mines.
+
+A nuclear missile or mine fired will have a mass and explosive power equal
+and usually greater than the total number that were used.  Nuclear torpedos
+are very fast, and all nuclear weapons explode violently (this may freeze
+the server momentarily).  After firing a one off nuclear weapon, the `n'
+indicator is cleared.
+.RE
+.TP 12
+.B keyToggleCluster {c}
+Pressing this key will toggle through the following indicators on your
+HUD (bottom left), only if cluster weapons are allowed;
+.RS 12
+.TP 4
+.B C
+All missiles or mines launched are cluster weapons.
+.RE
+.RS 12
+
+Cluster weapons explode differently from normal weapons.  The explode with
+a slower moving shower of killing shots and not debris, which may kill
+or deplete shields just like a normal shot fired by your self.   Thus,
+since cluster debris is deadly to yourself, you should be careful when
+firing such a weapon.  After firing a one off cluster weapon, the `c'
+indicator is cleared.
+
+A cluster weapon will also use an almost equivalent
+amount of fuel as if you had fired the shots using your cannon, and thus
+large cluster explosions will use large amounts of fuel.  If you do not
+have enough fuel a message saying so will be displayed at the bottom of
+the game area and the weapon will not be launched.
+.RE
+.TP 12
+.B keyToggleVelocity {v}
+Pressing this key will toggle through \fBV1\fP through \fBV3\fP and
+to no modifier in turn.  It affects the speed of nuclear and/or cluster explosions, higher modifier
+numbers produce lower explosion velocities, and thus for the most effective
+nuclear cluster explosion a \fBV2\fP or \fBV3\fP modifier should be used.
+.RE
+.TP 12
+.B keyToggleMini {x}
+Pressing this key will toggle through \fBX2\fP through \fBX4\fP and
+then no modifier in turn.  The number shows how many miniture mines,
+missiles or lasers ill be fired for every key press.  The sum
+total damage and cost of using miniture weapon is equivalent to a normal
+weapon of that type.
+.RE
+.TP 12
+.B keyToggleSpread {z}
+Pressing this key will toggle through \fBZ1\fP through \fBZ3\fP and
+then no modifier.  The higher the number the closer the spread of fire
+for minature weapons, it also affects the spread of wide and rear shots,
+successively narrowing the stream of bullets such that \fBV3\fP is a single
+beam of shots.
+.RE
+.TP 12
+.B keyTogglePower {b}
+Pressing this key will toggle through \fBB1\fP through \fBB3\fP and then
+no modifier.  The higher the number the less powerful a laser or tractor
+beam is used, mainly for conserving energy or fine adjustment in pulling
+somebody around.  The power setting also affects the engine to warhead
+ratio in missiles, a higher setting will cause each missile to have more
+powerful engines, and thus be much quicker and more maneaverable, but at
+the cost of a drastically reduced damage capability.  However when
+coupled with other modifiers this can cause severe psychological
+advantages, consider the effect of trying to outrun four minuture full
+cluster powered up nuclear smart missiles.
+.RE
+.TP 12
+.B keyClearModifiers {k}
+Clears all current modifiers in effect.
+.RE
+.TP 12
+.B keyLoadModifiers1 {1}
+Loads the modifiers stored in bank 1, as set by the modifierBank1 resource.
+.RE
+.TP 12
+.B keyLoadModifiers2 {2}
+Loads the modifiers stored in bank 2, as set by the modifierBank2 resource.
+.RE
+.TP 12
+.B keyLoadModifiers3 {3}
+Loads the modifiers stored in bank 3, as set by the modifierBank3 resource.
+.RE
+.TP 12
+.B keyLoadModifiers4 {4}
+Loads the modifiers stored in bank 4, as set by the modifierBank4 resource.
+.RE
+.TP 12
+.B keyToggleAutoPilot {h Meta Alt}
+This toggles the autopilot feature.  You need atleast one Autopilot item
+before this will work.
+.TP 12
+.B keyToggleEmergencyThrust {j Meta Alt}
+This toggles the emergency thrust item.  You need atleast one Emergency
+thrust item, on first turning this on the item is used up and ten seconds
+or so of emergency thrust is placed at your disposal.  The time is only
+used up as you thrust, and hitting this key will return you back to normal
+thrust while conserving the remaining boosted thrust.  If you posses both
+Autopilot and Emergency Thrust items, pressing the Meta or Alt keys will
+give the equivalent of emergency brakes.
+.TP 12
+.B keyToggleShields {g}
+This toggles shields on, another press will turn them off.  Useful for
+when you wish to always have shields up while performing other duties.
+.TP 12
+.B keyTractorBeam {Control_L comma}
+This will engage any tractor beam items on the player who you hold a lock
+on, it causes a mutual attractive force between you and them, causing both
+players to move towards each other.
+.TP 12
+.B keyPressorBeam {Control_R .}
+This will engage any tractor beam items on the player who you hold a lock
+on, it causes a mutual repulsive force between you and them, causing both
+players to move away from each other.
+.TP 12
+.B keyTalk {m}
+Pressing this key will toggle between the talk window being shown below
+the HUD.  If your mouse pointer is outside the window you will still
+have full control of your ship and pressing the talk key will disappear
+(the current message will not be lost).  If you position your mouse
+pointer within the window you can type a message using the keyboard,
+however you ship will no longer respond to key presses.  The following
+special keys are available;
+.RS 12
+.TP 4
+.B Return Linefeed
+This finishes and sends the message.  The talk window is also removed
+from the screen and the message text cleared.
+.TP 4
+.B Backspace Del
+These keys delete the last character.
+.TP 4
+.B Ctrl-W
+This deletes the last word.
+.TP 4
+.B Ctrl-U
+This deletes the entire line of text.
+.TP 4
+.B Esc
+This removes the talk window without clearing the text.  This is useful
+if you are typing a message and something important in the game happens
+that requires you to control your ship.
+.RE
+.RS 12
+
+Messages will usually be sent to every player logged in, including
+yourself.  Messages received will always appear in the bottom of the
+Game area, and will look like;
+
+.nf
+\fI<<Viper shouts>> Hello world\fP.
+.fi
+
+However you can send messages to individual players or teams by starting the
+message with the player's name (or enough character from the beginning
+of their name to make it unique) or team number followed by a colon, and
+then the message.  Just placing a colon at the start of the message
+will send it to everyone.  For example;
+
+.nf
+\fIvip: Hello\fP
+.fi
+
+will send a message to only one player who's name begins the letters \fIvip\fP
+(the case does not matter).
+.RE
+.TP 12
+.B keyToggleCompass {l}
+Turns of the HUD compass display.
+.TP 12
+.B keyLockClose {Select Down}
 Will lock onto the closest player if he/she is within range.
+.RE
 .TP 12
-.B keyLockNext {Next}
+.B keyLockNextClose {up}
+Will lock onto the next closest player after the currently locked player.
+.TP 12
+.B keyLockNext {Next Right}
 Will, if possible, lock onto the next player in the game.
 .TP 12
-.B keyLockPrev {Prior}
+.B keyLockPrev {Prior Left}
 Will, if possible, lock onto the previous player in the game.
 .TP 12
-.B keyConnector {left ctrl}
+.B keyConnector {Control_L}
 Use connector (for the moment, all this is used for is picking up
 treasures/balls).
 .TP 12
 .B keyDropBall {d}
 Drop the ball if you are carrying it.
-
+.TP 12
+.B keyIdMode {i}
+Toggle ship ID mode between nick name and real name.
 .TP 0
 These keys let you adjust the control sensitivity:
 .TP 12
-.B keyIncreasePower {*}
+.B keyIncreasePower {KP_Multiply}
 Increase engine power.
 .TP 12
-.B keyDecreasePower {/}
+.B keyDecreasePower {KP_Divide}
 Decrease engine power.
 .TP 12
-.B keyIncreaseTurnspeed {+}
+.B keyIncreaseTurnspeed {KP_Add}
 Increase turn speed.
 .TP 12
-.B keyDecreaseTurnspeed {-}
+.B keyDecreaseTurnspeed {KP_Subtract}
 Decrease turn speed.
-
-.TP 0
-And:
 .TP 12
-.B keyTalk {m}
-Toggles the talk window.  It is a small and wide window below the middle
-of the game window.  If you move the mouse pointer into it then you can
-type a message which will be send to all players in this game.
-Pressing escape while typing cancels the message.  Pressing return
-will send it.
-
+.B keyToggleOwnedItmes {o}
+Causes all owned bonus items to be shown either constantly or for a brief
+period after they change in amount on the HUD.
+.TP 12
+.B keyToggleMessages {0}
+Causes messages to be shown or not shown.
 
 .SH X RESOURCES
 
@@ -615,12 +884,27 @@ exist then it will look for the file as if LANG had been undefined.
 Resources defined in files listed later will override resources in
 files listed earlier.  All of these resources can be overridden by
 their corresponding command line arguments.
-
-The following resources are understood:
 .RS 5
 .TP 12
+.B gameFont
+The font used on the HUD and for nearly all text part of the game
+field.
+.TP 12
+.B messageFont
+The font used for messages displayed in the bottom left corner of
+the game field.
+.TP 12
+.B scoreListFont
+The font used on the score list.  Must be non-proportional.
+.TP 12
+.B buttonFont
+The font used on all buttons.
+.TP 12
+.B textFont
+The font used in the help and about windows.
+.TP 12
 .B name
-Your nick name.
+Nick name of your player.
 .TP 12
 .B team
 Preferred team number.
@@ -932,7 +1216,7 @@ will be to install the GNU C compiler on your system.
 
 .SH COPYRIGHT & DISCLAIMER
 
-XPilot is copyright (C) 1991-93 by the authors mentioned above.
+XPilot is copyright (C) 1991-94 by the authors mentioned above.
 XPilot comes with ABSOLUTELY NO WARRANTY; for details see the
 provided LICENSE file.
 

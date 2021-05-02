@@ -1,6 +1,6 @@
-/* $Id: draw.h,v 3.15 1993/10/21 10:24:16 bert Exp $
+/* $Id: draw.h,v 3.20 1994/04/12 13:43:10 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,6 +24,13 @@
 #ifndef	DRAW_H
 #define	DRAW_H
 
+/*
+ * Abstract (non-display system specific) drawing definitions.
+ * 
+ * This file should not contain any X window stuff as VMS
+ * does not accept this in the server.  Rightly so. :-)
+ */
+
 #include "types.h"
 
 /*
@@ -40,7 +47,7 @@
 /*
  * The minimum and maximum playing window sizes supported by the server.
  */
-#define MIN_VIEW_SIZE	    512
+#define MIN_VIEW_SIZE	    384
 #define MAX_VIEW_SIZE	    1024
 #define DEF_VIEW_SIZE	    768
 
@@ -51,7 +58,6 @@
 #define MAX_SPARK_RAND	    0x80	/* Always display spark */
 #define DEF_SPARK_RAND	    0x55	/* 66% */
 
-#define SMART_SHOT_LEN	    15
 #define DSIZE		    4	    /* Size of diamond (on radar) */
 
 #define MSG_DURATION	    1024
@@ -65,36 +71,18 @@
 
 #define CLOAK_FAILURE	    130
 
-#ifndef NO_ROTATING_DASHES
-#define NUM_DASHES	    2
-#define DASHES_LENGTH	    12
-#endif
-
-#define HUD_SIZE	    90		    /* Size/2 of HUD lines */
-#define HUD_OFFSET	    20		    /* Hud line offset */
-#define FUEL_GAUGE_OFFSET   6
-#define HUD_FUEL_GAUGE_SIZE (2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
-
-enum alignment_t { RIGHT, LEFT };
-
-typedef struct {
-    char txt[MSG_LEN];
-    short len;
-    short pixelLen;
-    enum alignment_t alignment;
-    long life;
-} message_t;
-
 typedef struct {			/* Defines wire-obj, i.e. ship */
-    position	*pts;
-    int		num_points;
+    position	*pts[RES];		/* the shape rotated many ways */
+    int		num_points;		/* total points in object */
+    int		pt1, pt2;		/* which two points are the back */
 } wireobj;
 
-#define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
-#define HaveColor(d)							\
-    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor		\
-     || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
+typedef unsigned long	Pixel;
 
-#define FRAC(py)	    ((int)((py) * 1024.0/768.0))
+extern wireobj *Default_ship(void);
+extern void Free_ship_shape(wireobj *w);
+extern wireobj *Parse_shape_str(char *str);
+extern wireobj *Convert_shape_str(char *str);
+extern int Validate_shape_str(char *str);
 
 #endif

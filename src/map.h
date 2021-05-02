@@ -1,6 +1,6 @@
-/* $Id: map.h,v 3.7 1993/09/13 19:09:40 bjoerns Exp $
+/* $Id: map.h,v 3.11 1994/02/07 13:19:57 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,22 +32,39 @@
 #define SPACE			0
 #define BASE			1
 #define FILLED			2
-#define FILLED_NO_DRAW		3
-#define REC_LU			4
-#define REC_LD			5
-#define REC_RU			6
-#define REC_RD			7
-#define FUEL			8
-#define CANNON			9
-#define CHECK			10
-#define SPECIAL			11
-#define POS_GRAV		20
-#define NEG_GRAV		21
-#define CWISE_GRAV		22
-#define ACWISE_GRAV		23
-#define WORMHOLE		24
-#define TREASURE		25
-#define	TARGET			26
+#define REC_LU			3
+#define REC_LD			4
+#define REC_RU			5
+#define REC_RD			6
+#define FUEL			7
+#define CANNON			8
+#define CHECK			9
+#define POS_GRAV		10
+#define NEG_GRAV		11
+#define CWISE_GRAV		12
+#define ACWISE_GRAV		13
+#define WORMHOLE		14
+#define TREASURE		15
+#define TARGET			16
+#define BASE_ATTRACTOR		127
+
+#define SPACE_BIT		(1 << SPACE)
+#define BASE_BIT		(1 << BASE)
+#define FILLED_BIT		(1 << FILLED)
+#define REC_LU_BIT		(1 << REC_LU)
+#define REC_LD_BIT		(1 << REC_LD)
+#define REC_RU_BIT		(1 << REC_RU)
+#define REC_RD_BIT		(1 << REC_RD)
+#define FUEL_BIT		(1 << FUEL)
+#define CANNON_BIT		(1 << CANNON)
+#define CHECK_BIT		(1 << CHECK)
+#define POS_GRAV_BIT		(1 << POS_GRAV)
+#define NEG_GRAV_BIT		(1 << NEG_GRAV)
+#define CWISE_GRAV_BIT		(1 << CWISE_GRAV)
+#define ACWISE_GRAV_BIT		(1 << ACWISE_GRAV)
+#define WORMHOLE_BIT		(1 << WORMHOLE)
+#define TREASURE_BIT		(1 << TREASURE)
+#define TARGET_BIT		(1 << TARGET)
 
 #define DIR_RIGHT		0
 #define DIR_UP			(RES/4)
@@ -101,9 +118,9 @@ typedef struct {
 
 typedef struct {
     ipos	pos;
-    bool	have;
-    u_short	team;
-    int 	count;
+    bool	have;		/* true if this treasure has ball in it */
+    u_short	team;		/* team of this treasure */
+    int 	destroyed;	/* number of times this treasure destroyed */
 } treasure_t;
 
 typedef struct {
@@ -116,8 +133,11 @@ typedef struct {
 } target_t;
 
 typedef struct {
-    int		NumMembers;
-    int		NumBases;
+    int		NumMembers;		/* Number of current members */
+    int		NumBases;		/* Number of bases owned */
+    int		NumTreasures;		/* Number of treasures owned */
+    int		TreasuresDestroyed;	/* Number of destroyed treasures */
+    int		TreasuresLeft;		/* Number of treasures left */
 } team_t;
     
 

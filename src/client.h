@@ -1,6 +1,6 @@
-/* $Id: client.h,v 3.38 1993/10/31 22:22:07 bert Exp $
+/* $Id: client.h,v 3.43 1994/03/30 16:49:42 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -28,6 +28,8 @@
 #include "types.h"
 #include "keys.h"
 #include "dbuff.h"
+#include "item.h"
+#include "draw.h"
 
 #define SHOW_HUD_INSTRUMENTS	(1<<0)		    
 #define SHOW_HUD_VERTICAL	(1<<1)
@@ -43,6 +45,9 @@
 #define SHOW_PACKET_LOSS_METER	(1<<11)
 #define SHOW_PACKET_DROP_METER	(1<<12)
 #define SHOW_CLOCK		(1<<13)
+#define SHOW_ITEMS		(1<<14)
+#define SHOW_MESSAGES		(1<<15)
+#define SHOW_MINE_NAME		(1<<16)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -56,6 +61,16 @@
 #define MAX_MAP_POINT_SIZE	8
 #define MIN_MAP_POINT_SIZE	0
 #define DEF_MAP_POINT_SIZE	2
+#define MAX_SHOT_SIZE		8
+#define MIN_SHOT_SIZE		1
+#define DEF_SHOT_SIZE		3
+#define MAX_TEAMSHOT_SIZE	8
+#define MIN_TEAMSHOT_SIZE	1
+#define DEF_TEAMSHOT_SIZE	2
+
+#define DEF_SHOW_ITEMS_TIME	2.0
+#define MIN_SHOW_ITEMS_TIME	0.0
+#define MAX_SHOW_ITEMS_TIME	10.0
 
 typedef struct {
     float	ratio;
@@ -67,6 +82,7 @@ typedef struct {
     short	war_id;
     short	name_width;	/* In pixels */
     short	name_len;	/* In bytes */
+    wireobj	*ship;
     char	name[MAX_CHARS];
     char	real[MAX_CHARS];
     char	host[MAX_CHARS];
@@ -121,16 +137,12 @@ extern ipos	realWorld;
 extern short	wrappedWorld;
 extern short	heading;
 extern short	nextCheckPoint;
-extern short	numCloaks;
-extern short	numSensors;
-extern short	numMines;
-extern short	numRockets;
-extern short	numEcms;
-extern short 	numTransporters;
-extern short	numFrontShots;
-extern short	numBackShots;
-extern short	numAfterburners;
-extern short	numLasers;
+extern u_byte	numItems[NUM_ITEMS];
+extern u_byte	lastNumItems[NUM_ITEMS];
+extern int	numItemsTime[NUM_ITEMS];
+extern float	showItemsTime;
+extern short	autopilotLight;
+
 
 extern short	lock_id;		/* Id of player locked onto */
 extern short	lock_dir;		/* Direction of lock */
@@ -141,11 +153,15 @@ extern short	damaged;		/* Damaged by ECM */
 extern short	destruct;		/* If self destructing */
 extern short	shutdown_delay;
 extern short	shutdown_count;
+extern short	thrusttime;
+extern short	thrusttimemax;
 
 extern int	RadarHeight;
 extern int	map_point_distance;	/* spacing of navigation points */
 extern int	map_point_size;		/* size of navigation points */
 extern int	spark_size;		/* size of sparks and debris */
+extern int	shot_size;		/* size of shot */
+extern int	teamshot_size;		/* size of team shot */
 extern long	control_count;		/* Display control for how long? */
 
 extern long	fuelSum;		/* Sum of fuel in all tanks */
@@ -157,6 +173,7 @@ extern int	fuelLevel1;		/* Fuel critical level */
 extern int	fuelLevel2;		/* Fuel warning level */
 extern int	fuelLevel3;		/* Fuel notify level */
 
+extern char	*shipShape;		/* Shape of player's ship */
 extern float	power;			/* Force of thrust */
 extern float	power_s;		/* Saved power fiks */
 extern float	turnspeed;		/* How fast player acc-turns */
@@ -168,6 +185,7 @@ extern int	charsPerSecond;		/* Message output speed (config) */
 
 extern float	hud_move_fact;		/* scale the hud-movement (speed) */
 extern float	ptr_move_fact;		/* scale the speed pointer length */
+extern char	mods[MAX_CHARS];	/* Current modifiers in effect */
 extern long	instruments;		/* Instruments on screen (bitmask) */
 extern int	packet_size;		/* Current frame update packet size */
 extern int	packet_loss;		/* lost packets per second */
@@ -202,9 +220,10 @@ int Handle_base(int id, int ind);
 int Check_pos_by_index(int ind, int *xp, int *yp);
 int Check_index_by_pos(int x, int y);
 other_t *Other_by_id(int id);
+wireobj *Ship_by_id(int id);
 int Handle_leave(int id);
 int Handle_player(int id, int team, int mychar, char *player_name,
-		  char *real_name, char *host_name);
+		  char *real_name, char *host_name, char *shape);
 int Handle_score(int id, int score, int life, int mychar);
 int Handle_score_object(int score, int x, int y, char *msg);
 int Handle_war(int robot_id, int killer_id);

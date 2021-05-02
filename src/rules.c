@@ -1,6 +1,6 @@
-/* $Id: rules.c,v 3.14 1993/11/16 22:48:22 bert Exp $
+/* $Id: rules.c,v 3.27 1994/04/11 21:02:29 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -30,20 +30,18 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: rules.c,v 3.14 1993/11/16 22:48:22 bert Exp $";
+    "@(#)$Id: rules.c,v 3.27 1994/04/11 21:02:29 bert Exp $";
 #endif
 
 
-long	KILLING_SHOTS =
-          (OBJ_SHOT|OBJ_CANNON_SHOT|OBJ_SMART_SHOT
-	   |OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_NUKE);
+long	KILLING_SHOTS = (OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
 long	DEF_BITS = 0;
 long	KILL_BITS = (THRUSTING|PLAYING|KILLED|SELF_DESTRUCT|PAUSE);
 long	DEF_HAVE =
-	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_CONNECTOR
-	|OBJ_FIRE|OBJ_LASER|OBJ_REPAIR);
+	(OBJ_SHOT|OBJ_SHIELD|OBJ_COMPASS|OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR
+	|OBJ_FIRE|OBJ_LASER);
 long	DEF_USED = (OBJ_SHIELD|OBJ_COMPASS);
-long	USED_KILL = (OBJ_REFUEL|OBJ_CONNECTOR|OBJ_FIRE|OBJ_LASER|OBJ_REPAIR);
+long	USED_KILL = (OBJ_REFUEL|OBJ_REPAIR|OBJ_CONNECTOR|OBJ_FIRE|OBJ_LASER);
 
 
 /*
@@ -74,12 +72,32 @@ void Init_item(int item, float prob)
 }
 
 
+void Set_initial_resources(void)
+{
+    CLR_BIT(DEF_HAVE,
+	OBJ_CLOAKING_DEVICE |
+	OBJ_EMERGENCY_THRUST |
+	OBJ_TRACTOR_BEAM |
+	OBJ_AUTOPILOT);
+
+    if (initialCloaks > 0)
+	SET_BIT(DEF_HAVE, OBJ_CLOAKING_DEVICE);
+    if (initialEmergencyThrusts > 0)
+	SET_BIT(DEF_HAVE, OBJ_EMERGENCY_THRUST);
+    if (initialTractorBeams > 0)
+	SET_BIT(DEF_HAVE, OBJ_TRACTOR_BEAM);
+    if (initialAutopilots > 0)
+	SET_BIT(DEF_HAVE, OBJ_AUTOPILOT);
+    LIMIT(initialTanks, 0, MAX_TANKS);
+}
+
 void Set_world_rules(void)
 {
     static rules_t rules;
 
 	rules.mode = 
 	  ((crashWithPlayer ? CRASH_WITH_PLAYER : 0)
+	   | (bounceWithPlayer ? BOUNCE_WITH_PLAYER : 0)
 	   | (playerKillings ? PLAYER_KILLINGS : 0)
 	   | (playerShielding ? PLAYER_SHIELDING : 0)
 	   | (limitedVisibility ? LIMITED_VISIBILITY : 0)
@@ -87,14 +105,18 @@ void Set_world_rules(void)
 	   | (teamPlay ? TEAM_PLAY : 0)
 	   | (onePlayerOnly ? ONE_PLAYER_ONLY : 0)
 	   | (timing ? TIMING : 0)
+	   | (identifyMines ? IDENTIFY_MINES : 0)
 	   | (allowNukes ? ALLOW_NUKES : 0)
+	   | (allowClusters ? ALLOW_CLUSTERS : 0)
+	   | (allowModifiers ? ALLOW_MODIFIERS : 0)
+	   | (allowLaserModifiers ? ALLOW_LASER_MODIFIERS : 0)
 	   | (edgeWrap ? WRAP_PLAY : 0));
 	rules.lives = worldLives;
 	World.rules = &rules;
 
     if (!BIT(World.rules->mode, PLAYER_KILLINGS))
 	CLR_BIT(KILLING_SHOTS,
-		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT|OBJ_NUKE);
+		OBJ_SHOT|OBJ_SMART_SHOT|OBJ_TORPEDO|OBJ_HEAT_SHOT);
     if (!BIT(World.rules->mode, PLAYER_SHIELDING))
 	CLR_BIT(DEF_HAVE, OBJ_SHIELD);
 
@@ -114,11 +136,19 @@ void Set_world_rules(void)
     Init_item(ITEM_AFTERBURNER, itemAfterburnerProb);
     Init_item(ITEM_TRANSPORTER, itemTransporterProb);
     Init_item(ITEM_LASER, itemLaserProb);
+    Init_item(ITEM_EMERGENCY_THRUST, itemEmergencyThrustProb);
+    Init_item(ITEM_TRACTOR_BEAM, itemTractorBeamProb);
+    Init_item(ITEM_AUTOPILOT, itemAutopilotProb);
     DEF_USED &= DEF_HAVE;
 
     /*
      * Convert from [0..1] probabilities to [0..127] probabilities
      */
+    LIMIT(dropItemOnKillProb, 0.0, 1.0);
+    LIMIT(movingItemProb, 0.0, 1.0);
     ThrowItemOnKillRand = (int)(dropItemOnKillProb * 128);
     MovingItemsRand = (int)(movingItemProb * 128);
+
+    Set_initial_resources();
 }
+

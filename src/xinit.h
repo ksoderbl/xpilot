@@ -1,6 +1,6 @@
-/* $Id: xinit.h,v 3.20 1993/09/20 18:51:18 bert Exp $
+/* $Id: xinit.h,v 3.26 1994/04/12 13:43:18 bjoerns Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,7 +24,6 @@
 #ifndef	XINIT_H
 #define	XINIT_H
 
-#include <X11/Intrinsic.h>
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
@@ -33,12 +32,17 @@
 
 #define MAX_VISUAL_NAME	12
 
-#define MIN_TOP_WIDTH	(256 + 2 + MIN_VIEW_SIZE)
-#define MAX_TOP_WIDTH	(256 + 2 + MAX_VIEW_SIZE)
-#define DEF_TOP_WIDTH	(256 + 2 + DEF_VIEW_SIZE)
-#define MIN_TOP_HEIGHT	MIN_VIEW_SIZE
-#define MAX_TOP_HEIGHT	MAX_VIEW_SIZE
-#define DEF_TOP_HEIGHT	DEF_VIEW_SIZE
+#define MIN_TOP_WIDTH	(640 + 2)
+#define MAX_TOP_WIDTH	(1280 + 2)
+#define DEF_TOP_WIDTH	(1024 + 2)
+#define MIN_TOP_HEIGHT	480
+#define MAX_TOP_HEIGHT	1024
+#define DEF_TOP_HEIGHT	768
+
+#define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
+#define HaveColor(d)							\
+    (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor		\
+     || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
 
 extern Atom		ProtocolAtom, KillAtom;
 extern int		buttonColor, windowColor, borderColor;
@@ -52,6 +56,7 @@ extern char		color_names[MAX_COLORS][MAX_COLOR_LEN];
 extern int		top_width, top_height;
 extern int		draw_width, draw_height;
 extern char		*geometry;
+extern bool		autoServerMotdPopup;
 
 /*
  * Prototypes for xinit.c
@@ -81,6 +86,8 @@ extern void ShadowDrawString(Display*, Window w, GC gc, int x,
 			   int start_y, char *str, Pixel fg, Pixel bg);
 void About(Window w);
 void Expose_about_window(void);
+int Handle_motd(long off, char *buf, int len, long filesize);
+int Startup_server_motd(void);
 
 #endif
 

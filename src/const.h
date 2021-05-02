@@ -1,6 +1,6 @@
-/* $Id: const.h,v 3.27 1993/12/19 18:59:24 bert Exp $
+/* $Id: const.h,v 3.42 1994/04/07 16:29:16 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -21,8 +21,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef LIMITS_H
-#define	LIMITS_H
+#ifndef CONST_H
+#define	CONST_H
 
 #include <limits.h>
 #include <math.h>
@@ -61,7 +61,7 @@
 #   define LINE_MAX 2048
 #endif
 
-#define RES		        128
+#define RES			128
 
 #define BLOCK_SZ		35
 
@@ -112,17 +112,28 @@
 
 #define PSEUDO_TEAM(i,j)\
 	(Players[(i)]->pseudo_team == Players[(j)]->pseudo_team)
+
+/*
+ * Used where we wish to know if a player is simply on the same team.
+ */
 #define TEAM(i, j)							\
 	(BIT(Players[i]->status|Players[j]->status, PAUSE)		\
 	|| (BIT(World.rules->mode, TEAM_PLAY)				\
 	   && (Players[i]->team == Players[j]->team)			\
 	   && (Players[i]->team != TEAM_NOT_SET)))
 
+/*
+ * Used where we wish to know if a player is on the same team
+ * and has immunity to shots, thrust sparks, lasers, ecms, etc.
+ */
+#define TEAM_IMMUNE(i, j)	(teamImmunity && TEAM(i, j))
+
 #define CANNON_DEAD_TIME	900
 
 #define	RECOVERY_DELAY		(FPS*3)
 
 #define MAX_ID			4096		    /* Should suffice :) */
+#define EXPIRED_MINE_ID		4096   /* assume no player has this id */
 #define MAX_PSEUDO_PLAYERS      16
 
 #define PLAYER_ITEM_RATE        5
@@ -131,16 +142,13 @@
 #define MAX_SCROLL_LEN		4096
 #define MAX_CHARS		80
 #define MSG_LEN			256
+#define MAX_SHAPE_LEN		MSG_LEN
 
 #define FONT_LEN		256
 
-#define MAX_STATUS_CHARS	200
-
-#define MIN_PAUSE		800
+#define NUM_MODBANKS		4
 
 #define MAX_TOTAL_SHOTS		16384
-#define MAX_SHOTS		64
-#define SHOTS_ANGLE		(RES/40)
 
 #define SPEED_LIMIT		65.0
 #define MAX_PLAYER_TURNSPEED	64.0
@@ -152,7 +160,7 @@
 
 #define FUEL_SCALE_BITS         8
 #define FUEL_SCALE_FACT         (1<<FUEL_SCALE_BITS)
-#define FUEL_MASS(f)            (f*0.005/FUEL_SCALE_FACT)
+#define FUEL_MASS(f)            ((f)*0.005/FUEL_SCALE_FACT)
 #define MAX_STATION_FUEL	(500<<FUEL_SCALE_BITS)
 #define START_STATION_FUEL	(20<<FUEL_SCALE_BITS)
 #define STATION_REGENERATION	(0.06*FUEL_SCALE_FACT)
@@ -166,8 +174,8 @@
 
 #define TARGET_DEAD_TIME	(FPS * 60)
 #define TARGET_DAMAGE		(250<<FUEL_SCALE_BITS)
-#define TARGET_FUEL_REPAIR_PER_FRAME (TARGET_DAMAGE / (FPS * (60 / 3)))
-#define TARGET_REPAIR_PER_FRAME	(TARGET_DAMAGE / (FPS * 60 * 10))
+#define TARGET_FUEL_REPAIR_PER_FRAME (TARGET_DAMAGE / (FPS * 10))
+#define TARGET_REPAIR_PER_FRAME	(TARGET_DAMAGE / (FPS * 600))
 #define TARGET_UPDATE_DELAY	(TARGET_DAMAGE / (TARGET_REPAIR_PER_FRAME \
 				    * BLOCK_SZ))
 
@@ -176,8 +184,10 @@
 #define ALT_FUEL_FACT           3
 #define MAX_AFTERBURNER        ((1<<LG2_MAX_AFTERBURNER)-1)
 #define AFTER_BURN_SPARKS(s,n)  (((s)*(n))>>LG2_MAX_AFTERBURNER)
+#define AFTER_BURN_POWER_FACTOR(n) \
+ (1.0+(n)*((ALT_SPARK_MASS_FACT-1.0)/(MAX_AFTERBURNER+1.0)))
 #define AFTER_BURN_POWER(p,n)   \
- ((p)*(1.0+(n)*((ALT_SPARK_MASS_FACT-1.0)/(MAX_AFTERBURNER+1.0))))
+ ((p)*AFTER_BURN_POWER_FACTOR(n))
 #define AFTER_BURN_FUEL(f,n)    \
  (((f)*((MAX_AFTERBURNER+1)+(n)*(ALT_FUEL_FACT-1)))/(MAX_AFTERBURNER+1.0))
 
@@ -203,12 +213,17 @@
 #define VISIBILITY_DISTANCE	1000.0
 #define WARNING_DISTANCE	(VISIBILITY_DISTANCE*0.8)
 
-#define ECM_DISTANCE		(VISIBILITY_DISTANCE*0.2)
-#define ECM_MIS_FACT		1.5
+#define ECM_DISTANCE		(VISIBILITY_DISTANCE*0.4)
 
-#define TRANSPORTER_DISTANCE	ECM_DISTANCE
+#define TRANSPORTER_DISTANCE	(VISIBILITY_DISTANCE*0.2)
+
+#define SHOT_MULT(o) \
+	((BIT((o)->mods.nuclear, NUCLEAR) && BIT((o)->mods.warhead, CLUSTER)) \
+	 ? nukeClusterDamage : 1.0f)
 
 #define MINE_RANGE              (VISIBILITY_DISTANCE*0.1)
+#define MINE_SENSE_BASE_RANGE   (MINE_RANGE*1.3)
+#define MINE_SENSE_RANGE_FACTOR (MINE_RANGE*0.3)
 #define MINE_MASS               30.0
 #define MINE_LIFETIME           (5000+(rand()&255))
 #define MINE_SPEED_FACT         1.3
@@ -223,15 +238,17 @@
 #define SMART_SHOT_MAX_SPEED	22.0
 #define SMART_SHOT_LOOK_AH      4
 #define TORPEDO_SPEED_TIME      (2*FPS)
-#define TORPEDO_ACC             (SMART_SHOT_MAX_SPEED/TORPEDO_SPEED_TIME)
+#define TORPEDO_ACC 	(18.0*SMART_SHOT_MAX_SPEED/(FPS*TORPEDO_SPEED_TIME))
 #define TORPEDO_RANGE           (MINE_RANGE*0.45)
 
 #define NUKE_SPEED_TIME		(2*FPS)
-#define NUKE_ACC		(5*SMART_SHOT_MAX_SPEED/TORPEDO_SPEED_TIME)
+#define NUKE_ACC 		(5*TORPEDO_ACC)
 #define NUKE_RANGE		(MINE_RANGE*1.5)
-#define NUKE_MIN_SMART		7
+#define NUKE_MIN_SMART		(nukeMinSmarts)
+#define NUKE_MIN_MINE		(nukeMinMines)
 #define NUKE_MASS_MULT		1
-#define NUKE_EXPLOSION_MULT	20
+#define NUKE_MINE_EXPL_MULT	3
+#define NUKE_SMART_EXPL_MULT	4
 
 #define HEAT_RANGE              (VISIBILITY_DISTANCE/2)
 #define HEAT_SPEED_FACT         1.7
@@ -244,6 +261,20 @@
 #define HEAT_WIDE_TIMEOUT       (8*FPS)
 #define HEAT_WIDE_ERROR         16
 
+#define MAX_MISSILES_PER_PACK	4
+
+#define CLUSTER_MASS_SHOTS(mass) ((mass) * 0.9 / ShotsMass)
+#define CLUSTER_MASS_DRAIN(mass) (CLUSTER_MASS_SHOTS(mass)*ED_SHOT)
+
+#define BALL_RADIUS		10
+
+#define MISSILE_LEN		15
+#define SMART_SHOT_LEN		12
+#define HEAT_SHOT_LEN		15
+#define TORPEDO_LEN		18
+
+#define MINE_RADIUS		8
+
 #define MAX_LASERS		5
 #define PULSE_SPEED		90
 #define PULSE_SAMPLE_DISTANCE	5
@@ -251,10 +282,20 @@
 #define PULSE_MAX_LIFE		6
 #define PULSE_LIFE(lasers)	(PULSE_MAX_LIFE - (MAX_LASERS - (lasers)) / 2)
 
+#define MAX_TRACTORS		4
+
+#define TRACTOR_MAX_RANGE(pl)  (200 + (pl)->tractor_beams * 50)
+#define TRACTOR_MAX_FORCE(pl)  (-40 + (pl)->tractor_beams * -20)
+#define TRACTOR_PERCENT(pl, maxdist) \
+	(1.0-(0.5*(pl)->lock.distance/(maxdist)))
+#define TRACTOR_COST(percent) (-1.5 * FUEL_SCALE_FACT * (percent))
+#define TRACTOR_FORCE(pl, percent, maxforce) \
+	((percent) * (maxforce) * ((pl)->tractor_pressor ? -1 : 1))
+
 #define WALL_RETURN_TIME        32
 #define WARN_TIME               2
 
-#define BALL_STRING_LENGTH	120
+#define BALL_STRING_LENGTH      120
 
 #define TEAM_NOT_SET		0xffff
 

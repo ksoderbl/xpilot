@@ -1,0 +1,31 @@
+The next version of TkXpInterface (for the xpilot-3.1.0) will include better 
+help file but , at the moment you have to know :
+	- Do a double-click for choosing a map in the map list.
+	- Do a double-click too for connecting to a foreign server in the server list 
+          (if you don't, you won't connect the server you want to play on).
+
+BUGS :
+TkXpInterface was ONLY tested on :
+                  HP 9000/735 running HP-UX 9.01
+                  SUN Sparc server 1000
+                  IBM Risc 6000
+
+-if on the botton-left of your screen you see "maps2image not found" message
+that's mean "maps2image" program isn't in a directory of your path (in $PATH).
+
+-The TkXpInterface will be soon adapted for the monochrome screen.
+
+-if after the sort of the current servers (in the meta-server command)
+the servers are not sorted, that's mean TkXpInterface doesn't recognize the
+"sort" unix command, e-mail me its exact syntax to include it in the next version.
+
+The syntax of the UNIX command depend of the machine you used :
+TkXpInterface calls some UNIX commands, if you see a strange behavior
+of TkXpInterface e-mail me the Tcl error message :
+The UNIX commands used are :
+      grep sort sed telnet cat rm mv cp ls echo tail head
+
+e-mail troubles to :
+berne@ensisun.imag.fr or ferhati@aremihp.univ-lille1.fr
+
+Enjoy !

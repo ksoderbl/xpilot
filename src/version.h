@@ -1,6 +1,6 @@
-/* $Id: version.h,v 3.32 1993/12/23 16:06:15 bert Exp $
+/* $Id: version.h,v 3.46 1994/04/14 09:45:36 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -35,8 +35,8 @@
  * the word "beta" or "alpha".
  */
 #define VERSION_MAJOR		"3"
-#define VERSION_MINOR		"0"
-#define VERSION_PATCHLEVEL	"7"
+#define VERSION_MINOR		"1"
+#define VERSION_PATCHLEVEL	"2"
 #define VERSION_STATUS		""
 
 /*
@@ -48,11 +48,11 @@
 #define AUTHORS		"Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers"
 
 #if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"1991-93"
+#   pragma COPYRIGHT_DATE	"1991-94"
 #   pragma COPYRIGHT		AUTHORS
 #   pragma VERSIONID		TITLE
 #endif
 
 #define COPYRIGHT	\
-	"© 1991-93 by Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers" 
+	"© 1991-94 by Bjørn Stabell, Ken Ronny Schouten & Bert Gÿsbers" 
 #endif

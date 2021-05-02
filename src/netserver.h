@@ -1,6 +1,6 @@
-/* $Id: netserver.h,v 3.25 1993/11/07 23:15:33 bert Exp $
+/* $Id: netserver.h,v 3.36 1994/04/10 13:15:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -94,15 +94,19 @@ typedef struct {
     int			his_port;		/* client port for this player */
     int			id;			/* index into GetInd[] or -1 */
     int			team;			/* team of player */
-    int			last_key_change;	/* last keyboard change */
     unsigned		version;		/* XPilot version of client */
+    long		last_key_change;	/* last keyboard change */
     long		talk_sequence_num;	/* talk acknowledgement */
+    long		motd_offset;		/* offset into motd or -1 */
+    long		motd_stop;		/* max offset into motd */
     int			view_width, view_height;/* Viewable area dimensions */
     int			debris_colors;		/* Max. debris intensities */
     int			spark_rand;		/* Sparkling effect */
     char		*real;			/* real login name of player */
     char		*nick;			/* nickname of player */
     char		*dpy;			/* display of player */
+    char		*shape;			/* ship shape of player */
+    char		addr[MAXHOSTNAMELEN];	/* address of players host */
     char		host[MAXHOSTNAMELEN];	/* hostname of players host */
 } connection_t;
 
@@ -113,7 +117,6 @@ static int Handle_setup(int ind);
 static int Handle_login(int ind);
 static int Handle_input(int ind);
 
-static int Receive_send_bufsize(int ind);
 static int Receive_keyboard(int ind);
 static int Receive_quit(int ind);
 static int Receive_play(int ind);
@@ -126,15 +129,20 @@ static int Receive_discard(int ind);
 static int Receive_undefined(int ind);
 static int Receive_talk(int ind);
 static int Receive_display(int ind);
+static int Receive_modifier_bank(int ind);
+static int Receive_motd(int ind);
+static int Receive_shape(int ind);
+
+static int Send_motd(int ind);
 
 #endif	/* NETSERVER_C */
 
 void Init_receive(void);
-int Setup_net_server(int maxconn);
+int Setup_net_server(int maxconn, int contact_socket);
 void Destroy_connection(int ind, char *reason, char *file, int line);
 int Setup_connection(char *real, char *nick, char *dpy,
-		     int team, char *host, unsigned version);
-int Input(int contact_socket);
+		     int team, char *addr, char *host, unsigned version);
+int Input(void);
 int Send_reply(int ind, int replyto, int result);
 int Send_self(int ind,
     int x, int y, int vx, int vy, int dir,
@@ -142,13 +150,14 @@ int Send_self(int ind,
     int lock_id, int lock_dist, int lock_dir,
     int check, int cloaks, int sensors, int mines,
     int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int lasers, int num_tanks, int current_tank,
-    int fuel_sum, int fuel_max, long status);
+    int afterburners, int lasers, int emergency_thrusts, int tractor_beams,
+    int autopilots, int autopilotlight,
+    int num_tanks, int current_tank, int fuel_sum, int fuel_max, long status);
+int Send_modifiers(int ind, char *mods);
 int Send_leave(int ind, int id);
 int Send_war(int ind, int robot_id, int killer_id);
 int Send_seek(int ind, int programmer_id, int robot_id, int sought_id);
-int Send_player(int ind, int id, int team, int mychar, char *name,
-		char *real, char *disp);
+int Send_player(int ind, int id);
 int Send_score(int ind, int id, int score, int life, int mychar);
 int Send_score_object(int ind, int score, int x, int y, char *string);
 int Send_base(int ind, int id, int num);
@@ -156,11 +165,13 @@ int Send_fuel(int ind, int num, int fuel);
 int Send_cannon(int ind, int num, int dead_time);
 int Send_destruct(int ind, int count);
 int Send_shutdown(int ind, int count, int delay);
+int Send_thrusttime(int ind, int count, int max);
 int Send_debris(int ind, int type, unsigned char *p, int n);
-int Send_shot(int ind, int x, int y, int color);
-int Send_smart(int ind, int x, int y, int dir);
+int Send_fastshot(int ind, int type, unsigned char *p, int n);
+int Send_shot(int ind, int x, int y, int color, int teamshot);
+int Send_missile(int ind, int x, int y, int len, int dir);
 int Send_ball(int ind, int x, int y, int id);
-int Send_mine(int ind, int x, int y);
+int Send_mine(int ind, int x, int y, int teammine, int id);
 int Send_target(int ind, int num, int dead_time, int damage);
 int Send_audio(int ind, int type, int vol);
 int Send_item(int ind, int x, int y, int type);
@@ -168,9 +179,9 @@ int Send_paused(int ind, int x, int y, int count);
 int Send_ecm(int ind, int x, int y, int size);
 int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak);
 int Send_refuel(int ind, int x0, int y0, int x1, int y1);
-int Send_connector(int ind, int x0, int y0, int x1, int y1);
+int Send_connector(int ind, int x0, int y0, int x1, int y1, int tractor);
 int Send_laser(int ind, int color, int x, int y, int len, int dir);
-int Send_radar(int ind, int x, int y);
+int Send_radar(int ind, int x, int y, int size);
 int Send_damaged(int ind, int damaged);
 int Send_message(int ind, char *msg);
 int Send_start_of_frame(int ind);
@@ -182,5 +193,6 @@ int Send_trans(int ind, int x1, int y1, int x2, int y2);
 void Get_display_parameters(int ind, int *width, int *height,
 			    int *debris_colors, int *spark_rand);
 int Get_player_id(int);
+int Send_shape(int ind, int shape);
 #endif
 

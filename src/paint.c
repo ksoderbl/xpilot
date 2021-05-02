@@ -1,6 +1,6 @@
-/* $Id: paint.c,v 3.67 1993/11/11 23:21:50 bert Exp $
+/* $Id: paint.c,v 3.87 1994/04/13 18:34:37 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -21,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <X11/Intrinsic.h>
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
@@ -56,7 +55,7 @@
 #define ERASE		0
 #endif
 
-#define ERASE_INITIALISED	(1 << 0)
+#define ERASE_INITIALIZED	(1 << 0)
 #define ERASE_DAMAGED		(1 << 1)
 
 #define MAX_LINE_WIDTH	4	/* widest line drawn */
@@ -65,11 +64,11 @@
 #define Y(co)  ((int) (view_height - (co) + world.y))
 
 extern float  		tbl_sin[];
-extern wireobj		ships[];
 extern setup_t		*Setup;
 extern int		RadarHeight;
 extern score_object_t	score_objects[MAX_SCORE_OBJECTS];
 extern int 		score_object;
+extern int		hudColor;
 
 
 /*
@@ -81,13 +80,16 @@ XFontStruct* scoreListFont;
 XFontStruct* buttonFont;
 XFontStruct* textFont;
 XFontStruct* talkFont;
-
+XFontStruct* keyListFont;
+XFontStruct* motdFont;
 char	gameFontName[FONT_LEN];	/* The fonts used in the game */
 char	messageFontName[FONT_LEN];
 char	scoreListFontName[FONT_LEN];
 char	buttonFontName[FONT_LEN];
 char	textFontName[FONT_LEN];
 char	talkFontName[FONT_LEN];
+char	keyListFontName[FONT_LEN];
+char	motdFontName[FONT_LEN];
 
 Display	*dpy;			/* Display of player (pointer) */
 short	about_page;		/* Which page is the player on? */
@@ -98,8 +100,10 @@ GC	messageGC;		/* GC for messages in the game area */
 GC	radarGC;		/* GC for the radar */
 GC	buttonGC;		/* GC for the buttons */
 GC	scoreListGC;		/* GC for the player list */
-GC	textGC;			/* GC for the info/keys text */
+GC	textGC;			/* GC for the info text */
 GC	talkGC;			/* GC for the message window */
+GC	keyListGC;		/* GC for the keys text */
+GC	motdGC;			/* GC for the motd text */
 
 Window	top;			/* Top-level window (topshell) */
 Window	draw;			/* Main play window */
@@ -128,8 +132,13 @@ short	view_width, view_height;	/* Visible area according to server */
 u_byte	debris_colors;		/* Number of debris intensities from server */
 u_byte	spark_rand;		/* Sparkling effect */
 float	charsPerTick = 0.0;	/* Output speed of messages */
-
 bool	markingLights;
+int	titleFlip;		/* Do special title bar flipping? */
+int	shieldDrawMode = -1;	/* Either LineOnOffDash or LineSolid */
+char	modBankStr[NUM_MODBANKS][MAX_CHARS];	/* modifier banks */
+int	(*radarPlayerRectFN)	/* Function to draw player on radar */
+	(Display *disp, Drawable d, GC gc,
+	 int x, int y, unsigned width, unsigned height);
 
 dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
@@ -156,6 +165,7 @@ typedef struct {
 
 typedef struct {
     short		x0, y0, x1, y1;
+    u_byte		tractor;
 } connector_t;
 
 typedef struct {
@@ -165,7 +175,8 @@ typedef struct {
 
 typedef struct {
     short		x, y, dir;
-} smart_t;
+    unsigned char	len;
+} missile_t;
 
 typedef struct {
     short		x, y, id;
@@ -177,7 +188,7 @@ typedef struct {
 } ship_t;
 
 typedef struct {
-    short		x, y;
+    short		x, y, teammine, id;
 } mine_t;
 
 typedef struct {
@@ -201,7 +212,7 @@ typedef struct {
 } paused_t;
 
 typedef struct {
-    short		x, y;
+    short		x, y, size;
 } radar_t;
 
 typedef struct {
@@ -245,8 +256,8 @@ static connector_t	*connector_ptr;
 static int		 num_connector, max_connector;
 static laser_t		*laser_ptr;
 static int		 num_laser, max_laser;
-static smart_t		*smart_ptr;
-static int		 num_smart, max_smart;
+static missile_t	*missile_ptr;
+static int		 num_missile, max_missile;
 static ball_t		*ball_ptr;
 static int		 num_ball, max_ball;
 static ship_t		*ship_ptr;
@@ -257,6 +268,8 @@ static itemtype_t	*itemtype_ptr;
 static int		 num_itemtype, max_itemtype;
 static shot_t		*shot_ptr;
 static int		 num_shot, max_shot;
+static shot_t		*teamshot_ptr;
+static int		 num_teamshot, max_teamshot;
 static ecm_t		*ecm_ptr;
 static int		 num_ecm, max_ecm;
 static trans_t 		*trans_ptr;
@@ -274,6 +287,9 @@ static int		 num_vbase, max_vbase;
 static debris_t		*debris_ptr[DEBRIS_TYPES];
 static int		 num_debris[DEBRIS_TYPES],
 			 max_debris[DEBRIS_TYPES];
+static debris_t		*fastshot_ptr[DEBRIS_TYPES * 2];
+static int		 num_fastshot[DEBRIS_TYPES * 2],
+			 max_fastshot[DEBRIS_TYPES * 2];
 
 #define HANDLE(P,N,M,T)							\
     if (N >= M && ((M <= 0)						\
@@ -325,7 +341,7 @@ static long		loops = 0,
 			end_loops,
 			time_left = -1;
 
-static XPoint		points[5];
+static XPoint		points[255];
 static XGCValues	gcv;
 
 static XPoint		diamond[] = {
@@ -366,10 +382,10 @@ static void Erase_start(void)
 	printf("ERASE is On!\n");
 	erp = &erase[0];
     }
-    if (BIT(erp->flags, ERASE_INITIALISED) == 0) {
+    if (BIT(erp->flags, ERASE_INITIALIZED) == 0) {
 	SET_FG(colors[BLACK].pixel);
 	XFillRectangle(dpy, p_draw, gc, 0, 0, draw_width, draw_height);
-	SET_BIT(erp->flags, ERASE_INITIALISED);
+	SET_BIT(erp->flags, ERASE_INITIALIZED);
     }
     erp->num_rect = 0;
     erp->num_arc = 0;
@@ -661,7 +677,7 @@ static int Segment_add(int color, int x1, int y1, int x2, int y2)
 }
 
 #ifdef SCROLL
-static char *scroll(char *string, int start, int length)
+static char *scroll(char *string, int start, int len)
 {
     static char str[MAX_SCROLL_LEN];
     int i;
@@ -745,8 +761,8 @@ static int wrap(int *x, int *y)
     }
 #if 0
     errno = 0;
-    error("Object (%d, %d) not in view (%d, %d)",
-	  *x, *y, pos.x, pos.y);
+    error("Object (%d, %d) not in view (%d, %d) (%x)",
+	  *x, *y, pos.x, pos.y, wrappedWorld);
 #endif
     return 0;
 }
@@ -754,9 +770,11 @@ static int wrap(int *x, int *y)
 void Game_over_action(u_byte stat)
 {
     static u_byte old_stat = 0;
-    
-    if (BIT(old_stat, GAME_OVER) && !BIT(stat, GAME_OVER))
+
+    if (BIT(old_stat, GAME_OVER) && !BIT(stat, GAME_OVER)
+	&& !BIT(stat,PAUSE)) {
 	XMapRaised(dpy, top);
+    }
     if (toggle_shield) {
 	if (BIT(old_stat, PLAYING|PAUSE|GAME_OVER) != PLAYING) {
 	    if (BIT(stat, PLAYING|PAUSE|GAME_OVER) == PLAYING) {
@@ -787,6 +805,7 @@ void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
 {
     const int		SIZE = ITEM_TRIANGLE_SIZE;
 
+#ifndef NO_ITEM_TRIANGLES
     points[0].x = x - SIZE;
     points[0].y = y - SIZE;
     points[1].x = x;
@@ -796,6 +815,7 @@ void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
     points[3] = points[0];
     SET_FG(colors[BLUE].pixel);
     XDrawLines(dpy, d, gc, points, 4, CoordModeOrigin);
+#endif
 
     SET_FG(colors[RED].pixel);
 #if 0
@@ -812,8 +832,8 @@ void Paint_item(u_byte type, Drawable d, GC gc, int x, int y)
 
 static void Paint_shots(void)
 {
-    int		color, i, j, id, x, y, xs, ys, x1, x2, y1, y2;
-    int		x_areas, y_areas, areas, max, len, dir;
+    int		color, i, j, id, x, y, xs, ys, x1, x2, y1, y2, len, dir;
+    int		x_areas, y_areas, areas, max;
 
     if (num_itemtype > 0) {
 	SET_FG(colors[RED].pixel);
@@ -842,6 +862,18 @@ static void Paint_shots(void)
 	RELEASE(shot_ptr, num_shot, max_shot);
     }
 
+    if (num_teamshot > 0) {
+	for (i = 0; i < num_teamshot; i++) {
+	    x = teamshot_ptr[i].x;
+	    y = teamshot_ptr[i].y;
+	    if (wrap(&x, &y)) {
+		Rectangle_add(teamshot_ptr[i].color, X(x), Y(y),
+			      teamshot_size, teamshot_size);
+	    }
+	}
+	RELEASE(teamshot_ptr, num_teamshot, max_teamshot);
+    }
+
     if (num_ball > 0) {
 	for (i = 0; i < num_ball; i++) {
 	    x = ball_ptr[i].x;
@@ -850,7 +882,8 @@ static void Paint_shots(void)
 	    if (wrap(&x, &y)) {
 		x = X(x);
 		y = Y(y);
-		Arc_add(WHITE, x - 10, y - 10, 20, 20, 0, 64*360);
+		Arc_add(WHITE, x - BALL_RADIUS, y - BALL_RADIUS,
+			2*BALL_RADIUS, 2*BALL_RADIUS, 0, 64*360);
 		if (ball_ptr[i].id == -1) {
 		    continue;
 		}
@@ -907,13 +940,67 @@ static void Paint_shots(void)
 		y = Y(y);
 		mine_points[0].x = x - 8;
 		mine_points[0].y = y - 1;
-		SET_FG(colors[BLUE].pixel);
-		XFillRectangle(dpy, p_draw, gc, x - 7, y - 2, 15, 5);
+		if (mine_ptr[i].teammine == 0) {
+			SET_FG(colors[BLUE].pixel);
+			XFillRectangle(dpy, p_draw, gc, x - 7, y - 2, 15, 5);
+		}
 		SET_FG(colors[WHITE].pixel);
 		XDrawLines(dpy, p_draw, gc,
 			   mine_points, 21, CoordModePrevious);
 		Erase_rectangle(x - 8, y - 3, 17, 7);
-		/* Arc_add(BLUE, x - 4, y - 4, 8, 8, 0, 64*360); */
+
+		/*
+		 * Determine if the name of the player who is safe
+		 * from the mine should be drawn.
+		 * Mines unsafe to all players have the name "Expired"
+		 * We do not know who is safe for mines sent with id==0 
+		 */
+		if (BIT(instruments, SHOW_MINE_NAME) && mine_ptr[i].id!=0) {
+		    other_t *other;
+		    char *name;
+		    int name_width, name_len;
+		    if (mine_ptr[i].id == EXPIRED_MINE_ID) {
+		        static char *expired_name = "Expired";
+		        static int expired_name_width = 0;
+		        static int expired_name_len = 0;
+		        if (expired_name_len == 0) {
+			    expired_name_len = strlen(expired_name);
+			    expired_name_width = XTextWidth(gameFont,
+							    expired_name,
+							    expired_name_len);
+		        }
+		        name = expired_name;
+		        name_len = expired_name_len;
+		        name_width = expired_name_width;
+		    } else if ((other=Other_by_id(mine_ptr[i].id))!=NULL) {
+		        FIND_NAME_WIDTH(other);
+		        name = other->name;
+		        name_len = other->name_len;
+		        name_width = other->name_width;
+		    } else {
+		        static char *unknown_name = "Not of this world!";
+		        static int unknown_name_width = 0;
+		        static int unknown_name_len = 0;
+		        if (unknown_name_len == 0) {
+			    unknown_name_len = strlen(unknown_name);
+			    unknown_name_width = XTextWidth(gameFont,
+							    unknown_name,
+							    unknown_name_len);
+		        }
+		        name = unknown_name;
+		        name_len = unknown_name_len;
+		        name_width = unknown_name_width;
+		    }
+		    if (name!=NULL) {
+		        XDrawString(dpy, p_draw, gc,
+				    x - name_width / 2,
+				    y + gameFont->ascent + 4,
+				    name, name_len);
+			Erase_rectangle(x - name_width / 2 - 1, y + 4,
+					name_width + 2,
+					gameFont->ascent + gameFont->descent);
+		    }
+		}
 	    }
 	}
 	RELEASE(mine_ptr, num_mine, max_mine);
@@ -923,18 +1010,21 @@ static void Paint_shots(void)
     y_areas = (view_height + 255) >> 8;
     areas = x_areas * y_areas;
     max = areas * (debris_colors > 0 ? debris_colors : 4);
+
+#define BASE_X(i)	((i % x_areas) << 8)
+#define BASE_Y(i)	(view_height - 1 - (((i / x_areas) % y_areas) << 8))
+#define COLOR(i)	(i / areas)
+#define DEBRIS_COLOR(color) \
+	((debris_colors > 4) ?				\
+	 (4 + (((color & 1) << 2) | (color >> 1))) :	\
+	 ((debris_colors >= 3) ?			\
+	  (color + 4) : (color)))
+
     for (i = 0; i < max; i++) {
 	if (num_debris[i] > 0) {
-	    x = ((i % x_areas) << 8);
-	    y = (((i / x_areas) % y_areas) << 8);
-	    color = i / areas;
-	    if (debris_colors > 4) {
-		color = 4 + (((color & 1) << 2) | (color >> 1));
-	    }
-	    else if (debris_colors >= 3) {
-		color += 4;
-	    }
-	    y = view_height - 1 - y;
+	    x = BASE_X(i);
+	    y = BASE_Y(i);
+	    color = DEBRIS_COLOR(COLOR(i));
 	    for (j = 0; j < num_debris[i]; j++) {
 		Rectangle_add(color,
 			      x + debris_ptr[i][j].x - spark_size/2,
@@ -942,28 +1032,68 @@ static void Paint_shots(void)
 			      spark_size, spark_size);
 	    }
 	    RELEASE(debris_ptr[i], num_debris[i], max_debris[i]);
-	}
+    	}
     }
 
-    if (num_smart > 0) {
+    /*
+     * Draw fastshots
+     */
+    for (i = 0; i < max; i++) {
+	int t = i + DEBRIS_TYPES;
+
+	if (num_fastshot[i] > 0) {
+	    x = BASE_X(i);
+	    y = BASE_Y(i);
+	    color = COLOR(i);
+	    for (j = 0; j < num_fastshot[i]; j++) {
+		Rectangle_add(color,
+			      x + fastshot_ptr[i][j].x - shot_size/2,
+			      y - fastshot_ptr[i][j].y - shot_size/2,
+			      shot_size, shot_size);
+	    }
+	    RELEASE(fastshot_ptr[i], num_fastshot[i], max_fastshot[i]);
+    	}
+
+	/*
+	 * Teamshots are in range DEBRIS_TYPES to DEBRIS_TYPES*2-1 in fastshot.
+	 */
+	if (num_fastshot[t] > 0) {
+	    x = BASE_X(i);
+	    y = BASE_Y(i);
+	    color = COLOR(i);
+	    for (j = 0; j < num_fastshot[t]; j++) {
+		Rectangle_add(color,
+			      x + fastshot_ptr[t][j].x - teamshot_size/2,
+			      y - fastshot_ptr[t][j].y - teamshot_size/2,
+			      teamshot_size, teamshot_size);
+	    }
+	    RELEASE(fastshot_ptr[t], num_fastshot[t], max_fastshot[t]);
+    	}
+    }
+
+    if (num_missile > 0) {
+        int len;
 	SET_FG(colors[WHITE].pixel);
 	XSetLineAttributes(dpy, gc, 4,
 			   LineSolid, CapButt, JoinMiter);
-	for (i = 0; i < num_smart; i++) {
-	    x = smart_ptr[i].x;
-	    y = smart_ptr[i].y;
+	for (i = 0; i < num_missile; i++) {
+	    x = missile_ptr[i].x;
+	    y = missile_ptr[i].y;
+	    len = MISSILE_LEN;
+	    if (missile_ptr[i].len > 0)
+	      len = missile_ptr[i].len;
 	    if (wrap(&x, &y)) {
 		x1 = X(x);
 		y1 = Y(y);
-		x2 = (int)(x1 - tcos(smart_ptr[i].dir) * SMART_SHOT_LEN);
-		y2 = (int)(y1 + tsin(smart_ptr[i].dir) * SMART_SHOT_LEN);
+		x2 = (int)(x1 - tcos(missile_ptr[i].dir) * len);
+		y2 = (int)(y1 + tsin(missile_ptr[i].dir) * len);
 		XDrawLine(dpy, p_draw, gc, x1, y1, x2, y2);
 		Erase_segment(4, x1, y1, x2, y2);
 	    }
 	}
 	XSetLineAttributes(dpy, gc, 0,
 			   LineSolid, CapButt, JoinMiter);
-	RELEASE(smart_ptr, num_smart, max_smart);
+	RELEASE(missile_ptr, num_missile, max_missile);
     }
 
     if (num_laser > 0) {
@@ -975,8 +1105,8 @@ static void Paint_shots(void)
 	    len = laser_ptr[i].len;
 	    dir = laser_ptr[i].dir;
 	    if (wrap(&x1, &y1)) {
-		x2 = x1 + (int)(len * tcos(dir));
-		y2 = y1 + (int)(len * tsin(dir));
+		x2 = (int)(x1 + len * tcos(dir));
+		y2 = (int)(y1 + len * tsin(dir));
 		if ((unsigned)(color = laser_ptr[i].color) >= NUM_COLORS) {
 		    color = WHITE;
 		}
@@ -995,10 +1125,11 @@ static void Paint_shots(void)
 
 static void Paint_ships(void)
 {
-    int			i, x, y, dir, x0, y0, x1, y1, size;
+    int			i, j, x, y, cnt, dir, x0, y0, x1, y1, size;
     unsigned long	mask;
     other_t		*other;
     static int		pauseCharWidth = -1;
+    wireobj		*ship;
 
     gcv.dash_offset = DASHES_LENGTH - (loops % DASHES_LENGTH);
     if (num_paused > 0) {
@@ -1019,7 +1150,7 @@ static void Paint_ships(void)
 			       x0, y0,
 			       2*half_pause_size+1, 2*half_pause_size+1);
 		if (paused_ptr[i].count <= 0 || loops % 10 >= 5) {
-		    SET_FG(colors[WHITE].pixel);
+		    SET_FG(colors[mono?BLACK:WHITE].pixel);
 		    XDrawRectangle(dpy, p_draw, gc,
 				   x0 - 1,
 				   y0 - 1,
@@ -1060,13 +1191,12 @@ static void Paint_ships(void)
 	    y = ship_ptr[i].y;
 	    if (wrap(&x, &y)) {
 		dir = ship_ptr[i].dir;
-		points[0].x = X(x + ships[dir].pts[0].x);
-		points[0].y = Y(y + ships[dir].pts[0].y);
-		points[1].x = X(x + ships[dir].pts[1].x);
-		points[1].y = Y(y + ships[dir].pts[1].y);
-		points[2].x = X(x + ships[dir].pts[2].x);
-		points[2].y = Y(y + ships[dir].pts[2].y);
-		points[3] = points[0];
+		ship = Ship_by_id(ship_ptr[i].id);
+		for (cnt = 0; cnt < ship->num_points; cnt++) {
+		    points[cnt].x = X(x + ship->pts[dir][cnt].x);
+		    points[cnt].y = Y(y + ship->pts[dir][cnt].y);
+		}
+		points[cnt++] = points[0];
 
 		/*
 		 * Determine if the name of the player should be drawn below
@@ -1093,61 +1223,52 @@ static void Paint_ships(void)
 			gcv.line_style = LineSolid;
 			XChangeGC(dpy, gc, GCLineStyle, &gcv);
 		    }
+		    XDrawLines(dpy, p_draw, gc, points, cnt, 0);
 		    if (lock_id == ship_ptr[i].id
 			&& ship_ptr[i].id != -1
 			&& lock_dist != 0) {
-			XFillPolygon(dpy, p_draw, gc, points, 4,
-				     Convex, CoordModeOrigin);
-			if (points[0].x < points[1].x) {
-			    x0 = points[0].x;
-			    x1 = points[1].x;
-			} else {
-			    x0 = points[1].x;
-			    x1 = points[0].x;
+			XFillPolygon(dpy, p_draw, gc, points, cnt,
+				     Complex, CoordModeOrigin);
+			x0 = x1 = y0 = y1 = 0;
+			for (j = 0; j < cnt; j++) {
+			    if (points[j].x < x0) x0 = points[j].x;
+			    else if (points[j].x > x1) x1 = points[j].x;
+			    if (points[j].y < y0) y0 = points[j].y;
+			    else if (points[j].y > y1) y1 = points[j].y;
 			}
-			if (points[2].x < x0) {
-			    x0 = points[2].x;
-			}
-			else if (points[2].x > x1) {
-			    x1 = points[2].x;
-			}
-			if (points[0].y < points[1].y) {
-			    y0 = points[0].y;
-			    y1 = points[1].y;
-			} else {
-			    y0 = points[1].y;
-			    y1 = points[0].y;
-			}
-			if (points[2].y < y0) {
-			    y0 = points[2].y;
-			}
-			else if (points[2].y > y1) {
-			    y1 = points[2].y;
-			}
-			Erase_rectangle(x0, y0, x1 + 1 - x0, y1 + 1 - y0);
+			Erase_rectangle(x0, y0, x1 + 2 - x0, y1 + 2 - y0);
 		    } else {
-			XDrawLines(dpy, p_draw, gc, points, 4, 0);
-			Erase_points(0, points, 4);
+			Erase_points(0, points, cnt);
 		    }
 		    if (markingLights) {
 			if (((loops + ship_ptr[i].id) & 0xF) == 0) {
 			    Rectangle_add(RED,
-					  points[1].x-2, points[1].y-2, 6, 6);
+                                points[ship->pt1].x-2,
+                                points[ship->pt1].y-2, 6, 6);
 			    Segment_add(RED,
-					points[1].x-8, points[1].y,
-					points[1].x+8, points[1].y);
+                                points[ship->pt1].x-8,
+                                points[ship->pt1].y,
+                                points[ship->pt1].x+8,
+                                points[ship->pt1].y);
 			    Segment_add(RED,
-					points[1].x, points[1].y-8,
-					points[1].x, points[1].y+8);
+                                points[ship->pt1].x,
+                                points[ship->pt1].y-8,
+                                points[ship->pt1].x,
+                                points[ship->pt1].y+8);
 			} else if (((loops + ship_ptr[i].id) & 0xF) == 2) {
-			    Rectangle_add(BLUE,
-					  points[2].x-2, points[2].y-2, 6, 6);
-			    Segment_add(BLUE,
-					points[2].x-8, points[2].y,
-					points[2].x+8, points[2].y);
-			    Segment_add(BLUE,
-					points[2].x, points[2].y-8,
-					points[2].x, points[2].y+8);
+                            Rectangle_add(BLUE,
+                                points[ship->pt2].x-2,
+                                points[ship->pt2].y-2, 6, 6);
+                            Segment_add(BLUE,
+                                points[ship->pt2].x-8,
+                                points[ship->pt2].y,
+                                points[ship->pt2].x+8,
+                                points[ship->pt2].y);
+                            Segment_add(BLUE,
+                                points[ship->pt2].x,
+                                points[ship->pt2].y-8,
+                                points[ship->pt2].x,
+                                points[ship->pt2].y+8);
 			}
 		    }
 		}
@@ -1169,9 +1290,9 @@ static void Paint_ships(void)
 				      points[j].x, points[j].y,
 				      points[j + 1].x, points[j + 1].y);
 			}
-			Erase_points(1, points, 4);
+			Erase_points(1, points, cnt);
 #else
-			XDrawLines(dpy, p_draw, gc, points, 4, 0);
+			XDrawLines(dpy, p_draw, gc, points, cnt, 0);
 #endif
 		    }
 		    if (ship_ptr[i].shield) {
@@ -1215,11 +1336,24 @@ static void Paint_ships(void)
 	    RELEASE(refuel_ptr, num_refuel, max_refuel);
 	}
 	if (num_connector > 0) {
+	    int	cdashing = 0;
+
 	    for (i = 0; i < num_connector; i++) {
 		x0 = connector_ptr[i].x0;
 		y0 = connector_ptr[i].y0;
 		x1 = connector_ptr[i].x1;
 		y1 = connector_ptr[i].y1;
+		if (connector_ptr[i].tractor) {
+		    if (!cdashing) {
+			XSetDashes(dpy, gc, 0, cdashes, NUM_CDASHES);
+			cdashing = 1;
+		    }
+		} else {
+		    if (cdashing) {
+			XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
+			cdashing = 0;
+		    }
+		}
 		if (wrap(&x0, &y0)
 		    && wrap(&x1, &y1)) {
 		    XDrawLine(dpy, p_draw, gc,
@@ -1229,6 +1363,8 @@ static void Paint_ships(void)
 		}
 	    }
 	    RELEASE(connector_ptr, num_connector, max_connector);
+	    if (cdashing)
+		XSetDashes(dpy, gc, 0, dashes, NUM_DASHES);
 	}
 	if (num_trans > 0) {
 	    for (i = 0; i < num_trans; i++) {
@@ -1304,6 +1440,12 @@ static void Paint_meters(void)
     if (BIT(instruments, SHOW_PACKET_DROP_METER))
 	Paint_meter(10, 120, "Drop", packet_drop, FPS);
 
+    if (thrusttime >= 0)
+	Paint_meter((view_width-300)/2 -32, 2*view_height/3,
+		    "Thrust Left",
+		    (thrusttime >= thrusttimemax ? thrusttimemax : thrusttime),
+		    thrusttimemax);
+
     if (destruct > 0)
 	Paint_meter((view_width-300)/2 -32, 3*view_height/4,
 		   "Self destructing", destruct, 150);
@@ -1357,14 +1499,14 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 	if (lock_dist > WARNING_DISTANCE || warningCount++ % 2 == 0) {
 	    int size = MIN(mapdiag / lock_dist, 10);
 
-	    SET_FG(colors[RED].pixel);
+/* XXX:	    SET_FG(colors[RED].pixel);*/
 	    if (size == 0) {
 		size = 1;
 	    }
 	    if (self != NULL
 		&& self->team == target->team
 		&& BIT(Setup->mode, TEAM_PLAY)) {
-		Arc_add(RED,
+		Arc_add(hudColor,
 			(int)(hud_pos_x + HUD_SIZE * 0.6 * tcos(lock_dir)
 			      - size * 0.5),
 			(int)(hud_pos_y - HUD_SIZE * 0.6 * tsin(lock_dir)
@@ -1380,7 +1522,7 @@ static void Paint_lock(int hud_pos_x, int hud_pos_y)
 			 size, size, 0, 64*360);
 		Erase_rectangle(x, y, size, size);
 	    }
-	    SET_FG(colors[BLUE].pixel); 
+/* XXX:	    SET_FG(colors[BLUE].pixel); */
 	}
     }
 }
@@ -1393,17 +1535,19 @@ static void Paint_HUD(void)
     char str[50];
     int hud_pos_x;
     int hud_pos_y;
-    int	i, j, maxWidth = -1;
-    int rect_x, rect_y, rect_width, rect_height;
+    int	i, j, maxWidth = -1, rect_x, rect_y, rect_width, rect_height;
     static int vertSpacing = -1;
-    
+    static char autopilot[] = "Autopilot";
+
+    int modlen = 0;
+
     /* 
      * Show speed pointer
      */
     if (ptr_move_fact != 0.0
 	&& selfVisible != 0
 	&& (vel.x != 0 || vel.y != 0)) {
-        Segment_add(RED,
+        Segment_add(hudColor,
 		    view_width / 2,
 		    view_height / 2,
 		    view_width / 2 - ptr_move_fact*vel.x,
@@ -1417,7 +1561,7 @@ static void Paint_HUD(void)
     /*
      * Display the HUD
      */
-    SET_FG(colors[BLUE].pixel);
+    SET_FG(colors[hudColor].pixel);
 
     hud_pos_x = view_width / 2 - hud_move_fact*vel.x;
     hud_pos_y = view_height / 2 + hud_move_fact*vel.y;
@@ -1470,47 +1614,27 @@ static void Paint_HUD(void)
     rect_y = vert_pos;
 
     for (i=0; i<NUM_ITEMS; i++) {
-	int num;
-	switch (i) {
-	case ITEM_ROCKET_PACK:
-	    num = numRockets;
-	    break;
-	case ITEM_CLOAKING_DEVICE:
-	    num = numCloaks;
-	    break;
-	case ITEM_WIDEANGLE_SHOT:
-	    num = numFrontShots;
-	    break;
-	case ITEM_BACK_SHOT:
-	    num = numBackShots;
-	    break;
-	case ITEM_MINE_PACK:
-	    num = numMines;
-	    break;
-	case ITEM_SENSOR_PACK:
-	    num = numSensors;
-	    break;
-	case ITEM_TANK:
-	    num = numTanks;
-	    break;
-	case ITEM_ECM:
-	    num = numEcms;
-	    break;
-	case ITEM_AFTERBURNER:
-	    num = numAfterburners;
-	    break;
-	case ITEM_TRANSPORTER:
-	    num = numTransporters;
-	    break;
-	case ITEM_LASER:
-	    num = numLasers;
-	    break;
-	case ITEM_ENERGY_PACK:
-	default:
-	    num = 0;
-	    break;
+	int num = numItems[i];
+
+	if (i == ITEM_ENERGY_PACK)
+	    continue;
+
+	if (BIT(instruments, SHOW_ITEMS)) {
+	    lastNumItems[i] = num;
+	    if (num <= 0)
+		num = -1;
+	} else {
+	    if (num != lastNumItems[i]) {
+		numItemsTime[i] = (int)(showItemsTime * (float)FPS);
+		lastNumItems[i] = num;
+	    }
+	    if (numItemsTime[i]-- <= 0) {
+		numItemsTime[i] = 0;
+		num = -1;
+	    }
 	}
-	if (num > 0) {
+
+	if (num >= 0) {
 	    int len, width;
 
 	    /* Paint item symbol */
@@ -1559,7 +1683,7 @@ static void Paint_HUD(void)
 			hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER,
 			XTextWidth(gameFont, str, strlen(str)) + 2,
 			gameFont->ascent + gameFont->descent);
-	if (numTanks) {
+	if (numItems[ITEM_TANK]) {
 	    if (fuelCurrent == 0)
 		strcpy(str,"M ");
 	    else
@@ -1613,6 +1737,40 @@ static void Paint_HUD(void)
 			size + 2, gameFont->ascent + gameFont->descent);
     }
 
+    /* Update the modifiers */
+    modlen = strlen(mods);
+    XDrawString(dpy, p_draw, gc,
+		hud_pos_x - HUD_SIZE+HUD_OFFSET-BORDER
+		- XTextWidth(gameFont, mods, modlen),
+		hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER
+		+ gameFont->ascent,
+		mods, strlen(mods));
+
+    Erase_rectangle(hud_pos_x - HUD_SIZE+HUD_OFFSET-BORDER
+		    - XTextWidth(gameFont, mods, modlen),
+		    hud_pos_y + HUD_SIZE-HUD_OFFSET+BORDER,
+		    XTextWidth(gameFont, mods, modlen) + 2,
+		    gameFont->ascent + gameFont->descent);
+
+    if (autopilotLight)
+    {
+	XDrawString(dpy, p_draw, gc,
+		    hud_pos_x - XTextWidth(gameFont, autopilot,
+					   sizeof(autopilot)-1)/2,
+		    hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
+		        - gameFont->descent * 2 - gameFont->ascent,
+		    autopilot, sizeof(autopilot)-1);
+	
+	Erase_rectangle(hud_pos_x - XTextWidth(gameFont, autopilot,
+						sizeof(autopilot)-1)/2,
+			hud_pos_y - HUD_SIZE+HUD_OFFSET - BORDER
+			- gameFont->descent * 2 - gameFont->ascent * 2,
+			XTextWidth(gameFont, autopilot,
+				   sizeof(autopilot)-1) + 2,
+			gameFont->ascent + gameFont->descent);
+
+    }
+    
     /* Fuel gauge, must be last */
     if (BIT(instruments, SHOW_FUEL_GAUGE) == 0
 	|| !((fuelCount)
@@ -1628,7 +1786,7 @@ static void Paint_HUD(void)
 	fuelCount--;
     }
 
-    SET_FG(colors[BLUE].pixel);
+/* XXX:   SET_FG(colors[BLUE].pixel);*/
     XDrawRectangle(dpy, p_draw, gc,
 		  hud_pos_x + HUD_SIZE - HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
 		  hud_pos_y - HUD_SIZE + HUD_OFFSET + FUEL_GAUGE_OFFSET - 1,
@@ -1664,6 +1822,9 @@ static void Paint_messages(void)
 	 i < MAX_MSGS;
 	 i++, y -= SPACING) {
 	int len;
+
+	if (!BIT(instruments, SHOW_MESSAGES) && Msg[i]->alignment == LEFT)
+	    continue;
 
 	if (Msg[i]->len == 0)
 	    continue;
@@ -1780,28 +1941,33 @@ static void Paint_radar(void)
 	}
     }
     for (i = 0; i<num_radar; i++) {
-	x = (int)(radar_ptr[i].x * xf + 0.5);
-	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1;
-	XFillRectangle(dpy, p_radar, radarGC,
-		       x-1, y-1, 3, 3);
+	int s;
+	if ((s = radar_ptr[i].size) <= 0)
+	    s = 1;
+	x = (int)(radar_ptr[i].x * xf + 0.5) - s / 2;
+	y = RadarHeight - (int)(radar_ptr[i].y * yf + 0.5) - 1 - s / 2;
+	(*radarPlayerRectFN)(dpy, p_radar, radarGC, x, y, s, s);
 	if (BIT(Setup->mode, WRAP_PLAY)) {
-	    xw = (x - 1 < 0) ? -256 : (x + 1 >= 256) ? 256 : 0;
-	    yw = (y - 1 < 0) ? -RadarHeight
-			     : (y + 1 >= RadarHeight) ? RadarHeight : 0;
+	    xw = (x < 0) ? -256 : (x + s >= 256) ? 256 : 0;
+	    yw = (y < 0) ? -RadarHeight
+			     : (y + s >= RadarHeight) ? RadarHeight : 0;
 	    if (xw != 0) {
-		XFillRectangle(dpy, p_radar, radarGC,
-			       x-1 - xw, y-1, 3, 3);
+		(*radarPlayerRectFN)(dpy, p_radar, radarGC,
+				     x - xw, y, s, s);
 	    }
 	    if (yw != 0) {
-		XFillRectangle(dpy, p_radar, radarGC,
-			       x-1, y-1 - yw, 3, 3);
+		(*radarPlayerRectFN)(dpy, p_radar, radarGC,
+				     x, y - yw, s, s);
+
 		if (xw != 0) {
-		    XFillRectangle(dpy, p_radar, radarGC,
-				   x-1 - xw, y-1 - yw, 3, 3);
+		    (*radarPlayerRectFN)(dpy, p_radar, radarGC,
+					 x - xw, y - yw, s, s);
 		}
 	    }
 	}
     }
+    if (num_radar)
+	RELEASE(radar_ptr, num_radar, max_radar);
 }
 
 static void Paint_vcannon(void)
@@ -1875,9 +2041,17 @@ static void Paint_vfuel(void)
 	    y = vfuel_ptr[i].y;
 	    fuel = vfuel_ptr[i].fuel;
 	    size = (BLOCK_SZ - 2*FUEL_BORDER) * fuel / MAX_STATION_FUEL;
+#if ERASE
+	    /* speedup for slow old cheap graphics cards like cg3. */
+	    XDrawLine(dpy, p_draw, gc,
+		      X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
+		      X(x + FUEL_BORDER + (BLOCK_SZ - 2*FUEL_BORDER)),
+		      Y(y + FUEL_BORDER + size));
+#else
 	    XFillRectangle(dpy, p_draw, gc,
 			  X(x + FUEL_BORDER), Y(y + FUEL_BORDER + size),
 			  BLOCK_SZ - 2*FUEL_BORDER + 1, size + 1);
+#endif
 	    Erase_rectangle(X(x + FUEL_BORDER),
 			    Y(y - FUEL_BORDER + BLOCK_SZ),
 			    BLOCK_SZ - 2*FUEL_BORDER + 1,
@@ -2567,7 +2741,7 @@ void Paint_frame(void)
     /*
      * Switch between two different window titles.
      */
-    if ((loops % TITLE_DELAY) == 0) {
+    if (titleFlip && (loops % TITLE_DELAY) == 0) {
 	scroll_i = !scroll_i;
 	if (scroll_i)
 	    XStoreName(dpy, top, COPYRIGHT);
@@ -2708,12 +2882,13 @@ int Handle_start(long server_loops)
 
     num_refuel = 0;
     num_connector = 0;
-    num_smart = 0;
+    num_missile = 0;
     num_ball = 0;
     num_ship = 0;
     num_mine = 0;
     num_itemtype = 0;
     num_shot = 0;
+    num_teamshot = 0;
     num_ecm = 0;
     num_trans = 0;
     num_paused = 0;
@@ -2731,7 +2906,7 @@ int Handle_start(long server_loops)
     shutdown_delay = 0;
     shutdown_count = -1;
     eyesId = (self != NULL) ? self->id : 0;
-
+    thrusttime = -1;
     return 0;
 }
 
@@ -2745,12 +2920,8 @@ int Handle_end(long server_loops)
 int Handle_self(int x, int y, int vx, int vy, int newHeading,
 		float newPower, float newTurnspeed, float newTurnresistance,
 		int newLockId, int newLockDist, int newLockBearing,
-		int newNextCheckPoint,
-		int newNumCloaks, int newNumSensors, int newNumMines,
-		int newNumRockets, int newNumEcms, int newNumTransporters,
-		int newExtraShots, int newRearShots,
-		int newAfterBurners, int newNumLasers,
-		int newNumTanks, int newCurrentTank,
+		int newNextCheckPoint, int newAutopilotLight,
+		u_byte *newNumItems, int newCurrentTank,
 		int newFuelSum, int newFuelMax, int newPacketSize)
 {
     pos.x = x;
@@ -2765,17 +2936,8 @@ int Handle_self(int x, int y, int vx, int vy, int newHeading,
     lock_dist = newLockDist;
     lock_dir = newLockBearing;
     nextCheckPoint = newNextCheckPoint;
-    numCloaks = newNumCloaks;
-    numSensors = newNumSensors;
-    numMines = newNumMines;
-    numRockets = newNumRockets;
-    numEcms = newNumEcms;
-    numTransporters = newNumTransporters;
-    numFrontShots = newExtraShots;
-    numBackShots = newRearShots;
-    numAfterburners = newAfterBurners;
-    numLasers = newNumLasers;
-    numTanks = newNumTanks;
+    autopilotLight = newAutopilotLight;
+    memcpy(numItems, newNumItems, NUM_ITEMS * sizeof(u_byte));
     fuelCurrent = newCurrentTank;
     if (newFuelSum > fuelSum && selfVisible != 0) {
 	fuelCount = FUEL_NOTIFY;
@@ -2819,13 +2981,18 @@ int Handle_eyes(int id)
     return 0;
 }
 
-
 int Handle_damaged(int dam)
 {
     damaged = dam;
     return 0;
 }
 
+int Handle_modifiers(char *m)
+{
+    strncpy(mods, m, MAX_CHARS);
+    mods[MAX_CHARS-1] = '\0';
+    return 0;
+}
 
 int Handle_destruct(int count)
 {
@@ -2841,6 +3008,12 @@ int Handle_shutdown(int count, int delay)
     return 0;
 }
 
+int Handle_thrusttime(int count, int max)
+{
+    thrusttime = count;
+    thrusttimemax = max;
+    return 0;
+}
 
 int Handle_refuel(int x0, int y0, int x1, int y1)
 {
@@ -2854,7 +3027,7 @@ int Handle_refuel(int x0, int y0, int x1, int y1)
     return 0;
 }
 
-int Handle_connector(int x0, int y0, int x1, int y1)
+int Handle_connector(int x0, int y0, int x1, int y1, int tractor)
 {
     connector_t	t;
 
@@ -2862,6 +3035,7 @@ int Handle_connector(int x0, int y0, int x1, int y1)
     t.x1 = x1;
     t.y0 = y0;
     t.y1 = y1;
+    t.tractor = tractor;
     HANDLE(connector_ptr, num_connector, max_connector, t);
     return 0;
 }
@@ -2879,14 +3053,15 @@ int Handle_laser(int color, int x, int y, int len, int dir)
     return 0;
 }
 
-int Handle_smart(int x, int y, int dir)
+int Handle_missile(int x, int y, int len, int dir)
 {
-    smart_t	t;
+    missile_t	t;
 
     t.x = x;
     t.y = y;
     t.dir = dir;
-    HANDLE(smart_ptr, num_smart, max_smart, t);
+    t.len = len;
+    HANDLE(missile_ptr, num_missile, max_missile, t);
     return 0;
 }
 
@@ -2915,18 +3090,20 @@ int Handle_ship(int x, int y, int id, int dir, int shield, int cloak)
 
     if (id == eyesId) {
 	selfVisible = 1;
-	return Handle_radar(x, y);
+	return Handle_radar(x, y, 3);
     }
 
     return 0;
 }
 
-int Handle_mine(int x, int y)
+int Handle_mine(int x, int y, int teammine, int id)
 {
     mine_t	t;
 
     t.x = x;
     t.y = y;
+    t.teammine = teammine;
+    t.id = id;
     HANDLE(mine_ptr, num_mine, max_mine, t);
     return 0;
 }
@@ -2953,33 +3130,57 @@ int Handle_shot(int x, int y, int color)
     return 0;
 }
 
+int Handle_teamshot(int x, int y, int color)
+{
+    shot_t	t;
+
+    t.x = x;
+    t.y = y;
+    t.color = color;
+    HANDLE(teamshot_ptr, num_teamshot, max_teamshot, t);
+    return 0;
+}
+
+#define HANDLE_DEBRIS(type, p, n) \
+    if (n > max) {						\
+	if (max == 0) {						\
+	    ptr = (debris_t *) malloc (n * sizeof(*ptr));	\
+	} else {						\
+	    ptr = (debris_t *) realloc (ptr, n * sizeof(*ptr));	\
+	}							\
+	if (ptr == NULL) {					\
+	    error("No memory for debris");			\
+	    num = max = 0;					\
+	    return -1;						\
+	}							\
+	max = n;						\
+    }								\
+    else if (n <= 0) {						\
+	printf("debris %d < 0\n", n);				\
+	return 0;						\
+    }								\
+    num = n;							\
+    memcpy(ptr, p, n * sizeof(*ptr));				\
+    return 0;
+
+
+int Handle_fastshot(int type, u_byte *p, int n)
+{
+#define num		(num_fastshot[type])
+#define max		(max_fastshot[type])
+#define ptr		(fastshot_ptr[type])
+    HANDLE_DEBRIS(type, p, n);
+#undef num
+#undef max
+#undef ptr
+}
+
 int Handle_debris(int type, u_byte *p, int n)
 {
 #define num		(num_debris[type])
 #define max		(max_debris[type])
 #define ptr		(debris_ptr[type])
-
-    if (n > max) {
-	if (max == 0) {
-	    ptr = (debris_t *) malloc (n * sizeof(*ptr));
-	} else {
-	    ptr = (debris_t *) realloc (ptr, n * sizeof(*ptr));
-	}
-	if (ptr == NULL) {
-	    error("No memory for debris");
-	    num = max = 0;
-	    return -1;
-	}
-	max = n;
-    }
-    else if (n <= 0) {
-	printf("debris %d < 0\n", n);
-	return 0;
-    }
-    num = n;
-    memcpy(ptr, p, n * sizeof(*ptr));
-    return 0;
-
+    HANDLE_DEBRIS(type, p, n);
 #undef num
 #undef max
 #undef ptr
@@ -3019,12 +3220,13 @@ int Handle_paused(int x, int y, int count)
     return 0;
 }
 
-int Handle_radar(int x, int y)
+int Handle_radar(int x, int y, int size)
 {
     radar_t	t;
 
     t.x = x;
     t.y = y;
+    t.size = size;
     HANDLE(radar_ptr, num_radar, max_radar, t);
     return 0;
 }
