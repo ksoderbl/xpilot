@@ -1,4 +1,4 @@
-/* $Id: defaults.h,v 5.7 2001/06/04 10:42:04 bertg Exp $
+/* $Id: defaults.h,v 5.9 2001/06/24 19:58:40 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -37,19 +37,26 @@ enum valType {
 };
 
 
+/*
+ * bitflags for the origin of an option.
+ */
 enum _optOrigin {
     OPT_INIT		= 0,
     OPT_MAP		= 1,
     OPT_DEFAULTS	= 2,
     OPT_COMMAND		= 4,
+    OPT_PASSWORD	= 8,
 };
 typedef enum _optOrigin optOrigin;
 
 
+/*
+ * extended bitflags for option origin.
+ */
 enum _optOriginAny {
     OPT_NONE		= 0,	/* not settable */
-    OPT_ORIGIN_ANY	= 7,	/* allow any origin for value */
-    OPT_VISIBLE		= 8,	/* can we query this option value? */
+    OPT_ORIGIN_ANY	= 7,	/* allow any of {map,defaults,command} */
+    OPT_VISIBLE		= 16,	/* can we query this option value? */
 };
 
 

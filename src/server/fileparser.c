@@ -1,4 +1,4 @@
-/* $Id: fileparser.c,v 5.1 2001/06/04 10:43:11 bertg Exp $
+/* $Id: fileparser.c,v 5.3 2001/06/24 20:00:54 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -700,6 +700,24 @@ bool parseDefaultsFile(const char *filename)
 	return false;
     }
     result = parseOpenFile(ifile, OPT_DEFAULTS);
+    closeDefaultsFile(ifile);
+
+    return true;
+}
+
+
+/*
+ * Parse a file containing password.
+ */
+bool parsePasswordFile(const char *filename)
+{
+    FILE       *ifile;
+    bool	result;
+
+    if ((ifile = openDefaultsFile(filename)) == NULL) {
+	return false;
+    }
+    result = parseOpenFile(ifile, OPT_PASSWORD);
     closeDefaultsFile(ifile);
 
     return true;

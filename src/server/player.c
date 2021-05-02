@@ -1,4 +1,4 @@
-/* $Id: player.c,v 5.14 2001/06/05 16:57:11 bertg Exp $
+/* $Id: player.c,v 5.16 2001/07/01 15:38:49 gkoopman Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1686,7 +1686,10 @@ void Delete_player(int ind)
 		}
 	    }
 	    else if (BIT(obj->type, OBJ_BALL)) {
-		BALL_PTR(obj)->owner = NO_ID;
+		ballobject *ball = BALL_PTR(obj);
+		if (ball->owner == id) {
+		    ball->owner = NO_ID;
+		}
 	    }
 	}
     }

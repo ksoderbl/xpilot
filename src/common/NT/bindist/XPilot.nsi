@@ -1,5 +1,5 @@
 # XPilot.nsi - the script to NSIS, the NullSoft Install System.
-# $Id: XPilot.nsi,v 5.3 2001/05/24 04:11:09 dik Exp $
+# $Id: XPilot.nsi,v 5.4 2001/06/26 08:29:35 dik Exp $
 #              Copyright 2001 Jarno van der Kolk <jarno@j-a-r-n-o.nl>
 #              Released under GNU General Public License Version 2 
 # The NullSoft Install System can be found here http://www.nullsoft.com/free/nsis/
@@ -192,12 +192,17 @@ CreateShortCut "$SMPROGRAMS\XPilot\XPwho.lnk" "$INSTDIR\XPwho.exe" "" "$INSTDIR\
 CreateShortCut "$SMPROGRAMS\XPilot\doc\README.lnk" "$INSTDIR\README.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\License.lnk" "$INSTDIR\License.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\ChangeLog.lnk" "$INSTDIR\doc\ChangeLog.txt" ""
-CreateShortCut "$SMPROGRAMS\XPilot\doc\Server Settings.lnk" "$INSTDIR\ServerOpts.txt" ""
+CreateShortCut "$SMPROGRAMS\XPilot\doc\Server Settings.lnk" "$INSTDIR\doc\ServerOpts.txt" ""
 CreateShortCut "$SMPROGRAMS\XPilot\doc\The XPilot Page.lnk" "$INSTDIR\doc\The XPilot Page.url" ""
-#IfFileExists $INSTDIR\XPShipEditor 0 1
+
+IfFileExists $INSTDIR\XPShipEditor 0 skipShipEditor
 CreateShortCut "$SMPROGRAMS\XPilot\XPShipEditor.lnk" "$INSTDIR\XPShipEditor\XPShipEditor.exe" "" "$INSTDIR\XPShipEditor\XPShipEditor.exe" 0
-#IfFileExists $INSTDIR\MapEditor 0 1
+skipShipEditor:
+
+IfFileExists $INSTDIR\MapEditor 0 skipMapEditor
 CreateShortCut "$SMPROGRAMS\XPilot\MapXpress.lnk" "$INSTDIR\mapXpress\MapXpress.exe" "" "$INSTDIR\mapXpress\MapXpress.exe" 0
+skipMapEditor:
+
 #put uninstall at the bottom
 CreateShortCut "$SMPROGRAMS\XPilot\Uninstall.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd

@@ -1,4 +1,4 @@
-/* $Id: rplayaudio.c,v 5.3 2001/05/12 18:08:41 bertg Exp $
+/* $Id: rplayaudio.c,v 5.4 2001/06/16 19:14:26 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -53,7 +53,7 @@ int audioDeviceInit(char *display)
 
     strlcpy(host, display, sizeof(host));
 
-    if (p = strrchr(host, ':'))
+    if ((p = strrchr(host, ':')) != NULL)
 	*p = 0;
 
     if (!*host)

@@ -1,4 +1,4 @@
-/* $Id: netclient.c,v 5.8 2001/06/04 20:32:51 bertg Exp $
+/* $Id: netclient.c,v 5.9 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -528,8 +528,7 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
  */
 int Net_init(char *server, int port)
 {
-    int			i,
-			status;
+    int			i;
     unsigned		size;
     sock_t		sock;
 
@@ -538,11 +537,33 @@ int Net_init(char *server, int port)
 #endif
 
     Receive_init();
-
-    if ((status = sock_open_udp(&sock, NULL, 0)) == -1) {
-	error("Can't create datagram socket");
-	return -1;
+    if (!clientPortStart || !clientPortEnd || (clientPortStart > clientPortEnd))
+    {
+	if (sock_open_udp(&sock, NULL, 0) == SOCK_IS_ERROR)
+	{
+	    error("Cannot create datagram socket (%d)", sock.error.error);
+	    return -1;
+	}
     }
+    else
+    {
+	int found_socket = 0;
+	for (i = clientPortStart; i <= clientPortEnd; i++)
+	{
+	    if (sock_open_udp(&sock, NULL, i) != SOCK_IS_ERROR)
+	    {
+		found_socket = 1;
+		break;
+	    }
+	}
+	if (found_socket == 0) 
+	{
+	    error("Could not find a usable port in given port range");
+	    return -1;
+	}
+    }
+    
+    
     if (server && sock_connect(&sock, server, port) == -1) {
 	error("Can't connect to server %s on port %d", server, port);
 	sock_close(&sock);

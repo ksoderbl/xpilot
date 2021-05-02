@@ -3,6 +3,32 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 4.4.1 compared to release 4.4.0.
+
+When tuning text options at run time like the password the server
+would crash.  This has now been fixed.
+
+Clients now support the firewall patch.
+For this the client has two new options: -clientPortStart and -clientPortEnd.
+When the client is started with e.g.:
+    -clientPortStart 40000 -clientPortEnd 41000
+then the server will use this range for UDP ports to communicate with clients.
+This is useful for sites which are behind a firewall.
+
+A new server option -passwordFileName gives the path to a file which
+only contains a definition for the server password.  The advantage
+of this is that you can set the file permissions so that others
+cannot read its contents.
+
+Zemyla submitted a patch to fix a small bug in his old blockFriction patch.
+The problem was that the option -blockFrictionVisible would not work.
+This patch fixes it.
+
+Ben Armstrong fixed a bug where ball ownership for all connected balls
+would be reset whenever a player would leave.
+
+===============================================================================
+
 This is a summary of changes of release 4.4.0 compared to release 4.3.2.
 
 New option (bool) logRobots: whether to log robot's comings or not.
@@ -221,6 +247,10 @@ very complicated, but it will be easy to understand with an example:
         which normally cannot be set in mapfiles, but only in the
         defaults file or on the command line.
 
+Some changes have been made to accomodate maps with hundreds
+of robots.  The most important of these changes is the addition
+of a new packet type to send radar information to clients much
+more compactly.  This is packet type is called fastradar packet.
 
 Ben Armstrong updated the xpilots manual page.
 
@@ -1387,6 +1417,6 @@ Guido Koopman contributed more bug fixes:
     - man pages are outdated
 
 ===============================================================================
-==== $Id: ChangeLog,v 5.22 2001/06/12 10:34:59 bertg Exp $
+==== $Id: ChangeLog,v 5.28 2001/07/02 08:10:49 bertg Exp $
 ===============================================================================
 

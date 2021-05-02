@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 5.23 2001/06/05 08:30:10 bertg Exp $
+/* $Id: proto.h,v 5.24 2001/06/24 18:59:33 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -349,6 +349,7 @@ int Get_option_value(const char *name, char *value);
  * Prototypes for fileparser.c
  */
 bool parseDefaultsFile(const char *filename);
+bool parsePasswordFile(const char *filename);
 bool parseMapFile(const char *filename);
 
 /*

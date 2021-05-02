@@ -1,4 +1,4 @@
-/* $Id: option.c,v 5.15 2001/06/05 08:30:10 bertg Exp $
+/* $Id: option.c,v 5.17 2001/06/25 07:50:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -322,9 +322,10 @@ static const char* Origin_name(optOrigin opt_origin)
 
     switch (opt_origin) {
 	case OPT_COMMAND: source = "command line"; break;
+	case OPT_PASSWORD: source = "password file"; break;
 	case OPT_DEFAULTS: source = "defaults file"; break;
 	case OPT_MAP: source = "map file"; break;
-	default: source = "unknow origin"; break;
+	default: source = "unknown origin"; break;
     }
 
     return source;
@@ -383,7 +384,11 @@ static void Option_change_node(
 			    set_ok = TRUE;
 			}
 			break;
-		    
+
+		    case OPT_PASSWORD:
+			/* never modify if set by password file. */
+			break;
+
 		    case OPT_INIT:
 			set_ok = TRUE;
 			break;
@@ -412,7 +417,43 @@ static void Option_change_node(
 			    set_ok = TRUE;
 			}
 			break;
-		    
+
+		    case OPT_PASSWORD:
+			/* never modify if set by password file. */
+			break;
+
+		    case OPT_INIT:
+			set_ok = TRUE;
+			break;
+
+		    default:
+			fatal("unknown node->value origin in set value");
+		}
+		break;
+
+	    case OPT_PASSWORD:
+		switch (node->value->origin) {
+		    case OPT_COMMAND:
+			/* never modify command line arg. */
+			break;
+
+		    case OPT_DEFAULTS:
+			/* password file always wins over defaults. */
+			set_ok = TRUE;
+			break;
+
+		    case OPT_MAP:
+			/* password file always wins over map. */
+			set_ok = TRUE;
+			break;
+
+		    case OPT_PASSWORD:
+			/* can't change if previous value has override. */
+			if (!node->value->override) {
+			    set_ok = TRUE;
+			}
+			break;
+
 		    case OPT_INIT:
 			set_ok = TRUE;
 			break;

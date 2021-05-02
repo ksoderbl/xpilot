@@ -1,4 +1,4 @@
-/* $Id: socklib.c,v 5.3 2001/05/08 11:35:29 bertg Exp $
+/* $Id: socklib.c,v 5.5 2001/06/26 09:49:05 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -66,6 +66,7 @@
 
 #ifdef _WINDOWS
 # include "NT/winNet.h"
+#include "../server/NT/winServer.h"
   /* Windows needs specific system calls for sockets: */
 # undef close
 # define close(x__) closesocket(x__)

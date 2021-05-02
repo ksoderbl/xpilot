@@ -80,6 +80,12 @@ For a list of all options, try \fBxpilots -help\fP.  See also sections
 \fBCommand options\fP and \fBMap file options\fP.
 
 .TP 15
+.B -passwordFileName \fIstring\fP
+The filename of the password file to read on startup.  This file should
+be protected against unwanted eyes with \fBchmod(1)\fP (e.g. chmod 600
+password).
+
+.TP 15
 .B -robotFile \fIstring\fP
 The file containing parameters for robot details.
 
@@ -193,8 +199,8 @@ Note that specifying this on the command line is not secure unless you
 are the sole user of the host xpilots is started on, as \fBps(1)\fP may
 be used to retrieve the options passed on the command-line when the
 server was started.  A more secure way of starting a passworded server
-is to set the password in the mapfile and protect the mapfile with
-\fBchmod(1)\fP to keep it private.
+is to set the password in the password file and protect the mapfile with
+\fBchmod(1)\fP (e.g. chmod 600 password) to keep it private.
 
 .TP 15
 .B -clientPortStart \fIinteger\fP
@@ -378,6 +384,9 @@ Log file.
 .TP 40
 .B @<INSTLIBDIR>@/defaults
 Defaults file.
+.TP 40
+.B @<INSTLIBDIR>@/password
+Password file.
 .PD
 
 

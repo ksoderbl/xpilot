@@ -1,4 +1,4 @@
-/* $Id: default.c,v 5.10 2001/06/02 21:00:22 bertg Exp $
+/* $Id: default.c,v 5.11 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1693,6 +1693,20 @@ option options[] = {
 	"An optional file where a recording of a game can be made.\n"
 	"If this file is undefined then recording isn't possible.\n"
     },
+    {
+	"clientPortStart",
+	NULL,
+	"0",
+	KEY_DUMMY,
+	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"
+    },
+    {
+	"clientPortEnd",
+	NULL,
+	"0",
+	KEY_DUMMY,
+	"Use UDP ports clientPortStart - clientPortEnd (for firewalls).\n"
+    },
 #ifdef _WINDOWS
     {
 	"threadedDraw",
@@ -2678,6 +2692,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	shieldDrawMode = ON(resValue);
     Get_bool_resource(rDB, "toggleShield", &toggle_shield);
     Get_bool_resource(rDB, "autoShield", &auto_shield);
+
+    Get_int_resource(rDB, "clientPortStart", &clientPortStart);
+    Get_int_resource(rDB, "clientPortEnd", &clientPortEnd);
+
 
     Get_resource(rDB, "modifierBank1", modBankStr[0], sizeof modBankStr[0]);
     Get_resource(rDB, "modifierBank2", modBankStr[1], sizeof modBankStr[1]);

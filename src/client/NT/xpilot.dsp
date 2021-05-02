@@ -56,6 +56,10 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
 # ADD LINK32 winmm.lib /nologo /subsystem:windows /map /machine:I386
+# Begin Special Build Tool
+SOURCE="$(InputPath)"
+PostBuild_Cmds=copy Release\XPilot.exe C:\XPilot
+# End Special Build Tool
 
 !ELSEIF  "$(CFG)" == "XPilot - Win32 Debug"
 
@@ -112,6 +116,10 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /map /machine:I386 /out:"Release/XPilotNT.exe"
 # ADD LINK32 winmm.lib /nologo /subsystem:windows /map /machine:I386 /out:".\Release\XPilot.exe"
+# Begin Special Build Tool
+SOURCE="$(InputPath)"
+PostBuild_Cmds=copy Release\XPilot.exe c:\XPilot
+# End Special Build Tool
 
 !ENDIF 
 
@@ -798,6 +806,10 @@ SOURCE=..\..\common\NT\bindist\READMEbin.txt.msub
 # Begin Source File
 
 SOURCE=..\..\common\NT\bindist\ServerMOTD.txt.msub
+# End Source File
+# Begin Source File
+
+SOURCE=.\XPilot.ini
 # End Source File
 # Begin Source File
 

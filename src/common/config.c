@@ -1,4 +1,4 @@
-/* $Id: config.c,v 5.5 2001/05/27 14:27:45 bertg Exp $
+/* $Id: config.c,v 5.6 2001/06/24 18:59:33 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -65,6 +65,13 @@
 #        define DEFAULTS_FILE_NAME	LIBDIR "defaults.txt"
 #    else
 #        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
+#    endif
+#endif
+#ifndef PASSWORD_FILE_NAME
+#    if defined(_WINDOWS)
+#        define PASSWORD_FILE_NAME	LIBDIR "password.txt"
+#    else
+#        define PASSWORD_FILE_NAME	LIBDIR "password"
 #    endif
 #endif
 #ifndef ROBOTFILE
@@ -151,6 +158,13 @@ char *Conf_libdir(void)
 char *Conf_defaults_file_name(void)
 {
     static char conf[] = DEFAULTS_FILE_NAME;
+
+    return conf;
+}
+
+char *Conf_password_file_name(void)
+{
+    static char conf[] = PASSWORD_FILE_NAME;
 
     return conf;
 }

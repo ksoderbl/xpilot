@@ -1,4 +1,4 @@
-/* $Id: config.h,v 5.2 2001/05/07 22:44:05 dik Exp $
+/* $Id: config.h,v 5.3 2001/06/24 18:59:33 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -103,6 +103,7 @@ this makes for harder to read code (and was tiring with each patch)
 
 char *Conf_libdir(void);
 char *Conf_defaults_file_name(void);
+char *Conf_password_file_name(void);
 char *Conf_mapdir(void);
 char *Conf_default_map(void);
 char *Conf_servermotdfile(void);

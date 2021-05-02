@@ -1,4 +1,4 @@
-/* $Id: datagram.c,v 5.2 2001/06/03 17:21:12 bertg Exp $
+/* $Id: datagram.c,v 5.5 2001/06/26 09:53:26 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -42,11 +42,14 @@
 #include "version.h"
 #include "config.h"
 #include "error.h"
+#include "client.h"
 #include "socklib.h"
 #include "protoclient.h"
 #include "datagram.h"
 #include "portability.h"
 
+extern int	clientPortStart;	/* First UDP port for clients */
+extern int	clientPortEnd;		/* Last one (these are for firewalls) */
 
 char datagram_version[] = VERSION;
 
@@ -58,10 +61,40 @@ int create_dgram_addr_socket(sock_t *sock, char *dotaddr, int port)
 {
     static int		saved;
     static sock_t	save_sock;
-    int			status;
+    int			status = SOCK_IS_ERROR;
+    int			i;
 
     if (saved == 0) {
-	status = sock_open_udp(sock, dotaddr, port);
+	if (clientPortStart && (!clientPortEnd || clientPortEnd > 65535)) {
+	    clientPortEnd = 65535;
+	}
+	if (clientPortEnd && (!clientPortStart || clientPortStart < 1024)) {
+	    clientPortStart = 1024;
+	}
+
+	if (port || !clientPortStart || (clientPortStart > clientPortEnd)) {
+	    status = sock_open_udp(sock, dotaddr, port);
+	    if (status == SOCK_IS_ERROR) {
+		error("Cannot create datagram socket (%d)", sock->error.error);
+		return -1;
+	    }
+	}
+	else {
+	    int found_socket = 0;
+	    for (i = clientPortStart; i <= clientPortEnd; i++) {
+		status = sock_open_udp(sock, dotaddr, i);
+		if (status != SOCK_IS_ERROR) {
+		    found_socket = 1;
+		    break;
+		}
+	    }
+	    if (found_socket == 0) {
+		error("Could not find a usable port in port range [%d,%d]",
+		      clientPortStart, clientPortEnd);
+		return -1;
+	    }
+	}
+
 	if (status == SOCK_IS_OK) {
 	    if (dgram_one_socket) {
 		save_sock = *sock;

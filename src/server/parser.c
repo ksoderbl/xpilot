@@ -1,4 +1,4 @@
-/* $Id: parser.c,v 5.7 2001/06/09 21:44:53 bertg Exp $
+/* $Id: parser.c,v 5.13 2001/06/25 07:50:30 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -70,12 +70,13 @@ static void Parse_help(char *progname)
 	   "is visible or not.  Default flags are \"any\" if not otherwise\n"
 	   "specified by one or more of these keywords:\n"
 	   "\n");
-    printf("command     May be specified on the command-line.\n"
-	   "defaults    May be specified in the defaults file.\n"
-	   "any         May be specified in the map file, defaults file,\n"
-	   "            or on the command line.\n"
-	   "invisible   Is not displayed when a list of options is requested\n"
-	   "            from the server by an operator.\n"
+    printf("command       May be specified on the command-line.\n"
+	   "passwordfile  May be specified in the password file.\n"
+	   "defaults      May be specified in the defaults file.\n"
+	   "any           May be specified in the map file, defaults file,\n"
+	   "              or on the command line.\n"
+	   "invisible     Is not displayed when a list of options is\n"
+	   "              requested from the server by an operator.\n"
 	   "\n");
     printf("The possible options include:\n"
 	   "\n");
@@ -106,6 +107,9 @@ static void Parse_help(char *progname)
 	all_flags = (OPT_ORIGIN_ANY | OPT_VISIBLE);
 	if ((flags & all_flags) != all_flags && flags != 0) {
 	    strlcpy(msg, "[ Flags: command, ", sizeof(msg));
+	    if ((flags & OPT_PASSWORD) != 0) {
+		strlcat(msg, "passwordfile, ", sizeof(msg));
+	    }
 	    if ((flags & (OPT_DEFAULTS | OPT_MAP)) == OPT_DEFAULTS) {
 		strlcat(msg, "defaults, ", sizeof(msg));
 	    }
@@ -176,6 +180,9 @@ static void Parser_dump_flags(char *progname)
 	if ((options[j].flags & OPT_COMMAND) != 0) {
 	    strlcat(msg, "command, ", sizeof(msg));
 	}
+	if ((options[j].flags & OPT_PASSWORD) != 0) {
+	    strlcat(msg, "passwordfile, ", sizeof(msg));
+	}
 	if ((options[j].flags & OPT_DEFAULTS) != 0) {
 	    strlcat(msg, "defaults, ", sizeof(msg));
 	}
@@ -211,6 +218,7 @@ static void Parser_dump_config(char *progname)
     xpprintf("# \n");
     xpprintf("# LIBDIR = %s\n", Conf_libdir());
     xpprintf("# DEFAULTS_FILE_NAME = %s\n", Conf_defaults_file_name());
+    xpprintf("# PASSWORD_FILE_NAME = %s\n", Conf_password_file_name());
     xpprintf("# MAPDIR = %s\n", Conf_mapdir());
     xpprintf("# DEFAULT_MAP = %s\n", Conf_default_map());
     xpprintf("# SERVERMOTDFILE = %s\n", Conf_servermotdfile());
@@ -398,6 +406,16 @@ bool Parser(int argc, char **argv)
     }
 
     /*
+     * Read local password file
+     */
+    if ((fname = Option_get_value("passwordFileName", NULL)) != NULL) {
+	parsePasswordFile(fname);
+    }
+    else {
+	parsePasswordFile(Conf_password_file_name());
+    }
+
+    /*
      * Read map file if map data not found yet.
      */
     if (!(fname = Option_get_value("mapData", NULL))) {
@@ -495,10 +513,8 @@ int Tune_option(char *name, char *val)
 	    if (!s) {
 		return 0;
 	    }
-	    if (opt->variable != NULL) {
-		if (*(char **)(opt->variable) != opt->defaultValue) {
-		    free(opt->variable);
-		}
+	    if (*(char **)(opt->variable) != opt->defaultValue) {
+		free(*(char **)opt->variable);
 	    }
 	    *(char **)opt->variable = s;
 	    (*opt->tuner)();

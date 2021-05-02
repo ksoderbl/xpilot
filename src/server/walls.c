@@ -1,4 +1,4 @@
-/* $Id: walls.c,v 5.15 2001/06/02 21:03:31 bertg Exp $
+/* $Id: walls.c,v 5.16 2001/06/16 17:21:38 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -59,7 +59,8 @@ unsigned SPACE_BLOCKS = (
 	POS_GRAV_BIT | NEG_GRAV_BIT | CWISE_GRAV_BIT | ACWISE_GRAV_BIT | 
 	UP_GRAV_BIT | DOWN_GRAV_BIT | RIGHT_GRAV_BIT | LEFT_GRAV_BIT | 
 	DECOR_LU_BIT | DECOR_LD_BIT | DECOR_RU_BIT | DECOR_RD_BIT | 
-	DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT 
+	DECOR_FILLED_BIT | CHECK_BIT | ITEM_CONCENTRATOR_BIT |
+	FRICTION_BIT
     );
 
 static struct move_parameters mp;

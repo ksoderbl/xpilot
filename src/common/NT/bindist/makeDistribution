@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Id: makeDistribution,v 5.3 2001/05/24 04:12:03 dik Exp $
+# $Id: makeDistribution,v 5.4 2001/06/26 09:55:16 dik Exp $
 # makeDistribution - a script to move things to a directory to make the build script
 #                    and then call makensis to build a Windows binary distribution for
 #                    XPilot, a multiplayer gravity war game.  
@@ -149,6 +149,10 @@ then
 		echo "makeDistribution: failed to build XPilotServer.exe"
 		exit 1
 	fi
+	# Generate the ServerOpts file.
+	echo make ServerOpts.txt
+	cd Release
+	./XPilotServer /ServerOpts
 fi
 
 # go make XPwho.exe

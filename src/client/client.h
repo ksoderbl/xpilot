@@ -1,4 +1,4 @@
-/* $Id: client.h,v 5.3 2001/05/17 13:31:08 bertg Exp $
+/* $Id: client.h,v 5.4 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -291,6 +291,9 @@ extern bool	useErase;		/* use the Erase hack for slow X */
 
 extern int	maxFPS;			/* Client's own FPS */
 extern int 	oldMaxFPS;
+
+extern int	clientPortStart;	/* First UDP port for clients */
+extern int	clientPortEnd;		/* Last one (these are for firewalls) */
 
 extern u_byte	lose_item;		/* flag and index to drop item */
 extern int	lose_item_active;	/* one of the lose keys is pressed */

@@ -1,4 +1,4 @@
-/* $Id: winConfig.c,v 5.1 2001/05/19 10:11:58 bertg Exp $
+/* $Id: winConfig.c,v 5.2 2001/06/22 05:00:57 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -41,7 +41,7 @@
 #include "winXXPilot.h"
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: winConfig.c,v 5.1 2001/05/19 10:11:58 bertg Exp $";
+    "@(#)$Id: winConfig.c,v 5.2 2001/06/22 05:00:57 dik Exp $";
 #endif
 
 
@@ -54,7 +54,7 @@ const char*	winHelpFile;
 void Config_get_name(char *name)
 {
     if (*name == '\0') {
-	/* Windows can have no default name */
+	/* Windows may have no default name */
 	strcpy(name, "NoName");
     }
 }

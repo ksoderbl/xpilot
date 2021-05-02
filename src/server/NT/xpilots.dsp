@@ -56,6 +56,10 @@ LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
 # ADD LINK32 /nologo /subsystem:windows /machine:I386 /out:".\Release\XPilotServer.exe"
 # SUBTRACT LINK32 /debug /nodefaultlib
+# Begin Special Build Tool
+SOURCE="$(InputPath)"
+PostBuild_Cmds=copy Release\XPilotServer.exe C:\XPilot
+# End Special Build Tool
 
 !ELSEIF  "$(CFG)" == "XPilotServer - Win32 Debug"
 

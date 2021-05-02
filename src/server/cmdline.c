@@ -1,4 +1,4 @@
-/* $Id: cmdline.c,v 5.26 2001/06/05 13:36:29 gkoopman Exp $
+/* $Id: cmdline.c,v 5.28 2001/06/24 20:12:05 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -141,6 +141,7 @@ bool		wormholeVisible;	/* Are wormholes visible? */
 bool		itemConcentratorVisible;/* Are itemconcentrators visible? */
 int		wormTime;
 char		*defaultsFileName;	/* Name of defaults file... */
+char		*passwordFileName;	/* Name of password file... */
 char		*motdFileName;		/* Name of motd file */
 char		*scoreTableFileName;	/* Name of score table file */
 
@@ -1521,6 +1522,16 @@ static option_desc options[] = {
 	tuner_none,
 	"The filename of the defaults file to read on startup.\n",
 	OPT_COMMAND,
+    },
+    {
+	"passwordFileName",
+	"passwordFileName",
+	NULL,
+	&passwordFileName,
+	valString,
+	tuner_none,
+	"The filename of the password file to read on startup.\n",
+	OPT_COMMAND | OPT_DEFAULTS,
     },
     {
 	"motdFileName",
@@ -2968,8 +2979,11 @@ static option_desc options[] = {
 	&password,
 	valString,
 	tuner_dummy,
-	"The password needed to obtain operator privileges.\n",
-	OPT_COMMAND | OPT_DEFAULTS
+	"The password needed to obtain operator privileges.\n"
+        "If specified on the command line, on many systems other\n"
+	"users will be able to see the password.  Therefore, using\n"
+	"the password file instead is recommended.",
+	OPT_COMMAND | OPT_DEFAULTS | OPT_PASSWORD
     },
     {
 	"clientPortStart",
@@ -3032,6 +3046,11 @@ static void Init_default_options(void)
 	dumpcore("Could not find defaults file option");
     }
     desc->defaultValue = Conf_defaults_file_name();
+
+    if ((desc = Find_option_by_name("passwordFileName")) == NULL) {
+	dumpcore("Could not find password file option");
+    }
+    desc->defaultValue = Conf_password_file_name();
 }
 
 

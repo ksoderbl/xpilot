@@ -1,4 +1,4 @@
-/* $Id: netserver.c,v 5.17 2001/06/08 19:40:50 bertg Exp $
+/* $Id: netserver.c,v 5.20 2001/06/26 19:14:08 bertg Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -252,21 +252,21 @@ static int Init_setup(void)
 	    case RIGHT_GRAV:
 	    case LEFT_GRAV:
 		if (!gravityVisible)
-		    type = SETUP_SPACE;
+		    type = SPACE;
 		break;
 	    case WORMHOLE:
 		if (!wormholeVisible)
-		    type = SETUP_SPACE;
+		    type = SPACE;
 		break;
 	    case ITEM_CONCENTRATOR:
 		if (!itemConcentratorVisible)
-		    type = SETUP_SPACE;
+		    type = SPACE;
 		break;
 	    case FRICTION:
 		if (!blockFrictionVisible)
-		    type = SETUP_SPACE;
+		    type = SPACE;
 		else
-		    type = SETUP_DECOR_FILLED;
+		    type = DECOR_FILLED;
 		break;
 	    default:
 		break;
@@ -287,7 +287,7 @@ static int Init_setup(void)
 	    case DOWN_GRAV:	*mapptr = SETUP_DOWN_GRAV; break;
 	    case RIGHT_GRAV:	*mapptr = SETUP_RIGHT_GRAV; break;
 	    case LEFT_GRAV:	*mapptr = SETUP_LEFT_GRAV; break;
-	    case ITEM_CONCENTRATOR:	*mapptr = SETUP_ITEM_CONCENTRATOR; break;
+	    case ITEM_CONCENTRATOR: *mapptr = SETUP_ITEM_CONCENTRATOR; break;
 	    case DECOR_FILLED:	*mapptr = SETUP_DECOR_FILLED; break;
 	    case DECOR_RU:	*mapptr = SETUP_DECOR_RU; break;
 	    case DECOR_RD:	*mapptr = SETUP_DECOR_RD; break;
@@ -683,13 +683,22 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 
     if (free_conn_index >= max_connections) {
 #ifndef SILENT
-		xpprintf("%s Full house for %s(%s)@%s(%s)\n", showtime(), real, nick, host, dpy);
+	xpprintf("%s Full house for %s(%s)@%s(%s)\n",
+		 showtime(), real, nick, host, dpy);
 #endif
-		return -1;
+	return -1;
     }
     connp = &Conn[free_conn_index];
+    if (clientPortStart && (!clientPortEnd || clientPortEnd > 65535)) {
+	clientPortEnd = 65535;
+    }
+    if (clientPortEnd && (!clientPortStart || clientPortStart < 1024)) {
+	clientPortStart = 1024;
+    }
 
-    if (!clientPortStart || !clientPortEnd || (clientPortStart > clientPortEnd)) {
+    if (!clientPortStart || !clientPortEnd ||
+	(clientPortStart > clientPortEnd)) {
+
         if (sock_open_udp(&sock, serverAddr, 0) == SOCK_IS_ERROR) {
             error("Cannot create datagram socket (%d)", sock.error.error);
             return -1;

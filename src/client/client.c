@@ -1,4 +1,4 @@
-/* $Id: client.c,v 5.5 2001/06/02 21:00:09 bertg Exp $
+/* $Id: client.c,v 5.6 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -155,6 +155,9 @@ int     auto_shield = 1;        /* shield drops for fire */
 
 int	maxFPS;			/* Client's own FPS */
 int	oldMaxFPS;
+
+int	clientPortStart = 0;	/* First UDP port for clients */
+int	clientPortEnd = 0;	/* Last one (these are for firewalls) */
 
 u_byte	lose_item;		/* index for dropping owned item */
 int	lose_item_active;	/* one of the lose keys is pressed */

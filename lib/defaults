@@ -35,9 +35,6 @@ allowModifiers:         yes
 # Set the frames per second
 framesPerSecond:	14
 
-# set this to a unique word and chmod 600 this file:
-# password: \override:  XXX
-
 # For Internet games we allow remote clients to bounce softly.
 maxUnshieldedWallBounceSpeed:		180
 maxShieldedWallBounceSpeed:		180

@@ -1,4 +1,4 @@
-/* $Id: draw.h,v 5.3 2001/06/02 21:02:09 bertg Exp $
+/* $Id: draw.h,v 5.4 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -28,6 +28,7 @@
 #ifndef TYPES_H
 /* need position */
 #include "types.h"
+#include "../common/const.h"
 #endif
 
 /*

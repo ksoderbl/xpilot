@@ -1,4 +1,4 @@
-/* $Id: configure.c,v 5.5 2001/05/07 15:23:27 bertg Exp $
+/* $Id: configure.c,v 5.6 2001/06/22 05:27:42 dik Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
@@ -1593,6 +1593,8 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "markingLights", markingLights);
     Config_save_bool(fp, "toggleShield", toggle_shield);
     Config_save_bool(fp, "autoShield", auto_shield);
+    Config_save_int(fp, "clientPortStart", clientPortStart);
+    Config_save_int(fp, "clientPortEnd", clientPortEnd);
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
