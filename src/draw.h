@@ -1,6 +1,6 @@
-/* $Id: draw.h,v 3.26 1994/09/10 12:58:11 bert Exp $
+/* $Id: draw.h,v 3.29 1995/01/24 17:04:21 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -73,8 +73,6 @@
 #define	UPDATE_SCORE_DELAY  (FPS)
 #define CONTROL_DELAY	    100
 
-#define CLOAK_FAILURE	    130
-
 /*
  * Please don't change any of these maxima.
  * It will create incompatibilities and frustration.
@@ -101,8 +99,6 @@ typedef struct {			/* Defines wire-obj, i.e. ship */
     int		num_m_rack;		/* Number of missile racks */
     position	*m_rack[MAX_RACK_PTS];
 } wireobj;
-
-typedef unsigned long	Pixel;
 
 extern wireobj *Default_ship(void);
 extern void Free_ship_shape(wireobj *w);

@@ -1,6 +1,6 @@
-/* $Id: map.h,v 3.20 1994/09/17 01:01:20 bert Exp $
+/* $Id: map.h,v 3.23 1995/01/11 19:34:33 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -115,9 +115,13 @@ typedef struct {
 } cannon_t;
 
 typedef struct {
+    float	prob;		/* Probility [0..1] for item to appear */
     int		max;		/* Max on world at a given time */
     int		num;		/* Number active right now */
-    int		chance;		/* Chance for the item to appear */
+    int		chance;		/* Chance [0..127] for this item to appear */
+    int		min_per_pack;	/* minimum number of elements per item. */
+    int		max_per_pack;	/* maximum number of elements per item. */
+    int		initial;	/* initial number of elements per player. */
 } item_t;
 
 typedef enum { WORM_NORMAL, WORM_IN, WORM_OUT } wormType;

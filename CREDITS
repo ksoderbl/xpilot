@@ -3,6 +3,11 @@ the people who have been involved in XPilot, especially since we have no such
 list at hand. :)  If you find someone (yourself!?) missing from this list
 then please don't hesitate to complain to the authors at xpilot@cs.uit.no.
 
+Release 3.3 credits:
+
+	Steven Singer			Record & playback, filled walls.
+	Christian Engstler		Bug reports & Sun guinea pig.
+
 Release 3.2 credits:
 
 	Harvey Thompson			Bugfixes and new code.
@@ -19,7 +24,6 @@ Release 3.2 credits:
 	Tom De Pauw & Lance Berc	AF audio support.
 	Ben Jackson			Bug fixes.
 	Steve Marsden			User controllable mine detonation.
-
 
 Release 3.1 credits:
 

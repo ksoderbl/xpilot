@@ -1,6 +1,6 @@
-/* $Id: cmdline.c,v 3.69 1994/09/17 00:56:29 bert Exp $
+/* $Id: cmdline.c,v 3.76 1995/01/11 19:17:43 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -31,12 +31,13 @@
 #include "const.h"
 #include "global.h"
 #include "proto.h"
-#include "robot.h"
 #include "defaults.h"
+
+char cmdline_version[] = VERSION;
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: cmdline.c,v 3.69 1994/09/17 00:56:29 bert Exp $";
+    "@(#)$Id: cmdline.c,v 3.76 1995/01/11 19:17:43 bert Exp $";
 #endif
 
 float		Gravity;		/* Power of gravity */
@@ -81,7 +82,7 @@ bool		missilesWallBounce;	/* Do missiles bounce off walls? */
 bool		sparksWallBounce;	/* Do sparks bounce off walls? */
 bool		debrisWallBounce;	/* Do sparks bounce off walls? */
 bool		ballsWallBounce;	/* Do balls bounce off walls? */
-bool		ecmsReprogramMines;	/* Do emcs reprogram mines? */
+bool		ecmsReprogramMines;	/* Do ecms reprogram mines? */
 float		maxObjectWallBounceSpeed;	/* max object bounce speed */
 float		maxShieldedWallBounceSpeed;	/* max shielded bounce speed */
 float		maxUnshieldedWallBounceSpeed; /* max unshielded bounce speed */
@@ -115,11 +116,6 @@ bool		gravityAnticlockwise;	/* If not clockwise, anticlockwise? */
 char		*defaultsFileName;	/* Name of defaults file... */
 char		*scoreTableFileName;	/* Name of score table file */
 
-int 		MovingItemsRand;	/* Probability for moving items */
-int		ThrowItemOnKillRand;	/* Probability for players items to */
-					/* drop upon beeing killed */
-int		DetonateItemOnKillRand;	/* Probaility for remaining items to */
-					/* detonate on being killed */
 int		nukeMinSmarts;		/* minimum smarts for a nuke */
 int		nukeMinMines;		/* minimum number of mines for nuke */
 float		nukeClusterDamage;	/* multiplier for damage from nuke */
@@ -135,41 +131,9 @@ float		detonateItemOnKillProb;	/* Probaility for remaining items to */
 float		destroyItemInCollisionProb;
 float           rogueHeatProb;          /* prob. that unclaimed rocketpack */
 float           rogueMineProb;          /* or minepack will "activate" */
-float 		itemEnergyPackProb;
-float 		itemTankProb;
-float		itemECMProb;
-float		itemMineProb;
-float 		itemMissileProb;
-float		itemCloakProb;
-float		itemSensorProb;
-float		itemWideangleProb;
-float		itemRearshotProb;
-float		itemAfterburnerProb;
-float		itemTransporterProb;
-float		itemLaserProb;
-float		itemEmergencyThrustProb;
-float		itemTractorBeamProb;
-float		itemAutopilotProb;
-float		itemEmergencyShieldProb;
 float		itemProbMult;
 float		maxItemDensity;
 int		itemConcentratorRadius;
-int		initialFuel;
-int 		initialTanks;
-int		initialECMs;
-int		initialMines;
-int 		initialMissiles;
-int		initialCloaks;
-int		initialSensors;
-int		initialWideangles;
-int		initialRearshots;
-int		initialAfterburners;
-int		initialTransporters;
-int		initialLasers;
-int		initialEmergencyThrusts;
-int		initialTractorBeams;
-int		initialAutopilots;
-int		initialEmergencyShields;
 
 bool		allowNukes;
 bool		allowClusters;
@@ -205,6 +169,9 @@ float		friction;		/* friction only affects ships */
 float		checkpointRadius;      	/* in blocks */
 int		raceLaps;		/* how many laps per race */
 
+static void tuner_none(void) {}
+static void tuner_dummy(void) {}
+
 static optionDesc options[] = {
     {
 	"help",
@@ -212,6 +179,7 @@ static optionDesc options[] = {
 	"0",
 	NULL,
 	valVoid,
+	tuner_none,
 	"Print out this help message.\n"
     },
     {
@@ -220,6 +188,7 @@ static optionDesc options[] = {
 	"0",
 	NULL,
 	valVoid,
+	tuner_none,
 	"Print version information.\n"
     },
     {
@@ -228,6 +197,7 @@ static optionDesc options[] = {
 	"0",
 	NULL,
 	valVoid,
+	tuner_none,
 	"Print all options with their default values in defaultsfile format.\n"
     },
     {
@@ -236,6 +206,7 @@ static optionDesc options[] = {
 	"-0.14",
 	&Gravity,
 	valReal,
+	tuner_none,
 	"Gravity strength.\n"
     },
     {
@@ -244,6 +215,7 @@ static optionDesc options[] = {
 	"20.0",
 	&ShipMass,
 	valReal,
+	tuner_none,
 	"Mass of fighters.\n"
     },
     {
@@ -252,6 +224,7 @@ static optionDesc options[] = {
 	"0.1",
 	&ShotsMass,
 	valReal,
+	tuner_none,
 	"Mass of bullets.\n"
     },
     {
@@ -260,6 +233,7 @@ static optionDesc options[] = {
 	"21.0",
 	&ShotsSpeed,
 	valReal,
+	tuner_none,
 	"Maximum speed of bullets.\n"
     },
     {
@@ -268,6 +242,7 @@ static optionDesc options[] = {
 	"60",
 	&ShotsLife,
 	valInt,
+	tuner_none,
 	"Life of bullets in ticks.\n"
     },
     {
@@ -276,6 +251,7 @@ static optionDesc options[] = {
 	"2",
 	&fireRepeatRate,
 	valInt,
+	tuner_dummy,
 	"Number of frames per automatic fire (0=off).\n"
     },
     {
@@ -284,6 +260,7 @@ static optionDesc options[] = {
 	"4",
 	&WantedNumRobots,
 	valInt,
+	tuner_none,
 	"How many robots do you want?\n"
     },
     {
@@ -292,6 +269,7 @@ static optionDesc options[] = {
 	"false",
 	&robotsTalk,
 	valBool,
+	tuner_dummy,
 	"Do robots talk when they kill, die etc.?\n"
     },
     {
@@ -300,6 +278,7 @@ static optionDesc options[] = {
 	"true",
 	&robotsLeave,
 	valBool,
+	tuner_dummy,
 	"Do robots leave the game?\n"
     },
     {
@@ -308,6 +287,7 @@ static optionDesc options[] = {
 	"50",
 	&robotLeaveLife,
 	valInt,
+	tuner_dummy,
 	"Max life per robot (0=off).\n"
     },
     {
@@ -316,6 +296,7 @@ static optionDesc options[] = {
 	"-90",
 	&robotLeaveScore,
 	valInt,
+	tuner_dummy,
 	"Min score for robot to play (0=off).\n"
     },
     {
@@ -324,6 +305,7 @@ static optionDesc options[] = {
 	"-5",
 	&robotLeaveRatio,
 	valInt,
+	tuner_dummy,
 	"Min ratio for robot to play (0=off).\n"
     },
     {
@@ -332,6 +314,7 @@ static optionDesc options[] = {
 	"256",
 	&ShotsMax,
 	valInt,
+	tuner_none,
 	"Maximum allowed bullets per player.\n"
     },
     {
@@ -340,6 +323,7 @@ static optionDesc options[] = {
 	"true",
 	&ShotsGravity,
 	valBool,
+	tuner_dummy,
 	"Are bullets afflicted by gravity.\n"
     },
     {
@@ -348,6 +332,7 @@ static optionDesc options[] = {
 	"false",
 	&RawMode,
 	valBool,
+	tuner_dummy,
 	"Do robots keep on playing even if all human players quit?\n"
     },
     {
@@ -356,6 +341,7 @@ static optionDesc options[] = {
 	"false",
 	&NoQuit,
 	valBool,
+	tuner_dummy,
 	"Does the server wait for new human players to show up\n"
 	"after all players have left.\n"
     },
@@ -365,6 +351,7 @@ static optionDesc options[] = {
 	"100",
 	&mapWidth,
 	valInt,
+	tuner_none,
 	"Width of the world in blocks.\n"
     },
     {
@@ -373,6 +360,7 @@ static optionDesc options[] = {
 	"100",
 	&mapHeight,
 	valInt,
+	tuner_none,
 	"Height of the world in blocks.\n"
     },
     {
@@ -381,6 +369,7 @@ static optionDesc options[] = {
 	DEFAULT_MAP,
 	&mapFileName,
 	valString,
+	tuner_none,
 	"The filename of the map to use.\n"
     },
     {
@@ -389,6 +378,7 @@ static optionDesc options[] = {
 	"unknown",
 	&mapName,
 	valString,
+	tuner_none,
 	"The title of the map.\n"
     },
     {
@@ -397,6 +387,7 @@ static optionDesc options[] = {
 	"anonymous",
 	&mapAuthor,
 	valString,
+	tuner_none,
 	"The name of the map author.\n"
     },
     {
@@ -405,6 +396,7 @@ static optionDesc options[] = {
 	"15345",
 	&contactPort,
 	valInt,
+	tuner_none,
 	"The server contact port number.\n"
     },
     {
@@ -413,6 +405,7 @@ static optionDesc options[] = {
 	SERVERMOTDFILE,
 	&motd,
 	valString,
+	tuner_none,
 	"The filename for the server-motd.\n"
     },
     {
@@ -421,6 +414,7 @@ static optionDesc options[] = {
 	NULL,
 	&mapData,
 	valString,
+	tuner_none,
 	"The map's topology.\n"
     },
     {
@@ -429,6 +423,7 @@ static optionDesc options[] = {
 	"yes",
 	&crashWithPlayer,
 	valBool,
+	Set_world_rules,
 	"Can players overrun other players?\n"
     },
     {
@@ -437,6 +432,7 @@ static optionDesc options[] = {
 	"yes",
 	&bounceWithPlayer,
 	valBool,
+	Set_world_rules,
 	"Can players bounce with other players?\n"
     },
     {
@@ -445,6 +441,7 @@ static optionDesc options[] = {
 	"yes",
 	&playerKillings,
 	valBool,
+	tuner_none,
 	"Should players be allowed to kill one other?\n"
     },
     {
@@ -453,6 +450,7 @@ static optionDesc options[] = {
 	"yes",
 	&playerShielding,
 	valBool,
+	tuner_none,
 	"Are shields allowed?\n"
     },
     {
@@ -461,6 +459,7 @@ static optionDesc options[] = {
 	"yes",
 	&playerStartsShielded,
 	valBool,
+	tuner_none,
 	"Do players start with shields up?\n"
     },
     {
@@ -469,6 +468,7 @@ static optionDesc options[] = {
 	"no",
 	&shotsWallBounce,
 	valBool,
+	Move_init,
 	"Do shots bounce off walls?\n"
     },
     {
@@ -477,6 +477,7 @@ static optionDesc options[] = {
 	"yes",
 	&ballsWallBounce,
 	valBool,
+	Move_init,
 	"Do balls bounce off walls?\n"
     },
     {
@@ -485,6 +486,7 @@ static optionDesc options[] = {
 	"no",
 	&minesWallBounce,
 	valBool,
+	Move_init,
 	"Do mines bounce off walls?\n"
     },
     {
@@ -493,6 +495,7 @@ static optionDesc options[] = {
 	"yes",
 	&itemsWallBounce,
 	valBool,
+	Move_init,
 	"Do items bounce off walls?\n"
     },
     {
@@ -501,6 +504,7 @@ static optionDesc options[] = {
 	"no",
 	&missilesWallBounce,
 	valBool,
+	Move_init,
 	"Do missiles bounce off walls?\n"
     },
     {
@@ -509,6 +513,7 @@ static optionDesc options[] = {
 	"no",
 	&sparksWallBounce,
 	valBool,
+	Move_init,
 	"Do thrust spark particles bounce off walls to give reactive thrust?\n"
     },
     {
@@ -517,6 +522,7 @@ static optionDesc options[] = {
 	"no",
 	&debrisWallBounce,
 	valBool,
+	Move_init,
 	"Do explosion debris particles bounce off walls?\n"
     },
     {
@@ -525,6 +531,7 @@ static optionDesc options[] = {
 	"40",
 	&maxObjectWallBounceSpeed,
 	valReal,
+	Move_init,
 	"The maximum allowed speed for objects to bounce off walls.\n"
     },
     {
@@ -533,6 +540,7 @@ static optionDesc options[] = {
 	"50",
 	&maxShieldedWallBounceSpeed,
 	valReal,
+	Move_init,
 	"The maximum allowed speed for a shielded player to bounce off walls.\n"
     },
     {
@@ -541,6 +549,7 @@ static optionDesc options[] = {
 	"20",
 	&maxUnshieldedWallBounceSpeed,
 	valReal,
+	Move_init,
 	"Maximum allowed speed for an unshielded player to bounce off walls.\n"
     },
     {
@@ -549,6 +558,7 @@ static optionDesc options[] = {
 	"90",
 	&maxShieldedWallBounceAngle,
 	valReal,
+	Move_init,
 	"Maximum allowed angle for a shielded player to bounce off walls.\n"
     },
     {
@@ -557,6 +567,7 @@ static optionDesc options[] = {
 	"30",
 	&maxUnshieldedWallBounceAngle,
 	valReal,
+	Move_init,
 	"Maximum allowed angle for an unshielded player to bounce off walls.\n"
     },
     {
@@ -565,6 +576,7 @@ static optionDesc options[] = {
 	"0.89",
 	&playerWallBrakeFactor,
 	valReal,
+	Move_init,
 	"Factor to slow down players when they hit the wall (between 0 and 1).\n"
     },
     {
@@ -573,6 +585,7 @@ static optionDesc options[] = {
 	"0.95",
 	&objectWallBrakeFactor,
 	valReal,
+	Move_init,
 	"Factor to slow down objects when they hit the wall (between 0 and 1).\n"
     },
     {
@@ -581,6 +594,7 @@ static optionDesc options[] = {
 	"0.80",
 	&objectWallBounceLifeFactor,
 	valReal,
+	Move_init,
 	"Factor to reduce the life of objects after bouncing (between 0 and 1).\n"
     },
     {
@@ -589,6 +603,7 @@ static optionDesc options[] = {
 	"1.0",
 	&wallBounceFuelDrainMult,
 	valReal,
+	Move_init,
 	"Multiplication factor for player wall bounce fuel cost.\n"
     },
     {
@@ -597,6 +612,7 @@ static optionDesc options[] = {
 	"0.0",
 	&wallBounceDestroyItemProb,
 	valReal,
+	Move_init,
 	"The probability for each item a player owns to get destroyed\n"
 	"when the player bounces against a wall.\n"
     },
@@ -606,6 +622,7 @@ static optionDesc options[] = {
 	"yes",
 	&reportToMetaServer,
 	valBool,
+	tuner_none,
 	"Keep the meta server informed about our game?\n"
     },
     {
@@ -614,6 +631,7 @@ static optionDesc options[] = {
 	"no",
 	&limitedVisibility,
 	valBool,
+	Set_world_rules,
 	"Should the players have a limited visibility?\n"
     },
     {
@@ -622,6 +640,7 @@ static optionDesc options[] = {
 	"0.0",
 	&minVisibilityDistance,
 	valReal,
+	tuner_none,
 	"Minimum block distance for limited visibility, 0 for default.\n"
     },
     {
@@ -630,6 +649,7 @@ static optionDesc options[] = {
 	"0.0",
 	&maxVisibilityDistance,
 	valReal,
+	tuner_none,
 	"Maximum block distance for limited visibility, 0 for default.\n"
     },
     {
@@ -638,6 +658,7 @@ static optionDesc options[] = {
 	"no",
 	&limitedLives,
 	valBool,
+	tuner_none,
 	"Should players have limited lives?\n"
 	"See also worldLives.\n"
     },
@@ -647,6 +668,7 @@ static optionDesc options[] = {
 	"0",
 	&worldLives,
 	valInt,
+	tuner_none,
 	"Number of lives each player has (no sense without limitedLives).\n"
     },
     {
@@ -655,6 +677,7 @@ static optionDesc options[] = {
 	"yes",
 	&endOfRoundReset,
 	valBool,
+	tuner_dummy,
 	"Does the world reset when the end of round is reached?\n"
 	"When true all mines, missiles, shots and explosions will be\n"
 	"removed from the world and all players including the winner(s)\n"
@@ -667,6 +690,7 @@ static optionDesc options[] = {
 	"no",
 	&teamPlay,
 	valBool,
+	tuner_none,
 	"Is the map a team play map?\n"
     },
     {
@@ -675,6 +699,7 @@ static optionDesc options[] = {
 	"yes",
 	&teamAssign,
 	valBool,
+	tuner_dummy,
 	"If a player has not specified which team he likes to join\n"
 	"should the server choose a team for him automatically?\n"
     },
@@ -684,14 +709,16 @@ static optionDesc options[] = {
 	"yes",
 	&teamImmunity,
 	valBool,
+	tuner_dummy,
 	"Should other team members be immune to various shots thrust etc.?\n"
     },
     {
-	"emcsReprogramMines",
+	"ecmsReprogramMines",
 	"ecmsReprogramMines",
 	"yes",
 	&ecmsReprogramMines,
 	valBool,
+	tuner_dummy,
 	"Is it possible to reprogram mines with ECMs?\n"
     },
     {
@@ -700,6 +727,7 @@ static optionDesc options[] = {
 	"no",
 	&targetKillTeam,
 	valBool,
+	tuner_dummy,
 	"Do team members die when their last target explodes?\n"
     },
     {
@@ -708,6 +736,7 @@ static optionDesc options[] = {
 	"yes",
 	&targetTeamCollision,
 	valBool,
+	tuner_dummy,
 	"Do team members collide with their own target or not.\n"
     },
     {
@@ -716,6 +745,7 @@ static optionDesc options[] = {
 	"no",
 	&targetSync,
 	valBool,
+	tuner_dummy,
 	"Do all the targets of a team reappear/repair at the same time?"
     },
     {
@@ -724,6 +754,7 @@ static optionDesc options[] = {
 	"no",
 	&treasureKillTeam,
 	valBool,
+	tuner_dummy,
 	"Do team members die when their treasure is destroyed?\n"
     },
     {
@@ -732,6 +763,7 @@ static optionDesc options[] = {
 	"yes",
 	&treasureCollisionDestroys,
 	valBool,
+	tuner_dummy,
 	"Are balls destroyed when a player touches it?\n"
     },
     {
@@ -740,6 +772,7 @@ static optionDesc options[] = {
 	"no",
 	&treasureCollisionMayKill,
 	valBool,
+	tuner_dummy,
 	"Does a ball kill a player when the player touches it unshielded?\n"
     },
     {
@@ -748,6 +781,7 @@ static optionDesc options[] = {
 	"no",
 	&onePlayerOnly,
 	valBool,
+	tuner_none,
 	"One player modus.\n"
     },
     {
@@ -756,6 +790,7 @@ static optionDesc options[] = {
 	"no",
 	&timing,
 	valBool,
+	tuner_none,
 	"Is the map a race mode map?\n"
     },
     {
@@ -764,6 +799,7 @@ static optionDesc options[] = {
 	"no",
 	&edgeWrap,
 	valBool,
+	tuner_none,
 	"Wrap around edges.\n"
     },
     {
@@ -772,6 +808,7 @@ static optionDesc options[] = {
 	"yes",
 	&edgeBounce,
 	valBool,
+	tuner_dummy,
 	"Players and bullets bounce when they hit the (non-wrapping) edge.\n"
     },
     {
@@ -780,6 +817,7 @@ static optionDesc options[] = {
 	"no",
 	&extraBorder,
 	valBool,
+	tuner_none,
 	"Give map an extra border of solid rock.\n"
     },
     {
@@ -788,6 +826,7 @@ static optionDesc options[] = {
 	"0,0",
 	&gravityPoint,
 	valIPos,
+	tuner_none,
 	"If the gravity is a point source where does that gravity originate?\n"
 	"Specify the point int the form: x,y.\n"
     },
@@ -797,6 +836,7 @@ static optionDesc options[] = {
 	"90",
 	&gravityAngle,
 	valReal,
+	tuner_none,
 	"If gravity is along a uniform line, at what angle is that line?\n"
     },
     {
@@ -805,6 +845,7 @@ static optionDesc options[] = {
 	"false",
 	&gravityPointSource,
 	valBool,
+	tuner_none,
 	"Is gravity originating from a single point?\n"
     },
     {
@@ -813,6 +854,7 @@ static optionDesc options[] = {
 	"false",
 	&gravityClockwise,
 	valBool,
+	tuner_none,
 	"If the gravity is a point source, is it clockwise?\n"
     },
     {
@@ -821,6 +863,7 @@ static optionDesc options[] = {
 	"false",
 	&gravityAnticlockwise,
 	valBool,
+	tuner_none,
 	"If the gravity is a point source, is it anticlockwise?\n"
     },
     {
@@ -829,6 +872,7 @@ static optionDesc options[] = {
 	"",
 	&defaultsFileName,
 	valString,
+	tuner_none,
 	"The filename of the defaults file to read on startup.\n"
     },
     {
@@ -837,14 +881,16 @@ static optionDesc options[] = {
 	"",
 	&scoreTableFileName,
 	valString,
+	tuner_none,
 	"The filename for the score table to be dumped to.\n"
     },
     {
 	"framesPerSecond",
 	"FPS",
-	"18",
+	"14",
 	&framesPerSecond,
 	valInt,
+	tuner_none,
 	"The number of frames per second the server should strive for.\n"
     },
     {
@@ -853,6 +899,7 @@ static optionDesc options[] = {
 	"False",
 	&allowNukes,
 	valBool,
+	tuner_none,
 	"Should nuclear weapons be allowed?\n"
     },
     {
@@ -861,6 +908,7 @@ static optionDesc options[] = {
 	"False",
 	&allowClusters,
 	valBool,
+	tuner_none,
 	"Should cluster weapons be allowed?\n"
     },
     {
@@ -869,6 +917,7 @@ static optionDesc options[] = {
 	"False",
 	&allowModifiers,
 	valBool,
+	tuner_none,
 	"Should the weapon modifiers be allowed?\n"
     },
     {
@@ -877,6 +926,7 @@ static optionDesc options[] = {
 	"False",
 	&allowLaserModifiers,
 	valBool,
+	tuner_none,
 	"Can lasers be modified to be a different weapon?\n"
     },
     {
@@ -885,6 +935,7 @@ static optionDesc options[] = {
 	"True",
 	&allowShipShapes,
 	valBool,
+	tuner_none,
 	"Are players allowed to define their own ship shape?\n"
     },
     {
@@ -893,6 +944,7 @@ static optionDesc options[] = {
 	"True",
 	&playersOnRadar,
 	valBool,
+	tuner_dummy,
 	"Are players visible on the radar.\n"
     },
     {
@@ -901,6 +953,7 @@ static optionDesc options[] = {
 	"True",
 	&missilesOnRadar,
 	valBool,
+	tuner_dummy,
 	"Are missiles visible on the radar.\n"
     },
     {
@@ -909,6 +962,7 @@ static optionDesc options[] = {
 	"False",
 	&minesOnRadar,
 	valBool,
+	tuner_dummy,
 	"Are mines visible on the radar.\n"
     },
     {
@@ -917,6 +971,7 @@ static optionDesc options[] = {
 	"True",
 	&nukesOnRadar,
 	valBool,
+	tuner_dummy,
 	"Are nukes visible or highlighted on the radar.\n"
     },
     {
@@ -925,6 +980,7 @@ static optionDesc options[] = {
 	"False",
 	&treasuresOnRadar,
 	valBool,
+	tuner_dummy,
 	"Are treasure balls visible or highlighted on the radar.\n"
     },
     {
@@ -933,6 +989,7 @@ static optionDesc options[] = {
 	"True",
 	&distinguishMissiles,
 	valBool,
+	tuner_dummy,
 	"Are different types of missiles distinguished (by length).\n"
     },
     {
@@ -941,6 +998,7 @@ static optionDesc options[] = {
 	"4",
 	&maxMissilesPerPack,
 	valInt,
+	tuner_none,
 	"The number of missiles gotten by picking up one missile item.\n"
     },
     {
@@ -949,6 +1007,7 @@ static optionDesc options[] = {
 	"True",
 	&identifyMines,
 	valBool,
+	tuner_dummy,
 	"Are mine owner's names displayed.\n"
     },
     {
@@ -957,6 +1016,7 @@ static optionDesc options[] = {
 	"False",
 	&shieldedItemPickup,
 	valBool,
+	tuner_dummy,
 	"Can items be picked up while shields are up?\n"
     },
     {
@@ -965,6 +1025,7 @@ static optionDesc options[] = {
 	"False",
 	&shieldedMining,
 	valBool,
+	tuner_dummy,
 	"Can mines be thrown and placed while shields are up?\n"
     },
     {
@@ -973,6 +1034,7 @@ static optionDesc options[] = {
 	"False",
 	&laserIsStunGun,
 	valBool,
+	tuner_dummy,
 	"Is the laser weapon a stun gun weapon?\n"
     },
     {
@@ -981,6 +1043,7 @@ static optionDesc options[] = {
 	"7",
 	&nukeMinSmarts,
 	valInt,
+	tuner_dummy,
 	"The minimum number of missiles needed to fire one nuclear missile.\n"
     },
     {
@@ -989,6 +1052,7 @@ static optionDesc options[] = {
 	"4",
 	&nukeMinMines,
 	valInt,
+	tuner_dummy,
 	"The minimum number of mines needed to make a nuclear mine.\n"
     },
     {
@@ -997,6 +1061,7 @@ static optionDesc options[] = {
 	"1.0",
 	&nukeClusterDamage,
 	valReal,
+	tuner_dummy,
 	"How much each cluster debris does damage wise from a nuke mine.\n"
 	"This helps to reduce the number of particles caused by nuclear mine\n"
 	"explosions, which improves server response time for such explosions.\n"
@@ -1007,6 +1072,7 @@ static optionDesc options[] = {
 	"0.0",
 	&mineFuseTime,
 	valSec,
+	tuner_dummy,
 	"Time after which owned mines become deadly, zero means never.\n"
     },
     {
@@ -1015,6 +1081,7 @@ static optionDesc options[] = {
 	"0.2",
 	&movingItemProb,
 	valReal,
+	Set_misc_item_limits,
 	"Probability for an item to appear as moving.\n"
     },
     {
@@ -1023,6 +1090,7 @@ static optionDesc options[] = {
 	"0.5",
 	&dropItemOnKillProb,
 	valReal,
+	Set_misc_item_limits,
 	"Probability for dropping an item (each item) when you are killed.\n"
     },
     {
@@ -1031,6 +1099,7 @@ static optionDesc options[] = {
 	"0.5",
 	&detonateItemOnKillProb,
 	valReal,
+	Set_misc_item_limits,
 	"Probability for undropped items to detonate when you are killed.\n"
     },
     {
@@ -1039,6 +1108,7 @@ static optionDesc options[] = {
 	"0.0",
 	&destroyItemInCollisionProb,
 	valReal,
+	Set_misc_item_limits,
 	"Probability for items (some items) to be destroyed in a collision.\n"
     },
     {
@@ -1047,6 +1117,7 @@ static optionDesc options[] = {
 	"1.0",
 	&itemProbMult,
 	valReal,
+	Tune_item_probs,
 	"Item Probability Multiplication Factor scales all item probabilities.\n"
     },
     {
@@ -1055,6 +1126,7 @@ static optionDesc options[] = {
 	"0.00012",
 	&maxItemDensity,
 	valReal,
+	Tune_item_probs,
 	"Maximum density [0.0-1.0] for items (max items per block).\n"
     },
     {
@@ -1063,6 +1135,7 @@ static optionDesc options[] = {
 	"10",
 	&itemConcentratorRadius,
 	valInt,
+	Set_misc_item_limits,
 	"The maximum distance from an item concentator for items to appear in.\n"
 	"Sensible values are in the range 1 to 20.\n"
 	"If no item concentators are defined in a map then items can popup anywhere.\n"
@@ -1076,6 +1149,7 @@ static optionDesc options[] = {
 	"1.0",
 	&rogueHeatProb,
 	valReal,
+	tuner_dummy,
 	"Probability that unclaimed missile packs will go rogue."
     },
     {
@@ -1084,262 +1158,295 @@ static optionDesc options[] = {
 	"1.0",
 	&rogueMineProb,
 	valReal,
+	tuner_dummy,
 	"Probability that unclaimed mine items will activate."
     },
     {
 	"itemEnergyPackProb",
 	"itemEnergyPackProb",
-	"0",
-	&itemEnergyPackProb,
+	"1e-9",
+	&World.items[ITEM_FUEL].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an energy pack to appear.\n"
     },
     {
 	"itemTankProb",
 	"itemTankProb",
-	"0",
-	&itemTankProb,
+	"1e-9",
+	&World.items[ITEM_TANK].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an extra tank to appear.\n"
     },
     {
 	"itemECMProb",
 	"itemECMProb",
-	"0",
-	&itemECMProb,
+	"1e-9",
+	&World.items[ITEM_ECM].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an ECM item to appear.\n"
     },
     {
 	"itemMineProb",
 	"itemMineProb",
-	"0",
-	&itemMineProb,
+	"1e-9",
+	&World.items[ITEM_MINE].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a mine item to appear.\n"
     },
     {
 	"itemMissileProb",
 	"itemMissileProb",
-	"0",
-	&itemMissileProb,
+	"1e-9",
+	&World.items[ITEM_MISSILE].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a missile item to appear.\n"
     },
     {
 	"itemCloakProb",
 	"itemCloakProb",
-	"0",
-	&itemCloakProb,
+	"1e-9",
+	&World.items[ITEM_CLOAK].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a cloak item to appear.\n"
     },
     {
 	"itemSensorProb",
 	"itemSensorProb",
-	"0",
-	&itemSensorProb,
+	"1e-9",
+	&World.items[ITEM_SENSOR].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a sensor item to appear.\n"
     },
     {
 	"itemWideangleProb",
 	"itemWideangleProb",
-	"0",
-	&itemWideangleProb,
+	"1e-9",
+	&World.items[ITEM_WIDEANGLE].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a wideangle item to appear.\n"
     },
     {
 	"itemRearshotProb",
 	"itemRearshotProb",
-	"0",
-	&itemRearshotProb,
+	"1e-9",
+	&World.items[ITEM_REARSHOT].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a rearshot item to appear.\n"
     },
     {
 	"itemAfterburnerProb",
 	"itemAfterburnerProb",
-	"0",
-	&itemAfterburnerProb,
+	"1e-9",
+	&World.items[ITEM_AFTERBURNER].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an afterburner item to appear.\n"
     },
     {
 	"itemTransporterProb",
 	"itemTransporterProb",
-	"0",
-	&itemTransporterProb,
+	"1e-9",
+	&World.items[ITEM_TRANSPORTER].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a transporter item to appear.\n"
     },
     {
 	"itemLaserProb",
 	"itemLaserProb",
-	"0",
-	&itemLaserProb,
+	"1e-9",
+	&World.items[ITEM_LASER].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a Laser item to appear.\n"
     },
     {
 	"itemEmergencyThrustProb",
 	"itemEmergencyThrustProb",
-	"0",
-	&itemEmergencyThrustProb,
+	"1e-9",
+	&World.items[ITEM_EMERGENCY_THRUST].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an Emergency Thrust item to appear.\n"
     },
     {
 	"itemTractorBeamProb",
 	"itemTractorBeamProb",
-	"0",
-	&itemTractorBeamProb,
+	"1e-9",
+	&World.items[ITEM_TRACTOR_BEAM].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for a Tractor Beam item to appear.\n"
     },
     {
 	"itemAutopilotProb",
 	"itemAutopilotProb",
-	"0",
-	&itemAutopilotProb,
+	"1e-9",
+	&World.items[ITEM_AUTOPILOT].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an Autopilot item to appear.\n"
     },
     {
 	"itemEmergencyShieldProb",
 	"itemEmergencyShieldProb",
-	"0",
-	&itemEmergencyShieldProb,
+	"1e-9",
+	&World.items[ITEM_EMERGENCY_SHIELD].prob,
 	valReal,
+	Tune_item_probs,
 	"Probability for an Emergency Shield item to appear.\n"
     },
     {
 	"initialFuel",
 	"initialFuel",
 	"1000",
-	&initialFuel,
+	&World.items[ITEM_FUEL].initial,
 	valInt,
+	Set_initial_resources,
 	"How much fuel players start with, or the minimum after being killed.\n"
     },
     {
 	"initialTanks",
 	"initialTanks",
 	"0",
-	&initialTanks,
+	&World.items[ITEM_TANK].initial,
 	valInt,
+	Set_initial_resources,
 	"How many tanks players start with.\n"
     },
     {
 	"initialECMs",
 	"initialECMs",
 	"0",
-	&initialECMs,
+	&World.items[ITEM_ECM].initial,
 	valInt,
+	Set_initial_resources,
 	"How many ECMs players start with.\n"
     },
     {
 	"initialMines",
 	"initialMines",
 	"0",
-	&initialMines,
+	&World.items[ITEM_MINE].initial,
 	valInt,
+	Set_initial_resources,
 	"How many mines players start with.\n"
     },
     {
 	"initialMissiles",
 	"initialMissiles",
 	"0",
-	&initialMissiles,
+	&World.items[ITEM_MISSILE].initial,
 	valInt,
+	Set_initial_resources,
 	"How many missiles players start with.\n"
     },
     {
 	"initialCloaks",
 	"initialCloaks",
 	"0",
-	&initialCloaks,
+	&World.items[ITEM_CLOAK].initial,
 	valInt,
+	Set_initial_resources,
 	"How many cloaks players start with.\n"
     },
     {
 	"initialSensors",
 	"initialSensors",
 	"0",
-	&initialSensors,
+	&World.items[ITEM_SENSOR].initial,
 	valInt,
+	Set_initial_resources,
 	"How many sensors players start with.\n"
     },
     {
 	"initialWideangles",
 	"initialWideangles",
 	"0",
-	&initialWideangles,
+	&World.items[ITEM_WIDEANGLE].initial,
 	valInt,
+	Set_initial_resources,
 	"How many wideangles players start with.\n"
     },
     {
 	"initialRearshots",
 	"initialRearshots",
 	"0",
-	&initialRearshots,
+	&World.items[ITEM_REARSHOT].initial,
 	valInt,
+	Set_initial_resources,
 	"How many rearshots players start with.\n"
     },
     {
 	"initialAfterburners",
 	"initialAfterburners",
 	"0",
-	&initialAfterburners,
+	&World.items[ITEM_AFTERBURNER].initial,
 	valInt,
+	Set_initial_resources,
 	"How many afterburners players start with.\n"
     },
     {
 	"initialTransporters",
 	"initialTransporters",
 	"0",
-	&initialTransporters,
+	&World.items[ITEM_TRANSPORTER].initial,
 	valInt,
+	Set_initial_resources,
 	"How many transporters players start with.\n"
     },
     {
 	"initialLasers",
 	"initialLasers",
 	"0",
-	&initialLasers,
+	&World.items[ITEM_LASER].initial,
 	valInt,
+	Set_initial_resources,
 	"How many lasers players start with.\n"
     },
     {
 	"initialEmergencyThrusts",
 	"initialEmergencyThrusts",
 	"0",
-	&initialEmergencyThrusts,
+	&World.items[ITEM_EMERGENCY_THRUST].initial,
 	valInt,
+	Set_initial_resources,
 	"How many emergency thrusts players start with.\n"
     },
     {
 	"initialTractorBeams",
 	"initialTractorBeams",
 	"0",
-	&initialTractorBeams,
+	&World.items[ITEM_TRACTOR_BEAM].initial,
 	valInt,
+	Set_initial_resources,
 	"How many tractor/pressor beams players start with.\n"
     },
     {
 	"initialAutopilots",
 	"initialAutopilots",
 	"0",
-	&initialAutopilots,
+	&World.items[ITEM_AUTOPILOT].initial,
 	valInt,
+	Set_initial_resources,
 	"How many autopilots players start with.\n"
     },
     {
 	"initialEmergencyShields",
 	"initialEmergencyShields",
 	"0",
-	&initialEmergencyShields,
+	&World.items[ITEM_EMERGENCY_SHIELD].initial,
 	valInt,
+	Set_initial_resources,
 	"How many emergency shields players start with.\n"
     },
     {
@@ -1348,6 +1455,7 @@ static optionDesc options[] = {
 	"0.0",
 	&gameDuration,
 	valReal,
+	tuner_none,
 	"The duration of the game in minutes (aka. pizza mode).\n"
     },
     {
@@ -1356,6 +1464,7 @@ static optionDesc options[] = {
 	"0.0",
 	&friction,
 	valReal,
+	tuner_dummy,
 	"Fraction of velocity ship loses each frame.\n"
     },
     {
@@ -1364,6 +1473,7 @@ static optionDesc options[] = {
 	"6.0",
 	&checkpointRadius,
 	valReal,
+	tuner_dummy,
 	"How close you have to be to a checkpoint to register - in blocks.\n"
     },
     {
@@ -1372,6 +1482,7 @@ static optionDesc options[] = {
 	"3",
 	&raceLaps,
 	valInt,
+	tuner_none,
 	"How many laps a race is run over.\n"
     },
 };
@@ -1414,7 +1525,7 @@ static void Parse_help(char *progname)
     printf(
 "    \n"
 "    The probabilities are in the range [0.0-1.0] and they refer to the\n"
-"    probability that an event will occur in a block in second.\n"
+"    probability that an event will occur in a block per second.\n"
 "    Boolean options are turned off by using +<option>.\n"
 "    \n"
 "    Please refer to the manual pages, xpilots(6) and xpilot(6),\n"
@@ -1568,3 +1679,61 @@ void Parser(int argc, char *argv[])
     parseOptions();
     Grok_map();
 }
+
+
+/*
+ * Some options can be modified during the game.
+ * Options which can be modified have a so called tuner function,
+ * which checks the validity of the new option value, and possibly
+ * does something extra depending upon the option in question.
+ * Options which don't need such a tuner function set it to `tuner_dummy'.
+ * Options which cannot be modified have the tuner set to `tuner_none'.
+ */
+int Tune_option(char *opt, char *val)
+{
+    int			ival;
+    float		fval;
+    int			j;
+
+    for (j = 0; j < NELEM(options); j++) {
+	if (strcasecmp(options[j].commandLineOption, opt)
+	    && strcasecmp(options[j].name, opt)) {
+	    continue;
+	}
+	if (options[j].tuner == tuner_none) {
+	    return -1;	/* Operation undefined */
+	}
+	switch (options[j].type) {
+	case valInt:
+	    if (sscanf(val, "%d", &ival) != 1) {
+		return 0;
+	    }
+	    *(int *)options[j].variable = ival;
+	    (*options[j].tuner)();
+	    return 1;
+	case valBool:
+	    if (ON(val)) {
+		*(bool *)options[j].variable = true;
+	    }
+	    else if (OFF(val)) {
+		*(bool *)options[j].variable = false;
+	    }
+	    else {
+		return 0;
+	    }
+	    (*options[j].tuner)();
+	    return 1;
+	case valReal:
+	    if (sscanf(val, "%f", &fval) != 1) {
+		return 0;
+	    }
+	    *(float *)options[j].variable = fval;
+	    (*options[j].tuner)();
+	    return 1;
+	default:
+	    return -1;	/* Operation undefined */
+	}
+    }
+    return -2;	/* Can't find variable */
+}
+

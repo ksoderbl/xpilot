@@ -1,6 +1,6 @@
-/* $Id: frame.c,v 3.54 1994/09/10 12:59:11 bert Exp $
+/* $Id: frame.c,v 3.59 1995/01/31 18:26:34 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -46,9 +46,11 @@
 #include "netserver.h"
 #include "saudio.h"
 
+char frame_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: frame.c,v 3.54 1994/09/10 12:59:11 bert Exp $";
+    "@(#)$Id: frame.c,v 3.59 1995/01/31 18:26:34 bert Exp $";
 #endif
 
 
@@ -269,8 +271,8 @@ static int Frame_status(int conn, int ind)
 		|| inview(Players[lock_ind]->pos.x, Players[lock_ind]->pos.y))
 	    && pl->lock.distance != 0) {
 	    SET_BIT(pl->lock.tagged, LOCK_VISIBLE);
-	    lock_dir = Wrap_findDir(Players[lock_ind]->pos.x - pl->pos.x,
-				    Players[lock_ind]->pos.y - pl->pos.y);
+	    lock_dir = Wrap_findDir((int)(Players[lock_ind]->pos.x - pl->pos.x),
+				    (int)(Players[lock_ind]->pos.y - pl->pos.y));
 	    lock_dist = pl->lock.distance;
 	}
     }
@@ -281,43 +283,6 @@ static int Frame_status(int conn, int ind)
 	showautopilot = (loops % 8) < 4;
     else
 	showautopilot = 0;
-
-    n = Send_self(conn,
-	(int) (pl->pos.x + 0.5),
-	(int) (pl->pos.y + 0.5),
-	(int) pl->vel.x,
-	(int) pl->vel.y,
-	pl->dir,
-	pl->power,
-	pl->turnspeed,
-	pl->turnresistance,
-	lock_id,
-	lock_dist,
-	lock_dir,
-	pl->check,
-	pl->cloaks,
-	pl->sensors,
-	pl->mines,
-	pl->missiles,
-	pl->ecms,
-	pl->transporters,
-	pl->extra_shots,
-	pl->back_shots,
-	pl->afterburners,
-	pl->lasers,
-	pl->emergency_thrusts,
-	pl->emergency_shields,
-	pl->tractor_beams,
-	pl->autopilots,
-	showautopilot,
-	pl->fuel.num_tanks,
-	pl->fuel.current,
-	pl->fuel.sum,
-	pl->fuel.max,
-	Players[GetInd[Get_player_id(conn)]]->status);
-    if (n <= 0) {
-	return 0;
-    }
 
     /*
      * Don't forget to modify Receive_modifier_bank() in netserver.c
@@ -357,7 +322,17 @@ static int Frame_status(int conn, int ind)
 	mods[i++] = (BIT(pl->mods.laser, STUN) ? 'S' : 'B');
     }
     mods[i] = '\0';
-    Send_modifiers(conn, mods);
+    n = Send_self(conn,
+		  pl,
+		  lock_id,
+		  lock_dist,
+		  lock_dir,
+		  showautopilot,
+		  Players[GetInd[Get_player_id(conn)]]->status,
+		  mods);
+    if (n <= 0) {
+	return 0;
+    }
 
     if (BIT(pl->used, OBJ_EMERGENCY_THRUST))
 	Send_thrusttime(conn,
@@ -472,6 +447,13 @@ static void Frame_shots(int conn, int ind)
 		 */
 		break;
 	    }
+	    /*
+	     * The number of colors which the client
+	     * uses for displaying debris is bigger than 2
+	     * then the color used denotes the temperature
+	     * of the debris particles.
+	     * Higher color number means hotter debris.
+	     */
 	    if (debris_colors >= 3) {
 		if (debris_colors > 4) {
 		    if (color == BLUE) {
@@ -485,7 +467,6 @@ static void Frame_shots(int conn, int ind)
 		    } else {
 			color = (shot->life >> 3);
 		    }
-
 		}
 		if (color >= debris_colors) {
 		    color = debris_colors - 1;
@@ -539,7 +520,7 @@ static void Frame_shots(int conn, int ind)
 		    && (Wrap_length(pl->pos.x - shot->pos.x,
 				    pl->pos.y - shot->pos.y)
 			< (SHIP_SZ + MINE_SENSE_BASE_RANGE
-			   + pl->sensors * MINE_SENSE_RANGE_FACTOR))) {
+			   + pl->item[ITEM_SENSOR] * MINE_SENSE_RANGE_FACTOR))) {
 		    id = shot->id;
 		    if (id==-1)
 			id = EXPIRED_MINE_ID;
@@ -893,6 +874,18 @@ void Frame_update(void)
 		continue;
 	    }
 	}
+
+	/*
+	* Reduce frame rate to player's own rate.
+	*/
+	if (pl->player_count > 0) {
+	    pl->player_round++;
+	    if (pl->player_round > pl->player_count) {
+		pl->player_round = 0;
+		continue;
+	    }
+	}
+
 	if (Send_start_of_frame(conn) == -1) {
 	    continue;
 	}
@@ -988,4 +981,7 @@ void Set_player_message(player *pl, char *message)
     }
     if (pl->conn != NOT_CONNECTED)
 	Send_message(pl->conn, msg);
+    else if (IS_ROBOT_PTR(pl))
+	Robot_message(GetInd[pl->id], msg);
 }
+

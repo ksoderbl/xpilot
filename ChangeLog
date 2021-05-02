@@ -3,6 +3,380 @@
 ====                         XPilot Change Log                             ====
 ===============================================================================
 
+This is a summary of changes of release 3.3.0 compared to release 3.2.9:
+
+Now players don't get points anymore for shooting targets owned
+by teams which are either empty or dead.
+Otherwise if the target destroyed was not the last target less
+points are awarded depending upon the total number of targets
+for that team and the number of targets remaining.
+
+The following options can now also be modified while the server is running:
+         shotsWallBounce, ballsWallBounce, minesWallBounce, itemsWallBounce,
+         missilesWallBounce, sparksWallBounce, debrisWallBounce,
+         maxObjectWallBounceSpeed, maxShieldedWallBounceSpeed,
+         maxUnshieldedWallBounceSpeed, maxShieldedPlayerWallBounceAngle,
+         maxUnshieldedPlayerWallBounceAngle, playerWallBounceBrakeFactor,
+         objectWallBounceBrakeFactor, objectWallBounceLifeFactor,
+         wallBounceFuelDrainMult, wallBounceDestroyItemProb,
+         targetKillTeam, targetTeamCollision, edgeBounce, movingItemProb,
+         dropItemOnKillProb, detonateItemOnKillProb,
+         destroyItemInCollisionProb, itemConcentratorRadius.
+
+Fixed two bugs for ERASE mode.
+The first ERASE bug had a small chance to occur when the player was ECMed.
+In this case the one half of the colorbuffers could remain blue,
+causing the screen to remain in a flashing state.
+The second ERASE bug was for dashed lines, which sometimes weren't
+erased completely.
+
+Moved the talk messages from the bottom right to the top left.
+This increases their readibility as they are now closer to the radar.
+To accommodate this some meters have been moved from the top left
+to the top right of the screen.
+Talk messages now have a little more memory allocated to prevent
+them from scrolling of the screen too soon.
+
+Changed the updating of keyboard changes to the server to consume
+slightly less packets.  Keyboard changes are still sent immediately,
+but no longer does the client expect the server to acknowledge
+a change in the very first frame after transmission.
+
+Steven Singer added recording and playback of games:
+        The client now can record games or parts of games into a file.
+        A new utility program provides a graphical user interface to
+        playback these record files.
+        The client has two new options to control recording:
+        1) -keyToggleRecord to turn recording on and off.
+            The default value for this key is KP_5, meaning the 5 on
+            the numerical keypad.
+        2) -recordFile to specify the output file for the recordings.
+            By default no value for this option is defined, so
+            that it is not possible to accidentally turn on recording
+            and find your disk quota exceeded.  Be warned that record files
+            can quickly become very large.
+        The utility program to playback recordings is called xp-replay.
+        Its use should be straightforward, but there is a
+        manual page for it in the man6 subdirectory.
+
+Added a bugfix by Ralf Berger to fix the beeping when talking
+in paused mode, at least for DEC-Alpha.
+
+A serious bug was triggered when a player got 8 tanks.  Fixed.
+
+Mark Boyns reported that not all tanks were removed when a race ends.
+This turned out to be a more serious bug (for race mode only).  Fixed.
+
+Internal changes to tanks and item damage.
+
+Trailing whitespaces on player nicknames is now stripped.
+This in order to prevent people from using very similar nicknames.
+
+Steven Singer provided code to have filled walls.
+The client has a new option -filledWorld to turn it on.
+Note that this requires a *fast* graphics system.
+
+A new client option -wallColor has been added to specify
+which color to use for wall drawing or filling.
+
+In cooperation with Steven Singer code was added to make it
+possible for the client to display textured walls.
+Images in the XPM format can either be included at compile time
+or loaded on startup of the client.  The following client
+options are provided to control which texture is used:
+    -texturedWalls
+        If true then the walls are filled with a texture pattern.
+    -wallTextureFile
+        The filename of a XPM format pixmap for the wall texture.
+    -texturePath
+        An optional search path for XPM texture files.
+        This is a list of one or more directories separated by colons.
+        The default value for this option is the subdirectory textures
+        in the xpilot lib directory.
+Three textures are provided in the xpilot/lib/textures directory:
+    metalite.xpm
+        a test texture made by Aleksi "MetaLite" Suhonen, which
+        works OK with the default -maxColors value 4.
+    rock4.xpm
+        a demo texture needing a -maxColors of 8.
+    moon.xpm
+        the most beautiful texture sofar made by Silk.
+        But it needs a -maxColors value of 16 and the xpilot colors
+        must be explicitly set to the colors needed by this texture.
+        For instance, one could use a shell script like this:
+	    #!/bin/sh
+	    xpilot -texturedWalls True \
+		-wallTexture moon.xpm \
+		-color15 \#A5A5A5A5A5A5 \
+		-color14 \#BCBCBCBCBCBC \
+		-color13 \#898989898989 \
+		-color12 \#5A5A5A5A5A5A \
+		-maxColors 16 $@
+
+A new client option -sparkColors lets you specify which colors
+to use for spark and debris particles.  This option was needed
+to free colors for use with XPM textures having many colors.
+
+The values for -hudColor and -wallColor can now be changed while
+the client is running by means of the CONFIG menu.
+
+Evmorfopoulos Dimitris supplied a fix for a typo in the Linux joystick support.
+
+The XPilot client no longer saves the maxFPS value to the .xpilotrc.
+If you have a maxFPS value in your .xpilotrc file then it is likely that
+its value is too low, causing lag effects.  Better remove the maxFPS value
+from your .xpilotrc, or set it to something innocent, like 18 or 20.
+
+Tom De Pauw provided a patch to improve audio support for DEC AudioFile:
+	The attached patch to xpilot-3.2.9/src/afaudio.c skips a possible
+	sound header in Sun or Inverted Sun format. Most (all?) of the
+	sounds for use with xpilot come with a header. When used with
+	DEC AudioFile, this header was considered as part of the sound.
+	It would produce an audible click at the start of each sound.
+
+Tassos Bassoukos provided a patch for a hudLockColor client option:
+	which allows the user to set the color of the lock on the HUD,
+	if it is not a team member.
+
+The client manual page has been extensively updated and corrected.
+
+Fixed a bug for owner-only commands.  Now owner-only commands
+can only be issued from the computer the server is running on.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.9 compared to release 3.2.8:
+
+Bugfix for a misplaced new cannon explosion sound.
+New sounds should be placed at the end of the sounds list!
+
+Set EXTENSIONLIB to nothing in the Imakefile in the hope
+that this will prevent users to try to link with libXext.a.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.8 compared to release 3.2.7:
+
+Fixed a bug for no-shield mode with each player getting one emergency shield.
+When a player would turn on emergency shields before the initial shields
+expired this would cause the emergency shields to become unusable when
+the initial shields did expire.
+
+Jeffrey C. Gealow provided us with a patch to avoid some distracting
+compiler warnings.
+
+The client and server now both check on startup that all of their
+source files are compiled for the same version.
+If they find that one source file is compiled for an older or newer
+version they print a message telling which file was incorrectly
+compiled and then exit.
+
+Dimitris Evmorfopoulos added a patch to let the client control the
+maximum number of frames that are sent to the client by the server:
+        I have been getting frustrated lately with the amount of servers that
+        run at 18 fps or more, when my personal line cannot take more than
+        14 fps.  So I decided to do something about it.  What you get below
+        is a patch that gives the clients the freedom to choose their own
+        frame rate anywhere between the servers rate and the half of that.
+        Any client can have any rate, and the server will take it.
+        Also, the rates can be changed at run time through the menus.
+The patch adds a new option to the client called -maxFPS, and some code
+to the server to handle the client requests for a lower framerate.
+
+Some changes to the client PACK interface to have it allocate a new socket
+for each PACK command it sends to the server.  This is supposed to make it
+more reliably WRT the replies it says is getting from the server.
+
+Fixed a bug which caused lasers to be deadly even though
+the allowPlayerKillings option was set to true.
+
+Now when players (or robots, or tanks) leave their explosions
+are not removed from the world.  Done on request of ...
+
+Bugfix for owner-only commands to the server.  Some piece of memory
+was accidentily used twice and overwritten the second time.
+
+Change ECM effects so that missiles cannot be redirected to team mates
+if team immunity is on, and so that robots cannot be programmed to
+seek team mates if team immunity is on.
+
+Kris Van Hees supplied a patch to fix one problem for IBM 3090 mainframes
+and to add a sound for cannon explosions.
+
+The default value for all the item probabilities has now changed
+from 0 to 1e-9 (or equivalently 0.000000001).
+
+The robot code added to 3.2.7 had a verious serious bug.
+When a robot wanted to drop a mine while not having enough fuel
+the server would send the robot a message which caused the robot
+to hang the server!  Oops!  *blush*
+
+The following options can now also be modified while the server is running:
+	itemProbMult, maxItemDensity, itemEnergyPackProb, itemTankProb, 
+	itemECMProb, itemMineProb, itemMissileProb, itemCloakProb, 
+	itemSensorProb, itemWideangleProb, itemRearshotProb, 
+	itemAfterburnerProb, itemTransporterProb, itemLaserProb, 
+	itemEmergencyThrustProb, itemTractorBeamProb, itemAutopilotProb, 
+	itemEmergencyShieldProb.
+
+Changes to enable people who have old buggy HP C compilers to continue
+using robots in their maps. :)  The initialization of strings to global
+string pointers have been changed to assignments of strings to character
+arrays.  At the expense of some extra memory usage, but oh well, memory
+is cheap nowadays.
+
+===============================================================================
+
+This is a summary of changes of release 3.2.7 compared to release 3.2.6:
+
+Made sure tanks are never moved to their homebase since
+tanks don't have one.
+
+Don't drop shields when ending a hoverpause.
+
+Changed the internals of the item handling  and initial item values.
+
+Improved the choosing of a team for players who didn't specify a team.
+    If there is none or only one team with playing (i.e. non-paused)
+    players the player will be assigned to a randomly chosen empty team.
+    If there is more than one team with playing players,
+    the player will be assigned randomly to a team which
+    has the least number of playing players.
+    If all non-empty teams are full, the player is assigned
+    to a randomly chosen available team.
+    Note:  Team zero is not part of this algorithm since that
+    team is reserved for the robots.
+
+Bugfix pointed out by Mark Boyns for race mode where the server would
+crash if there were released tanks in the air after game reset.  
+
+Yves-Henri Berne pointed out a bug with detonating mines.
+When a mine was reprogrammed with an ECM, the player who originally placed
+the mine could still detonate the mine with the "keyDetonateMines" key.
+This has now been changed so that only the player who reprogrammed the
+mine with an ECM can now detonate the mine.
+
+A bugfix for displaying destroyed targets on screen.
+Sometimes a target was displayed with a diagonal cross through it
+even though the target was actually destroyed already.
+The bug was reported by several people, but it was extremely hard to solve.
+
+If a player picks up an emergency shield item in a map where shields are
+not allowed and the emergency shield item picked up is the first
+emergency shield item the player has then the emergency shield item
+is activated immediately.
+
+Talk messages are now transmitted sooner and a little more reliably
+to the server.
+
+Simple addition to make robots use emergency shields if they have them.
+
+A new client option -shipShapeFile, which can hold several shipshape
+definitions.  From the "xpilot -help" entry:
+	If this resource is defined and it refers to an existing file
+	then shipshapes can be referenced to by their name.
+	For instance if you define shipShapeFile to be
+	/home/myself/.shipshapes and this file contains one or more
+	shipshapes then you can select the shipshape by starting xpilot as:
+		xpilot -shipShape myshipshapename
+	Where "myshipshapename" should be the "name:" or "NM:" of
+	one of the shipshapes defined in /home/myself/.shipshapes.
+	Each shipshape definition should be defined on only one line.
+	Note that XPilot assumes a shipshape to be a definition of
+	a shipshape when it contains at least one left parenthesis.
+	This means that shipshapenames may not contain one.
+
+Fixed a bug which caused player weapons not to detonate
+when a player was killed and detonateItemOnKillProb was
+bigger than zero when the player in question had
+the nuclear modifier turned on, but didn't have enough
+mines or missiles to make one nuclear mine or missile.
+
+X4 mines on 3.2.6 servers were each as powerful as a single X1 mine.
+Bug pointed out by Anthony Ignacio.  The same bug was the case for missiles.
+
+Changed the resulting behavior of keyDetonateMines to only
+detonate the mine owned by the detonating player which is
+closest to that player.
+
+Fixed a tough to find bug which has caused servers to hang when:
+   - one or more players were playing.
+   - a new player entered.
+   - one of the already playing players locked on the newly entered player.
+   - the newly entered player left.
+   - the player who locked on the last left player presses either
+     KEY_LOCK_NEXT or KEY_LOCK_PREV.
+
+This change is only interesting for programmers who want to add
+new types of robots to XPilot:
+	The interface between the robot code and the rest of
+	the server has been minimized and strictly defined.
+	Now there is a robot manager which manages different
+	robot types and calls robot type specific functions
+	when a robot needs to do something, like calculating
+	its next movements.  The time required to program the
+	interface of a completely new robot type is now estimated
+	to be less than 5 minutes.  Of course filling in the actual
+	robot implementation code will require a little more work... ;-)
+	Different types of robots can co-exist in the same server
+	without problems.  This means that it is now possible to
+	let different robot types fight against eachother
+	to see which one plays better, etc.  The details of
+	this new interface are accurately described in robot.h.
+	One of the new robot type functions accepts messages from
+	players.  This could be used to give commands to robots.
+
+Some work has been done to improve the run-time configurability of
+the server.  Still only a fraction of the options are run-time configurable,
+but the number is increasing.  Now the following options can be changed
+while the server is running:
+	fireRepeatRate, robotsTalk, robotsLeave, robotLeaveLife,
+	robotLeaveScore, robotLeaveRatio, shotsGravity, idleRun, noQuit,
+	reset, teamAssign, teamImmunity, emcsReprogramMines, targetSync,
+	treasureKillTeam, treasureCollisionDestroys, treasureCollisionMayKill,
+	playersOnRadar, missilesOnRadar, minesOnRadar, nukesOnRadar,
+	treasuresOnRadar, distinguishMissiles, shieldedItemPickup,
+	shieldedMining, laserIsStunGun, nukeMinSmarts, nukeMinMines,
+	nukeClusterDamage, mineFuseTime, rogueHeatProb, rogueMineProb,
+	initialFuel, initialTanks, initialECMs, initialMines,
+	initialMissiles, initialCloaks, initialSensors, initialWideangles,
+	initialRearshots, initialAfterburners, initialTransporters,
+	initialLasers, initialEmergencyThrusts, initialTractorBeams,
+	initialAutopilots, initialEmergencyShields,
+	friction, checkpointRadius,
+
+There is a new compile time constant for the server PLOCKSERVER.
+	When this is part of the compiler flags the plock(2) system call
+	will be used to lock the xpilots server into memory, i.e. to
+	inhibit paging/swapping.
+	This probably only makes sense in conjunction with
+	raising the priority of the server a little, which
+	is equivalent to reducing the nice value a few points.
+	Note that both require special system privileges.
+	Sofar this feature has only been tested on HP-UX.
+
+Fixed a bug which caused lasers to be deadly even though
+the allowPlayerKillings option was set to true.
+
+Fixed unpausing of paused players in limited lives mode.  Now paused
+players can unpause correctly if nobody has died yet.
+
+Yves-Henri Berne pointed out that it was impossible to shut down a server
+which was still waiting for the first player to show up.  Fixed.
+
+Mark Boyns pointed out it was impossible to fire lasers if the itemLaserProb
+was zero and players got their lasers from initialLasers.  Fixed.
+
+Jeffrey C. Gealow pointed out that the default item probabilities
+were a factor 10 too high.  Dunno how that came to be.  They
+are now restored to a factor 10 lower.
+NOTE: The default value for Frames Per Second (aka. fps) has been
+lowered from 18 to 14.  This is to enable Internet games and to
+give inexperienced XPiloteers a better chance to survive their first
+steps in globe.map.  It is also helpful for slower/cheaper displays.
+
+===============================================================================
+
 This is a summary of changes of release 3.2.6 compared to release 3.2.5:
 
 The Makefile.std is changed to allow the client and server to be build

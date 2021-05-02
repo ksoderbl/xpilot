@@ -1,6 +1,6 @@
-/* $Id: dbuff.c,v 3.12 1994/07/10 19:41:55 bert Exp $
+/* $Id: dbuff.c,v 3.14 1995/01/11 19:25:06 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -44,9 +44,11 @@
 #endif
 #endif
 
+char dbuff_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: dbuff.c,v 3.12 1994/07/10 19:41:55 bert Exp $";
+    "@(#)$Id: dbuff.c,v 3.14 1995/01/11 19:25:06 bert Exp $";
 #endif
 
 

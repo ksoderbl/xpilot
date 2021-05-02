@@ -1,6 +1,6 @@
-/* $Id: saudio.c,v 3.15 1994/09/20 14:21:16 bert Exp $
+/* $Id: saudio.c,v 3.18 1995/01/11 19:56:30 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -34,6 +34,8 @@
 #include "netserver.h"
 #include "saudio.h"
 
+char saudio_version[] = VERSION;
+
 #ifdef SOUND
 
 #define SOUND_RANGE_FACTOR	0.5		/* factor to increase sound
@@ -43,7 +45,7 @@
 #define SOUND_MIN_VOLUME	10
 
 #define sound_range(pl) \
-	(SOUND_DEFAULT_RANGE + pl->sensors\
+	(SOUND_DEFAULT_RANGE + pl->item[ITEM_SENSOR]\
 	 * SOUND_DEFAULT_RANGE * SOUND_RANGE_FACTOR)
 
 typedef struct _AudioQRec

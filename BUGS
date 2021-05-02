@@ -1,4 +1,4 @@
-$Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
+$Id: BUGS,v 3.52 1995/01/16 16:45:54 bert Exp $
 
 #
 # Each bug has its unique number and some additional info.
@@ -39,87 +39,6 @@ $Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 <DESC>	bjoerns
 	Ball should be affected by object collisions. 
 
-<BUG>	003
-<STATUS>deferred/low
-<VER>	1.2
-<DESC>	unknown
-	Players can fly through walls at high speed, this isn't the case for
-	objects (they use different collision detection methods).
-
-<BUG>	004
-<STATUS>open/low
-<VER>	3.0.4
-<DESC>	930900: kenrsc@stud.cs.uit.no
-	Limited lives.  New human players are dead when entering a game
-	where somebody has lost a life. This is not true for robots.
-<WORK>  930915 kenrsc@stud.cs.uit.no
-	Bert did you not change it so that if robots where left in the game
-	it would start over again ? If so, does it do anything harm having
-	the robots entering. Lowered the status to low since robots wont
-	join in to often.
-<WORK>  930919: bert
-	I don't expect that adding more robots will be a problem.
-	If only robots are alive then they have won the game and the
-	game resets.
-
-<BUG>	005
-<STATUS>open/low
-<VER>	2.0
-<DESC>	930900: kenrsc@stud.cs.uit.no
-    	The treasure is not correct. Sometimes the ball disapears for
-	good.  There are also other things, but I don't remember now.
-
-<BUG>	008
-<STATUS>open/low
-<VER>	3.0.3
-<DESC>	930912: chc@dale.ksc.nasa.gov (Charles Curley)
-	Has anyone else noticed that on when you get near the edge of a
-	wrapped map that you can't shoot when you nose is within say 20
-	pixels of the edge?
-<WORK>	930912: bert
-	The problem is that when the center of a player is close to the edge
-	then the expression "shot->pos = pl->pos + ships[dir].pts[0]" may
-	result in a value bigger than the mapwidth/height.
-
-<BUG> 	011
-<STATUS>open/medium
-<VER>	3.0.4
-<DESC>	930930: Charles Curley (chc@dale.ksc.nasa.gov)
-	Cloaks don't seem to work sometimes.  Mostly with three of more
-	people we will have a situation where some players can see
-	others all the time regardless of the others cloak situation.
-	eric@soda.berkeley.edu (Eric van Bezooijen):
-	We here have also noticed the cloak problem.  We are running
-	everything on Solaris 2.x on Sparc-boxes.  It is quite rare,
-	however.  It is just like he describes.  Once in a while there
-	will be a player playing who I can always see, regardless whether
-	or not he has cloaking or not, with dashed lines around his ship...
-<WORK>	931001: bert
-	Had a thorough look at all of the visibility code and made
-	a possible fix.  The updateVisibility flag is now explicitly set
-	when a player reenters the game.  It appeared that the lastChange
-	flags in the player visibility structure were nowhere initialised.
-<DESC>	931007: Jonathan Katz (jonathan@cad.ucla.edu)
-	There seems to be a bug in the current release (3.0.5)
-	and the last couple) that allows usually a pair of people
-	on our server to be unable to cloak from each other.
-	The cloaked individual will be 'ghosted' but visible....
-	Also they will show up on the world map and radar...
-<DESC>	931011:  Gary O'Brien <gary@hpmtlgo.lvld.hp.com>
-	We're using xpillot 3.0.5 on HP 700 series.  We still have the
-	cloak bug problem.  We see the problem if there are more than
-	2 human players in the game.  The general rule is if your cloaked
-	and can see them, then they can see you.  A player which is cloaked
-	and not visible cannoot seee you either.
-
-<BUG> 	014
-<STATUS>open/low
-<VER>	3.0.5
-<DESC>	931005: Mark Boyns
-	I have a problem with robot's Ids disappearing.  Sometimes I will see
-	a robot flying around without a name.  The problem seems to be sort
-	of random, and I have not spent any time trying to figure out why.
-
 <BUG>	017
 <STATUS>open/medium
 <VER>	3.0.6
@@ -148,37 +67,8 @@ $Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 <WORK>	931210: bjoerns
 	At least, the server should warn about this condition.
 
-<BUG>	019
-<STATUS>open/medium
-<VER>	3.0.7
-<DESC>	940113: ferhati@aremihp.univ-lille1.fr ( Ramdane FERHATI )
-	In a team mode, if you are in pause mode
-	and the other team blow up all your targets
-	you automatically quit the pause mode,
-	the "P" character is still  before your nick name.
-	You must press twice the "P" key to return on
-	the pause mode.
-<WORK>	940115: bert
-	I think I know where to look for a fix (collision.c, targetKillTeam).
-
-<BUG>  021
-<STATUS>open/medium
-<VER>	3.0.7
-<DESC>	940309: Tony Plate <tap@cs.toronto.edu>
-	Suppose we have 3 players, A and B, on one team, and X on the other.
-	This is how the bug manifests itself (I think):
-	    A is locked onto X.
-	    X is locked onto B.
-	    A fires a smart at X.
-	    X ECMs the smart, now it locks onto B.
-	    Smart chases B, but can never hit B, because B is
-	    immune to this smart because it was fired by a
-	    team member.
-	My suggestion: change effect of team immunity so that it
-	applies only to simple shots.  (Would be a pretty simple fix).
-
 <BUG>  022
-<STATUS>open/medium
+<STATUS>deferred/medium
 <VER>	3.1.3
 <DESC>	940503: leo@dcs.warwick.ac.uk (Leo Hendry)
 	I have been playing tournament and team tournament maps recently and I have
@@ -187,30 +77,10 @@ $Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 	random.  For example you can connect to an almost stationary ball and you will
 	be thrown with great force into the wall, but other times you can connect to a
 	falling ball without difficulty.
-
-<BUG>   023
-<STATUS>open/medium
-<VER>   3.1.3
-<DESC>  940504: kenrsc@stud.cs.uit.no (Ken Ronny Schouten)
-        If the server is not in RawMode (Robots playing even if humans is 
-        not there) and NoQuit is also set the server will be idle until
-        the first player shows up. This also means that the server will
-        not send info to the meta server during this time. So after about
-        16 minutes the server will no longer be in the meta server list.
-        I don't think this is what the starters of the long term servers
-        want.
-<FIX>   Set an alarm for about 6-10 minutes so the server breaks the idle
-        hang to send a message to the meta server. This means some 
-        changing in the way signals are handled.
-
-<BUG>   024
-<STATUS>open/medium
-<VER>   3.2.2
-<DESC>  940523: Frenchy
-	When the target blows up and the game resets then the target
-	still exists, but it is untouchable.
-	Sometimes the target appears in red instead of blue, even
-	if it belongs to the player's team.
+<WORK>  941021: bert
+	It has improved somewhat (see ChangeLog), but it is still not perfect.
+	However, we got requests from users to keep it risky to try to connect
+	to a ball, so that will be it then for some while at least.
 
 <BUG>   025
 <STATUS>open/low
@@ -228,15 +98,6 @@ $Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 	BTW, I've got the "Bad net input" before, but I've never
 	seen the "debris 0 < 0" message.
 
-<BUG>   026
-<STATUS>open/medium
-<VER>   3.2.4
-<DESC>  940722: Berne Yves-Henri <Yves-Henri.Berne@imag.fr>
-	I don't know if you received this bug before but :
-	on the map tourmination, I began the game with 7 shots max but suddenly (I
-	haven't determine how) I have no limit (as much shots as I want)
-	And my friend (who played with the same program) stay with 7 shots max.
-
 <BUG>   027
 <STATUS>open/low
 <VER>   3.2.5
@@ -252,3 +113,84 @@ $Id: BUGS,v 3.44 1994/08/23 09:53:58 bert Exp $
 	happens equally often per unit time, but not per attack, if that makes
 	any sense).
 
+<BUG>   029
+<STATUS>open/medium
+<VER>   3.2.6
+<DESC>  941014: Karen Gould
+	Sometimes in some maps on some servers for some players the weapon modifiers
+	get cleared when reappearing on the homebase after a death.
+
+<BUG>   31
+<STATUS>open/medium
+<VER>   3.2.5
+<DESC>  941113: Erwin Zierler
+	In the map The Real 3D Mega World in no-wrap mode
+	and edge bounce on, when having a homebase on the
+	bottom turning left or right while sitting on the
+	homebase causes the player to leave the Known Universe.
+
+<BUG>   32
+<STATUS>open/medium
+<VER>   3.2.8
+<DESC>  941114: Mark Boyns
+	When releasing 8 tanks in race mode not all tanks
+	are removed from the world on restart.
+
+<BUG>   34
+<STATUS>closed/high
+<VER>   3.2.8
+<DESC>  941124: Remy (Remy.Amouroux@imag.fr)
+	For local tournament, I use a server 3.2.8 with a customized
+	Tournament map.
+	I have set the following options for that map :
+	allowshields:false             // I used the no value too
+	playerstartshielded:false
+	initialemergencyshields:1
+	The problem is the following:
+	when the players start their session, they appear shielded
+	and can use the normal shield until they use the extra-shield.
+	After they totally used the extra-shield, they cannot use
+	the normal shield. When they die, they return to the previously
+	described state (shielded, ...) .
+	Is it a bug or an option that I forgot ?
+<WORK>	941130: Bert
+	I tried to repeat it with the options given, but couldn't repeat it.
+	Maybe it is fixed already?  If not let me know.
+
+<BUG>   37
+<STATUS>open/medium
+<VER>   3.2.9
+<DESC>  950116: Rus Berrett (berrettr@alaska.et.byu.edu)
+	The xpilot server on scotland crashed Sunday the 15th due to an "unhandled
+	exception".  Fortunately I always compile in debug (due to the humble xpilot
+	development I do on my own).  It seems the culprit was a divide by zero in the function "do_Autopilot".
+	Please find below a few lines scrapped from the dbx shell:
+	(dbx) trace
+	>  0 do_Autopilot(pl = 0x140123b50) ["update.c":280, 0x120039484]
+	   1 Update_objects() ["update.c":645, 0x12003aca4]
+	   2 Main_Loop() ["server.c":442, 0x12000aca8]
+	   3 main(argc = 148, argv = 0x11ffff1e8) ["server.c":316, 0x12000a5e8]
+	(dbx) list 270,290
+	   270          vad = RES - vad;
+	   271          dir = -1;
+	   272      } else {
+	   273          dir = 1;
+	   274      }
+	   275
+	   276      /*
+	   277       * Calculate turnspeed needed to change direction instataneously by
+	   278       * above direction change.
+	   279       */
+	>* 280      turnspeed = ((float)vad) / pl->turnresistance - pl->turnvel;
+	   281      if (turnspeed < 0) {
+	   282          turnspeed = -turnspeed;
+	   283          dir = -dir;
+	   284      }
+	   285
+	   286      /*
+	   287       * Change the turnspeed setting towards the perfect value, and limit
+	   288       * to the maximum only (limiting to the minimum causes oscillation).
+	   289       */
+	   290      if (turnspeed < pl->turnspeed) {
+	(dbx) print (pl->turnresistance - pl->turnvel)
+	0.000000

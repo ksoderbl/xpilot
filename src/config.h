@@ -1,6 +1,6 @@
-/* $Id: config.h,v 3.16 1994/07/10 19:41:09 bert Exp $
+/* $Id: config.h,v 3.18 1995/02/13 10:55:15 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -65,6 +65,13 @@
 #    define MAPDIR		LIBPREFIX ".maps]"
 #else
 #    define MAPDIR		LIBDIR "maps/"
+#endif
+#endif
+#ifndef TEXTUREDIR
+#ifdef VMS
+#    define TEXTUREDIR		LIBPREFIX ".textures]"
+#else
+#    define TEXTUREDIR		LIBDIR "textures/"
 #endif
 #endif
 #ifndef SOUNDFILE

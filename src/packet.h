@@ -1,6 +1,6 @@
-/* $Id: packet.h,v 3.30 1994/09/17 01:05:37 bert Exp $
+/* $Id: packet.h,v 3.34 1995/01/11 19:43:50 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -29,6 +29,8 @@
 /*
  * Definition of various client/server packet types.
  */
+
+/* packet types: 0 - 9 */
 #define PKT_UNDEFINED		0
 #define PKT_VERIFY		1
 #define PKT_REPLY		2
@@ -39,6 +41,8 @@
 #define PKT_END			7
 #define PKT_SELF		8
 #define PKT_DAMAGED		9
+
+/* packet types: 10 - 19 */
 #define PKT_CONNECTOR		10
 #define PKT_REFUEL		11
 #define PKT_SHIP		12
@@ -49,16 +53,20 @@
 #define PKT_BALL		17
 #define PKT_MISSILE		18
 #define PKT_SHUTDOWN		19
+
+/* packet types: 20 - 29 */
 #define PKT_STRING		20
 #define PKT_DESTRUCT		21
 #define PKT_RADAR		22
 #define PKT_TARGET		23
 #define PKT_KEYBOARD		24
 #define PKT_SEEK		25
-#define PKT_NODELAY		26
-/* #define PKT_SEND_BUFSIZE	27 */
+#define PKT_NOT_USED_26		26
+#define PKT_NOT_USED_27		27	/* was PKT_SEND_BUFSIZE */
 #define PKT_PLAYER		28
 #define PKT_SCORE		29
+
+/* packet types: 30 - 39 */
 #define PKT_FUEL		30
 #define PKT_BASE		31
 #define PKT_CANNON		32
@@ -69,16 +77,20 @@
 #define PKT_TURNSPEED_S		37
 #define PKT_TURNRESISTANCE	38
 #define PKT_TURNRESISTANCE_S	39
+
+/* packet types: 40 - 49 */
 #define PKT_WAR			40
 #define PKT_MAGIC		41
 #define PKT_RELIABLE		42
 #define PKT_ACK			43
-#define PKT_HEADER		44
+#define PKT_NOT_USED_44		44
 #define PKT_TRANS		45
 #define PKT_ACK_CANNON		46
 #define PKT_ACK_FUEL		47
 #define PKT_ACK_TARGET		48
 #define	PKT_SCORE_OBJECT	49
+
+/* packet types: 50 - 59 */
 #define PKT_AUDIO		50
 #define PKT_TALK		51
 #define PKT_TALK_ACK		52
@@ -88,20 +100,37 @@
 #define PKT_EYES		56
 #define PKT_SHAPE		57
 #define PKT_MOTD		58
+#define PKT_NOT_USED_59		59
+
+/* packet types: 60 - 69 */
+#define PKT_NOT_USED_60		60
+#define PKT_NOT_USED_61		61
+#define PKT_NOT_USED_62		62
+#define PKT_NOT_USED_63		63
+#define PKT_NOT_USED_64		64
+#define PKT_NOT_USED_65		65
+#define PKT_NOT_USED_66		66
+#define PKT_NOT_USED_67		67
 #define PKT_MODIFIERS		68
-#define PKT_FASTSHOT		69		/* replaces SHOT/TEAMSHOT */
+#define PKT_FASTSHOT		69	/* replaces SHOT/TEAMSHOT */
+
+/* packet types: 70 - 79 */
 #define PKT_THRUSTTIME		70
 #define PKT_MODIFIERBANK	71
 #define PKT_SHIELDTIME		72
 #define PKT_POINTER_MOVE	73
 #define PKT_REQUEST_AUDIO	74
+#define PKT_ASYNC_FPS		75
 #define PKT_TIMING		76
+#define PKT_NOT_USED_77		77
+#define PKT_NOT_USED_78		78
+#define PKT_NOT_USED_79		79
 
-/* status reports */
+/* status reports: 101 - 102 */
 #define PKT_FAILURE		101
 #define PKT_SUCCESS		102
 
-/* optimized packet types */
+/* optimized packet types: 128 - 255 */
 #define PKT_DEBRIS		128		/* + color + x + y */
 
 #endif

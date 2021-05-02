@@ -1,6 +1,6 @@
-/* $Id: xevent.c,v 3.44 1994/09/24 10:50:27 bert Exp $
+/* $Id: xevent.c,v 3.51 1995/01/24 17:29:27 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -22,6 +22,8 @@
  */
 
 #include <stdlib.h>
+#include <errno.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xutil.h>
@@ -29,7 +31,6 @@
 #ifdef	__apollo
 #    include <X11/ap_keysym.h>
 #endif
-#include <errno.h>
 
 #include "version.h"
 #include "config.h"
@@ -43,6 +44,9 @@
 #include "netclient.h"
 #include "widget.h"
 #include "error.h"
+#include "record.h"
+
+char xevent_version[] = VERSION;
 
 extern setup_t		*Setup;
 
@@ -119,8 +123,8 @@ static void Joystick_event(void)
 	change |= Key_set(JS_BUTTON1, (js.buttons & 2));
 	change |= Key_set(JS_LEFT,    (js.x < JS_X0 - JS_DX));
 	change |= Key_set(JS_RIGHT,   (js.x > JS_X0 + JS_DX));
-	change |= Key_set(JS_UP,      (js.x < JS_Y0 - JS_DY));
-	change |= Key_set(JS_DOWN,    (js.x > JS_Y0 + JS_DY));
+	change |= Key_set(JS_UP,      (js.y < JS_Y0 - JS_DY));
+	change |= Key_set(JS_DOWN,    (js.y > JS_Y0 + JS_DY));
 	if (change) {
 	    Net_key_change();
 	}
@@ -281,6 +285,9 @@ static bool Key_press(keys_t key)
 	    return false;
 	}
 	Pointer_control_set_state(!pointerControl);
+	return false;	/* server doesn't need to know */
+    case KEY_TOGGLE_RECORD:
+	Record_toggle();
 	return false;	/* server doesn't need to know */
     default:
 	break;

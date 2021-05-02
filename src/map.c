@@ -1,6 +1,6 @@
-/* $Id: map.c,v 3.38 1994/09/17 01:00:45 bert Exp $
+/* $Id: map.c,v 3.41 1995/01/11 19:33:48 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -38,11 +38,13 @@
 #include "map.h"
 #include "bit.h"
 
+char map_version[] = VERSION;
+
 #define GRAV_RANGE  10
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: map.c,v 3.38 1994/09/17 01:00:45 bert Exp $";
+    "@(#)$Id: map.c,v 3.41 1995/01/11 19:33:48 bert Exp $";
 #endif
 
 
@@ -208,6 +210,7 @@ void Grok_map(void)
     y = World.y - 1;
 
     Set_world_rules();
+    Set_world_items();
 
     if (BIT(World.rules->mode, TEAM_PLAY|TIMING) == (TEAM_PLAY|TIMING)) {
 	error("Cannot teamplay while in race mode -- ignoring teamplay");

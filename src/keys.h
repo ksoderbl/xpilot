@@ -1,6 +1,6 @@
-/* $Id: keys.h,v 3.25 1994/08/22 19:19:25 bert Exp $
+/* $Id: keys.h,v 3.27 1995/01/11 19:33:06 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -111,6 +111,7 @@ typedef enum {
     KEY_TOGGLE_OWNED_ITEMS,
     KEY_TOGGLE_MESSAGES,
     KEY_POINTER_CONTROL,
+    KEY_TOGGLE_RECORD,
     NUM_CLIENT_KEYS	/* The number of keys really used by the client. */
 #endif
 } keys_t;

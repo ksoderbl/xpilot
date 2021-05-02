@@ -1,6 +1,6 @@
-/* $Id: Imakefile,v 3.38 1994/09/17 00:53:43 bert Exp $
+/* $Id: Imakefile,v 3.49 1995/02/13 10:27:51 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -42,8 +42,8 @@ MANDIR = $(PREFIX)/man/man$(MANEXT)
 MANFILT = groff -Tlatin1 -man
 #MANFILT = nroff -man
 
-PROGRAMS = xpilot xpilots
-VERSION = 3.2.0
+PROGRAMS = xpilot xpilots xp-replay
+VERSION = 3.3.0
 LOCALGURU = xpilot@cs.uit.no
 
 /*
@@ -66,13 +66,20 @@ LOCALGURU = xpilot@cs.uit.no
  *			  what it does and how it works.
  *			  It needs more work by a volunteer.
  *  JOYSTICK		- joystick support for Linux 1.0, needs joystick-0.7.
+ *  PLOCKSERVER         - Use the plock(2) system call to lock the xpilots
+ *			  server into memory, i.e. to inhibit paging/swapping.
+ *			  This probably only makes sense in conjunction with
+ *			  raising the priority of the server a little, which is
+ *			  equivalent to reducing the nice value a few points.
+ *			  Note that both require special system privileges.
+ *			  Sofar this feature has only been tested on HP-UX.
  *
  * You should also set these appropriately (see config.h):
  *
  *  LOCALGURU		- define to the person in charge
  *			  of xpilot on this site.
  *  LIBDIR		- define to where you want the help-files etc.
- *			  (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
+ *			  (HELPFILE, MOTDFILE, LOGFILE, MAPDIR and TEXTUREDIR)
  */
 DEFS = -DLOCALGURU=\"$(LOCALGURU)\"  -DLIBDIR=\"$(LIBDIR)/\"
 
@@ -107,7 +114,7 @@ DEFS = -DLOCALGURU=\"$(LOCALGURU)\"  -DLIBDIR=\"$(LIBDIR)/\"
  */
 /* CDEBUGFLAGS = -g				/* General debug flag */
 /* CDEBUGFLAGS = -O				/* General optimize flag */
-/* CDEBUGFLAGS = +O3 +ESlit +FPD		/* HPUX cc optimize flags */
+/* CDEBUGFLAGS = +O3 +FPD			/* HPUX cc optimize flags (no +ESlit) */
 /* CDEBUGFLAGS = -g -z +w1			/* HPUX cc debug flags */
 /* CDEBUGFLAGS = -g2 -O2			/* SGI debug */
 /* CDEBUGFLAGS = -O2				/* SGI optimize */
@@ -147,7 +154,6 @@ HPAUDIOLIB = -lAlib
  * Miscellaneous.
  * SGI users must select their CCOPTIONS here.
  */
-USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
 /* STRDUP_OBJ = strdup.o		/* Uncomment if you lack strdup() */
 /* STRCASECMP_OBJ = strcasecmp.o	/* Uncomment if you lack strcasecmp()*/
 /* CCOPTIONS = -I/usr/local/include	/* You might need this one */
@@ -158,7 +164,8 @@ USLEEP_OBJ = usleep.o			/* Uncomment if you lack usleep() */
 /* EXTRALIB = -lsocket -lnsl		/* Solaris needs these */
 /* EXTRALIB =				/* normal */
 
-
+/* Don't need Xext.  So kill it since some people have it badly installed. */
+EXTENSIONLIB =
 
 ############### DO NOT TOUCH ANYTHING BELOW THIS LINE #####################
 
@@ -217,7 +224,7 @@ MATHLIB = -lm
 OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
         play.o player.o rules.o update.o collision.o error.o frame.o \
         robot.o option.o socklib.o timer.o saudio.o \
-        $(USLEEP_OBJ) $(STRCASECMP_OBJ) $(STRDUP_OBJ)
+        $(STRCASECMP_OBJ) $(STRDUP_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
         play.c player.c rules.c update.c collision.c error.c frame.c \
         robot.c option.c socklib.c timer.c saudio.c
@@ -226,29 +233,40 @@ SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
 #
 OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
         default.o math.o xevent.o syslimit.o error.o socklib.o caudio.o \
-	widget.o configure.o $(USLEEP_OBJ) $(AUDIOOBJ) $(STRDUP_OBJ)
+	widget.o configure.o usleep.o record.o texture.o xpmread.o \
+	$(AUDIOOBJ) $(STRDUP_OBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
         default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
-	widget.c configure.c $(AUDIOSRC)
+	widget.c configure.c usleep.c record.c texture.c xpmread.c \
+	$(AUDIOSRC)
+#
+# Playback program, xp-replay...
+#
+OBJS3 = xp-replay.o buttons.o
+SRCS3 = xp-replay.c buttons.c
 
 #
 # Make handshake and server program
 #
 ComplexProgramTarget_1(xpilots, $(AUDIOLIB), $(MATHLIB) $(EXTRALIB))
 ComplexProgramTarget_2(xpilot,  $(AUDIOLIB) $(XLIB), $(MATHLIB) $(EXTRALIB))
+ComplexProgramTarget_3(xp-replay,  $(XLIB), $(MATHLIB))
 
 #
 # Install the rest.
 #
 install::
 	@for prog in $(PROGRAMS); do \
-	    [ -r $(BINDIR)/$$prog-$(VERSION) ] && rm -f $(BINDIR)/$$prog-$(VERSION); \
+	    if [ -r $(BINDIR)/$$prog-$(VERSION) ]; then \
+		rm -f $(BINDIR)/$$prog-$(VERSION); \
+	    fi; \
 	    ( set -x ; ln $(BINDIR)/$$prog $(BINDIR)/$$prog-$(VERSION) ) \
 	done
 	@cd ../man6; for manpage in xpilot xpilots; do \
 	    ( set -x ; $(MANFILT) <$$manpage.6 >$(MANDIR)/$$manpage.$(MANEXT) ) \
 	done
 	$(MKDIRHIER) $(LIBDIR)/maps;
+	$(MKDIRHIER) $(LIBDIR)/textures;
 	@cd ../lib; for libfile in *; do \
 	    if [ -f $$libfile ]; then \
 		( rm -f $(LIBDIR)/$$libfile; \
@@ -260,6 +278,11 @@ install::
 	    ( rm -f $(LIBDIR)/maps/$$mapfile; \
 	      set -x; \
 	      $(INSTALL) -c $(INSTDATFLAGS) $$mapfile $(LIBDIR)/maps ) \
+	done
+	@cd ../lib/textures; for texturefile in *; do \
+	    ( rm -f $(LIBDIR)/textures/$$texturefile; \
+	      set -x; \
+	      $(INSTALL) -c $(INSTDATFLAGS) $$texturefile $(LIBDIR)/textures ) \
 	done
 
 #

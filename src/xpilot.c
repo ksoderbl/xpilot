@@ -1,6 +1,6 @@
-/* $Id: xpilot.c,v 3.49 1994/07/10 20:11:01 bert Exp $
+/* $Id: xpilot.c,v 3.58 1995/01/24 17:36:02 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -21,6 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef _IBMESA
+# define _SOCKADDR_LEN
+#endif
 #ifdef VMS
 #include <unixio.h>
 #include <unixlib.h>
@@ -71,10 +74,12 @@
 #include "cmw.h"
 #endif /* SUNCMW */
 
+char xpilot_version[] = VERSION;
+
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: xpilot.c,v 3.49 1994/07/10 20:11:01 bert Exp $";
+    "@(#)$Id: xpilot.c,v 3.58 1995/01/24 17:36:02 bert Exp $";
 #endif
 
 #if defined(LINUX0) || defined(VMS)
@@ -92,6 +97,7 @@ extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 extern int Join(char *server_addr, char *server_name, int port,
 		char *real, char *nick, int my_team,
 		char *display, unsigned version);
+extern int micro_delay(unsigned usec);
 
 
 #define MAX_LINE	256	/* should not be smaller than MSG_LEN */
@@ -104,9 +110,9 @@ static char		nick_name[MAX_NAME_LEN],
 			real_name[MAX_NAME_LEN],
 			server_addr[MAXHOSTNAMELEN],
 			server_name[MAXHOSTNAMELEN],
-			hostname[MAXHOSTNAMELEN],
 			display[MAX_DISP_LEN],
 			shutdown_reason[MAX_CHARS];
+char			hostname[MAXHOSTNAMELEN];
 static int		auto_connect = false,
 			list_servers = false,
 			noLocalMotd = false,
@@ -120,6 +126,7 @@ int			Argc;
 
 static int Query_all(int sockfd, int port, char *msg, int msglen);
 static int Query_fudged(int sockfd, int port, char *msg, int msglen);
+static void Check_client_versions(void);
 
 
 static void printfile(char *filename)
@@ -157,7 +164,7 @@ static bool Get_contact_message(sockbuf_t *sbuf)
 		continue;
 	    }
 	    error("DgramReceiveAny, contact message");
-	    exit(-1);
+	    exit(1);
 	}
 	sbuf->len = len;
 
@@ -209,7 +216,7 @@ static int Get_reply_message(sockbuf_t *ibuf)
 	if ((len = read(ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
 	    error("Can't read reply message from %s/%d",
 		  server_addr, server_port);
-	    exit(-1);
+	    exit(1);
 	}
 
 	ibuf->len = len;
@@ -280,6 +287,23 @@ static bool Process_commands(sockbuf_t *ibuf)
 		c = 'J';
 	}
 
+	/*
+	 * For each command to the server create a new socket and bind
+	 * the socket to the server's address and destination port.
+	 * This assures us that we only get replies to the last command sent.
+	 */
+	if (ibuf->sock != -1) {
+	    SocketClose(ibuf->sock);
+	}
+	if ((ibuf->sock = CreateDgramSocket(0)) == -1) {
+	    error("Could not create info socket");
+	    exit(1);
+	}
+	if (DgramConnect(ibuf->sock, server_addr, server_port) == -1) {
+	    error("Can't connect to server %s on port %d\n",
+		  server_addr, server_port);
+	    return (false);
+	}
 	Sockbuf_clear(ibuf);
 	Packet_printf(ibuf, "%u%s%hu", VERSION2MAGIC(server_version),
 		      real_name, GetPortNum(ibuf->sock));
@@ -301,18 +325,20 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    printf("Enter maximum number of robots: ");
 	    fflush(stdout);
 	    gets(str);
-	    if (sscanf(str, "%d", &max_robots) <= 0) {
-		max_robots = 0;
-	    } else
-		if (max_robots < 0)
-		    max_robots = 0;
+	    if (sscanf(str, "%d", &max_robots) <= 0 || max_robots < 0) {
+		printf("Invalid number of robots \"%s\".\n", str);
+		continue;
+	    }
 	    Packet_printf(ibuf, "%c%d", MAX_ROBOT_pack, max_robots);
 	    break;
 
 	case 'M':				/* Send a message to server. */
 	    printf("Enter message: ");
 	    fflush(stdout);
-	    gets(str);
+	    if (!gets(str) || !str[0]) {
+		printf("No message sent.\n");
+		continue;
+	    }
 	    str[MAX_CHARS - 1] = '\0';
 	    Packet_printf(ibuf, "%c%s", MESSAGE_pack, str);
 	    break;
@@ -322,7 +348,6 @@ static bool Process_commands(sockbuf_t *ibuf)
 	     */
 	case 'N':				/* Next server. */
 	    return (false);
-	    break;
 
 	case 'O':				/* Tune an option. */
 	    printf("Enter option: ");
@@ -458,7 +483,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    }
 	    if (write(ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
 		error("Couldn't send request to server.");
-		exit(-1);
+		exit(1);
 	    }
 	}
 
@@ -467,6 +492,7 @@ static bool Process_commands(sockbuf_t *ibuf)
 	 */
 	SetTimeout(3, 0);
 	do {
+	    Sockbuf_clear(ibuf);
 	    if (Get_reply_message(ibuf) <= 0) {
 		errno = 0;
 		error("No answer from server");
@@ -574,6 +600,12 @@ static bool Process_commands(sockbuf_t *ibuf)
 	    case E_VERSION:
 		error("We have an incompatible version says the server");
 		break;
+	    case E_NOENT:
+		error("No such variable, says the server");
+		break;
+	    case E_UNDEFINED:
+		error("Requested operation is undefined, says the server");
+		break;
 	    default:
 		error("Wrong status '%d'", status);
 		break;
@@ -620,28 +652,18 @@ static bool Process_commands(sockbuf_t *ibuf)
  */
 static bool Connect_to_server(void)
 {
-    int			socket_i;		/* Info socket */
     sockbuf_t		ibuf;			/* info buffer */
     bool		result;
 
-    if ((socket_i = CreateDgramSocket(0)) == -1) {
-	error("Could not create info socket");
-	exit(-1);
-    }
-    if (DgramConnect(socket_i, server_addr, server_port) == -1) {
-	error("Can't connect to server %s on port %d\n",
-	      server_addr, server_port);
-	SocketClose(socket_i);
-	return (false);
-    }
-    if (Sockbuf_init(&ibuf, socket_i, CLIENT_RECV_SIZE,
+    if (Sockbuf_init(&ibuf, -1, CLIENT_RECV_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for info buffer");
-	SocketClose(socket_i);
-	exit(-1);
+	exit(1);
     }
     result = Process_commands(&ibuf);
-    SocketClose(socket_i);
+    if (ibuf.sock != -1) {
+	SocketClose(ibuf.sock);
+    }
     Sockbuf_cleanup(&ibuf);
 
     return result;
@@ -691,7 +713,7 @@ static bool Contact_servers(int count, char **servers)
 	} while (!contacted && retries++ < max_retries);
     }
     else {
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count && !connected; i++) {
 	    retries = 0;
 	    contacted = 0;
 	    do {
@@ -751,6 +773,7 @@ int main(int argc, char *argv[])
     cmw_priv_init();
 #endif /* CMW */
     init_error(argv[0]);
+    Check_client_versions();
     GetLocalHostName(hostname, sizeof hostname);
 
     /*
@@ -891,7 +914,7 @@ static int Query_subnet(int sockfd,
 	 * are still transmitting packets for non-existing servers
 	 * and the server packet colliding with one of our packets.
 	 */
-	usleep((unsigned long)10000);
+	micro_delay((unsigned)10000);
     }
 
     return 0;
@@ -1154,3 +1177,80 @@ static int Query_all(int sockfd, int port, char *msg, int msglen)
 
 #endif	/* QUERY_FUDGED */
 }
+
+/*
+ * Verify that all source files making up this program have been
+ * compiled for the same version.  Too often bugs have been reported
+ * for incorrectly compiled programs.
+ */
+static void Check_client_versions(void)
+{
+#ifdef SOUND
+    extern char		audio_version[];
+#endif
+    extern char		caudio_version[],
+			client_version[],
+			configure_version[],
+			dbuff_version[],
+			default_version[],
+			error_version[],
+			join_version[],
+			math_version[],
+			net_version[],
+			netclient_version[],
+			paint_version[],
+			record_version[],
+			socklib_version[],
+			texture_version[],
+			widget_version[],
+			xevent_version[],
+			xinit_version[],
+			xpilot_version[],
+			xpmread_version[];
+    static struct file_version {
+	char		filename[16];
+	char		*versionstr;
+    } file_versions[] = {
+#ifdef SOUND
+	{ "*audio", audio_version },
+#endif
+	{ "caudio", caudio_version },
+	{ "client", client_version },
+	{ "configure", configure_version },
+	{ "dbuff", dbuff_version },
+	{ "default", default_version },
+	{ "error", error_version },
+	{ "join", join_version },
+	{ "math", math_version },
+	{ "net", net_version },
+	{ "netclient", netclient_version },
+	{ "paint", paint_version },
+	{ "record", record_version },
+	{ "socklib", socklib_version },
+	{ "texture", texture_version },
+	{ "widget", widget_version },
+	{ "xevent", xevent_version },
+	{ "xinit", xinit_version },
+	{ "xpilot", xpilot_version },
+	{ "xpmread", xpmread_version },
+    };
+    int			i;
+    int			oops = 0;
+
+    for (i = 0; i < NELEM(file_versions); i++) {
+	if (strcmp(VERSION, file_versions[i].versionstr)) {
+	    oops++;
+	    error("Source file %s.c (\"%s\") is not compiled "
+		  "for the current version (\"%s\")!",
+		  file_versions[i].filename,
+		  file_versions[i].versionstr,
+		  VERSION);
+	}
+    }
+    if (oops) {
+	error("%d version inconsistency errors, cannot continue.", oops);
+	error("Please recompile this program properly.");
+	exit(1);
+    }
+}
+

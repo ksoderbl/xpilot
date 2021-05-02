@@ -1,6 +1,6 @@
-/* $Id: bit.h,v 3.6 1994/02/07 13:19:15 bjoerns Exp $
+/* $Id: bit.h,v 3.7 1995/01/11 19:13:45 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)

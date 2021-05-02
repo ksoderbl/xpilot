@@ -11,12 +11,19 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
  * Revision History:
  * 30-Aug-90: written.
  *
+ * 07-Dec-94: Bert Gijsbers
+ *	Changed "void usleep(unsigned long)" to "int usleep(unsigned)"
+ *	as this is what it seems to be on systems which do have usleep(3) (AIX).
+ *	Changed usleep into micro_delay to forego any possible prototype clashes.
  */
 
 #ifdef VMS
+#include <unixio.h>
+#include <unixlib.h>
 #include <time.h>
 #include <socket.h>
 #else
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #endif
@@ -25,11 +32,11 @@ static char sccsid[] = "@(#)usleep.c	1.3 91/05/24 XLOCK";
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: usleep.c,v 3.7 1994/07/10 20:06:33 bert Exp $";
+    "@(#)$Id: usleep.c,v 3.9 1995/01/24 17:24:49 bert Exp $";
 #endif
 
 
-void usleep(unsigned long usec)
+int micro_delay(unsigned usec)
 {
 #if 0 /* SYSV */
     poll((struct poll *) 0, (size_t) 0, usec / 1000);	/* ms RES */
@@ -43,6 +50,8 @@ void usleep(unsigned long usec)
     struct timeval timeout;
     timeout.tv_usec = usec % (unsigned long) 1000000;
     timeout.tv_sec = usec / (unsigned long) 1000000;
-    (void) select(0, (void *) 0, (void *) 0, (void *) 0, &timeout);
+    (void) select(0, NULL, NULL, NULL, &timeout);
 #endif
+
+    return 0;
 }

@@ -1,6 +1,6 @@
-/* $Id: option.c,v 3.19 1994/07/10 19:53:27 bert Exp $
+/* $Id: option.c,v 3.25 1995/02/05 13:41:09 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -38,12 +38,13 @@
 #include "const.h"
 #include "global.h"
 #include "proto.h"
-#include "robot.h"
 #include "map.h"
 #include "defaults.h"
 
+char option_version[] = VERSION;
+
 #ifndef PATH_MAX
-#define PATH_MAX	1024
+#define PATH_MAX	1023
 #endif
 
 #define	NHASH	29
@@ -205,7 +206,7 @@ static char *getMultilineValue(char *delimiter, FILE *ifile)
     int         ich;
 
     bol = s;
-    while (1) {
+    for (;;) {
 	ich = getc(ifile);
 	if (ich == EOF) {
 	    s = (char *)realloc(s, i + 1);
@@ -362,7 +363,7 @@ static void parseLine(FILE *ifile)
     while (*value && isascii(*value) && isspace(*value))
 	++value;
     if (!*value) {
-	error("%s line %s: no value specified.\n",
+	error("%s line %d: no value specified.\n",
 	      FileName, LineNumber);
 	free(name);
 	free(head);
@@ -449,7 +450,7 @@ static int parseOldMapFile(FILE *ifile)
 #if defined(COMPRESSED_MAPS)
 static FILE *openCompressedDefaultsFile(void)
 {
-    char	buf[PATH_MAX + sizeof(ZCAT_FORMAT)];
+    char	buf[PATH_MAX + sizeof(ZCAT_FORMAT) + 1];
 
     if (access(FileName, 4) == 0) {
 	sprintf(buf, ZCAT_FORMAT, FileName);
@@ -466,7 +467,7 @@ static FILE *openDefaultsFile(char *filename)
     bool	hasmap = false;
     FILE	*ifile;
 
-    if ((FileName = (char *)malloc(PATH_MAX)) == NULL) {
+    if ((FileName = (char *)malloc(PATH_MAX + 1)) == NULL) {
 	return NULL;
     }
     strcpy(FileName, filename);
@@ -680,7 +681,5 @@ void parseOptions(void)
 	}
     }
 }
-
-
 
 

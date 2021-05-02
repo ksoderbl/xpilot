@@ -1,6 +1,6 @@
-/* $Id: netserver.h,v 3.44 1994/09/17 01:05:04 bert Exp $
+/* $Id: netserver.h,v 3.48 1995/01/11 19:41:11 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -82,7 +82,7 @@ typedef struct {
     long		start;			/* time of last state change */
     long		last_send_loops;	/* last update of reliable */
     long		reliable_offset;	/* amount of data acked */
-    long		reliable_unsend;	/* next unsend reliable byte */
+    long		reliable_unsent;	/* next unsend reliable byte */
     long		retransmit_at_loop;	/* next retransmission time */
     int			rtt_smoothed;		/* smoothed roundtrip time */
     int			rtt_dev;		/* roundtrip time deviation */
@@ -107,8 +107,8 @@ typedef struct {
     char		*nick;			/* nickname of player */
     char		*dpy;			/* display of player */
     wireobj		*ship;			/* ship shape of player */
-    char		addr[MAXHOSTNAMELEN];	/* address of players host */
-    char		host[MAXHOSTNAMELEN];	/* hostname of players host */
+    char		*addr;			/* address of players host */
+    char		*host;			/* hostname of players host */
 } connection_t;
 
 static int Compress_map(unsigned char *map, int size);
@@ -135,6 +135,7 @@ static int Receive_motd(int ind);
 static int Receive_shape(int ind);
 static int Receive_pointer_move(int ind);
 static int Receive_audio_request(int ind);
+static int Receive_fps_request(int ind);
 
 static int Send_motd(int ind);
 
@@ -147,16 +148,13 @@ int Setup_connection(char *real, char *nick, char *dpy,
 		     int team, char *addr, char *host, unsigned version);
 int Input(void);
 int Send_reply(int ind, int replyto, int result);
-int Send_self(int ind,
-    int x, int y, int vx, int vy, int dir,
-    float power, float turnspeed, float turnresistance,
-    int lock_id, int lock_dist, int lock_dir,
-    int check, int cloaks, int sensors, int mines,
-    int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int lasers, int emergency_thrusts, int emergency_shields,
-    int tractor_beams, int autopilots, int autopilotlight,
-    int num_tanks, int current_tank, int fuel_sum, int fuel_max, long status);
-int Send_modifiers(int ind, char *mods);
+int Send_self(int ind, player *pl,
+	      int lock_id,
+	      int lock_dist,
+	      int lock_dir,
+	      int autopilotlight,
+	      long status,
+	      char *mods);
 int Send_leave(int ind, int id);
 int Send_war(int ind, int robot_id, int killer_id);
 int Send_seek(int ind, int programmer_id, int robot_id, int sought_id);

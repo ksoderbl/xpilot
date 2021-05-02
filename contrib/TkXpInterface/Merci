@@ -18,6 +18,7 @@ Great thanks to my English teachers :
  - Derek C. Richardson (richards@chipmunk.cita.utoronto.ca)
  - Steve (swamp@bnr.ca)
  - Rene Boe (rene@iesd.auc.dk)
+ - Erwin Zierler (erwin@bau3.uibk.ac.at)
 
 --------------------------------
 Thanks to 
@@ -28,3 +29,13 @@ Thanks to
 Thanks to
  - Brian Kaplan (brian@brian.cica.indiana.edu) for his idea about 
 	local server window.
+
+-------------------------
+Thanks to 
+ -Christian Engstler (engstler@mat1.uibk.ac.at) for his bugs report about the
+        Max player shots scale.
+
+-------------------------
+Thanks to 
+ -Axel Grewe (grewe@kcri6a.gsi.de) for his idea about the TOPDIR in the 
+Makefile

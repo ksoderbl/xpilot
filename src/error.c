@@ -1,4 +1,4 @@
-/* $Id: error.c,v 3.6 1994/07/10 19:44:09 bert Exp $
+/* $Id: error.c,v 3.7 1994/11/12 15:14:44 bert Exp $
  *
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
@@ -9,7 +9,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: error.c,v 3.6 1994/07/10 19:44:09 bert Exp $";
+    "@(#)$Id: error.c,v 3.7 1994/11/12 15:14:44 bert Exp $";
 #endif
 
 #include <stdlib.h>
@@ -19,6 +19,8 @@ static char sourceid[] =
 #include "config.h"
 #include "const.h"
 #include "error.h"
+
+char error_version[] = VERSION;
 
 
 /*

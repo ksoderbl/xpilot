@@ -1,6 +1,6 @@
-/* $Id: object.h,v 3.50 1994/09/20 19:45:15 bert Exp $
+/* $Id: object.h,v 3.56 1995/01/24 17:06:16 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -36,37 +36,55 @@
 /* need wireobj */
 #include "draw.h"
 #endif
+#ifndef ITEM_H
+/* need NUM_ITEMS */
+#include "item.h"
+#endif
 
 /*
  * Different types of objects, including player.
+ * Robots and tanks are players but have an additional bit.
  * Smart missile, heat seaker and torpedoe can be merged into missile.
  * ECM doesn't really need an object type.
  * Lasers and pulses can be merged.
  */
-#define OBJ_PLAYER		(1UL<<0)
-#define OBJ_DEBRIS		(1UL<<1)
-#define OBJ_SPARK		(1UL<<2)
-#define OBJ_EMERGENCY_THRUST	(1UL<<3)
-#define OBJ_AUTOPILOT		(1UL<<4)
-#define OBJ_TRACTOR_BEAM	(1UL<<5)
-#define OBJ_LASER		(1UL<<6)
-#define OBJ_BALL		(1UL<<7)
-#define OBJ_SHOT		(1UL<<8)
-#define OBJ_SMART_SHOT		(1UL<<9)
-#define OBJ_CLOAKING_DEVICE	(1UL<<10)
-#define OBJ_SHIELD		(1UL<<11)
-#define OBJ_REFUEL		(1UL<<12)
-#define OBJ_REPAIR		(1UL<<13)
-#define OBJ_COMPASS		(1UL<<14)
-#define OBJ_MINE		(1UL<<15)
-#define OBJ_ECM			(1UL<<16)
-#define OBJ_TORPEDO		(1UL<<17)
-#define OBJ_HEAT_SHOT		(1UL<<18)
-#define OBJ_AFTERBURNER		(1UL<<19)
-#define OBJ_CONNECTOR		(1UL<<20)
-#define OBJ_PULSE		(1UL<<21)
-#define OBJ_EMERGENCY_SHIELD	(1UL<<22)
-#define OBJ_ITEM		(1UL<<23)
+#define OBJ_PLAYER		(1U<<0)
+#define OBJ_DEBRIS		(1U<<1)
+#define OBJ_SPARK		(1U<<2)
+#define OBJ_EMERGENCY_THRUST	(1U<<3)
+#define OBJ_AUTOPILOT		(1U<<4)
+#define OBJ_TRACTOR_BEAM	(1U<<5)
+#define OBJ_LASER		(1U<<6)
+#define OBJ_BALL		(1U<<7)
+#define OBJ_SHOT		(1U<<8)
+#define OBJ_SMART_SHOT		(1U<<9)
+#define OBJ_CLOAKING_DEVICE	(1U<<10)
+#define OBJ_SHIELD		(1U<<11)
+#define OBJ_REFUEL		(1U<<12)
+#define OBJ_REPAIR		(1U<<13)
+#define OBJ_COMPASS		(1U<<14)
+#define OBJ_MINE		(1U<<15)
+#define OBJ_ECM			(1U<<16)
+#define OBJ_TORPEDO		(1U<<17)
+#define OBJ_HEAT_SHOT		(1U<<18)
+#define OBJ_AFTERBURNER		(1U<<19)
+#define OBJ_CONNECTOR		(1U<<20)
+#define OBJ_PULSE		(1U<<21)
+#define OBJ_EMERGENCY_SHIELD	(1U<<22)
+#define OBJ_ITEM		(1U<<23)
+
+/*
+ * Some object types are overloaded.
+ */
+#define OBJ_EXT_TANK		(1U<<1)
+#define OBJ_EXT_ROBOT		(1U<<2)
+
+#define IS_TANK_IND(ind)	IS_TANK_PTR(Players[ind])
+#define IS_ROBOT_IND(ind)	IS_ROBOT_PTR(Players[ind])
+#define IS_HUMAN_IND(ind)	IS_HUMAN_PTR(Players[ind])
+#define IS_TANK_PTR(pl)		(BIT((pl)->type_ext,OBJ_EXT_TANK)==OBJ_EXT_TANK)
+#define IS_ROBOT_PTR(pl)	(BIT((pl)->type_ext,OBJ_EXT_ROBOT)==OBJ_EXT_ROBOT)
+#define IS_HUMAN_PTR(pl)	(!BIT((pl)->type_ext,OBJ_EXT_TANK|OBJ_EXT_ROBOT))
 
 /*
  * Weapons modifiers.
@@ -128,6 +146,8 @@ struct _object {
     long	status;
     modifiers	mods;			/* Modifiers to this object */
 
+    /* up to here all object types (including players!) should be the same. */
+
     float	turnspeed;		/* for missiles only */
     long	fuselife;		/* Ticks left when considered fused */
 
@@ -136,7 +156,7 @@ struct _object {
     int 	owner;			/* Who's object is this ? */
 					/* (spare for id)*/
     int		treasure;		/* Which treasure does ball belong */
-    int		new_info;
+    int		new_info;		/* smart re-lock id after confusion */
     float	length;			/* Distance between ball and player */
     float	ecm_range;		/* Range from last ecm center */
     int		spread_left;		/* how much spread time left */
@@ -153,7 +173,7 @@ typedef struct {
     long	max;			/* How much fuel can you take? */
     int		current;		/* Number of currently used tank */
     int		num_tanks;		/* Number of tanks */
-    long	tank[MAX_TANKS];
+    long	tank[1 + MAX_TANKS];	/* main fixed tank + extra tanks. */
     long	l1;			/* Fuel critical level */
     long	l2;			/* Fuel warning level */
     long	l3;			/* Fuel notify level */
@@ -164,7 +184,7 @@ struct _visibility {
     long	lastChange;
 };
 
-#define MAX_PLAYER_ECMS	16		/* Maximum simultaneous per player */
+#define MAX_PLAYER_ECMS		8	/* Maximum simultaneous per player */
 typedef struct _ecm_info ecm_info;
 struct _ecm_info {
     int		count;
@@ -205,6 +225,8 @@ typedef struct {
     int		time;
 } shove_t;
 
+struct robot_data;
+
 /* IMPORTANT
  *
  * This is the player structure, the first part MUST be similar to object_t,
@@ -228,6 +250,10 @@ struct player {
     int		count;			/* Miscellaneous timings */
     long	status;			/** Status, currently **/
     modifiers	mods;			/* Modifiers in effect */
+
+    /* up to here the player type should be the same as an object. */
+
+    int		type_ext;		/* extended type info (tank, robot) */
 
     float	turnspeed;		/* How fast player acc-turns */
     float	velocity;		/* Absolute speed */
@@ -261,28 +287,17 @@ struct player {
     int		shots;			/* Number of active shots by player */
     int		missile_rack;		/* Next missile rack to be active */
 
-    int		afterburners;		/* Number of afterburners */
-    int		extra_shots;		/* Number of extra shots / 2 */
-    int		back_shots;		/* Number of rear shots */
-    int		mines;			/* Number of mines. */
-    int		cloaks;			/* Number of cloaks. */
-    int		sensors;		/* Number of sensors */
-    int		missiles;		/* Number of missiles. */
-    int		lasers;			/* Number of laser items. */
     int		num_pulses;		/* Number of laser pulses in the air. */
     int		max_pulses;		/* Max. number of laser pulses. */
     pulse_t	*pulses;		/* Info on laser pulses. */
-    int		ecms;			/* Number of ecms. */
-    int		transporters;		/* Number of transporters */
-    int		autopilots;		/* Number of autopilots */
-    int		emergency_thrusts;	/* Number of emergency thrusts */
-    int		emergency_shields;	/* Number of emergency shields */
-    int		tractor_beams;		/* Number of tractor beams */
 
     int		emergency_thrust_left;	/* how much emergency thrust left */
     int		emergency_thrust_max;	/* maximum time left */
     int		emergency_shield_left;	/* how much emergency shield left */
     int		emergency_shield_max;	/* maximum time left */
+
+    int		item[NUM_ITEMS];	/* for each item type how many */
+
     float	auto_power_s;		/* autopilot saves of current */
     float	auto_turnacc_s;		/* power, turnacc, turnspeed and */
     float	auto_turnspeed_s;	/* turnresistance settings. Restored */
@@ -325,14 +340,12 @@ struct player {
     u_short	pseudo_team;		/* Which team is used for my tanks */
 					/* (detaching!) */
     object	*ball;
+
     /*
-     * Robot variables
+     * Pointer to robot private data (dynamically allocated).
+     * Only used in robot code.
      */
-    int		robot_mode;		/* For players->RM_NOT_ROBOT */
-    long	robot_count;		/* Misc timings, minimizes rand()use */
-    int		robot_ind;		/* Index in the robot array */
-    int		robot_lock;
-    int		robot_lock_id;
+    struct robot_data	*robot_data_ptr;
 
     /*
      * A record of who's been pushing me (a circular buffer).
@@ -356,6 +369,10 @@ struct player {
     int		key_changed;
 
     void	*audio;			/* audio private data */
+
+    int		player_fps;		/* FPS that this player can do */
+    int		player_round;		/* Divisor for player FPS calculation */
+    int		player_count;		/* Player's current frame count */
 };
 
 #endif

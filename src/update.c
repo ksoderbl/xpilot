@@ -1,6 +1,6 @@
-/* $Id: update.c,v 3.56 1994/09/20 19:48:26 bert Exp $
+/* $Id: update.c,v 3.63 1995/01/11 20:00:31 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,13 +32,14 @@
 #include "proto.h"
 #include "map.h"
 #include "score.h"
-#include "robot.h"
 #include "bit.h"
 #include "saudio.h"
 
+char update_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: update.c,v 3.56 1994/09/20 19:48:26 bert Exp $";
+    "@(#)$Id: update.c,v 3.63 1995/01/11 20:00:31 bert Exp $";
 #endif
 
 
@@ -109,14 +110,14 @@ void Emergency_thrust (int ind, int on)
 	if (pl->emergency_thrust_left <= 0) {
 	    pl->emergency_thrust_left = emergency_thrust_time;
 	    pl->emergency_thrust_max = emergency_thrust_time;
-	    pl->emergency_thrusts--;
+	    pl->item[ITEM_EMERGENCY_THRUST]--;
 	}
 	SET_BIT(pl->used, OBJ_EMERGENCY_THRUST);
 	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_ON_SOUND);
     } else {
 	CLR_BIT(pl->used, OBJ_EMERGENCY_THRUST);
 	if (pl->emergency_thrust_left <= 0) {
-	    if (pl->emergency_thrusts <= 0)
+	    if (pl->item[ITEM_EMERGENCY_THRUST] <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
 	}
 	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_THRUST_OFF_SOUND);
@@ -132,17 +133,21 @@ void Emergency_shield (int ind, int on)
     const int	emergency_shield_time = 4 * FPS;	/* 8 -> 4 */
 
     if (on) {
-	if (pl->emergency_shield_left <= 0) {
-	    pl->emergency_shield_left = emergency_shield_time;
-	    pl->emergency_shield_max = emergency_shield_time;
-	    pl->emergency_shields--;
+	if (BIT(pl->have, OBJ_EMERGENCY_SHIELD)
+	    && !BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
+	    if (pl->emergency_shield_left <= 0) {
+		pl->emergency_shield_left = emergency_shield_time;
+		pl->emergency_shield_max = emergency_shield_time;
+		pl->item[ITEM_EMERGENCY_SHIELD]--;
+	    }
+	    SET_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
+	    SET_BIT(pl->have, OBJ_SHIELD);
+	    sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
 	}
-	SET_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
-	sound_play_sensors(pl->pos.x, pl->pos.y, EMERGENCY_SHIELD_ON_SOUND);
     } else {
 	CLR_BIT(pl->used, OBJ_EMERGENCY_SHIELD);
 	if (pl->emergency_shield_left <= 0) {
-	    if (pl->emergency_shields <= 0)
+	    if (pl->item[ITEM_EMERGENCY_SHIELD] <= 0)
 		CLR_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
 	}
 	if (!BIT(DEF_HAVE, OBJ_SHIELD)) {
@@ -211,19 +216,19 @@ static void do_Autopilot (player *pl)
      * the autopilot code is used by the pause code.
      */
     delta = auto_pilot_settings_delta;
-    if (pl->autopilots)
-	delta *= pl->autopilots;
+    if (pl->item[ITEM_AUTOPILOT])
+	delta *= pl->item[ITEM_AUTOPILOT];
 
     if (BIT(pl->used, OBJ_EMERGENCY_THRUST)) {
 	afterburners = MAX_AFTERBURNER;
 	if (delta < emergency_thrust_settings_delta)
 	    delta = emergency_thrust_settings_delta;
     } else {
-	afterburners = pl->afterburners;
+	afterburners = pl->item[ITEM_AFTERBURNER];
     }
 
-    ix = pl->pos.x/BLOCK_SZ;
-    iy = pl->pos.y/BLOCK_SZ;
+    ix = (int)(pl->pos.x / BLOCK_SZ);
+    iy = (int)(pl->pos.y / BLOCK_SZ);
     gx = World.gravity[ix][iy].x;
     gy = World.gravity[ix][iy].y;
 
@@ -413,7 +418,7 @@ void Update_objects(void)
     /*
      * Update robots.
      */
-    Update_robots();
+    Robot_update();
 
     /*
      * Autorepeat fire, must unfortunately be done here, not in
@@ -438,7 +443,7 @@ void Update_objects(void)
 	    && World.items[i].chance > 0
 	    && rand()%World.items[i].chance == 0) {
 
-	    Place_item(i, 0, 0);
+	    Place_item(i, (player *)NULL);
 	}
 
     /*
@@ -608,7 +613,9 @@ void Update_objects(void)
 		}
 	    }
 	    if (BIT(pl->used, OBJ_SHIELD) == 0) {
-		CLR_BIT(pl->have, OBJ_SHIELD);
+		if (!BIT(pl->have, OBJ_EMERGENCY_SHIELD)) {
+		    CLR_BIT(pl->have, OBJ_SHIELD);
+		}
 		pl->shield_time = 0;
 	    }
 	}
@@ -690,8 +697,8 @@ void Update_objects(void)
 
 		pl->visibility[j].lastChange = loops;
 		pl->visibility[j].canSee
-		    = rand() % (pl->sensors + 1)
-			> (rand() % (Players[j]->cloaks + 1));
+		    = rand() % (pl->item[ITEM_SENSOR] + 1)
+			> (rand() % (Players[j]->item[ITEM_CLOAK] + 1));
 	    }
 	}
 
@@ -777,8 +784,9 @@ void Update_objects(void)
 	if (BIT(pl->status, THRUSTING)) {
 	    float power = pl->power;
 	    float f = pl->power * 0.0008;	/* 1/(FUEL_SCALE*MIN_POWER) */
-	    int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST) ? MAX_AFTERBURNER
-		     : pl->afterburners);
+	    int a = (BIT(pl->used, OBJ_EMERGENCY_THRUST)
+		     ? MAX_AFTERBURNER
+		     : pl->item[ITEM_AFTERBURNER]);
 	    float inert = pl->mass;
 
 	    if (a) {
@@ -990,7 +998,7 @@ void Update_objects(void)
 	if (BIT(pl->status, KILLED)) {
 	    Throw_items(pl);
 
-	    Detonate_items(pl);
+	    Detonate_items(i);
 
 	    Kill_player(i);
 	}

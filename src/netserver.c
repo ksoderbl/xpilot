@@ -1,6 +1,6 @@
-/* $Id: netserver.c,v 3.99 1994/09/19 21:39:56 bert Exp $
+/* $Id: netserver.c,v 3.106 1995/01/11 19:39:46 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -97,6 +97,7 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #ifndef  VMS
 #include <sys/param.h>
@@ -104,6 +105,12 @@
 #if defined(__hpux) || defined(VMS)
 #include <time.h>
 #else
+#if defined(_AIX) && !defined(_BSD_INCLUDES)
+#define _BSD_INCLUDES
+#endif
+#ifdef sco
+#include <time.h>
+#endif
 #include <sys/time.h>
 #endif
 #ifdef VMS
@@ -132,11 +139,12 @@
 #include "packet.h"
 #include "setup.h"
 #undef NETSERVER_C
-#include "robot.h"
 #include "saudio.h"
 #ifdef sco
 #undef select		/* Xos.h defines select as XSelect */
 #endif
+
+char netserver_version[] = VERSION;
 
 #define MAX_SELECT_FD			(sizeof(int) * 8 - 1)
 #define MAX_MOTD_CHUNK			512
@@ -377,6 +385,7 @@ void Init_receive(void)
     login_receive[PKT_MOTD]			= Receive_motd;
     login_receive[PKT_SHAPE]			= Receive_shape;
     login_receive[PKT_REQUEST_AUDIO]		= Receive_audio_request;
+    login_receive[PKT_ASYNC_FPS]		= Receive_fps_request;
 
     playing_receive[PKT_ACK]			= Receive_ack;
     playing_receive[PKT_VERIFY]			= Receive_discard;
@@ -399,6 +408,7 @@ void Init_receive(void)
     playing_receive[PKT_SHAPE]			= Receive_shape;
     playing_receive[PKT_POINTER_MOVE]		= Receive_pointer_move;
     playing_receive[PKT_REQUEST_AUDIO]		= Receive_audio_request;
+    playing_receive[PKT_ASYNC_FPS]		= Receive_fps_request;
 }
 
 /*
@@ -436,11 +446,8 @@ int Setup_net_server(int maxconn, int contsock)
  * Cleanup a connection.  The client may not know yet that
  * it is thrown out of the game so we send it a quit packet.
  * We send it twice because of UDP it could get lost.
- * Because there may be many reasons why a connection may
- * need to be destroyed we print the source file and line
- * number in order to be able to analyse any problems easily.
- * Since 3.0.6 the client also receives a short reason why the
- * connection was terminated.
+ * Since 3.0.6 the client receives a short message
+ * explaining why the connection was terminated.
  */
 void Destroy_connection(int ind, char *reason)
 {
@@ -448,7 +455,7 @@ void Destroy_connection(int ind, char *reason)
     int			id,
 			len,
 			sock;
-    char		pkt[MAX_NAME_LEN];
+    char		pkt[MAX_CHARS];
 
     if (connp->state == CONN_FREE) {
 	errno = 0;
@@ -466,7 +473,10 @@ void Destroy_connection(int ind, char *reason)
     }
 #ifndef SILENT
     printf("Goodbye %s=%s@%s|%s (\"%s\")\n",
-	    connp->nick, connp->real, connp->host, connp->dpy,
+	    connp->nick ? connp->nick : "",
+	    connp->real ? connp->real : "",
+	    connp->host ? connp->host : "",
+	    connp->dpy ? connp->dpy : "",
 	    reason);
 #endif
     connp->state = CONN_FREE;
@@ -484,6 +494,12 @@ void Destroy_connection(int ind, char *reason)
     }
     if (connp->dpy != NULL) {
 	free(connp->dpy);
+    }
+    if (connp->addr != NULL) {
+	free(connp->addr);
+    }
+    if (connp->host != NULL) {
+	free(connp->host);
     }
     Sockbuf_cleanup(&connp->w);
     Sockbuf_cleanup(&connp->r);
@@ -558,8 +574,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
 	return -1;
     }
     if (sock >= MAX_SELECT_FD) {
-	/* Not handled with our current oldfashioned use of select(2).
-	 * Tell the client that we are old and lazy. */
+	/* Not handled with our current oldfashioned use of select(2). */
 	errno = 0;
 	error("Socket filedescriptor too big");
 	close(sock);
@@ -595,6 +610,8 @@ int Setup_connection(char *real, char *nick, char *dpy,
     connp->real = strdup(real);
     connp->nick = strdup(nick);
     connp->dpy = strdup(dpy);
+    connp->addr = strdup(addr);
+    connp->host = strdup(host);
     connp->ship = NULL;
     connp->team = team;
     connp->version = version;
@@ -604,7 +621,7 @@ int Setup_connection(char *real, char *nick, char *dpy,
     connp->id = -1;
     connp->last_key_change = 0;
     connp->reliable_offset = 0;
-    connp->reliable_unsend = 0;
+    connp->reliable_unsent = 0;
     connp->last_send_loops = 0;
     connp->retransmit_at_loop = 0;
     connp->rtt_retransmit = DEFAULT_RETRANSMIT;
@@ -619,15 +636,17 @@ int Setup_connection(char *real, char *nick, char *dpy,
     connp->view_height = DEF_VIEW_SIZE;
     connp->debris_colors = 0;
     connp->spark_rand = DEF_SPARK_RAND;
-    strncpy(connp->addr, addr, sizeof(connp->addr) - 1);
-    strncpy(connp->host, host, sizeof(connp->host) - 1);
     if (connp->w.buf == NULL
 	|| connp->r.buf == NULL
 	|| connp->c.buf == NULL
 	|| connp->real == NULL
 	|| connp->nick == NULL
-	|| connp->dpy == NULL) {
+	|| connp->dpy == NULL
+	|| connp->addr == NULL
+	|| connp->host == NULL
+	) {
 	error("Not enough memory for connection");
+	/* socket is not yet connected, but it doesn't matter much. */
 	Destroy_connection(free_conn_index, "no memory");
 	return -1;
     }
@@ -649,8 +668,6 @@ static int Handle_listening(int ind)
 			real[MAX_NAME_LEN];
 
     if (connp->state != CONN_LISTENING) {
-	errno = 0;
-	error("Connection not in listening state");
 	Destroy_connection(ind, "not listening");
 	return -1;
     }
@@ -735,6 +752,7 @@ static int Handle_setup(int ind)
 	Destroy_connection(ind, "not setup");
 	return -1;
     }
+
     if (connp->setup == 0) {
 	n = Packet_printf(&connp->c,
 			  "%ld" "%ld%hd" "%hd%hd" "%hd%hd" "%s%s",
@@ -751,6 +769,7 @@ static int Handle_setup(int ind)
     }
     else if (connp->setup < Setup->setup_size) {
 	if (connp->c.len > 0) {
+	    /* If there is still unacked reliable data test for acks. */
 	    if ((n = Handle_input(ind)) == -1) {
 		return -1;
 	    }
@@ -759,7 +778,7 @@ static int Handle_setup(int ind)
     if (connp->setup < Setup->setup_size) {
 	len = MIN(connp->c.size, 4096) - connp->c.len;
 	if (len <= 0) {
-	    /* Wait for ack */
+	    /* Wait for acknowledgement of previously transmitted data. */
 	    return 0;
 	}
 	if (len > Setup->setup_size - connp->setup) {
@@ -795,6 +814,7 @@ static int Handle_login(int ind)
     connection_t	*connp = &Conn[ind];
     player		*pl;
     int			i,
+			war_on_id,
 			conn_bit;
     char		msg[MSG_LEN];
 
@@ -809,9 +829,6 @@ static int Handle_login(int ind)
 	return -1;
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
-	if (connp->team == TEAM_NOT_SET) {
-	    connp->team = 0;
-	}
 	if (connp->team < 0 || connp->team >= MAX_TEAMS) {
 	    errno = 0;
 	    error("Invalid team %d", connp->team);
@@ -883,7 +900,7 @@ static int Handle_login(int ind)
 	Send_player(pl->conn, Players[i]->id);
 	Send_score(pl->conn, Players[i]->id,
 		   Players[i]->score, Players[i]->life, Players[i]->mychar);
-	if (Players[i]->robot_mode != RM_OBJECT) {
+	if (!IS_TANK_IND(i)) {
 	    Send_base(pl->conn, Players[i]->id, Players[i]->home_base);
 	}
     }
@@ -900,10 +917,10 @@ static int Handle_login(int ind)
 	/*
 	 * And tell him about the relationships others have with eachother.
 	 */
-	else if (Players[i]->robot_mode != RM_NOT_ROBOT
-	    && Players[i]->robot_mode != RM_OBJECT
-	    && BIT(Players[i]->robot_lock, LOCK_PLAYER)) {
-	    Send_war(pl->conn, Players[i]->id, Players[i]->robot_lock_id);
+	else if (IS_ROBOT_IND(i)) {
+	    if ((war_on_id = Robot_war_on_player(i)) != -1) {
+		Send_war(pl->conn, Players[i]->id, war_on_id);
+	    }
 	}
     }
 
@@ -1233,23 +1250,19 @@ int Send_reply(int ind, int replyto, int result)
  * Send all frame data related to the player self and his HUD.
  */
 int Send_self(int ind,
-    int x, int y, int vx, int vy, int dir,
-    float power, float turnspeed, float turnresistance,
-    int lock_id, int lock_dist, int lock_dir,
-    int check, int cloaks, int sensors, int mines,
-    int missiles, int ecms, int transporters, int extra_shots, int back_shots,
-    int afterburners, int lasers, int emergency_thrusts, int emergency_shields,
-    int tractor_beams, int autopilots, int autopilotlight,
-    int num_tanks, int current_tank, int fuel_sum, int fuel_max, long status)
+	      player *pl,
+	      int lock_id,
+	      int lock_dist,
+	      int lock_dir,
+	      int autopilotlight,
+	      long status,
+	      char *mods)
 {
     connection_t	*connp = &Conn[ind];
-    int			pw, ts, tr, n;
+    int			n;
     u_byte		stat = status;
     int			sbuf_len = connp->w.len;
 
-    pw = (int) (power + 0.5);
-    ts = (int) (turnspeed + 0.5);
-    tr = (int) (turnresistance * 255.0 + 0.5);
     n = Packet_printf(&connp->w,
 		      "%c"
 		      "%hd%hd%hd%hd%c"
@@ -1263,19 +1276,35 @@ int Send_self(int ind,
 		      "%c%c"
 		      ,
 		      PKT_SELF,
-		      x, y, vx, vy, dir,
-		      pw, ts, tr,
-		      lock_id, lock_dist, lock_dir, check,
+		      (int) (pl->pos.x + 0.5), (int) (pl->pos.y + 0.5),
+		      (int) pl->vel.x, (int) pl->vel.y,
+		      pl->dir,
+		      (int) (pl->power + 0.5),
+		      (int) (pl->turnspeed + 0.5),
+		      (int) (pl->turnresistance * 255.0 + 0.5),
+		      lock_id, lock_dist, lock_dir,
+		      pl->check,
 
-		      cloaks, sensors, mines, missiles, ecms,
+		      pl->item[ITEM_CLOAK],
+		      pl->item[ITEM_SENSOR],
+		      pl->item[ITEM_MINE],
+		      pl->item[ITEM_MISSILE],
+		      pl->item[ITEM_ECM],
 
-		      transporters, extra_shots, back_shots, afterburners,
-		      num_tanks,
+		      pl->item[ITEM_TRANSPORTER],
+		      pl->item[ITEM_WIDEANGLE],
+		      pl->item[ITEM_REARSHOT],
+		      pl->item[ITEM_AFTERBURNER],
+		      pl->fuel.num_tanks,
 
-		      lasers, emergency_thrusts, tractor_beams, autopilots,
+		      pl->item[ITEM_LASER],
+		      pl->item[ITEM_EMERGENCY_THRUST],
+		      pl->item[ITEM_TRACTOR_BEAM],
+		      pl->item[ITEM_AUTOPILOT],
 
-		      current_tank,
-		      fuel_sum >> FUEL_SCALE_BITS, fuel_max >> FUEL_SCALE_BITS,
+		      pl->fuel.current,
+		      pl->fuel.sum >> FUEL_SCALE_BITS,
+		      pl->fuel.max >> FUEL_SCALE_BITS,
 
 		      connp->view_width, connp->view_height,
 		      connp->debris_colors,
@@ -1290,21 +1319,17 @@ int Send_self(int ind,
     if (connp->version >= 0x3200) {
 	n = Packet_printf(&connp->w,
 			  "%c",
-			  emergency_shields);
+			  pl->item[ITEM_EMERGENCY_SHIELD]);
 	if (n <= 0) {
 	    connp->w.len = sbuf_len;
 	}
     }
+    n = Packet_printf(&Conn[ind].w, "%c%s", PKT_MODIFIERS, mods);
+    if (n <= 0) {
+	connp->w.len = sbuf_len;
+    }
 
     return n;
-}
-
-/*
- * Send the current weapon modifiers in effect.
- */
-int Send_modifiers(int ind, char *mods)
-{
-    return Packet_printf(&Conn[ind].w, "%c%s", PKT_MODIFIERS, mods);
 }
 
 /*
@@ -1411,7 +1436,7 @@ int Send_score(int ind, int id, int score, int life, int mychar)
 }
 
 /*
- * Send the new score for some player to a client.
+ * Send the new race info for some player to a client.
  */
 int Send_timing(int ind, int id, int check, int round)
 {
@@ -1446,6 +1471,9 @@ int Send_base(int ind, int id, int num)
     return Packet_printf(&connp->c, "%c%hd%hu", PKT_BASE, id, num);
 }
 
+/*
+ * Send the amount of fuel in a fuelstation.
+ */
 int Send_fuel(int ind, int num, int fuel)
 {
     return Packet_printf(&Conn[ind].w, "%c%hu%hu", PKT_FUEL,
@@ -1600,8 +1628,8 @@ int Send_trans(int ind, int x1, int y1, int x2, int y2)
 			 PKT_TRANS, x1, y1, x2, y2);
 }
 
-int Send_ship(int ind, int x, int y, int id, int dir, int shield, int cloak,
-	      int emergency_shield)
+int Send_ship(int ind, int x, int y, int id, int dir,
+	      int shield, int cloak, int emergency_shield)
 {
     return Packet_printf(&Conn[ind].w,
 			 "%c%hd%hd%hd" "%c" "%c",
@@ -1680,11 +1708,6 @@ int Send_message(int ind, char *msg)
 	errno = 0;
 	error("Connection not ready for message (%d,%d)",
 	    connp->state, connp->id);
-	return 0;
-    }
-    if (strlen(msg) >= MSG_LEN) {
-	errno = 0;
-	error("Output message too big (%s)", msg);
 	return 0;
     }
     return Packet_printf(&connp->c, "%c%S", PKT_MESSAGE, msg);
@@ -1893,7 +1916,16 @@ static int Receive_power(int ind)
 }
 
 /*
- * This thing still is not finished, but it works better than in PL 0 I hope.
+ * Send the reliable data.
+ * If the client is in the receive-frame-updates state then
+ * all reliable data is piggybacked at the end of the
+ * frame update packets.  (Except maybe for the MOTD data, which
+ * could be transmitted in its own packets since MOTDs can be big.)
+ * Otherwise if the client is not actively playing yet then
+ * the reliable data is sent in its own packets since there
+ * is no other data to combine it with.
+ *
+ * This thing still is not finished, but it works better than in 3.0.0 I hope.
  */
 int Send_reliable(int ind)
 {
@@ -1931,7 +1963,7 @@ int Send_reliable(int ind)
 	/*
 	 * It is no time to retransmit yet.
 	 */
-	if (max_todo <= connp->reliable_unsend - connp->reliable_offset
+	if (max_todo <= connp->reliable_unsent - connp->reliable_offset
 			+ min_send_size
 	    || connp->w.len == 0) {
 	    /*
@@ -1944,6 +1976,8 @@ int Send_reliable(int ind)
     else if (connp->retransmit_at_loop != 0) {
 	/*
 	 * Timeout.
+	 * Either our packet or the acknowledgement got lost,
+	 * so retransmit.
 	 */
 	connp->acks >>= 1;
     }
@@ -2003,8 +2037,8 @@ int Send_reliable(int ind)
 	connp->retransmit_at_loop = loops + connp->rtt_retransmit;
     }
 
-    if (rel_off > connp->reliable_unsend) {
-	connp->reliable_unsend = rel_off;
+    if (rel_off > connp->reliable_unsent) {
+	connp->reliable_unsent = rel_off;
     }
 
     return (max_todo - todo);
@@ -2103,7 +2137,7 @@ static int Receive_ack(int ind)
     else {
 	connp->acks++;
     }
-    if (connp->reliable_offset >= connp->reliable_unsend) {
+    if (connp->reliable_offset >= connp->reliable_unsent) {
 	/*
 	 * All reliable data has been sent and acked.
 	 */
@@ -2136,7 +2170,7 @@ static int Receive_discard(int ind)
 
     errno = 0;
     error("Discarding packet %d while in state %02x",
-	connp->r.ptr[0], connp->state);
+	  connp->r.ptr[0], connp->state);
     connp->r.ptr = connp->r.buf + connp->r.len;
 
     return 0;
@@ -2171,7 +2205,7 @@ static int Receive_ack_cannon(int ind)
 	Destroy_connection(ind, "bad cannon ack");
 	return -1;
     }
-    if (loops_ack >= World.cannon[num].last_change) {
+    if (loops_ack > World.cannon[num].last_change) {
 	SET_BIT(World.cannon[num].conn_mask, 1 << ind);
     }
     return 1;
@@ -2196,7 +2230,7 @@ static int Receive_ack_fuel(int ind)
 	Destroy_connection(ind, "bad fuel ack");
 	return -1;
     }
-    if (loops_ack >= World.fuel[num].last_change) {
+    if (loops_ack > World.fuel[num].last_change) {
 	SET_BIT(World.fuel[num].conn_mask, 1 << ind);
     }
     return 1;
@@ -2221,7 +2255,19 @@ static int Receive_ack_target(int ind)
 	Destroy_connection(ind, "bad target ack");
 	return -1;
     }
-    if (loops_ack >= World.targets[num].last_change) {
+    /*
+     * Because the "loops" value as received by the client as part
+     * of a frame update is 1 higher than the actual change to the
+     * target in collision.c a valid map object change
+     * acknowledgement must be at least 1 higher.
+     * That's why we should use the '>' symbol to compare
+     * and not the '>=' symbol.
+     * The same applies to cannon and fuelstation updates.
+     * This fix was discovered for 3.2.7, previously some
+     * destroyed targets could have been displayed with
+     * a diagonal cross through them.
+     */
+    if (loops_ack > World.targets[num].last_change) {
 	SET_BIT(World.targets[num].conn_mask, 1 << ind);
 	CLR_BIT(World.targets[num].update_mask, 1 << ind);
     }
@@ -2234,7 +2280,6 @@ static int Receive_ack_target(int ind)
  * If the string does not match one team or one player the message is not sent.
  * If no colon, the message is general.
  */
-
 static void Handle_talk(int ind, char *str)
 {
     connection_t	*connp = &Conn[ind];
@@ -2276,9 +2321,27 @@ static void Handle_talk(int ind, char *str)
     else if (strcasecmp(str, "god") == 0) {
 	FILE *fp = fopen(LOGFILE, "a");
 	if (fp) {
-	    fprintf(fp, "[%s](%s@%s(%s)|%s): %s\n",
-		    pl->name, pl->realname, connp->host, connp->addr, connp->dpy, cp);
+	    time_t		now;
+	    struct tm		*tmp;
+	    static char		month_names[13][4] = {
+				    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+				    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+				    "Bug"
+				};
+
+	    time(&now);
+	    tmp = localtime(&now);
+	    fprintf(fp,
+		    "[%s]{%s@%s(%s)|%s}(%02d %s %02d:%02d:%02d):\n"
+		    "\t%s\n",
+		    pl->name,
+		    pl->realname, connp->host, connp->addr, connp->dpy,
+		    tmp->tm_mday, month_names[tmp->tm_mon],
+		    tmp->tm_hour, tmp->tm_min, tmp->tm_sec,
+		    cp);
 	    fclose(fp);
+	    sprintf(msg + strlen(msg), ":[%s]", "GOD");
+	    Set_player_message(pl, msg);
 	}
     }
     else {						/* Player message */
@@ -2385,7 +2448,7 @@ static int Receive_modifier_bank(int ind)
     modifiers		mods;
     int			n;
 
-    if ((n = Packet_scanf(&connp->r, "%c%c%s", &ch, &bank, &str)) <= 0) {
+    if ((n = Packet_scanf(&connp->r, "%c%c%s", &ch, &bank, str)) <= 0) {
 	if (n == -1) {
 	    Destroy_connection(ind, "read modbank");
 	}
@@ -2618,6 +2681,36 @@ static int Receive_pointer_move(int ind)
     return 1;
 }
 
+static int Receive_fps_request(int ind)
+{
+    connection_t	*connp = &Conn[ind];
+    player		*pl;
+    int			n;
+    unsigned char	ch;
+    unsigned char	fps;
+
+    if ((n = Packet_scanf(&connp->r, "%c%c", &ch, &fps)) <= 0) {
+	if (n == -1) {
+	    Destroy_connection(ind, "read error");
+	}
+	return n;
+    }
+    if (connp->id != -1) {
+	pl = Players[GetInd[connp->id]];
+	pl->player_fps = fps;
+	if (fps > FPS) pl->player_fps = FPS;
+	if (fps < (FPS / 2)) pl->player_fps = FPS / 2;
+	if (fps == 0) pl->player_fps = FPS;
+	n = FPS - fps;
+	if (n <= 0) {
+	    pl->player_count = 0;
+	} else {
+	    pl->player_count = FPS / n;
+	}
+    }
+
+    return 1;
+}
 static int Receive_audio_request(int ind)
 {
     connection_t	*connp = &Conn[ind];

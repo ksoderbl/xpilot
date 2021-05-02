@@ -1,6 +1,6 @@
-/* $Id: client.h,v 3.51 1994/09/17 00:55:43 bert Exp $
+/* $Id: client.h,v 3.56 1995/01/17 14:01:18 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -33,23 +33,25 @@
 #include "item.h"
 #endif
 
-#define SHOW_HUD_INSTRUMENTS	(1<<0)
-#define SHOW_HUD_VERTICAL	(1<<1)
-#define SHOW_HUD_HORIZONTAL	(1<<2)
-#define SHOW_FUEL_METER		(1<<3)
-#define SHOW_FUEL_GAUGE		(1<<4)
-#define SHOW_TURNSPEED_METER	(1<<5)
-#define SHOW_POWER_METER	(1<<6)
-#define SHOW_SHIP_NAME		(1<<7)
-#define SHOW_SLIDING_RADAR	(1<<8)
-#define SHOW_OUTLINE_WORLD	(1<<9)
-#define SHOW_PACKET_SIZE_METER	(1<<10)
-#define SHOW_PACKET_LOSS_METER	(1<<11)
-#define SHOW_PACKET_DROP_METER	(1<<12)
-#define SHOW_CLOCK		(1<<13)
-#define SHOW_ITEMS		(1<<14)
-#define SHOW_MESSAGES		(1<<15)
-#define SHOW_MINE_NAME		(1<<16)
+#define SHOW_HUD_INSTRUMENTS	(1L << 0)
+#define SHOW_HUD_VERTICAL	(1L << 1)
+#define SHOW_HUD_HORIZONTAL	(1L << 2)
+#define SHOW_FUEL_METER		(1L << 3)
+#define SHOW_FUEL_GAUGE		(1L << 4)
+#define SHOW_TURNSPEED_METER	(1L << 5)
+#define SHOW_POWER_METER	(1L << 6)
+#define SHOW_SHIP_NAME		(1L << 7)
+#define SHOW_SLIDING_RADAR	(1L << 8)
+#define SHOW_PACKET_SIZE_METER	(1L << 10)
+#define SHOW_PACKET_LOSS_METER	(1L << 11)
+#define SHOW_PACKET_DROP_METER	(1L << 12)
+#define SHOW_CLOCK		(1L << 13)
+#define SHOW_ITEMS		(1L << 14)
+#define SHOW_MESSAGES		(1L << 15)
+#define SHOW_MINE_NAME		(1L << 16)
+#define SHOW_OUTLINE_WORLD	(1L << 17)
+#define SHOW_FILLED_WORLD	(1L << 18)
+#define SHOW_TEXTURED_WALLS	(1L << 19)
 
 #define PACKET_LOSS		0
 #define PACKET_DROP		1
@@ -59,18 +61,13 @@
 
 #define MAX_SPARK_SIZE		8
 #define MIN_SPARK_SIZE		1
-#define DEF_SPARK_SIZE		2
 #define MAX_MAP_POINT_SIZE	8
 #define MIN_MAP_POINT_SIZE	0
-#define DEF_MAP_POINT_SIZE	2
 #define MAX_SHOT_SIZE		8
 #define MIN_SHOT_SIZE		1
-#define DEF_SHOT_SIZE		3
 #define MAX_TEAMSHOT_SIZE	8
 #define MIN_TEAMSHOT_SIZE	1
-#define DEF_TEAMSHOT_SIZE	2
 
-#define DEF_SHOW_ITEMS_TIME	2.0
 #define MIN_SHOW_ITEMS_TIME	0.0
 #define MAX_SHOW_ITEMS_TIME	10.0
 
@@ -210,6 +207,9 @@ extern int	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
 extern int	initialPointerControl;	/* Start by using mouse for control? */
 
+extern int	maxFPS;			/* Client's own FPS */
+extern int 	oldMaxFPS;
+
 #ifdef SOUND
 extern char 	sounds[MAX_CHARS];	/* audio mappings */
 extern char 	audioServer[MAX_CHARS];	/* audio server */
@@ -245,6 +245,7 @@ int Client_init(char *server, unsigned server_version);
 int Client_setup(void);
 void Client_cleanup(void);
 int Client_start(void);
+int Client_fps_request(void);
 int Client_power(void);
 int Client_fd(void);
 int Client_input(int);
@@ -256,6 +257,7 @@ void Set_toggle_shield(int onoff);
 int xevent(int);
 int Key_init(void);
 int Key_update(void);
+int Check_client_fps(void);
 
 #endif
 

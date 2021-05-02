@@ -1,6 +1,6 @@
-/* $Id: proto.h,v 3.40 1994/09/17 01:08:25 bert Exp $
+/* $Id: proto.h,v 3.47 1995/01/11 19:51:18 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -71,6 +71,8 @@ extern float Wrap_length(float dx, float dy);
 /*
  * Prototypes for math.c
  */
+extern int ON(char *optval);
+extern int OFF(char *optval);
 extern int mod(int x, int y);
 extern int f2i(float f);
 extern float findDir(float x, float y);
@@ -79,10 +81,11 @@ extern void Make_table(void);
 
 
 /*
- * Prototypes for parser.c
+ * Prototypes for cmdline.c
  */
 extern int Parse_list(int *index, char *buf);
 extern void Parser(int argc, char *argv[]);
+extern int Tune_option(char *opt, char *val);
 
 /*
  * Prototypes for play.c
@@ -99,9 +102,9 @@ extern void Item_damage(int ind, float prob);
 extern void Alloc_shots(int number);
 extern void Free_shots(void);
 extern void Tank_handle_detach(player*);
-extern void Add_fuel(pl_fuel_t*,long);
-extern void Update_tanks(pl_fuel_t*);
-extern void Place_item(int type, player*, int);
+extern void Add_fuel(pl_fuel_t*, long);
+extern void Update_tanks(pl_fuel_t *);
+extern void Place_item(int type, player *pl);
 extern void Place_mine(int ind);
 extern void Place_moving_mine(int ind);
 extern void Place_general_mine(int ind, long status, float x, float y,
@@ -138,7 +141,7 @@ extern void Make_debris(
 extern void Explode(int ind);
 extern void Explode_fighter(int ind);
 extern void Throw_items(player*);
-extern void Detonate_items(player*);
+extern void Detonate_items(int ind);
 
 /*
  * Prototypes for player.c
@@ -146,11 +149,12 @@ extern void Detonate_items(player*);
 extern void Pick_startpos(int ind);
 extern void Go_home(int ind);
 extern void Compute_sensor_range(player *);
+extern void Player_add_tank(int ind, long tank_fuel);
+extern void Player_remove_tank(int ind, int which_tank);
 extern void Init_player(int ind, wireobj *ship);
 extern void Alloc_players(int number);
 extern void Free_players(void);
 extern void Update_score_table(void);
-/*extern void Reset_all_players(void);*/
 extern void Check_team_members(int);
 extern void Check_team_treasures(int);
 extern void Compute_game_status(void);
@@ -162,16 +166,25 @@ extern void Player_death_reset(int ind);
 /*
  * Prototypes for robot.c
  */
-extern void Init_robot(int ind);
-extern void Update_robots(void);
+extern void Robot_init(void);
+extern void Robot_delete(int ind, int kicked);
+extern void Robot_destroy(int ind);
+extern void Robot_update(void);
 extern void Robot_war(int ind, int killer);
+extern void Robot_reset_war(int ind);
+extern int Robot_war_on_player(int ind);
+extern void Robot_go_home(int ind);
+extern void Robot_program(int ind, int victim_id);
+extern void Robot_message(int ind, char *message);
 
 /*
  * Prototypes for rules.c
  */
+extern void Tune_item_probs(void);
 extern void Set_initial_resources(void);
+extern void Set_world_items(void);
 extern void Set_world_rules(void);
-extern void UpdateItemChances(int num_players);
+extern void Set_misc_item_limits(void);
 
 /*
  * Prototypes for server.c

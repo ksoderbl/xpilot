@@ -1,6 +1,6 @@
-/* $Id: strcasecmp.c,v 3.7 1994/02/07 13:20:47 bjoerns Exp $
+/* $Id: strcasecmp.c,v 3.8 1995/01/11 19:58:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -27,7 +27,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: strcasecmp.c,v 3.7 1994/02/07 13:20:47 bjoerns Exp $";
+    "@(#)$Id: strcasecmp.c,v 3.8 1995/01/11 19:58:54 bert Exp $";
 #endif
 
 /*

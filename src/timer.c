@@ -1,6 +1,6 @@
-/* $Id: timer.c,v 3.17 1994/07/10 20:05:11 bert Exp $
+/* $Id: timer.c,v 3.19 1995/01/11 19:59:30 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -42,6 +42,8 @@
 #include "config.h"
 #include "const.h"
 #include "error.h"
+
+char timer_version[] = VERSION;
 
 #ifdef sony_news
 /*

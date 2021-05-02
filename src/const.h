@@ -1,6 +1,6 @@
-/* $Id: const.h,v 3.50 1994/08/22 19:15:05 bert Exp $
+/* $Id: const.h,v 3.56 1995/01/15 16:58:25 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,20 +32,32 @@
  * MAXFLOAT and INT_MAX instead.
  */
 #ifndef	FLT_MAX
-#   if defined(__sgi)
-#       include <float.h>	/* FLT_MAX for SGI Personal Iris */
+#   if defined(__sgi) || defined(__FreeBSD__)
+#       include <float.h>	/* FLT_MAX for SGI Personal Iris or FreeBSD */
 #   else
 #	if defined(__sun__)
 #           include <values.h>	/* MAXFLOAT for suns */
 #	endif
 #	ifdef VMS
 #	    include <float.h>
-#	else
+#	endif
+#   endif
+#   if !defined(FLT_MAX)
+#	if defined(MAXFLOAT)
 #	    define FLT_MAX	MAXFLOAT
+#	else
+#	    define FLT_MAX	1e30f	/* should suffice :-) */
 #	endif
 #   endif
 #endif
 #ifndef	RAND_MAX
+    /*
+     * Ough!  If this is possible then we shouldn't be using RAND_MAX!
+     * Older systems which don't have RAND_MAX likely should have it
+     * to be defined as 32767, not as INT_MAX!
+     * We better get our own pseudo-random library to overcome this mess
+     * and get a uniform solution for everything.
+     */
 #   define  RAND_MAX	INT_MAX
 #endif
 
@@ -156,13 +168,10 @@
 #define EXPIRED_MINE_ID		4096   /* assume no player has this id */
 #define MAX_PSEUDO_PLAYERS      16
 
-#define PLAYER_ITEM_RATE        5
-
 #define MAX_MSGS		8
 #define MAX_SCROLL_LEN		4096
 #define MAX_CHARS		80
 #define MSG_LEN			256
-#define MAX_SHAPE_LEN		MSG_LEN
 
 #define FONT_LEN		256
 
@@ -188,7 +197,6 @@
 #define MIN_PLAYER_FUEL		(350<<FUEL_SCALE_BITS)
 #define REFUEL_RATE		(5<<FUEL_SCALE_BITS)
 #define ENERGY_PACK_FUEL        ((500+(rand()&511))<<FUEL_SCALE_BITS)
-#define RACE_PLAYER_FUEL	(500<<FUEL_SCALE_BITS)
 #define DEFAULT_PLAYER_FUEL	(1000<<FUEL_SCALE_BITS)
 #define FUEL_NOTIFY             (16*FPS)
 
@@ -265,8 +273,6 @@
 #define NUKE_SPEED_TIME		(2*FPS)
 #define NUKE_ACC 		(5*TORPEDO_ACC)
 #define NUKE_RANGE		(MINE_RANGE*1.5)
-#define NUKE_MIN_SMART		(nukeMinSmarts)
-#define NUKE_MIN_MINE		(nukeMinMines)
 #define NUKE_MASS_MULT		1
 #define NUKE_MINE_EXPL_MULT	3
 #define NUKE_SMART_EXPL_MULT	4
@@ -301,15 +307,14 @@
 
 #define MAX_TRACTORS		4
 
-#define TRACTOR_MAX_RANGE(pl)  (200 + (pl)->tractor_beams * 50)
-#define TRACTOR_MAX_FORCE(pl)  (-40 + (pl)->tractor_beams * -20)
+#define TRACTOR_MAX_RANGE(pl)  (200 + (pl)->item[ITEM_TRACTOR_BEAM] * 50)
+#define TRACTOR_MAX_FORCE(pl)  (-40 + (pl)->item[ITEM_TRACTOR_BEAM] * -20)
 #define TRACTOR_PERCENT(pl, maxdist) \
 	(1.0-(0.5*(pl)->lock.distance/(maxdist)))
 #define TRACTOR_COST(percent) (-1.5 * FUEL_SCALE_FACT * (percent))
 #define TRACTOR_FORCE(pl, percent, maxforce) \
 	((percent) * (maxforce) * ((pl)->tractor_pressor ? -1 : 1))
 
-#define WALL_RETURN_TIME        32
 #define WARN_TIME               2
 
 #define BALL_STRING_LENGTH      120
@@ -330,8 +335,6 @@
 
 #define WORM_BRAKE_FACTOR	1
 #define WORMCOUNT		64
-
-#define ROB_LOOK_AH		2
 
 #ifdef __GNUC__
 #define	INLINE	inline

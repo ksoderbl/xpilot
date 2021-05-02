@@ -1,6 +1,6 @@
-/* $Id: caudio.c,v 3.15 1994/07/12 07:40:05 bert Exp $
+/* $Id: caudio.c,v 3.17 1995/01/11 19:14:47 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -45,6 +45,8 @@
 #include "types.h"
 #include "audio.h"
 #include "client.h"
+
+char caudio_version[] = VERSION;
 
 static int	audioEnabled;
 
@@ -149,8 +151,8 @@ int Handle_audio(int type, int volume)
 
 #else
 
-#if defined(__osf__) && defined(__alpha)
-static int caudio_c_non_empty_kludge;	/* For DEC Alpha OSF/1 V1.2 */
-#endif
+#include "version.h"
+
+char caudio_version[] = VERSION;
 
 #endif /* SOUND */

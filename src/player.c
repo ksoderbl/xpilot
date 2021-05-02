@@ -1,6 +1,6 @@
-/* $Id: player.c,v 3.73 1994/09/21 11:01:44 bert Exp $
+/* $Id: player.c,v 3.81 1995/01/11 19:50:13 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,14 +32,15 @@
 #include "proto.h"
 #include "map.h"
 #include "score.h"
-#include "robot.h"
 #include "bit.h"
 #include "netserver.h"
 #include "saudio.h"
 
+char player_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: player.c,v 3.73 1994/09/21 11:01:44 bert Exp $";
+    "@(#)$Id: player.c,v 3.81 1995/01/11 19:50:13 bert Exp $";
 #endif
 
 extern int Rate(int winner, int loser);
@@ -58,7 +59,7 @@ void Pick_startpos(int ind)
     static int	prev_num_bases = 0;
     static char	*free_bases = NULL;
 
-    if (pl->robot_mode == RM_OBJECT) {
+    if (IS_TANK_PTR(pl)) {
 	pl->home_base = 0;
 	return;
     }
@@ -84,7 +85,7 @@ void Pick_startpos(int ind)
     }
     for (i = 0; i < NumPlayers; i++) {
 	if (i != ind
-	    && Players[i]->robot_mode != RM_OBJECT
+	    && !IS_TANK_IND(i)
 	    && free_bases[Players[i]->home_base] != 0) {
 	    free_bases[Players[i]->home_base] = 0;
 	    num_free--;
@@ -123,12 +124,18 @@ void Pick_startpos(int ind)
 }
 
 
-
 void Go_home(int ind)
 {
     player		*pl = Players[ind];
     int			i, x, y, dir, check;
     float		vx, vy, velo;
+
+    if (IS_TANK_PTR(pl)) {
+	/*NOTREACHED*/
+	/* Tanks have no homebase. */
+	error("BUG: gohome tank");
+	return;
+    }
 
     if (BIT(World.rules->mode, TIMING)
 	&& pl->round
@@ -186,8 +193,9 @@ void Go_home(int ind)
 	Players[i]->visibility[ind].lastChange = 0;
     }
 
-    if (pl->robot_mode != RM_NOT_ROBOT)
-	pl->robot_mode = RM_TAKE_OFF;
+    if (IS_ROBOT_PTR(pl)) {
+	Robot_go_home(ind);
+    }
 }
 
 /*
@@ -210,9 +218,10 @@ void Compute_sensor_range(player *pl)
 	else
 	    maxVisibilityDistance *= BLOCK_SZ;
 
-	if (initialFuel > 0.0) {
+	if (World.items[ITEM_FUEL].initial > 0.0) {
 	    EnergyRangeFactor = minVisibilityDistance /
-		(initialFuel * (1.0 + ((float)initialSensors * 0.25)));
+		(World.items[ITEM_FUEL].initial
+		    * (1.0 + ((float)World.items[ITEM_SENSOR].initial * 0.25)));
 	    EnergyRangeFactor /= FUEL_SCALE_FACT;
 	} else {
 	    EnergyRangeFactor = ENERGY_RANGE_FACTOR;
@@ -221,7 +230,7 @@ void Compute_sensor_range(player *pl)
     }
 
     pl->sensor_range = pl->fuel.sum * EnergyRangeFactor;
-    pl->sensor_range *= (1.0 + ((float)pl->sensors * 0.25));
+    pl->sensor_range *= (1.0 + ((float)pl->item[ITEM_SENSOR] * 0.25));
     if (pl->sensor_range < minVisibilityDistance)
 	pl->sensor_range = minVisibilityDistance;
     if (pl->sensor_range > maxVisibilityDistance)
@@ -229,34 +238,76 @@ void Compute_sensor_range(player *pl)
 }
 
 /*
- * Give player the specified number of tanks and amount of fuel. Upto the
- * maximum allowed.
+ * Give ship one more tank, if possible.
  */
-static void Fuel_player(int ind, int tanks, long fuel)
+void Player_add_tank(int ind, long tank_fuel)
 {
     player		*pl = Players[ind];
-    long		i, in, max;
+    long		tank_cap, add_fuel;
+
+    if (pl->fuel.num_tanks < MAX_TANKS) {
+	pl->fuel.num_tanks++;
+	tank_cap = TANK_CAP(pl->fuel.num_tanks);
+	add_fuel = tank_fuel;
+	LIMIT(add_fuel, 0, tank_cap);
+	pl->fuel.sum += add_fuel;
+	pl->fuel.max += tank_cap;
+	pl->fuel.tank[pl->fuel.num_tanks] = add_fuel;
+	pl->emptymass += TANK_MASS;
+    }
+}
+
+/*
+ * Remove a tank from a ship, if possible.
+ */
+void Player_remove_tank(int ind, int which_tank)
+{
+    player		*pl = Players[ind];
+    int			i, tank_ind;
+    long		tank_fuel, tank_cap;
+
+    if (pl->fuel.num_tanks > 0) {
+	tank_ind = which_tank;
+	LIMIT(tank_ind, 1, pl->fuel.num_tanks);
+	pl->emptymass -= TANK_MASS;
+	tank_fuel = pl->fuel.tank[tank_ind];
+	tank_cap = TANK_CAP(tank_ind);
+	pl->fuel.max -= tank_cap;
+	pl->fuel.sum -= tank_fuel;
+	pl->fuel.num_tanks--;
+	if (pl->fuel.current > pl->fuel.num_tanks) {
+	    pl->fuel.current = 0;
+	} else {
+	    for (i = tank_ind; i <= pl->fuel.num_tanks; i++) {
+		pl->fuel.tank[i] = pl->fuel.tank[i + 1];
+	    }
+	}
+    }
+}
+
+/*
+ * Give player the initial number of tanks and amount of fuel.
+ * Upto the maximum allowed.
+ */
+static void Player_init_fuel(int ind, long total_fuel)
+{
+    player		*pl = Players[ind];
+    long		fuel = total_fuel;
+    int			i;
 
     pl->fuel.num_tanks  = 0;
     pl->fuel.current    = 0;
-    pl->fuel.sum	= 0;
-    pl->fuel.max	= 0;
+    pl->fuel.max	= TANK_CAP(0);
+    pl->fuel.sum	= MIN(fuel, pl->fuel.max);
+    pl->fuel.tank[0]	= pl->fuel.sum;
+    pl->emptymass	= ShipMass;
 
-    for(i = 0; i <= initialTanks; i++) {
-	if (i) {
-	    pl->fuel.num_tanks++;
-	    pl->emptymass += TANK_MASS;
-	}
-	pl->fuel.current = i;
+    fuel -= pl->fuel.sum;
 
-	max = TANK_CAP(i);
-	in = MIN(fuel, max);
-	pl->fuel.max += max;
-	pl->fuel.sum += in;
-	pl->fuel.tank[i] = in;
-	fuel -= in;
+    for (i = 1; i <= World.items[ITEM_TANK].initial; i++) {
+	Player_add_tank(ind, fuel);
+	fuel -= pl->fuel.tank[i];
     }
-    pl->fuel.current = 0;
 }
 
 void Init_player(int ind, wireobj *ship)
@@ -277,11 +328,15 @@ void Init_player(int ind, wireobj *ship)
     pl->mass		= ShipMass;
     pl->emptymass	= ShipMass;
 
-    pl->fuel.sum        = initialFuel << FUEL_SCALE_BITS;
-    Fuel_player(ind, initialTanks, pl->fuel.sum);
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (!BIT(1U << i, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+	    pl->item[i] = World.items[i].initial;
+	}
+    }
 
-    pl->afterburners   = initialAfterburners;
-    pl->transporters    = initialTransporters;
+    pl->fuel.sum        = World.items[ITEM_FUEL].initial << FUEL_SCALE_BITS;
+    Player_init_fuel(ind, pl->fuel.sum);
+
     pl->transInfo.count	= 0;
 
     if (allowShipShapes == true && ship) {
@@ -308,14 +363,9 @@ void Init_player(int ind, wireobj *ship)
     pl->shield_time	= 0;
 
     pl->type		= OBJ_PLAYER;
+    pl->type_ext	= 0;		/* assume human player */
     pl->shots		= 0;
     pl->missile_rack	= 0;
-    pl->extra_shots	= initialWideangles;
-    pl->back_shots	= initialRearshots;
-    pl->missiles	= initialMissiles;
-    pl->mines		= initialMines;
-    pl->cloaks		= initialCloaks;
-    pl->sensors		= initialSensors;
     pl->forceVisible	= 0;
     pl->shot_speed	= ShotsSpeed;
     Compute_sensor_range(pl);
@@ -331,19 +381,13 @@ void Init_player(int ind, wireobj *ship)
     pl->fs		= 0;
     pl->repair_target	= 0;
     pl->name[0]		= '\0';
-    pl->ecms 		= initialECMs;
-    pl->lasers 		= initialLasers;
     pl->num_pulses	= 0;
     pl->max_pulses	= 0;
     pl->pulses		= NULL;
-    pl->emergency_thrusts = initialEmergencyThrusts;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
-    pl->emergency_shields = initialEmergencyShields;
     pl->emergency_shield_left = 0;
     pl->emergency_shield_max = 0;
-    pl->autopilots	= initialAutopilots;
-    pl->tractor_beams	= initialTractorBeams;
     pl->ecmInfo.count	= 0;
     pl->damaged 	= 0;
 
@@ -352,7 +396,7 @@ void Init_player(int ind, wireobj *ship)
     pl->have		= DEF_HAVE;
     pl->used		= DEF_USED;
 
-    if (pl->cloaks > 0) {
+    if (pl->item[ITEM_CLOAK] > 0) {
 	SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
     }
 
@@ -371,6 +415,10 @@ void Init_player(int ind, wireobj *ship)
     pl->life		= World.rules->lives;
     pl->prev_life	= pl->life;
     pl->ball 		= NULL;
+
+    pl->player_fps	= FPS;
+    pl->player_round	= 0;
+    pl->player_count	= 0;
 
     pl->kills		= 0;
     pl->deaths		= 0;
@@ -402,11 +450,7 @@ void Init_player(int ind, wireobj *ship)
     pl->lock.pos.x	= pl->pos.x;
     pl->lock.pos.y	= pl->pos.y;
 
-    pl->robot_mode	= RM_NOT_ROBOT;
-    pl->robot_count	= 0;
-    pl->robot_ind	= -1;
-    pl->robot_lock	= LOCK_NONE;
-    pl->robot_lock_id	= 0;
+    pl->robot_data_ptr	= NULL;
 
     pl->wormDrawCount   = 0;
 
@@ -516,6 +560,8 @@ static void Reset_all_players(void)
 	    if (!BIT(pl->status, PAUSE)) {
 		Kill_player(i);
 		if (pl != Players[i]) {
+		    /* player was deleted. */
+		    i--;
 		    continue;
 		}
 	    }
@@ -537,9 +583,9 @@ static void Reset_all_players(void)
 		pl->count = RECOVERY_DELAY;
 	    }
 	}
-	if (pl->robot_mode == RM_OBJECT)
+	if (IS_TANK_PTR(pl))
 	    pl->mychar = 'T';
-	else if (pl->robot_mode != RM_NOT_ROBOT)
+	else if (IS_ROBOT_PTR(pl))
 	    pl->mychar = 'R';
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
@@ -614,7 +660,8 @@ void Check_team_members(int team)
 
     for (members = i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
-	if (pl->team != TEAM_NOT_SET && pl->robot_mode != RM_OBJECT
+	if (pl->team != TEAM_NOT_SET
+	    && !IS_TANK_PTR(pl)
 	    && pl->team == team)
 	    members++;
     }
@@ -623,7 +670,8 @@ void Check_team_members(int team)
 	       team, World.teams[team].NumMembers, members);
 	for (i = 0; i < NumPlayers; i++) {
 	    pl = Players[i];
-	    if (pl->team != TEAM_NOT_SET && pl->robot_mode != RM_OBJECT
+	    if (pl->team != TEAM_NOT_SET
+		&& !IS_TANK_PTR(pl)
 		&& pl->team == team)
 		error ("Team %d currently has player %d: \"%s\"",
 		       team, i+1, pl->name);
@@ -677,7 +725,7 @@ static void Compute_end_of_round_values(int *average_score,
     /* Figure out what the average score is and who has the best kill/death */
     /* ratio for this round */
     for (i = 0; i < NumPlayers; i++) {
-	if (Players[i]->robot_mode == RM_OBJECT
+	if (IS_TANK_IND(i)
 	    || (BIT(Players[i]->status, PAUSE)
 	       && Players[i]->count <= 0)) {
 	    continue;
@@ -817,7 +865,7 @@ static void Team_game_over(int winning_team, char *reason)
 	    if (Players[i]->team != winning_team) {
 		continue;
 	    }
-	    if (Players[i]->robot_mode == RM_OBJECT
+	    if (IS_TANK_IND(i)
 		|| (BIT(Players[i]->status, PAUSE)
 		    && Players[i]->count <= 0)
 		|| (BIT(Players[i]->status, GAME_OVER)
@@ -894,8 +942,7 @@ static void Individual_game_over(int winner)
     }
     else if (winner == -2) {
 	for (j = 0; j < NumPlayers; j++) {
-	    if (Players[j]->robot_mode != RM_OBJECT
-		&& Players[j]->robot_mode != RM_NOT_ROBOT) {
+	    if (IS_ROBOT_IND(j)) {
 		for (i = 0; i < num_best_players; i++) {
 		    if (j == best_players[i]) {
 			break;
@@ -921,7 +968,8 @@ static void Race_game_over(void)
 			k,
 			bestlap = 0,
 			num_best_players = 0,
-			num_active_players = 0;
+			num_active_players = 0,
+			num_ordered_players = 0;
     int			*order;
     char		msg[MSG_LEN];
 
@@ -932,7 +980,7 @@ static void Race_game_over(void)
     if ((order = (int *)malloc(NumPlayers * sizeof(int))) != NULL) {
 	for (i = 0; i < NumPlayers; i++) {
 	    pl = Players[i];
-	    if (pl->robot_mode == RM_OBJECT) {
+	    if (IS_TANK_PTR(pl)) {
 		continue;
 	    }
 	    if (BIT(pl->status, PAUSE)
@@ -956,12 +1004,10 @@ static void Race_game_over(void)
 		order[k + 1] = order[k];
 	    }
 	    order[j] = i;
+	    num_ordered_players++;
 	}
-	for (i = 0; i < NumPlayers; i++) {
+	for (i = 0; i < num_ordered_players; i++) {
 	    pl = Players[order[i]];
-	    if (pl->robot_mode == RM_OBJECT) {
-		continue;
-	    }
 	    if (pl->home_base != World.baseorder[i].base_idx) {
 		pl->home_base = World.baseorder[i].base_idx;
 		for (j = 0; j < NumPlayers; j++) {
@@ -984,7 +1030,7 @@ static void Race_game_over(void)
 	CLR_BIT(pl->status, RACE_OVER | FINISH);
 	if (BIT(pl->status, PAUSE)
 	    || (BIT(pl->status, GAME_OVER) && pl->mychar == 'W')
-	    || pl->robot_mode == RM_OBJECT) {
+	    || IS_TANK_PTR(pl)) {
 	    continue;
 	}
 	num_active_players++;
@@ -1012,7 +1058,7 @@ static void Race_game_over(void)
 	    pl = Players[i];
 	    if (BIT(pl->status, PAUSE)
 		|| (BIT(pl->status, GAME_OVER) && pl->mychar == 'W')
-		|| pl->robot_mode == RM_OBJECT) {
+		|| IS_TANK_PTR(pl)) {
 		continue;
 	    }
 	    if (pl->best_lap == bestlap) {
@@ -1081,7 +1127,7 @@ void Compute_game_status(void)
 	for (i = 0; i < NumPlayers; i++)  {
 	    pl = Players[i];
 	    if (BIT(pl->status, PAUSE)
-		|| pl->robot_mode == RM_OBJECT) {
+		|| IS_TANK_PTR(pl)) {
 		continue;
 	    }
 	    if (!BIT(pl->status, GAME_OVER)) {
@@ -1137,7 +1183,7 @@ void Compute_game_status(void)
 		pl = Players[i];
 		if (BIT(pl->status, PAUSE)
 		    || (BIT(pl->status, GAME_OVER) && pl->mychar == 'W')
-		    || pl->robot_mode == RM_OBJECT) {
+		    || IS_TANK_PTR(pl)) {
 		    continue;
 		}
 		if (BIT(pl->status, FINISH)) {
@@ -1211,7 +1257,7 @@ void Compute_game_status(void)
 	}
 
 	for (i = 0; i < NumPlayers; i++) {
-	    if (Players[i]->robot_mode == RM_OBJECT) {
+	    if (IS_TANK_IND(i)) {
 		/* Ignore tanks. */
 		continue;
 	    }
@@ -1235,7 +1281,7 @@ void Compute_game_status(void)
 	    }
 	    /*
 	     * If the player is not paused and he is not in the
-	     * game over mode and his team own treasures then he is
+	     * game over mode and his team owns treasures then he is
 	     * considered alive.
 	     * But he may not be playing though if the rest of the team
 	     * was genocided very quickly after game reset, while this
@@ -1316,7 +1362,7 @@ void Compute_game_status(void)
 
 	    for (i = 0; i < NumPlayers; i++) {
 		if (BIT(Players[i]->status, PAUSE)
-		    || Players[i]->robot_mode == RM_OBJECT) {
+		    || IS_TANK_IND(i)) {
 		    continue;
 		}
 		team_score[Players[i]->team] += Players[i]->score;
@@ -1335,7 +1381,7 @@ void Compute_game_status(void)
 		}
 	    }
 	    if (winners == 1) {
-		sprintf(msg, " by destroying %d treasures and saving %d",
+		sprintf(msg, " by destroying %d treasures and successfully defending %d",
 			max_destroyed, max_left);
 		Team_game_over(winning_team, msg);
 		return;
@@ -1408,17 +1454,17 @@ void Compute_game_status(void)
 
 	for (i=0; i<NumPlayers; i++)  {
 	    if (BIT(Players[i]->status, PAUSE)
-		|| Players[i]->robot_mode == RM_OBJECT) {
+		|| IS_TANK_IND(i)) {
 		continue;
 	    }
 	    if (!BIT(Players[i]->status, GAME_OVER)) {
 		num_alive_players++;
-		if (Players[i]->robot_mode != RM_NOT_ROBOT) {
+		if (IS_ROBOT_IND(i)) {
 		    num_alive_robots++;
 		}
 		winner = i; 	/* Tag player that's alive */
 	    }
-	    else if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	    else if (IS_HUMAN_IND(i)) {
 		num_active_humans++;
 	    }
 	    num_active_players++;
@@ -1445,6 +1491,10 @@ void Delete_player(int ind)
     int			i, j,
 			id = pl->id;
 
+    if (IS_ROBOT_PTR(pl)) {
+	Robot_destroy(ind);
+    }
+
     /* Delete remaining shots */
     for (i = NumObjs - 1; i >= 0; i--) {
 	obj = Obj[i];
@@ -1452,6 +1502,11 @@ void Delete_player(int ind)
 	    if (obj->type == OBJ_BALL) {
 		Delete_shot(i);
 		obj->owner = -1;
+	    }
+	    else if (BIT(obj->type, OBJ_DEBRIS | OBJ_SPARK)) {
+		/* Okay, so you want robot explosions to exist,
+		 * even if the robot left the game. */
+		obj->id = -1;
 	    }
 	    else {
 		obj->life = 0;
@@ -1481,14 +1536,14 @@ void Delete_player(int ind)
     sound_close(pl);
 
     NumPlayers--;
-    if (pl->robot_mode == RM_OBJECT) {
+    if (IS_TANK_PTR(pl)) {
 	NumPseudoPlayers--;
     }
 
-    if (pl->team != TEAM_NOT_SET && pl->robot_mode != RM_OBJECT)
+    if (pl->team != TEAM_NOT_SET && !IS_TANK_PTR(pl))
 	World.teams[pl->team].NumMembers--;
 
-    if (pl->robot_mode != RM_NOT_ROBOT && pl->robot_mode != RM_OBJECT)
+    if (IS_ROBOT_PTR(pl))
 	NumRobots--;
 
     /*
@@ -1501,15 +1556,15 @@ void Delete_player(int ind)
     Check_team_members (Players[ind]->team);
 
     GetInd[Players[ind]->id] = ind;
+    GetInd[Players[NumPlayers]->id] = NumPlayers;
 
     for (i=0; i<NumPlayers; i++) {
 	if (BIT(Players[i]->lock.tagged, LOCK_PLAYER)
 	    && (Players[i]->lock.pl_id == id || NumPlayers <= 1))
 	    CLR_BIT(Players[i]->lock.tagged, LOCK_PLAYER);
-	if (Players[i]->robot_mode != RM_NOT_ROBOT
-	    && BIT(Players[i]->robot_lock, LOCK_PLAYER)
-	    && Players[i]->robot_lock_id == id) {
-	    CLR_BIT(Players[i]->robot_lock, LOCK_PLAYER);
+	if (IS_ROBOT_IND(i)
+	    && Robot_war_on_player(i) == id) {
+	    Robot_reset_war(i);
 	}
 	for (j = 0; j < LOCKBANK_MAX; j++) {
 	    if (Players[i]->lockbank[j] == id)
@@ -1565,9 +1620,10 @@ void Player_death_reset(int ind)
 {
     player		*pl = Players[ind];
     long		minfuel;
+    int			i;
 
 
-    if (pl->robot_mode == RM_OBJECT) {
+    if (IS_TANK_PTR(pl)) {
 	Delete_player(ind);
 	updateScores = true;
 	return;
@@ -1584,40 +1640,33 @@ void Player_death_reset(int ind)
     pl->emptymass	= pl->mass	= ShipMass;
     pl->status		|= DEF_BITS;
     pl->status		&= ~(KILL_BITS);
-    pl->extra_shots	= initialWideangles;
-    pl->back_shots	= initialRearshots;
-    pl->missiles	= initialMissiles;
-    pl->mines		= initialMines;
-    pl->cloaks		= initialCloaks;
-    pl->sensors		= initialSensors;
+
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (!BIT(1U << i, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+	    pl->item[i] = World.items[i].initial;
+	}
+    }
+
     pl->forceVisible	= 0;
     pl->shot_speed	= ShotsSpeed;
     pl->shot_max	= ShotsMax;
     pl->shot_life	= ShotsLife;
     pl->shot_mass	= ShotsMass;
     pl->count		= RECOVERY_DELAY;
-    pl->ecms 		= initialECMs;
     pl->ecmInfo.count	= 0;
-    pl->lasers 		= initialLasers;
-    pl->emergency_thrusts = initialEmergencyThrusts;
     pl->emergency_thrust_left = 0;
     pl->emergency_thrust_max = 0;
-    pl->emergency_shields = initialEmergencyShields;
     pl->emergency_shield_left = 0;
     pl->emergency_shield_max = 0;
-    pl->tractor_beams	= initialTractorBeams;
-    pl->autopilots	= initialAutopilots;
     pl->damaged 	= 0;
     pl->lock.distance	= 0;
 
     pl->fuel.sum       	*= 0.90;		/* Loose 10% of fuel */
-    minfuel		= (initialFuel * FUEL_SCALE_FACT);
+    minfuel		= (World.items[ITEM_FUEL].initial * FUEL_SCALE_FACT);
     minfuel		+= (rand() % (1 + minfuel) / 5);
     pl->fuel.sum	= MAX(pl->fuel.sum, minfuel);
-    Fuel_player(ind, initialTanks, pl->fuel.sum);
+    Player_init_fuel(ind, pl->fuel.sum);
 
-    pl->afterburners	= initialAfterburners;
-    pl->transporters    = initialTransporters;
     pl->transInfo.count	= 0;
 
     if (pl->max_pulses > 0 && pl->num_pulses == 0) {

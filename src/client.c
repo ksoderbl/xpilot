@@ -1,6 +1,6 @@
-/* $Id: client.c,v 3.65 1994/09/17 00:54:55 bert Exp $
+/* $Id: client.c,v 3.69 1995/01/29 00:03:17 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -46,6 +46,8 @@
 #include "netclient.h"
 #include "paint.h"
 #include "xinit.h"
+
+char client_version[] = VERSION;
 
 #define MAX_CHECKPOINT	26
 
@@ -123,6 +125,9 @@ char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
 int     toggle_shield;          /* Are shields toggled by a press? */
 int     shields;                /* When shields are considered up */
+
+int	maxFPS;			/* Client's own FPS */
+int	oldMaxFPS;
 
 #ifdef SOUND
 char 	sounds[MAX_CHARS];	/* audio mappings */
@@ -523,6 +528,9 @@ void Map_blue(int startx, int starty, int width, int height)
 			type,
 			newtype;
     unsigned char	blue[256];
+    const long		outline_mask = SHOW_OUTLINE_WORLD
+				     | SHOW_FILLED_WORLD
+				     | SHOW_TEXTURED_WALLS;
 
     /*
      * Optimize the map for blue.
@@ -606,7 +614,7 @@ void Map_blue(int startx, int starty, int width, int height)
 		    : !(blue[Setup->map_data[x * Setup->y + (y - 1)]]
 			& BLUE_UP))
 		    newtype |= BLUE_DOWN;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((x == Setup->x - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[y]]
@@ -614,7 +622,7 @@ void Map_blue(int startx, int starty, int width, int height)
 			: !(blue[Setup->map_data[(x + 1) * Setup->y + y]]
 			    & BLUE_LEFT)))
 		    newtype |= BLUE_RIGHT;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((y == Setup->y - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[x * Setup->y]]
@@ -633,7 +641,7 @@ void Map_blue(int startx, int starty, int width, int height)
 		    : !(blue[Setup->map_data[(x - 1) * Setup->y + y]]
 			& BLUE_RIGHT))
 		    newtype |= BLUE_LEFT;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((y == Setup->y - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[x * Setup->y]]
@@ -645,7 +653,7 @@ void Map_blue(int startx, int starty, int width, int height)
 
 	    case SETUP_REC_RU:
 		newtype = BLUE_BIT | BLUE_CLOSED;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((x == Setup->x - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[y]]
@@ -653,7 +661,7 @@ void Map_blue(int startx, int starty, int width, int height)
 			: !(blue[Setup->map_data[(x + 1) * Setup->y + y]]
 			    & BLUE_LEFT)))
 		    newtype |= BLUE_RIGHT;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((y == Setup->y - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[x * Setup->y]]
@@ -683,7 +691,7 @@ void Map_blue(int startx, int starty, int width, int height)
 
 	    case SETUP_REC_RD:
 		newtype = BLUE_BIT | BLUE_BELOW | BLUE_OPEN;
-		if (!BIT(instruments, SHOW_OUTLINE_WORLD)
+		if (!BIT(instruments, outline_mask)
 		    || ((x == Setup->x - 1)
 			? (!BIT(Setup->mode, WRAP_PLAY)
 			   || !(blue[Setup->map_data[y]]
@@ -1282,10 +1290,18 @@ int Client_setup(void)
     if (Init_window() == -1) {
 	return -1;
     }
-    if (Alloc_msgs(MAX_MSGS) == -1) {
+    if (Alloc_msgs() == -1) {
 	return -1;
     }
     return 0;
+}
+
+int Client_fps_request()
+{
+    if (maxFPS > FPS) maxFPS = FPS;
+    if (maxFPS < (FPS / 2)) maxFPS = FPS / 2;
+    oldMaxFPS = maxFPS;
+    return Send_fps_request(maxFPS);
 }
 
 int Client_power(void)
@@ -1349,3 +1365,15 @@ int Client_wrap_mode(void)
 {
     return (BIT(Setup->mode, WRAP_PLAY) != 0);
 }
+
+int Check_client_fps(void) 
+{
+    if (oldMaxFPS != maxFPS) {
+	if (maxFPS > FPS) maxFPS = FPS;
+	if (maxFPS < (FPS / 2)) maxFPS = FPS / 2;
+	oldMaxFPS = maxFPS;
+	return Send_fps_request(maxFPS);
+    }
+    return 0;
+}
+

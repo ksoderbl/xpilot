@@ -1,6 +1,6 @@
-/* $Id: netclient.c,v 3.74 1994/09/17 01:02:00 bert Exp $
+/* $Id: netclient.c,v 3.82 1995/01/29 16:17:44 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -61,8 +61,12 @@
 #include "pack.h"
 #include "socklib.h"
 
-#define TALK_RETRY	FPS
+char netclient_version[] = VERSION;
 
+#define TALK_RETRY	2
+
+
+int micro_delay(unsigned usec);
 
 /*
  * Type definitions.
@@ -70,7 +74,7 @@
 typedef struct {
     long		loops;
     sockbuf_t		sbuf;
-} frame_t;
+} frame_buf_t;
 
 /*
  * Exported variables.
@@ -85,7 +89,7 @@ long			last_loops;
 static sockbuf_t	rbuf,
 			cbuf,
 			wbuf;
-static frame_t		*Frames;
+static frame_buf_t	*Frames;
 static int		(*receive_tbl[256])(void),
 			(*reliable_tbl[256])(void);
 static unsigned		magic;
@@ -521,8 +525,8 @@ int Net_init(char *server, int port)
 	error("Can't set receive buffer size to %d", CLIENT_RECV_SIZE + 256);
     }
 
-    size = receive_window_size * sizeof(frame_t);
-    if ((Frames = (frame_t *) malloc(size)) == NULL) {
+    size = receive_window_size * sizeof(frame_buf_t);
+    if ((Frames = (frame_buf_t *) malloc(size)) == NULL) {
 	error("No memory (%u)", size);
 	return -1;
     }
@@ -580,7 +584,7 @@ void Net_cleanup(void)
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
 	}
-	usleep((unsigned long)50*1000);
+	micro_delay((unsigned)50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -605,7 +609,7 @@ void Net_cleanup(void)
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
 	}
-	usleep((unsigned long)50*1000);
+	micro_delay((unsigned)50*1000);
 	if (write(sock, &ch, 1) != 1) {
 	    GetSocketError(sock);
 	    write(sock, &ch, 1);
@@ -632,6 +636,13 @@ int Net_flush(void)
     if (wbuf.len == 0) {
 	wbuf.ptr = wbuf.buf;
 	return 0;
+    }
+    if (last_keyboard_ack != last_keyboard_change) {
+	/*
+	 * Since 3.2.10: just call Key_update to add our keyboard vector.
+	 * Key_update will call Send_keyboard to flush our buffer.
+	 */
+	return Key_update();
     }
     Send_talk();
     if (Sockbuf_flush(&wbuf) == -1) {
@@ -678,6 +689,7 @@ int Net_start(void)
 #ifdef SOUND
 		|| Send_audio_request(1) == -1
 #endif
+		|| Client_fps_request() == -1
 		|| Sockbuf_flush(&wbuf) == -1) {
 		error("Can't send start play packet");
 		return -1;
@@ -922,7 +934,7 @@ static void Net_measurement(long loop, int status)
  * we retry to read a packet once more.
  * It's a non-blocking read.
  */
-static int Net_read(frame_t *frame)
+static int Net_read(frame_buf_t *frame)
 {
     int		n;
     long	loop;
@@ -947,6 +959,7 @@ static int Net_read(frame_t *frame)
 	     */
 	    return 1;
 	}
+	/* Peek at the frame loop number. */
 	n = Packet_scanf(&frame->sbuf, "%c%ld", &ch, &loop);
 	frame->sbuf.ptr = frame->sbuf.buf;
 	if (n <= 0) {
@@ -982,7 +995,7 @@ int Net_input(void)
     int		i,
 		j,
 		n;
-    frame_t	*frame,
+    frame_buf_t	*frame,
 		*last_frame,
 		*oldest_frame = &Frames[0],
 		tmpframe;
@@ -1147,12 +1160,12 @@ int Net_input(void)
 
     /*
      * If the server hasn't yet acked our last keyboard change
-     * and we haven't updated it in this time frame already
-     * or we haven't sent anything for a while (keepalive)
+     * and we haven't updated it in the previous time frame
+     * or if we haven't sent anything for a while (keepalive)
      * then we send our current keyboard state.
      */
     if ((last_keyboard_ack != last_keyboard_change
-	    && last_keyboard_update < last_loops)
+	    && last_keyboard_update + 1 < last_loops)
 	|| last_loops - last_send_anything > 5 * Setup->frames_per_second) {
 	Key_update();
 	last_send_anything = last_loops;
@@ -1361,15 +1374,15 @@ int Receive_self(void)
 		     &power, &turnspeed, &turnresistance,
 		     &lockId, &lockDist, &lockDir, &nextCheckPoint,
 
-		     &(num_items[ITEM_CLOAKING_DEVICE]),
-		     &(num_items[ITEM_SENSOR_PACK]),
-		     &(num_items[ITEM_MINE_PACK]),
-		     &(num_items[ITEM_ROCKET_PACK]),
+		     &(num_items[ITEM_CLOAK]),
+		     &(num_items[ITEM_SENSOR]),
+		     &(num_items[ITEM_MINE]),
+		     &(num_items[ITEM_MISSILE]),
 		     &(num_items[ITEM_ECM]),
 
 		     &(num_items[ITEM_TRANSPORTER]),
-		     &(num_items[ITEM_WIDEANGLE_SHOT]),
-		     &(num_items[ITEM_BACK_SHOT]),
+		     &(num_items[ITEM_WIDEANGLE]),
+		     &(num_items[ITEM_REARSHOT]),
 		     &(num_items[ITEM_AFTERBURNER]),
 		     &(num_items[ITEM_TANK]),
 
@@ -1396,8 +1409,8 @@ int Receive_self(void)
 	}
     }
 
-    if (debris_colors > 8) {
-	debris_colors = 8;
+    if (debris_colors > num_spark_colors) {
+	debris_colors = num_spark_colors;
     }
     if (view_width != draw_width || view_height != draw_height) {
 	Send_display();
@@ -2259,13 +2272,8 @@ int Send_talk(void)
 
 int Send_display(void)
 {
-    int			num_col;
-
-    num_col = (maxColors == 8) ? 3
-	: (maxColors == 16) ? 7
-	: 0;
     if (Packet_printf(&wbuf, "%c%hd%hd%c%c", PKT_DISPLAY,
-		      draw_width, draw_height, num_col, spark_rand) == -1) {
+		      draw_width, draw_height, num_spark_colors, spark_rand) == -1) {
 	return -1;
     }
     return 0;
@@ -2302,6 +2310,17 @@ int Send_audio_request(int onoff)
     onoff = 0;
 #endif
     if (Packet_printf(&wbuf, "%c%c", PKT_REQUEST_AUDIO, (onoff != 0)) == -1) {
+	return -1;
+    }
+    return 0;
+}
+
+int Send_fps_request(int fps)
+{
+    if (version < 0x3280) {
+	return 0;
+    }
+    if (Packet_printf(&wbuf, "%c%c", PKT_ASYNC_FPS, fps) == -1) {
 	return -1;
     }
     return 0;

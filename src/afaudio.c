@@ -1,6 +1,6 @@
-/*
+/* $Id: afaudio.c,v 3.9 1995/01/28 15:30:15 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -21,8 +21,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 /*
- * AFPlay audio driver by Tom De Pauw <tom@depauw.finning.wimsey.com>.
- * Hacked on for AF3 & cached audio by Lance Berc <berc@src.dec.com>.
+ * History
+ * 1993: AFPlay audio driver by Tom De Pauw <tom@finning.ca>.
+ * 1994: Hacked on for AF3 & cached audio by Lance Berc <berc@src.dec.com>.
+ * 22 Jan 1995: Skip sound headers if present. Tom De Pauw <tom@finning.ca>.
  */
 /*
  * DEC CRL's AudioFile is a public domain network-transparent system
@@ -52,9 +54,16 @@
  * heuristic is good for the speaker on my J-Video, but your milage may
  * vary.
  *
- * 3) This code relies on the samples being in 8kHz u-law format.
+ * 3) This code skips a possible sound header in Sun or Inverted Sun
+ * format. The rest of the sound file describes samples in 8kHz u-law format.
+ * The sound files suggested for use with xpilot contain the headers.
+ * AF was never intended to read these headers, they would produce
+ * an audible click at the start of each sound. The headers are
+ * assumed of fixed length. This seems the case in the sounds I looked at.
+ * If this causes problem, the header length field will have to be read.
  *
- * Thanks to everyone I stole code from.
+ * Resemblance of this code to other programs is not coincidental.
+ *
  */
 
 #include <stdlib.h>
@@ -64,7 +73,10 @@
 #include <sys/file.h>
 #include <AF/AFlib.h>
 
+#include "version.h"
 #include "audio.h"
+
+char audio_version[] = VERSION;
 
 /* Keep a cache of recently played audio.  This really helps when the
  * client has the sound files mounted from a heavily loaded NFS server.
@@ -79,6 +91,21 @@ struct SoundCache {
   struct timeval when;
   int length;
 };
+
+typedef struct
+{
+    unsigned    magic;              /* Magic number       */
+    unsigned    sample_rate;        /* Samples per second     */
+    unsigned    samples_per_unit;   /* Samples per unit   */
+    unsigned    bytes_per_unit;     /* Bytes per sample unit  */
+    unsigned    channels;           /* # interleaved channels */
+    unsigned    encoding;           /* Date encoding format   */
+    unsigned    info1;              /* "info" field of unspecified nature */
+    unsigned    info2;              /* (totalling hdr_size - 24) */
+} Sun_Audio_Hdr;
+#define SUN_MAGIC       ((u_long) 0x2e736e64)   /* Really '.snd' */
+#define SUN_INV_MAGIC   ((u_long) 0x646e732e)
+#define SUN_AUDIO_ENCODING_ULAW (1)
 
 static struct SoundCache soundCache[CACHE_ENTRIES];
 
@@ -168,25 +195,42 @@ struct SoundCache *newCacheEntry(char *fn)
   int fd;
   struct stat sbuf;
   struct SoundCache *ce;
+  Sun_Audio_Hdr header;
 
   /* Open the sound file for reading */
   if ((fd = open(fn, O_RDONLY, 0)) < 0) {
-    error ("Unable to open sound file %s.", fn);
+    error("Unable to open sound file %s.", fn);
     return NULL;
   }
-
   if (fstat(fd, &sbuf) == -1) {
     error("Unable to stat sound file %s.", fn);
     close(fd);
     return NULL;
   }
 
+  /* If we have a Sun audio file, strip the header and adjust size. */
+  if (read(fd, (char *)&header, sizeof(Sun_Audio_Hdr))
+    < sizeof(Sun_Audio_Hdr)) {
+    error("Warning: assuming no header in: %s.", fn);
+    close(fd);
+    fd = open(fn, O_RDONLY, 0);
+  }
+  else if (header.magic != SUN_MAGIC && header.magic != SUN_INV_MAGIC
+    /*|| header.encoding != SUN_AUDIO_ENCODING_ULAW*/ ) {
+    error("Warning: found %x, expected sound header %x or %x in %s.",
+      header.magic, SUN_MAGIC, SUN_INV_MAGIC, fn);
+    close(fd);
+    fd = open(fn, O_RDONLY, 0);
+  }
+  else /* We have in fact found a header */
+    sbuf.st_size -= sizeof(Sun_Audio_Hdr);
+
   /* Truncate huge sound files to the cache size */
   if (sbuf.st_size > CACHE_SIZE) sbuf.st_size = CACHE_SIZE;
 
   /* If the cache is full, throw out the oldest entry.  */
   while ((soundCacheEntries == CACHE_ENTRIES) ||
-	 (soundCacheBytes + sbuf.st_size > CACHE_SIZE))
+    (soundCacheBytes + sbuf.st_size > CACHE_SIZE))
     tossOldestCacheEntry();
 
   /* Find an empty cache entry */

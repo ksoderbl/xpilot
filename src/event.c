@@ -1,6 +1,6 @@
-/* $Id: event.c,v 3.50 1994/09/16 19:40:37 bert Exp $
+/* $Id: event.c,v 3.57 1995/01/11 19:28:38 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,14 +32,15 @@
 #include "proto.h"
 #include "score.h"
 #include "map.h"
-#include "robot.h"
 #include "saudio.h"
 #include "bit.h"
 #include "netserver.h"
 
+char event_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: event.c,v 3.50 1994/09/16 19:40:37 bert Exp $";
+    "@(#)$Id: event.c,v 3.57 1995/01/11 19:28:38 bert Exp $";
 #endif
 
 #define SWAP(_a, _b)	    {float _tmp = _a; _a = _b; _b = _tmp;}
@@ -184,6 +185,9 @@ void Pause_player(int ind, int onoff)
 		pl->mychar = ' ';
 		Go_home(ind);
 		SET_BIT(pl->status, PLAYING);
+		if (BIT(pl->mode, LIMITED_LIVES)) {
+		    pl->life = World.rules->lives;
+		}
 	    }
 	    if (BIT(World.rules->mode, TIMING)) {
 		pl->round = 0;
@@ -287,20 +291,32 @@ int Handle_keyboard(int ind)
 	    case KEY_LOCK_NEXT:
 	    case KEY_LOCK_PREV:
 		j = i = GetInd[pl->lock.pl_id];
+		if (!BIT(pl->lock.tagged, LOCK_PLAYER)
+		    || j < 0 || j >= NumPlayers) {
+		    /* better jump to KEY_LOCK_CLOSEST.... */
+		    (void) Player_lock_closest(ind, 0);
+		    break;
+		}
 		do {
-		    if (key == KEY_LOCK_PREV)
-			i--;
-		    else
-			i++;
-		    i = mod(i, NumPlayers);
+		    if (key == KEY_LOCK_PREV) {
+			if (--i < 0) {
+			    i = NumPlayers - 1;
+			}
+		    } else {
+			if (++i >= NumPlayers) {
+			    i = 0;
+			}
+		    }
 		    if (i == j)
 			break;
 		} while (i == ind || BIT(Players[i]->status, GAME_OVER));
-		pl->lock.pl_id = Players[i]->id;
-		if (i == ind)
+		if (i == ind) {
 		    CLR_BIT(pl->lock.tagged, LOCK_PLAYER);
-		else
+		}
+		else {
+		    pl->lock.pl_id = Players[i]->id;
 		    SET_BIT(pl->lock.tagged, LOCK_PLAYER);
+		}
 		break;
 
 	    case KEY_TOGGLE_COMPASS:
@@ -357,7 +373,7 @@ int Handle_keyboard(int ind)
 		    }
 		    for (i=0; i<NumPlayers; i++)
 			if (i != ind
-			    && Players[i]->robot_mode != RM_OBJECT
+			    && !IS_TANK_IND(i)
 			    && pl->home_base == Players[i]->home_base) {
 			    Pick_startpos(i);
 			    sprintf(msg, "%s has taken over %s's home base.",
@@ -378,9 +394,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_SHIELD:
-		if (BIT(pl->have, OBJ_SHIELD)
-		    || BIT(pl->used, OBJ_EMERGENCY_SHIELD)) {
-		    SET_BIT(pl->have, OBJ_SHIELD);
+		if (BIT(pl->have, OBJ_SHIELD)) {
 		    SET_BIT(pl->used, OBJ_SHIELD);
 		    CLR_BIT(pl->used, OBJ_LASER);	/* don't remove! */
 		}
@@ -400,23 +414,23 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_FIRE_MISSILE:
-		if (pl->missiles > 0)
+		if (pl->item[ITEM_MISSILE] > 0)
 		    Fire_shot(ind, OBJ_SMART_SHOT, pl->dir);
 		break;
 
 	    case KEY_FIRE_HEAT:
-		if (pl->missiles > 0)
+		if (pl->item[ITEM_MISSILE] > 0)
 		    Fire_shot(ind, OBJ_HEAT_SHOT, pl->dir);
 		break;
 
 	    case KEY_FIRE_TORPEDO:
-		if (pl->missiles > 0)
+		if (pl->item[ITEM_MISSILE] > 0)
 		    Fire_shot(ind, OBJ_TORPEDO, pl->dir);
 
 		break;
 
 	    case KEY_FIRE_LASER:
-		if (pl->lasers > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
+		if (pl->item[ITEM_LASER] > 0 && BIT(pl->used, OBJ_SHIELD) == 0) {
 		    SET_BIT(pl->used, OBJ_LASER);
 		}
 		break;
@@ -663,7 +677,9 @@ int Handle_keyboard(int ind)
 		    } else if (pl->count <= 0) {
 			Autopilot(ind, 0);
 			CLR_BIT(pl->status, HOVERPAUSE);
-			CLR_BIT(pl->used, OBJ_SHIELD);
+			if (!BIT(pl->have, OBJ_SHIELD)) {
+			    CLR_BIT(pl->used, OBJ_SHIELD);
+			}
 		    }
 		    break;
 		}
@@ -748,7 +764,7 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_CLOAK:
-		if (pl->cloaks > 0) {
+		if (pl->item[ITEM_CLOAK] > 0) {
 		    sound_play_player(pl, CLOAK_SOUND);
 		    pl->updateVisibility = 1;
 		    TOGGLE_BIT(pl->used, OBJ_CLOAKING_DEVICE);
@@ -760,9 +776,9 @@ int Handle_keyboard(int ind)
 		break;
 
 	    case KEY_TRANSPORTER:
-		if (pl->transporters > 0 && pl->fuel.sum > -ED_TRANSPORTER) {
+		if (pl->item[ITEM_TRANSPORTER] > 0 && pl->fuel.sum > -ED_TRANSPORTER) {
 		    do_transporter(pl);
-		    pl->transporters--;
+		    pl->item[ITEM_TRANSPORTER]--;
 		    Add_fuel(&(pl->fuel), ED_TRANSPORTER);
 		    }
 		break;

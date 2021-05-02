@@ -1,6 +1,6 @@
-# $Id: Makefile.std,v 3.38 1994/09/26 13:24:44 bert Exp $
+# $Id: Makefile.std,v 3.49 1995/02/13 10:29:03 bert Exp $
 #
-# XPilot, a multiplayer gravity war game.  Copyright (C) 1993 by
+# XPilot, a multiplayer gravity war game.  Copyright (C) 1993-95 by
 #
 #      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
 #      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,7 +24,7 @@
 # Set the version number here so that we can we use it when installing
 # the binaries in the destination directory.
 #
-VERSION=3.2.0
+VERSION=3.3.0
 
 # Change these for your site
 INSTALLDIR=/usr/local/games
@@ -119,7 +119,7 @@ SGI_MLIB = -lm -lsun
 #
 AIX_CC = cc
 AIX_CFLAGS = -DAIX $(DEFS) $(INCS)
-AIX_OPT = -O -Hfsingle -w
+AIX_OPT = -O -w
 AIX_DEBUG = -g
 AIX_MLIB = -lm
 AIX_XLIB = -lX11
@@ -186,12 +186,19 @@ ULTRIX_XLIB = -lX11-mit
 #                    what it does and how it works.
 #                    It needs more work by a volunteer.
 #  JOYSTICK        - joystick support for Linux 1.0, needs joystick-0.7.
+#  PLOCKSERVER     - Use the plock(2) system call to lock the xpilots
+#                    server into memory, i.e. to inhibit paging/swapping.
+#                    This probably only makes sense in conjunction with
+#                    raising the priority of the server a little, which is
+#                    equivalent to reducing the nice value a few points.
+#                    Note that both require special system privileges.
+#                    Sofar this feature has only been tested on HP-UX.
 #
 # You should also set these appropriately (see config.h):
 #
 #  LOCALGURU           - define to the person in charge of xpilot on this site.
 #  LIBDIR              - define to where you want the help-files etc.
-#                        (HELPFILE, MOTDFILE, LOGFILE and MAPDIR)
+#                        (HELPFILE, MOTDFILE, LOGFILE, MAPDIR and TEXTUREDIR)
 #  UPDATES_PR_FRAME=1  - number of 'ticks' per drawing (1 is default).
 #
 DEFS = -DLOCALGURU=\\\"$(LOCALGURU)\\\" -DLIBDIR=\\\"$(LIBDIR)\\\"
@@ -227,13 +234,6 @@ INCS = $(AUDIOINC)
 #AUDIOOBJ = hpaudio.o
 
 #
-# Uncomment this line if your system doesn't have usleep().
-# Note that systems that do have usleep may want to use this
-# version too, because it may be faster :-)
-#
-USLEEP_OBJ = usleep.o
-
-#
 # Uncomment this line if you don't have strcasecmp() (case insensitive compare)
 #
 #STRCASECMP_OBJ = strcasecmp.o
@@ -256,7 +256,7 @@ USLEEP_OBJ = usleep.o
 OBJS1 = server.o event.o map.o math.o cmdline.o net.o netserver.o \
         play.o player.o rules.o update.o collision.o error.o frame.o \
         robot.o option.o socklib.o timer.o saudio.o \
-        $(USLEEP_OBJ) $(STRCASECMP_OBJ) $(STRDUP_OBJ) $(SUNCMW_OBJ)
+        $(STRCASECMP_OBJ) $(STRDUP_OBJ) $(SUNCMW_OBJ)
 SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
         play.c player.c rules.c update.c collision.c error.c frame.c \
         robot.c option.c socklib.c timer.c saudio.c
@@ -265,11 +265,19 @@ SRCS1 = server.c event.c map.c math.c cmdline.c net.c netserver.c \
 # Client program, xpilot...
 #
 OBJS2 = xpilot.o client.o join.o net.o netclient.o paint.o dbuff.o xinit.o \
-	default.o math.o xevent.o syslimit.o error.o socklib.o $(USLEEP_OBJ) \
-	configure.o widget.o caudio.o $(AUDIOOBJ) $(STRDUP_OBJ)
+	default.o math.o xevent.o syslimit.o error.o socklib.o \
+	configure.o widget.o caudio.o usleep.o record.o texture.o xpmread.o \
+	$(AUDIOOBJ) $(STRDUP_OBJ)
 SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
-	default.c math.c xevent.c syslimit.c error.c socklib.c caudio.c \
-	configure.c widget.c $(AUDIOSRC)
+	default.c math.c xevent.c syslimit.c error.c socklib.c \
+	configure.c widget.c caudio.c usleep.c record.c texture.c xpmread.c \
+	$(AUDIOSRC)
+
+#
+# Playback program, xp-replay...
+#
+OBJS3 = xp-replay.o buttons.o
+SRCS3 = xp-replay.c buttons.c
 
 #
 # If you have two CPUs available for compilation then
@@ -281,7 +289,7 @@ SRCS2 = xpilot.c client.c join.c net.c netclient.c paint.c dbuff.c xinit.c \
 #    make architecture TARGETS=xpilot
 # By default both are made on the same CPU.
 #
-TARGETS= xpilot xpilots
+TARGETS= xpilot xpilots xp-replay
 
 all:
 	@echo "Please specify your system.  Choose one of:"
@@ -384,19 +392,24 @@ xpilot: $(OBJS2)
 	rm -f xpilot
 	$(CC) $(LFLAGS) -o $@ $(OBJS2) $(AUDIOLIB) $(XLIB) $(MLIB)
 
+xp-replay: $(OBJS3)
+	rm -f xp-replay
+	$(CC) $(LFLAGS) -o $@ $(OBJS3) $(XLIB) $(MLIB)
+
 install:
 	@echo "Specify either install-apollo, install-hppa or install-sun or install-sonynews or install-suncmw"
 
 install-apollo: apollo
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).apollo
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).apollo
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).apollo
 
 install-hppa: hppa
-	cp xpilot xpilots $(INSTALLDIR)
-	strip $(INSTALLDIR)/xpilot*
+	cp xpilot xpilots xp-replay $(INSTALLDIR)
+	strip $(INSTALLDIR)/xpilot $(INSTALLDIR)/xpilots $(INSTALLDIR)/xp-replay
 	if [ ! -d $(LIBDIR) ]; then mkdir $(LIBDIR); fi
 	/bin/rm -f $(LIBDIR)/maps
-	cp -r ../lib/defaults ../lib/sounds ../lib/maps $(LIBDIR)
+	cp -r ../lib/defaults ../lib/sounds ../lib/maps ../lib/textures $(LIBDIR)
 	if [ ! -d $(SOUNDSDIR) ]; then mkdir $(SOUNDSDIR); fi
 	cp ../sounds/*.au $(SOUNDSDIR)
 	chmod -R a+r $(LIBDIR) $(SOUNDSDIR)
@@ -406,10 +419,12 @@ install-hppa: hppa
 install-sun: sun
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sun
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sun
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sun
 
 install-solaris: solaris
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).solaris
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).solaris
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).solaris
 
 install-suncmw: sun
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).suncmw
@@ -441,14 +456,17 @@ install-suncmw: sun
 install-sonynews: sonynews
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sonynews
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sonynews
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sonynews
 
 install-sgi: sgi
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).sgi
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).sgi
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).sgi
 
 install-ultrix: ultrix
 	cp xpilot $(INSTALLDIR)/xpilot-$(VERSION).ultrix
 	cp xpilots $(INSTALLDIR)/xpilots-$(VERSION).ultrix
+	cp xp-replay $(INSTALLDIR)/xp-replay-$(VERSION).ultrix
 
 
 install-apollo-debug: apollo-debug install-apollo
@@ -464,86 +482,108 @@ install-sgi-debug: sgi-debug install-sgi
 install-ultrix-debug: ultrix-debug install-ultrix
 
 #
-# usleep.o strcasecmp.o and strdup.o declared here in case they are
+# strcasecmp.o and strdup.o declared here in case they are
 # commented out for another platform
 #
 
 clean:
-	rm -f $(OBJS1) $(OBJS2) usleep.o strcasecmp.o strdup.o xpilot xpilots core
+	rm -f $(OBJS1) $(OBJS2) strcasecmp.o strdup.o xpilot xpilots \
+		xp-replay $(OBJS3) core
 
 ctags:
 	ctags *.h *.c
 
 ###
-server.o : server.c types.h version.h config.h const.h global.h object.h keys.h \
-  bit.h draw.h map.h rules.h item.h proto.h error.h socklib.h pack.h robot.h saudio.h \
-  net.h netserver.h 
-event.o : event.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h score.h robot.h saudio.h \
-  netserver.h 
-map.o : map.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
-  types.h map.h rules.h item.h proto.h error.h 
-math.o : math.c version.h config.h const.h draw.h types.h error.h 
-cmdline.o : cmdline.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h robot.h defaults.h 
-net.o : net.c version.h config.h const.h error.h net.h packet.h bit.h socklib.h 
-netserver.o : netserver.c types.h version.h config.h const.h global.h object.h \
-  keys.h bit.h draw.h map.h rules.h item.h proto.h error.h pack.h socklib.h net.h \
-  netserver.h packet.h setup.h robot.h saudio.h 
-play.o : play.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
-  types.h map.h rules.h item.h proto.h error.h score.h robot.h saudio.h netserver.h 
-player.o : player.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h score.h robot.h netserver.h \
-  saudio.h 
-rules.o : rules.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h 
-update.o : update.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h score.h robot.h saudio.h 
-collision.o : collision.c version.h config.h const.h global.h object.h keys.h \
-  bit.h draw.h types.h map.h rules.h item.h proto.h error.h score.h robot.h saudio.h \
-  netserver.h pack.h 
-error.o : error.c version.h config.h const.h error.h 
-frame.o : frame.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h netserver.h saudio.h 
-robot.o : robot.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h score.h robot.h saudio.h \
-  netserver.h 
-option.o : option.c types.h version.h config.h const.h global.h object.h keys.h \
-  bit.h draw.h map.h rules.h item.h proto.h error.h robot.h defaults.h 
-socklib.o : socklib.c socklib.h 
-timer.o : timer.c types.h version.h config.h const.h error.h 
-saudio.o : saudio.c version.h config.h const.h global.h object.h keys.h bit.h \
-  draw.h types.h map.h rules.h item.h proto.h error.h netserver.h 
-xpilot.o : xpilot.c version.h config.h const.h types.h pack.h bit.h error.h \
-  socklib.h net.h 
-client.o : client.c version.h config.h const.h setup.h error.h rules.h bit.h \
-  netclient.h types.h paint.h client.h draw.h item.h xinit.h 
-join.o : join.c types.h version.h config.h const.h error.h client.h draw.h item.h \
-  netclient.h 
-net.o : net.c version.h config.h const.h error.h net.h packet.h bit.h socklib.h 
-netclient.o : netclient.c types.h version.h config.h const.h error.h net.h netclient.h \
-  setup.h packet.h bit.h paint.h client.h draw.h item.h xinit.h pack.h socklib.h 
-paint.o : paint.c version.h config.h const.h error.h paint.h types.h client.h \
-  draw.h item.h xinit.h setup.h rules.h bit.h keys.h net.h netclient.h dbuff.h 
-dbuff.o : dbuff.c version.h config.h const.h draw.h types.h bit.h dbuff.h 
-xinit.o : xinit.c version.h config.h const.h rules.h icon.h paint.h types.h \
+server.o: server.c types.h version.h config.h const.h global.h object.h keys.h \
+  bit.h draw.h item.h map.h rules.h proto.h error.h socklib.h pack.h saudio.h net.h \
+  netserver.h
+event.o: event.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h score.h saudio.h netserver.h
+map.o: map.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h
+math.o: math.c version.h config.h const.h draw.h types.h error.h
+cmdline.o: cmdline.c version.h config.h const.h global.h object.h keys.h bit.h \
+  draw.h types.h item.h map.h rules.h proto.h error.h defaults.h
+net.o: net.c version.h config.h const.h error.h net.h packet.h bit.h socklib.h
+netserver.o: netserver.c types.h version.h config.h const.h global.h object.h \
+  keys.h bit.h draw.h item.h map.h rules.h proto.h error.h pack.h socklib.h net.h \
+  netserver.h packet.h setup.h saudio.h
+play.o: play.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h score.h saudio.h netserver.h
+player.o: player.c version.h config.h const.h global.h object.h keys.h bit.h \
+  draw.h types.h item.h map.h rules.h proto.h error.h score.h netserver.h saudio.h
+rules.o: rules.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h
+update.o: update.c version.h config.h const.h global.h object.h keys.h bit.h \
+  draw.h types.h item.h map.h rules.h proto.h error.h score.h saudio.h
+collision.o: collision.c version.h config.h const.h global.h object.h keys.h \
+  bit.h draw.h types.h item.h map.h rules.h proto.h error.h score.h saudio.h \
+  netserver.h pack.h
+error.o: error.c version.h config.h const.h error.h
+frame.o: frame.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h netserver.h saudio.h
+robot.o: robot.c version.h config.h const.h global.h object.h keys.h bit.h draw.h \
+  types.h item.h map.h rules.h proto.h error.h score.h saudio.h netserver.h pack.h \
+  robot.h
+option.o: option.c types.h version.h config.h const.h global.h object.h keys.h \
+  bit.h draw.h item.h map.h rules.h proto.h error.h defaults.h
+socklib.o: socklib.c version.h socklib.h
+timer.o: timer.c types.h version.h config.h const.h error.h
+saudio.o: saudio.c version.h config.h const.h global.h object.h keys.h bit.h \
+  draw.h types.h item.h map.h rules.h proto.h error.h netserver.h saudio.h
+xpilot.o: xpilot.c version.h config.h const.h types.h pack.h bit.h error.h \
+  socklib.h net.h
+client.o: client.c version.h config.h const.h setup.h error.h rules.h bit.h \
+  netclient.h types.h paint.h client.h draw.h item.h xinit.h
+join.o: join.c types.h version.h config.h const.h error.h client.h draw.h item.h \
+  netclient.h
+net.o: net.c version.h config.h const.h error.h net.h packet.h bit.h socklib.h
+netclient.o: netclient.c types.h version.h config.h const.h error.h net.h \
+  netclient.h setup.h packet.h bit.h paint.h client.h draw.h item.h xinit.h pack.h \
+  socklib.h
+paint.o: paint.c version.h config.h const.h error.h paint.h types.h client.h \
+  draw.h item.h xinit.h setup.h rules.h bit.h keys.h net.h netclient.h dbuff.h \
+  record.h texture.h
+dbuff.o: dbuff.c version.h config.h const.h draw.h types.h bit.h dbuff.h
+xinit.o: xinit.c version.h config.h const.h rules.h icon.h paint.h types.h \
   client.h draw.h item.h xinit.h bit.h keys.h setup.h widget.h configure.h error.h \
-  netclient.h dbuff.h items/itemRocketPack.xbm items/itemCloakingDevice.xbm items/itemEnergyPack.xbm \
-  items/itemWideangleShot.xbm items/itemRearShot.xbm items/itemMinePack.xbm items/itemSensorPack.xbm \
-  items/itemTank.xbm items/itemEcm.xbm items/itemAfterburner.xbm items/itemTransporter.xbm \
-  items/itemLaser.xbm items/itemEmergencyThrust.xbm items/itemTractorBeam.xbm \
-  items/itemAutopilot.xbm items/itemEmergencyShield.xbm 
-default.o : default.c types.h version.h config.h const.h paint.h client.h draw.h \
-  item.h pack.h bit.h keys.h netclient.h xinit.h error.h 
-math.o : math.c version.h config.h const.h draw.h types.h error.h 
-xevent.o : xevent.c version.h config.h const.h paint.h types.h client.h draw.h \
-  item.h xinit.h keys.h packet.h bit.h setup.h netclient.h widget.h error.h 
-syslimit.o : syslimit.c 
-error.o : error.c version.h config.h const.h error.h 
-socklib.o : socklib.c socklib.h 
-caudio.o : caudio.c 
-configure.o : configure.c version.h config.h const.h paint.h types.h client.h \
+  netclient.h dbuff.h items/itemRocketPack.xbm items/itemCloakingDevice.xbm \
+  items/itemEnergyPack.xbm items/itemWideangleShot.xbm \
+  items/itemRearShot.xbm items/itemMinePack.xbm items/itemSensorPack.xbm \
+  items/itemTank.xbm items/itemEcm.xbm items/itemAfterburner.xbm \
+  items/itemTransporter.xbm items/itemLaser.xbm \
+  items/itemEmergencyThrust.xbm items/itemTractorBeam.xbm \
+  items/itemAutopilot.xbm items/itemEmergencyShield.xbm
+default.o: default.c types.h version.h config.h const.h paint.h client.h draw.h \
+  item.h pack.h bit.h keys.h netclient.h xinit.h error.h
+math.o: math.c version.h config.h const.h draw.h types.h error.h
+xevent.o: xevent.c version.h config.h const.h paint.h types.h client.h draw.h \
+  item.h xinit.h keys.h packet.h bit.h setup.h netclient.h widget.h error.h \
+  record.h
+syslimit.o: syslimit.c
+error.o: error.c version.h config.h const.h error.h
+socklib.o: socklib.c version.h socklib.h
+caudio.o: caudio.c version.h
+configure.o: configure.c version.h config.h const.h paint.h types.h client.h \
   draw.h item.h xinit.h bit.h keys.h netclient.h widget.h configure.h setup.h \
-  error.h 
-widget.o : widget.c version.h config.h const.h paint.h types.h client.h draw.h \
-  item.h xinit.h bit.h error.h widget.h 
+  error.h
+widget.o: widget.c version.h config.h const.h paint.h types.h client.h draw.h \
+  item.h xinit.h bit.h error.h widget.h
+usleep.o: usleep.c types.h
+record.o: record.c version.h config.h error.h const.h client.h draw.h types.h \
+  item.h paint.h setup.h record.h recordfmt.h xpmread.h
+texture.o: texture.c version.h config.h const.h paint.h types.h client.h draw.h \
+  item.h xinit.h error.h xpmread.h texture.h textures/rock4.xpm
+xpmread.o: xpmread.c version.h config.h const.h paint.h types.h client.h draw.h \
+  item.h xinit.h error.h xpmread.h
+xp-replay.o: xp-replay.c recordfmt.h item.h buttons.h xp-replay.h \
+  items/itemRocketPack.xbm items/itemCloakingDevice.xbm \
+  items/itemEnergyPack.xbm items/itemWideangleShot.xbm \
+  items/itemRearShot.xbm items/itemMinePack.xbm items/itemSensorPack.xbm \
+  items/itemTank.xbm items/itemEcm.xbm items/itemAfterburner.xbm \
+  items/itemTransporter.xbm items/itemLaser.xbm \
+  items/itemEmergencyThrust.xbm items/itemTractorBeam.xbm \
+  items/itemAutopilot.xbm items/itemEmergencyShield.xbm tools/eject.xbm \
+  tools/fastf.xbm tools/pause.xbm tools/play.xbm tools/record.xbm \
+  tools/revplay.xbm tools/rewind.xbm tools/stop.xbm
+buttons.o: buttons.c buttons.h xp-replay.h tools/grey.xbm

@@ -1,10 +1,11 @@
+Subject: XPilot multi-player Internet game FAQ
 Followup-To: poster
 Reply-To: bert@mc.bio.uva.nl
-Archive-name: xpilot-faq
-Expires: Sun, 1 Oct 1994 00:00:00 GMT
-Summary: XPilot, a multi-player tactical manouvring game for X and Unix.
-Last-modified: 1994/08/20
-Version: 2.8.5
+Expires: Sun, 26 Feb 1995 00:00:00 GMT
+
+Archive-name: games/xpilot-faq
+Last-modified: 1995/02/06
+Version: 3.1.1
 
 This is the Frequently Asked Questions list With Answers for XPilot.
 Suggestions, improvements and spelling corrections to bert@mc.bio.uva.nl.
@@ -15,8 +16,8 @@ It can also be obtained by: telnet xpilot.cs.uit.no 4402.
 Or by anonymous ftp to xpilot.sdsu.edu in /pub/xpilot-maps/FAQ.
 
 New questions in this release:
-Questions changed in this release: 1 (WWW!)
-Questions changed in the previous release:
+Questions changed in this release:
+Questions changed in the previous release: (Newbie Manual on WWW!) 0, 1, 3, 6, 7, 8, 19, 24
 
 Questions:
 
@@ -48,6 +49,7 @@ Questions:
 23) Why do I never get any items (triangles) to appear in my maps?
 24) What are the Well Known Problems for the latest version?
 25) What if I'm having trouble installing XPilot on Platform XYZ?
+26) Is there a XPilot version available for MS-DOS or MS-Windows or the Mac?
 
 Answers:
 
@@ -57,8 +59,10 @@ No, this FAQ is only meant to get you up and running and covers some
 issues not found elsewhere.  In the XPilot distribution there is
 authoritative documentation any wanna-be XPiloter should read.
 Pay special attention to the two manual pages in the man6 directory
-and to the four README files.  The README files are README, README.MAPS,
-README.MAPS2 and README.SHIPS.
+and to the four README files.
+
+More, many more questions are answered in the WWW XPilot Newbie Manual
+http://bau2.uibk.ac.at/erwin/NM/www
 
 1) What is this wonderful game called XPilot everybody is talking about?
 
@@ -93,32 +97,24 @@ other ways to have XPilot run on a diverse set of Unix computers and VMS.
 The XPilot home page on World-Wide Web is:
     http://www.cs.uit.no/XPilot/
 
-Other WWW pages about XPilot are:
-    http://heron.met.nps.navy.mil/~forsythe/index.html
-    http://bau2.uibk.ac.at/che/xpilot.html
-    http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html
-    http://ernie.ucsc.edu:8001/1g/xpilot
-    http://ece.uiuc.edu/lard/lard.html
-    http://www.sdsu.edu/~boyns/xpilot.html
-    http://www.sdsu.edu/~turtle/
-    http://www.sdsu.edu/~garrett/
-    http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html
-    http://rs560.cl.msu.edu/misc/xpilot.html
+There is a large and entertaining Newbie Manual on WWW which encompasses
+more than 160 articles.  Its URL is:
+    http://bau2.uibk.ac.at/erwin/NM/www
 
 2) What is the latest version?
 
-3.2.5.  Which is XPilot release 3.2, patchlevel 5.
+3.2.9.  Which is XPilot release 3.2, patchlevel 9.
 
 3) Where can I get it as soon as possible?
 
-Anonymous ftp to ftp.cs.uit.no (129.242.16.93) in /pub/games/xpilot.
-Use as login name anonymous or ftp and use as password your email address.
-Look for the file named xpilot-3.2.5.tar.gz, which is the already fully
-patched up version.  Some patches for older versions are also available.
+Anonymous ftp to ftp.cs.uit.no (129.242.16.93).  Use as login name
+anonymous or ftp and supply your email address as password.
+Go to the directory /pub/games/xpilot and look for the file named
+xpilot-3.2.9.tar.gz.  Some patches for older versions are also available.
 Other anonymous ftp sites may have it as well, the most up to date is
-ftp.x.org (198.112.44.100) in /contrib/games.
-Another important ftp site (especially for HP 700 series computers) is
-hpux.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games/Arcade.
+ftp.x.org (198.112.44.100) in /contrib/games/multiplayer/.
+Another important ftp site (especially for HP 700 series workstations) is
+hpux.csc.liv.ac.uk (138.253.42.172) in /hpux9/Games/Arcade/.
 
 If you have absolutely no FTP access then you can get it send by email.
 Mail to bert@mc.bio.uva.nl with a Subject line of `mail xpilot'.
@@ -128,7 +124,7 @@ much faster anyway.
 You will get a dozen mails with XPilot in gzipped uuencoded format.
 Strip the mail headers and concatenate these files in the right order
 into one big file.  The last line of this file should read: "end".
-Then uudecode this file to get xpilot-3.2.5.tar.gz.
+Then uudecode this file to get xpilot-3.2.9.tar.gz.
 This is the XPilot distribution file as found on ftp.cs.uit.no.
 
 4) Sound?  Does it really have sound?
@@ -173,29 +169,29 @@ prep.ai.mit.edu (18.71.0.38).  The last one in the pub/gnu directory.
 Alternatively, if you have an older version of GNU zip and do not wish to
 upgrade, you can use something like :
 
-    gzip -d < xpilot-3.2.5.tar.gz > xpilot-3.2.5.tar
+    gzip -d < xpilot-3.2.9.tar.gz > xpilot-3.2.9.tar
 
 or even better :
 
-    gzip -d < xpilot-3.2.5.tar.gz | tar xvf -
+    gzip -d < xpilot-3.2.9.tar.gz | tar xvf -
 
 6) I do not have the patch program on my system, so how can I upgrade?
 
 Get patch from one of the major ftp sites mentioned above.
-Or from prep.ai.mit.edu in the pub/gnu directory.
+Or from prep.ai.mit.edu in the /pub/gnu directory.
 
 7) Compilation fails, because the compiler generates lots of error messages?
 
-This is probably due to not using an ANSI compiler.  Consider using GCC.
-Also, do not use the -ansi option together with GCC, because some system
-include files are not fully ANSI compatible.
+This is probably due to not using an ANSI C compliant compiler.
+Consider using gcc.  Also, do not use the -ansi option together with GCC,
+because some system include files are not fully ANSI compatible.
 
 8) How should I start the game?
 
 When you have managed to compile XPilot successfully you will have
 two new executables.  One program is named 'xpilots', which is the
 server program.  If you do: `xpilots -help' then you will see some
-configuration options.  Start this program in one window
+configuration options with explanations.  Start this program in one window
 simply by typing: xpilots or ./xpilots.  Nothing much will happen yet.
 The other program is named 'xpilot', which is the client program.
 Startup this program in a second window.  If you start this program
@@ -208,6 +204,7 @@ The xpilot client program should now print a message like:
 
 Now type a question mark '?' to see some possible options.
 Or simply type a return to enter the game.
+
 Newbies should note that in order to fire one has to put down
 the shield first.  This is done by pressing and releasing the
 spacebar once.
@@ -412,7 +409,7 @@ program which is in the contrib directory of the distribution.
 
 Use the XMapEdit program, which was made
 by Aaron Averila (averila@oes.orst.edu).
-You can get it by ftp from ftp.cs.uit.no in /pub/games/xpilot.
+You can get it by ftp from ftp.cs.uit.no in /pub/games/xpilot/contrib/.
 The map format is in ASCII so you can also make or change maps
 with your standard text editor (vi, emacs).  And everybody did
 it that way before XMapEdit, but that seems hopelessly complex
@@ -470,30 +467,30 @@ Help is available online.  Example session:
     E-mail problems to kenrsc@stud.cs.uit.no (Ken Ronny Schouten).
 
     >list
-    3.2.5          :144.168.23.100           :15345    :0   :2.51      :Team-combat
-    3.2.5          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
-    3.2.5          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
-    3.2.5          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
-    3.2.5          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
-    3.2.5          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
-    3.2.5          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
-    3.2.5          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
-    3.2.5          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
-    3.2.5          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
-    3.2.5          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
-    3.2.5          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
-    3.2.5          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
-    3.2.5          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
-    3.2.5          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
-    3.2.5          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
-    3.2.5          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
-    3.2.5          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
-    3.2.5          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
-    3.2.5          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
-    3.2.5          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
+    3.2.9          :144.168.23.100           :15345    :0   :2.51      :Team-combat
+    3.2.9          :stra27.hw.stratus.com    :15345    :1   :20d 2.14  :The Wide Colony (version 1.0)
+    3.2.9          :i11s17.ira.uka.de        :15345    :2   :13d 10.29 :The Globe
+    3.2.9          :wpyx78.physik.uni-wuerzburg.de:15345    :2   :0.16      :The Globe
+    3.2.9          :irz201.inf.tu-dresden.de :15345    :4   :11d 8.52  :The Black Hole
+    3.2.9          :skolem.uni-paderborn.de  :15345    :0   :13d 1.33  :UNI-PADERBORN
+    3.2.9          :micro.iesd.auc.dk        :15345    :2   :6d 6.32   :CyberParadise
+    3.2.9          :bird05.cs.ohiou.edu      :15345    :4   :0.00      :CloudScape
+    3.2.9          :adder.ee.byu.edu         :15345    :0   :NA        :The Globe
+    3.2.9          :polaris.cis.ksu.edu      :15345    :1   :2.30      :Refrigerator
+    3.2.9          :carbon.lance.colostate.edu:15345    :2   :1.07      :Team Warfare
+    3.2.9          :mizar.wustl.edu          :15345    :5   :21.00     :Chambers of Carnage
+    3.2.9          :scratch.eecs.umich.edu   :15345    :7   :1d 15.24  :Blood's Music
+    3.2.9          :xpilot.modeemi.cs.tut.fi :15000    :0   :6d 22.00  :Mta tournament
+    3.2.9          :dutian.twi.tudelft.nl    :15345    :2   :0.00      :Team Tournament
+    3.2.9          :surt.ifi.uio.no          :15345    :1   :0.36      :Fireball
+    3.2.9          :oversoul.edb.tih.no      :15345    :0   :23.18     :Tournament
+    3.2.9          :tsunb.ctn.cogs.susx.ac.uk:15345    :3   :1.21      :Borgtown
+    3.2.9          :eden.bioc.cam.ac.uk      :15345    :3   :0.24      :ShadesNicks
+    3.2.9          :lagrange.cms.dmu.ac.uk   :15345    :4   :0.39      :The Globe
+    3.2.9          :meehpa02.ee.man.ac.uk    :15345    :0   :7d 0.06   :Tournament
     >server scratch.eecs.umich.edu
     >status
-    SERVER VERSION...: XPilot 3.2.5
+    SERVER VERSION...: XPilot 3.2.9
     STARTED BY.......: pkenny
     STATUS...........: ok
     MAX SPEED........: 12 fps
@@ -530,12 +527,29 @@ His email address is kenrsc@stud.cs.uit.no.
 19) What information about XPilot is available on World-Wide Web?
 
 The XPilot Page on the World-Wide Web can be found on URL
-<http://www.cs.uit.no/XPilot/>.
+    http://www.cs.uit.no/XPilot/
+
+Highly recommended is the online XPilot Newbie Manual, the creation
+of Karen Gould and Erwin Zierler with the help of many contributors:
+    http://bau2.uibk.ac.at/erwin/NM/www
+
+Other WWW pages related to XPilot are:
+    http://heron.met.nps.navy.mil/~forsythe/index.html
+    http://bau2.uibk.ac.at/che/xpilot.html
+    http://vitruvius.cecer.army.mil:8000/~rglaeser/xpilot/xpilot.html
+    http://ernie.ucsc.edu:8001/1g/xpilot
+    http://ece.uiuc.edu/lard/lard.html
+    http://www.sdsu.edu/~boyns/xpilot.html
+    http://www.sdsu.edu/~turtle/
+    http://www.sdsu.edu/~garrett/
+    http://krusty.eecs.umich.edu/people/kennyp/xpilot/xpilot.html
+    http://rs560.cl.msu.edu/misc/xpilot.html
+    http://www.cldc.howard.edu/~ltb/Xpilot
 
 20) How should I subscribe/unsubscribe to/from the XPilot mailing list?
 
 Requests for (un)subscription to the XPilot mailing list should
-be send to xpilot-request@cs.uit.no.  People really dislike it
+be send to listproc@cs.uit.no.  People really dislike it
 to see any (un)subscribe requests in the mailing list itself.
 The mailing list itself is xpilot-list@cs.uit.no, which is gateway-ed
 to alt.games.xpilot.
@@ -602,7 +616,7 @@ but may also apply to later patchlevels:
 (d) It has been reported that after applying patch #3 it was necessary to do
     a make clean first before recompiling.
 
-These apply to patchlevel 4 only:
+These apply to XPilot 3.0 patchlevel 4 only:
 
 (e) In Team mode shots sometimes don't kill.  This is due to a bug
     in collision.c line 627, which currently reads as:
@@ -610,13 +624,13 @@ These apply to patchlevel 4 only:
     But which should read as:
 	    if (TEAM(GetInd[obj->id], GetInd[pl->id])) {
 
-For patchlevel 5 there have not been reported any problems.
+For XPilot 3.0 patchlevel 5 there have not been reported any problems.
 
 Since 3.0.5 there is a BUGS file in the toplevel directory of the distribution.
 This file describes all of the known bugs and the (lack of :) progress being
 made on fixing them.
 
-These apply to patchlevel 6 only:
+These apply to XPilot 3.0 patchlevel 6 only:
 
 Using the `K' command to kick a player cause the server to exit with an
 error message.  This will be fixed in patchlevel 7 (not so it seems).
@@ -626,7 +640,7 @@ not transmitted complete to the client.  Very big is approximately
 600x600, depending upon the map compression ratio.
 This is fixed in the next release, which will permit maps upto 936x936.
 
-These apply to patchlevel 7 only:
+These apply to XPilot 3.0 patchlevel 7 only:
 
 There is a typo in the text displayed for nuke hits.  Only cosmetic.
 Apart from this patchlevel 7 seems to be the most stable 3.0 release.
@@ -657,12 +671,25 @@ is as good as perfect, except for a few known small problems.
     c) rogue heat seakers can cause the server to crash.  This bug
        may also exist in earlier 3.2 versions.
 
-Version 3.2.3 looks to be quite stable.  Sofar two people reported some
-strange problems, which have not been repeated on other systems (yet?).
+XPilot 3.2.5 and 3.2.6 are stable recommended versions with only a
+few harmless bugs, which you will probably not notice.
 
-No problems reported for 3.2.4 sofar.
+3.2.7 has a serious bug in the new robot code.
+It also cause some strange problems which haven't been demystified.
 
-3.2.5 is bugfree ;-)
+3.2.8 has a bad new sound messing up most of the sound effects
+if different client and server versions are mixed.
+
+3.2.9 has a few small bugs, some of which were also in 3.2.8, 3.2.7
+and earlier versions:
+    a) robots have an undefined attack and defense setting.
+    b) Compilation for old HP C compilers may cause strange effects,
+       either upgrade your HP C to A.09.69 or use gcc.
+       For HP 700 series there is a pre-compiled gcc distribution
+       available from jaguar.cs.utah.edu in /dist/hpuxbin.tar.Z
+    c) `initialEmergencyShields' don't work correctly when `playerStartShielded'
+       is false and `allowShields' is false.  This bugreport could not be repeated.
+    d) A memory overwrite bug is triggered when a player gets her eighth tank.
 
 25) What if I'm having trouble installing XPilot on Platform XYZ?
 
@@ -670,7 +697,7 @@ Below is a list of people who are willing to help others install XPilot
 on various platforms. Please feel free to mail these people about any
 difficulties you are having but keep in mind that they are doing this
 voluntarily.  Please specify the operating system and compiler you are
-using when describing your difficulties.
+using when describing your difficulties as well as the version of XPilot.
 
 Platform                Person              Email
 ----------------------- ------------------- ---------------------------------
@@ -685,5 +712,12 @@ VMS                     Curt Hjorring       HJORRING@esv1.aukuni.ac.nz
 Linux                   Bert Gijsbers       bert@mc.bio.uva.nl
 
 HP-UX                   Bert Gijsbers       bert@mc.bio.uva.nl
+
+26) Is there a XPilot version available for MS-DOS or MS-Windows or the Mac?
+
+No.  For PCs the best solution is to install the Linux operating system,
+which is free, on the PC.  Linux is a supported platform for XPilot.
+
+For the Mac there is no hope.
 
 EOFAQ

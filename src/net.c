@@ -1,6 +1,6 @@
-/* $Id: net.c,v 3.25 1994/07/10 19:48:54 bert Exp $
+/* $Id: net.c,v 3.29 1995/01/11 19:36:09 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -44,6 +44,9 @@
 #include <netinet/in.h>
 #endif
 #include <netdb.h>
+#ifdef __sgi
+#include <bstring.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -53,6 +56,8 @@
 #include "packet.h"
 #include "bit.h"
 #include "socklib.h"
+
+char net_version[] = VERSION;
 
 int last_packet_of_frame;
 
@@ -302,7 +307,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	if (before++ == 0) {
 	    errno = 0;
 	    error("Read socket buffer not big enough (%d,%d)",
-		sbuf->size, sbuf->len);
+		  sbuf->size, sbuf->len);
 	}
 	return -1;
     }

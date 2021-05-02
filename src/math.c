@@ -1,6 +1,6 @@
-/* $Id: math.c,v 3.24 1994/09/16 23:28:09 bert Exp $
+/* $Id: math.c,v 3.29 1995/01/11 19:35:08 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -37,9 +37,11 @@
 #include "draw.h"
 #include "error.h"
 
+char math_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: math.c,v 3.24 1994/09/16 23:28:09 bert Exp $";
+    "@(#)$Id: math.c,v 3.29 1995/01/11 19:35:08 bert Exp $";
 #endif
 
 
@@ -51,6 +53,22 @@ static int	Get_shape_keyword(char *keyw);
 
 float		tbl_sin[TABLE_SIZE];
 float		tbl_cos[TABLE_SIZE];
+
+
+int ON(char *optval)
+{
+    return (strncasecmp(optval, "true", 4) == 0
+	    || strncasecmp(optval, "on", 2) == 0
+	    || strncasecmp(optval, "yes", 3) == 0);
+}
+
+
+int OFF(char *optval)
+{
+    return (strncasecmp(optval, "false", 5) == 0
+	    || strncasecmp(optval, "off", 3) == 0
+	    || strncasecmp(optval, "no", 2) == 0);
+}
 
 
 int mod(int x, int y)
@@ -91,16 +109,16 @@ float rfrac()
      * Return a pseudo-random value in the range { 0 <= x < 1 }.
      * Assume all RAND_MAXs are at least 32767 and divide by 32768.
      */
-    return ((rand() & 0x7FFF) * 0.000030517578125f);
+    return (float)((double)(rand() & 0x7FFF) * 0.000030517578125);
 }
 
 void Make_table(void)
 {
     int i;
 
-    for (i=0; i<TABLE_SIZE; i++) {
-	tbl_sin[i] = sin((2*PI) * ((float)i/TABLE_SIZE));
-	tbl_cos[i] = cos((2*PI) * ((float)i/TABLE_SIZE));
+    for (i = 0; i < TABLE_SIZE; i++) {
+	tbl_sin[i] = sin(i * (2.0 * PI / TABLE_SIZE));
+	tbl_cos[i] = cos(i * (2.0 * PI / TABLE_SIZE));
     }
 }
 
@@ -208,7 +226,7 @@ static int shape2wire(char *ship_shape_str, wireobj *w)
 			 grid.done++)
 #define GRID_CHK(x,y)	(GRID_PT(x, y) == 2)
 #define GRID_READY()	(grid.done >= grid.todo)
-#define GRID_RESET()	(memset(&grid.pt, 0, sizeof grid.pt), \
+#define GRID_RESET()	(memset(grid.pt, 0, sizeof grid.pt), \
 			 grid.done = 0, \
 			 grid.todo = 0)
 

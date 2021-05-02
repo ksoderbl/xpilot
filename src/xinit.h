@@ -1,6 +1,6 @@
-/* $Id: xinit.h,v 3.30 1994/07/10 20:10:28 bert Exp $
+/* $Id: xinit.h,v 3.35 1995/01/29 16:22:23 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -35,7 +35,6 @@
 
 #define MAX_POINTER_BUTTONS 5
 
-#define HavePlanes(d) (DisplayPlanes(d, DefaultScreen(d)) > 2)
 #define HaveColor(d)							\
     (DefaultVisual(d, DefaultScreen(d))->class == PseudoColor		\
      || DefaultVisual(d, DefaultScreen(d))->class == GrayScale)
@@ -53,6 +52,9 @@ extern int		top_width, top_height;
 extern int		draw_width, draw_height;
 extern char		*geometry;
 extern bool		autoServerMotdPopup;
+extern char		sparkColors[MSG_LEN];
+extern int		spark_color[MAX_COLORS];
+extern int		num_spark_colors;
 
 /*
  * Prototypes for xinit.c
@@ -60,7 +62,7 @@ extern bool		autoServerMotdPopup;
 extern int Parse_colors(Colormap cmap);
 extern void List_visuals(void);
 extern int Init_window(void);
-extern int Alloc_msgs(int number);
+extern int Alloc_msgs(void);
 extern void Free_msgs(void);
 extern void Expose_info_window(void);
 extern void Expose_button_window(int color, Window w);
@@ -74,10 +76,11 @@ extern void Draw_score_table(void);
 extern void Resize(Window w, int width, int height);
 
 extern int DrawShadowText(Display*, Window w, GC gc,
-			  int x_border, int start_y,
-			  char *str, Pixel fg, Pixel bg);
-extern void ShadowDrawString(Display*, Window w, GC gc, int x,
-			   int start_y, char *str, Pixel fg, Pixel bg);
+			  int x_border, int start_y, char *str,
+			  unsigned long fg, unsigned long bg);
+extern void ShadowDrawString(Display*, Window w, GC gc,
+			     int x, int start_y, char *str,
+			     unsigned long fg, unsigned long bg);
 void About(Window w);
 void Expose_about_window(void);
 int Handle_motd(long off, char *buf, int len, long filesize);

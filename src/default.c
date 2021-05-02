@@ -1,6 +1,6 @@
-/* $Id: default.c,v 3.80 1994/08/16 19:03:20 bert Exp $
+/* $Id: default.c,v 3.96 1995/02/13 10:56:37 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -55,9 +55,11 @@
 #include "xinit.h"
 #include "error.h"
 
+char default_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: default.c,v 3.80 1994/08/16 19:03:20 bert Exp $";
+    "@(#)$Id: default.c,v 3.96 1995/02/13 10:56:37 bert Exp $";
 #endif
 
 #ifdef VMS
@@ -70,8 +72,8 @@ static char sourceid[] =
 #define KEYBOARD_ENV	"KEYBOARD"
 #endif
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN	1024
+#ifndef PATH_MAX
+#define PATH_MAX	1023
 #endif
 
 /*
@@ -147,7 +149,7 @@ struct option {
 	NULL,
 	"Yes",
 	KEY_DUMMY,
-	"Popup the MOTD of the server when available.\n"
+	"Automatically popup the MOTD of the server on startup.\n"
     },
     {
 	"list",
@@ -216,6 +218,25 @@ struct option {
 	"The exact format is defined in the file README.ships in the XPilot\n"
 	"distribution.  Note that there is a nifty tool called editss for\n"
 	"easy ship creation.  See the XPilot FAQ for details.\n"
+	"See also the \"shipShapeFile\" option below.\n"
+    },
+    {
+	"shipShapeFile",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"An optional file where shipshapes can be stored.\n"
+	"If this resource is defined and it refers to an existing file\n"
+	"then shipshapes can be referenced to by their name.\n"
+	"For instance if you define shipShapeFile to be\n"
+	"/home/myself/.shipshapes and this file contains one or more\n"
+	"shipshapes then you can select the shipshape by starting xpilot as:\n"
+	"	xpilot -shipShape myshipshapename\n"
+	"Where \"myshipshapename\" should be the \"name:\" or \"NM:\" of\n"
+	"one of the shipshapes defined in /home/myself/.shipshapes.\n"
+	"Each shipshape definition should be defined on only one line,\n"
+	"where all characters up to the first left parenthesis don't matter.\n"
+	/* shipshopshapshepshit getting nuts from all these shpshp-s. */
     },
     {
 	"power",
@@ -395,6 +416,38 @@ struct option {
 	"Draws only the outline of all the blue map constructs.\n"
     },
     {
+	"filledWorld",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draws the walls solid, filled with one color.\n"
+	"Be warned that this option needs fast graphics.\n"
+    },
+    {
+	"texturedWalls",
+	NULL,
+	"No",
+	KEY_DUMMY,
+	"Draws the walls filled with a texture pattern.\n"
+	"See also the wallTextureFile option.\n"
+	"Be warned that this needs a very fast graphics system.\n"
+    },
+    {
+	"wallTextureFile",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"Specify a XPM format pixmap file to load the wall texture from.\n"
+    },
+    {
+	"texturePath",
+	NULL,
+	TEXTUREDIR,
+	KEY_DUMMY,
+	"Optional search path for XPM texture files.\n"
+	"This is a list of one or more directories separated by colons.\n"
+    },
+    {
 	"markingLights",
 	NULL,
 	"Yes",
@@ -408,13 +461,14 @@ struct option {
 	KEY_DUMMY,
 	"The chance that sparks are drawn or not.\n"
 	"This gives a sparkling effect.\n"
+	"Valid values are in the range [0.0-1.0]\n"
     },
     {
 	"sparkSize",
 	NULL,
 	"2",
 	KEY_DUMMY,
-	"Size of sparks.\n"
+	"Size of sparks in pixels.\n"
     },
     {
 	"charsPerSecond",
@@ -476,7 +530,7 @@ struct option {
 	KEY_DUMMY,
 	"The font used in the talk window.\n"
     },
-	{
+    {
 	"motdFont",
 	NULL,
 	MOTD_FONT,
@@ -496,14 +550,15 @@ struct option {
 	NULL,
 	"3",
 	KEY_DUMMY,
-	"The size of shots.\n"
+	"The size of shots in pixels.\n"
     },
     {
 	"teamShotSize",
 	NULL,
 	"2",
 	KEY_DUMMY,
-	"The size of team shots.  Note that team shots are drawn in blue.\n"
+	"The size of team shots in pixels.\n"
+	"Note that team shots are drawn in blue.\n"
     },
     {
 	"backgroundPointDist",
@@ -528,7 +583,7 @@ struct option {
 	KEY_DUMMY,
 	"Should the title bar change or not.\n"
 	"Some window managers like twm may have problems with\n"
-	"flipping title bars.\n"
+	"flipping title bars.  Hence this option to turn it off.\n"
     },
     {
 	"toggleShield",
@@ -572,14 +627,16 @@ struct option {
 	NULL,
 	"Yes",
 	KEY_DUMMY,
-	"Dunno what this does.  If you do please let me know.\n"
+	"Should owned items be displayed permanently on the HUD,\n"
+	"or only when their amount has changed?\n"
     },
     {
 	"showItemsTime",
 	NULL,
 	"2.0",
 	KEY_DUMMY,
-	"Dunno what this does.  If you do please let me know.\n"
+	"The time in seconds to display item information when\n"
+	"it has changed and the showItems option is turned on.\n"
     },
     {
 	"receiveWindowSize",
@@ -778,12 +835,33 @@ struct option {
 	"Which color number to use for drawing the HUD.\n"
     },
     {
+	"hudLockColor",
+	NULL,
+	"4",
+	KEY_DUMMY,
+	"Which color number to use for drawing the lock on the HUD.\n"
+    },
+    {
+	"wallColor",
+	NULL,
+	"2",
+	KEY_DUMMY,
+	"Which color number to use for drawing walls.\n"
+    },
+    {
 	"targetRadarColor",
 	NULL,
 	"4",
 	KEY_DUMMY,
 	"Which color number to use for drawing targets on the radar.\n"
-	"Valid values are all even color numbers bigger than or equal to 2.\n"
+	"Valid values all powers of 2 smaller than maxColors.\n"
+    },
+    {
+	"sparkColors",
+	NULL,
+	"5,6,7,3",
+	KEY_DUMMY,
+	"Which color numbers to use for spark and debris particles.\n"
     },
     {
 	"modifierBank1",
@@ -896,7 +974,7 @@ struct option {
 	NULL,
 	"equal",
 	KEY_DETONATE_MINES,
-	"Detonate all the mines you have dropped or thrown.\n"
+	"Detonate the mine you have dropped or thrown, which is closest to you.\n"
     },
     {
 	"keyLockClose",
@@ -1252,6 +1330,13 @@ struct option {
 	"Load player lock from bank 4.\n"
     },
     {
+	"keyToggleRecord",
+	NULL,
+	"KP_5",
+	KEY_TOGGLE_RECORD,
+	"Toggle recording of session (see recordFile).\n"
+    },
+    {
 	"keyPointerControl",
 	NULL,
 	"KP_Enter",
@@ -1293,6 +1378,21 @@ struct option {
 	KEY_DUMMY,
 	"The key to activate when pressing the fifth mouse button.\n"
     },
+    {
+	"maxFPS",
+	NULL,
+	"20",
+	KEY_DUMMY,
+	"Set client's maximum FPS supported.\n"
+    },
+    {
+	"recordFile",
+	NULL,
+	"",
+	KEY_DUMMY,
+	"An optional file where a recording of a game can be made.\n"
+	"If this file is undefined then recording isn't possible.\n"
+    },
 #ifdef SOUND
     {
 	"sounds",
@@ -1319,12 +1419,7 @@ struct option {
 };
 
 
-static int ON(char *optval)
-{
-    return (strncasecmp(optval, "true", 4) == 0
-	    || strncasecmp(optval, "on", 2) == 0
-	    || strncasecmp(optval, "yes", 3) == 0);
-}
+int ON(char *optval);
 
 
 char* Get_keyHelpString(keys_t key)
@@ -1388,7 +1483,13 @@ static void Usage(void)
 	    }
 	}
 	if (options[i].fallback && options[i].fallback[0]) {
-	    printf("        The default value is: %s.\n", options[i].fallback);
+	    printf("        The default %s: %s.\n",
+		   (options[i].key == KEY_DUMMY)
+		       ? "value is"
+		       : (strchr(options[i].fallback, ' ') == NULL)
+			   ? "key is"
+			   : "keys are",
+		   options[i].fallback);
 	}
 	printf("\n");
     }
@@ -1538,7 +1639,7 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
     char		*ptr,
 			*lang = getenv("LANG"),
 			*home = getenv("HOME"),
-			path[MAXPATHLEN];
+			path[PATH_MAX + 1];
     XrmDatabase		tmpDB;
 
     sprintf(path, "%s%s", LIBDIR, myClass);
@@ -1639,9 +1740,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     KeySym		ks;
     char		*ptr,
 			*str,
-			resValue[2*MSG_LEN];
+			resValue[MAX(2*MSG_LEN, PATH_MAX + 1)];
     XrmDatabase		argDB = 0, rDB;
     XrmOptionDescRec	*xopt;
+    extern void		Record_init(char *filename);
 
     XrmInitialize();
 
@@ -1768,6 +1870,14 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	    nickName);
 	exit(1);
     }
+    /* strip trailing whitespace. */
+    for (ptr = &nickName[strlen(nickName)]; ptr-- > nickName; ) {
+	if (isascii(*ptr) && isspace(*ptr)) {
+	    *ptr = '\0';
+	} else {
+	    break;
+	}
+    }
     strncpy(realname, realName, sizeof(realname) - 1);
     strncpy(name, nickName, sizeof(name) - 1);
 
@@ -1786,6 +1896,38 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
     Get_resource(rDB, "shipShape", resValue, sizeof resValue);
     shipShape = strdup(resValue);
+    if (shipShape && *shipShape && !strchr(shipShape, '(' )) {
+	/* so it must be the name of shipshape defined in the shipshapefile. */
+	Get_resource(rDB, "shipShapeFile", resValue, sizeof resValue);
+	if (resValue[0] != '\0') {
+	    FILE *fp = fopen(resValue, "r");
+	    if (!fp) {
+		perror(resValue);
+	    } else {
+		char line[1024];
+		while (fgets(line, sizeof line, fp)) {
+		    if ((str = strstr(line, "(name:" )) != NULL
+			|| (str = strstr(line, "(NM:" )) != NULL) {
+			str = strchr(str, ':');
+			while (*++str == ' ');
+			if ((ptr = strchr(str, ')' )) != NULL) {
+			    *ptr = '\0';
+			}
+			if (!strcmp(str, shipShape)) {
+			    /* Gotcha */
+			    free(shipShape);
+			    if (ptr != NULL) {
+				*ptr = ')';
+			    }
+			    shipShape = strdup(line);
+			    break;
+			}
+		    }
+		}
+	    }
+	    fclose(fp);
+	}
+    }
     Validate_shape_str(shipShape);
 
     Get_float_resource(rDB, "power", &power);
@@ -1848,7 +1990,10 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	strcpy(color_names[i], resValue);
     }
     Get_int_resource(rDB, "hudColor", &hudColor);
+    Get_int_resource(rDB, "hudLockColor", &hudLockColor);
+    Get_int_resource(rDB, "wallColor", &wallColor);
     Get_int_resource(rDB, "targetRadarColor", &targetRadarColor);
+    Get_resource(rDB, "sparkColors", sparkColors, MSG_LEN);
 
     instruments = 0;
     Get_bit_resource(rDB, "showShipName", &instruments, SHOW_SHIP_NAME);
@@ -1865,9 +2010,11 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bit_resource(rDB, "packetLossMeter", &instruments, SHOW_PACKET_LOSS_METER);
     Get_bit_resource(rDB, "packetDropMeter", &instruments, SHOW_PACKET_DROP_METER);
     Get_bit_resource(rDB, "slidingRadar", &instruments, SHOW_SLIDING_RADAR);
-    Get_bit_resource(rDB, "outlineWorld", &instruments, SHOW_OUTLINE_WORLD);
     Get_bit_resource(rDB, "showItems", &instruments, SHOW_ITEMS);
     Get_bit_resource(rDB, "clock", &instruments, SHOW_CLOCK);
+    Get_bit_resource(rDB, "outlineWorld", &instruments, SHOW_OUTLINE_WORLD);
+    Get_bit_resource(rDB, "filledWorld", &instruments, SHOW_FILLED_WORLD);
+    Get_bit_resource(rDB, "texturedWalls", &instruments, SHOW_TEXTURED_WALLS);
 
     Get_bool_resource(rDB, "pointerControl", &initialPointerControl);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
@@ -1889,6 +2036,16 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 
     Get_int_resource(rDB, "receiveWindowSize", &receive_window_size);
     LIMIT(receive_window_size, MIN_RECEIVE_WINDOW_SIZE, MAX_RECEIVE_WINDOW_SIZE);
+
+    Get_resource(rDB, "recordFile", resValue, sizeof resValue);
+    Record_init(resValue);
+    Get_resource(rDB, "texturePath", resValue, sizeof resValue);
+    texturePath = strdup(resValue);
+    Get_resource(rDB, "wallTextureFile", resValue, sizeof resValue);
+    wallTextureFile = strdup(resValue);
+
+    Get_int_resource(rDB, "maxFPS", &maxFPS);
+    oldMaxFPS = maxFPS;
 
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);

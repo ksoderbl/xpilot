@@ -1,6 +1,6 @@
-/* $Id: global.h,v 3.61 1994/09/17 01:00:08 bert Exp $
+/* $Id: global.h,v 3.66 1995/01/11 19:30:39 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -128,9 +128,6 @@ extern float		gravityAngle;
 extern bool		gravityPointSource;
 extern bool		gravityClockwise;
 extern bool		gravityAnticlockwise;
-extern int		MovingItemsRand;
-extern int 		ThrowItemOnKillRand;
-extern int		DetonateItemOnKillRand;
 extern int		nukeMinSmarts;
 extern int		nukeMinMines;
 extern float		nukeClusterDamage;
@@ -169,44 +166,11 @@ extern float		detonateItemOnKillProb;
 extern float 		movingItemProb;
 extern float            rogueHeatProb;
 extern float            rogueMineProb;
-extern float 		itemEnergyPackProb;
-extern float 		itemTankProb;
-extern float		itemECMProb;
-extern float		itemMineProb;
-extern float 		itemMissileProb;
-extern float		itemCloakProb;
-extern float		itemSensorProb;
-extern float		itemWideangleProb;
-extern float		itemRearshotProb;
-extern float		itemAfterburnerProb;
-extern float		itemTransporterProb;
-extern float		itemLaserProb;
-extern float		itemEmergencyThrustProb;
-extern float		itemTractorBeamProb;
-extern float		itemAutopilotProb;
-extern float		itemEmergencyShieldProb;
 extern float		itemProbMult;
 extern float		maxItemDensity;
 extern int		itemConcentratorRadius;
 extern float		gameDuration;
 extern time_t		gameOverTime;
-
-extern int		initialFuel;
-extern int		initialTanks;
-extern int		initialECMs;
-extern int		initialMines;
-extern int		initialMissiles;
-extern int		initialCloaks;
-extern int		initialSensors;
-extern int		initialWideangles;
-extern int		initialRearshots;
-extern int		initialAfterburners;
-extern int		initialTransporters;
-extern int		initialLasers;
-extern int		initialEmergencyThrusts;
-extern int		initialTractorBeams;
-extern int		initialAutopilots;
-extern int		initialEmergencyShields;
 
 extern char	       	*scoreTableFileName;
 

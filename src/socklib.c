@@ -14,449 +14,7 @@
  *
  * This software is provided "as is" without any express or implied warranty.
  *
- * 1993/05/22 bert
- * Changed SocketReadable to check for return value of select()
- * and changed unused fd sets to NULL pointers.
- *
- * Revision so-and-so, Id: bla-bla, Code: too.  Bert Gÿsbers April/Mai 93
- * Added several interface calls to get/setsockopt/ioctl calls for use
- * in the client/server version of XPilot.
- * Also, (Please Note!) I removed the linger stuff from the SocketAccept()
- * function into a separate function call.  When a socket is non-blocking
- * then lingering on close didn't seem like a good idea to me.
- *
- * RCS:      $Id: socklib.c,v 3.39 1994/09/16 18:54:15 bert Exp $
- * Log:      $Log: socklib.c,v $
- * Revision 3.39  1994/09/16  18:54:15  bert
- * Improved XPilot host alias stuff.
- *
- * Revision 3.38  1994/07/18  10:18:54  bert
- * Moved void before #ifdef __STDC__ for SetTimeout().
- * Thanks to Yves-Henri.Berne@imag.fr.
- *
- * Revision 3.37  1994/07/10  20:03:45  bert
- * Several small changes to:
- *     - resolve compilation problems with very strict ANSI C or C++ compilers.
- *     - resolve potential problems for systems for which a long integer
- *       is bigger than a normal integer.
- *     - resolve problems for compilers for which enumeration constants
- *       are smaller than an integer.
- * Removed lots of superfluous whitespace.
- * More changes to the new help system.
- * Different key help list window.
- *
- * Revision 3.36  1994/06/04  14:40:30  bert
- * Changed conditional compilation constant LINUX to LINUX0 as recent 1.1*
- * versions of Linux seem to have resolved most of the incompatibilities.
- * Notification by: devmorfo@cs.mtu.edu  (Evmorfopoulos Dimitris).
- *
- * Revision 3.35  1994/05/17  07:35:29  bert
- * More fiddling with the xpilot hostname alias and getting the domainname.
- *
- * Revision 3.34  1994/05/15  14:27:02  bert
- * Fix for GetLocalHostName which was broken by a previous fix.
- *
- * Revision 3.33  1994/04/30  11:50:39  kenrsc
- * Added a patch from Jyke Jokinen to send the name of the machine to be xpilot.* if it excist such an alias for it to the meta server. Have also changed the meta server to take the hostname from the packet.
- *
- * Revision 3.32  1994/04/15  15:33:40  bert
- * Fixed Sun problems.
- *
- * Revision 3.31  1994/04/14  09:44:19  bert
- * Commented out _res usage for Solaris.
- *
- * Revision 3.30  1994/04/13  15:17:52  bert
- * Changed conditional compilation for SetSocketNonBlocking.
- *
- * Revision 3.29  1994/04/11  12:22:26  bert
- * Added another (the fourth!) way to make a socket non-blocking.
- *
- * Revision 3.28  1994/04/10  13:20:38  bert
- * Extended the way sockets are made non-blocking by trying three different
- * possibilities depending upon which system include file constants are defined.
- * Now fcntl(O_NDELAY), fcntl(FNDELAY) and ioctl(FIONBIO) are all tried until
- * one of them succeeds.
- * Improved GetLocalHostName for suns.
- *
- * Revision 3.27  1994/03/23  08:46:21  bert
- * Fixed GetLocalHostName by adding a size parameter.
- *
- * Revision 3.26  1994/03/22  19:01:40  bert
- * Fixed MAXHOSTNAMELEN dependencies.
- *
- * Revision 3.25  1994/02/06  18:18:38  bert
- * Fixed typo.
- *
- * Revision 3.24  1994/02/04  16:11:30  bjoerns
- * Minor.
- *
- * Revision 3.23  1994/01/27  22:28:38  bert
- * Added a new call GetLocalHostName() to get the fully qualified local hostname.
- *
- * Revision 3.22  1994/01/23  14:15:23  bert
- * setsockopt needs a (void *) argument, not (char *).
- * Added a SetSocketBroadcast() function.
- *
- * Revision 3.21  1994/01/20  21:20:09  bert
- * Changes to get the prototypes when compiling with C++.
- * Small change for C++ functionprototypes and the select system call.
- *
- * Revision 3.20  1993/12/23  12:29:46  bert
- * Applied a patch from Stig Bakken for Solaris compatibility ifdefs.
- *
- * Revision 3.19  1993/12/19  19:04:32  bert
- * Simplified a comment.
- *
- * Revision 3.18  1993/11/16  22:40:09  bert
- * Added an #ifdef TCP_NODELAY for the use of TCP_NODELAY to prevent any more
- * silly patches for it from people not having TCP_NODELAY.
- * Hardcoded the printing of the source filename for Suns.  *sigh*.
- *
- * Revision 3.17  1993/10/24  22:33:09  bert
- * Changed a __FILE__ expression to "socklib.c" as Suns don't seem to support
- * the __FILE__ construct.  Sigh.
- * Added a DgramReply() routine, not used yet.
- *
- * Revision 3.16  1993/10/21  11:08:54  bert
- * VMS patch from Curt Hjorring.
- * Removed Optimize_map() from the server.
- * Made toggleShield a new client option.
- *
- * Revision 3.15  1993/10/01  20:47:15  bjoerns
- * Added Thrusted Solaris CMW 1.0 patch by Steve Marsden.
- *
- * Revision 3.14  1993/09/20  18:46:17  bert
- * Changes to have XPilot compiled by g++, both under Linux and HP-UX 9.01.
- * Added new entries in Makefile.std for C++ compilation.
- * Several include files added.  Missing prototypes were added to include
- * files.  Several casts to shut up the compiler.  Changes to socklib.c
- * for bad function pointers.  Some obscure functions were still written
- * in K&R style.  A few small changes to make some statements valid C++ code.
- *
- * Revision 3.13  1993/08/24  12:17:30  bjoerns
- * Summary provided by Bert:
- *
- * 1) Lasers.
- * #define MAX_LASERS              8
- * #define MIN_LASER_LEN           100
- * #define MAX_LASER_LEN           350
- * #define EXTRA_LASER_LEN         ((MAX_LASER_LEN-MIN_LASER_LEN)/(MAX_LASERS-1))
- * #define LASER_LENGTH(lasers)    (MIN_LASER_LEN + ((lasers)-1)*EXTRA_LASER_LEN)
- * #define LASER_COST(lasers)      (ED_LASER*LASER_LENGTH(lasers)/MAX_LASER_LEN)
- * #define ED_LASER                (-80.0*FUEL_SCALE_FACT)
- * #define ED_LASER_HIT            (-120.0*FUEL_SCALE_FACT)
- * Lasers costs quite a lot of fuel and it remains to be seen if they
- * are useful at all.  But I didn't want to risk introducing a weapon
- * which was too heavy.  So rather start low profile then.
- * Robots defend against lasers and use them if possible.
- * The default key for firing a laser is the slash key.
- *
- * 2) Add player info to the Player packet for new to be developed
- * player info window.
- *
- * 3) Sliding radar is now also selectable from the configure window.
- *
- * 4) Fix for player mutual crash scores.  The scores for the second player
- * were disadvantaged by the scores just calculated for the first player.
- * This depended upon the order of the players in the Players[] array.
- *
- * 5) Removed all pl->fuel.count = FUEL_NOTIFY; statements from the server
- * as this is a client only business.
- *
- * 6) Moved the robot war declarations from collision.c to robot.c in a
- * new function because it was also needed in LaserCollision().
- *
- * 7) The configuration window stuff is now also savable to $(HOME)/.xpilotrc.
- * It checks to only replace resources that it understands and will add
- * resources that were missing.  The screen related resources are not
- * saved because they may have been derived from a X display particular
- * resource file.
- *
- * 8) Changed most of the `double buffer' names into 'color switch'
- * were appropriate.
- *
- * 9) Changed PACK version into 0x3041 to differentiate from the 0x3040 versions.
- *
- * 10) Changed About window to create room for the new Laser item info.
- * The window is now also somewhat smaller to fit into 1024x768 screens.
- *
- * 11) All the sliding radar X stuff is now move into a separate subroutine
- * in paint.c.
- *
- * 12) The rand() calls in Place_item for gravity items wasn't doing anything.
- * It read: (((rand()&7)-3)/4) which always evaluates to zero.
- *
- * 13) ECMs also damage lasers.
- *
- * 14) Fixed a score update bug introduced by a previous 3.0.4 patch.
- *
- * 15) Increased the robot manouvring lookahead a little, because robots
- * crashed into the walls too often after the previous lookahead limitation.
- *
- * 16) Some of the robot idle mode manouvring compensates for gravity a little.
- *
- * 17) New easy to use confirmation popup widget for short messages.
- *
- * 18) Changes to the wideangle item to have three streams of bullets.
- * Otherwise it looked too much the same as the laser item.
- *
- * 19) When installing a new colormap try to allocate the first 16 colors
- * the same as the default colormap to reduce the chance that the window
- * manager decorations and other colors will flicker because of the
- * color switching.
- *
- * 20) If the default visual is DirectColor or TrueColor then automatically.
- * try to use a PseudoColor visual.
- *
- * 21) Fix for the CONFIG/SCORE label in the menu.  The bug was pointed
- * out by Fred Hucht.
- *
- * 22) The client accepts now more then one server on the command line.
- *
- * Revision 3.12  1993/08/19  07:35:25  kenrsc
- * Added patch from bert (3f4changes)
- *
- * Revision 3.11  1993/08/16  17:03:42  kenrsc
- * Changes by Bert (see patch 3a4 for more info
- *
- * Revision 3.10  1993/08/15  00:33:34  kenrsc
- * Changed back soem of the code for the meta server. Fixed a small bug.
- *
- * Revision 3.9  1993/08/07  02:23:45  kenrsc
- * Made the extra fields reported to the meta server.
- * Made the readable address available to the meta server and the server.
- * Made the server report to the meta server when player numbers changes.
- * Changed the field called dispname to hostname since it is not a dispname
- * but a host name :)
- *
- * Revision 3.8  1993/08/06  21:21:00  bjoerns
- * 1) Some tweaks to the new client option code like a -xrm option.
- * 2) Correction for maximum string size Get_resource.
- * 3) Fix for the /usr/X11/lib/app-defaults resource path.
- * 4) Fix for NULL pointer dereference if neither XUSERFILESEARCHPATH
- * or XAPPLRESDIR were defined in the environment.
- * Thanks to welch@xcf.Berkeley.EDU (Sean N. Welch).
- * 5) Limit the receiveWindowSize.
- * 6) Destroying the resource database after use (memory reuse).
- * 7) Fix for definition of the BLUE_... bits in paint.c.
- * 8) Fix for the first empty score entry in paint.c.
- *
- * Revision 3.7  1993/08/02  12:55:37  bjoerns
- * Patchlevel 3.
- *
- * Revision 3.6  1993/08/02  12:51:18  bjoerns
- * Patchlevel 2.
- *
- * Revision 3.5  1993/08/02  12:41:41  bjoerns
- * Patchlevel 1.
- *
- * Revision 3.4  1993/06/28  20:54:22  bjoerns
- * Added an Imakefile and renamed Makefile to Makefile.std.
- * Made Bert's last name 8-bit.
- *
- * Revision 3.3  1993/06/28  11:43:36  bjoerns
- * Applied PL8 which was handled completely by Bert Gÿsbers.
- *
- *
- * SUMMARY OF CHANGES
- *
- * Andy Skinner contributed a new targetKillTeam option.
- * When turned on it will kill all players in the team that just
- * lost their target.  The default value is off/inactive.
- *
- * Any remaining problems  with the login sequence should be fixed
- * due to a thorough revision/rewrite of the receive-window-size code.
- * E.g., the `ufo-problem' reported by Andy should be gone.
- *
- * Player info is now transmitted and stored in a less bugprone way.
- * All problems with player names and radar visibility should
- * now be fixed.
- *
- * The flashing of the 'F' in fuelstations should now be gone.
- * The solution was to use the proper pre-xored pixel value as
- * foreground for xor operations.
- *
- * Drawing the new score objects now also work across edge wrap.
- *
- * Shots are now killed if they hit a cannon.
- *
- * In Move_smart_shot() `min' wasn't allways initialized before use.
- *
- * The PacketDrawMeter is removed (was overkill).
- *
- * The mineDraw resource is removed (was overkill).
- *
- * Mines are now drawn like they already appeared in the new
- * items and HUD instead of a small-blue-almost-invisible circle.
- *
- * Several functions have now a (void) prototype when no arguments
- * to shut up the compiler.
- *
- * The backgroundPointDist resource code is now checking for division
- * by zero.
- *
- * The printing of duplicate reliable data packet info is commented out.
- *
- * The drawing of fuelstations is buffered and optimised to reduce
- * changing of GCs.
- *
- * The '#ifdef SOUND' statement in sound.c is now on top of the sound.c file
- * like suggested in alt.games.xpilot.
- *
- * DrawShadowText() wasn't always returning a value.
- *
- * Small changes to pixmaps for Tank, Transporter and Cloak items.
- *
- * Revision 3.2  1993/06/12  20:35:37  bjoerns
- * Applied yet anoter patch from Bert, this time he has implemented clustering of objects (sparks for the moment).
- *
- * Revision 3.1  1993/05/28  18:04:02  bjoerns
- * Applied new giant patch from Bert.  Here's a summary I got from him:
- *
- * changes to Makefile:
- * 	some AIX flags
- * 	new include file dependencies
- * client.c:
- * 	Target test.
- * 	player info bug fix (already mailed to you).
- * 	More accurate RadarHeight calculation.
- * client.h:
- * 	"self_visible" boolean flag in client structure.
- * 	new prototype for Client_flush().
- * cmdline.c:
- * 	playerStartsShielded flag for PlayerShielding=false mode
- * 	playersOnRadar if players are visible on radar (default=true)
- * 	missilesOnRadar if missiles are visible on radar (default=true)
- * collision.c:
- * 	new interesting experiment with collision detection for objects,
- * 	now only test objects that have already passed the ObjectCollision
- * 	function this timeframe (simple change, should be an improvement I hope)
- * const.h:
- * 	Experiment with hypot() in LENGTH() macro, untested yet.
- * 	TARGET_DEAD_TIME is defined in some amount of FPS.
- * 	A little higher amount of TARGET_DAMAGE and TARGET_REPAIR_PER_FRAME.
- * event.c:
- * 	Changes to  Refuel() and Player_lock_closest(), I did these because
- * 	I hadn't your changes available.  Might be skipped.
- * 	Removed pl->control_count stuff as these are only needed in the client.
- * frame.c:
- * 	Added new visibility detection stuff for map data.
- * 	It didn't work in PL0 at the edges for cannons and fuelstations.
- * 	This one works perfect for cannons and fuelstations, but has a tough
- * 	to find bug for target info.  Target info is only correctly displayed
- * 	if the player ship is above the target, not below or equal.  Strange!
- * 	Changed radar stuff to incorporate the new playersOnRadar and
- * 	missilesOnRadar options.
- * global.h:
- * 	New declarations for the new commandline options.
- * join.c:
- * 	Flushing of display stuff, probably not necessary.
- * 	But David had some kind of strange problem.
- * 	May be removed.
- * net.c:
- * 	Changed ifdefs for memmove as AIX doesn't have that either.
- * 	Also, AIX does not use EWOULDBLOCK but EAGAIN instead.
- * netclient.c:
- * 	Removed Check_packet_type().  Not needed anymore.
- * 	Changed Kernel network buffer sizes ifdefs as AIX has smaller
- * 	socket buffers by default.
- * 	Added stuff for PKT_PLAY to also handle premature frames.
- * 	May evetually not be needed or in a different way.
- * netserver.c:
- * 	Big changes in states a new connection can be in.
- * 	Removed duplicate code.  Other cleanups.
- * 	A little better retransmission code + bug fix which you already have.
- * 	AIX doesn't have strdup().
- * 	More different types of packet dispatch tables.
- * 	Removed the CONN_ACCEPTED state.  Added CONN_DRAIN and CONN_READY
- * 	to wait until client has acked all reliable data.
- * 	Added war stuff for new players.
- * 	Made an upper limit of 5 for maximum input packet reads per frame.
- * 	Some functions now are static.
- * netserver.h:
- * 	See netserver.c.
- * object.h:
- * 	Removed control_count.
- * 	Added shield_time which gives the time a player still has shields left
- * 	after restart if mode is playerShielding=false and
- * 	playerStartsShielded=true.
- * paint.c:
- * 	Add drawing of transporter lines together with drawing of refuel lines
- * 	and connector lines.
- * 	Added proper control_count decrease.
- * 	New radar stuff.  Improved accuracy.  And better radar map drawing.
- * 	Changed drawing color of target damage, but I don't like it.  Damage lines
- * 	are now drawn in opposite color.  See if you dislike it as much as I do.
- * 	No more direction line of self on radar when dead, like Bjoern disliked.
- * 	I experimented somewhat with the drawing of a cross instead, but
- * 	removed it also again.  Now nothing is drawn when dead, just like 2.0.
- * play.c:
- * 	Small fix to remove AIX compiler complaint, it improves code readability
- * 	too I think.  Unimportant.
- * player.c:
- * 	New playerShielding code for playerStartsShielded option.
- * 	Bugfix for race mode when only one player is playing.
- * robot.c:
- * 	New playerShielding code for playerStartsShielded option.
- * server.c:
- * 	Removed RadarHeight stuff as this is only needed in the client.
- * 	Bugfix for Wait_for_new_players() to disable the real-time interval
- * 	timer when noone is playing.  Otherwise all selects() would have been
- * 	interrupted at a rate of FPS.
- * socklib.c:
- * 	Changed SocketReadable() to check for select returning -1.
- * timer.c:
- * 	Dummy routines if defined BUSYLOOP for block_timer() and allow_timer().
- * update.c:
- * 	New transport to home stuff after death.  I really like this and
- * 	am curious to know if you do too.  You now are transported back to
- * 	home with a constant acceleration and deacceleration.  Try it!
- * 	The old code is preserved with an ifdef.
- * xinit.c:
- * 	I think I fixed two syntax bugs, but please have a careful look yourself.
- * 	There were two statements like: if (a = b), instead of: if (a == b).
- *
- * That's all sofar.
- *
- * Bert
- *
- * Revision 3.0  1993/05/21  18:36:39  bjoerns
- * New client server release.
- *
- * Revision 1.3  1993/05/20  17:33:53  kenrsc
- * Bert changes from M -> R version !!!!!
- *
- * Revision 1.2  1993/05/18  16:49:30  kenrsc
- * Berts few changes !
- *
- * Revision 1.1  1993/04/22  10:21:32  bjoerns
- * Moved socklib from lib to src.
- *
- * Revision 1.3  1993/04/14  16:50:41  bjoerns
- * Applied two patches from Bert, one was really big and fixed all known
- * wrap-around problems, and added some timing and robot optimisations.
- * Also fixed other small bugs.
- *
- * Revision 1.2  1993/03/24  03:24:56  bjoerns
- * Patch by Bert, mainly casting to right type.
- *
- * Revision 1.1  1993/03/09  14:33:25  kenrsc
- * Hopefully we won't have a corrupted CVS directory anymore.
- *
- * Revision 1.1.1.1  1993/02/27  14:47:46  bjoerns
- * XPilot v2.0
- *
- * Revision 1.1.1.1  1993/01/19  17:19:59  bjoerns
- * XPilot v1.4
- *
- * Revision 1.4  1992/08/26  19:36:35  bjoerns
- * Incorporated NCD patch.
- *
- * Revision 1.3  1992/06/25  04:31:37  bjoerns
- * Added source id to socklib.
- *
- * Revision 1.2  1992/05/19  21:11:39  bjoerns
- * Minor.
+ * RCS:      $Id: socklib.c,v 3.42 1995/02/02 09:03:29 bert Exp $
  *
  * Revision 1.1.1.1  1992/05/11  12:32:34  bjoerns
  * XPilot v1.0
@@ -472,7 +30,7 @@
 
 #ifndef lint
 static char sourceid[] =
-    "@(#)$Id: ";
+    "@(#)$Id: socklib.c,v 3.42 1995/02/02 09:03:29 bert Exp $";
 #endif
 
 /* _SOCKLIB_LIBSOURCE must be defined int this file */
@@ -532,6 +90,7 @@ static char sourceid[] =
 #endif
 
 /* Socklib Includes And Definitions */
+#include "version.h"
 #include "socklib.h"
 #ifdef SUNCMW
 #include "cmw.h"
@@ -539,6 +98,8 @@ static char sourceid[] =
 #define cmw_priv_assert_netaccess() /* empty */
 #define cmw_priv_deassert_netaccess() /* empty */
 #endif /* SUNCMW */
+
+char socklib_version[] = VERSION;
 
 /* Debug macro */
 #ifdef DEBUG
@@ -1740,6 +1301,78 @@ int	port;
 
     return (fd);
 } /* CreateDgramSocket */
+
+
+/*
+ *******************************************************************************
+ *
+ *	CreateDgramAddrSocket()
+ *
+ *******************************************************************************
+ * Description
+ *	Creates a UDP/IP datagram socket on a know interface address.
+ *
+ * Input Parameters
+ *	dotaddr		- Pointer to string containing of IP address in dot-format.
+ *	port		- The port number. A value of zero may be specified in
+ *			  clients to assign any available port number.
+ *
+ * Output Parameters
+ *	None
+ *
+ * Return Value
+ *	A UDP/IP datagram socket descriptor, or -1 on error.
+ *
+ * Globals Referenced
+ *	sl_errno	- If any errors occured: SL_ESOCKET, SL_EBIND.
+ *
+ * External Calls
+ *	socket
+ *	memset
+ *	bind
+ *	close
+ *
+ * Called By
+ *	User applications.
+ *
+ * Originally coded by Bert Gijsbers, adapted from CreateDgramSocket().
+ */
+int
+#ifdef __STDC__
+CreateDgramAddrSocket(char *dotaddr, int port)
+#else
+CreateDgramAddrSocket(dotaddr, port)
+char	*dotaddr;
+int	port;
+#endif /* __STDC__ */
+{
+    struct sockaddr_in	addr_in;
+    int			fd;
+    int			retval;
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0)
+    {
+	sl_errno = SL_ESOCKET;
+	return (-1);
+    }
+
+    memset((char *)&addr_in, 0, sizeof(struct sockaddr_in));
+    addr_in.sin_family		= AF_INET;
+    addr_in.sin_addr.s_addr	= inet_addr(dotaddr);
+    addr_in.sin_port		= htons(port);
+    retval = bind(fd, (struct sockaddr *)&addr_in, sizeof(struct sockaddr_in));
+    if (retval < 0)
+    {
+	sl_errno = SL_EBIND;
+	retval = errno;
+	(void) close(fd);
+	errno = retval;
+	return (-1);
+    }
+
+    return (fd);
+} /* CreateDgramAddrSocket */
 
 
 /*

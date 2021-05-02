@@ -1,35 +1,38 @@
-# Makefile for TkXpInterface-3.6.1
+# Makefile for TkXpInterface-3.7.3
 
 # Where is wish installed ( Tcl path and filename) ?
 WISH = /usr/local/bin/wish
 
+# Your TOP directory to install TkXpInterface
+TOPDIR = /home/perms/berne
+
 # Directory where TkXpInterface is to be installed.
-BINDIR = /home/orion/berne/bin
+BINDIR = $(TOPDIR)/bin
 
 # Where do you want the manpage?
 # Assuming that someone is actually going to bother reading it. ;-)
-MANDIR = /home/orion/berne/man/man1
+MANDIR = $(TOPDIR)/man/man1
 
 # Where are the xpilot maps on this system?
-MAPDIR = /home/orion/berne/lib/xpilot/maps
+MAPDIR = $(TOPDIR)/lib/xpilot/maps
 
 # Directory to put the temporary file of list server  ?
 TEMPDIR = /tmp
 
 # Directory to put the help and the shipshapes files (TkXpI.hlp,TkXpI.shp) ?
-LIBDIR = /home/orion/berne/lib/xpilot
+LIBDIR = $(TOPDIR)/lib/xpilot
 
 # Path and filename of the xpilot default file
-DEFAULT = /home/orion/berne/lib/xpilot/defaults
+DEFAULT = $(TOPDIR)/lib/xpilot/defaults
 
 # Map to charge by default (without extension)
 MAP = globe
 
 # motd file with its pathname to charge by default
-MOTDFILE= /home/orion/berne/lib/xpilot/servermotd
+MOTDFILE= $(TOPDIR)/lib/xpilot/servermotd
 
 # file with its pathname where xpilots dumps the scores.
-# You can set now this option BUT xpilots-3.1.3 and lower doesn't
+# You can set now this option BUT xpilots-3.2.6 and lower doesn't
 # take it into account !
 SCOREFILE=
 
@@ -117,7 +120,7 @@ INSTALL= install
 
 #######################  Don't change the lines below ####################
 
-VERSION= 3.6.1
+VERSION= 3.7.3
 
 SEDOPT= -e 's;WISH;$(WISH);' \
 	-e 's;MAPDIR;$(MAPDIR);' \

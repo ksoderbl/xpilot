@@ -1,6 +1,6 @@
-/* $Id: audio.h,v 3.12 1994/08/08 09:01:28 bert Exp $
+/* $Id: audio.h,v 3.15 1995/01/11 19:13:24 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -100,6 +100,7 @@ enum {
     EMERGENCY_SHIELD_PICKUP_SOUND,
     EMERGENCY_SHIELD_ON_SOUND,
     EMERGENCY_SHIELD_OFF_SOUND,
+    CANNON_EXPLOSION_SOUND,
     MAX_SOUNDS
 };
 
@@ -178,6 +179,7 @@ static char    *soundNames[] =
     "emergency_shield_pickup",
     "emergency_shield_on",
     "emergency_shield_off",
+    "cannon_explosion",
 };
 
 #endif						/* _CAUDIO_C_ */

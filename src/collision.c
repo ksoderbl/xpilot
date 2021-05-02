@@ -1,6 +1,6 @@
-/* $Id: collision.c,v 3.115 1994/09/20 19:42:46 bert Exp $
+/* $Id: collision.c,v 3.128 1995/02/13 10:52:06 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -34,21 +34,18 @@
 #include "proto.h"
 #include "map.h"
 #include "score.h"
-#include "robot.h"
 #include "saudio.h"
 #include "item.h"
 #include "netserver.h"
 #include "pack.h"
 
-#if 0
-#define NUM_POINTS	3
-#else
+char collision_version[] = VERSION;
+
 #define NUM_POINTS	(pl->ship->num_points)
-#endif
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: collision.c,v 3.115 1994/09/20 19:42:46 bert Exp $";
+    "@(#)$Id: collision.c,v 3.128 1995/02/13 10:52:06 bert Exp $";
 #endif
 
 #define FLOAT_TO_INT(F)		((F) < 0 ? -(int)(0.5f-(F)) : (int)((F)+0.5f))
@@ -398,20 +395,16 @@ static void PlayerCollision(void)
 		}
 
 		if (BIT(Players[j]->status, KILLED)) {
-		    if (Players[j]->robot_mode != RM_NOT_ROBOT
-			&& Players[j]->robot_mode != RM_OBJECT
-			&& BIT(Players[j]->robot_lock, LOCK_PLAYER)
-			&& Players[j]->robot_lock_id == pl->id) {
-			CLR_BIT(Players[j]->robot_lock, LOCK_PLAYER);
+		    if (IS_ROBOT_IND(j)
+			&& Robot_war_on_player(j) == pl->id) {
+			Robot_reset_war(j);
 		    }
 		}
 
 		if (BIT(pl->status, KILLED)) {
-		    if (pl->robot_mode != RM_NOT_ROBOT
-			&& pl->robot_mode != RM_OBJECT
-			&& BIT(pl->robot_lock, LOCK_PLAYER)
-			&& pl->robot_lock_id == Players[j]->id) {
-			CLR_BIT(pl->robot_lock, LOCK_PLAYER);
+		    if (IS_ROBOT_PTR(pl)
+			&& Robot_war_on_player(i) == Players[j]->id) {
+			Robot_reset_war(i);
 		    }
 		    /* cannot crash with more than one player at the same time? */
 		    /* hmm, if 3 players meet at the same point at the same time? */
@@ -486,7 +479,7 @@ static void PlayerCollision(void)
 		&& Wrap_length(pl->pos.x - World.check[pl->check].x * BLOCK_SZ,
 			       pl->pos.y - World.check[pl->check].y * BLOCK_SZ)
 		    < checkpointRadius * BLOCK_SZ
-		&& pl->robot_mode != RM_OBJECT) {
+		&& !IS_TANK_PTR(pl)) {
 
 		if (pl->check == 0) {
 		    pl->round++;
@@ -538,16 +531,15 @@ static void PlayerCollision(void)
 
 static void PlayerObjectCollision(int ind)
 {
-    int		j, killer, range, radius, sc, current_tank, hit, obj_count;
+    int		j, killer, old_have, range, radius, sc, hit, obj_count;
     long	drain;
-    player	*pl;
+    player	*pl = Players[ind];
     object	*obj, **obj_list;
 
 
     /*
      * Collision between a player and an object.
      */
-    pl = Players[ind];
     if (BIT(pl->status, PLAYING|PAUSE|GAME_OVER|KILLED) != PLAYING)
 	return;
 
@@ -657,101 +649,102 @@ static void PlayerObjectCollision(int ind)
 
 	case OBJ_ITEM:
 	    switch ((enum Item) obj->info) {
-	    case ITEM_WIDEANGLE_SHOT:
-		pl->extra_shots += obj->count;
+	    case ITEM_WIDEANGLE:
+		pl->item[ITEM_WIDEANGLE] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   WIDEANGLE_SHOT_PICKUP_SOUND);
 		break;
 	    case ITEM_ECM:
-		pl->ecms += obj->count;
+		pl->item[ITEM_ECM] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y, ECM_PICKUP_SOUND);
 		break;
 	    case ITEM_TRANSPORTER:
-		pl->transporters += obj->count;
+		pl->item[ITEM_TRANSPORTER] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y, TRANSPORTER_PICKUP_SOUND);
 		break;
-	    case ITEM_SENSOR_PACK:
-		pl->sensors += obj->count;
+	    case ITEM_SENSOR:
+		pl->item[ITEM_SENSOR] += obj->count;
 		pl->updateVisibility = 1;
 		sound_play_sensors(pl->pos.x, pl->pos.y, SENSOR_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_AFTERBURNER:
 		SET_BIT(pl->have, OBJ_AFTERBURNER);
-		if ((pl->afterburners += obj->count) > MAX_AFTERBURNER)
-		    pl->afterburners = MAX_AFTERBURNER;
+		if ((pl->item[ITEM_AFTERBURNER] += obj->count) > MAX_AFTERBURNER)
+		    pl->item[ITEM_AFTERBURNER] = MAX_AFTERBURNER;
 		sound_play_sensors(pl->pos.x, pl->pos.y, AFTERBURNER_PICKUP_SOUND);
 		break;
-	    case ITEM_BACK_SHOT:
-		pl->back_shots += obj->count;
+	    case ITEM_REARSHOT:
+		pl->item[ITEM_REARSHOT] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y, BACK_SHOT_PICKUP_SOUND);
 		break;
-	    case ITEM_ROCKET_PACK:
-		pl->missiles += obj->count;
+	    case ITEM_MISSILE:
+		pl->item[ITEM_MISSILE] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y, ROCKET_PACK_PICKUP_SOUND);
 		break;
-	    case ITEM_CLOAKING_DEVICE:
+	    case ITEM_CLOAK:
 		SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
-		pl->cloaks += obj->count;
+		pl->item[ITEM_CLOAK] += obj->count;
 		pl->updateVisibility = 1;
 		sound_play_sensors(pl->pos.x, pl->pos.y, CLOAKING_DEVICE_PICKUP_SOUND);
 		break;
-	    case ITEM_ENERGY_PACK:
+	    case ITEM_FUEL:
 		Add_fuel(&(pl->fuel), ENERGY_PACK_FUEL);
 		sound_play_sensors(pl->pos.x, pl->pos.y, ENERGY_PACK_PICKUP_SOUND);
 		break;
-	    case ITEM_MINE_PACK:
-		pl->mines += obj->count;
+	    case ITEM_MINE:
+		pl->item[ITEM_MINE] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y, MINE_PACK_PICKUP_SOUND);
 		break;
 	    case ITEM_LASER:
-		if ((pl->lasers += obj->count) > MAX_LASERS) {
-		    pl->lasers = MAX_LASERS;
+		if ((pl->item[ITEM_LASER] += obj->count) > MAX_LASERS) {
+		    pl->item[ITEM_LASER] = MAX_LASERS;
 		}
 		sound_play_sensors(pl->pos.x, pl->pos.y, LASER_PICKUP_SOUND);
 		break;
 	    case ITEM_EMERGENCY_THRUST:
 		SET_BIT(pl->have, OBJ_EMERGENCY_THRUST);
-		pl->emergency_thrusts += obj->count;
+		pl->item[ITEM_EMERGENCY_THRUST] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   EMERGENCY_THRUST_PICKUP_SOUND);
 		break;
 	    case ITEM_EMERGENCY_SHIELD:
+		old_have = pl->have;
 		SET_BIT(pl->have, OBJ_EMERGENCY_SHIELD);
-		pl->emergency_shields++;
+		pl->item[ITEM_EMERGENCY_SHIELD]++;
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   EMERGENCY_SHIELD_PICKUP_SOUND);
+	        /*
+	         * New feature since 3.2.7:
+	         * If we're playing in a map where shields are not allowed
+	         * and a player picks up her first emergency shield item
+	         * then we'll immediately turn on emergency shield.
+	         */
+	        if (!BIT(old_have, OBJ_SHIELD | OBJ_EMERGENCY_SHIELD)
+		    && pl->item[ITEM_EMERGENCY_SHIELD] == 1) {
+		    Emergency_shield(ind, 1);
+		}
 		break;
 	    case ITEM_TRACTOR_BEAM:
 		SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
-		if ((pl->tractor_beams += obj->count) > MAX_TRACTORS) {
-		    pl->tractor_beams = MAX_TRACTORS;
+		if ((pl->item[ITEM_TRACTOR_BEAM] += obj->count) > MAX_TRACTORS) {
+		    pl->item[ITEM_TRACTOR_BEAM] = MAX_TRACTORS;
 		}
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   TRACTOR_BEAM_PICKUP_SOUND);
 		break;
 	    case ITEM_AUTOPILOT:
 		SET_BIT(pl->have, OBJ_AUTOPILOT);
-		pl->autopilots += obj->count;
+		pl->item[ITEM_AUTOPILOT] += obj->count;
 		sound_play_sensors(pl->pos.x, pl->pos.y,
 				   AUTOPILOT_PICKUP_SOUND);
 		break;
+
 	    case ITEM_TANK:
-		current_tank = pl->fuel.current;
-
 		if (pl->fuel.num_tanks < MAX_TANKS) {
-		    /*
-		     * Set a new, empty tank in the list.
-		     * update max-fuel
-		     */
-		    int no = ++(pl->fuel.num_tanks);
-
-		    pl->fuel.current = no;
-		    pl->fuel.max += TANK_CAP(no);
-		    pl->fuel.tank[no] = 0;
-		    pl->emptymass += TANK_MASS;
+		    Player_add_tank(ind, TANK_FUEL(pl->fuel.num_tanks + 1));
+		} else {
+		    Add_fuel(&(pl->fuel), TANK_FUEL(MAX_TANKS));
 		}
-		Add_fuel(&(pl->fuel), TANK_FUEL(pl->fuel.current));
-		pl->fuel.current = current_tank;
 		sound_play_sensors(pl->pos.x, pl->pos.y, TANK_PICKUP_SOUND);
 		break;
 	    case NUM_ITEMS:
@@ -800,6 +793,12 @@ static void PlayerObjectCollision(int ind)
 			reprogrammer_name);
 	    }
 	    if (killer != -1) {
+		/*
+		 * Question with this is if we want to give the same points for
+		 * a high-scored-player hitting a low-scored-player's mine as
+		 * for a low-scored-player hitting a high-scored-player's mine.
+		 * Maybe not.
+		 */
 		sc = Rate(Players[killer]->score, pl->score) / 6;
 		Score_players(killer, sc, pl->name,
 			      ind, -sc, Players[killer]->name);
@@ -853,6 +852,17 @@ static void PlayerObjectCollision(int ind)
 
 	if (!BIT(obj->type, KILLING_SHOTS))
 	    continue;
+
+	/*
+	 * Player got hit by a potentially deadly object.
+	 *
+	 * When a player has shields up, and not enough fuel
+	 * to `absorb' the shot then shields are lowered.
+	 * This is not very logical, rather in this case
+	 * the shot should be considered to be deadly too.
+	 *
+	 * Sound effects are missing when shot is deadly.
+	 */
 
 	if (BIT(pl->used, OBJ_SHIELD)
 	    || (obj->type == OBJ_TORPEDO
@@ -1010,24 +1020,21 @@ static void LaserCollision(void)
     object			*obj = NULL;
     char			msg[MSG_LEN];
 
-    if (itemLaserProb <= 0) {
-	return;
-    }
     for (ind = 0; ind < NumPlayers; ind++) {
 	pl = Players[ind];
 	if (BIT(pl->used, OBJ_LASER) != 0) {
 	    if (BIT(pl->status, PLAYING|GAME_OVER|KILLED|PAUSE) != PLAYING
-		|| pl->lasers <= 0) {
+		|| pl->item[ITEM_LASER] <= 0) {
 		CLR_BIT(pl->used, OBJ_LASER);
 	    }
-	    else if (pl->lasers > pl->num_pulses
+	    else if (pl->item[ITEM_LASER] > pl->num_pulses
 		&& pl->velocity < PULSE_SPEED - PULSE_SAMPLE_DISTANCE) {
 		if (pl->fuel.sum <= -ED_LASER) {
 		    CLR_BIT(pl->used, OBJ_LASER);
 		} else {
 		    Add_fuel(&(pl->fuel), ED_LASER);
 		    if (pl->num_pulses >= pl->max_pulses) {
-			size = pl->lasers * sizeof(pulse_t);
+			size = pl->item[ITEM_LASER] * sizeof(pulse_t);
 			if (pl->max_pulses <= 0) {
 			    pl->pulses = (pulse_t *)malloc(size);
 			    pl->num_pulses = 0;
@@ -1039,17 +1046,17 @@ static void LaserCollision(void)
 			    pl->num_pulses = 0;
 			    continue;
 			}
-			pl->max_pulses = pl->lasers;
+			pl->max_pulses = pl->item[ITEM_LASER];
 		    }
 		    pulse = &pl->pulses[pl->num_pulses++];
 		    pulse->dir = pl->dir;
 		    pulse->len = PULSE_LENGTH;
-		    pulse->life = PULSE_LIFE(pl->lasers);
+		    pulse->life = PULSE_LIFE(pl->item[ITEM_LASER]);
 		    pulse->mods = pl->mods;
 		    pulse->pos.x = pl->pos.x + pl->ship->m_gun[pl->dir].x
-			- PULSE_SPEED * tcos(pulse->dir);
+				    - PULSE_SPEED * tcos(pulse->dir);
 		    pulse->pos.y = pl->pos.y + pl->ship->m_gun[pl->dir].y
-			- PULSE_SPEED * tsin(pulse->dir);
+				    - PULSE_SPEED * tsin(pulse->dir);
 		    sound_play_sensors(pulse->pos.x, pulse->pos.y,
 				       FIRE_LASER_SOUND);
 		}
@@ -1212,6 +1219,8 @@ static void LaserCollision(void)
 			sound_play_sensors(vic->pos.x, vic->pos.y, PLAYER_EAT_LASER_SOUND);
 			if (BIT(vic->used, (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
 			    == (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD))
+			    continue;
+			if (!BIT(obj->type, KILLING_SHOTS))
 			    continue;
 			if (BIT(pulse->mods.laser, STUN)
 			    || (laserIsStunGun == true
@@ -2591,6 +2600,7 @@ static void Cannon_dies(move_state_t *ms)
     cannon->conn_mask = 0;
     cannon->last_change = loops;
     World.block[x][y] = SPACE;
+    sound_play_sensors((x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ, CANNON_EXPLOSION_SOUND);
     Make_debris(
 	/* pos.x, pos.y   */ (x+0.5f) * BLOCK_SZ, (y+0.5f) * BLOCK_SZ,
 	/* vel.x, vel.y   */ 0.0, 0.0,
@@ -2629,7 +2639,8 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 			lose_score = 0,
 			lose_team_members = 0,
 			somebody_flag = 0,
-			targets_remaining = 0;
+			targets_remaining = 0,
+			targets_total = 0;
 
     /* a normal shot or a direct mine hit work, cannons don't */
     /* also players suiciding on target will cause damage */
@@ -2709,7 +2720,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	for (j = 0; j < NumPlayers; j++) {
-	    if (Players[j]->robot_mode == RM_OBJECT
+	    if (IS_TANK_IND(j)
 		|| (BIT(Players[j]->status, PAUSE)
 		    && Players[j]->count <= 0)
 		|| (BIT(Players[j]->status, GAME_OVER)
@@ -2733,6 +2744,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     if (somebody_flag) {
 	for (j = 0; j < World.NumTargets; j++) {
 	    if (World.targets[j].team == targ->team) {
+		targets_total++;
 		if (World.targets[j].dead_time == 0) {
 		    targets_remaining++;
 		}
@@ -2740,31 +2752,35 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 	}
     }
     if (!somebody_flag) {
-	SCORE(killer, Rate(Players[killer]->score, CANNON_SCORE)/4,
-	      targ->pos.x, targ->pos.y, "");
 	return;
     }
 
     sound_play_sensors(x, y, DESTROY_TARGET_SOUND);
 
     if (targets_remaining > 0) {
-	SCORE(killer, Rate(Players[killer]->score, CANNON_SCORE)/4,
-	      targ->pos.x, targ->pos.y, "Target: ");
+	sc = Rate(Players[killer]->score, CANNON_SCORE)/4;
+	sc = sc * (targets_total - targets_remaining) / (targets_total + 1);
+	if (sc > 0) {
+	    SCORE(killer, sc,
+		  targ->pos.x, targ->pos.y, "Target: ");
+	}
 	/*
 	 * If players can't collide with their own targets, we
 	 * assume there are many used as shields.  Don't litter
 	 * the game with the message below.
 	 */
-	if (targetTeamCollision) {
-		sprintf(msg, "%s blew up one of team %d's targets.",
-			Players[killer]->name, (int) targ->team);
-		Set_message(msg);
+	if (targetTeamCollision && targets_total < 10) {
+	    sprintf(msg, "%s blew up one of team %d's targets.",
+		    Players[killer]->name, (int) targ->team);
+	    Set_message(msg);
 	}
 	return;
     }
 
-    sprintf(msg, "%s blew up team %d's last target.",
-	    Players[killer]->name, (int) targ->team);
+    sprintf(msg, "%s blew up team %d's %starget.",
+	    Players[killer]->name,
+	    (int) targ->team,
+	    (targets_total > 1) ? "last " : "");
     Set_message(msg);
 
     if (targetKillTeam) {
@@ -2775,7 +2791,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     por = (sc*lose_team_members)/win_team_members;
 
     for (j = 0; j < NumPlayers; j++) {
-	if (Players[j]->robot_mode == RM_OBJECT
+	if (IS_TANK_IND(j)
 	    || (BIT(Players[j]->status, PAUSE)
 		&& Players[j]->count <= 0)
 	    || (BIT(Players[j]->status, GAME_OVER)
@@ -3102,8 +3118,7 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 
     if (BIT(pl->status, KILLED)
 	&& pl->score < 0
-	&& pl->robot_mode != RM_NOT_ROBOT
-	&& pl->robot_mode != RM_OBJECT) {
+	&& IS_ROBOT_PTR(pl)) {
 	pl->home_base = 0;
 	Pick_startpos(ind);
     }
@@ -3339,7 +3354,7 @@ void Move_player(int ind)
 		    != (OBJ_SHIELD|OBJ_EMERGENCY_SHIELD)) {
 		    Add_fuel(&pl->fuel, -((cost << FUEL_SCALE_BITS)
 					  * wallBounceFuelDrainMult));
-		    Item_damage(ind, (cost * wallBounceDestroyItemProb));
+		    Item_damage(ind, wallBounceDestroyItemProb);
 		}
 		if (!pl->fuel.sum) {
 		    crash = worst;

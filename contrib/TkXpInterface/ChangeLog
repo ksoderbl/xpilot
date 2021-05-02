@@ -1,0 +1,247 @@
+			CHANGELOG FILE
+
+-------------------------------------------------------------------------------
+Release 3.7.3
+
+  - New update option in the Item Setup Menu from the Update server window.
+  - New client option MaxFPS in the meta server window, local server window
+    and right panel on the client & server main window.
+  
+-------------------------------------------------------------------------------
+Release 3.7.2
+
+  - New update server window, which allow you to modify more options during
+    game. Use menu inside update server window to have the options which
+    are configurable when you want to update a server. 
+  - New Makefile with a TOPDIR variable (better when all the variable begin
+    with the same path)
+
+-------------------------------------------------------------------------------
+Release 3.7.1
+
+Some fixed bugs
+  - If one ShipShape has an error, then Tk continue telling the error.
+    Consequence is that this shape won't be totally in the list.
+  - When you choose a ship then the real name appears in the list (actually,
+    "?" appears and not the name)
+
+-------------------------------------------------------------------------------
+Release 3.7
+
+Please try TkXpInterface -info to get an overview of the new options.
+(with 2 - (with 1 - you'll get the help for wish)).
+
+Some fixed bugs
+  - Thanks to Christian Engstler (engstler@mat1.uibk.ac.at) for his bug report
+about the Max player shots (min was 1, not useful for map with no bullets like
+Zap!.
+
+Some new improvement:
+  - You can choose now which file TkXpInterface will read to make shipShape
+(TkXpI.shp or/and .xpilotrc). ShipShape lines MUST begin with
+xpilot.shipShape:
+                ^
+                |
+        ---------
+Tk will read the 2 fields NM and AU (for name and author) but doesn't care about
+the author. If you don't have NM field then the name of your ship will be "?".
+Like this you will be able to change the TkXpI.shp each week when you'll
+receive the Weekly Ship Shape Listing from John E. Norlin
+I thought this definition is the new standard so I modified Tk to behave like ot
+hers.
+  - All the new xpilot-3.2.6 options are in the new window "Race".
+
+-------------------------------------------------------------------------------
+Release 3.6.2
+
+some new improvement:
+  - You can follow the making of the ship shapes on the first window.
+  - Each user has his own files TkXpI.srv and TkXpI.mp, like this you can be 
+more than one to use TkXpInterface and no having problem when updating server
+or changing map at the same time.
+  - The help is correct for the new server options added in TkXpI-3.6
+  - A default ship button to retrieve the default ship (your .xpilotrc's ship)
+  - Your nick name is read in your .xpilotrc file and show in the nick name 
+entry.
+
+-------------------------------------------------------------------------------
+Release 3.6.1
+
+An only new thing:
+  - To choose team -1 means that you want no team in the xpilot client prompt.
+Ex:
+Team 0 => xpilot -join <server> -team 0  .....
+Team -1 => xpilot -join <server> .....
+
+-------------------------------------------------------------------------------
+Release 3.6
+
+Some new things:
+  - A new window to see local servers (using xpilot -list command)
+  - You can change your nick name in the main window for client&server interface
+  - All the new xpilot-3.2.5 server options : treasuresOnRadar (in Radar window)
+, targetSync (in Team window), itemConcentratorRadius (in Misc window)
+  - You won't find playerMinimumStartFuel option so MODIFY your maps.
+  - Gravity error repaired (about the fact that you can have a
+gravityPointSource without clockwise or anti-clockwise effect).
+Some fixed bugs :
+	- An error when making the prompt by comparison with default options. 
+TkXpInterface-3.5 didn't save map default options so prompt didn't show what
+user wanted really as options.
+
+-------------------------------------------------------------------------------
+Release 3.5.1
+
+Some fixed bugs :
+ -Thanks to Mike Morrison <mmorriso@mipos2.intel.com>
+  "There is a minor bug in TkXpInterface which reads the incorrect options
+   for booleans when the option is capitalized (e.g. LaserIsStunGun: False)
+   won't work  because False is capitalized."
+ -Thanks to Juha Leskel <jussa@cherry.modeemi.cs.tut.fi>
+ "When using TkXpInterface to find servers from the meta server, the update
+  doesn't work as it should."
+
+-------------------------------------------------------------------------------
+Release 3.5
+
+Add some new server options for Xpilot-3.2.3:
+     -minVisibilityDistance or minVisibility <real>
+       Minimum block distance for limited visibility, 0 for default
+     -maxVisibilityDistance or maxVisibility <real>
+       Maximum block distance for limited visibility, 0 for default
+     -rogueHeatProb <real>
+       Probability that unclaimed missile packs will go rogue.
+     -rogueMineProb <real>
+       Probability that unclaimed mines will activate.
+
+-------------------------------------------------------------------------------	
+Release 3.4
+
+Some improvements :
+ - You can now change the size of the Meta-server list window.
+ - Display, on the window from where you execute TkXpInterface,
+   the new format of all ship shapes that are in old format in
+   the TkXpI.shp file.
+
+------------------------------------------------------------------------------	
+Release 3.3
+
+Hi All !
+
+Some fixed buggs :
+
+    - Color fixed for the text on the bitmap (when an error occurs
+      on the maps2image program)
+       Thanks to Hugues Crepin (chugues@droopy.inria.fr)
+    - If TkXpInterface is executed in background the telnet don't crash :
+       Thanks to Bert Gijsbers (bert@mc.bio.uva.nl)
+    - The filter of the remote server list is based on the lexically order.
+       Thanks to Bert Gijsbers (bert@mc.bio.uva.nl)
+    - The temporary file (tkxpI.upd) is suppressed.
+       Thanks to Hugues Crepin (chugues@droopy.inria.fr)
+
+Some improvements :
+
+- The server mode accepts the new xpilots options :
+  maxMissilesPerPack
+  detonateItemOnKillProb
+  itemEmergencyShieldProb
+  initialEmergencyShields
+- The server mode accepts the New ship shapes format but DOESN'T verify
+  if it is accepted by your current client.
+
+- The ship shapes definition (in TkXpI.shp) accepts the multilines format.
+- You can for a running local server (without restarted it.):
+     - change the initial items values
+     - change the number of robots
+     - Lock or Unlock the game
+     - Shut down or Stop the shut down
+     - Send a message of God to the player 
+- The "Search" entry box in now on the main panel of the metaserver menu.
+- In the Meta server menu, the results of the "Status" option is filtered.
+- In the installation in the Makefile, the user can set a filter for
+  the remote servers with the Xpilots version to avoid the display of 
+  some old and incompatble version of xpilots.
+- For the monochrome displays, TkXpInterface is in Black on White,
+  the "-reverse" option on the  TkXpInterface commande line toggles it
+  in White on Black.
+
+- etc.......
+Regards
+Ramdane
+
+------------------------------------------------------------------------------
+Release 3.2
+
+Hi All !
+Some improvements :
+
+- You can now start TkXpInterface as xpilot Client or Server or Client&Server 
+  interface.
+- You can change the initial items values of your local server
+  without restarted it.
+- Now a SINGLE-Click with your left mouse button is enough to
+  to select a map, a remote server,...
+- I read the Default file and the Dump only once (fastest)
+  (thanks to Rene Boe (rene@iesd.auc.dk))
+- I have added a "Score table filename" button EVEN IF it's not still
+  avalaible in xpilots-3.1.3 
+- If you save a map file or execute the Server, only the modified
+  values will be written (if you want) or pass on the Xpilots command line.
+- I have changed the order and the position of the windows corresponding
+  to the upper buttons to avoid some truncated windows.
+- The use of the Meta-server menu have change
+  (thanks to Nick (vargish@sura.net)).
+- In the Meta-server menu (sort window) you can see an entry box 
+   it's useful if you want to look for a friend (with his nick name or
+   e-mail adress), a map name, all .fr servers, etc....
+   - The search mode doesn't take into account the difference between the
+    lowercases and uppercases.
+   - You must enter AT LEAST 3 characters for each word.
+   - the servers names, that correspond to this criterion, will be displayed
+     with another color
+   - The number of remote servers that correspond to this criterion will be
+     displayed on the header of the servers list "( #number servers found )".
+   - If you put your mouse pointer inside the list of
+     servers these servers names will retrieve the normal color, so use the
+   - scroll bar to look for the servers BEFORE to put your mouse pointer
+     inside the list.
+
+  the servers names, that correspond to this criterion, will be displayed
+  with another color, but if you put your mouse pointer inside the list of
+  servers these servers names will retrieve the normal color, so use the
+  scroll bar to look for the servers BEFORE to put your mouse pointer inside
+  the list.
+- The sort choice, the words you look for and the previous remote server you
+   selected doesn't change even if you close and open the servers window
+  (thanks to Bert (bert@mc.bio.uva.nl)).
+- A Status button have been added. (same as the "S" command on the xpilot client
+  command line).
+- You can select or unselect a new ship shape.
+- You can enter a new nick name.
+- The servers window a new column to show if this remote server is in team mode
+  and the info windows will show you the team number of each player, very 
+  useful for the set of your team number before to play.
+  but Attention !
+    The team mode information will be used for Xpilots-3.1.4 and later !
+    not still implemented.
+
+- During the installation in the Makefile, the user can set a filter for
+  the remote servers with the Xpilots version to avoid the display of 
+  some old and incompatble version of xpilots.
+
+- During the installation in the Makefile, the user can customize the
+  set of colors used by TkXpInterface.
+
+- A "Check options" button avoids or not the display of the options unknown
+  by Xpilots when you load a map (thanks to Nick (vargish@sura.net)) .
+
+- When you save a map file the original options unknown by Xpilots will be
+  saved too ( to keep some options of "unofficial" patchs).
+
+- When you start a server, the original options unknown by Xpilots will be
+  added on the Xpilots command line.
+
+- etc.......
+Regards
+Ramdane

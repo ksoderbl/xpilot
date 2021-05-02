@@ -1,6 +1,6 @@
-/* $Id: play.c,v 3.98 1994/09/19 21:43:17 bert Exp $
+/* $Id: play.c,v 3.113 1995/02/11 17:13:54 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -32,14 +32,15 @@
 #include "global.h"
 #include "proto.h"
 #include "score.h"
-#include "robot.h"
 #include "saudio.h"
 #include "bit.h"
 #include "netserver.h"
 
+char play_version[] = VERSION;
+
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: play.c,v 3.98 1994/09/19 21:43:17 bert Exp $";
+    "@(#)$Id: play.c,v 3.113 1995/02/11 17:13:54 bert Exp $";
 #endif
 
 #define MISSILE_POWER_SPEED_FACT	0.25
@@ -61,8 +62,8 @@ extern int Rate(int winner, int loser);
 void Thrust(int ind)
 {
     player		*pl = Players[ind];
-    const int		min_dir = pl->dir + RES/2 - RES*0.2 - 1;
-    const int		max_dir = pl->dir + RES/2 + RES*0.2 + 1;
+    const int		min_dir = (int)(pl->dir + RES/2 - RES*0.2 - 1);
+    const int		max_dir = (int)(pl->dir + RES/2 + RES*0.2 + 1);
     const float		max_speed = 1 + (pl->power * 0.14);
     const int		max_life = 3 + (int)(pl->power * 0.35);
     static int		keep_rand;
@@ -78,7 +79,7 @@ void Thrust(int ind)
 
     afterburners = (BIT(pl->used, OBJ_EMERGENCY_THRUST)
 		    ? MAX_AFTERBURNER
-		    : pl->afterburners);
+		    : pl->item[ITEM_AFTERBURNER]);
     alt_sparks = afterburners
 		    ? AFTER_BURN_SPARKS(tot_sparks-1, afterburners) + 1
 		    : 0;
@@ -236,18 +237,18 @@ void Obj_repel(object *obj1, object *obj2, int repel_dist)
 
 static void Item_update_flags(player *pl)
 {
-    if (pl->cloaks <= 0
+    if (pl->item[ITEM_CLOAK] <= 0
 	&& BIT(pl->have, OBJ_CLOAKING_DEVICE)) {
 	CLR_BIT(pl->have, OBJ_CLOAKING_DEVICE);
 	pl->updateVisibility = 1;
     }
-    if (pl->afterburners <= 0)
+    if (pl->item[ITEM_AFTERBURNER] <= 0)
 	CLR_BIT(pl->have, OBJ_AFTERBURNER);
-    if (pl->emergency_thrusts <= 0
+    if (pl->item[ITEM_EMERGENCY_THRUST] <= 0
 	&& !BIT(pl->used, OBJ_EMERGENCY_THRUST)
 	&& pl->emergency_thrust_left == 0)
 	CLR_BIT(pl->have, OBJ_EMERGENCY_THRUST);
-    if (pl->emergency_shields <= 0
+    if (pl->item[ITEM_EMERGENCY_SHIELD] <= 0
 	&& !BIT(pl->used, OBJ_EMERGENCY_SHIELD)
 	&& pl->emergency_shield_left == 0) {
 	if (BIT(pl->have, OBJ_EMERGENCY_SHIELD)) {
@@ -258,60 +259,43 @@ static void Item_update_flags(player *pl)
 	    }
 	}
     }
-    if (pl->tractor_beams <= 0)
+    if (pl->item[ITEM_TRACTOR_BEAM] <= 0)
 	CLR_BIT(pl->have, OBJ_TRACTOR_BEAM);
-    if (pl->autopilots <= 0) {
+    if (pl->item[ITEM_AUTOPILOT] <= 0) {
 	if (BIT(pl->used, OBJ_AUTOPILOT))
 	    Autopilot (GetInd[pl->id], 0);
 	CLR_BIT(pl->have, OBJ_AUTOPILOT);
     }
 }
 
+/* 
+ * Player loses some items after some event (collision, bounce).
+ * The `prob' parameter gives the chance that items are lost
+ * and, if they are lost, what percentage.
+ */
 void Item_damage(int ind, float prob)
 {
-    player *pl;
-    int	p, rem;
+    if (prob < 1.0f) {
+	player		*pl = Players[ind];
+	int		i;
+	float		loss;
 
-    if (prob >= 0.0 && prob <= 1.0) {
-	p = (prob * RAND_MAX);
-	rem = 1;
-    } else {
-	p = RAND_MAX;
-	rem = 1 + (int)prob;
+	loss = prob;
+	LIMIT(loss, 0.0f, 1.0f);
+
+	for (i = 0; i < NUM_ITEMS; i++) {
+	    if (!BIT(1U << i, ITEM_BIT_FUEL|ITEM_BIT_TANK)) {
+		if (pl->item[i]) {
+		    float f = rfrac();
+		    if (f < loss) {
+			pl->item[i] = (int)(pl->item[i] * loss + 0.5f);
+		    }
+		}
+	    }
+	}
+
+	Item_update_flags(pl);
     }
-
-#ifdef OLD_ITEM_DAMAGE
-    if (rand() > p)
-	return;
-
-#define ITEM_DAMAGE(item) (pl->item = rand() % (pl->item + 1))
-
-#else /* OLD_ITEM_DAMAGE */
-
-#define ITEM_DAMAGE(item) \
-    if (pl->item && rand() <= p) { \
-	if ((pl->item -= ((rand() % rem) + 1)) < 0) \
-	    pl->item = 0; \
-    }
-
-#endif /* OLD_ITEM_DAMAGE */
-
-    pl			= Players[ind];
-    ITEM_DAMAGE(extra_shots);
-    ITEM_DAMAGE(back_shots);
-    ITEM_DAMAGE(missiles);
-    ITEM_DAMAGE(mines);
-    ITEM_DAMAGE(ecms);
-    ITEM_DAMAGE(cloaks);
-    ITEM_DAMAGE(sensors);
-    ITEM_DAMAGE(lasers);
-    ITEM_DAMAGE(transporters);
-    ITEM_DAMAGE(afterburners);
-    ITEM_DAMAGE(emergency_thrusts);
-    ITEM_DAMAGE(emergency_shields);
-    ITEM_DAMAGE(tractor_beams);
-    ITEM_DAMAGE(autopilots);
-    Item_update_flags(pl);
 }
 
 /***********************
@@ -340,10 +324,11 @@ void Free_shots(void)
 }
 
 
-void Place_item(int type, player *pl, int count)
+void Place_item(int item, player *pl)
 {
-    object		*item;
-    int			x, y,
+    object		*obj;
+    int			num_lose, num_per_pack,
+			x, y,
 			place_count,
 			dir, dist,
 			grav;
@@ -352,25 +337,30 @@ void Place_item(int type, player *pl, int count)
     item_concentrator_t	*con;
 
 
+    if (pl) {
+	num_lose = pl->item[item] - World.items[item].initial;
+	if (num_lose <= 0) {
+	    /*NOTREACHED*/
+	    error("BUG: Place_item");
+	    return;
+	}
+	pl->item[item] -= num_lose;
+	num_per_pack = (int)(num_lose * dropItemOnKillProb);
+	if (num_per_pack < World.items[item].min_per_pack) {
+	    return;
+	}
+    } else {
+	if (World.items[item].min_per_pack == World.items[item].max_per_pack) {
+	    num_per_pack = World.items[item].max_per_pack;
+	} else {
+	    num_per_pack = World.items[item].min_per_pack
+			 + rand () % (1 + World.items[item].max_per_pack
+				        - World.items[item].min_per_pack);
+	}
+    }
+
     if (NumObjs >= MAX_TOTAL_SHOTS)
 	return;
-
-    /*
-     * Correct count if necessary.
-     */
-    switch (type) {
-    case ITEM_ROCKET_PACK:
-	if (count < 1 || count > maxMissilesPerPack)
-	    count = maxMissilesPerPack;
-	break;
-    case ITEM_MINE_PACK:
-	if (count < 1 || count > 2)
-	    count = 1 + (rand()&1);
-	break;
-    default:
-	count = 1;
-	break;
-    }
 
     if (pl) {
 	grav = GRAVITY;
@@ -379,21 +369,21 @@ void Place_item(int type, player *pl, int count)
 	x = fx / BLOCK_SZ;
 	y = fy / BLOCK_SZ;
     } else {
-	if ((rand()&127) < MovingItemsRand)
+	if (rfrac() < movingItemProb) {
 	    grav = GRAVITY;
-	else {
+	} else {
 	    grav = 0;
+	}
+	if (World.NumItemConcentrators > 0) {
+	    con = &World.itemConcentrators[rand()%World.NumItemConcentrators];
+	} else {
+	    con = NULL;
 	}
 	/*
 	 * This will take very long (or forever) with maps
 	 * that hardly have any (or none) spaces.
 	 * So bail out after a few retries.
 	 */
-	if (World.NumItemConcentrators > 0) {
-	    con = &World.itemConcentrators[rand()%World.NumItemConcentrators];
-	} else {
-	    con = NULL;
-	}
 	for (place_count = 0; ; place_count++) {
 	    if (place_count >= 8) {
 		return;
@@ -440,113 +430,57 @@ void Place_item(int type, player *pl, int count)
 	vx = vy = 0.0;
     }
 
-    item = Obj[NumObjs++];
-    item->type = OBJ_ITEM;
-    item->info = type;
-    item->color = RED;
-    item->status = grav;
-    item->id = -1;
-    item->pos.x = fx;
-    item->pos.y = fy;
-    item->prevpos = item->pos;
-    item->vel.x = vx;
-    item->vel.y = vy;
-    item->acc.x =
-    item->acc.y = 0.0;
-    item->mass = 10.0;
-    item->life = 1500 + (rand()&511);
-    item->count = count;
-    item->pl_range = ITEM_SIZE/2;
-    item->pl_radius = ITEM_SIZE/2;
+    obj = Obj[NumObjs++];
+    obj->type = OBJ_ITEM;
+    obj->info = item;
+    obj->color = RED;
+    obj->status = grav;
+    obj->id = -1;
+    obj->pos.x = fx;
+    obj->pos.y = fy;
+    obj->prevpos = obj->pos;
+    obj->vel.x = vx;
+    obj->vel.y = vy;
+    obj->acc.x =
+    obj->acc.y = 0.0;
+    obj->mass = 10.0;
+    obj->life = 1500 + (rand()&511);
+    obj->count = num_per_pack;
+    obj->pl_range = ITEM_SIZE/2;
+    obj->pl_radius = ITEM_SIZE/2;
 
-    World.items[type].num++;
+    World.items[item].num++;
 }
 
 
 void Throw_items(player *pl)
 {
-    int i;
+    int			num_items_to_throw, remain, item;
 
-    if (!ThrowItemOnKillRand)
+    if (!dropItemOnKillProb)
 	return;
 
-    for (i = pl->extra_shots - initialWideangles; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_WIDEANGLE_SHOT, pl, 1);
-	    pl->extra_shots--;
+    for (item = 0; item < NUM_ITEMS; item++) {
+	if (!BIT(1U << item, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+	    do {
+		num_items_to_throw = pl->item[item] - World.items[item].initial;
+		if (num_items_to_throw <= 0) {
+		    break;
+		}
+		Place_item(item, pl);
+		remain = pl->item[item] - World.items[item].initial;
+	    } while (remain > 0 && remain < num_items_to_throw);
 	}
-    for (i = pl->ecms - initialECMs; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_ECM, pl, 1);
-	    pl->ecms--;
-	}
-    for (i = pl->sensors - initialSensors; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_SENSOR_PACK, pl, 1);
-	    pl->sensors--;
-	}
-    for (i = pl->afterburners - initialAfterburners; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_AFTERBURNER, pl, 1);
-	    pl->afterburners--;
-	}
-    for (i = pl->transporters - initialTransporters; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_TRANSPORTER, pl, 1);
-	    pl->transporters--;
-	}
-    for (i = pl->back_shots - initialRearshots; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_BACK_SHOT, pl, 1);
-	    pl->back_shots--;
-	}
-    for (i = pl->missiles - initialMissiles; i > 0; i-=4)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    int n = (i > 4 ? 4 : i);
-	    Place_item(ITEM_ROCKET_PACK, pl, n);
-	    pl->missiles -= n;
-	}
-    for (i = pl->cloaks - initialCloaks; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_CLOAKING_DEVICE, pl, 1);
-	    pl->cloaks--;
-	}
-    for (i = pl->mines - initialMines; i > 0; i-=2)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    int n = (i > 2 ? 2 : i);
-	    Place_item(ITEM_MINE_PACK, pl, n);
-	    pl->mines -= n;
-	}
-    for (i = pl->lasers - initialLasers; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_LASER, pl, 1);
-	    pl->lasers--;
-	}
-    for (i = pl->emergency_thrusts - initialEmergencyThrusts; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_EMERGENCY_THRUST, pl, 1);
-	    pl->emergency_thrusts--;
-	}
-    for (i = pl->emergency_shields - initialEmergencyShields; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_EMERGENCY_SHIELD, pl, 1);
-	    pl->emergency_shields--;
-	}
-    for (i = pl->tractor_beams - initialTractorBeams; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_TRACTOR_BEAM, pl, 1);
-	    pl->tractor_beams--;
-	}
-    for (i = pl->autopilots - initialAutopilots; i > 0; i--)
-	if ((rand()&127) < ThrowItemOnKillRand) {
-	    Place_item(ITEM_AUTOPILOT, pl, 1);
-	    pl->autopilots--;
-	}
+    }
+
     /*
      * Would it be nice if Tanks could be thrown?
      */
-    Item_update_flags(pl);
+    /*
+     * Yes, if they are thrown as tank items.
+     */
 
+    Item_update_flags(pl);
 }
 
 /*
@@ -554,9 +488,11 @@ void Throw_items(player *pl)
  * a random direction with a small life time (ie. magazine has
  * gone off).
  */
-void Detonate_items(player *pl)
+void Detonate_items(int ind)
 {
-    int	i;
+    player		*pl = Players[ind];
+    int			i;
+    modifiers		mods;
 
     if (!BIT(pl->status, KILLED))
 	return;
@@ -564,10 +500,10 @@ void Detonate_items(player *pl)
     /*
      * These are always immune to detonation.
      */
-    if ((pl->mines -= initialMines) < 0)
-	pl->mines = 0;
-    if ((pl->missiles -= initialMissiles) < 0)
-	pl->missiles = 0;
+    if ((pl->item[ITEM_MINE] -= World.items[ITEM_MINE].initial) < 0)
+	pl->item[ITEM_MINE] = 0;
+    if ((pl->item[ITEM_MISSILE] -= World.items[ITEM_MISSILE].initial) < 0)
+	pl->item[ITEM_MISSILE] = 0;
 
     /*
      * Drop shields in order to launch mines and missiles.
@@ -578,21 +514,29 @@ void Detonate_items(player *pl)
      * Mines are always affected by gravity and are sent in random directions
      * slowly out from the ship (velocity relative).
      */
-    for (i = 0; i < pl->mines; i++) {
-	if ((rand()&127) < DetonateItemOnKillRand) {
+    for (i = 0; i < pl->item[ITEM_MINE]; i++) {
+	if (rfrac() < detonateItemOnKillProb) {
 	    int dir = MOD2(rand(), RES);
 	    float vel = ((rand() % 16) / 4.0);
 
-	    Place_general_mine(GetInd[pl->id], GRAVITY,
+	    mods = pl->mods;
+	    if (BIT(mods.nuclear, NUCLEAR)
+		&& pl->item[ITEM_MINE] < nukeMinMines) {
+		CLR_BIT(mods.nuclear, NUCLEAR);
+	    }
+	    Place_general_mine(ind, GRAVITY,
 			       pl->pos.x, pl->pos.y,
 			       pl->vel.x + vel * tcos(dir),
 			       pl->vel.y + vel * tsin(dir),
-			       pl->mods);
+			       mods);
 	}
     }
-    for (i = 0; i < pl->missiles; i++) {
-	if ((rand()&127) < DetonateItemOnKillRand) {
+    for (i = 0; i < pl->item[ITEM_MISSILE]; i++) {
+	if (rfrac() < detonateItemOnKillProb) {
 	    int	type;
+
+	    if (pl->shots >= pl->shot_max)
+		break;
 
 	    /*
 	     * Missiles are random type at random players, which could
@@ -607,7 +551,14 @@ void Detonate_items(player *pl)
 	    default:	type = OBJ_SMART_SHOT;	break;
 	    }
 
-	    Fire_shot(GetInd[pl->id], type, (rand() % RES));
+	    mods = pl->mods;
+	    if (BIT(mods.nuclear, NUCLEAR)
+		&& pl->item[ITEM_MISSILE] < nukeMinSmarts) {
+		CLR_BIT(mods.nuclear, NUCLEAR);
+	    }
+	    Fire_general_shot(ind, pl->pos.x, pl->pos.y,
+			      type, MOD2(rand(), RES),
+			      pl->shot_speed, mods);
 	}
     }
 }
@@ -616,7 +567,8 @@ void Place_mine(int ind)
 {
     player *pl = Players[ind];
 
-    if (pl->mines <= 0 || (BIT(pl->used, OBJ_SHIELD) && !shieldedMining))
+    if (pl->item[ITEM_MINE] <= 0
+	|| (BIT(pl->used, OBJ_SHIELD) && !shieldedMining))
 	return;
 
     Place_general_mine(ind, 0,
@@ -628,7 +580,8 @@ void Place_moving_mine(int ind)
 {
     player *pl = Players[ind];
 
-    if (pl->mines <= 0 || (BIT(pl->used, OBJ_SHIELD) && !shieldedMining))
+    if (pl->item[ITEM_MINE] <= 0
+	|| (BIT(pl->used, OBJ_SHIELD) && !shieldedMining))
 	return;
 
     Place_general_mine(ind, GRAVITY,
@@ -668,20 +621,24 @@ void Place_general_mine(int ind, long status, float x, float y,
     if (!mods.mini)
 	mods.spread = 0;
 
+    if (nukeMinSmarts <= 0) {
+	CLR_BIT(mods.nuclear, NUCLEAR);
+    }
     if (BIT(mods.nuclear, NUCLEAR)) {
 	if (pl) {
-	    used = (BIT(mods.nuclear, FULLNUCLEAR) ?
-		    pl->mines : NUKE_MIN_MINE);
-	    if (pl->mines < NUKE_MIN_MINE) {
+	    used = (BIT(mods.nuclear, FULLNUCLEAR)
+		    ? pl->item[ITEM_MINE]
+		    : nukeMinMines);
+	    if (pl->item[ITEM_MINE] < nukeMinMines) {
 		sprintf(msg, "You need at least %d mines to %s %s!",
-			NUKE_MIN_MINE,
+			nukeMinMines,
 			(BIT(status, GRAVITY) ? "throw" : "drop"),
 			Describe_shot (OBJ_MINE, status, mods, 0));
 		Set_player_message (pl, msg);
 		return;
 	    }
 	} else {
-	    used = NUKE_MIN_MINE;
+	    used = nukeMinMines;
 	}
 	mass = MINE_MASS * used * NUKE_MASS_MULT;
     } else {
@@ -703,7 +660,7 @@ void Place_general_mine(int ind, long status, float x, float y,
 	    return;
 	}
 	Add_fuel(&(pl->fuel), drain);
-	pl->mines -= used;
+	pl->item[ITEM_MINE] -= used;
 
 	if (used > 1) {
 	    sprintf(msg, "%s has %s %s!", pl->name,
@@ -737,7 +694,7 @@ void Place_general_mine(int ind, long status, float x, float y,
 	    int		dir;
 	    float	spread;
 
-	    spread = (float)mods.spread + 1;
+	    spread = (float)((unsigned)mods.spread + 1);
 	    /*
 	     * Dir gives (S is ship upwards);
 	     *
@@ -773,23 +730,42 @@ void Place_general_mine(int ind, long status, float x, float y,
 }
 
 /*
- * Cause all of the given player's dropped/thrown mines to explode.
+ * Up to and including 3.2.6 it was:
+ *     Cause all of the given player's dropped/thrown mines to explode.
+ * Since this caused a slowdown when many mines detonated it
+ * is changed into:
+ *     Cause the mine which is closest to a player and owned
+ *     by that player to detonate.
  */
 void Detonate_mines(int ind)
 {
-    player *pl = Players[ind];
-    int i;
+    player		*pl = Players[ind];
+    int			i;
+    int			closest = -1;
+    float		dist;
+    float		min_dist = World.hypotenuse + 1;
 
-    for (i = 0; i < NumObjs; i++)
-    {
+    for (i = 0; i < NumObjs; i++) {
 	object *mine = Obj[i];
 
 	if (! BIT(mine->type, OBJ_MINE))
 	    continue;
-	if (! (mine->owner == pl->id) )
-	    continue;
-	mine->life = 0;
+	/*
+	 * Mines which have been ECM reprogrammed should only be detonatable
+	 * by the reprogrammer, not by the original mine placer:
+	 */
+	if (mine->id == pl->id) {
+	    dist = Wrap_length(pl->pos.x - mine->pos.x, pl->pos.y - mine->pos.y);
+	    if (dist < min_dist) {
+		min_dist = dist;
+		closest = i;
+	    }
+	}
     }
+    if (closest != -1) {
+	Obj[closest]->life = 0;
+    }
+
     return;
 }
 
@@ -905,7 +881,7 @@ int Punish_team(int ind, int t_destroyed, int t_target)
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	for (i = 0; i < NumPlayers; i++) {
-	    if (Players[i]->robot_mode == RM_OBJECT
+	    if (IS_TANK_IND(i)
 		|| (BIT(Players[i]->status, PAUSE)
 		    && Players[i]->count <= 0)
 		|| (BIT(Players[i]->status, GAME_OVER)
@@ -946,7 +922,7 @@ int Punish_team(int ind, int t_destroyed, int t_target)
     por = (sc * lose_team_members) / (2 * win_team_members + 1);
 
     for (i = 0; i < NumPlayers; i++) {
-	if (Players[i]->robot_mode == RM_OBJECT
+	if (IS_TANK_IND(i)
 	    || (BIT(Players[i]->status, PAUSE)
 		&& Players[i]->count <= 0)
 	    || (BIT(Players[i]->status, GAME_OVER)
@@ -1162,23 +1138,27 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
 	if (NumObjs + mods.mini >= MAX_TOTAL_SHOTS)
 	    return;
 
-	if (pl && pl->missiles <= 0)
+	if (pl && pl->item[ITEM_MISSILE] <= 0)
 	    return;
 
+	if (nukeMinSmarts <= 0) {
+	    CLR_BIT(mods.nuclear, NUCLEAR);
+	}
 	if (BIT(mods.nuclear, NUCLEAR)) {
 	    if (pl) {
-		used = (BIT(mods.nuclear, FULLNUCLEAR) ?
-			pl->missiles : NUKE_MIN_SMART);
-		if (pl->missiles < NUKE_MIN_SMART) {
+		used = (BIT(mods.nuclear, FULLNUCLEAR)
+			? pl->item[ITEM_MISSILE]
+			: nukeMinSmarts);
+		if (pl->item[ITEM_MISSILE] < nukeMinSmarts) {
 		    sprintf(msg,
 			    "You need at least %d missiles to fire %s!",
-			    NUKE_MIN_SMART,
+			    nukeMinSmarts,
 			    Describe_shot (type, status, mods, 0));
 		    Set_player_message (pl, msg);
 		    return;
 		}
 	    } else {
-		used = NUKE_MIN_SMART;
+		used = nukeMinSmarts;
 	    }
 	    mass = MISSILE_MASS * used * NUKE_MASS_MULT;
 	    pl_range = (type == OBJ_TORPEDO) ? NUKE_RANGE : MISSILE_RANGE;
@@ -1249,7 +1229,7 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
 		return;
 	    }
 	    Add_fuel(&(pl->fuel), drain);
-	    pl->missiles -= used;
+	    pl->item[ITEM_MISSILE] -= used;
 
 	    if (used > 1) {
 		sprintf(msg, "%s has launched %s!", pl->name,
@@ -1269,7 +1249,7 @@ void Fire_general_shot(int ind, float x, float y, int type, int dir,
     speed *= (1 + (mods.power * MISSILE_POWER_SPEED_FACT));
     max_speed *= (1 + (mods.power * MISSILE_POWER_SPEED_FACT));
     turnspeed *= (1 + (mods.power * MISSILE_POWER_TURNSPEED_FACT));
-    spread = (float)mods.spread + 1.0;
+    spread = (float)((unsigned)mods.spread + 1);
     /*
      * Calculate the maxmimum time it would take to cross one ships width,
      * don't fuse the shot/missile/torpedo for the owner only until that
@@ -1611,7 +1591,7 @@ void Fire_normal_shots(int ind)
 
     pl->shot_time = loops;
     Fire_main_shot(ind, OBJ_SHOT, pl->dir);
-    for (i = 0; i < pl->extra_shots; i++) {
+    for (i = 0; i < pl->item[ITEM_WIDEANGLE]; i++) {
 	if (pl->ship->num_l_gun > 0) {
 	    Fire_left_shot(ind, OBJ_SHOT, MOD2(pl->dir + (1 + i) * shot_angle,
 			   RES), i % pl->ship->num_l_gun);
@@ -1629,9 +1609,9 @@ void Fire_normal_shots(int ind)
 			   RES));
 	}
     }
-    for (i = 0; i < pl->back_shots; i++) {
+    for (i = 0; i < pl->item[ITEM_REARSHOT]; i++) {
 	Fire_shot(ind, OBJ_SHOT, MOD2(pl->dir + RES/2
-		       + ((pl->back_shots - 1 - 2 * i) * shot_angle) / 2,
+		       + ((pl->item[ITEM_REARSHOT] - 1 - 2 * i) * shot_angle) / 2,
 		       RES));
     }
 }
@@ -1761,6 +1741,12 @@ void Delete_shot(int ind)
 	    } else {
 		intensity = 32;
 	    }
+	    /*
+	     * Writing it like this:
+	     *   num_modv /= (shot->mods.mini + 1);
+	     * triggers a bug in HP C A.09.19.
+	     */
+	    num_modv = num_modv / ((float)shot->mods.mini + 1.0f);
 	}
 
 	if (BIT(shot->mods.nuclear, NUCLEAR)) {
@@ -1815,24 +1801,24 @@ void Delete_shot(int ind)
 
 	switch (shot->info) {
 
-	case ITEM_ROCKET_PACK:
+	case ITEM_MISSILE:
 	    if (shot->life == 0 && shot->color != WHITE) {
 		shot->color = WHITE;
 		shot->life  = FPS * WARN_TIME;
 		return;
 	    }
-	    if (shot->life == 0 && rand() < rogueHeatProb * RAND_MAX) {
+	    if (shot->life == 0 && rfrac() < rogueHeatProb) {
 		addHeat = 1;
 	    }
 	    break;
 
-	case ITEM_MINE_PACK:
+	case ITEM_MINE:
 	    if (!shot->life && shot->color != WHITE) {
 		shot->color = WHITE;
 		shot->life  = FPS * WARN_TIME;
 		return;
 	    }
-	    if (shot->life == 0 && rand() < rogueMineProb * RAND_MAX) {
+	    if (shot->life == 0 && rfrac() < rogueMineProb) {
 		addMine = 1;
 	    }
 	    break;
@@ -1896,7 +1882,7 @@ void do_transporter(player *pl)
 	if (p != pl
 	    && BIT(p->status, PLAYING|PAUSE|GAME_OVER) == PLAYING
 	    && !TEAM_IMMUNE(GetInd[pl->id], i)
-	    && p->robot_mode != RM_OBJECT) {
+	    && !IS_TANK_PTR(p)) {
 
 	    l = Wrap_length(pl->pos.x - p->pos.x, pl->pos.y - p->pos.y);
 	    if (l < closestLength) {
@@ -1915,86 +1901,88 @@ void do_transporter(player *pl)
     pl->transInfo.pl_id = p->id;
     pl->transInfo.count = 5;
 
-#define STEAL(item, msg)	\
-{				\
-    if (!p->item)		\
-	break;			\
-    p->item--;			\
-    pl->item++;			\
-    what = msg;			\
-    done = true;		\
-}
+#define STEAL(ITEM, MSG)	\
+    {				\
+	if (!p->item[ITEM])	\
+	    break;		\
+	p->item[ITEM]--;	\
+	pl->item[ITEM]++;	\
+	what = MSG;		\
+	done = true;		\
+    }
 
     while (!done) {
 
-	switch ((enum Item) (rfrac() * NUM_ITEMS)) {
+	enum Item item = (enum Item) (rfrac() * NUM_ITEMS);
+
+	switch (item) {
 
 	case ITEM_AFTERBURNER:
-	    STEAL(afterburners, "an afterburner");
-	    if (p->afterburners <= 0)
+	    STEAL(item, "an afterburner");
+	    if (p->item[ITEM_AFTERBURNER] <= 0)
 		CLR_BIT(p->have, OBJ_AFTERBURNER);
 	    SET_BIT(pl->have, OBJ_AFTERBURNER);
-	    if (pl->afterburners > MAX_AFTERBURNER)
-		pl->afterburners = MAX_AFTERBURNER;
+	    if (pl->item[ITEM_AFTERBURNER] > MAX_AFTERBURNER)
+		pl->item[ITEM_AFTERBURNER] = MAX_AFTERBURNER;
 	    break;
 
-	case ITEM_ROCKET_PACK:
-	    STEAL(missiles, "some missiles");
+	case ITEM_MISSILE:
+	    STEAL(item, "some missiles");
 
-	    if (p->missiles < 3) {
-		pl->missiles += p->missiles;
-		p->missiles = 0;
+	    if (p->item[ITEM_MISSILE] < 3) {
+		pl->item[ITEM_MISSILE] += p->item[ITEM_MISSILE];
+		p->item[ITEM_MISSILE] = 0;
 	    }
 	    else {
-		p->missiles -= 3;
-		pl->missiles += 3;
+		p->item[ITEM_MISSILE] -= 3;
+		pl->item[ITEM_MISSILE] += 3;
 	    }
 	    break;
 
-	case ITEM_CLOAKING_DEVICE:
-	    STEAL(cloaks, "a cloaking device");
+	case ITEM_CLOAK:
+	    STEAL(item, "a cloaking device");
 	    p->updateVisibility = pl->updateVisibility = 1;
-	    if (!p->cloaks) {
+	    if (!p->item[ITEM_CLOAK]) {
 		CLR_BIT(p->used, OBJ_CLOAKING_DEVICE);
 		CLR_BIT(p->have, OBJ_CLOAKING_DEVICE);
 	    }
 	    SET_BIT(pl->have, OBJ_CLOAKING_DEVICE);
 	    break;
 
-	case ITEM_WIDEANGLE_SHOT:
-	    STEAL(extra_shots, "a wide");
+	case ITEM_WIDEANGLE:
+	    STEAL(item, "a wide");
 	    break;
 
-	case ITEM_BACK_SHOT:
-	    STEAL(back_shots, "a rear");
+	case ITEM_REARSHOT:
+	    STEAL(item, "a rear");
 	    break;
 
-	case ITEM_MINE_PACK:
-	    STEAL(mines, "a mine");
+	case ITEM_MINE:
+	    STEAL(item, "a mine");
 	    break;
 
-	case ITEM_SENSOR_PACK:
-	    STEAL(sensors, "a sensor");
+	case ITEM_SENSOR:
+	    STEAL(item, "a sensor");
 	    p->updateVisibility = pl->updateVisibility = 1;
 	    break;
 
 	case ITEM_ECM:
-	    STEAL(ecms, "an ECM");
+	    STEAL(item, "an ECM");
 	    break;
 
 	case ITEM_TRANSPORTER:
-	    STEAL(transporters, "a transporter");
+	    STEAL(item, "a transporter");
 	    break;
 
 	case ITEM_LASER:
-	    STEAL(lasers, "a laser");
-	    if (pl->lasers > MAX_LASERS)
-		pl->lasers = MAX_LASERS;
+	    STEAL(item, "a laser");
+	    if (pl->item[ITEM_LASER] > MAX_LASERS)
+		pl->item[ITEM_LASER] = MAX_LASERS;
 	    break;
 
 	case ITEM_EMERGENCY_THRUST:
-	    STEAL(emergency_thrusts, "an emergency thrust");
-	    if (!p->emergency_thrusts) {
+	    STEAL(item, "an emergency thrust");
+	    if (!p->item[ITEM_EMERGENCY_THRUST]) {
 		if (BIT(p->used, OBJ_EMERGENCY_THRUST))
 		    Emergency_thrust(GetInd[p->id], 0);
 		CLR_BIT(p->have, OBJ_EMERGENCY_THRUST);
@@ -2003,8 +1991,8 @@ void do_transporter(player *pl)
 	    break;
 
 	case ITEM_EMERGENCY_SHIELD:
-	    STEAL(emergency_shields, "an emergency shield");
-	    if (!p->emergency_shields) {
+	    STEAL(item, "an emergency shield");
+	    if (!p->item[ITEM_EMERGENCY_SHIELD]) {
 		if (BIT(p->used, OBJ_EMERGENCY_SHIELD))
 		    Emergency_shield(GetInd[p->id], 0);
 		CLR_BIT(p->have, OBJ_EMERGENCY_SHIELD);
@@ -2017,17 +2005,17 @@ void do_transporter(player *pl)
 	    break;
 
 	case ITEM_TRACTOR_BEAM:
-	    STEAL(tractor_beams, "a tractor beam");
-	    if (!p->tractor_beams)
+	    STEAL(item, "a tractor beam");
+	    if (!p->item[ITEM_TRACTOR_BEAM])
 		CLR_BIT(p->have, OBJ_TRACTOR_BEAM);
 	    SET_BIT(pl->have, OBJ_TRACTOR_BEAM);
-	    if (pl->tractor_beams > MAX_TRACTORS)
-		pl->tractor_beams = MAX_TRACTORS;
+	    if (pl->item[ITEM_TRACTOR_BEAM] > MAX_TRACTORS)
+		pl->item[ITEM_TRACTOR_BEAM] = MAX_TRACTORS;
 	    break;
 
 	case ITEM_AUTOPILOT:
-	    STEAL(autopilots, "an autopilot");
-	    if (!p->autopilots) {
+	    STEAL(item, "an autopilot");
+	    if (!p->item[ITEM_AUTOPILOT]) {
 		if (BIT(p->used, OBJ_AUTOPILOT))
 		    Autopilot(GetInd[p->id], 0);
 		CLR_BIT(p->have, OBJ_AUTOPILOT);
@@ -2036,40 +2024,17 @@ void do_transporter(player *pl)
 	    break;
 
 	case ITEM_TANK:
-	    {
-		int             no, c,
-				t;
-
-		if (pl->fuel.num_tanks == MAX_TANKS || !p->fuel.num_tanks)
-		    break;
-		t = (rand() % p->fuel.num_tanks) + 1;
-
-		/* remove the tank from the victim */
-		p->fuel.sum -= p->fuel.tank[t];
-		p->fuel.max -= TANK_CAP(t);
-		for (i = t; i < p->fuel.num_tanks; i++)
-		    p->fuel.tank[i] = p->fuel.tank[i + 1];
-		p->emptymass -= TANK_MASS;
-		p->fuel.num_tanks -= 1;
-		if (p->fuel.current)
-		    p->fuel.current--;
-
-		/* add the tank to the thief */
-		c = pl->fuel.current;
-		no = ++(pl->fuel.num_tanks);
-		pl->fuel.current = no;
-		pl->fuel.max += TANK_CAP(no);
-		pl->fuel.tank[no] = 0;
-		pl->emptymass += TANK_MASS;
-		Add_fuel(&(pl->fuel), p->fuel.tank[t]);
-		pl->fuel.current = c;
-
+	    if (p->fuel.num_tanks > 0 && pl->fuel.num_tanks < MAX_TANKS) {
+		int tank_ind = (rand() % p->fuel.num_tanks) + 1;
+		long tank_fuel = p->fuel.tank[tank_ind];
+		Player_remove_tank(GetInd[p->id], tank_ind);
+		Player_add_tank(GetInd[pl->id], tank_fuel);
 		what = "a tank";
 		done = true;
-		break;
 	    }
+	    break;
 
-	case ITEM_ENERGY_PACK:	/* used to steal fuel */
+	case ITEM_FUEL:	/* used to steal fuel */
 #define MIN_FUEL_STEAL	10
 #define MAX_FUEL_STEAL  50
 	    {
@@ -2085,11 +2050,12 @@ void do_transporter(player *pl)
 		Add_fuel(&(pl->fuel), amount);
 		Add_fuel(&(p->fuel), -amount);
 		Set_message(msg);
-		return;
 	    }
-	    break;
+	    return;
+
 	case NUM_ITEMS:
-	    /* impossible */
+	    /*NOTREACHED*/
+	    error("BUG: steal");
 	    break;
 	}
     }
@@ -2157,12 +2123,18 @@ void do_ecm(player *pl)
 	    SET_BIT(shot->status, CONFUSED);
 	    shot->ecm_range = range;
 	    shot->count = CONFUSED_TIME;
-	    if ((pl->lock.distance <= pl->sensor_range
-		 || !BIT(World.rules->mode, LIMITED_VISIBILITY))
+	    if (BIT(pl->lock.tagged, LOCK_PLAYER)
+		&& (pl->lock.distance <= pl->sensor_range
+		    || !BIT(World.rules->mode, LIMITED_VISIBILITY))
 		&& pl->visibility[GetInd[pl->lock.pl_id]].canSee)
 		shot->new_info = pl->lock.pl_id;
 	    else
 		shot->new_info = Players[rand() % NumPlayers]->id;
+	    /* Can't redirect missiles to team mates. */
+	    if (TEAM_IMMUNE(ind, GetInd[shot->new_info])) {
+		/* So let the missile keep on following this unlucky player. */
+		shot->new_info = ind;
+	    }
 	    break;
 
 	case OBJ_MINE:
@@ -2202,13 +2174,14 @@ void do_ecm(player *pl)
 	    break;
 	}
     }
+
     /*
      * range%		reprogram%
      * 100		50
      *  50		75
      *	 0 (closest)	100
      */
-    if (ecmsReprogramMines && closest_mine!=NULL) {
+    if (ecmsReprogramMines && closest_mine != NULL) {
 	range = closest_mine_range;
 	if (range <= 0 || rand() % 100 < (100 - (int)(50*range)))
 	    closest_mine->id = pl->id;
@@ -2243,13 +2216,17 @@ void do_ecm(player *pl)
 	     * 0	0		25		50		5
 	     */
 
-	    /* should this be FPS dependant: damage = 4.0f * FPS * range; ?  no, i think. */
+	    /*
+	     * should this be FPS dependant: damage = 4.0f * FPS * range; ?
+	     * No, i think.
+	     */
 	    damage = 24.0f * range;
 
-	    if (p->cloaks <= 1) {
+	    if (p->item[ITEM_CLOAK] <= 1) {
 		p->forceVisible += (int)damage;
 	    } else {
-		p->forceVisible += (int)(damage * pow(0.75, (p->cloaks-1)));
+		p->forceVisible += (int)(damage
+					 * pow(0.75, (p->item[ITEM_CLOAK]-1)));
 	    }
 
 	    /* ECM may cause balls to detach. */
@@ -2264,13 +2241,13 @@ void do_ecm(player *pl)
 	    }
 
 	    /* ECM damages sensitive equipment like lasers */
-	    if (p->lasers > 0) {
-		p->lasers = range * p->lasers;
+	    if (p->item[ITEM_LASER] > 0) {
+		p->item[ITEM_LASER] = range * p->item[ITEM_LASER];
 	    }
 
-	    if (p->robot_mode == RM_NOT_ROBOT || p->robot_mode == RM_OBJECT) {
+	    if (!IS_ROBOT_PTR(p)) {
 		/* player is blinded by light flashes. */
-		long duration = (int)(damage * pow(0.75, p->sensors));
+		long duration = (int)(damage * pow(0.75, p->item[ITEM_SENSOR]));
 		p->damaged += duration;
 		Record_shove(p, pl, loops + duration);
 	    } else {
@@ -2278,17 +2255,17 @@ void do_ecm(player *pl)
 		    && (pl->lock.distance < pl->sensor_range
 			|| !BIT(World.rules->mode, LIMITED_VISIBILITY))
 		    && pl->visibility[GetInd[pl->lock.pl_id]].canSee
-		    && pl->lock.pl_id != p->id) {
+		    && pl->lock.pl_id != p->id
+		    && !TEAM_IMMUNE(ind, GetInd[pl->lock.pl_id])) {
 
 		    /*
 		     * Player programs robot to seek target.
 		     */
-		    p->robot_lock_id = pl->lock.pl_id;
-		    SET_BIT(p->robot_lock, LOCK_PLAYER);
+		    Robot_program(i, pl->lock.pl_id);
 		    for (j = 0; j < NumPlayers; j++) {
 			if (Players[j]->conn != NOT_CONNECTED) {
 			    Send_seek(Players[j]->conn, pl->id,
-				      p->id, p->robot_lock_id);
+				      p->id, pl->lock.pl_id);
 			}
 		    }
 		}
@@ -2299,16 +2276,16 @@ void do_ecm(player *pl)
 
 void Fire_ecm(int ind)
 {
-    player *pl = Players[ind];
+    player		*pl = Players[ind];
 
-    if (pl->ecms == 0
+    if (pl->item[ITEM_ECM] == 0
 	|| pl->fuel.sum <= -ED_ECM
 	|| pl->ecmInfo.count >= MAX_PLAYER_ECMS)
 	return;
 
     SET_BIT(pl->used, OBJ_ECM);
     do_ecm(pl);
-    pl->ecms--;
+    pl->item[ITEM_ECM]--;
     Add_fuel(&(pl->fuel), ED_ECM);
 }
 
@@ -2419,10 +2396,10 @@ void Move_smart_shot(int ind)
 		     * After burners can be detected easier;
 		     * so scale the length:
 		     */
-		    l *= MAX_AFTERBURNER + 1 - p->afterburners;
+		    l *= MAX_AFTERBURNER + 1 - p->item[ITEM_AFTERBURNER];
 		    l /= MAX_AFTERBURNER + 1;
 		    if (BIT(p->have, OBJ_AFTERBURNER))
-			l *= 16 - p->afterburners;
+			l *= 16 - p->item[ITEM_AFTERBURNER];
 		    if (l < range) {
 			shot->info = Players[i]->id;
 			range = l;
@@ -2743,10 +2720,11 @@ void Tank_handle_detach(player *pl)
     player		*dummy;
     int			i, ct;
     static char		tank_shape[] =
-			    "(shape: 10,0 6,-3 2,-7 0,-8 -2,-7 -6,-3 -10,0"
-			    " -6,3 -2,7 0,8 2,7 6,3)"
-			    "(leftLight: -6,-3)"
-			    "(rightLight: -6,3)";
+			    "(NM:fueltank)(AU:John E. Norlin)"
+			    "(SH: 15,0 14,-5 9,-8 -5,-8 -3,-8 -3,0 "
+			    "2,0 2,2 -3,2 -3,6 5,6 5,8 -5,8 -5,-8 "
+			    "-9,-8 -14,-5 -15,0 -14,5 -9,8 9,8 14,5)"
+			    "(EN: -15,0)(MG: 15,0)";
 
     /* Return, if no more players or no tanks */
     if (pl->fuel.num_tanks == 0
@@ -2758,7 +2736,7 @@ void Tank_handle_detach(player *pl)
     sound_play_sensors(pl->pos.x, pl->pos.y, TANK_DETACH_SOUND);
 
     /* If current tank is main, use another one */
-    if ((ct=pl->fuel.current) == 0)
+    if ((ct = pl->fuel.current) == 0)
 	ct = pl->fuel.num_tanks;
 
     Update_tanks(&(pl->fuel));
@@ -2773,6 +2751,11 @@ void Tank_handle_detach(player *pl)
     Init_player(NumPlayers, (allowShipShapes)
 			    ? Parse_shape_str(tank_shape)
 			    : NULL);
+    /* Released tanks don't have tanks... */
+    while (dummy->fuel.num_tanks > 0) {
+	Player_remove_tank(NumPlayers, dummy->fuel.num_tanks);
+    }
+    SET_BIT(dummy->type_ext, OBJ_EXT_TANK);
     dummy->prevpos	= pl->prevpos;
     dummy->pos		= pl->pos;
     dummy->vel		= pl->vel;
@@ -2796,7 +2779,6 @@ void Tank_handle_detach(player *pl)
     dummy->home_base	= pl->home_base;
     dummy->team		= pl->team;
     dummy->pseudo_team	= pl->pseudo_team;
-    dummy->robot_mode   = RM_OBJECT;
     dummy->mychar       = 'T';
     dummy->score	= pl->score - 500; /* It'll hurt to be hit by this */
     updateScores	= true;
@@ -2812,20 +2794,11 @@ void Tank_handle_detach(player *pl)
     dummy->fuel.num_tanks = 0;
 
     /* Init items with initialItems to have Throw_items() be useful. */
-    dummy->afterburners      = initialAfterburners;
-    dummy->back_shots        = initialRearshots;
-    dummy->cloaks            = initialCloaks;
-    dummy->ecms              = initialECMs;
-    dummy->extra_shots       = initialWideangles;
-    dummy->lasers            = initialLasers;
-    dummy->mines             = initialMines;
-    dummy->missiles          = initialMissiles;
-    dummy->sensors           = initialSensors;
-    dummy->transporters      = initialTransporters;
-    dummy->autopilots        = initialAutopilots;
-    dummy->emergency_thrusts = initialEmergencyThrusts;
-    dummy->emergency_shields = initialEmergencyShields;
-    dummy->tractor_beams     = initialTractorBeams;
+    for (i = 0; i < NUM_ITEMS; i++) {
+	if (!BIT(1U << i, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {
+	    dummy->item[i] = World.items[i].initial;
+	}
+    }
 
     /* No lasers */
     dummy->num_pulses = 0;
@@ -2846,12 +2819,8 @@ void Tank_handle_detach(player *pl)
     }
 
     /* Remember whose tank this is */
-    dummy->robot_lock_id = pl->id;
-    dummy->robot_lock = LOCK_NONE;
+    dummy->lock.pl_id = pl->id;
 
-    /* Handling the id's and the Tables */
-    dummy->id = Id;
-    GetInd[Id] = NumPlayers;
     NumPlayers++;
     NumPseudoPlayers++;
     Id++;
@@ -2874,16 +2843,7 @@ void Tank_handle_detach(player *pl)
 	    Obj[i]->info = NumPlayers - 1;
 
     /* Remove tank, fuel and mass from myself */
-    pl->fuel.sum -= pl->fuel.tank[ct];
-    pl->fuel.max -= TANK_CAP(ct);
-
-    for (i=ct; i < pl->fuel.num_tanks; i++)
-	pl->fuel.tank[i] = pl->fuel.tank[i+1];
-
-    pl->emptymass -= TANK_MASS;
-    pl->fuel.num_tanks--;
-    if (pl->fuel.current)
-	pl->fuel.current--;
+    Player_remove_tank(GetInd[pl->id], ct);
 
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->conn != NOT_CONNECTED) {
@@ -3005,8 +2965,8 @@ void Explode_fighter(int ind)
 
     sound_play_sensors(pl->pos.x, pl->pos.y, PLAYER_EXPLOSION_SOUND);
 
-    min_debris = 1 + (pl->fuel.sum / (8.0 * FUEL_SCALE_FACT));
-    max_debris = min_debris + (pl->mass * 2.0);
+    min_debris = (int)(1 + (pl->fuel.sum / (8.0 * FUEL_SCALE_FACT)));
+    max_debris = (int)(min_debris + (pl->mass * 2.0));
 
     Make_debris(
 	/* pos.x, pos.y   */ pl->pos.x, pl->pos.y,

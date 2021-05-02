@@ -1,6 +1,6 @@
-/* $Id: configure.c,v 3.35 1994/08/15 08:13:41 bert Exp $
+/* $Id: configure.c,v 3.42 1995/02/02 09:51:28 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -49,7 +49,7 @@
  *      should be given as NULL.
  *   f) Add one line to the Config_save() routine to have the option saved.
  * 7: Document your option in the manual page for the client.
- * 8: Mail a context diff of your changes to xpilot@cs.uit.no.
+ * 8: Mail a context diff (diff -c old new) of your changes to xpilot@cs.uit.no.
  */
 
 #include <X11/Xlib.h>
@@ -86,8 +86,10 @@
 #include "setup.h"
 #include "error.h"
 
+char configure_version[] = VERSION;
+
 #ifndef PATH_MAX
-#define PATH_MAX	1024
+#define PATH_MAX	1023
 #endif
 
 static int Config_create_power(int widget_desc, int *height);
@@ -107,6 +109,8 @@ static int Config_create_fuelWarning(int widget_desc, int *height);
 static int Config_create_fuelCritical(int widget_desc, int *height);
 static int Config_create_fuelGauge(int widget_desc, int *height);
 static int Config_create_outlineWorld(int widget_desc, int *height);
+static int Config_create_filledWorld(int widget_desc, int *height);
+static int Config_create_texturedWalls(int widget_desc, int *height);
 static int Config_create_slidingRadar(int widget_desc, int *height);
 static int Config_create_showItems(int widget_desc, int *height);
 static int Config_create_showItemsTime(int widget_desc, int *height);
@@ -118,6 +122,10 @@ static int Config_create_toggleShield(int widget_desc, int *height);
 static int Config_create_sparkProb(int widget_desc, int *height);
 static int Config_create_shotSize(int widget_desc, int *height);
 static int Config_create_teamShotSize(int widget_desc, int *height);
+static int Config_create_hudColor(int widget_desc, int *height);
+static int Config_create_hudLockColor(int widget_desc, int *height);
+static int Config_create_wallColor(int widget_desc, int *height);
+static int Config_create_maxFPS(int widget_desc, int *height);
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height);
 #endif
@@ -147,6 +155,7 @@ static int Config_update_turnSpeed(int widget_desc, void *data, float *val);
 static int Config_update_sparkProb(int widget_desc, void *data, float *val);
 static int Config_update_charsPerSecond(int widget_desc, void *data, int *val);
 static int Config_update_toggleShield(int widget_desc, void *data, bool *val);
+static int Config_update_maxFPS(int widget_desc, void *data, int *val);
 
 static int Config_close(int widget_desc, void *data, char **strptr);
 static int Config_next(int widget_desc, void *data, char **strptr);
@@ -203,6 +212,8 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_fuelCritical,
     Config_create_fuelGauge,
     Config_create_outlineWorld,
+    Config_create_filledWorld,
+    Config_create_texturedWalls,
     Config_create_slidingRadar,
     Config_create_showItems,
     Config_create_showItemsTime,
@@ -215,6 +226,10 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_toggleShield,
     Config_create_shotSize,
     Config_create_teamShotSize,
+    Config_create_hudColor,
+    Config_create_hudLockColor,
+    Config_create_wallColor,
+    Config_create_maxFPS,
 #ifdef SOUND
     Config_create_maxVolume,
 #endif
@@ -679,6 +694,24 @@ static int Config_create_outlineWorld(int widget_desc, int *height)
 			      (void *) SHOW_OUTLINE_WORLD);
 }
 
+static int Config_create_filledWorld(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "filledWorld",
+			      BIT(instruments, SHOW_FILLED_WORLD)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_FILLED_WORLD);
+}
+
+static int Config_create_texturedWalls(int widget_desc, int *height)
+{
+    return Config_create_bool(widget_desc, height, "texturedWalls",
+			      BIT(instruments, SHOW_TEXTURED_WALLS)
+				  ? true : false,
+			      Config_update_instruments,
+			      (void *) SHOW_TEXTURED_WALLS);
+}
+
 static int Config_create_slidingRadar(int widget_desc, int *height)
 {
     if (Client_wrap_mode() == 0) {
@@ -771,6 +804,30 @@ static int Config_create_teamShotSize(int widget_desc, int *height)
 			   NULL, NULL);
 }
 
+static int Config_create_hudColor(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "hudColor", &hudColor,
+			   1, maxColors - 1,
+			   NULL, NULL);
+}
+
+static int Config_create_hudLockColor(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "hudLockColor", &hudLockColor,
+			   1, maxColors - 1,
+			   NULL, NULL);
+}
+
+static int Config_create_wallColor(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			   "wallColor", &wallColor,
+			   1, maxColors - 1,
+			   NULL, NULL);
+}
+
 #ifdef SOUND
 static int Config_create_maxVolume(int widget_desc, int *height)
 {
@@ -779,6 +836,13 @@ static int Config_create_maxVolume(int widget_desc, int *height)
 			     NULL, NULL);
 }
 #endif
+
+static int Config_create_maxFPS(int widget_desc, int *height)
+{
+    return Config_create_int(widget_desc, height,
+			     "maxFPS", &maxFPS, 0, 30,
+			     Config_update_maxFPS, NULL);
+}
 
 static int Config_create_showShipName(int widget_desc, int *height)
 {
@@ -911,22 +975,32 @@ static int Config_update_bool(int widget_desc, void *data, bool *val)
 
 static int Config_update_instruments(int widget_desc, void *data, bool *val)
 {
+    long		old_instruments = instruments;
+    long		bit = (long) data;
+    long		outline_mask = SHOW_OUTLINE_WORLD
+				     | SHOW_FILLED_WORLD
+				     | SHOW_TEXTURED_WALLS;
+
     if (*val == false) {
-	CLR_BIT(instruments, (long)data);
+	CLR_BIT(instruments, bit);
     } else {
-	SET_BIT(instruments, (long)data);
+	SET_BIT(instruments, bit);
     }
-    if ((long)data == SHOW_SLIDING_RADAR) {
+    if (bit == SHOW_SLIDING_RADAR) {
 	Paint_sliding_radar();
     }
-    if ((long)data == SHOW_OUTLINE_WORLD) {
-	Map_restore(0, 0, Setup->x, Setup->y);
-	Map_blue(0, 0, Setup->x, Setup->y);
+    if (BIT(bit, outline_mask)) {
+	/* only do the map recalculations if really needed. */
+	if (!BIT(old_instruments, outline_mask)
+	     != !BIT(instruments, outline_mask)) {
+	    Map_restore(0, 0, Setup->x, Setup->y);
+	    Map_blue(0, 0, Setup->x, Setup->y);
+	}
     }
-    if ((long)data == SHOW_PACKET_DROP_METER
-	|| (long)data == SHOW_PACKET_LOSS_METER) {
+    if (BIT(bit, SHOW_PACKET_DROP_METER | SHOW_PACKET_LOSS_METER)) {
 	Net_init_measurement();
     }
+
     return 0;
 }
 
@@ -997,6 +1071,12 @@ static int Config_update_toggleShield(int widget_desc, void *data, bool *val)
     return 0;
 }
 
+static int Config_update_maxFPS(int widget_desc, void *data, int *val)
+{
+    Check_client_fps();
+    return 0;
+}
+
 static void Config_save_failed(char *reason, char **strptr)
 {
     if (config_save_confirm_desc != NO_WIDGET) {
@@ -1059,7 +1139,11 @@ static void Xpilotrc_end(FILE *fp)
 	return;
     }
     for (i = 0; i < num_xpilotrc; i++) {
-	fprintf(fp, "%s", xpilotrc_ptr[i].line);
+	/* a bug in 3.2.8 saved maxFPS, which is wrong!  don't save maxFPS! */
+	if (strncmp(xpilotrc_ptr[i].line + 7, "maxFPS:",
+		    xpilotrc_ptr[i].size + 1) != 0) {
+	    fprintf(fp, "%s", xpilotrc_ptr[i].line);
+	}
 	free(xpilotrc_ptr[i].line);
     }
     free(xpilotrc_ptr);
@@ -1130,8 +1214,8 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 			*res,
 			*base = ".xpilotrc",
 			buf[512],
-			oldfile[PATH_MAX],
-			newfile[PATH_MAX];
+			oldfile[PATH_MAX + 1],
+			newfile[PATH_MAX + 1];
 
     *strptr = "Saving...";
     Widget_draw(widget_desc);
@@ -1187,6 +1271,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_bool(fp, "showItems", BIT(instruments, SHOW_ITEMS));
     Config_save_float(fp, "showItemsTime", showItemsTime);
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
+    Config_save_bool(fp, "filledWorld", BIT(instruments, SHOW_FILLED_WORLD));
     Config_save_bool(fp, "clock", BIT(instruments, SHOW_CLOCK));
     Config_save_int(fp, "backgroundPointDist", map_point_distance);
     Config_save_int(fp, "backgroundPointSize", map_point_size);
@@ -1194,6 +1279,9 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
     Config_save_float(fp, "sparkProb", spark_prob);
     Config_save_int(fp, "shotSize", shot_size);
     Config_save_int(fp, "teamShotSize", teamshot_size);
+    Config_save_int(fp, "hudColor", hudColor);
+    Config_save_int(fp, "hudLockColor", hudLockColor);
+    Config_save_int(fp, "wallColor", wallColor);
     Config_save_int(fp, "receiveWindowSize", receive_window_size);
     Config_save_int(fp, "charsPerSecond", charsPerSecond);
     Config_save_bool(fp, "markingLights", markingLights);
@@ -1201,6 +1289,7 @@ static int Config_save(int widget_desc, void *button_str, char **strptr)
 #if SOUND
     Config_save_int(fp, "maxVolume", maxVolume);
 #endif
+    /* don't save this one: Config_save_int(fp, "maxFPS", maxFPS); */
     buf[0] = '\0';
     for (i = 0, prev_key = KEY_DUMMY; i < maxKeyDefs; i++, prev_key = key) {
 	ks = keyDefs[i].keysym;

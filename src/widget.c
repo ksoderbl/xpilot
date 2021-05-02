@@ -1,6 +1,6 @@
-/* $Id: widget.c,v 3.17 1994/07/10 20:07:27 bert Exp $
+/* $Id: widget.c,v 3.20 1995/01/24 17:27:40 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -40,6 +40,8 @@
 #include "bit.h"
 #include "error.h"
 #include "widget.h"
+
+char widget_version[] = VERSION;
 
 static void Widget_resize_viewer(XEvent *event, int ind);
 
@@ -306,7 +308,7 @@ int Widget_resize(int widget_desc, int width, int height)
 static void Widget_draw_button(widget_t *widget, bool inverse, char *label)
 {
     int			x, y;
-    Pixel		fg, bg;
+    unsigned long	fg, bg;
 
     if (mono) {
 	if (inverse) {
@@ -507,16 +509,16 @@ static void Widget_viewer_draw_lines(widget_t *widget, int start, int end)
 	    XSetForeground(dpy, motdGC, colors[BLACK].pixel);
 	    XDrawString(dpy, widget->window, motdGC,
 			x+1, y+1,
-			viewerw->line[i].txt, viewerw->line[i].len);
+			(char *) viewerw->line[i].txt, viewerw->line[i].len);
 	    XSetForeground(dpy, motdGC, colors[WHITE].pixel);
 	    XDrawString(dpy, widget->window, motdGC,
 			x-1, y-1,
-			viewerw->line[i].txt, viewerw->line[i].len);
+			(char *) viewerw->line[i].txt, viewerw->line[i].len);
 	}
 	else {
 	    XDrawString(dpy, widget->window, motdGC,
 			x, y,
-			viewerw->line[i].txt, viewerw->line[i].len);
+			(char *) viewerw->line[i].txt, viewerw->line[i].len);
 	}
 	y += text_height;
     }
@@ -2017,7 +2019,7 @@ static int Widget_viewer_calculate_text(int viewer_desc)
 	}
 	line[count].len = &viewerw->buf[i] - line[count].txt;
 	line[count].txt_width = XTextWidth(viewerw->font,
-					   line[count].txt,
+					   (char *) line[count].txt,
 					   line[count].len);
 	if (line[count].txt_width > viewerw->max_width) {
 	    viewerw->max_width = line[count].txt_width;

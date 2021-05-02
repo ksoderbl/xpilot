@@ -1,6 +1,6 @@
-/* $Id: server.c,v 3.92 1994/09/20 19:59:51 bert Exp $
+/* $Id: server.c,v 3.107 1995/02/02 09:04:53 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -31,6 +31,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
@@ -59,6 +60,9 @@
 #include <arpa/inet.h>
 #endif
 #include <netdb.h>
+#ifdef PLOCKSERVER
+#include <sys/lock.h>
+#endif
 
 #include "version.h"
 #include "config.h"
@@ -68,7 +72,6 @@
 #include "socklib.h"
 #include "map.h"
 #include "pack.h"
-#include "robot.h"
 #include "saudio.h"
 #include "bit.h"
 #include "net.h"
@@ -77,10 +80,12 @@
 #include "cmw.h"
 #endif /* SUNCMW */
 
+char server_version[] = VERSION;
+
 #ifndef	lint
 static char versionid[] = "@(#)$" TITLE " $";
 static char sourceid[] =
-    "@(#)$Id: server.c,v 3.92 1994/09/20 19:59:51 bert Exp $";
+    "@(#)$Id: server.c,v 3.107 1995/02/02 09:04:53 bert Exp $";
 #endif
 
 
@@ -107,13 +112,15 @@ static char		meta_address[16];
 static char		meta_address_two[16];
 static bool		Log = true;
 static bool		NoPlayersEnteredYet = true;
-static bool		lock = false;
+static bool		game_lock = false;
 static void		Wait_for_new_players(void);
 time_t			gameOverTime = 0;
 time_t			serverTime = 0;
 extern int		login_in_progress;
 
-static bool Owner(char *name, char *in_host);
+static bool Owner(char *name, char *host_addr);
+static void plockserver(int onoff);
+static void Check_server_versions(void);
 
 static void catch_alarm(int signum)
 {
@@ -146,6 +153,7 @@ int main(int argc, char *argv[])
 #endif /* SUNCMW */
     init_error(argv[0]);
     srand(time((time_t *)0) * getpid());
+    Check_server_versions();
     Parser(argc, argv);
     Make_table();			/* Make trigonometric tables */
     Compute_gravity();
@@ -157,6 +165,8 @@ int main(int argc, char *argv[])
     Alloc_cells();
 
     Move_init();
+
+    Robot_init();
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
 	int i;
@@ -306,6 +316,7 @@ void Send_meta_server(int change)
     char 		string[MAX_STR_LEN];
     char 		status[MAX_STR_LEN];
     int			i;
+    int			num_paused_players;
     bool		first = true;
     time_t		currentTime;
     static time_t	lastMetaSendTime = 0;
@@ -323,6 +334,13 @@ void Send_meta_server(int change)
 
     Server_info(status, sizeof(status));
 
+    /* Find out the number of paused players. */
+    num_paused_players = 0;
+    for (i = 0; i < NumPlayers; i++) {
+	if (IS_HUMAN_IND(i) && BIT(Players[i]->status, PAUSE)) {
+	    num_paused_players++;
+	}
+    }
     sprintf(string,
 	    "add server %s\n"
 	    "add users %d\n"
@@ -338,19 +356,19 @@ void Send_meta_server(int change)
 	    "add timing %d\n"
 	    "add stime %ld\n"
 	    "add sound " SOUND_SUPPORT_STR "\n",
-	    Server.host, NumPlayers - NumRobots,
+	    Server.host, NumPlayers - NumPseudoPlayers - NumRobots - num_paused_players,
 	    VERSION, World.name, World.x, World.y, World.author,
 	    World.NumBases, FPS, contactPort,
-	    (lock && ShutdownServer == -1) ? "locked"
-		: (!lock && ShutdownServer != -1) ? "shutting down"
-		: (lock && ShutdownServer != -1) ? "locked and shutting down"
+	    (game_lock && ShutdownServer == -1) ? "locked"
+		: (!game_lock && ShutdownServer != -1) ? "shutting down"
+		: (game_lock && ShutdownServer != -1) ? "locked and shutting down"
 		: "ok", World.NumTeamBases,
 	    BIT(World.rules->mode, TIMING) ? 1:0,
 	    time(NULL) - serverTime);
 
 
     for(i=0; i < NumPlayers; i++) {
-	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	if (IS_HUMAN_IND(i)) {
 	    sprintf(string + strlen(string),
 		    "%s%s=%s@%s",
 		    (first) ? "add players " : ",",
@@ -397,6 +415,8 @@ void Main_Loop(void)
     printf("Server runs at %d frames per second\n", framesPerSecond);
 #endif
 
+    plockserver(true);
+
     SetTimeout(0, 0);
 
     while (NoQuit
@@ -407,7 +427,9 @@ void Main_Loop(void)
 
 	if (NumPlayers - NumPseudoPlayers == NumRobots && !RawMode) {
 	    block_timer();
+	    plockserver(false);
 	    Wait_for_new_players();
+	    plockserver(true);
 	    allow_timer();
 	}
 
@@ -450,36 +472,47 @@ static void Wait_for_new_players(void)
 #define CHECK_FOR_NEW_PLAYERS	4
 
     int			new_players = false;
-    time_t		start_time,
-			start_loops,
-			milli_delta;
+    long		delta;
 #if _SEQUENT_
-    timeval_t		tv;
+    timeval_t		tv0, tv1;
 #else
-    struct timeval	tv;
+    struct timeval	tv0, tv1;
 #endif
 
-    gettimeofday(&tv, NULL);
-    start_time = tv.tv_sec;
-    start_loops = loops;
+    gettimeofday(&tv0, NULL);
     while (new_players == false) {
 	if (login_in_progress > 0) {
 	    if (Input() > 0) {
 		NoPlayersEnteredYet = false;
 		new_players = true;
-		continue;
+		break;
 	    }
 	    SetTimeout(0, 10*1000);
 	} else {
-	    SetTimeout(CHECK_FOR_NEW_PLAYERS, 0);
+	    if (ShutdownServer >= 0) {
+		SetTimeout(1, 0);
+	    } else {
+		SetTimeout(CHECK_FOR_NEW_PLAYERS, 0);
+	    }
 	}
 	if (SocketReadable(Socket) != 0) {
 	    Contact();
 	}
 	Send_meta_server(0);
-	gettimeofday(&tv, NULL);
-	milli_delta = (tv.tv_sec - start_time) * 1000 + tv.tv_usec / 1000;
-	loops = start_loops + (FPS * milli_delta) / 1000;
+	gettimeofday(&tv1, NULL);
+	delta = 1000*1000 * (long)(tv1.tv_sec - tv0.tv_sec)
+		- ((long)tv1.tv_usec - (long)tv0.tv_usec);
+	delta = delta * FPS / (1000*1000);
+	if (delta > 0) {
+	    loops += delta;
+	    tv0 = tv1;
+	    if (ShutdownServer >= 0) {
+		if ((ShutdownServer -= delta) <= 0) {
+		    ShutdownServer = 0;
+		    End_game();
+		}
+	    }
+	}
     }
     SetTimeout(0, 0);
 }
@@ -535,51 +568,105 @@ void End_game(void)
  * Return a good team number for a player.
  *
  * If the team is not specified, the player is assigned
- * to a non-empty team which has space.  The team chosen
- * is one with the least number of players.
+ * to a non-empty team which has space.
+ *
+ * If there is none or only one team with playing (i.e. non-paused)
+ * players the player will be assigned to a randomly chosen empty team.
+ *
+ * If there is more than one team with playing players,
+ * the player will be assigned randomly to a team which
+ * has the least number of playing players.
  *
  * If all non-empty teams are full, the player is assigned
- * to the first available team.
+ * to a randomly chosen available team.
  *
  * Note:  Team zero is not part of this algorithm as that
  * team is reserved for the robots.
  */
 static int Pick_team(void)
 {
-    int	i, teammin, min;
+    int			i,
+			least_players,
+			num_available_teams = 0,
+			playing_teams = 0;
+    player		*pl;
+    int			playing[MAX_TEAMS];
+    int			free_bases[MAX_TEAMS];
+    int			available_teams[MAX_TEAMS];
 
-    /*
-     * Find first non-empty team with least number of players that has room
-     * for more...
-     */
-    min = NumPlayers + 1;
-    teammin = TEAM_NOT_SET;
+    memset(playing, 0, sizeof playing);
+    memset(free_bases, 0, sizeof free_bases);
+    memset(available_teams, 0, sizeof available_teams);
 
-    for (i = 1; i < MAX_TEAMS; i++) {
-	if (! World.teams[i].NumMembers
-	    || World.teams[i].NumMembers >= World.teams[i].NumBases)
-	    break;
-	if (World.teams[i].NumMembers < min) {
-	    min = World.teams[i].NumMembers;
-	    teammin = i;
+    for (i = 0; i < MAX_TEAMS; i++) {
+	free_bases[i] = World.teams[i].NumBases - World.teams[i].NumMembers;
+    }
+    for (i = 0; i < NumPlayers; i++) {
+	pl = Players[i];
+	if (IS_TANK_PTR(pl)) {
+	    continue;
+	}
+	if (BIT(pl->status, PAUSE)) {
+	    continue;
+	}
+	if (!playing[pl->team]++) {
+	    playing_teams++;
+	}
+    }
+    if (playing_teams <= 1) {
+	for (i = 1; i < MAX_TEAMS; i++) {
+	    if (!playing[i] && free_bases[i] > 0) {
+		available_teams[num_available_teams++] = i;
+	    }
+	}
+    } else {
+	least_players = NumPlayers;
+	for (i = 1; i < MAX_TEAMS; i++) {
+	    if (playing[i] > 0) {
+		if (free_bases[i] > 0) {
+		    if (playing[i] < least_players) {
+			least_players = playing[i];
+		    }
+		}
+	    }
+	}
+
+	for (i = 1; i < MAX_TEAMS; i++) {
+	    if (free_bases[i] > 0) {
+		if (least_players == NumPlayers
+		    || playing[i] == least_players) {
+		    available_teams[num_available_teams++] = i;
+		}
+	    }
 	}
     }
 
-    if (teammin != TEAM_NOT_SET)
-	return teammin;
+    if (num_available_teams > 0) {
+	return available_teams[rand() % num_available_teams];
+    }
 
-    /*
-     * Find first available team...
-     */
-    for (i = 1; i < MAX_TEAMS; i++)
-	if (World.teams[i].NumMembers < World.teams[i].NumBases)
-	    return i;
-
-    /*
-     * There is no team to enter...
-     */
+    /*NOTREACHED*/
     return TEAM_NOT_SET;
 }
+
+
+static int Reply(int sock, char *host_addr, int port,
+		 char *buf, int len)
+{
+    int			i, result;
+    const int		max_send_retries = 3;
+
+    for (i = 0; i < max_send_retries; i++) {
+	if ((result = DgramSend(sock, host_addr, port, buf, len)) == -1) {
+	    GetSocketError(sock);
+	} else {
+	    break;
+	}
+    }
+
+    return result;
+}
+
 
 void Contact(void)
 {
@@ -589,8 +676,7 @@ void Contact(void)
 			delay,
 			max_robots,
 			login_port;
-    char		*in_host,
-			status,
+    char		status,
 			reply_to;
     unsigned		magic,
 			version,
@@ -600,31 +686,11 @@ void Contact(void)
 			disp_name[MAX_CHARS],
 			nick_name[MAX_CHARS],
 			host_name[MAX_CHARS],
+			host_addr[24],
 			str[MSG_LEN];
-    static struct tunable_int_options_t {
-	char *opt;
-	int *val;
-    } tune_iopt[] = {
-	{ "initialFuel",             &initialFuel },
-	{ "initialTanks",            &initialTanks },
-	{ "initialECMs",             &initialECMs },
-	{ "initialMines",            &initialMines },
-	{ "initialMissiles",         &initialMissiles },
-	{ "initialCloaks",           &initialCloaks },
-	{ "initialSensors",          &initialSensors },
-	{ "initialWideangles",       &initialWideangles },
-	{ "initialRearshots",        &initialRearshots },
-	{ "initialAfterburners",     &initialAfterburners },
-	{ "initialTransporters",     &initialTransporters },
-	{ "initialLasers",           &initialLasers },
-	{ "initialEmergencyThrusts", &initialEmergencyThrusts },
-	{ "initialTractorBeams",     &initialTractorBeams },
-	{ "initialAutopilots",       &initialAutopilots },
-	{ "initialEmergencyShields", &initialEmergencyShields }
-    };
 
     /*
-     * Someone connected to us, now try and deschiffer the message :)
+     * Someone connected to us, now try and decipher the message :)
      */
     Sockbuf_clear(&ibuf);
     if ((bytes = DgramReceiveAny(Socket, ibuf.buf, ibuf.size)) <= 8) {
@@ -649,14 +715,14 @@ void Contact(void)
     /*
      * Get hostname.
      */
-    in_host = DgramLastaddr();
+    strcpy(host_addr, DgramLastaddr());
 
     /*
      * Determine if we can talk with this client.
      */
     if (Packet_scanf(&ibuf, "%u", &magic) <= 0
 	|| (magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
-	D(printf("Incompatible packet from %s (0x%08x)", in_host, magic);)
+	D(printf("Incompatible packet from %s (0x%08x)", host_addr, magic);)
 	return;
     }
     version = MAGIC2VERSION(magic);
@@ -665,7 +731,7 @@ void Contact(void)
      * Read core of packet.
      */
     if (Packet_scanf(&ibuf, "%s%hu%c", real_name, &port, &reply_to) <= 0) {
-	D(printf("Incomplete packet from %s", in_host);)
+	D(printf("Incomplete packet from %s", host_addr);)
 	return;
     }
     real_name[MAX_NAME_LEN - 1] = '\0';
@@ -679,18 +745,16 @@ void Contact(void)
      * If the client request was only a contact request (to see
      * if there is a server running on this host) then we don't
      * care about version incompatibilities, so that the client
-     * can decide itself if it wants to conform to our version.
+     * can decide if it wants to conform to our version or not.
      */
     if (version < MIN_CLIENT_VERSION
 	|| (version > MAX_CLIENT_VERSION
 	    && reply_to != CONTACT_pack)) {
 	D(error("Incompatible version with %s@%s (%04x,%04x)",
-	    real_name, in_host, MY_VERSION, version);)
+	    real_name, host_addr, MY_VERSION, version);)
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", MAGIC, reply_to, E_VERSION);
-	if (DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
-	    GetSocketError(Socket);
-	}
+	Reply(Socket, host_addr, port, ibuf.buf, ibuf.len);
 	return;
     }
 
@@ -719,7 +783,7 @@ void Contact(void)
 	 */
 	if (Packet_scanf(&ibuf, "%s%s%s%d", nick_name, disp_name, host_name,
 			 &team) <= 0) {
-	    D(printf("Incomplete login from %s@%s", real_name, in_host);)
+	    D(printf("Incomplete login from %s@%s", real_name, host_addr);)
 	    return;
 	}
 	nick_name[sizeof(nick_name) - 1] = '\0';
@@ -739,7 +803,7 @@ void Contact(void)
 	    || nick_name[0] > 'Z') {
 #ifndef SILENT
 	    printf("Invalid name (%s,%s) from %s@%s",
-		  nick_name, real_name, real_name, in_host);
+		  nick_name, real_name, real_name, host_addr);
 #endif
 	    status = E_INVAL;
 	}
@@ -747,7 +811,7 @@ void Contact(void)
 	/*
 	 * Game locked?
 	 */
-	else if (lock && !Owner(real_name, in_host)) {
+	else if (game_lock && !Owner(real_name, host_addr)) {
 	    status = E_GAME_LOCKED;
 	}
 
@@ -776,6 +840,15 @@ void Contact(void)
 	 * All names must be unique (so we know who we're talking about).
 	 */
 	if (status == SUCCESS) {
+	    /* strip trailing whitespace. */
+	    char *ptr;
+	    for (ptr = &nick_name[strlen(nick_name)]; ptr-- > nick_name; ) {
+		if (isascii(*ptr) && isspace(*ptr)) {
+		    *ptr = '\0';
+		} else {
+		    break;
+		}
+	    }
 	    for (i=0; i<NumPlayers; i++) {
 		if (strcasecmp(Players[i]->name, nick_name) == 0) {
 		    D(printf("%s %s\n", Players[i]->name, nick_name);)
@@ -791,7 +864,7 @@ void Contact(void)
 	if (status == SUCCESS) {
 	    if ((login_port = Setup_connection(real_name, nick_name,
 					       disp_name, team,
-					       in_host, host_name,
+					       host_addr, host_name,
 					       version)) > 0) {
 		/*
 		 * Tell the client which port to use for logging in.
@@ -813,7 +886,7 @@ void Contact(void)
 
 #ifndef	SILENT
 	printf("%s@%s asked for info about current game.\n",
-	       real_name, in_host);
+	       real_name, host_addr);
 #endif
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, SUCCESS);
@@ -829,7 +902,7 @@ void Contact(void)
 	 * Someone wants to transmit a message to the server.
 	 */
 
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
@@ -851,10 +924,10 @@ void Contact(void)
 	 * Someone wants to lock the game so that no more players can enter.
 	 */
 
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	} else {
-	    lock = lock ? false : true;
+	    game_lock = game_lock ? false : true;
 	}
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
@@ -867,7 +940,7 @@ void Contact(void)
 	 * Got contact message from client.
 	 */
 
-	D(printf("Got CONTACT from %s.\n", in_host));
+	D(printf("Got CONTACT from %s.\n", host_addr));
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, status);
     }
@@ -879,7 +952,7 @@ void Contact(void)
 	 * Shutdown the entire server.
 	 */
 
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%d%s", &delay, ShutdownReason) <= 0) {
@@ -909,7 +982,7 @@ void Contact(void)
 	 */
 	int			found = -1;
 
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%s", str) <= 0) {
@@ -958,9 +1031,8 @@ void Contact(void)
 	 */
 
 	char		*opt, *val;
-	int		ival;
 
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%S", str) <= 0
@@ -970,16 +1042,21 @@ void Contact(void)
 	    status = E_INVAL;
 	}
 	else {
-	    status = E_INVAL;
-	    if (sscanf(val, "%d", &ival) > 0) {
-		for (i = 0; i < NELEM(tune_iopt); i++) {
-		    if (!strcasecmp(tune_iopt[i].opt, opt)) {
-			*tune_iopt[i].val = ival;
-			Set_initial_resources();
-			status = SUCCESS;
-			break;
-		    }
-		}
+	    i = Tune_option(opt, val);
+	    if (i == 1) {
+		status = SUCCESS;
+	    }
+	    else if (i == 0) {
+		status = E_INVAL;
+	    }
+	    else if (i == -1) {
+		status = E_UNDEFINED;
+	    }
+	    else if (i == -2) {
+		status = E_NOENT;
+	    }
+	    else {
+		status = E_INVAL;
 	    }
 	}
 	Sockbuf_clear(&ibuf);
@@ -1024,8 +1101,8 @@ void Contact(void)
 		}
 	    }
 	    if (change
-		&& DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
-		GetSocketError(Socket);
+		&& Reply(Socket, host_addr, port,
+			 ibuf.buf, ibuf.len) == -1) {
 		bad = true;
 	    }
 	} while (!bad);
@@ -1036,9 +1113,7 @@ void Contact(void)
 	/*
 	 * Set the maximum of robots wanted in the server
 	 */
-	int	ind;
-
-	if (!Owner(real_name, in_host)) {
+	if (!Owner(real_name, host_addr)) {
 	    status = E_NOT_OWNER;
 	}
 	else if (Packet_scanf(&ibuf, "%d", &max_robots) <= 0
@@ -1048,28 +1123,8 @@ void Contact(void)
 	else {
 	    WantedNumRobots = max_robots;
 	    while (WantedNumRobots < NumRobots) {
-		ind = -1;
-		for (i=0; i<NumPlayers; i++) {
-
-		    /*
-		     * Remove the robot with the lowest score.
-		     */
-
-		    if (Players[i]->robot_mode != RM_NOT_ROBOT
-			&& Players[i]->robot_mode != RM_OBJECT) {
-			if (ind == -1)
-			    ind = i;
-			else if (Players[i]->score < Players[ind]->score)
-			    ind = i;
-		    }
-		}
-
-		sprintf(msg, "\"%s\" upset the gods and was kicked out "
-			"of the game.", Players[ind]->name);
-		Set_message(msg);
-		Delete_player(ind);
+		Robot_delete(-1, true);
 	    }
-	    updateScores = true;
 	}
 
 	Sockbuf_clear(&ibuf);
@@ -1083,16 +1138,13 @@ void Contact(void)
 	 * Incorrect packet type.
 	 */
 	D(printf("Unknown packet type (%d) from %s@%s.\n",
-	    reply_to, real_name, in_host);)
+	    reply_to, real_name, host_addr);)
 
 	Sockbuf_clear(&ibuf);
 	Packet_printf(&ibuf, "%u%c%c", my_magic, reply_to, E_VERSION);
     }
 
-    if (DgramSend(Socket, in_host, port, ibuf.buf, ibuf.len) == -1) {
-	D(printf("Could not reply to %s@%s/%d.", real_name, in_host, port);)
-	GetSocketError(Socket);
-    }
+    Reply(Socket, host_addr, port, ibuf.buf, ibuf.len);
 }
 
 /*
@@ -1100,11 +1152,11 @@ void Contact(void)
 */
 void Server_info(char *str, unsigned max_size)
 {
-    int i, j, k;
-    player *pl, **order, *best = NULL;
-    float ratio, best_ratio = -1e7;
-    char name[MAX_CHARS];
-    char lblstr[MAX_CHARS];
+    int			i, j, k;
+    player		*pl, **order, *best = NULL;
+    float		ratio, best_ratio = -1e7;
+    char		name[MAX_CHARS];
+    char		lblstr[MAX_CHARS];
 
     sprintf(str,
 	    "SERVER VERSION...: %s\n"
@@ -1116,9 +1168,9 @@ void Server_info(char *str, unsigned max_size)
 	    "PLAYERS (%2d/%2d)..:\n",
 	    TITLE,
 	    /* security: Server.name, */
-	    (lock && ShutdownServer == -1) ? "locked" :
-	    (!lock && ShutdownServer != -1) ? "shutting down" :
-	    (lock && ShutdownServer != -1) ? "locked and shutting down" : "ok",
+	    (game_lock && ShutdownServer == -1) ? "locked" :
+	    (!game_lock && ShutdownServer != -1) ? "shutting down" :
+	    (game_lock && ShutdownServer != -1) ? "locked and shutting down" : "ok",
 	    FPS,
 	    World.x, World.y, World.name, World.author,
 	    NumPlayers, World.NumBases);
@@ -1152,8 +1204,9 @@ void Server_info(char *str, unsigned max_size)
 	} else {
 	    ratio = (float) pl->score / (pl->life + 1);
 	}
-	if (best == NULL
-	    || ratio > best_ratio) {
+	if ((best == NULL
+		|| ratio > best_ratio)
+	    && !BIT(pl->status, PAUSE)) {
 	    best_ratio = ratio;
 	    best = pl;
 	}
@@ -1170,12 +1223,12 @@ void Server_info(char *str, unsigned max_size)
     for (i=0; i<NumPlayers; i++) {
 	pl = order[i];
 	strcpy(name, pl->name);
-	if (pl->robot_mode != RM_NOT_ROBOT
-	    && BIT(pl->robot_lock, LOCK_PLAYER)) {
-	    sprintf(name + strlen(name), " (%s)",
-		Players[GetInd[pl->robot_lock_id]]->name);
-	    if (strlen(name) >= 19) {
-		strcpy(&name[17], ")");
+	if (IS_ROBOT_PTR(pl)) {
+	    if ((k = Robot_war_on_player(GetInd[pl->id])) != -1) {
+		sprintf(name + strlen(name), " (%s)", Players[GetInd[k]]->name);
+		if (strlen(name) >= 19) {
+		    strcpy(&name[17], ")");
+		}
 	    }
 	}
 	sprintf(lblstr, "%c%c %-19s%03d%6d",
@@ -1184,7 +1237,7 @@ void Server_info(char *str, unsigned max_size)
 		name, pl->life, (int)pl->score);
 	sprintf(msg, "%2d... %-36s%s@%s\n",
 		i+1, lblstr, pl->realname,
-		pl->robot_mode == RM_NOT_ROBOT
+		IS_HUMAN_PTR(pl)
 		? pl->hostname
 		: "robots.org");
 	if (strlen(msg) + strlen(str) >= max_size)
@@ -1197,13 +1250,13 @@ void Server_info(char *str, unsigned max_size)
 /*
  * Returns true if <name> has owner status of this server.
  */
-static bool Owner(char *name, char *in_host)
+static bool Owner(char *name, char *host_addr)
 {
     bool		valid = false;
     char		*local = NULL;
     char		host[MAX_CHARS];
 
-    strncpy(host, in_host, sizeof host);
+    strncpy(host, host_addr, sizeof host);
     host[sizeof host - 1] = '\0';
     if (!strcmp(name, Server.name)) {
 	if (!(local = GetSockAddr(Socket))) {
@@ -1213,21 +1266,34 @@ static bool Owner(char *name, char *in_host)
 	/* require that the owner issue commands from the same host
 	 * he started the server on. */
 	else if (!strcmp(host, local)
-	      || !strcmp(local, "0.0.0.0")	/* fix later */
 	      || !strcmp(host, "127.0.0.1")) {
 	    valid = true;
 	}
+	else if (!strcmp(local, "0.0.0.0")) {
+	    /*
+	     * Can't get address for INADDR_ANY bounded socket.
+	     * See if requester sends from address which is a valid
+	     * interface address for this host.
+	     */
+	    int dummy_sock = CreateDgramAddrSocket(host, 0);
+	    if (dummy_sock != -1) {
+		close(dummy_sock);
+		valid = true;
+	    }
+	}
     }
-    /* permit the authors to issue messages and help with problems,
-     * but do require that they do so from their well known locations. */
-    else if (!strcmp(name, "kenrsc") ? !strncmp(host, "129.242.16.", 11)
-	   : !strcmp(name, "bjoerns") ? !strncmp(host, "129.242.16.", 11)
-	   : !strcmp(name, "bert") && !strncmp(host, "145.18.160.", 11)) {
-	valid = true;
+    if (!valid) {
+	/* permit the authors to issue messages and help with problems,
+	 * but do require that they do so from their well known locations. */
+	if (!strcmp(name, "kenrsc") ? !strncmp(host, "129.242.16.", 11)
+	    : !strcmp(name, "bjoerns") ? !strncmp(host, "129.242.16.", 11)
+	    : !strcmp(name, "bert") && !strncmp(host, "145.18.160.", 11)) {
+	    valid = true;
+	}
     }
 #ifndef SILENT
     if (!valid) {
-	printf("Permission denied for %s@%s (%s)\n", name, host, local?local:"");
+	printf("Permission denied for %s@%s\n", name, host);
     }
 #endif
     return valid;
@@ -1336,7 +1402,7 @@ void Game_Over(void)
 	}
 	for (i=0; i < NumPlayers; i++) {
 	    int team;
-	    if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	    if (IS_HUMAN_IND(i)) {
 		team = Players[i]->team;
 		if (teamscore[team] == 1234567) {
 		    teamscore[team] = 0;
@@ -1377,7 +1443,7 @@ void Game_Over(void)
 
     for (i = 0; i < NumPlayers; i++) {
 	SET_BIT(Players[i]->status, GAME_OVER);
-	if (Players[i]->robot_mode == RM_NOT_ROBOT) {
+	if (IS_HUMAN_IND(i)) {
 	    if (Players[i]->score > maxsc) {
 		maxsc = Players[i]->score;
 		win = i;
@@ -1399,3 +1465,100 @@ void Game_Over(void)
 	printf("%s\n", msg);
     }
 }
+
+/*
+ * Verify that all source files making up this program have been
+ * compiled for the same version.  Too often bugs have been reported
+ * for incorrectly compiled programs.
+ */
+static void Check_server_versions(void)
+{
+    extern char		cmdline_version[],
+			collision_version[],
+			error_version[],
+			event_version[],
+			frame_version[],
+			map_version[],
+			math_version[],
+			net_version[],
+			netserver_version[],
+			option_version[],
+			play_version[],
+			player_version[],
+			robot_version[],
+			rules_version[],
+			saudio_version[],
+			server_version[],
+			socklib_version[],
+			timer_version[],
+			update_version[];
+    static struct file_version {
+	char		filename[16];
+	char		*versionstr;
+    } file_versions[] = {
+	{ "cmdline", cmdline_version },
+	{ "collision", collision_version },
+	{ "error", error_version },
+	{ "event", event_version },
+	{ "frame", frame_version },
+	{ "map", map_version },
+	{ "math", math_version },
+	{ "net", net_version },
+	{ "netserver", netserver_version },
+	{ "option", option_version },
+	{ "play", play_version },
+	{ "player", player_version },
+	{ "robot", robot_version },
+	{ "rules", rules_version },
+	{ "saudio", saudio_version },
+	{ "server", server_version },
+	{ "socklib", socklib_version },
+	{ "timer", timer_version },
+	{ "update", update_version },
+    };
+    int			i;
+    int			oops = 0;
+
+    for (i = 0; i < NELEM(file_versions); i++) {
+	if (strcmp(VERSION, file_versions[i].versionstr)) {
+	    oops++;
+	    error("Source file %s.c (\"%s\") is not compiled "
+		  "for the current version (\"%s\")!",
+		  file_versions[i].filename,
+		  file_versions[i].versionstr,
+		  VERSION);
+	}
+    }
+    if (oops) {
+	error("%d version inconsistency errors, cannot continue.", oops);
+	error("Please recompile this program properly.");
+	exit(1);
+    }
+}
+
+/*
+ * Lock the server process data and code segments into memory
+ * if this program has been compiled with the PLOCKSERVER flag.
+ * Or unlock the server process if the argument is false.
+ */
+static void plockserver(int onoff)
+{
+#ifdef PLOCKSERVER
+    int			op;
+
+    if (onoff) {
+	op = PROCLOCK;
+    }
+    else {
+	op = UNLOCK;
+    }
+    if (plock(op)) {
+#ifdef DEVELOPMENT
+	error("Can't plock(%d)", op);
+    } else {
+	printf("plock %d\n", op);
+#endif
+    }
+#endif
+}
+

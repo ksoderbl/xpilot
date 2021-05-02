@@ -1,6 +1,6 @@
-/* $Id: join.c,v 3.24 1994/08/02 16:23:26 bert Exp $
+/* $Id: join.c,v 3.27 1995/01/11 19:32:34 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -51,9 +51,15 @@
 #include "client.h"
 #include "netclient.h"
 
+char join_version[] = VERSION;
+
 #ifndef SCORE_UPDATE_DELAY
 # define SCORE_UPDATE_DELAY	4
 #endif
+
+
+extern void Record_cleanup(void);
+
 
 void Input_loop(void)
 {
@@ -228,6 +234,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
 
     Net_cleanup();
     Client_cleanup();
+    Record_cleanup();
 
     return 0;
 }

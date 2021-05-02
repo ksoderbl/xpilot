@@ -1,6 +1,6 @@
-/* $Id: pack.h,v 3.37 1994/09/16 18:41:39 bert Exp $
+/* $Id: pack.h,v 3.41 1995/01/11 19:43:12 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -85,8 +85,9 @@
  * 3.2.5.0: Now client must ask for audio packets in order to get them.
  * 3.2.6.0: New map update packet.
  * 3.2.6.1: New player timing packet.
+ * 3.2.8.0: New asyn packet.
  */
-#define	MAGIC		0x3261F4ED
+#define	MAGIC		0x3280F4ED
 
 #define MAGIC2VERSION(M)	(((M) >> 16) & 0xFFFF)
 #define VERSION2MAGIC(V)	((((V) & 0xFFFF) << 16) | (MAGIC & 0xFFFF))
@@ -105,7 +106,6 @@
 #define MAX_SERVER_VERSION	MY_VERSION
 
 #define	MAX_STR_LEN		4096
-#define	MAX_ARG_LEN		256
 #define	MAX_DISP_LEN		80
 #define	MAX_NAME_LEN		16
 
@@ -139,5 +139,7 @@
 #define	E_SOCKET	0x09		/* Can't setup socket */
 #define	E_INVAL		0x0A		/* Invalid input parameters */
 #define	E_VERSION	0x0C		/* Incompatible version */
+#define	E_NOENT		0x0D		/* No such variable */
+#define	E_UNDEFINED	0x0E		/* Operation undefined */
 
 #endif

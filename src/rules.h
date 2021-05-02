@@ -1,6 +1,6 @@
-/* $Id: rules.h,v 3.24 1994/09/16 18:53:41 bert Exp $
+/* $Id: rules.h,v 3.26 1995/01/11 19:56:07 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -24,6 +24,9 @@
 #ifndef RULES_H
 #define RULES_H
 
+/*
+ * Bitfield definitions for playing mode.
+ */
 #define CRASH_WITH_PLAYER	(1<<0)
 #define BOUNCE_WITH_PLAYER	(1<<1)
 #define PLAYER_KILLINGS		(1<<2)
@@ -38,7 +41,10 @@
 #define ALLOW_CLUSTERS		(1<<11)
 #define ALLOW_MODIFIERS		(1<<12)
 #define ALLOW_LASER_MODIFIERS	(1<<13)
-#define IDENTIFY_MINES		(1<<14)
+/*
+ * Client uses only a subset of them:
+ */
+#define CLIENT_RULES_MASK	(WRAP_PLAY|TEAM_PLAY|TIMING|LIMITED_LIVES)
 
 /*
  * Possible object and player status bits.
@@ -69,17 +75,9 @@
 #define FINISH			(1L<<23)	/* Reached race finish */
 #define RACE_OVER		(1L<<24)	/* After finished and score. */
 
-/* #define WAITING_SHOTS	(1L<<32) */
-/* #define SHOT_GRAVITY		(1L<<32) */
-/* #define LOOSE_MASS		(1L<<32) */
-/* #define INACTIVE		(1L<<32) */
-/* #define FUEL_GAUGE		(1L<<32) */
-/* #define VELOCITY_GAUGE	(1L<<32) */
-/* #define POWER_GAUGE		(1L<<32) */
-
 typedef struct {
-    int lives;
-    long mode;
+    int		lives;
+    long	mode;
 } rules_t;
 
 #endif

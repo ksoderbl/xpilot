@@ -1,6 +1,6 @@
-/* $Id: paint.h,v 3.42 1994/09/17 01:06:07 bert Exp $
+/* $Id: paint.h,v 3.47 1995/01/29 00:05:21 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -89,14 +89,11 @@ void Game_over_action(u_byte stat);
 #define FUEL_GAUGE_OFFSET   6
 #define HUD_FUEL_GAUGE_SIZE (2*(HUD_SIZE-HUD_OFFSET-FUEL_GAUGE_OFFSET))
 
-enum alignment_t { RIGHT, LEFT };
-
 typedef struct {
-    char txt[MSG_LEN];
-    short len;
-    short pixelLen;
-    enum alignment_t alignment;
-    long life;
+    char		txt[MSG_LEN];
+    short		len;
+    short		pixelLen;
+    int			life;
 } message_t;
 
 /*
@@ -143,6 +140,8 @@ extern XColor	colors[MAX_COLORS];		/* Colors */
 extern Colormap	colormap;		/* Private colormap */
 extern int	maxColors;		/* Max. number of colors to use */
 extern int	hudColor;		/* Color index for HUD drawing */
+extern int	hudLockColor;           /* Color index for lock on HUD drawing */
+extern int	wallColor;		/* Color index for wall drawing */
 extern int	targetRadarColor;	/* Color index for targets on radar. */
 extern bool	gotFocus;
 extern bool	talk_mapped;
@@ -154,6 +153,8 @@ extern bool	markingLights;		/* Marking lights on ships */
 extern int	titleFlip;		/* Do special titlebar flipping? */
 extern int	shieldDrawMode;		/* How to draw players shield */
 extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
+extern char	*texturePath;		/* Path list of texture directories */
+extern char	*wallTextureFile;	/* Filename of wall texture */
 
 extern int	(*radarPlayerRectFN)	/* Function to draw player on radar */
 		(Display *disp, Drawable d, GC gc,

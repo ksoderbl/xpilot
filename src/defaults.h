@@ -1,6 +1,6 @@
-/* $Id: defaults.h,v 3.11 1994/07/10 19:43:34 bert Exp $
+/* $Id: defaults.h,v 3.13 1995/01/11 19:27:32 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -50,6 +50,7 @@ typedef struct {
     char *defaultValue;
     void *variable;
     enum valType type;
+    void (*tuner)(void);
     char *helpLine;
 } optionDesc;
 

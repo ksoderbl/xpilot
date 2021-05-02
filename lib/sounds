@@ -65,3 +65,4 @@ transporter_pickup	Missed.au
 transporter_success	givethat.au|sugar.au|give_to_me.au|Bring_Him_to_Me.au
 wideangle_shot_pickup	swish.au
 worm_hole		beep_laughing_warning.au|evil_laugh.au
+cannon_explosion	bzzzt.au|bus_vaporize2.au|Cork.au|boom.au

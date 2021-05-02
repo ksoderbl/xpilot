@@ -1,4 +1,4 @@
-/*
+/* $Id: hpaudio.c,v 3.5 1995/01/31 18:24:28 bert Exp $
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-93 by
  *
@@ -33,6 +33,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#include "version.h"
+
+char audio_version[] = VERSION;
 
 /*
  * There is an include file included by Alib.h containing

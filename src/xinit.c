@@ -1,6 +1,6 @@
-/* $Id: xinit.c,v 3.74 1994/09/18 13:51:10 bjoerns Exp $
+/* $Id: xinit.c,v 3.86 1995/02/04 15:03:46 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -50,6 +50,8 @@
 #include "netclient.h"
 #include "dbuff.h"
 
+char xinit_version[] = VERSION;
+
 /*
  * Item structures
  */
@@ -72,7 +74,7 @@
 
 #ifndef	lint
 static char sourceid[] =
-    "@(#)$Id: xinit.c,v 3.74 1994/09/18 13:51:10 bjoerns Exp $";
+    "@(#)$Id: xinit.c,v 3.86 1995/02/04 15:03:46 bert Exp $";
 #endif
 
 /* Kludge for visuals under C++ */
@@ -100,7 +102,7 @@ static char sourceid[] =
 
 #define MAX_VISUAL_CLASS	6
 
-extern message_t	*Msg[];
+extern message_t	*TalkMsg[], *GameMsg[];
 extern int		RadarHeight;
 
 /*
@@ -121,6 +123,9 @@ int			draw_width, draw_height;
 char			*geometry;
 bool			autoServerMotdPopup;
 Cursor			pointerControlCursor;
+char			sparkColors[MSG_LEN];
+int			spark_color[MAX_COLORS];
+int			num_spark_colors;
 
 static message_t	*MsgBlock;
 static bool		about_created;
@@ -263,13 +268,13 @@ static char	*color_defaults[MAX_COLORS] = {
     "#000000", "#FFFFFF", "#4E7CFF", "#FF3A27",
     "#33BB44", "#992200", "#BB7700", "#EE9900",
     "#770000", "#CC4400", "#DD8800", "#FFBB11",
-    "", "", "", ""
+    "#9f9f9f", "#5f5f5f", "#dfdfdf", "#202020"
 };
 static char	*gray_defaults[MAX_COLORS] = {
     "#000000", "#FFFFFF", "#AAAAAA", "#CCCCCC",
     "#BBBBBB", "#888888", "#AAAAAA", "#CCCCCC",
     "#777777", "#999999", "#BBBBBB", "#DDDDDD",
-    "", "", "", ""
+    "#9f9f9f", "#5f5f5f", "#dfdfdf", "#202020"
 };
 
 
@@ -548,17 +553,71 @@ static void Get_visual_info(void)
 
 
 /*
+ * Convert a string of color numbers into an array
+ * of "colors[]" indices stored by "spark_color[]".
+ * Initialize "num_spark_colors".
+ */
+static void Init_spark_colors(void)
+{
+    char		buf[MSG_LEN];
+    char		*src, *dst;
+    unsigned		col;
+    int			i;
+
+    num_spark_colors = 0;
+    /*
+     * The sparkColors specification may contain
+     * any possible separator.  Only look at numbers.
+     */
+    for (src = sparkColors; *src; src++) {
+	if (isascii(*src) && isdigit(*src)) {
+	    dst = &buf[0];
+	    do {
+		*dst++ = *src++;
+	    } while (*src && isascii(*src) && isdigit(*src));
+	    *dst = '\0';
+	    src--;
+	    if (sscanf(buf, "%u", &col) == 1) {
+		if (col < maxColors) {
+		    spark_color[num_spark_colors++] = col;
+		}
+	    }
+	}
+    }
+    if (num_spark_colors == 0) {
+	if (maxColors <= 8) {
+	    /* 3 colors ranging from 5 up to 7 */
+	    for (i = 5; i < maxColors; i++) {
+		spark_color[num_spark_colors++] = i;
+	    }
+	}
+	else {
+	    /* 7 colors ranging from 5 till 11 */
+	    for (i = 5; i < 12; i++) {
+		spark_color[num_spark_colors++] = i;
+	    }
+	}
+	/* default spark colors always include RED. */
+	spark_color[num_spark_colors++] = RED;
+    }
+    for (i = num_spark_colors; i < MAX_COLORS; i++) {
+	spark_color[i] = spark_color[num_spark_colors - 1];
+    }
+}
+
+
+/*
  * Initialize miscellaneous window hints and properties.
  */
 void Init_disp_prop(Display *d, Window win, int w, int h, int x, int y,
 		   int flags)
 {
-    extern char	**Argv;
-    extern int	Argc;
-    XClassHint	xclh;
-    XWMHints	xwmh;
-    XSizeHints	xsh;
-    char	msg[256];
+    extern char		**Argv;
+    extern int		Argc;
+    XClassHint		xclh;
+    XWMHints		xwmh;
+    XSizeHints		xsh;
+    char		msg[256];
 
     xwmh.flags	   = InputHint|StateHint|IconPixmapHint;
     xwmh.input	   = True;
@@ -748,8 +807,14 @@ int Init_window(void)
     for (i = maxColors; i < MAX_COLORS; i++) {
 	colors[i] = colors[i % maxColors];
     }
-    if (hudColor >= maxColors) {
+    if (hudColor >= maxColors || hudColor <= 0) {
 	hudColor = BLUE;
+    }
+    if (hudLockColor >= maxColors || hudLockColor <= 0) {
+	hudLockColor = hudColor;
+    }
+    if (wallColor >= maxColors || wallColor <= 0) {
+	wallColor = BLUE;
     }
     if (targetRadarColor >= maxColors
 	|| (targetRadarColor != 8
@@ -1077,23 +1142,30 @@ int Init_window(void)
 	XSync(kdpy, False);
     }
 
+    Init_spark_colors();
+
     return 0;
 }
 
 
-int Alloc_msgs(int number)
+int Alloc_msgs(void)
 {
-    message_t *x;
-    int i;
+    message_t		*x;
+    int			i;
 
-    if ((x = (message_t *)malloc(number * sizeof(message_t))) == NULL) {
+    if ((x = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL) {
 	error("No memory for messages");
 	return -1;
     }
     MsgBlock = x;
-    for (i=0; i<number; i++) {
-	Msg[i]=x;
+    for (i = 0; i < 2 * MAX_MSGS; i++) {
+	if (i < MAX_MSGS) {
+	    TalkMsg[i] = x;
+	} else {
+	    GameMsg[i - MAX_MSGS] = x;
+	}
 	x->txt[0] = '\0';
+	x->len = 0;
 	x->life = 0;
 	x++;
     }
@@ -1108,7 +1180,8 @@ void Free_msgs(void)
 
 
 void ShadowDrawString(Display* dpy, Window w, GC gc,
-		      int x, int y, char* str, Pixel fg, Pixel bg)
+		      int x, int y, char* str,
+		      unsigned long fg, unsigned long bg)
 {
     if (HaveColor(dpy)) {
 	XSetForeground(dpy, gc, bg);
@@ -1126,8 +1199,8 @@ void ShadowDrawString(Display* dpy, Window w, GC gc,
  * vertical position it ended at.
  */
 int DrawShadowText(Display* dpy, Window w, GC gc,
-		    int x_border, int y_start,
-		    char *str, Pixel fg, Pixel bg)
+		    int x_border, int y_start, char *str,
+		    unsigned long fg, unsigned long bg)
 {
     XFontStruct*	font = XQueryFont(dpy, XGContextFromGC(gc));
     int			y, x;
@@ -1327,8 +1400,11 @@ void Expose_about_window(void)
 	"University of Tromsø (Norway) by Ken Ronny Schouten and "
 	"Bjørn Stabell during the fall of 1991, but much of the game today "
 	"is the result of hard efforts by Bert Gÿsbers of the "
-	"biology lab at the University of Amsterdam (The Netherlands).  "
+	"molecular cytology lab at the University of Amsterdam (The Netherlands).  "
 	"Bert joined the team in the spring of 1993.\n"
+	"\n"
+	"A large number of features have been contributed by XPilot fans from "
+	"all around the world.  See the CREDITS file for details.\n"
 	"\n"
 	"For more information, "
 	"read the XPilot FAQ (Frequently Asked Questions), "
@@ -1684,9 +1760,17 @@ int Talk_do_event(XEvent *event)
     bool		cursor_visible = talk_cursor.visible;
     int			count, oldlen, newlen, onewidth, oldwidth;
     KeySym		keysym;
-    XComposeStatus	compose;
     char		new_str[MAX_CHARS];
     bool		result = true;
+
+    /* according to Ralf Berger <gotan@physik.rwth-aachen.de>
+     * compose should be static:
+     * the value of 'compose' has to be preserved across calls to
+     * 'XLookupString' (the man page also mentioned that a portable program 
+     * should pass NULL but i don't know if that's specific to dec-alpha ?).
+     * To fix this declare 'compose' static (can't hurt anyway).
+     */
+    static XComposeStatus	compose;
 
     switch (event->type) {
 
@@ -2082,7 +2166,7 @@ int Handle_motd(long off, char *buf, int len, long filesize)
 	    Widget_create_viewer(motd_buf,
 				 (off || len) ? (off + len) : strlen(motd_buf),
 				 2*DisplayWidth(dpy, DefaultScreen(dpy))/3,
-				 4*DisplayHeight(dpy, DefaultScreen(dpy))/5,
+				 4*DisplayHeight(dpy, DefaultScreen(dpy))/8,
 				 2,
 				 title, "XPilot:motd",
 				 motdFont);

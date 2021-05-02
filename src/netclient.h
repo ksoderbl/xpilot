@@ -1,6 +1,6 @@
-/* $Id: netclient.h,v 3.31 1994/09/17 01:03:01 bert Exp $
+/* $Id: netclient.h,v 3.34 1995/01/11 19:38:38 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -31,8 +31,6 @@
 
 #define MIN_RECEIVE_WINDOW_SIZE		1
 #define MAX_RECEIVE_WINDOW_SIZE		4
-#define DEF_RECEIVE_WINDOW_SIZE		3
-#define DEF_RECEIVE_WINDOW_SIZE_STR	"3"
 
 extern int	receive_window_size;
 extern long	last_loops;
@@ -108,5 +106,6 @@ int Receive_eyes(void);
 int Receive_motd(void);
 int Receive_magic(void);
 int Send_audio_request(int onoff);
+int Send_fps_request(int fps);
 
 #endif

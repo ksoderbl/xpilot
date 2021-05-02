@@ -1,6 +1,6 @@
-/* $Id: net.h,v 3.17 1994/07/10 19:49:19 bert Exp $
+/* $Id: net.h,v 3.20 1995/01/11 19:36:42 bert Exp $
  *
- * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-94 by
+ * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-95 by
  *
  *      Bjørn Stabell        (bjoerns@staff.cs.uit.no)
  *      Ken Ronny Schouten   (kenrsc@stud.cs.uit.no)
@@ -60,21 +60,16 @@
 #define MAX_SOCKBUF_RETRIES	2
 
 /*
- * Currently biggest packet size.
- */
-#define	MAX_PACKET_SIZE		(1 + MSG_LEN + 16 + 64 + 80 + 5)
-
-/*
  * A buffer to reduce the number of system calls made and to reduce
  * the number of network packets.
  */
 typedef struct {
     int		sock;		/* socket filedescriptor */
-    char	*buf;		/* i/o buffer */
+    char	*buf;		/* i/o data buffer */
     int		size;		/* size of buffer */
-    int		len;		/* amount of data in buffer */
-    char	*ptr;		/* current position in buffer */
-    int		state;		/* read/write/locked/error */
+    int		len;		/* amount of data in buffer (writing/reading) */
+    char	*ptr;		/* current position in buffer (reading) */
+    int		state;		/* read/write/locked/error status flags */
 } sockbuf_t;
 
 int Sockbuf_init(sockbuf_t *sbuf, int sock, int size, int state);

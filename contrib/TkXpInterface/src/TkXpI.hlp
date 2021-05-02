@@ -49,6 +49,11 @@ Activation condition :
   On the main panel the ^R Team ^R play ^R mode button must be On.
 
 This panel fixes the following Xpilots options :
+    -/+reset 
+        Does the world reset when the end of round is reached?
+        When true all mines, missiles, shots and explosions will be
+        removed from the world and all players including the winner(s)
+        will be transported back to their homebases.
     -/+targetKillTeam
         Do team members die when their last target explodes?
     -/+teamAssign
@@ -57,6 +62,8 @@ This panel fixes the following Xpilots options :
         Should other team members be immune to various shots, thrust etc.?
     -/+targetTeamCollision or targetCollision
         Do team members collide with their own target or not
+    -/+targetSync 
+        Do all the targets of a team reappear/repair at the same time?
     -/+treasureKillTeam
         Do team members die when treasure is destroyed?
     -/+treasureCollisionDestroys or treasureCollisionDestroy
@@ -81,6 +88,10 @@ This panel fixes the following Xpilots options :
         Can items be picked up while shields are up?
     -/+shieldedMining or shieldMine
         Can mines be thrown and placed while shields are up?
+
+
+    Please refer to the manual pages, xpilots(6) and xpilot(6),
+    for more specific help.
 }
 {TkXpInterface-VERSION  Help on Radar :
 
@@ -98,6 +109,8 @@ This panel fixes the following Xpilots options :
         Are mines visible on the radar
     -/+nukesOnRadar or nukesRadar
         Are nukes visible or highlighted on radar
+    -/+treasuresOnRadar or treasuresRadar 
+        Are treasure balls visible or highlighted on the radar.
     -/+distinguishMissiles
         Are different types of missiles distinguished (by length)
      -minVisibilityDistance or minVisibility <real>
@@ -149,7 +162,7 @@ This panel fixes the following Xpilots options :
 
 The ^R Players ^R can... and ^R Players ^R bounce... buttons can be used if
 the ^R One ^R player ^R only button on the main panel is Off (even if these
-buttons aren't deactivated).
+buttons aren't desactivated).
 
 This panel fixes the following Xpilots options :
     -/+limitedLives
@@ -228,6 +241,8 @@ This panel fixes the following Xpilots options :
         Mass of bullets
     -shotSpeed or shotspeed <real>
         Maximum speed of bullets
+    -friction <real>
+        Fraction of velocity ship loses each frame.
     -playerMinimumStartFuel or playerMinStartFuel <real>
         Minimum amount of fuel a player will have after being killed
     -/+shotsGravity
@@ -238,6 +253,14 @@ This panel fixes the following Xpilots options :
         Number of frames per automatic fire (0=off)
     -maxPlayerShots or shots <integer>
         Maximum number of bullets present at one time
+    -itemConcentratorRadius or itemConcentratorRange <integer>
+        The maximum distance from an item concentator for items to appear in.
+        Sensible values are in the range 1 to 20.
+        If no item concentators are defined in a map then items can popup 
+	anywhere.
+        Otherwise items always popup in the vicinity of an item concentrator.
+        An item concentrator is drawn on screen as three rotating triangles.
+        The map symbol is the percentage symbol '%'.
     -/+allowShipShapes or ShipShapes
         Are players allowed to define their own ship shape?
 
@@ -251,8 +274,9 @@ This panel fixes the following Xpilots options :
   the others, included in the default file and the Xpilots Dump 
   configuration, will be read by Xpilots.
 
-  It doesn't take into account the chosen ship shapes and chosen team
-  ("Team to join" entry), these are client options.
+  It doesn't take into account the chosen ship shapes , the chosen team
+  ("Team to join" scale) and the Max frame per second ("Max Frame/Second"
+   scale), these are client options.
 
   You can launch more than one server with different configurations 
   (maps, options...) if you change each time the ^R Port ^R to ^R use value 
@@ -374,7 +398,7 @@ This panel fixes the following Xpilots options :
 ^R Save : This operation save the current loaded map file with :
          - with all commented lines from the file (begining with a "#")
          - with all configurations different from the default file and
-           from the xpilots dump exept if the ^R Save ^R all ^R options 
+           from the xpilots dump except if the ^R Save ^R all ^R options 
            button is On.
          - with the original map data (to change it, use XmapEdit).
          - with all original options unknown by Xpilots-3.2.x you may have
@@ -386,18 +410,20 @@ This panel fixes the following Xpilots options :
 
          When you save a map file the current file becomes the saved file !
 }
-{TkXpInterface-VERSION  Help on remote servers :
+{TkXpInterface-VERSION  Help on remote and local servers :
 
  If you want to play on a remote server, click on the "Meta server" button.
 
  ^R Connect button :
- - To play the game on the choosen remote server with the ^R ship ^R shape and 
-   ^R Team ^R to ^R join you selected before or after calling
-   the ^S Meta ^S server menu. If the connection is OK, you can quit TkXpInterface,
-   otherwise try another remote server or the same server again (still selected)
+ - To play the game on the choosen remote server with the ^R ship ^R shape,  
+   the ^R Team ^R to ^R join , the ^R MaxFPS and the ^R Nick ^R name you 
+   selected before or after calling the ^S Meta ^S server menu. If the 
+   connection is OK, you can quit TkXpInterface, otherwise try another 
+   remote server or the same server again (still selected)
  - NOTICE THAT TEAM -1 MEANS NO TEAM IN THE XPILOT CLIENT PROMPT !!
+ - NOTICE THAT MAXFPS -1 MEANS NO MAXFPS IN THE XPILOT CLIENT PROMPT !!
 
- ^R Ping button :
+ ^R Ping button :(on Meta-server and only client window)
  - To do a PING on a selected remote server.
    After a moment you will see in a window the results of the ping operation.
    TkXpInterface doesn't interpret these results (they depend of your UNIX
@@ -407,8 +433,7 @@ This panel fixes the following Xpilots options :
    It's useful if you want more info about a game (i.e. the scores of all the
    players, the lives, the robots...)
 
- ^R Local button :
-   First this button is only present on the only client interface.
+ ^R Local button :(on only client window)
    Press this button open a new window in which you can see the local servers. 
 
  ^R Update button :
@@ -419,12 +444,12 @@ This panel fixes the following Xpilots options :
    will appear in a window and will be stored in the TkXpI.srv file.
    the meta server filter is defined during the installation.
 
- ^R Sort button :
+ ^R Sort button :(on Meta-server and only client window)
    - Chose your favorite ordered ^R sort ^R indexes and click on the ^R OK button, the
    current list of servers will be sorted. The priority of each sort name is
    written before it.
 
- ^R Word(s) ^R to ^R search entry box :
+ ^R Word(s) ^R to ^R search entry box :(on Meta-server and only client window)
    to search for some sub-strings in the list of remote servers, it's useful if
    you want to look for a friend (with his nick name or e-mail adress) and a
    map name, etc....
@@ -446,6 +471,11 @@ This panel fixes the following Xpilots options :
 
  ^R Team ^R to ^R join scale :
      Just to select your own team before the connection to the remote server.
+ - NOTICE THAT TEAM -1 MEANS NO TEAM IN THE XPILOT CLIENT PROMPT !!
+
+ ^R Max ^R frames ^R per ^R second scale :
+     Just to select the maximum FPS supported.
+ - NOTICE THAT MAXFPS -1 MEANS NO MAXFPS IN THE XPILOT CLIENT PROMPT !!
 
  ^R Nick ^R name entry box :
      Just to select a new nick name before the connection to the remote server.
@@ -457,7 +487,7 @@ This panel fixes the following Xpilots options :
      server.  If you click again on the selected shape it will be deselected
      so your xpilot client will use the shape defined in your ~/xpilotrc file.
 
- ^R Servers list :
+ ^R Remote ^R Servers list :(on Meta-Server and only client window)
     The servers window has 11 columns :
     1- (Pl)  The number of players
     2- (FPS) The number of frames per second
@@ -480,8 +510,17 @@ This panel fixes the following Xpilots options :
    If you are interested by a team mode server, you can set your own team to 
    join without quit the ^S Meta ^S server menu.
 
-   - Click on a choosen remote server to select it, its name will appear on the
-   bottom.
+ ^R Local ^R Servers list :(on local server window)
+    The servers window has 6 columns :
+    1- (Version)  The xpilot version 
+    2- (Status)  Status of the local server.
+    3- (Speed) The number of frames per second
+    4- (Map) The map name (only the 10 first characters).
+    5-(Nb Play/Max Play) The numbre of players / the number of bases
+    6- (Server) Remote server name.
+
+   - Click on a choosen remote or local server to select it, its name will 
+   appear on the bottom.
 
 ^U Attention !
    - When you start the xpilots client ^U wait some secondes to let it 
@@ -500,7 +539,7 @@ This panel fixes the following Xpilots options :
 }
 {TkXpInterface-VERSION  Help on Play the game :
 
-  This starts an Xpilot client on your LOCAL machine (127.0.0.1)
+  This starts an Xpilot client on your LOCAL machine ($hostname)
 
   - with the port number indicated on the main panel in the 
     ^R Port ^R to ^R use entry box.
@@ -512,7 +551,7 @@ This panel fixes the following Xpilots options :
   - with the team number indicated on the main panel in the 
     ^R Team ^R to ^R join entry box, if the server is not in team mode the
     xpilots client will ignore this option.
-    If the sever is in team mode and your choosen team is full, change the
+    If the server is in team mode and your choosen team is full, change the
     team number on the main panel and restart.
 
   If the client runs well you can quit TkXpInterface.
@@ -542,7 +581,8 @@ This panel fixes the following Xpilots options :
  the installation of TkXpInterface.
 
  An asterix (*) after the map name means the map is compressed; it will
- be decompressed in the temporary directory with the name "TkXpI.tm".
+ be decompressed in the temporary directory with the name "TkXpI.mp" 
+ follow by a number which is your session number.
 
  This temporary file will be deleted if you quit TkXpInterface normally.
  (i.e. Quit button, not <Control-c>).
@@ -553,7 +593,7 @@ This panel fixes the following Xpilots options :
  The ^U button ^U on ^U the ^U right of ^R Check ^R options button will show you if some options
  warnings occured.
 
- before the map names list you can change the current directory :
+ Before the map names list you can change the current directory :
 
  To default Dir : to go to the default dir (if you are lost).
           ..    : to go on the previous directory.
@@ -580,7 +620,7 @@ This panel fixes the following Xpilots options :
 }
 {TkXpInterface-VERSION  Help on Ship shapes :
 
- It displays the set of ship shapes read from TkXpI.shp file.
+ It displays the set of ship shapes read from TkXpI.shp file or xpilotrc.
  The ship shape you chose by a click on the name of the ship is
  used, of course, only by the xpilots client.
  Its name appears on the top of the list.
@@ -595,6 +635,9 @@ This panel fixes the following Xpilots options :
         shape, mainGuns, leftGuns, rightGuns, leftLights
         rightLights, engines, missileRacks.
 
+ You can retrieve the Default ship (this of your .xpilotrc file) by 
+ clicking a new time on the selected ship or on the Default ship button.
+
  You can edit TkXpI.shp file to add some new shapes but respect the
  format described in the header of this file.
 
@@ -604,16 +647,16 @@ This panel fixes the following Xpilots options :
 {TkXpInterface-VERSION  Help on the right main panel : 
 
  If TkXpInterface doesn't find a valid motd file its button is
- deactivated.
+ desactivated.
 
  If the scoreTableFileName is an empty string its button is
- deactivated.
+ desactivated.
 
  If ^R Team ^R play ^R mode is On, the ^S Team menu is active and the
  ^R One ^R player ^R only button is switched off.
 
  If ^R One ^R player ^R only is On, the ^R Team ^R play ^R mode button is
- switched off and the ^S Team menu is deactive. In the ^S Player menu
+ switched off and the ^S Team menu is desactivated. In the ^S Player menu
  only ^R Limited ^R lives and ^R Number ^R of ^R lives make a sense!
 
  The ^S Robots menu is active if the ^R Number ^R of ^R robots is greater than 0.
@@ -621,6 +664,14 @@ This panel fixes the following Xpilots options :
  The ^R Port ^R to ^R use value will be used by the next server or client you start.
 
  The ^R Team ^R to ^R join will be used by the next client you start.
+ - NOTICE THAT TEAM -1 MEANS NO TEAM IN THE XPILOT CLIENT PROMPT !!
+
+ The ^R Max ^R frame ^R per ^R second  will be used by the next client 
+ you start.
+ - NOTICE THAT MAXFPS -1 MEANS NO MAXFPS IN THE XPILOT CLIENT PROMPT !!
+ 
+ The ^R Nick ^R name will be used by the next client you start.
+ The first name you see was read in your .xpilotrc file.
 
  ^U Note : TkXpInterface doesn't take into account the motd and score files
         defined in the xpilots dump and defaults file but on those 
@@ -659,6 +710,11 @@ Client and server option :
 Client option :
     -team <value> 
         Team to join
+    -maxFPS <value>
+        Set client's maximum FPS supported.
+        The default value is: 20.
+    -name <value>
+	Set the nickname
 
     Please refer to the manual pages, xpilots(6) and xpilot(6),
     for more specific help.
@@ -729,9 +785,10 @@ This panel fixes the following Xpilots options :
   The ^R Update ^R server button , on a running local server (without restarted it) :
   - Changes the ^U initial ^U items values.
   - Changes the ^U number ^U of ^U robots.
+  - Changes the ^U options you can find in the differents ^U menus. 
+   (In these menus only the ^U configurables options are shown)
   - ^U Locks or ^U Unlocks the game.
-  - ^U Shuts ^U down the server or ^U Stops it if its value is equal to 0 or if
-       it's an empty string.
+  - ^U Shuts ^U down the server.
   - ^U Sends ^U a ^U message to the players.
   All the values (modified or not) will be passed to the client command line.
 
@@ -739,39 +796,18 @@ This panel fixes the following Xpilots options :
   The ^R Port ^R to ^R use value on the main panel must be the same
   as the one used by the running local server you want to update.
 
-This panel uses the following Xpilots options :
-    -maxRobots or robots <integer>
-        How many robots do you want?
-    -initialFuel <integer>
-        How much fuel players start with
-    -initialTanks <integer>
-        How many tanks players start with
-    -initialECMs <integer>
-        How many ECMs players start with
-    -initialMines <integer>
-        How many mines players start with
-    -initialMissiles <integer>
-        How many missiles players start with
-    -initialCloaks <integer>
-        How many cloaks players start with
-    -initialSensors <integer>
-        How many sensors players start with
-    -initialWideangles <integer>
-        How many wideangles players start with
-    -initialRearshots <integer>
-        How many rearshots players start with
-    -initialAfterburners <integer>
-        How many afterburners players start with
-    -initialTransporters <integer>
-        How many transporters players start with
-    -initialLasers <integer>
-        How many lasers players start with
-    -initialEmergencyThrusts <integer>
-        How many emergency thrusts players start with
-    -initialTractorBeams <integer>
-        How many tractor/pressor beams players start with
-    -initialAutopilots <integer>
-        How many autopilots players start with
+}
+{TkXpInterface-VERSION  Help on Race :
+
+Activation condition :
+  On the main panel the ^R Race ^R mode button must be On.
+
+This panel fixes the following Xpilots options :
+    -checkpointRadius <real>
+        How close you have to be to a checkpoint to register - in blocks.
+
+    -raceLaps <integer>
+        How many laps a race is run over.
 
     Please refer to the manual pages, xpilots(6) and xpilot(6),
     for more specific help.
