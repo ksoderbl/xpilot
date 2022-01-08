@@ -209,10 +209,11 @@ static void Parser_dump_flags(char *progname)
  */
 static void Parser_dump_config(char *progname)
 {
-    option_desc		*options;
+    /* option_desc		*options; */
     int			option_count;
 
-    options = Get_option_descs(&option_count);
+    /* options = */
+    Get_option_descs(&option_count);
 
     xpprintf("\n");
     xpprintf("# %s option dump\n", progname);

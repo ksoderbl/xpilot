@@ -2178,7 +2178,7 @@ static void Robot_default_play_check_lasers(int ind)
     int				j;
     int				dx, dy;
     int				distance2;
-    int				shield_range;
+    /* int				shield_range; */
     robot_default_data_t	*my_data = Robot_default_get_data(pl);
 
     /*
@@ -2187,7 +2187,7 @@ static void Robot_default_play_check_lasers(int ind)
      */
     if (BIT(pl->used, HAS_SHIELD) == 0
 	&& BIT(pl->have, HAS_SHIELD) != 0) {
-	shield_range = 21 + SHIP_SZ;
+	/* shield_range = 21 + SHIP_SZ; */
 	for (j = 0; j < NumPulses; j++) {
 	    pulse_t *pulse = Pulses[j];
 	    if (pulse->id == pl->id

@@ -1558,7 +1558,7 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     char		buf[512];
 #ifndef _WINDOWS	/* Windows does no file handling on its own. */
 	char	oldfile[PATH_MAX + 1],
-			newfile[PATH_MAX + 1];
+			newfile[PATH_MAX + 1 + 4];
 
     *strptr = "Saving...";
     Widget_draw(widget_desc);

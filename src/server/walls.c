@@ -803,7 +803,7 @@ void Move_segment(move_state_t *ms)
 	     * Later we transform the result back to the real type.
 	     */
 
-	    ivec mx, my, dir;
+	    ivec mx = { 0, 0 }, my = { 0, 0 }, dir;
 	    clpos mirx, miry, start, end, todo, done, diff, a, b;
 	    double d, w;
 

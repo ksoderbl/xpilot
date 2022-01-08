@@ -394,11 +394,13 @@ void Gui_paint_base(int x, int y, int xi, int yi, int type)
 	    if (other) {
 		s[1] = ' ';
 		s[2] = '\0';
-	    } else
+	    } else {
 		s[1] = '\0';
-		size = XTextWidth(gameFont, s, other ? 2 : 1);
-	} else
+	    }
+	    size = XTextWidth(gameFont, s, other ? 2 : 1);
+	} else {
 	    size = 0;
+	}
 
 	switch (type) {
 	case SETUP_BASE_UP:

@@ -331,11 +331,12 @@ static int Laser_pulse_check_player_hits(
 {
     int			j;
     int			hits = 0;
-    int			ind;
+    /* int			ind; */
     DFLOAT		dist;
-    player		*pl;
+    /* player		*pl; */
     victim_t		*victim;
 
+    /*
     if (pulse->id != NO_ID) {
 	ind = GetInd[pulse->id];
 	pl = Players[ind];
@@ -343,6 +344,7 @@ static int Laser_pulse_check_player_hits(
 	ind = -1;
 	pl = NULL;
     }
+    */
 
     for (j = vicbuf->num_vic - 1; j >= 0; --j) {
 	victim = &(vicbuf->vic_ptr[j]);
@@ -433,7 +435,7 @@ void Laser_pulse_collision(void)
     DFLOAT			x, y, x1, x2, y1, y2;
     DFLOAT			dx, dy;
     DFLOAT			midx, midy;
-    player			*pl;
+    /* player			*pl; */
     pulse_t			*pulse;
     object			*obj = NULL, *ast = NULL;
     list_t			obj_list = NULL;
@@ -465,10 +467,10 @@ void Laser_pulse_collision(void)
 
 	if (pulse->id != NO_ID) {
 	    ind = GetInd[pulse->id];
-	    pl = Players[ind];
+	    /* pl = Players[ind]; */
 	} else {
 	    ind = -1;
-	    pl = NULL;
+	    /* pl = NULL; */
 	}
 
 	pulse->pos.x += tcos(pulse->dir) * PULSE_SPEED;

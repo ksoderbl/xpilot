@@ -684,12 +684,13 @@ static void closeDefaultsFile(FILE *fp)
 bool parseDefaultsFile(const char *filename)
 {
     FILE       *ifile;
-    bool	result;
+    /* bool	result; */
 
     if ((ifile = openDefaultsFile(filename)) == NULL) {
 	return false;
     }
-    result = parseOpenFile(ifile, OPT_DEFAULTS);
+    /* result = */
+    parseOpenFile(ifile, OPT_DEFAULTS);
     closeDefaultsFile(ifile);
 
     return true;
@@ -702,12 +703,13 @@ bool parseDefaultsFile(const char *filename)
 bool parsePasswordFile(const char *filename)
 {
     FILE       *ifile;
-    bool	result;
+    /* bool	result; */
 
     if ((ifile = openDefaultsFile(filename)) == NULL) {
 	return false;
     }
-    result = parseOpenFile(ifile, OPT_PASSWORD);
+    /* result = */
+    parseOpenFile(ifile, OPT_PASSWORD);
     closeDefaultsFile(ifile);
 
     return true;
@@ -720,12 +722,13 @@ bool parsePasswordFile(const char *filename)
 bool parseMapFile(const char *filename)
 {
     FILE       *ifile;
-    bool	result;
+    /* bool	result; */
 
     if ((ifile = openMapFile(filename)) == NULL) {
 	return false;
     }
-    result = parseOpenFile(ifile, OPT_MAP);
+    /* result = */
+    parseOpenFile(ifile, OPT_MAP);
     closeMapFile(ifile);
 
     return true;

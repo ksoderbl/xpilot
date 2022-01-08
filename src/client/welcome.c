@@ -343,7 +343,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     Connect_param_t		*conpar = (Connect_param_t *) user_data;
     int				i;
     int				n = 0;
-    int				label;
+    /* int				label; */
     int				label_y, label_height;
     int				subform_width = 0;
     int				subform_height = 0;
@@ -355,7 +355,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 
     Welcome_set_mode(ModeLocalnet);
 
-    label =
+    /* label = */
 	Welcome_create_label(1,
 	    "Searching for XPilot servers on your local network...");
     Widget_get_dimensions(subform_widget, &subform_width, &subform_height);
@@ -388,7 +388,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 
     if (n > 0) {
 	int	max_width = 0;
-	int	button;
+	/* int	button; */
 	int	button_width;
 	int	button_height;
 	int	button_x;
@@ -400,7 +400,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	int	button2_x;
 	int	button2_y;
 #endif
-	int	button3;
+	/* int	button3; */
 	int	button3_width;
 	int	button3_height;
 	int	button3_x;
@@ -431,7 +431,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    button_height = textFont->ascent + textFont->descent + 10;
 	    button_x = 20;
 	    button_y = label_y * 2 + label_height + i * (button_height + label_y);
-	    button =
+	    /* button = */
 		Widget_create_label(subform_widget,
 				    button_x, button_y,
 				    button_width, button_height,
@@ -458,7 +458,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    button3_y = button_y;
 	    button3_width = XTextWidth(buttonFont, "Join game", 7) + 40;
 	    button3_height = buttonFont->ascent + buttonFont->descent + 10;
-	    button3 =
+	    /* button3 = */
 		Widget_create_activate(subform_widget,
 				       button3_x, button3_y,
 				       button3_width, button3_height,

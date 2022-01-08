@@ -602,7 +602,7 @@ static void Sort_labels(int tbl[256])
 
     Count_labels();
 
-    memset(tbl, 0, sizeof(int *) * 256);
+    memset(tbl, 0, sizeof(int) * 256);
 
     tbl[0] = 0;
     tbl[1] = 1;

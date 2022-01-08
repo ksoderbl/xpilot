@@ -250,7 +250,7 @@ static widget_t *Widget_new(int *descp)
 static int Widget_create(widget_type_t type, const char *name, Window window,
 			 int width, int height, void *sub)
 {
-    int			desc;
+    int			desc = NO_WIDGET;
     widget_t		*widget;
 
     if ((widget = Widget_new(&desc)) != NULL) {

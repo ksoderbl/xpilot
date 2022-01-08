@@ -122,7 +122,7 @@ void Break_asteroid(int ind)
     wireobject	*asteroid = WIRE_IND(ind);
     DFLOAT	mass, mass3;
     DFLOAT	speed, speed1, speed2, radius;
-    DFLOAT	velx1, vely1, velx2, vely2, velx3, vely3;
+    DFLOAT	/* velx1, vely1, velx2, vely2,*/ velx3, vely3;
     int		dir, dir1, dir2, split_dir;
     int		x1, y1, x2, y2;
 
@@ -170,10 +170,10 @@ void Break_asteroid(int ind)
 		 / tcos(ABS(dir - dir1));
 	speed2 = (speed * (1 - ASTEROID_DUST_FACT))
 		 / tcos(ABS(dir2 - dir));
-	velx1 = tcos(dir1) * speed1;
+	/* velx1 = tcos(dir1) * speed1;
 	vely1 = tsin(dir1) * speed1;
 	velx2 = tcos(dir2) * speed2;
-	vely2 = tsin(dir2) * speed2;
+	vely2 = tsin(dir2) * speed2; */
 	split_dir = MOD2(dir - RES/4, RES);
 	radius = ASTEROID_RADIUS(asteroid->size - 1);
 	x1 = WRAP_XPIXEL(asteroid->pos.x + tcos(split_dir) * radius);
