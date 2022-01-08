@@ -477,7 +477,7 @@ void Server_info(char *str, unsigned max_size)
     int			i, j, k;
     player		*pl, **order, *best = NULL;
     DFLOAT		ratio, best_ratio = -1e7;
-    char		name[MAX_CHARS];
+    char		name[MAX_CHARS * 2 + 4];
     char		lblstr[MAX_CHARS];
     char		msg[MSG_LEN];
 

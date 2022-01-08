@@ -1139,7 +1139,7 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
     other_t		*programmer,
 			*robot,
 			*sought;
-    char		msg[MSG_LEN];
+    char		msg[MSG_LEN + 8];
 
     if ((programmer = Other_by_id(programmer_id)) == NULL
 	|| (robot = Other_by_id(robot_id)) == NULL

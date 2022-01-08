@@ -35,6 +35,9 @@
 *.i*86
 *.x86_64
 *.hex
+src/client/xpilot
+src/server/xpilots
+src/replay/xp-replay
 
 # Debug files
 *.dSYM/

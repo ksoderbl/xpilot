@@ -483,7 +483,7 @@ void Paint_score_entry(int entry_num,
 		       other_t* other,
 		       bool best)
 {
-    static char		raceStr[8], teamStr[4], lifeStr[8], label[MSG_LEN];
+    static char		raceStr[12], teamStr[4], lifeStr[8], label[MSG_LEN];
     static int		lineSpacing = -1, firstLine;
     int			thisLine;
     char		scoreStr[16];

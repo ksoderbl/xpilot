@@ -1094,9 +1094,10 @@ void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
      */
     if (ecmsReprogramMines && closest_mine != NULL) {
 	range = closest_mine_range;
-	if (range <= 0 || (int)(rfrac() * 100.0f) < (100 - (int)(50*range)))
+	if (range <= 0 || (int)(rfrac() * 100.0f) < (100 - (int)(50*range))) {
 	    closest_mine->id = (pl ? pl->id : NO_ID);
 	    closest_mine->team = team;
+	}
     }
 
     /* in non-team mode cannons are immune to cannon ECMs */
