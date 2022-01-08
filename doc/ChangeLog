@@ -31,7 +31,7 @@ a high score.
 When the server option cloakedShield was on then deflectors could
 not be turned on while being cloaked.  Fixed.  Thanks go to Paul Forman.
 
-Kristian Söderblom contributed several important bugfixes.
+Kristian SÃ¶derblom contributed several important bugfixes.
 
 Ben Armstrong submitted a patch which fixes a problem with a client passing
 the wrong version to a server when multiple servers are displayed.
@@ -393,7 +393,7 @@ Paul Alexander Drees submitted a patch for the server:
     I also streamlined some code in frame.c using a function I
     created for the asteroid item determination.
 
-Juha Lindström submitted a patch for the client:
+Juha LindstrÃ¶m submitted a patch for the client:
     The attached patch draws the object information of the radar to the
     map on an area three times the size of the radar. The information
     is drawn in the sliding radar way so that you sit in the center
@@ -709,7 +709,7 @@ Ben Jackson submitted partially finished code to measure the speed
 of different graphics features.  He didn't commit yet to any
 further work on this.
 
-Juha Lindström submitted code to fix the new socklib library
+Juha LindstrÃ¶m submitted code to fix the new socklib library
 for Windows peculiarities.  He adds the following remark:
 
 	It seems that the current 4.3.1alpha doesn't compile on windows due to a few
@@ -1197,7 +1197,7 @@ maximum speed is increased.
 Ignore client maxFPS request if it is 20 (the client default setting)
 and if serveroption `ignore20MaxFPS' is true (default), by Uoti Urpala.
 
-The client knows about talk macros now (Jonny Svärling, Adam Lorentzon)
+The client knows about talk macros now (Jonny SvÃ¤rling, Adam Lorentzon)
 modified: macros work also properly in teammode when one is dead.
 See doc/README.talkmacros.
 

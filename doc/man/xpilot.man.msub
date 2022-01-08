@@ -1558,10 +1558,10 @@ set the loginname and hostname as reported to the xpilots server.
 .SH AUTHORS
 
 \fBXPilot\fP was developed by
-Bjørn Stabell <bjoern@xpilot.org> and
-Ken Ronny Schouten <ken@xpilot.org> from the University of Tromsø, 
-Bert Gijsbers <bert@xpilot.org> from the University of Amsterdam,
-and Dick Balaska <dick@xpilot.org> from BuckoSoft.COM.
+BjÃ¸rn Stabell and
+Ken Ronny Schouten from the University of TromsÃ¸, 
+Bert Gijsbers from the University of Amsterdam,
+and Dick Balaska from BuckoSoft.COM.
 
 
 .SH BUG REPORTS

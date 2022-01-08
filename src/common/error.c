@@ -4,8 +4,8 @@
  * and an example from the manualpage for vprintf by
  * Gaute Nessan, University of Tromsoe (gaute@staff.cs.uit.no).
  *
- * Modified by Bjoern Stabell <bjoern@xpilot.org>.
- * Windows mods and memory leak detection by Dick Balaska <dick@xpilot.org>.
+ * Modified by Bjoern Stabell.
+ * Windows mods and memory leak detection by Dick Balaska.
  */
 
 

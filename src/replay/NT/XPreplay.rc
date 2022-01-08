@@ -142,7 +142,7 @@ BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
     LTEXT           "XPreplay Version 0.4",IDC_STATIC,37,10,119,8,
                     SS_NOPREFIX
-    LTEXT           "Copyright © 2001",IDC_STATIC,37,20,119,8
+    LTEXT           "Copyright Â© 2001",IDC_STATIC,37,20,119,8
     LTEXT           "This is the Windowsport of the original xp-replay for Unix.",
                     IDC_STATIC,14,48,178,8
     GROUPBOX        "Info",IDC_STATIC,7,35,203,84

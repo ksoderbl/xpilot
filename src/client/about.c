@@ -2,10 +2,10 @@
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
- *      Ken Ronny Schouten   <ken@xpilot.org>
- *      Bert Gijsbers        <bert@xpilot.org>
- *      Dick Balaska         <dick@xpilot.org>
+ *      BjÃ¸rn Stabell
+ *      Ken Ronny Schouten
+ *      Bert Gijsbers
+ *      Dick Balaska
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,8 +276,8 @@ void Expose_about_window(void)
 	"ABOUT XPILOT\n"
 	"\n"
 	"The game was conceived in its orignal form at the "
-	"University of Tromsø (Norway) by Ken Ronny Schouten and "
-	"Bjørn Stabell during the fall of 1991, but much of the game today "
+	"University of TromsÃ¸ (Norway) by Ken Ronny Schouten and "
+	"BjÃ¸rn Stabell during the fall of 1991, but much of the game today "
 	"is the result of hard efforts by Bert Gijsbers of the "
 	"molecular cytology lab at the University of Amsterdam (The Netherlands).  "
 	"Bert joined the team in the spring of 1993.\n"
@@ -295,7 +295,7 @@ void Expose_about_window(void)
 	"You can report any bug you find to <xpilot@xpilot.org>.\n"
 	"\n\n"
 	"Good luck as a future xpilot,\n"
-	"Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",
+	"BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers & Dick Balaska",
 	colors[WHITE].pixel, colors[BLACK].pixel);
 	break;
 

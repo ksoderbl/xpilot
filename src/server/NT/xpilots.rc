@@ -81,7 +81,7 @@ BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
     LTEXT           "version x",IDC_VERSION,40,23,119,8,SS_NOPREFIX
     DEFPUSHBUTTON   "OK",IDOK,235,7,32,14,WS_GROUP
-    LTEXT           "XPilot is copyright © 1991-2002 by \nBjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
+    LTEXT           "XPilot is copyright Â© 1991-2002 by \nBjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska",
                     IDC_STATIC,7,41,260,22
     PUSHBUTTON      "www.xpilot.org",IDC_BUTTON_WWW_XPILOT_ORG,19,74,103,14
     PUSHBUTTON      "www.buckosoft.com/xpilot/",IDC_BUTTON_WWW_BUCKOSOFT_COM,
@@ -205,7 +205,7 @@ BEGIN
             VALUE "FileDescription", "XPILOTS MFC Application\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
             VALUE "InternalName", "XPILOTS\0"
-            VALUE "LegalCopyright", "Copyright © 1996-1997 BuckoSoft, Inc.\0"
+            VALUE "LegalCopyright", "Copyright Â© 1996-1997 BuckoSoft, Inc.\0"
             VALUE "OriginalFilename", "XPILOTS.EXE\0"
             VALUE "ProductName", "XPilotNT Server\0"
             VALUE "ProductVersion", "1, 0, 0, 1\0"

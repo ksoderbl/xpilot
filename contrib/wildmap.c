@@ -2,8 +2,8 @@
  *
  * Wildmap, a random map generator for XPilot.  Copyright (C) 1993-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
- *      Ken Ronny Schouten   <ken@xpilot.org>
+ *      BjÃ¸rn Stabell
+ *      Ken Ronny Schouten
  *      Bert Gijsbers        <bert@xpilot.org>
  *
  * This program is free software; you can redistribute it and/or modify

@@ -110,9 +110,9 @@ FONT 8, "MS Sans Serif"
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,7,17,20,20
     LTEXT           "Version 0.8",IDC_VERSION,41,23,252,8,SS_NOPREFIX
-    CTEXT           "XPilot is Copyright © 1991-2002",IDC_STATIC,7,41,325,8
+    CTEXT           "XPilot is Copyright Â© 1991-2002",IDC_STATIC,7,41,325,8
     DEFPUSHBUTTON   "OK",IDOK,153,219,32,14,WS_GROUP
-    CTEXT           "by Bjørn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska.",
+    CTEXT           "by BjÃ¸rn Stabell, Ken Ronny Schouten, Bert Gijsbers && Dick Balaska.",
                     IDC_STATIC,7,52,325,8
     ICON            IDI_XPILOTS,IDC_STATIC,314,17,20,20
     CONTROL         "",IDC_CREDITS,"Static",SS_BLACKFRAME,7,71,325,137
@@ -214,7 +214,7 @@ BEGIN
             VALUE "FileDescription", "xpilot\0"
             VALUE "FileVersion", "0,8,0,0\0"
             VALUE "InternalName", "xpilot\0"
-            VALUE "LegalCopyright", "Copyright © 1996-1997 BuckoSoft, Inc.\0"
+            VALUE "LegalCopyright", "Copyright Â© 1996-1997 BuckoSoft, Inc.\0"
             VALUE "OriginalFilename", "XPilotNT.exe\0"
             VALUE "ProductName", "XPilotNT\0"
             VALUE "ProductVersion", "0, 8, 0, 0\0"
