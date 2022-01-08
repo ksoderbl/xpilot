@@ -305,7 +305,7 @@ make-common:
 		"CC=$(CC)" "CFLAGS=$(CFLAGS)" "MLIB=$(MLIB)" "XLIB=$(XLIB)"
 
 $(LIBCOMMON): $(OBJS0)
-	ar cql $@ $(OBJS0)
+	ar rcs $@ $(OBJS0)
 
 make-client:
 	cd client && $(MAKE) -f ../Makefile.std xpilot \
