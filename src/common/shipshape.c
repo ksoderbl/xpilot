@@ -728,7 +728,7 @@ static int shape2wire(char *ship_shape_str, shipobj *w)
 	    /*
 	     * For making sure the ship is the right width!
 	     */
-	    int pair[2];
+	    int pair[2] = { 0, 0 };
 	    int dist = 0, tmpDist = 0;
 	    double vec[2], width, dTmp;
 	    const int minWidth = 12;

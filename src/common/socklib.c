@@ -543,7 +543,7 @@ int sock_read(sock_t *sock, char *buf, int len)
 int sock_receive_any(sock_t *sock, char *buf, int len)
 {
     int			count;
-    int			addrlen;
+    socklen_t		addrlen;
 
     if (sock_alloc_lastaddr(sock)) {
 	return SOCK_IS_ERROR;
@@ -710,7 +710,7 @@ void sock_get_local_hostname(char *name, unsigned size,
 int sock_get_port(sock_t *sock)
 {
     struct sockaddr_in	addr;
-    int			len = sizeof(addr);
+    socklen_t		len = sizeof(addr);
     unsigned short	port;
 
     if (getsockname(sock->fd, (struct sockaddr *)&addr, &len) < 0) {
@@ -726,7 +726,7 @@ int sock_get_port(sock_t *sock)
 int sock_get_error(sock_t *sock)
 {
     int			error;
-    int			size = sizeof(error);
+    socklen_t		size = sizeof(error);
 
     if (getsockopt(sock->fd, SOL_SOCKET, SO_ERROR, (void *)&error, &size) < 0) {
 	sock_set_error(sock, errno, SOCK_CALL_GETSOCKOPT, __LINE__);
