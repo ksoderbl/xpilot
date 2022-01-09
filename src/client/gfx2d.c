@@ -39,7 +39,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "gfx2d.h"
 #include "error.h"
 #include "const.h"

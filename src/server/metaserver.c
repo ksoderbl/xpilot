@@ -42,7 +42,7 @@
 #endif
 
 #define SERVER
-#include "config.h"
+#include "xpconfig.h"
 #include "version.h"
 #include "serverconst.h"
 #include "types.h"

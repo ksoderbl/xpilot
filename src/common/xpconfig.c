@@ -27,7 +27,7 @@
 #include <ctype.h>
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 
 #ifdef _WINDOWS
 /* #include "NT/winClient.h" */

@@ -50,7 +50,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "portability.h"
 #include "commonproto.h"
 

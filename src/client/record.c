@@ -46,7 +46,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "error.h"
 #include "const.h"
 #include "client.h"

@@ -34,7 +34,7 @@
 
 #define SERVER
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
 #include "proto.h"

@@ -41,7 +41,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "const.h"
 #include "types.h"
 #include "paint.h"

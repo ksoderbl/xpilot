@@ -44,7 +44,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "const.h"
 #include "setup.h"
 #include "error.h"

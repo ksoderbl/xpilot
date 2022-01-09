@@ -29,7 +29,7 @@
 #include <X11/Xos.h>
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "const.h"
 #include "draw.h"
 #include "bit.h"

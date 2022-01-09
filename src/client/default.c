@@ -49,7 +49,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
 #include "pack.h"

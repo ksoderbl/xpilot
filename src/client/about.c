@@ -40,7 +40,7 @@
 #endif
 
 #include "version.h"
-#include "config.h"
+#include "xpconfig.h"
 #include "const.h"
 #include "keys.h"
 #include "paint.h"
