@@ -44,18 +44,9 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include <windows.h>
-# include <process.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "portability.h"
 #include "commonproto.h"
-
-
-char portability_version[] = VERSION;
 
 
 int Get_process_id(void)
@@ -70,15 +61,9 @@ int Get_process_id(void)
 
 void Get_login_name(char *buf, int size)
 {
-#if defined(_WINDOWS)
-    long nsize = size;
-    GetUserName(buf, &nsize);
-    buf[size - 1] = '\0';
-#else
     /* Unix */
     struct passwd *pwent = getpwuid(geteuid());
     strlcpy(buf, pwent->pw_name, size);
-#endif
 }
 
 
@@ -126,15 +111,3 @@ int is_this_windows()
     return 0;
 #endif
 }
-
-
-/*
- * Round to nearest integer.
- */
-#ifdef _WINDOWS
-double rint(double x)
-{
-    return floor((x < 0.0) ? (x - 0.5) : (x + 0.5));
-}
-#endif
-

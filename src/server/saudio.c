@@ -1,5 +1,4 @@
-/* $Id: saudio.c,v 5.2 2002/08/04 10:56:03 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -26,20 +25,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef _WINDOWS
-# include <windows.h>
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "netserver.h"
 #include "saudio.h"
-
-char saudio_version[] = VERSION;
 
 #ifdef SOUND
 

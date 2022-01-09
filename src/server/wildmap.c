@@ -1336,13 +1336,11 @@ static int wildmain(int argc, char **argv)
 
 #define SERVER
 #undef NELEM
-#include "version.h"
 #include "serverconst.h"
 #include "object.h"
 #include "proto.h"
 
 
-char wildmap_version[] = VERSION;
 
 
 int Wildmap(

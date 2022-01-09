@@ -25,12 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef _WINDOWS
-# include <windows.h>
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -39,8 +34,6 @@
 #include "rules.h"
 #include "bit.h"
 #include "cannon.h"
-
-char rules_version[] = VERSION;
 
 
 #define MAX_FUEL                10000

@@ -1,5 +1,4 @@
-/* $Id: net.c,v 5.3 2001/07/08 10:09:06 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,17 +38,6 @@
 # include <netdb.h>
 #endif
 
-#ifdef __sgi
-# include <bstring.h>
-#endif
-
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-# undef	va_start		/* there are bad versions in windows.h's "stdarg.h" */
-# undef	va_end
-# include <varargs.h>
-#endif
-
 #include "version.h"
 #include "xpconfig.h"
 #include "const.h"
@@ -58,8 +46,6 @@
 #include "packet.h"
 #include "bit.h"
 #include "socklib.h"
-
-char net_version[] = VERSION;
 
 int last_packet_of_frame;
 

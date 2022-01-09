@@ -35,10 +35,6 @@
 # include <unistd.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
 #include "version.h"
 #include "xpconfig.h"
@@ -56,8 +52,6 @@
 #include "portability.h"
 #include "commonproto.h"
 
-
-char robotdef_version[] = VERSION;
 
 
 #define ROB_LOOK_AH		2

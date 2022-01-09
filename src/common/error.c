@@ -1,5 +1,4 @@
-/* $Id: error.c,v 5.5 2001/05/27 17:15:04 bertg Exp $
- *
+/*
  * Adapted from 'The UNIX Programming Environment' by Kernighan & Pike
  * and an example from the manualpage for vprintf by
  * Gaute Nessan, University of Tromsoe (gaute@staff.cs.uit.no).
@@ -25,7 +24,6 @@
 	static void Win_show_error(char *errmsg);
 #endif
 
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -43,8 +41,6 @@
 # endif
 #endif
 
-
-char error_version[] = VERSION;
 
 
 /*

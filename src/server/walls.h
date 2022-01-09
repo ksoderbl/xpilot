@@ -1,5 +1,4 @@
-/* $Id: walls.h,v 5.3 2001/05/27 16:37:06 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,7 +28,6 @@
 #include "click.h"
 #endif
 
-extern char walls_version[];
 
 /*
  * Wall collision detection and bouncing.

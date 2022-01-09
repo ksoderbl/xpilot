@@ -28,12 +28,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -48,7 +43,6 @@
 #include "draw.h"
 #include "commonproto.h"
 
-char player_version[] = VERSION;
 
 
 bool		updateScores = true;

@@ -1,5 +1,4 @@
-/* $Id: config.c,v 5.7 2002/01/26 13:01:01 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -26,13 +25,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "version.h"
 #include "xpconfig.h"
-
-#ifdef _WINDOWS
-/* #include "NT/winClient.h" */
-/* #include "NT/winAudio.h" */
-#endif /* _WINDOWS */
 
 
 /*
@@ -141,9 +134,6 @@
 #ifndef CONTACTADDRESS
 #    define CONTACTADDRESS	"xpilot@xpilot.org"
 #endif
-
-
-char config_version[] = VERSION;
 
 
 

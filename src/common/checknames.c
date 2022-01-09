@@ -1,5 +1,4 @@
-/* $Id: checknames.c,v 5.1 2001/05/07 15:23:28 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,19 +27,12 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifndef _WINDOWS
-# include <unistd.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
 #include "pack.h"
 #include "checknames.h"
 #include "commonproto.h"
-
-char checknames_version[] = VERSION;
 
 int Check_real_name(char *name)
 {

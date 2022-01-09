@@ -1,5 +1,4 @@
-/* $Id: math.c,v 5.2 2003/09/16 21:00:16 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -33,9 +32,6 @@
 #include "const.h"
 #include "error.h"
 #include "commonproto.h"
-
-
-char math_version[] = VERSION;
 
 
 

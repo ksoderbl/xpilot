@@ -1,5 +1,4 @@
-/* $Id: socklib.c,v 5.5 2001/06/26 09:49:05 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -64,27 +63,12 @@
 # include <resolv.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-#include "../server/NT/winServer.h"
-  /* Windows needs specific system calls for sockets: */
-# undef close
-# define close(x__) closesocket(x__)
-# undef ioctl
-# define ioctl(x__, y__, z__) ioctlsocket(x__, y__, z__)
-# undef read
-# define read(x__, y__, z__) recv(x__, y__, z__,0)
-# undef write
-# define write(x__, y__, z__) send(x__, y__, z__,0)
-#endif
-
 #ifdef TERMNET
 /* support for running clients over term, but not servers please. */
 #include "termnet.h"
 #endif
 
 /* Socklib Includes And Definitions */
-#include "version.h"
 #include "socklib.h"
 #include "commonproto.h"
 
@@ -103,8 +87,6 @@
 
 #define SOCK_GETHOST_TIMEOUT	6
 
-
-char socklib_version[] = VERSION;
 
 
 static jmp_buf		env;
