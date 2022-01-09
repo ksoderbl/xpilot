@@ -1,3 +1,2 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = src
-
+SUBDIRS = doc contrib src lib

@@ -38,6 +38,7 @@
 src/client/xpilot
 src/server/xpilots
 src/replay/xp-replay
+src/mapedit/xp-mapedit
 
 # Debug files
 *.dSYM/
@@ -53,3 +54,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Generated makefiles
+Makefile
