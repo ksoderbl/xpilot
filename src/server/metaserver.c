@@ -1,5 +1,4 @@
-/* $Id: metaserver.c,v 5.5 2001/11/29 14:48:12 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -37,10 +36,6 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
 #include "xpconfig.h"
 #include "version.h"
@@ -57,13 +52,8 @@
 #include "netserver.h"
 #include "commonproto.h"
 
-#if defined(_WINDOWS)
-#define	META_VERSION	TITLE
-#else
 #define META_VERSION	VERSION
-#endif
 
-char metaserver_version[] = VERSION;
 
 
 struct MetaServer {

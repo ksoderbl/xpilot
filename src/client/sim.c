@@ -1,5 +1,4 @@
-/* $Id: sim.c,v 5.4 2001/06/02 21:01:08 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -43,11 +42,6 @@ int simulating;
 # include <X11/Xlib.h>
 #endif
 
-#ifdef  _WINDOWS
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "setup.h"

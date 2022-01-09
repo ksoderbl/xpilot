@@ -1,5 +1,4 @@
-/* $Id: default.c,v 5.19 2002/05/14 15:44:32 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -42,12 +41,6 @@
 # include <sys/param.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winXXPilot.h"
-# include "NT/winConfig.h"
-#endif
-
 #include "version.h"
 #include "xpconfig.h"
 #include "const.h"
@@ -66,10 +59,6 @@
 #include "talk.h"
 #include "default.h"
 #include "checknames.h"
-
-
-char default_version[] = VERSION;
-
 
 
 #define DISPLAY_ENV	"DISPLAY"

@@ -1,5 +1,4 @@
-/* $Id: update.c,v 5.34 2003/09/16 21:01:58 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -26,12 +25,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -48,9 +42,6 @@
 
 #define TURN_FUEL(acc)          (0.005*FUEL_SCALE_FACT*ABS(acc))
 #define TURN_SPARKS(tf)         (5+((tf)>>((FUEL_SCALE_BITS)-6)))
-
-
-char update_version[] = VERSION;
 
 
 #define update_object_speed(o_)						\

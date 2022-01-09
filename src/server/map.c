@@ -1,5 +1,4 @@
-/* $Id: map.c,v 5.19 2002/01/18 22:34:26 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,12 +33,7 @@
 # include <sys/file.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -48,8 +42,6 @@
 #include "bit.h"
 #include "error.h"
 #include "commonproto.h"
-
-char map_version[] = VERSION;
 
 #define GRAV_RANGE  10
 

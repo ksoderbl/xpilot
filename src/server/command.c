@@ -1,5 +1,4 @@
-/* $Id: command.c,v 5.23 2003/09/16 21:00:46 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -32,10 +31,6 @@
 # include <unistd.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
 #include "version.h"
 #include "serverconst.h"
@@ -45,10 +40,6 @@
 #include "netserver.h"
 #include "commonproto.h"
 #include "score.h"
-
-
-char command_version[] = VERSION;
-
 
 
 

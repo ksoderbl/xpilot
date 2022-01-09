@@ -1,5 +1,4 @@
-/* $Id: painthud.c,v 5.11 2002/04/13 16:10:59 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -35,12 +34,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -59,7 +52,6 @@
 #include "blockbitmaps.h"
 #include "commonproto.h"
 
-char painthud_version[] = VERSION;
 
 
 extern setup_t		*Setup;

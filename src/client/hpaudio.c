@@ -1,5 +1,4 @@
-/* $Id: hpaudio.c,v 5.1 2001/05/12 18:07:26 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -37,10 +36,6 @@
 #ifndef _WINDOWS
 # include <unistd.h>
 #endif
-
-#include "version.h"
-
-char audio_version[] = VERSION;
 
 /*
  * There is an include file included by Alib.h containing

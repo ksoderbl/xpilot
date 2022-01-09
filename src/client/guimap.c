@@ -1,5 +1,4 @@
-/* $Id: guimap.c,v 5.7 2002/02/10 19:29:39 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,13 +33,7 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winBitmap.h"
-#endif
-
 #include "gfx2d.h"
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -58,9 +51,6 @@
 #include "protoclient.h"
 #include "blockbitmaps.h"
 #include "guimap.h"
-
-
-char guimap_version[] = VERSION;
 
 
 /* XXX better include a header. */

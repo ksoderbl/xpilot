@@ -1,5 +1,4 @@
-/* $Id: cell.c,v 5.2 2001/11/29 14:48:12 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,21 +28,13 @@
 #include <limits.h>
 #include <assert.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "error.h"
 #include "object.h"
-
-
-char cell_version[] = VERSION;
 
 
 /* we only search for objects which are at most 28 blocks away. */

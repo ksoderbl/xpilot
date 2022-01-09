@@ -39,13 +39,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "../common/NT/winX.h"
-# include "NT/winclient.h"
-# include "NT/winXXPilot.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -62,10 +55,6 @@
 #include "portability.h"
 #include "socklib.h"
 #include "commonproto.h"
-
-
-char welcome_version[] = VERSION;
-
 
 
 /*

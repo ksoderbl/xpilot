@@ -1,5 +1,4 @@
-/* $Id: colors.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -36,11 +35,6 @@
 # include <X11/Xutil.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "types.h"
@@ -49,9 +43,6 @@
 #include "error.h"
 #include "dbuff.h"
 #include "protoclient.h"
-
-
-char colors_version[] = VERSION;
 
 
 /* Kludge for visuals under C++ */

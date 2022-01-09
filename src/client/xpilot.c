@@ -1,5 +1,4 @@
-/* $Id: xpilot.c,v 5.9 2004/02/11 18:58:52 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,11 +38,6 @@
 # include <netdb.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-# include "NT/winClient.h"
-#endif
-
 #include "version.h"
 #include "xpconfig.h"
 #include "const.h"
@@ -58,12 +52,6 @@
 #include "portability.h"
 #include "checknames.h"
 #include "commonproto.h"
-
-char xpilot_version[] = VERSION;
-
-#ifndef	lint
-char xpilot_versionid[] = "@(#)$" TITLE " $";
-#endif
 
 
 char			hostname[SOCK_HOSTNAME_LENGTH];
@@ -129,8 +117,6 @@ int main(int argc, char *argv[])
     init_error(argv[0]);
 
     seedMT( (unsigned)time((time_t *)0) ^ Get_process_id());
-
-    Check_client_versions();
 
     conpar = (Connect_param_t *) calloc(1, sizeof(Connect_param_t));
     if (!conpar) {
@@ -220,129 +206,3 @@ int main(int argc, char *argv[])
     }
     return 1;
 }
-
-
-/*
- * Verify that all source files making up this program have been
- * compiled for the same version.  Too often bugs have been reported
- * for incorrectly compiled programs.
- */
-extern char about_version[];
-#ifdef SOUND
-extern char audio_version[];
-#endif
-extern char blockbitmaps_version[];
-extern char caudio_version[];
-extern char checknames_version[];
-extern char client_version[];
-extern char colors_version[];
-extern char config_version[];
-extern char configure_version[];
-extern char datagram_version[];
-extern char dbuff_version[];
-extern char default_version[];
-extern char error_version[];
-extern char gfx2d_version[];
-extern char guimap_version[];
-extern char guiobjects_version[];
-extern char join_version[];
-extern char math_version[];
-extern char net_version[];
-extern char netclient_version[];
-extern char paint_version[];
-extern char paintdata_version[];
-extern char painthud_version[];
-extern char paintmap_version[];
-extern char paintobjects_version[];
-extern char paintradar_version[];
-extern char portability_version[];
-extern char query_version[];
-extern char record_version[];
-extern char shipshape_version[];
-extern char socklib_version[];
-extern char talk_version[];
-extern char talkmacros_version[];
-extern char textinterface_version[];
-extern char texture_version[];
-extern char welcome_version[];
-extern char widget_version[];
-extern char xevent_version[];
-extern char xeventhandlers_version[];
-extern char xinit_version[];
-extern char xpilot_version[];
-extern char xpmread_version[];
-
-
-static void Check_client_versions(void)
-{
-#ifndef _WINDOWS	/* gotta put this back in before source released */
-    static struct file_version {
-	char		filename[16];
-	char		*versionstr;
-    } file_versions[] = {
-	{ "about", about_version },
-#ifdef SOUND
-	{ "audio", audio_version },
-#endif
-	{ "blockbitmaps", blockbitmaps_version },
-	{ "caudio", caudio_version },
-	{ "checknames", checknames_version },
-	{ "client", client_version },
-	{ "colors", colors_version },
-	{ "config", config_version },
-	{ "configure", configure_version },
-	{ "datagram", datagram_version },
-	{ "dbuff", dbuff_version },
-	{ "default", default_version },
-	{ "error", error_version },
-	{ "gfx2d", gfx2d_version },
-	{ "guimap", guimap_version },
-	{ "guiobjects", guiobjects_version },
-	{ "join", join_version },
-	{ "math", math_version },
-	{ "net", net_version },
-	{ "netclient", netclient_version },
-	{ "paint", paint_version },
-	{ "paintdata", paintdata_version },
-	{ "painthud", painthud_version },
-	{ "paintmap", paintmap_version },
-	{ "paintobjects", paintobjects_version },
-	{ "paintradar", paintradar_version },
-	{ "portability", portability_version },
-	{ "query", query_version },
-	{ "record", record_version },
-	{ "shipshape", shipshape_version },
-	{ "socklib", socklib_version },
-	{ "talk", talk_version },
-	{ "talkmacros", talkmacros_version },
-	{ "textinterface", textinterface_version },
-	{ "texture", texture_version },
-	{ "welcome", welcome_version },
-	{ "widget", widget_version },
-	{ "xevent", xevent_version },
-	{ "xeventhandlers", xeventhandlers_version },
-	{ "xinit", xinit_version },
-	{ "xpilot", xpilot_version },
-	{ "xpmread", xpmread_version },
-    };
-    int			i;
-    int			oops = 0;
-
-    for (i = 0; i < NELEM(file_versions); i++) {
-	if (strcmp(VERSION, file_versions[i].versionstr)) {
-	    oops++;
-	    error("Source file %s.c (\"%s\") is not compiled "
-		  "for the current version (\"%s\")!",
-		  file_versions[i].filename,
-		  file_versions[i].versionstr,
-		  VERSION);
-	}
-    }
-    if (oops) {
-	error("%d version inconsistency errors, cannot continue.", oops);
-	error("Please recompile this program properly.");
-	exit(1);
-    }
-#endif
-}
-

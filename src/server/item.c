@@ -1,5 +1,4 @@
-/* $Id: item.c,v 5.25 2003/09/16 21:01:03 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <errno.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -49,9 +43,6 @@
 #include "error.h"
 #include "objpos.h"
 #include "commonproto.h"
-
-char item_version[] = VERSION;
-
 
 
 #define CONFUSED_TIME	3

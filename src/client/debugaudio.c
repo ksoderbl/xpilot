@@ -1,5 +1,4 @@
-/* $Id: debugaudio.c,v 5.1 2001/05/12 18:07:19 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -36,10 +35,8 @@
 # include <unistd.h>
 #endif
 
-#include "version.h"
 #include "audio.h"
 
-char audio_version[] = VERSION;
 
 int audioDeviceInit(char *display)
 {

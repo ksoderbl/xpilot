@@ -1,5 +1,4 @@
-/* $Id: cannon.c,v 5.15 2002/01/27 23:26:55 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -44,8 +38,6 @@
 #include "cannon.h"
 #include "saudio.h"
 #include "commonproto.h"
-
-char cannon_version[] = VERSION;
 
 
 #ifdef	SOUND

@@ -1,5 +1,4 @@
-/* $Id: play.c,v 5.11 2003/09/16 21:01:29 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,12 +27,7 @@
 #include <limits.h>
 #include <math.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -42,8 +36,6 @@
 #include "score.h"
 #include "objpos.h"
 #include "commonproto.h"
-
-char play_version[] = VERSION;
 
 
 int Punish_team(int ind, int t_destroyed, int t_target)

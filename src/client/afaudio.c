@@ -77,10 +77,7 @@
 # include <sys/file.h>
 #endif
 
-#include "version.h"
 #include "audio.h"
-
-char audio_version[] = VERSION;
 
 /* Keep a cache of recently played audio.  This really helps when the
  * client has the sound files mounted from a heavily loaded NFS server.

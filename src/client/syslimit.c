@@ -1,5 +1,4 @@
-/* $Id: syslimit.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell

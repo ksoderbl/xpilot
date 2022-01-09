@@ -1,5 +1,4 @@
-/* $Id: id.c,v 5.2 2001/11/29 14:48:12 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -30,18 +29,11 @@
 # include <unistd.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "serverconst.h"
 #include "global.h"
 #include "proto.h"
 #include "error.h"
-
-char id_version[] = VERSION;
 
 
 static int		ID_queue[NUM_IDS];

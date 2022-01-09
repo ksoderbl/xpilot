@@ -1,5 +1,4 @@
-/* $Id: datagram.c,v 5.5 2001/06/26 09:53:26 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,12 +33,6 @@
 # include <netdb.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "error.h"
 #include "client.h"
@@ -50,8 +43,6 @@
 
 extern int	clientPortStart;	/* First UDP port for clients */
 extern int	clientPortEnd;		/* Last one (these are for firewalls) */
-
-char datagram_version[] = VERSION;
 
 
 int			dgram_one_socket = 0;

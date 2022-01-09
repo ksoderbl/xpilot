@@ -1,5 +1,4 @@
-/* $Id: shot.c,v 5.29 2001/12/11 12:45:13 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -46,8 +40,6 @@
 #include "netserver.h"
 #include "error.h"
 #include "commonproto.h"
-
-char shot_version[] = VERSION;
 
 
 #define MISSILE_POWER_SPEED_FACT	0.25

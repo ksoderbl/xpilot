@@ -1,5 +1,4 @@
-/* $Id: record.c,v 5.5 2002/06/15 18:14:01 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,13 +38,6 @@
 # include <fcntl.h>
 #endif
 
-#ifdef _WINDOWS
-# include "winX.h"
-# include "winX_.h"
-# include <io.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "error.h"
 #include "const.h"
@@ -57,8 +49,6 @@
 #include "xpmread.h"
 #include "commonproto.h"
 #include "xinit.h"
-
-char record_version[] = VERSION;
 
 /*
  * GC elements for line drawing operations.

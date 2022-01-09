@@ -1,5 +1,4 @@
-/* $Id: client.c,v 5.12 2002/01/17 19:51:16 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,11 +38,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "setup.h"
@@ -57,8 +51,6 @@
 #include "portability.h"
 #include "talk.h"
 #include "commonproto.h"
-
-char client_version[] = VERSION;
 
 #define MAX_CHECKPOINT	26
 

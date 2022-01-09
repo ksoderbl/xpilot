@@ -1,5 +1,4 @@
-/* $Id: paintdata.c,v 5.9 2002/04/13 16:10:59 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -33,11 +32,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -52,8 +46,6 @@
 #include "protoclient.h"
 #include "dbuff.h"
 #include "commonproto.h"
-
-char paintdata_version[] = VERSION;
 
 refuel_t	*refuel_ptr;
 int		 num_refuel, max_refuel;

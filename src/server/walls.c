@@ -1,5 +1,4 @@
-/* $Id: walls.c,v 5.28 2003/09/16 21:02:10 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -47,8 +41,6 @@
 #include "click.h"
 #include "objpos.h"
 #include "commonproto.h"
-
-char walls_version[] = VERSION;
 
 #define WALLDIST_MASK	\
 	(FILLED_BIT | REC_LU_BIT | REC_LD_BIT | REC_RU_BIT | REC_RD_BIT \

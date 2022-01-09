@@ -22,10 +22,6 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-#endif
-
 #include "types.h"
 
 

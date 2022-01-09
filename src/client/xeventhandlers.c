@@ -1,5 +1,4 @@
-/* $Id: xeventhandlers.c,v 5.5 2002/04/08 20:56:33 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,14 +38,6 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winAudio.h"
-# include "NT/winClient.h"
-# include "NT/winXKey.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -64,9 +55,6 @@
 #include "talk.h"
 #include "configure.h"
 #include "xeventhandlers.h"
-
-
-char xeventhandlers_version[] = VERSION;
 
 
 extern int	talk_key_repeat_count;  /* xevent.c */

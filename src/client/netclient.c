@@ -43,21 +43,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winclient.h"
-# include "NT/winNet.h"
-# include "NT/winAudio.h"
-# include "NT/winX.h"
-# include "NT/winXThread.h"
-# include "NT/winXXPilot.h"
-#endif
-
-#ifdef VMS
-# include <socket.h>
-# include <in.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -79,8 +64,6 @@
 #ifdef	SOUND
 # include "audio.h"
 #endif
-
-char netclient_version[] = VERSION;
 
 #define TALK_RETRY	2
 #define MAX_MAP_ACK_LEN	500

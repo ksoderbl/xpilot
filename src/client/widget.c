@@ -1,5 +1,4 @@
-/* $Id: widget.c,v 5.1 2001/12/28 13:26:10 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -35,13 +34,6 @@
 # include <X11/Xutil.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winClient.h"
-# include "NT/winXXPilot.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -52,8 +44,6 @@
 #include "widget.h"
 #include "protoclient.h"
 #include "portability.h"
-
-char widget_version[] = VERSION;
 
 static void Widget_resize_viewer(XEvent *event, int ind);
 

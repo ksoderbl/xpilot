@@ -1,5 +1,4 @@
-/* $Id: alliance.c,v 1.12 2001/12/05 16:11:23 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,7 +27,6 @@
 #include <stdio.h>
 
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -38,9 +36,6 @@
 #include "netserver.h"
 #include "error.h"
 #include "commonproto.h"
-
-
-char alliance_version[] = VERSION;
 
 
 /*

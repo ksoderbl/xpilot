@@ -1,5 +1,4 @@
-/* $Id: server.c,v 5.21 2002/02/13 17:09:18 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -48,12 +47,6 @@
 # else
 #  include <sys/lock.h>
 # endif
-#endif
-
-#ifdef _WINDOWS
-# include <io.h>
-# include "NT/winServer.h"
-# include "NT/winSvrThread.h"
 #endif
 
 #define	SERVER
@@ -106,7 +99,6 @@ time_t			serverTime = 0;
 extern int		login_in_progress;
 extern int		NumQueuedPlayers;
 
-static void Check_server_versions(void);
 extern void Main_loop(void);
 static void Handle_signal(int sig_no);
 
@@ -132,7 +124,6 @@ int main(int argc, char **argv)
 	   "  provided LICENSE file.\n\n");
 
     init_error(argv[0]);
-    Check_server_versions();
 
     seedMT((unsigned)time((time_t *)0) * Get_process_id());
 
@@ -762,122 +753,6 @@ void Server_log_admin_message(int ind, const char *str)
     }
     else {
 	Set_player_message(pl, " < GOD doesn't seem to be listening>");
-    }
-}
-
-
-/*
- * Verify that all source files making up this program have been
- * compiled for the same version.  Too often bugs have been reported
- * for incorrectly compiled programs.
- */
-extern char asteroid_version[];
-extern char cannon_version[];
-extern char cell_version[];
-extern char checknames_version[];
-extern char cmdline_version[];
-extern char collision_version[];
-extern char command_version[];
-extern char config_version[];
-extern char contact_version[];
-extern char error_version[];
-extern char event_version[];
-extern char fileparser_version[];
-extern char frame_version[];
-extern char id_version[];
-extern char item_version[];
-extern char laser_version[];
-extern char map_version[];
-extern char math_version[];
-extern char metaserver_version[];
-extern char net_version[];
-extern char netserver_version[];
-extern char objpos_version[];
-extern char option_version[];
-extern char parser_version[];
-extern char play_version[];
-extern char player_version[];
-extern char portability_version[];
-extern char robot_version[];
-extern char robotdef_version[];
-extern char rules_version[];
-extern char saudio_version[];
-extern char sched_version[];
-extern char score_version[];
-extern char server_version[];
-extern char ship_version[];
-extern char shipshape_version[];
-extern char shot_version[];
-extern char socklib_version[];
-extern char update_version[];
-extern char walls_version[];
-extern char wildmap_version[];
-
-static void Check_server_versions(void)
-{
-    static struct file_version {
-	char		filename[16];
-	char		*versionstr;
-    } file_versions[] = {
-	{ "asteroid", asteroid_version },
-	{ "cannon", cannon_version },
-	{ "cell", cell_version },
-	{ "checknames", checknames_version },
-	{ "cmdline", cmdline_version },
-	{ "collision", collision_version },
-	{ "command", command_version },
-	{ "config", config_version },
-	{ "contact", contact_version },
-	{ "error", error_version },
-	{ "event", event_version },
-	{ "fileparser", fileparser_version },
-	{ "frame", frame_version },
-	{ "id", id_version },
-	{ "item", item_version },
-	{ "laser", laser_version },
-	{ "map", map_version },
-	{ "math", math_version },
-	{ "metaserver", metaserver_version },
-	{ "net", net_version },
-	{ "netserver", netserver_version },
-	{ "objpos", objpos_version },
-	{ "option", option_version },
-	{ "parser", parser_version },
-	{ "play", play_version },
-	{ "player", player_version },
-	{ "portability", portability_version },
-	{ "robot", robot_version },
-	{ "robotdef", robotdef_version },
-	{ "rules", rules_version },
-	{ "saudio", saudio_version },
-	{ "sched", sched_version },
-	{ "score", score_version },
-	{ "server", server_version },
-	{ "ship", ship_version },
-	{ "shipshape", shipshape_version },
-	{ "shot", shot_version },
-	{ "socklib", socklib_version },
-	{ "update", update_version },
-	{ "walls", walls_version },
-	{ "wildmap", wildmap_version },
-    };
-    int			i;
-    int			oops = 0;
-
-    for (i = 0; i < NELEM(file_versions); i++) {
-	if (strcmp(VERSION, file_versions[i].versionstr)) {
-	    oops++;
-	    error("Source file %s.c (\"%s\") is not compiled "
-		  "for the current version (\"%s\")!",
-		  file_versions[i].filename,
-		  file_versions[i].versionstr,
-		  VERSION);
-	}
-    }
-    if (oops) {
-	error("%d version inconsistency errors, cannot continue.", oops);
-	error("Please recompile this program properly.");
-	exit(1);
     }
 }
 

@@ -1,5 +1,4 @@
-/* $Id: dbuff.c,v 5.1 2001/05/08 11:35:29 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,11 +38,6 @@
 /* Needed for windows ... */
 # include "paint.h"
 #endif
-
-
-char dbuff_version[] = VERSION;
-
-
 
 
 #ifdef SPARC_CMAP_HACK

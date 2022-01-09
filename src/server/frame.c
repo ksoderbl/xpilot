@@ -36,12 +36,7 @@
 # include <sys/param.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -51,9 +46,6 @@
 #include "saudio.h"
 #include "error.h"
 #include "commonproto.h"
-
-
-char frame_version[] = VERSION;
 
 
 #define MAX_SHUFFLE_INDEX	65535

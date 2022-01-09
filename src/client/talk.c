@@ -1,5 +1,4 @@
-/* $Id: talk.c,v 5.4 2004/04/21 06:34:17 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -36,7 +35,6 @@
 # include <X11/Xmd.h>
 #endif
 
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -47,8 +45,6 @@
 #include "keys.h"
 #include "bit.h"
 #include "commonproto.h"
-
-char talk_version[] = VERSION;
 
 
 /* avoid trouble with Atoms and 64 bit archs */

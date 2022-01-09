@@ -1,5 +1,4 @@
-/* $Id: query.c,v 5.4 2001/12/27 15:28:18 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -46,28 +45,10 @@
 # include <net/if.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winClient.h"
-# include "NT/winNet.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "error.h"
 #include "socklib.h"
 #include "protoclient.h"
-
-char query_version[] = VERSION;
-
-
-#if defined(_WINDOWS)
-# ifndef QUERY_FUDGED
-#  define QUERY_FUDGED
-# endif
-#endif
-#ifdef _IBMESA
-# define _SOCKADDR_LEN
-#endif
 
 #ifndef MAX_INTERFACE
 #define MAX_INTERFACE    16	/* Max. number of network interfaces. */

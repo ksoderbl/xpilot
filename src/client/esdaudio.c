@@ -1,5 +1,4 @@
-/* $Id: esdaudio.c,v 1.1 2002/08/04 11:04:58 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -32,10 +31,8 @@
 #include <stdio.h>
 #include <esd.h>
 
-#include "version.h"
 #include "audio.h"
 
-char audio_version[] = VERSION;
 static int audioserver;
 
 int audioDeviceInit(char *display)

@@ -1,5 +1,4 @@
-/* $Id: contact.c,v 5.9 2002/08/21 14:22:30 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -38,13 +37,7 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-# include <process.h>
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "types.h"
 #include "serverconst.h"
@@ -63,8 +56,6 @@
 #include "commonproto.h"
 #include "portability.h"
 #include "connection.h"
-
-char contact_version[] = VERSION;
 
 
 /*

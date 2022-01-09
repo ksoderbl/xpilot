@@ -1,5 +1,4 @@
-/* $Id: about.c,v 5.2 2001/06/02 21:00:02 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -39,7 +38,6 @@
 # include "NT/winClient.h"
 #endif
 
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "keys.h"
@@ -51,8 +49,6 @@
 #include "netclient.h"
 #include "dbuff.h"
 #include "protoclient.h"
-
-char about_version[] = VERSION;
 
 
 /* How far away objects should be placed from each other etc... */

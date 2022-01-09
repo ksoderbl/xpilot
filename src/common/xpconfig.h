@@ -1,5 +1,4 @@
-/* $Id: config.h,v 5.3 2001/06/24 18:59:33 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -22,8 +21,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef XPCONFIG_H
+#define XPCONFIG_H
 
 #ifdef MOD2
 #error "MOD2 already defined - config.h should be included before const.h"
@@ -120,4 +119,4 @@ char *Conf_robotfile(void);
 char *Conf_zcat_ext(void);
 char *Conf_zcat_format(void);
 
-#endif /* CONFIG_H */
+#endif /* XPCONFIG_H */

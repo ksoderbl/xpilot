@@ -1,5 +1,4 @@
-/* $Id: talkmacros.c,v 5.5 2002/01/29 21:02:10 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,16 +27,6 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef _WINDOWS
-# include "NT/winclient.h"
-# include "NT/winNet.h"
-# include "NT/winAudio.h"
-# include "NT/winX.h"
-# include "NT/winXThread.h"
-# include "NT/winXXPilot.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "client.h"
@@ -51,8 +40,6 @@
 #include "rules.h"		/* TEAM_PLAY, LIMITED_LIVES */
 #include "commonproto.h"
 
-
-char talkmacros_version[] = VERSION;
 
 /*
  * Abandon your hope, all you enter here

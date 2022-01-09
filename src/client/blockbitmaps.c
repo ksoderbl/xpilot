@@ -30,12 +30,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "../common/NT/winX.h"
-# include "NT/winbitmap.h"
-# include "NT/winClient.h"
-#endif 
-
 #include "blockbitmaps.h"
 #include "gfx2d.h"
 
@@ -44,9 +38,6 @@
 #include "const.h"
 #include "paint.h"
 #include "portability.h"
-
-
-char blockbitmaps_version[] = VERSION;
 
 
 int scaled_bitmaps = 0;

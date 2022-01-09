@@ -1,5 +1,4 @@
-/* $Id: fileparser.c,v 5.5 2001/11/29 20:31:36 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,14 +33,7 @@
 # include <unistd.h>
 #endif
 
-#ifdef _WINDOWS
-# include <windows.h>
-# include <io.h>
-# define read(__a, __b, __c)	_read(__a, __b, __c)
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -51,9 +43,6 @@
 #include "error.h"
 #include "types.h"
 #include "commonproto.h"
-
-
-char fileparser_version[] = VERSION;
 
 
 

@@ -1,5 +1,4 @@
-/* $Id: texture.c,v 5.1 2001/04/24 13:51:06 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -33,12 +32,6 @@
 # include <X11/Xlib.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include <io.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -52,8 +45,6 @@
 #ifndef PATH_MAX
 #define PATH_MAX        1023
 #endif
-
-char texture_version[] = VERSION;
 
 enum TextureStatus {
     TextureUnloaded = 0,

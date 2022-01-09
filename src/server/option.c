@@ -1,5 +1,4 @@
-/* $Id: option.c,v 5.19 2001/11/30 11:47:19 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,7 +33,6 @@
 #endif
 
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -43,9 +41,6 @@
 #include "error.h"
 #include "types.h"
 #include "commonproto.h"
-
-
-char option_version[] = VERSION;
 
 
 /*

@@ -1,5 +1,4 @@
-/* $Id: guiobjects.c,v 5.14 2002/01/17 19:49:53 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -38,13 +37,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winBitmap.h"
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -67,9 +59,6 @@
 #include "guiobjects.h"
 #include "pack.h"
 #include "commonproto.h"
-
-
-char guiobjects_version[] = VERSION;
 
 
 extern setup_t		*Setup;

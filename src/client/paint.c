@@ -1,5 +1,4 @@
-/* $Id: paint.c,v 5.7 2002/01/30 21:29:39 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -37,13 +36,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winClient.h"
-# include "NT/winXXPilot.h"
-# include "netclient.h"
-#endif
-
 #include "version.h"
 #include "xpconfig.h"
 #include "const.h"
@@ -63,8 +55,6 @@
 #include "portability.h"
 #include "client.h"
 #include "commonproto.h"
-
-char paint_version[] = VERSION;
 
 extern setup_t		*Setup;
 extern int		RadarHeight;

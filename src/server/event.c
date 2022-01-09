@@ -1,5 +1,4 @@
-/* $Id: event.c,v 5.12 2002/04/13 18:26:03 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -27,12 +26,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -42,8 +36,6 @@
 #include "saudio.h"
 #include "bit.h"
 #include "netserver.h"
-
-char event_version[] = VERSION;
 
 
 #define SWAP(_a, _b)	    {DFLOAT _tmp = _a; _a = _b; _b = _tmp;}

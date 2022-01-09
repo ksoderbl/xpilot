@@ -1,5 +1,4 @@
-/* $Id: showtime.c,v 5.2 2002/01/13 14:58:05 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -30,9 +29,6 @@
 # ifndef __hpux
 #  include <sys/time.h>
 # endif
-#endif
-
-#ifdef _WINDOWS
 #endif
 
 #define SERVER

@@ -1,5 +1,4 @@
-/* $Id: collision.c,v 5.61 2003/09/16 21:00:37 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -31,12 +30,7 @@
 #include <limits.h>
 #include <assert.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "list.h"
@@ -53,8 +47,6 @@
 #include "objpos.h"
 #include "asteroid.h"
 #include "commonproto.h"
-
-char collision_version[] = VERSION;
 
 
 /*

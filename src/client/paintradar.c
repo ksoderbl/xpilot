@@ -1,5 +1,4 @@
-/* $Id: paintradar.c,v 5.1 2001/05/25 00:22:50 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -33,12 +32,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winXXPilot.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -50,7 +43,6 @@
 #include "paintdata.h"
 #include "xinit.h"
 
-char paintradar_version[] = VERSION;
 
 extern DFLOAT		tbl_sin[];
 extern DFLOAT		tbl_cos[];

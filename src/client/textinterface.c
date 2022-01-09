@@ -1,8 +1,7 @@
-/* $Id: textinterface.c,v 5.8 2004/02/11 18:58:52 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
- *      Bjï¿½rn Stabell        <>
+ *      Bjørn Stabell
  *      Ken Ronny Schouten
  *      Bert Gijsbers
  *      Dick Balaska
@@ -39,12 +38,6 @@
 # endif
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winNet.h"
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "types.h"
@@ -59,9 +52,6 @@
 #include "connectparam.h"
 #include "protoclient.h"
 #include "commonproto.h"
-
-
-char textinterface_version[] = VERSION;
 
 
 #define MAX_LINE	MSG_LEN	/* should not be smaller than MSG_LEN */

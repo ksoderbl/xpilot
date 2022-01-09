@@ -1,5 +1,4 @@
-/* $Id: netserver.c,v 5.33 2002/08/21 14:22:31 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -115,11 +114,6 @@
 # include <netdb.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-# include <io.h>
-#endif
-
 #define SERVER
 #include "version.h"
 #include "xpconfig.h"
@@ -146,8 +140,6 @@
 #include "commonproto.h"
 #include "asteroid.h"
 #include "score.h"
-
-char netserver_version[] = VERSION;
 
 #define MAX_SELECT_FD			(sizeof(int) * 8 - 1)
 #define MAX_RELIABLE_DATA_PACKET_SIZE	1024

@@ -1,5 +1,4 @@
-/* $Id: ship.c,v 5.18 2002/05/13 20:38:56 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -45,8 +39,6 @@
 #include "netserver.h"
 #include "commonproto.h"
 #include "proto.h"
-
-char ship_version[] = VERSION;
 
 
 

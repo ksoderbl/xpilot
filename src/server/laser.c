@@ -1,5 +1,4 @@
-/* $Id: laser.c,v 5.14 2003/09/16 21:01:12 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -29,12 +28,7 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "list.h"
@@ -48,8 +42,6 @@
 #include "objpos.h"
 #include "asteroid.h"
 #include "commonproto.h"
-
-char laser_version[] = VERSION;
 
 
 /*

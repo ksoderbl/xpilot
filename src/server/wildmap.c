@@ -1,5 +1,4 @@
-/* $Id: wildmap.c,v 5.9 2001/11/29 16:31:47 bertg Exp $
- *
+/*
  * Wildmap, a random map generator for XPilot.  Copyright (C) 1993-2001 by
  *
  *      Bjørn Stabell

@@ -1,5 +1,4 @@
-/* $Id: caudio.c,v 5.3 2001/07/08 10:09:06 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -38,7 +37,6 @@
 #include <errno.h>
 #include <sys/types.h>
 
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "types.h"
@@ -46,8 +44,6 @@
 #include "client.h"
 #include "error.h"
 #include "commonproto.h"
-
-char caudio_version[] = VERSION;
 
 static int	audioEnabled;
 

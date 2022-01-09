@@ -1,5 +1,4 @@
-/* $Id: xpmread.c,v 5.0 2001/04/07 20:00:59 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -37,7 +36,6 @@
 # include <X11/Xutil.h>
 #endif
 
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -47,8 +45,6 @@
 
 #define XPM_READ_C
 #include "xpmread.h"
-
-char xpmread_version[] = VERSION;
 
 /* Kludge for visuals under C++ */
 #if defined(__cplusplus)

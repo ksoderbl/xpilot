@@ -1,5 +1,4 @@
-/* $Id: objpos.c,v 5.2 2001/11/29 14:48:12 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -25,12 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef _WINDOWS
-# include <windows.h>
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -38,8 +32,6 @@
 #include "map.h"
 #include "object.h"
 #include "objpos.h"
-
-char objpos_version[] = VERSION;
 
 
 void Object_position_set_clicks(object *obj, int cx, int cy)

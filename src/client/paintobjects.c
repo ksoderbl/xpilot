@@ -1,5 +1,4 @@
-/* $Id: paintobjects.c,v 5.5 2002/01/18 22:34:25 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -37,12 +36,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winClient.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -66,8 +59,6 @@
 #include "wreckshape.h"
 #include "astershape.h"
 #include "gfx3d.h"
-
-char paintobjects_version[] = VERSION;
 
 
 #define COLOR(i)	(i / areas)

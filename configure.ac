@@ -1,4 +1,4 @@
-AC_INIT([XPilot], [4.5.5], [kps])
+AC_INIT([XPilot], [4.5.5], [https://github.com/ksoderbl], [xpilot], [https://github.com/ksoderbl/xpilot])
 AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_RANLIB

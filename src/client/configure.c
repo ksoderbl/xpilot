@@ -1,5 +1,4 @@
-/* $Id: configure.c,v 5.11 2002/01/30 21:29:39 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -69,14 +68,6 @@
 # include <X11/Xutil.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-# include "NT/winClient.h"
-# include "NT/winXXPilot.h"
-# include "NT/winConfig.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "paint.h"
@@ -91,8 +82,6 @@
 #include "protoclient.h"
 #include "portability.h"
 #include "commonproto.h"
-
-char configure_version[] = VERSION;
 
 #ifndef PATH_MAX
 #define PATH_MAX	1023

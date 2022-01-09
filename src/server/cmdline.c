@@ -1,5 +1,4 @@
-/* $Id: cmdline.c,v 5.55 2002/08/21 14:22:29 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,12 +27,7 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -44,8 +38,6 @@
 #include "checknames.h"
 #include "commonproto.h"
 #include "tuner.h"
-
-char cmdline_version[] = VERSION;
 
 
 list_t		expandList;		/* List of predefined settings. */

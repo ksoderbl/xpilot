@@ -1,5 +1,4 @@
-/* $Id: xinit.c,v 5.3 2001/06/02 21:01:45 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -35,12 +34,6 @@
 # include <X11/Xutil.h>
 #endif
 
-#ifdef _WINDOWS
-# include "../common/NT/winX.h"
-# include "NT/winclient.h"
-# include "NT/winXXPilot.h"
-#endif
-
 #include "version.h"
 #include "xpconfig.h"
 #include "const.h"
@@ -62,9 +55,6 @@
  * If you add an item here then please make sure you also add
  * the item in the proper place in ../replay/xp-replay.c.
  */
-#ifdef _WINDOWS
-#pragma warning(disable : 4305)
-#endif
 #include "items/itemRocketPack.xbm"
 #include "items/itemCloakingDevice.xbm"
 #include "items/itemEnergyPack.xbm"
@@ -86,8 +76,6 @@
 #include "items/itemTractorBeam.xbm"
 #include "items/itemAutopilot.xbm"
 #include "items/itemEmergencyShield.xbm"
-
-char xinit_version[] = VERSION;
 
 
 /* How far away objects should be placed from each other etc... */

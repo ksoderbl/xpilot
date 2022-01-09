@@ -1,5 +1,4 @@
-/* $Id: paintmap.c,v 5.3 2001/10/11 20:27:35 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,11 +33,6 @@
 # include <X11/Xos.h>
 #endif
 
-#ifdef _WINDOWS
-# include "NT/winX.h"
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "const.h"
 #include "error.h"
@@ -55,9 +49,6 @@
 #include "xinit.h"
 #include "protoclient.h"
 #include "guimap.h"
-
-
-char paintmap_version[] = VERSION;
 
 
 int	wallColor;		/* Color index for wall drawing */

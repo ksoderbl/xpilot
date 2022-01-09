@@ -1,5 +1,4 @@
-/* $Id: gfx2d.c,v 5.5 2001/06/03 17:21:19 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -34,20 +33,12 @@
 # include <unistd.h>
 #endif
 
-#ifdef _WINDOWS
-# include <io.h>
-#endif
-
-#include "version.h"
 #include "xpconfig.h"
 #include "gfx2d.h"
 #include "error.h"
 #include "const.h"
 #include "portability.h"
 #include "commonproto.h"
-
-
-char gfx2d_version[] = VERSION;
 
 
 #ifndef PATH_MAX

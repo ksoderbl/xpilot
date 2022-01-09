@@ -1,5 +1,4 @@
-/* $Id: stratbot.c,v 1.1 2002/01/07 20:48:07 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -42,12 +41,7 @@
 #include <errno.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
-#include "version.h"
 #include "xpconfig.h"
 #include "serverconst.h"
 #include "global.h"
@@ -62,9 +56,6 @@
 #include "error.h"
 #include "portability.h"
 #include "commonproto.h"
-
-
-char stratbot_version[] = VERSION;
 
 
 /*
