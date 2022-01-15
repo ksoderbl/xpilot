@@ -86,7 +86,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = xp-replay$(EXEEXT)
+bin_PROGRAMS = xpilot-replay$(EXEEXT)
 subdir = src/replay
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -98,9 +98,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_xp_replay_OBJECTS = buttons.$(OBJEXT) xp-replay.$(OBJEXT)
-xp_replay_OBJECTS = $(am_xp_replay_OBJECTS)
-xp_replay_DEPENDENCIES = ../common/libxpcommon.a
+am_xpilot_replay_OBJECTS = buttons.$(OBJEXT) xp-replay.$(OBJEXT)
+xpilot_replay_OBJECTS = $(am_xpilot_replay_OBJECTS)
+xpilot_replay_DEPENDENCIES = ../common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -130,8 +130,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(xp_replay_SOURCES)
-DIST_SOURCES = $(xp_replay_SOURCES)
+SOURCES = $(xpilot_replay_SOURCES)
+DIST_SOURCES = $(xpilot_replay_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -246,8 +246,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/src/common -I$(top_srcdir)/src/client
-xp_replay_SOURCES = buttons.c xp-replay.c
-xp_replay_LDADD = -lX11 -lm ../common/libxpcommon.a
+xpilot_replay_SOURCES = buttons.c xp-replay.c
+xpilot_replay_LDADD = -lX11 -lm ../common/libxpcommon.a
 all: all-am
 
 .SUFFIXES:
@@ -324,9 +324,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-xp-replay$(EXEEXT): $(xp_replay_OBJECTS) $(xp_replay_DEPENDENCIES) $(EXTRA_xp_replay_DEPENDENCIES) 
-	@rm -f xp-replay$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xp_replay_OBJECTS) $(xp_replay_LDADD) $(LIBS)
+xpilot-replay$(EXEEXT): $(xpilot_replay_OBJECTS) $(xpilot_replay_DEPENDENCIES) $(EXTRA_xpilot_replay_DEPENDENCIES) 
+	@rm -f xpilot-replay$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_replay_OBJECTS) $(xpilot_replay_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

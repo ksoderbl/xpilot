@@ -86,7 +86,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = xpilot$(EXEEXT)
+bin_PROGRAMS = xpilot-client$(EXEEXT)
 subdir = src/client
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -98,7 +98,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_xpilot_OBJECTS = about.$(OBJEXT) blockbitmaps.$(OBJEXT) \
+am_xpilot_client_OBJECTS = about.$(OBJEXT) blockbitmaps.$(OBJEXT) \
 	client.$(OBJEXT) colors.$(OBJEXT) configure.$(OBJEXT) \
 	datagram.$(OBJEXT) dbuff.$(OBJEXT) default.$(OBJEXT) \
 	gfx2d.$(OBJEXT) gfx3d.$(OBJEXT) guimap.$(OBJEXT) \
@@ -111,8 +111,8 @@ am_xpilot_OBJECTS = about.$(OBJEXT) blockbitmaps.$(OBJEXT) \
 	usleep.$(OBJEXT) welcome.$(OBJEXT) widget.$(OBJEXT) \
 	xevent.$(OBJEXT) xeventhandlers.$(OBJEXT) xinit.$(OBJEXT) \
 	xpilot.$(OBJEXT) xpmread.$(OBJEXT)
-xpilot_OBJECTS = $(am_xpilot_OBJECTS)
-xpilot_DEPENDENCIES = ../common/libxpcommon.a
+xpilot_client_OBJECTS = $(am_xpilot_client_OBJECTS)
+xpilot_client_DEPENDENCIES = ../common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -160,8 +160,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(xpilot_SOURCES)
-DIST_SOURCES = $(xpilot_SOURCES)
+SOURCES = $(xpilot_client_SOURCES)
+DIST_SOURCES = $(xpilot_client_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -276,8 +276,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/src/common
-xpilot_SOURCES = about.c blockbitmaps.c client.c colors.c configure.c datagram.c dbuff.c default.c gfx2d.c gfx3d.c guimap.c guiobjects.c join.c ncdaudio.c netclient.c paint.c paintdata.c painthud.c paintmap.c paintobjects.c paintradar.c query.c record.c sim.c syslimit.c talk.c talkmacros.c textinterface.c texture.c usleep.c welcome.c widget.c xevent.c xeventhandlers.c xinit.c xpilot.c xpmread.c
-xpilot_LDADD = -lX11 -lm ../common/libxpcommon.a
+xpilot_client_SOURCES = about.c blockbitmaps.c client.c colors.c configure.c datagram.c dbuff.c default.c gfx2d.c gfx3d.c guimap.c guiobjects.c join.c ncdaudio.c netclient.c paint.c paintdata.c painthud.c paintmap.c paintobjects.c paintradar.c query.c record.c sim.c syslimit.c talk.c talkmacros.c textinterface.c texture.c usleep.c welcome.c widget.c xevent.c xeventhandlers.c xinit.c xpilot.c xpmread.c
+xpilot_client_LDADD = -lX11 -lm ../common/libxpcommon.a
 all: all-am
 
 .SUFFIXES:
@@ -354,9 +354,9 @@ uninstall-binPROGRAMS:
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 
-xpilot$(EXEEXT): $(xpilot_OBJECTS) $(xpilot_DEPENDENCIES) $(EXTRA_xpilot_DEPENDENCIES) 
-	@rm -f xpilot$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(xpilot_OBJECTS) $(xpilot_LDADD) $(LIBS)
+xpilot-client$(EXEEXT): $(xpilot_client_OBJECTS) $(xpilot_client_DEPENDENCIES) $(EXTRA_xpilot_client_DEPENDENCIES) 
+	@rm -f xpilot-client$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(xpilot_client_OBJECTS) $(xpilot_client_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
