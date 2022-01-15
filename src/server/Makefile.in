@@ -112,7 +112,7 @@ am_xpilots_OBJECTS = alliance.$(OBJEXT) asteroid.$(OBJEXT) \
 	stratbot.$(OBJEXT) tuner.$(OBJEXT) update.$(OBJEXT) \
 	walls.$(OBJEXT) wildmap.$(OBJEXT)
 xpilots_OBJECTS = $(am_xpilots_OBJECTS)
-xpilots_LDADD = $(LDADD)
+xpilots_DEPENDENCIES = ../common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -274,7 +274,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+AM_CPPFLAGS = -I$(top_srcdir)/src/common
 xpilots_SOURCES = alliance.c asteroid.c cannon.c cell.c cmdline.c collision.c command.c contact.c event.c fileparser.c frame.c id.c item.c laser.c map.c metaserver.c netserver.c object.c objpos.c option.c parser.c play.c player.c robot.c robotdef.c rules.c saudio.c sched.c score.c server.c ship.c shot.c showtime.c stratbot.c tuner.c update.c walls.c wildmap.c
+xpilots_LDADD = -lm ../common/libxpcommon.a
 all: all-am
 
 .SUFFIXES:
