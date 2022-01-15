@@ -114,7 +114,7 @@ void Erase_do_start(void)
     int			i;
 
     if (damaged > 0) {
-	error("BUG: Erase_start while damaged");
+	xperror("BUG: Erase_start while damaged");
 	return;
     }
 
@@ -140,7 +140,7 @@ void Erase_do_end(void)
 			linewidth = false;
 
     if (damaged > 0) {
-	error("BUG: Erase_do_end while damaged");
+	xperror("BUG: Erase_do_end while damaged");
 	return;
     }
 #ifndef _WINDOWS
@@ -699,7 +699,7 @@ int Handle_item(int x, int y, int type)
 	    ptr_ = (debris_t *)realloc(ptr_, _n * sizeof(*ptr_));	\
 	}							\
 	if (ptr_ == NULL) {					\
-	    error("No memory for debris");			\
+	    xperror("No memory for debris");			\
 	    num_ = max_ = 0;					\
 	    return -1;						\
 	}							\

@@ -174,7 +174,7 @@ static void Alloc_map(void)
     World.asteroidConcs = NULL;
     if (World.block == NULL || World.itemID == NULL || World.gravity == NULL) {
 	Free_map();
-	error("Couldn't allocate memory for map (%d bytes)",
+	xperror("Couldn't allocate memory for map (%d bytes)",
 	      World.x * (World.y * (sizeof(unsigned char) + sizeof(vector))
 			 + sizeof(vector*)
 			 + sizeof(unsigned char*)));
@@ -258,7 +258,7 @@ bool Grok_map(void)
     if (mapWidth <= 0 || mapWidth > MAX_MAP_SIZE ||
 	mapHeight <= 0 || mapHeight > MAX_MAP_SIZE) {
 	errno = 0;
-	error("mapWidth or mapHeight exceeds map size limit [1, %d]",
+	xperror("mapWidth or mapHeight exceeds map size limit [1, %d]",
 		MAX_MAP_SIZE);
 	free(mapData);
 	mapData = NULL;
@@ -279,7 +279,7 @@ bool Grok_map(void)
 
     if (!mapData) {
 	errno = 0;
-	error("Generating random map");
+	xperror("Generating random map");
 	Generate_random_map();
 	if (!mapData) {
 	    return FALSE;
@@ -296,7 +296,7 @@ bool Grok_map(void)
     Set_world_asteroids();
 
     if (BIT(World.rules->mode, TEAM_PLAY|TIMING) == (TEAM_PLAY|TIMING)) {
-	error("Cannot teamplay while in race mode -- ignoring teamplay");
+	xperror("Cannot teamplay while in race mode -- ignoring teamplay");
 	CLR_BIT(World.rules->mode, TEAM_PLAY);
     }
 
@@ -420,59 +420,59 @@ bool Grok_map(void)
     if (World.NumCannons > 0
 	&& (World.cannon = (cannon_t *)
 	    malloc(World.NumCannons * sizeof(cannon_t))) == NULL) {
-	error("Out of memory - cannons");
+	xperror("Out of memory - cannons");
 	exit(-1);
     }
     if (World.NumFuels > 0
 	&& (World.fuel = (fuel_t *)
 	    malloc(World.NumFuels * sizeof(fuel_t))) == NULL) {
-	error("Out of memory - fuel depots");
+	xperror("Out of memory - fuel depots");
 	exit(-1);
     }
     if (World.NumGravs > 0
 	&& (World.grav = (grav_t *)
 	    malloc(World.NumGravs * sizeof(grav_t))) == NULL) {
-	error("Out of memory - gravs");
+	xperror("Out of memory - gravs");
 	exit(-1);
     }
     if (World.NumWormholes > 0
 	&& (World.wormHoles = (wormhole_t *)
 	    malloc(World.NumWormholes * sizeof(wormhole_t))) == NULL) {
-	error("Out of memory - wormholes");
+	xperror("Out of memory - wormholes");
 	exit(-1);
     }
     if (World.NumTreasures > 0
 	&& (World.treasures = (treasure_t *)
 	    malloc(World.NumTreasures * sizeof(treasure_t))) == NULL) {
-	error("Out of memory - treasures");
+	xperror("Out of memory - treasures");
 	exit(-1);
     }
     if (World.NumTargets > 0
 	&& (World.targets = (target_t *)
 	    malloc(World.NumTargets * sizeof(target_t))) == NULL) {
-	error("Out of memory - targets");
+	xperror("Out of memory - targets");
 	exit(-1);
     }
     if (World.NumItemConcentrators > 0
 	&& (World.itemConcentrators = (item_concentrator_t *)
 	    malloc(World.NumItemConcentrators * sizeof(item_concentrator_t))) == NULL) {
-	error("Out of memory - item concentrators");
+	xperror("Out of memory - item concentrators");
 	exit(-1);
     }
     if (World.NumAsteroidConcs > 0
 	&& (World.asteroidConcs = (asteroid_concentrator_t *)
 	    malloc(World.NumAsteroidConcs * sizeof(asteroid_concentrator_t))) == NULL) {
-	error("Out of memory - asteroid concentrators");
+	xperror("Out of memory - asteroid concentrators");
 	exit(-1);
     }
     if (World.NumBases > 0) {
 	if ((World.base = (base_t *)
 	    malloc(World.NumBases * sizeof(base_t))) == NULL) {
-	    error("Out of memory - bases");
+	    xperror("Out of memory - bases");
 	    exit(-1);
 	}
     } else {
-	error("WARNING: map has no bases!");
+	xperror("WARNING: map has no bases!");
     }
 
     /*
@@ -885,7 +885,7 @@ bool Grok_map(void)
 					 World.treasures[i].pos.y);
 		World.treasures[i].team = team;
 		if (team == TEAM_NOT_SET) {
-		    error("Couldn't find a matching team for the treasure.");
+		    xperror("Couldn't find a matching team for the treasure.");
 		} else {
 		    World.teams[team].NumTreasures++;
 		    if (!World.treasures[i].empty) {
@@ -899,7 +899,7 @@ bool Grok_map(void)
 		team = Find_closest_team(World.targets[i].pos.x,
 					 World.targets[i].pos.y);
 		if (team == TEAM_NOT_SET) {
-		    error("Couldn't find a matching team for the target.");
+		    xperror("Couldn't find a matching team for the target.");
 		}
 		World.targets[i].team = team;
 	    }
@@ -908,7 +908,7 @@ bool Grok_map(void)
 		    team = Find_closest_team(World.cannon[i].blk_pos.x,
 					     World.cannon[i].blk_pos.y);
 		    if (team == TEAM_NOT_SET) {
-			error("Couldn't find a matching team for the cannon.");
+			xperror("Couldn't find a matching team for the cannon.");
 		    }
 		    World.cannon[i].team = team;
 		}
@@ -917,7 +917,7 @@ bool Grok_map(void)
 		team = Find_closest_team(World.fuel[i].blk_pos.x,
 					 World.fuel[i].blk_pos.y);
 		if (team == TEAM_NOT_SET) {
-		    error("Couldn't find a matching team for fuelstation.");
+		    xperror("Couldn't find a matching team for fuelstation.");
 		}
 		World.fuel[i].team = team;
 	    }
@@ -1095,13 +1095,13 @@ static void Find_base_order(void)
 	return;
     }
     if ((n = World.NumBases) <= 0) {
-	error("Cannot support race mode in a map without bases");
+	xperror("Cannot support race mode in a map without bases");
 	exit(-1);
     }
 
     if ((World.baseorder = (baseorder_t *)
 	    malloc(n * sizeof(baseorder_t))) == NULL) {
-	error("Out of memory - baseorder");
+	xperror("Out of memory - baseorder");
 	exit(-1);
     }
 
@@ -1331,7 +1331,7 @@ void add_temp_wormholes(int xin, int yin, int xout, int yout)
 					 (World.NumWormholes + 2)
 					 * sizeof(wormhole_t)))
 	== NULL) {
-	error("No memory for temporary wormholes.");
+	xperror("No memory for temporary wormholes.");
 	return;
     }
     World.wormHoles = wwhtemp;

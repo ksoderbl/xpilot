@@ -249,7 +249,7 @@ void dbuff_init_buffer(dbuff_state_t *state)
 				   MultibufferUpdateActionUndefined,
 				   MultibufferUpdateHintFrequent,
 				   state->mbx.mbx_draw) != 2) {
-		perror("Couldn't create double buffering buffers");
+		pxperror("Couldn't create double buffering buffers");
 		exit(1);
 	    }
 	}
@@ -265,7 +265,7 @@ void dbuff_init_buffer(dbuff_state_t *state)
 					   draw,
 					   XdbeBackground);
 	    if (state->dbe.dbe_draw == 0) {
-		perror("Couldn't create double buffering back buffer");
+		pxperror("Couldn't create double buffering back buffer");
 		exit(1);
 	    }
 	}
@@ -300,7 +300,7 @@ void dbuff_switch(dbuff_state_t *state)
 	    }
 	    if (ioctl(state->cmap_hack.fbfd, FBIOPUTCMAP,
 		      &state->cmap_hack.hardcmap) == -1) {
-		perror("ioctl FBIOPUTCMAP");
+		pxperror("ioctl FBIOPUTCMAP");
 		close(state->cmap_hack.fbfd);
 		state->cmap_hack.fbfd = -1;
 	    }
@@ -317,7 +317,7 @@ void dbuff_switch(dbuff_state_t *state)
 	swap.swap_window	= draw;
 	swap.swap_action	= XdbeBackground;
 	if (!XdbeSwapBuffers(state->display, &swap, 1)) {
-	    perror("XdbeSwapBuffers failed");
+	    pxperror("XdbeSwapBuffers failed");
 	    exit(1);
 	}
     }

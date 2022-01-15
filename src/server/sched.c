@@ -96,7 +96,7 @@ static void sig_ok(int signum, int flag)
     sigemptyset(&sigset);
     sigaddset(&sigset, signum);
     if (sigprocmask((flag) ? SIG_UNBLOCK : SIG_BLOCK, &sigset, NULL) == -1) {
-	error("sigprocmask(%d,%d)", signum, flag);
+	xperror("sigprocmask(%d,%d)", signum, flag);
 	exit(1);
     }
 #endif
@@ -183,7 +183,7 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosGetInfoBlocks( &ptib, &ppib ) )
 	{
-		error("Error getting process information.  rc = %d", rc );
+		xperror("Error getting process information.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -195,14 +195,14 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosSetPriority(  PRTYS_THREAD, PRTYC_TIMECRITICAL, 0L, 0L ) )
 	{
-		error("Error setting timer thread priority.  rc = %d", rc );
+		xperror("Error setting timer thread priority.  rc = %d", rc );
 		exit(1);
 	}
 
 	/*  Create the event semaphore that will be posted by the timer.  */
 	if( rc = DosCreateEventSem( NULL, &hev, DC_SEM_SHARED, FALSE ) )
 	{
-		error("DosCreateEventSem - error creating timer semaphore.  rc = %d", rc );
+		xperror("DosCreateEventSem - error creating timer semaphore.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -211,7 +211,7 @@ void timerThread( void *arg )
 	 */
 	if( rc = DosStartTimer( 1000/timer_freq, (HSEM)hev, &htimer ) )
 	{
-		error("DosStartTimer - error starting timer.  rc = %d", rc );
+		xperror("DosStartTimer - error starting timer.  rc = %d", rc );
 		exit( 1 );
 	}
 
@@ -267,7 +267,7 @@ static void setup_timer(void)
     sigemptyset(&act.sa_mask);
     sigaddset(&act.sa_mask, SIGALRM);
     if (sigaction(SIGALRM, &act, (struct sigaction *)NULL) == -1) {
-	error("sigaction SIGALRM");
+	xperror("sigaction SIGALRM");
 	exit(1);
     }
 
@@ -275,7 +275,7 @@ static void setup_timer(void)
      * Install a real-time timer.
      */
     if (timer_freq <= 0 || timer_freq > 100) {
-	error("illegal timer frequency: %ld", timer_freq);
+	xperror("illegal timer frequency: %ld", timer_freq);
 	exit(1);
     }
 
@@ -284,7 +284,7 @@ static void setup_timer(void)
     itv.it_interval.tv_usec = 1000000 / timer_freq;
     itv.it_value = itv.it_interval;
     if (setitimer(ITIMER_REAL, &itv, NULL) == -1) {
-	error("setitimer");
+	xperror("setitimer");
 	exit(1);
     }
 #else  /*  !defined( _OS2_ )  */
@@ -300,7 +300,7 @@ static void setup_timer(void)
      */
 
     if( _beginthread( timerThread, NULL, 8192L, NULL ) == -1 ) {
-	error("_beginthread - error starting timer thread");
+	xperror("_beginthread - error starting timer thread");
 	exit( 1 );
     }
 
@@ -314,7 +314,7 @@ static void setup_timer(void)
     UINT cr = SetTimer(NULL, 0, 1000/timer_freq, timer_handler);
     UINT cr = SetTimer(NULL, 0, 20, (TIMERPROC)ServerThreadTimerProc);
     if (!cr)
-	error("Can't create timer");
+	xperror("Can't create timer");
 */
 #endif
     /*
@@ -383,7 +383,7 @@ static struct to_handler *to_alloc(void)
 
     to_fill();
     if (!to_free_list) {
-	error("Not enough memory for timeouts");
+	xperror("Not enough memory for timeouts");
 	exit(1);
     }
 
@@ -520,11 +520,11 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
     }
 	/* IFWINDOWS(xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);) */
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
-	error("install illegal input handler fd %d (%d)", fd, min_fd);
+	xperror("install illegal input handler fd %d (%d)", fd, min_fd);
 	ServerExit();
     }
     if (FD_ISSET(fd, &input_mask)) {
-	error("input handler %d busy", fd);
+	xperror("input handler %d busy", fd);
 	ServerExit();
     }
     input_handlers[fd - min_fd].fd = fd;
@@ -539,7 +539,7 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
 void remove_input(int fd)
 {
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
-	error("remove illegal input handler fd %d (%d)", fd, min_fd);
+	xperror("remove illegal input handler fd %d (%d)", fd, min_fd);
 	ServerExit();
     }
     if (FD_ISSET(fd, &input_mask)) {
@@ -572,13 +572,13 @@ extern int End_game(void);
 static void sched_select_error(void)
 {
 #ifndef _WINDOWS
-    error("sched select error");
+    xperror("sched select error");
 #else
     char	msg[MSG_LEN];
 
     sprintf(msg, "sched select error e=%d (%s)",
 	    errno, _GetWSockErrText(errno));
-    error("%s", msg);
+    xperror("%s", msg);
 #endif
 
     End_game();
@@ -596,7 +596,7 @@ void sched(void)
 
 #ifndef _WINDOWS
     if (sched_running) {
-	error("sched already running");
+	xperror("sched already running");
 	exit(1);
     }
 

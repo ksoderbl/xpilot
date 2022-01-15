@@ -266,7 +266,7 @@ static XFontStruct* Set_font(Display* dpy, GC gc,
 
 #ifndef _WINDOWS
     if ((font = XLoadQueryFont(dpy, fontName)) == NULL) {
-	error("Couldn't find font '%s' for %s, using default font",
+	xperror("Couldn't find font '%s' for %s, using default font",
 	      fontName, resName);
 	font = XQueryFont(dpy, XGContextFromGC(gc));
     } else
@@ -431,7 +431,7 @@ int Init_top(void)
     unsigned long			mask;
 
     if (top) {
-	error("Init_top called twice");
+	xperror("Init_top called twice");
 	exit(1);
     }
 
@@ -732,7 +732,7 @@ int Init_playing_windows(void)
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
 			       draw_width, draw_height,
 			       0, 0, colors[BLACK].pixel);
-    IFWINDOWS( if (draw != 1) error("draw != 1"); )
+    IFWINDOWS( if (draw != 1) xperror("draw != 1"); )
     radar = XCreateSimpleWindow(dpy, top, 0, 0,
 				256, RadarHeight, 0, 0,
 				colors[BLACK].pixel);
@@ -941,14 +941,14 @@ int Alloc_msgs(void)
     int			i;
 
     if ((x = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL){
-	error("No memory for messages");
+	xperror("No memory for messages");
 	return -1;
     }
 
 #ifndef _WINDOWS
     if (selectionAndHistory &&
 	((x2 = (message_t *)malloc(2 * MAX_MSGS * sizeof(message_t))) == NULL)){
-	error("No memory for history messages");
+	xperror("No memory for history messages");
 	free(x);
 	return -1;
     }

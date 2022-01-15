@@ -152,7 +152,7 @@ static void Stratbot_create(int ind, char *str)
     stratbot_data_t		*my_data;
 
     if (!(my_data = (stratbot_data_t *)malloc(sizeof(*my_data)))) {
-	error("no mem for stratbot robot");
+	xperror("no mem for stratbot robot");
 	End_game();
     }
 

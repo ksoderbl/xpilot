@@ -394,7 +394,7 @@ bool Parser(int argc, char **argv)
 		}
 		else {
 		    if (i + 1 == argc) {
-			warn("Option '%s' needs an argument", argv[i]);
+			xpwarn("Option '%s' needs an argument", argv[i]);
 		    }
 		    else {
 			i++;
@@ -403,11 +403,11 @@ bool Parser(int argc, char **argv)
 		}
 	    }
 	    else {
-		warn("Unknown option '%s'", argv[i]);
+		xpwarn("Unknown option '%s'", argv[i]);
 	    }
 	}
 	else {
-	    warn("Unknown option '%s'", argv[i]);
+	    xpwarn("Unknown option '%s'", argv[i]);
 	}
     }
 

@@ -242,7 +242,7 @@ static void Option_add_node(hash_node *node)
 
     for (np = Option_hash_array[ix]; np; np = np->next) {
 	if (!strcasecmp(node->name, np->name)) {
-	    fatal("Option_add_node node exists (%s, %s)\n",
+	    xpfatal("Option_add_node node exists (%s, %s)\n",
 		    node->name, np->name);
 	}
     }
@@ -348,7 +348,7 @@ static void Option_change_node(
 	if (node->value->desc != NULL) {
 	    option_desc	*desc = node->value->desc;
 	    if ((desc->flags & opt_origin) == 0) {
-		warn("Not allowed to change option '%s' from %s.",
+		xpwarn("Not allowed to change option '%s' from %s.",
 		      node->name, Origin_name(opt_origin));
 		return;
 	    }
@@ -389,7 +389,7 @@ static void Option_change_node(
 			break;
 
 		    default:
-			fatal("unknown node->value origin in set value");
+			xpfatal("unknown node->value origin in set value");
 		}
 		break;
 
@@ -422,7 +422,7 @@ static void Option_change_node(
 			break;
 
 		    default:
-			fatal("unknown node->value origin in set value");
+			xpfatal("unknown node->value origin in set value");
 		}
 		break;
 
@@ -454,12 +454,12 @@ static void Option_change_node(
 			break;
 
 		    default:
-			fatal("unknown node->value origin in set value");
+			xpfatal("unknown node->value origin in set value");
 		}
 		break;
 
 	    default:
-		fatal("unknown opt_origin in set value");
+		xpfatal("unknown opt_origin in set value");
 	}
     }
 
@@ -467,7 +467,7 @@ static void Option_change_node(
 	if (node->value == NULL) {
 	    node->value = Option_allocate_value(value, NULL, opt_origin);
 	    if (node->value == NULL) {
-		fatal("Not enough memory.");
+		xpfatal("Not enough memory.");
 	    }
 	    else {
 		node->value->refcount++;
@@ -494,7 +494,7 @@ static void Option_change_node(
     else {
 	const char *old_value_origin_name = Origin_name(node->value->origin);
 	const char *new_value_origin_name = Origin_name(opt_origin);
-	warn("Not modifying %s option '%s' from %s\n",
+	xpwarn("Not modifying %s option '%s' from %s\n",
 	     old_value_origin_name,
 	     node->name,
 	     new_value_origin_name);
@@ -581,14 +581,14 @@ static void Options_hash_free(void)
 
     if (hash_nodes_allocated != hash_nodes_freed) {
 	errno = 0;
-	error("hash nodes alloc = %d, hash nodes free = %d, delta = %d\n",
+	xperror("hash nodes alloc = %d, hash nodes free = %d, delta = %d\n",
 		hash_nodes_allocated, hash_nodes_freed,
 		hash_nodes_allocated - hash_nodes_freed);
     }
 
     if (hash_values_allocated != hash_values_freed) {
 	errno = 0;
-	error("hash values alloc = %d, hash values free = %d, delta = %d\n",
+	xperror("hash values alloc = %d, hash values free = %d, delta = %d\n",
 		hash_values_allocated, hash_values_freed,
 		hash_values_allocated - hash_values_freed);
     }
@@ -733,7 +733,7 @@ void Convert_string_to_list(const char *value, list_t *list_ptr)
     if (NULL == *list_ptr) {
 	*list_ptr = List_new();
 	if (NULL == *list_ptr) {
-	    fatal("Not enough memory for list");
+	    xpfatal("Not enough memory for list");
 	}
     }
 
@@ -757,7 +757,7 @@ void Convert_string_to_list(const char *value, list_t *list_ptr)
 	    memcpy(str, start, (end - start));
 	    str[(end - start)] = '\0';
 	    if (NULL == List_push_back(*list_ptr, str)) {
-		fatal("Not enough memory for list element");
+		xpfatal("Not enough memory for list element");
 	    }
 	}
     }
@@ -793,7 +793,7 @@ static void Option_parse_node(hash_node *np)
 	    return;
 	}
 	else {
-	    dumpcore("Hashed option %s has no value", np->name);
+	    xpdumpcore("Hashed option %s has no value", np->name);
 	}
     }
 
@@ -807,7 +807,7 @@ static void Option_parse_node(hash_node *np)
 	    int		*ptr = (int *)desc->variable;
 
 	    if (Convert_string_to_int(value, ptr) != TRUE) {
-		warn("%s value '%s' not an integral number.",
+		xpwarn("%s value '%s' not an integral number.",
 			np->name, value);
 		Convert_string_to_int(desc->defaultValue, ptr);
 	    }
@@ -819,7 +819,7 @@ static void Option_parse_node(hash_node *np)
 	    DFLOAT	*ptr = (DFLOAT *)desc->variable;
 
 	    if (Convert_string_to_float(value, ptr) != TRUE) {
-		warn("%s value '%s' not a number.",
+		xpwarn("%s value '%s' not a number.",
 			np->name, value);
 		Convert_string_to_float(desc->defaultValue, ptr);
 	    }
@@ -831,7 +831,7 @@ static void Option_parse_node(hash_node *np)
 	    bool	*ptr = (bool *)desc->variable;
 
 	    if (Convert_string_to_bool(value, ptr) != TRUE) {
-		warn("%s value '%s' not a boolean.",
+		xpwarn("%s value '%s' not a boolean.",
 			np->name, value);
 		Convert_string_to_bool(desc->defaultValue, ptr);
 	    }
@@ -845,13 +845,13 @@ static void Option_parse_node(hash_node *np)
 
 	    s = strchr(value, ',');
 	    if (!s) {
-		error("Invalid coordinate pair for %s - %s\n",
+		xperror("Invalid coordinate pair for %s - %s\n",
 		      desc->name, value);
 		break;
 	    }
 	    if (Convert_string_to_int(value, &(ptr->x)) != TRUE ||
 		Convert_string_to_int(s + 1, &(ptr->y)) != TRUE) {
-		warn("%s value '%s' not a valid position.",
+		xpwarn("%s value '%s' not a valid position.",
 			np->name, value);
 		value = desc->defaultValue;
 		s = strchr(value, ',');
@@ -875,7 +875,7 @@ static void Option_parse_node(hash_node *np)
 	    DFLOAT	seconds;
 
 	    if (Convert_string_to_float(value, &seconds) != TRUE) {
-		warn("%s value '%s' not a number.",
+		xpwarn("%s value '%s' not a number.",
 			np->name, value);
 		Convert_string_to_float(desc->defaultValue, &seconds);
 	    }
@@ -889,7 +889,7 @@ static void Option_parse_node(hash_node *np)
 	    DFLOAT	seconds;
 
 	    if (Convert_string_to_float(value, &seconds) != TRUE) {
-		warn("%s value '%s' not a number.",
+		xpwarn("%s value '%s' not a number.",
 			np->name, value);
 		Convert_string_to_float(desc->defaultValue, &seconds);
 	    }
@@ -918,7 +918,7 @@ static void Options_parse_expand(void)
 
     np = Get_hash_node_by_name("expand");
     if (np == NULL) {
-	dumpcore("Could not find option hash node for option '%s'.",
+	xpdumpcore("Could not find option hash node for option '%s'.",
 		 "expand");
     }
     else {
@@ -949,7 +949,7 @@ static void Options_parse_FPS(void)
 	int		frames;
 
 	if (Convert_string_to_int(fpsstr, &frames) != TRUE) {
-	    warn("Invalid framesPerSecond specification '%s' in %s.",
+	    xpwarn("Invalid framesPerSecond specification '%s' in %s.",
 		fpsstr, Origin_name(value_origin));
 	}
 	else {
@@ -958,7 +958,7 @@ static void Options_parse_FPS(void)
     }
 
     if (FPS <= 0) {
-	fatal("Can't run with %d frames per second, should be positive\n",
+	xpfatal("Can't run with %d frames per second, should be positive\n",
 	    FPS);
     }
 
@@ -993,7 +993,7 @@ void Options_parse(void)
     for (i = 0; i < option_count; i++) {
 	np = Get_hash_node_by_name(options[i].name);
 	if (np == NULL) {
-	    dumpcore("Could not find option hash node for option '%s'.",
+	    xpdumpcore("Could not find option hash node for option '%s'.",
 		     options[i].name);
 	}
 	else {

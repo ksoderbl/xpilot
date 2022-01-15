@@ -3377,7 +3377,7 @@ static bool options_inited = FALSE;
 option_desc* Get_option_descs(int *count_ptr)
 {
     if (options_inited != TRUE) {
-	dumpcore("options not initialized");
+	xpdumpcore("options not initialized");
     }
 
     *count_ptr = NELEM(options);
@@ -3390,27 +3390,27 @@ static void Init_default_options(void)
     option_desc*	desc;
 
     if ((desc = Find_option_by_name("mapFileName")) == NULL) {
-	dumpcore("Could not find map file option");
+	xpdumpcore("Could not find map file option");
     }
     desc->defaultValue = Conf_default_map();
 
     if ((desc = Find_option_by_name("motdFileName")) == NULL) {
-	dumpcore("Could not find motd file option");
+	xpdumpcore("Could not find motd file option");
     }
     desc->defaultValue = Conf_servermotdfile();
 
     if ((desc = Find_option_by_name("robotFile")) == NULL) {
-	dumpcore("Could not find robot file option");
+	xpdumpcore("Could not find robot file option");
     }
     desc->defaultValue = Conf_robotfile();
 
     if ((desc = Find_option_by_name("defaultsFileName")) == NULL) {
-	dumpcore("Could not find defaults file option");
+	xpdumpcore("Could not find defaults file option");
     }
     desc->defaultValue = Conf_defaults_file_name();
 
     if ((desc = Find_option_by_name("passwordFileName")) == NULL) {
-	dumpcore("Could not find password file option");
+	xpdumpcore("Could not find password file option");
     }
     desc->defaultValue = Conf_password_file_name();
 }
@@ -3422,7 +3422,7 @@ bool Init_options(void)
     int			option_count = NELEM(options);
 
     if (options_inited != FALSE) {
-	dumpcore("Can't init options twice.");
+	xpdumpcore("Can't init options twice.");
     }
 
     Init_default_options();

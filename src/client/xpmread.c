@@ -67,7 +67,7 @@ static void xpm_print_error(XPM_read *xpmr)
 	    xpmr->filename ? xpmr->filename : "internal data",
 	    xpmr->error_str ? ": " : "",
 	    xpmr->error_str ? xpmr->error_str : "");
-    error(buf);
+    xperror(buf);
 }
 
 static int xpm_read_error(XPM_read *xpmr, const char *err_str)
@@ -518,11 +518,11 @@ static XImage *xpm_convert_to_image(XPM *xpm)
 		       (dispDepth <= 8) ? 8 : (dispDepth <= 16) ? 16 : 32,
 		       0);
     if (!img) {
-	error("Can't create XImage");
+	xperror("Can't create XImage");
 	return NULL;
     }
     if (!(img->data = (char *)malloc(img->bytes_per_line * xpm->height))) {
-	error("Can't allocate XImage data");
+	xperror("Can't allocate XImage data");
 	XDestroyImage(img);
 	return NULL;
     }
@@ -547,7 +547,7 @@ static Pixmap xpm_image_to_pixmap(XPM *xpm, XImage *img)
 	XPutImage(dpy, pixmap, pixgc, img, 0, 0, 0, 0, xpm->width, xpm->height);
 	XFreeGC(dpy, pixgc);
     } else {
-	error("Can't create XPM pixmap");
+	xperror("Can't create XPM pixmap");
     }
     return pixmap;
 }
@@ -607,7 +607,7 @@ XImage *xpm_image_from_pixmap(Pixmap pixmap)
 		      &x, &y,
 		      &width, &height,
 		      &border_width, &depth)) {
-	error("Can't get pixmap geometry");
+	xperror("Can't get pixmap geometry");
 	return NULL;
     }
     img = XGetImage(dpy, pixmap,
@@ -615,7 +615,7 @@ XImage *xpm_image_from_pixmap(Pixmap pixmap)
 		    width, height,
 		    AllPlanes, ZPixmap);
     if (!img) {
-	error("Can't get Image from Pixmap");
+	xperror("Can't get Image from Pixmap");
 	return NULL;
     }
     return img;
@@ -636,7 +636,7 @@ char **xpm_data_from_image(XImage *img)
     XColor		xcolors[256];
 
     if (!(pixels = (char *)malloc(img->width * img->height))) {
-	error("Not enough memory");
+	xperror("Not enough memory");
 	return NULL;
     }
     memset(img_colors, -1, sizeof(img_colors));

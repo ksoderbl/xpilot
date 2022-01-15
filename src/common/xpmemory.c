@@ -68,7 +68,7 @@ void *xp_safe_malloc(size_t size)
 
     p = (void *) malloc(size);
     if (p == NULL) {
-	fatal("Not enough memory.");
+	xpfatal("Not enough memory.");
     }
 
     return p;
@@ -80,7 +80,7 @@ void *xp_safe_realloc(void *oldptr, size_t size)
 
     p = (void *) realloc(oldptr, size);
     if (p == NULL) {
-	fatal("Not enough memory.");
+	xpfatal("Not enough memory.");
     }
 
     return p;
@@ -92,7 +92,7 @@ void *xp_safe_calloc(size_t nmemb, size_t size)
 
     p = (void *) calloc(nmemb, size);
     if (p == NULL) {
-	fatal("Not enough memory.");
+	xpfatal("Not enough memory.");
     }
 
     return p;

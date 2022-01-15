@@ -44,7 +44,7 @@
     if (N >= M && ((M <= 0)						\
 	? (P = (T *) malloc((M = 1) * sizeof(*P)))			\
 	: (P = (T *) realloc(P, (M += M) * sizeof(*P)))) == NULL) {	\
-	error("No memory");						\
+	xperror("No memory");						\
 	N = M = 0;							\
 	return -1;							\
     } else								\
@@ -239,7 +239,7 @@ extern erase_t		erase[2],
 	    P = (T *) realloc(P, (M) * sizeof(T));			\
 	}								\
 	if (P == NULL) {						\
-	    error("No memory");						\
+	    xperror("No memory");						\
 	    N = M = 0;							\
 	    return;	/* ! */						\
 	}								\

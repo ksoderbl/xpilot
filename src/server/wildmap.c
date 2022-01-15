@@ -1229,12 +1229,12 @@ static void Picture_map(void)
     sprintf(name, "wildmap.ppm");
     fp = fopen(name, "w");
     if (!fp) {
-	perror(name);
+	pxperror(name);
 	return;
     }
     line = (unsigned char *)malloc(3 * map.width);
     if (!line) {
-	perror("No memory for wildmap dump");
+	pxperror("No memory for wildmap dump");
 	fclose(fp);
 	return;
     }

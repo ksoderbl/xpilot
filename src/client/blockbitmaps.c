@@ -149,7 +149,7 @@ int Block_bitmaps_create(void)
 
 	xp_pixmaps[i].bitmaps = (xp_bitmap_t *) malloc(images * sizeof(xp_bitmap_t));
 	if (!xp_pixmaps[i].bitmaps) {
-	    error("Not enough memory.");
+	    xperror("Not enough memory.");
 	    break;
 	}
 	for (j = 0; j < images; j++) {
@@ -428,7 +428,7 @@ void Block_bitmap_create_begin(Drawable d,
 			   width, height,
 			   dispDepth);
     if (!pixmap) {
-	error("Could not create pixmap");
+	xperror("Could not create pixmap");
 	exit(1);
     }
     xp_pixmap->bitmaps[image].bitmap = pixmap;
@@ -437,7 +437,7 @@ void Block_bitmap_create_begin(Drawable d,
 			   width, height,
 			   1);
     if (!pixmap) {
-	error("Could not create mask pixmap");
+	xperror("Could not create mask pixmap");
 	exit(1);
     }
     xp_pixmap->bitmaps[image].mask = pixmap;

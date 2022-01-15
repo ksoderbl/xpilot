@@ -298,13 +298,13 @@ static int Create_alliance(int ind1, int ind2)
     char	msg[MSG_LEN];
 
     if (alliance == NULL) {
-	error("Not enough memory for new alliance.\n");
+	xperror("Not enough memory for new alliance.\n");
 	return 0;
     }
 
     alliance->id = New_alliance_ID();
     if (alliance->id == ALLIANCE_NOT_SET) {
-	warn("Maximum number of alliances reached.\n");
+	xpwarn("Maximum number of alliances reached.\n");
 	free(alliance);
 	return 0;
     }
@@ -433,7 +433,7 @@ static void Dissolve_alliance(int id)
     }
     /* check */
     if (alliance->NumMembers != 0) {
-	warn("Dissolve_alliance after dissolve %d remain!",
+	xpwarn("Dissolve_alliance after dissolve %d remain!",
 	     alliance->NumMembers);
     }
 

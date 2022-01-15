@@ -987,7 +987,7 @@ static int shape2wire(char *ship_shape_str, shipobj *w)
 	|| (w->num_m_rack
 	    && !(w->m_rack[0] = (position*)malloc(w->num_m_rack * i)))
 	) {
-	error("Not enough memory for ship shape");
+	xperror("Not enough memory for ship shape");
 	if (w->pts[0]) {
 	    free(w->pts[0]);
 	    if (w->l_gun[0]) {
@@ -1096,7 +1096,7 @@ static shipobj *do_parse_shape(char *str)
 	return Default_ship();
     }
     if (!(w = (shipobj *)malloc(sizeof(*w)))) {
-	error("No mem for ship shape");
+	xperror("No mem for ship shape");
 	return Default_ship();
     }
     if (shape2wire(str, w) != 0) {
@@ -1338,7 +1338,7 @@ void Convert_ship_2_string(shipobj *w, char *buf, char *ext,
 #endif
 	if (shape_version != 0x3100) {
 	    errno = 0;
-	    error("Unknown ship shape version: %x", shape_version);
+	    xperror("Unknown ship shape version: %x", shape_version);
 	}
 
 	for (i = 1, ll = rl = 0; i < num_points; i++) {
@@ -1363,7 +1363,7 @@ void Convert_ship_2_string(shipobj *w, char *buf, char *ext,
     }
     if (buflen >= MSG_LEN || extlen >= MSG_LEN) {
 	errno = 0;
-	error("BUG: convert ship: buffer overflow (%d,%d)", buflen, extlen);
+	xperror("BUG: convert ship: buffer overflow (%d,%d)", buflen, extlen);
     }
     if (debugShapeParsing) {
 	xpprintf("ship 2 str: %s %s\n", buf, ext);

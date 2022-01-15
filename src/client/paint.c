@@ -174,7 +174,7 @@ void Paint_frame(void)
 
     if (start_loops != end_loops) {
 	errno = 0;
-	error("Start neq. End (%ld,%ld,%ld)", start_loops, end_loops, loops);
+	xperror("Start neq. End (%ld,%ld,%ld)", start_loops, end_loops, loops);
     }
     loops = end_loops;
 

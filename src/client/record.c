@@ -257,7 +257,7 @@ static void RWriteTile(Pixmap tile)
     /* a first time tile. */
 
     if (!(lptr = (tile_list_t *)malloc(sizeof(tile_list_t)))) {
-	error("Not enough memory");
+	xperror("Not enough memory");
 	RWriteByte(RC_TILE);
 	RWriteByte(0);
 	return;

@@ -280,7 +280,7 @@ static void Talk_set_state(bool onoff)
 int Key_init(void)
 {
     if (sizeof(keyv) != KEYBOARD_SIZE) {
-	error ("%s, %d: keyv size %d, KEYBOARD_SIZE is %d",
+	xperror("%s, %d: keyv size %d, KEYBOARD_SIZE is %d",
 	       __FILE__, __LINE__,
 	       sizeof(keyv), KEYBOARD_SIZE);
 	exit(1);
@@ -445,7 +445,7 @@ bool Key_press_show_messages(keys_t key)
 bool Key_press_pointer_control(keys_t key)
 {
     if (version < 0x3202) {
-	error("Cannot use pointer control below version 3.2.3");
+	xperror("Cannot use pointer control below version 3.2.3");
     } else  {
         Pointer_control_set_state(!pointerControl);
     }
@@ -473,7 +473,7 @@ bool Key_press_select_lose_item(keys_t key)
         static int before;
         if (!before++) {
 	    errno = 0;
-	    error("Servers less than 3.4.0 dont know how to drop items");
+	    xperror("Servers less than 3.4.0 dont know how to drop items");
 	}
 	return false;
     }
@@ -861,7 +861,7 @@ int win_xevent(XEvent event)
     case 2: queued = QueuedAfterFlush; break;
     default:
 	errno = 0;
-	error("Bad input queue type (%d)", new_input);
+	xperror("Bad input queue type (%d)", new_input);
 	return -1;
     }
     n = XEventsQueued(dpy, queued);

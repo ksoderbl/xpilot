@@ -137,7 +137,7 @@ static Pixmap Texture_load_from_file(char *filename)
 	}
     }
 
-    error("Can't find texture \"%s\"", filename);
+    xperror("Can't find texture \"%s\"", filename);
 #endif
     return None;
 }

@@ -1228,7 +1228,7 @@ void Talk_window_cut(XButtonEvent* xbutton)
 	selection.txt_size = MAX_MSGS * MSG_LEN;
 	selection.txt = (char *)malloc(selection.txt_size);
 	if (selection.txt == NULL) {
-	    error("No memory for Selection");
+	    xperror("No memory for Selection");
 	    return;
         }
 
@@ -1529,7 +1529,7 @@ void Talk_cut_from_messages(XButtonEvent* xbutton)
 	selection.txt_size = MAX_MSGS * MSG_LEN;
 	selection.txt = (char *)malloc(selection.txt_size);
 	if (selection.txt == NULL) {
-	    error("No memory for Selection");
+	    xperror("No memory for Selection");
 	    return;
         }
 	selection.draw.x1 = c1.str_index;

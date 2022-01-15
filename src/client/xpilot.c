@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 
     conpar = (Connect_param_t *) calloc(1, sizeof(Connect_param_t));
     if (!conpar) {
-	error("Not enough memory");
+	xperror("Not enough memory");
 	exit(1);
     }
     conpar->contact_port = SERVER_PORT;

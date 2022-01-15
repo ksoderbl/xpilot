@@ -48,7 +48,7 @@ char *xp_safe_strdup(const char *old_string)
 
     new_string = xp_strdup(old_string);
     if (new_string == NULL) {
-	fatal("Not enough memory.");
+	xpfatal("Not enough memory.");
     }
 
     return new_string;

@@ -82,7 +82,7 @@ static void Input_loop(void)
     struct timeval	tv;
 
     if ((result = Net_input()) == -1) {
-	error("Bad server input");
+	xperror("Bad server input");
 	return;
     }
     if (Client_input(2) == -1) {
@@ -92,11 +92,11 @@ static void Input_loop(void)
 	return;
     }
     if ((clientfd = Client_fd()) == -1) {
-	error("Bad client filedescriptor");
+	xperror("Bad client filedescriptor");
 	return;
     }
     if ((netfd = Net_fd()) == -1) {
-	error("Bad socket filedescriptor");
+	xperror("Bad socket filedescriptor");
 	return;
     }
     Net_key_change();
@@ -123,7 +123,7 @@ static void Input_loop(void)
 	    if (errno == EINTR) {
 		continue;
 	    }
-	    error("Select failed");
+	    xperror("Select failed");
 	    return;
 	}
 	if (n == 0) {
@@ -136,7 +136,7 @@ static void Input_loop(void)
 	    }
 	    else if (result <= 1) {
 		errno = 0;
-		error("No response from server");
+		xperror("No response from server");
 		continue;
 	    }
 	}
@@ -145,14 +145,14 @@ static void Input_loop(void)
 		return;
 	    }
 	    if (Net_flush() == -1) {
-		error("Bad net flush after X input");
+		xperror("Bad net flush after X input");
 		return;
 	    }
 	}
 	if (FD_ISSET(netfd, &rfds) || result > 1) {
 	    if ((result = Net_input()) == -1) {
 		errno = 0;
-		error("Bad net input.  Have a nice day!");
+		xperror("Bad net input.  Have a nice day!");
 		return;
 	    }
 	    if (result > 0) {
@@ -174,7 +174,7 @@ static void Input_loop(void)
 		    return;
 		}
 		if (Net_flush() == -1) {
-		    error("Bad net flush before sync");
+		    xperror("Bad net flush before sync");
 		    return;
 		}
 		Client_sync();
@@ -202,7 +202,7 @@ static void sigcatch(int signum)
     signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
     xpilotShutdown();
-    error("Got signal %d\n", signum);
+    xperror("Got signal %d\n", signum);
     exit(1);
 }
 
@@ -247,7 +247,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
     IFWINDOWS( Progress("Net_start"); )
     if (Net_start() == -1) {
 	errno = 0;
-	error("Network start failed");
+	xperror("Network start failed");
 	Net_cleanup();
 	Client_cleanup();
 	return -1;
@@ -255,7 +255,7 @@ int Join(char *server_addr, char *server_name, int port, char *real,
     IFWINDOWS( Progress("Client_start"); )
     if (Client_start() == -1) {
 	errno = 0;
-	error("Window init failed");
+	xperror("Window init failed");
 	Net_cleanup();
 	Client_cleanup();
 	return -1;

@@ -147,11 +147,11 @@ static bool Get_contact_message(sockbuf_t *sbuf,
 
 	if (Packet_scanf(sbuf, "%u%c%c", &magic, &reply_to, &status) <= 0) {
 	    errno = 0;
-	    error("Incomplete contact reply message (%d)", len);
+	    xperror("Incomplete contact reply message (%d)", len);
 	}
 	else if ((magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
 	    errno = 0;
-	    error("Bad magic on contact message (0x%x).", magic);
+	    xperror("Bad magic on contact message (0x%x).", magic);
 	}
 	else {
 	    allow = version = MAGIC2VERSION(magic);
@@ -189,7 +189,7 @@ static int Get_reply_message(sockbuf_t *ibuf,
     if (sock_readable(&ibuf->sock)) {
 	Sockbuf_clear(ibuf);
 	if ((len = sock_read(&ibuf->sock, ibuf->buf, ibuf->size)) == -1) {
-	    error("Can't read reply message from %s/%d",
+	    xperror("Can't read reply message from %s/%d",
 		  conpar->server_addr, conpar->server_port);
 	    exit(1);
 	}
@@ -197,13 +197,13 @@ static int Get_reply_message(sockbuf_t *ibuf,
 	ibuf->len = len;
 	if (Packet_scanf(ibuf, "%u", &magic) <= 0) {
 	    errno = 0;
-	    error("Incomplete reply packet (%d)", len);
+	    xperror("Incomplete reply packet (%d)", len);
 	    return 0;
 	}
 
 	if ((magic & 0xFFFF) != (MAGIC & 0xFFFF)) {
 	    errno = 0;
-	    error("Wrong MAGIC in reply pack (0x%x).", magic);
+	    xperror("Wrong MAGIC in reply pack (0x%x).", magic);
 	    return 0;
 	}
 
@@ -337,22 +337,22 @@ static bool Process_commands(sockbuf_t *ibuf,
 		close_dgram_socket(&ibuf->sock);
 	    }
 	    if ((success = create_dgram_addr_socket(&ibuf->sock, localhost, 0)) == SOCK_IS_ERROR) {
-		error("Could not create localhost socket");
+		xperror("Could not create localhost socket");
 		exit(1);
 	    }
 	    if (sock_connect(&ibuf->sock, localhost, conpar->server_port) == SOCK_IS_ERROR) {
-		error("Can't connect to local server %s on port %d\n",
+		xperror("Can't connect to local server %s on port %d\n",
 		      localhost, conpar->server_port);
 		return false;
 	    }
 	} else {
 	    if ((success = create_dgram_socket(&ibuf->sock, 0)) == SOCK_IS_ERROR) {
-		error("Could not create socket");
+		xperror("Could not create socket");
 		exit(1);
 	    }
 	    if (sock_connect(&ibuf->sock, conpar->server_addr, conpar->server_port) == SOCK_IS_ERROR
 		&& !dgram_one_socket) {
-		error("Can't connect to server %s on port %d\n",
+		xperror("Can't connect to server %s on port %d\n",
 		      conpar->server_addr, conpar->server_port);
 		return false;
 	    }
@@ -551,7 +551,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 		}
 	    }
 	    if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
-		error("Couldn't send request to server.");
+		xperror("Couldn't send request to server.");
 		exit(1);
 	    }
 	}
@@ -564,12 +564,12 @@ static bool Process_commands(sockbuf_t *ibuf,
 	    Sockbuf_clear(ibuf);
 	    if (Get_reply_message(ibuf, conpar) <= 0) {
 		errno = 0;
-		error("No answer from server");
+		xperror("No answer from server");
 		return false;
 	    }
 	    if (Packet_scanf(ibuf, "%c%c", &reply_to, &status) <= 0) {
 		errno = 0;
-		error("Incomplete reply from server");
+		xperror("Incomplete reply from server");
 		return false;
 	    }
 
@@ -627,7 +627,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 		case ENTER_GAME_pack:
 		    if (Packet_scanf(ibuf, "%hu", &port) <= 0) {
 			errno = 0;
-			error("Incomplete login reply from server");
+			xperror("Incomplete login reply from server");
 			conpar->login_port = -1;
 		    } else {
 			conpar->login_port = port;
@@ -638,7 +638,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 		case ENTER_QUEUE_pack:
 		    if (Packet_scanf(ibuf, "%hu", &qpos) <= 0) {
 			errno = 0;
-			error("Incomplete queue reply from server");
+			xperror("Incomplete queue reply from server");
 		    } else {
 			printf("... queued at position %2d\n", qpos);
 			IFWINDOWS(Progress("Queued at position %2d\n", qpos);)
@@ -656,7 +656,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 				      conpar->nick_name, conpar->disp_name,
 				      hostname, conpar->team);
 			if (sock_write(&ibuf->sock, ibuf->buf, ibuf->len) != ibuf->len) {
-			    error("Couldn't send request to server.");
+			    xperror("Couldn't send request to server.");
 			    exit(1);
 			}
 			time(&qsent);
@@ -668,7 +668,7 @@ static bool Process_commands(sockbuf_t *ibuf,
 		case CREDENTIALS_pack:
 		    if (Packet_scanf(ibuf, "%ld", &key) <= 0) {
 			errno = 0;
-			error("Incomplete credentials reply from server");
+			xperror("Incomplete credentials reply from server");
 		    }
 		    else {
 			has_credentials++;
@@ -684,44 +684,44 @@ static bool Process_commands(sockbuf_t *ibuf,
 		break;
 
 	    case E_NOT_OWNER:
-		error("Permission denied, not owner");
+		xperror("Permission denied, not owner");
 		break;
 	    case E_GAME_FULL:
-		error("Sorry, game full");
+		xperror("Sorry, game full");
 		break;
 	    case E_TEAM_FULL:
-		error("Sorry, team %d is full", conpar->team);
+		xperror("Sorry, team %d is full", conpar->team);
 		break;
 	    case E_TEAM_NOT_SET:
-		error("Sorry, team play selected "
+		xperror("Sorry, team play selected "
 		      "and you haven't specified your team");
 		break;
 	    case E_GAME_LOCKED:
-		error("Sorry, game locked");
+		xperror("Sorry, game locked");
 		break;
 	    case E_NOT_FOUND:
-		error("That player is not logged on this server");
+		xperror("That player is not logged on this server");
 		break;
 	    case E_IN_USE:
-		error("Your nick is already used");
+		xperror("Your nick is already used");
 		break;
 	    case E_SOCKET:
-		error("Server can't setup socket");
+		xperror("Server can't setup socket");
 		break;
 	    case E_INVAL:
-		error("Invalid input parameters says the server");
+		xperror("Invalid input parameters says the server");
 		break;
 	    case E_VERSION:
-		error("We have an incompatible version says the server");
+		xperror("We have an incompatible version says the server");
 		break;
 	    case E_NOENT:
-		error("No such variable, says the server");
+		xperror("No such variable, says the server");
 		break;
 	    case E_UNDEFINED:
-		error("Requested operation is undefined, says the server");
+		xperror("Requested operation is undefined, says the server");
 		break;
 	    default:
-		error("Server answers with unknown error status '%02x'", status);
+		xperror("Server answers with unknown error status '%02x'", status);
 		break;
 	    }
 
@@ -775,7 +775,7 @@ int Connect_to_server(int auto_connect, int list_servers,
 
     if (Sockbuf_init(&ibuf, NULL, CLIENT_RECV_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for info buffer");
+	xperror("No memory for info buffer");
 	exit(1);
     }
     result = Process_commands(&ibuf,
@@ -811,12 +811,12 @@ int Contact_servers(int count, char **servers,
 
 
     if ((status = create_dgram_socket(&sock, 0)) == SOCK_IS_ERROR) {
-	error("Could not create connection socket");
+	xperror("Could not create connection socket");
 	exit(1);
     }
     if (Sockbuf_init(&sbuf, &sock, CLIENT_RECV_SIZE,
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
-	error("No memory for contact buffer");
+	xperror("No memory for contact buffer");
 	exit(1);
     }
     if (!count) {
@@ -827,7 +827,7 @@ int Contact_servers(int count, char **servers,
 	    Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
 			  conpar->real_name, sock_get_port(&sbuf.sock), CONTACT_pack);
 	    if (Query_all(&sbuf.sock, conpar->contact_port, sbuf.buf, sbuf.len) == -1) {
-		error("Couldn't send contact requests");
+		xperror("Couldn't send contact requests");
 		exit(1);
 	    }
 	    if (retries == 0) {
@@ -889,7 +889,7 @@ int Contact_servers(int count, char **servers,
 			IFWINDOWS( Progress("Can't find %s", servers[i]); )
 			break;
 		    }
-		    error("Can't contact %s on port %d",
+		    xperror("Can't contact %s on port %d",
 			  servers[i], conpar->contact_port);
 		}
 		if (retries) {

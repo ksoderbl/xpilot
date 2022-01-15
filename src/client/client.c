@@ -219,7 +219,7 @@ static fuelstation_t *Fuelstation_by_pos(int x, int y)
 	return &fuels[lo];
     }
     errno = 0;
-    error("No fuelstation at (%d,%d)", x, y);
+    xperror("No fuelstation at (%d,%d)", x, y);
     return NULL;
 }
 
@@ -265,7 +265,7 @@ int Target_alive(int x, int y, int *damage)
 	return targets[lo].dead_time;
     }
     errno = 0;
-    error("No targets at (%d,%d)", x, y);
+    xperror("No targets at (%d,%d)", x, y);
     return -1;
 }
 
@@ -273,7 +273,7 @@ int Handle_fuel(int ind, int fuel)
 {
     if (ind < 0 || ind >= num_fuels) {
 	errno = 0;
-	error("Bad fuelstation index (%d)", ind);
+	xperror("Bad fuelstation index (%d)", ind);
 	return -1;
     }
     fuels[ind].fuel = fuel;
@@ -299,7 +299,7 @@ static cannontime_t *Cannon_by_pos(int x, int y)
 	return &cannons[lo];
     }
     errno = 0;
-    error("No cannon at (%d,%d)", x, y);
+    xperror("No cannon at (%d,%d)", x, y);
     return NULL;
 }
 
@@ -318,7 +318,7 @@ int Handle_cannon(int ind, int dead_time)
 {
     if (ind < 0 || ind >= num_cannons) {
 	errno = 0;
-	error("Bad cannon index (%d)", ind);
+	xperror("Bad cannon index (%d)", ind);
 	return 0;
     }
     cannons[ind].dead_time = dead_time;
@@ -329,7 +329,7 @@ int Handle_target(int num, int dead_time, int damage)
 {
     if (num < 0 || num >= num_targets) {
 	errno = 0;
-	error("Bad target index (%d)", num);
+	xperror("Bad target index (%d)", num);
 	return 0;
     }
     if (dead_time == 0
@@ -371,7 +371,7 @@ static homebase_t *Homebase_by_pos(int x, int y)
 	return &bases[lo];
     }
     errno = 0;
-    error("No homebase at (%d,%d)", x, y);
+    xperror("No homebase at (%d,%d)", x, y);
     return NULL;
 }
 
@@ -393,7 +393,7 @@ int Handle_base(int id, int ind)
 
     if (ind < 0 || ind >= num_bases) {
 	errno = 0;
-	error("Bad homebase index (%d)", ind);
+	xperror("Bad homebase index (%d)", ind);
 	return -1;
     }
     for (i = 0; i < num_bases; i++) {
@@ -410,7 +410,7 @@ int Check_pos_by_index(int ind, int *xp, int *yp)
 {
     if (ind < 0 || ind >= MAX_CHECKPOINT) {
 	errno = 0;
-	error("Bad checkpoint index (%d)", ind);
+	xperror("Bad checkpoint index (%d)", ind);
 	*xp = 0;
 	*yp = 0;
 	return -1;
@@ -431,7 +431,7 @@ int Check_index_by_pos(int x, int y)
 	}
     }
     errno = 0;
-    error("Can't find checkpoint (%d,%d)", x, y);
+    xperror("Can't find checkpoint (%d,%d)", x, y);
     return 0;
 }
 
@@ -870,7 +870,7 @@ static int Map_init(void)
     if (num_bases != 0) {
 	bases = (homebase_t *) malloc(num_bases * sizeof(homebase_t));
 	if (bases == NULL) {
-	    error("No memory for Map bases (%d)", num_bases);
+	    xperror("No memory for Map bases (%d)", num_bases);
 	    return -1;
 	}
 	num_bases = 0;
@@ -878,7 +878,7 @@ static int Map_init(void)
     if (num_fuels != 0) {
 	fuels = (fuelstation_t *) malloc(num_fuels * sizeof(fuelstation_t));
 	if (fuels == NULL) {
-	    error("No memory for Map fuels (%d)", num_fuels);
+	    xperror("No memory for Map fuels (%d)", num_fuels);
 	    return -1;
 	}
 	num_fuels = 0;
@@ -886,7 +886,7 @@ static int Map_init(void)
     if (num_targets != 0) {
 	targets = (target_t *) malloc(num_targets * sizeof(target_t));
 	if (targets == NULL) {
-	    error("No memory for Map targets (%d)", num_targets);
+	    xperror("No memory for Map targets (%d)", num_targets);
 	    return -1;
 	}
 	num_targets = 0;
@@ -894,7 +894,7 @@ static int Map_init(void)
     if (num_cannons != 0) {
 	cannons = (cannontime_t *) malloc(num_cannons * sizeof(cannontime_t));
 	if (cannons == NULL) {
-	    error("No memory for Map cannons (%d)", num_cannons);
+	    xperror("No memory for Map cannons (%d)", num_cannons);
 	    return -1;
 	}
 	num_cannons = 0;
@@ -1004,7 +1004,7 @@ int Handle_leave(int id)
     if ((other = Other_by_id(id)) != NULL) {
 	if (other == self) {
 	    errno = 0;
-	    error("Self left?!");
+	    xperror("Self left?!");
 	    self = NULL;
 	}
 	Free_ship_shape(other->ship);
@@ -1049,7 +1049,7 @@ int Handle_player(int id, int player_team, int mychar, char *player_name,
 		    max_others * sizeof(other_t));
 	    }
 	    if (Others == NULL) {
-		error("Not enough memory for player info");
+		xperror("Not enough memory for player info");
 		num_others = max_others = 0;
 		self = NULL;
 		return -1;
@@ -1103,7 +1103,7 @@ int Handle_war(int robot_id, int killer_id)
 
     if ((robot = Other_by_id(robot_id)) == NULL) {
 	errno = 0;
-	IFNWINDOWS(error("Can't update war for non-existing player (%d,%d)", robot_id, killer_id);)
+	IFNWINDOWS(xperror("Can't update war for non-existing player (%d,%d)", robot_id, killer_id);)
 	return 0;
     }
     if (killer_id == -1) {
@@ -1115,7 +1115,7 @@ int Handle_war(int robot_id, int killer_id)
     }
     if ((killer = Other_by_id(killer_id)) == NULL) {
 	errno = 0;
-	IFNWINDOWS(error("Can't update war against non-existing player (%d,%d)", robot_id, killer_id);)
+	IFNWINDOWS(xperror("Can't update war against non-existing player (%d,%d)", robot_id, killer_id);)
 	return 0;
     }
     robot->war_id = killer_id;
@@ -1137,7 +1137,7 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
 	|| (robot = Other_by_id(robot_id)) == NULL
 	|| (sought = Other_by_id(sought_id)) == NULL) {
 	errno = 0;
-	error("Bad player seek (%d,%d,%d)",
+	xperror("Bad player seek (%d,%d,%d)",
 	      programmer_id, robot_id, sought_id);
 	return 0;
     }
@@ -1158,7 +1158,7 @@ int Handle_score(int id, DFLOAT score, int life, int mychar, int alliance)
     if ((other = Other_by_id(id)) == NULL) {
 #ifndef _WINDOWS
 	errno = 0;
-	error("Can't update score for non-existing player %d,%.2f,%d",
+	xperror("Can't update score for non-existing player %d,%.2f,%d",
 	      id, score, life);
 #endif
 	return 0;
@@ -1193,7 +1193,7 @@ int Handle_timing(int id, int check, int round)
 
     if ((other = Other_by_id(id)) == NULL) {
 	errno = 0;
-	error("Can't update timing for non-existing player %d,%d,%d", id, check, round);
+	xperror("Can't update timing for non-existing player %d,%d,%d", id, check, round);
 	return 0;
     }
     else if (other->check != check
@@ -1276,7 +1276,7 @@ void Client_score_table(void)
     }
 
     if ((order = (other_t **)malloc(num_others * sizeof(other_t *))) == NULL) {
-	error("No memory for score");
+	xperror("No memory for score");
 	return;
     }
     if (BIT(Setup->mode, TEAM_PLAY|TIMING) == TEAM_PLAY) {
@@ -1422,7 +1422,7 @@ static int Alloc_history(void)
 
     /* maxLinesInHistory is a runtime constant */
     if ((hist_ptr = (char *)malloc(maxLinesInHistory * MAX_CHARS)) == NULL) {
-	error("No memory for history");
+	xperror("No memory for history");
 	return -1;
     }
     HistoryBlock	= hist_ptr;

@@ -87,7 +87,7 @@ void Object_free_ind(int ind)
 	Obj[ObjCount] = obj;
     }
     else {
-	warn("Cannot free object %d, when count = %d, and total = %d !",
+	xpwarn("Cannot free object %d, when count = %d, and total = %d !",
 	     ind, ObjCount, MAX_TOTAL_SHOTS);
     }
 }
@@ -103,7 +103,7 @@ void Object_free_ptr(object *obj)
 	}
     }
     if (i < 0) {
-	warn("Could NOT free object!");
+	xpwarn("Could NOT free object!");
     }
 }
 
@@ -116,7 +116,7 @@ void Alloc_shots(int number)
 
     x = (anyobject *) calloc(number, sizeof(anyobject));
     if (!x) {
-	error("Not enough memory for shots.");
+	xperror("Not enough memory for shots.");
 	exit(1);
     }
 

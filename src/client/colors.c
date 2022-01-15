@@ -240,7 +240,7 @@ static void Choose_visual(void)
 	if (strncmp(visualName, "0x", 2) == 0) {
 	    if (sscanf(visualName, "%x", &visual_id) < 1) {
 		errno = 0;
-		error("Bad visual id \"%s\", using default\n", visualName);
+		xperror("Bad visual id \"%s\", using default\n", visualName);
 		visual_id = -1;
 	    }
 	} else {
@@ -254,7 +254,7 @@ static void Choose_visual(void)
 	    }
 	    if (visual_class == -1) {
 		errno = 0;
-		error("Unknown visual class named \"%s\", using default\n",
+		xperror("Unknown visual class named \"%s\", using default\n",
 		    visualName);
 	    }
 	}
@@ -286,7 +286,7 @@ static void Choose_visual(void)
 	    || num <= 0) {
 	    if (using_default == false) {
 		errno = 0;
-		error("No visuals available with class name \"%s\", using default",
+		xperror("No visuals available with class name \"%s\", using default",
 		    visualName);
 	    }
 	    visual_class = -1;
@@ -400,7 +400,7 @@ static void Fill_colormap(void)
 			 False, NULL,
 			 0, pixels, max_fill) == False) {
 	errno = 0;
-	error("Can't pre-alloc color cells");
+	xperror("Can't pre-alloc color cells");
 	return;
     }
 
@@ -409,7 +409,7 @@ static void Fill_colormap(void)
 	if (i != (int) pixels[i]) {
 #ifdef DEVELOPMENT
 	    errno = 0;
-	    error("Can't pre-fill color map, got %d'th pixel %lu",
+	    xperror("Can't pre-fill color map, got %d'th pixel %lu",
 		  i, pixels[i]);
 #endif
 	    XFreeColors(dpy, colormap, pixels, max_fill, 0);
@@ -535,7 +535,7 @@ int Colors_init(void)
     if (dbuf_state == NULL) {
 	/* Can't setup double buffering */
 	errno = 0;
-	error("Can't setup colors with visual %s and %d colormap entries",
+	xperror("Can't setup colors with visual %s and %d colormap entries",
 	      Visual_class_name(visual->class), visual->map_entries);
 	return -1;
     }
@@ -767,13 +767,13 @@ static int Colors_init_color_cube(void)
     XColor		colors[256];
 
     if (color_cube != NULL) {
-	error("Already a cube!\n");
+	xperror("Already a cube!\n");
 	exit(1);
     }
 
     color_cube = (struct Color_cube *) calloc(1, sizeof(struct Color_cube));
     if (!color_cube) {
-	error("Could not allocate memory for a color cube");
+	xperror("Could not allocate memory for a color cube");
 	return -1;
     }
     for (i = 0; i < NELEM(rgb_cube_sizes); i++) {
@@ -869,13 +869,13 @@ static int Colors_init_true_color(void)
     }
 
     if (true_color) {
-	error("Already a True_color!");
+	xperror("Already a True_color!");
 	exit(1);
     }
 
     true_color = (struct True_color *) calloc(1, sizeof(struct True_color));
     if (!true_color) {
-	error("Could not allocate memory for a true color structure");
+	xperror("Could not allocate memory for a true color structure");
 	return -1;
     }
 

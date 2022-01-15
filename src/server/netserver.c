@@ -209,7 +209,7 @@ static int Init_setup(void)
     unsigned char	*mapdata, *mapptr;
 
     if ((mapdata = (unsigned char *) malloc(World.x * World.y)) == NULL) {
-	error("No memory for mapdata");
+	xperror("No memory for mapdata");
 	return -1;
     }
     memset(mapdata, SETUP_SPACE, World.x * World.y);
@@ -280,7 +280,7 @@ static int Init_setup(void)
 		case WORM_IN:     *mapptr = SETUP_WORM_IN; break;
 		case WORM_OUT:    *mapptr = SETUP_WORM_OUT; break;
 		default:
-		    error("Bad wormhole (%d,%d).", x, y);
+		    xperror("Bad wormhole (%d,%d).", x, y);
 		    free(mapdata);
 		    return -1;
 		}
@@ -303,7 +303,7 @@ static int Init_setup(void)
 		case DIR_DOWN:  *mapptr = SETUP_BASE_DOWN + team; break;
 		case DIR_LEFT:  *mapptr = SETUP_BASE_LEFT + team; break;
 		default:
-		    error("Bad base at (%d,%d).", x, y);
+		    xperror("Bad base at (%d,%d).", x, y);
 		    free(mapdata);
 		    return -1;
 		}
@@ -315,7 +315,7 @@ static int Init_setup(void)
 		case DIR_DOWN:	*mapptr = SETUP_CANNON_DOWN; break;
 		case DIR_LEFT:	*mapptr = SETUP_CANNON_LEFT; break;
 		default:
-		    error("Bad cannon at (%d,%d).", x, y);
+		    xperror("Bad cannon at (%d,%d).", x, y);
 		    free(mapdata);
 		    return -1;
 		}
@@ -330,13 +330,13 @@ static int Init_setup(void)
 		    break;
 		}
 		if (i >= World.NumChecks) {
-		    error("Bad checkpoint at (%d,%d).", x, y);
+		    xperror("Bad checkpoint at (%d,%d).", x, y);
 		    free(mapdata);
 		    return -1;
 		}
 		break;
 	    default:
-		error("Unknown map type (%d) at (%d,%d).", type, x, y);
+		xperror("Unknown map type (%d) at (%d,%d).", type, x, y);
 		*mapptr = SETUP_SPACE;
 		break;
 	    }
@@ -350,12 +350,12 @@ static int Init_setup(void)
 	size = Compress_map(mapdata, World.x * World.y);
 	if (size <= 0 || size > World.x * World.y) {
 	    errno = 0;
-	    error("Map compression error (%d)", size);
+	    xperror("Map compression error (%d)", size);
 	    free(mapdata);
 	    return -1;
 	}
 	if ((mapdata = (unsigned char *)realloc(mapdata, size)) == NULL) {
-	    error("Cannot reallocate mapdata");
+	    xperror("Cannot reallocate mapdata");
 	    return -1;
 	}
     }
@@ -367,7 +367,7 @@ static int Init_setup(void)
     }
 #endif
     if ((Setup = (setup_t *) malloc(sizeof(setup_t) + size)) == NULL) {
-	error("No memory to hold setup");
+	xperror("No memory to hold setup");
 	free(mapdata);
 	return -1;
     }
@@ -470,7 +470,7 @@ int Setup_net_server(void)
     max_connections = MIN(MAX_SELECT_FD - 5, World.NumBases);
     size = max_connections * sizeof(*Conn);
     if ((Conn = (connection_t *) malloc(size)) == NULL) {
-	error("Cannot allocate memory for connections");
+	xperror("Cannot allocate memory for connections");
 	return -1;
     }
     memset(Conn, 0, size);
@@ -536,7 +536,7 @@ void Destroy_connection(int ind, const char *reason)
 
     if (connp->state == CONN_FREE) {
 	errno = 0;
-	error("Cannot destroy empty connection (\"%s\")", reason);
+	xperror("Cannot destroy empty connection (\"%s\")", reason);
 	return;
     }
 
@@ -681,7 +681,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	(clientPortStart > clientPortEnd)) {
 
         if (sock_open_udp(&sock, serverAddr, 0) == SOCK_IS_ERROR) {
-            error("Cannot create datagram socket (%d)", sock.error.error);
+            xperror("Cannot create datagram socket (%d)", sock.error.error);
             return -1;
         }
     }
@@ -694,26 +694,26 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	    }
 	}
 	if (found_socket == 0) {
-	    error("Could not find a usable port in given port range");
+	    xperror("Could not find a usable port in given port range");
 	    return -1;
 	}
     }
 
     if ((my_port = sock_get_port(&sock)) == -1) {
-	error("Cannot get port from socket");
+	xperror("Cannot get port from socket");
 	sock_close(&sock);
 	return -1;
     }
     if (sock_set_non_blocking(&sock, 1) == -1) {
-	error("Cannot make client socket non-blocking");
+	xperror("Cannot make client socket non-blocking");
 	sock_close(&sock);
 	return -1;
     }
     if (sock_set_receive_buffer_size(&sock, SERVER_RECV_SIZE + 256) == -1) {
-	error("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
+	xperror("Cannot set receive buffer size to %d", SERVER_RECV_SIZE + 256);
     }
     if (sock_set_send_buffer_size(&sock, SERVER_SEND_SIZE + 256) == -1) {
-	error("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
+	xperror("Cannot set send buffer size to %d", SERVER_SEND_SIZE + 256);
     }
 
     Sockbuf_init(&connp->w, &sock, SERVER_SEND_SIZE,
@@ -765,7 +765,7 @@ int Setup_connection(char *real, char *nick, char *dpy, int team,
 	|| connp->addr == NULL
 	|| connp->host == NULL
 	) {
-	error("Not enough memory for connection");
+	xperror("Not enough memory for connection");
 	/* socket is not yet connected, but it doesn't matter much. */
 	Destroy_connection(free_conn_index, "no memory");
 	return -1;
@@ -808,19 +808,19 @@ static int Handle_listening(int ind)
     connp->r.len = n;
     connp->his_port = sock_get_last_port(&connp->r.sock);
     if (sock_connect(&connp->w.sock, connp->addr, connp->his_port) == -1) {
-	error("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
+	xperror("Cannot connect datagram socket (%s,%d,%d,%d,%d)",
 	      connp->addr, connp->his_port,
 	      connp->w.sock.error.error,
 	      connp->w.sock.error.call,
 	      connp->w.sock.error.line);
 	if (sock_get_error(&connp->w.sock)) {
-	    error("sock_get_error fails too, giving up");
+	    xperror("sock_get_error fails too, giving up");
 	    Destroy_connection(ind, "connect error");
 	    return -1;
 	}
 	errno = 0;
 	if (sock_connect(&connp->w.sock, connp->addr, connp->his_port) == -1) {
-	    error("Still cannot connect datagram socket (%s,%d,%d,%d,%d)",
+	    xperror("Still cannot connect datagram socket (%s,%d,%d,%d,%d)",
 		  connp->addr, connp->his_port,
 		  connp->w.sock.error.error,
 		  connp->w.sock.error.call,
@@ -958,7 +958,7 @@ static int Handle_login(int ind, char *errmsg, int errsize)
     if (NumPlayers - NumPseudoPlayers >= World.NumBases) {
 	errno = 0;
 	strlcpy(errmsg, "Not enough bases for players", errsize);
-	error("%s", errmsg);
+	xperror("%s", errmsg);
 	return -1;
     }
     if (BIT(World.rules->mode, TEAM_PLAY)) {
@@ -983,7 +983,7 @@ static int Handle_login(int ind, char *errmsg, int errsize)
 		(connp->team == robotTeam && reserveRobotTeam)) {
 		errno = 0;
 		strlcpy(errmsg, "Can't pick team", errsize);
-		error("%s", errmsg);
+		xperror("%s", errmsg);
 		return -1;
 	    }
 	}
@@ -993,7 +993,7 @@ static int Handle_login(int ind, char *errmsg, int errsize)
     for (i = 0; i < NumPlayers; i++) {
 	if (strcasecmp(Players[i]->name, connp->nick) == 0) {
 	    errno = 0;
-	    error("Name already in use %s", connp->nick);
+	    xperror("Name already in use %s", connp->nick);
 	    strlcpy(errmsg, "Name already in use", errsize);
 	    return -1;
 	}
@@ -1036,7 +1036,7 @@ static int Handle_login(int ind, char *errmsg, int errsize)
 
     if (Send_reply(ind, PKT_PLAY, PKT_SUCCESS) <= 0) {
 	strlcpy(errmsg, "Cannot send play reply", errsize);
-	error("%s", errmsg);
+	xperror("%s", errmsg);
 	return -1;
     }
 
@@ -1563,7 +1563,7 @@ int Send_leave(int ind, int id)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for leave info (%d,%d)",
+	xperror("Connection not ready for leave info (%d,%d)",
 	      connp->state, connp->id);
 	return 0;
     }
@@ -1579,7 +1579,7 @@ int Send_war(int ind, int robot_id, int killer_id)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for war declaration (%d,%d,%d)",
+	xperror("Connection not ready for war declaration (%d,%d,%d)",
 	      ind, connp->state, connp->id);
 	return 0;
     }
@@ -1596,7 +1596,7 @@ int Send_seek(int ind, int programmer_id, int robot_id, int sought_id)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for seek declaration (%d,%d,%d)",
+	xperror("Connection not ready for seek declaration (%d,%d,%d)",
 	      ind, connp->state, connp->id);
 	return 0;
     }
@@ -1617,7 +1617,7 @@ int Send_player(int ind, int id)
 
     if (!BIT(connp->state, CONN_PLAYING|CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for player info (%d,%d)",
+	xperror("Connection not ready for player info (%d,%d)",
 	      connp->state, connp->id);
 	return 0;
     }
@@ -1650,7 +1650,7 @@ int Send_score(int ind, int id, DFLOAT score,
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for score(%d,%d)",
+	xperror("Connection not ready for score(%d,%d)",
 	    connp->state, connp->id);
 	return 0;
     }
@@ -1684,7 +1684,7 @@ int Send_team_score(int ind, int team, DFLOAT score)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for team score(%d,%d)",
+	xperror("Connection not ready for team score(%d,%d)",
 	      connp->state, connp->id);
 	return 0;
     }
@@ -1708,7 +1708,7 @@ int Send_timing(int ind, int id, int check, int round)
     }
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for timing(%d,%d)",
+	xperror("Connection not ready for timing(%d,%d)",
 	      connp->state, connp->id);
 	return 0;
     }
@@ -1725,7 +1725,7 @@ int Send_base(int ind, int id, int num)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for base info (%d,%d)",
+	xperror("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
     }
@@ -1747,7 +1747,7 @@ int Send_score_object(int ind, DFLOAT score, int x, int y, const char *string)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for base info (%d,%d)",
+	xperror("Connection not ready for base info (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
     }
@@ -1816,7 +1816,7 @@ int Send_debris(int ind, int type, unsigned char *p, int n)
 
     if ((n & 0xFF) != n) {
 	errno = 0;
-	error("Bad number of debris %d", n);
+	xperror("Bad number of debris %d", n);
 	return 0;
     }
     avail = w->size - w->len - SOCKBUF_WRITE_SPARE - 2;
@@ -1873,7 +1873,7 @@ int Send_fastshot(int ind, int type, unsigned char *p, int n)
 
     if ((n & 0xFF) != n) {
 	errno = 0;
-	error("Bad number of fastshot %d", n);
+	xperror("Bad number of fastshot %d", n);
 	return 0;
     }
     avail = w->size - w->len - SOCKBUF_WRITE_SPARE - 3;
@@ -2030,7 +2030,7 @@ int Send_fastradar(int ind, unsigned char *buf, int n)
 
     if ((n & 0xFF) != n) {
 	errno = 0;
-	error("Bad number of fastradar %d", n);
+	xperror("Bad number of fastradar %d", n);
 	return 0;
     }
     avail = w->size - w->len - SOCKBUF_WRITE_SPARE - 3;
@@ -2084,7 +2084,7 @@ int Send_message(int ind, const char *msg)
 
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
-	error("Connection not ready for message (%d,%d)",
+	xperror("Connection not ready for message (%d,%d)",
 	    connp->state, connp->id);
 	return 0;
     }
@@ -2108,7 +2108,7 @@ int Send_start_of_frame(int ind)
     if (connp->state != CONN_PLAYING) {
 	if (connp->state != CONN_READY) {
 	    errno = 0;
-	    error("Connection not ready for frame (%d,%d)",
+	    xperror("Connection not ready for frame (%d,%d)",
 		connp->state, connp->id);
 	}
 	return -1;
@@ -2226,13 +2226,13 @@ static int Receive_play(int ind)
 
     if ((n = Packet_scanf(&connp->r, "%c", &ch)) != 1) {
 	errno = 0;
-	error("Cannot receive play packet");
+	xperror("Cannot receive play packet");
 	Destroy_connection(ind, "receive error");
 	return -1;
     }
     if (ch != PKT_PLAY) {
 	errno = 0;
-	error("Packet is not of play type");
+	xperror("Packet is not of play type");
 	Destroy_connection(ind, "not play");
 	return -1;
     }
@@ -2243,7 +2243,7 @@ static int Receive_play(int ind)
 		return 0;
 	    }
 	    errno = 0;
-	    error("Connection not in login state (%02x)", connp->state);
+	    xperror("Connection not in login state (%02x)", connp->state);
 	    Destroy_connection(ind, "not login");
 	    return -1;
 	}
@@ -2315,7 +2315,7 @@ static int Receive_power(int ind)
 	break;
     default:
 	errno = 0;
-	error("Not a power packet (%d,%02x)", ch, connp->state);
+	xperror("Not a power packet (%d,%02x)", ch, connp->state);
 	Destroy_connection(ind, "not power");
 	return -1;
     }
@@ -2395,7 +2395,7 @@ int Send_reliable(int ind)
 	if (Packet_printf(&connp->w, "%c%hd%ld%ld", PKT_RELIABLE,
 			  len, rel_off, main_loops) <= 0
 	    || Sockbuf_write(&connp->w, read_buf, len) != len) {
-	    error("Cannot write reliable data");
+	    xperror("Cannot write reliable data");
 	    Destroy_connection(ind, "write error");
 	    return -1;
 	}
@@ -2406,7 +2406,7 @@ int Send_reliable(int ind)
 		connp->acks = 0;
 		break;
 	    } else {
-		error("Cannot flush reliable data (%d)", n);
+		xperror("Cannot flush reliable data (%d)", n);
 		Destroy_connection(ind, "flush error");
 		return -1;
 	    }
@@ -2465,13 +2465,13 @@ static int Receive_ack(int ind)
     if ((n = Packet_scanf(&connp->r, "%c%ld%ld",
 			  &ch, &rel, &rel_loops)) <= 0) {
 	errno = 0;
-	error("Cannot read ack packet (%d)", n);
+	xperror("Cannot read ack packet (%d)", n);
 	Destroy_connection(ind, "read error");
 	return -1;
     }
     if (ch != PKT_ACK) {
 	errno = 0;
-	error("Not an ack packet (%d)", ch);
+	xperror("Not an ack packet (%d)", ch);
 	Destroy_connection(ind, "not ack");
 	return -1;
     }
@@ -2527,7 +2527,7 @@ static int Receive_ack(int ind)
     if (diff > connp->c.len) {
 	/* Impossible to ack data that has not been send */
 	errno = 0;
-	error("Bad ack (diff=%ld,cru=%ld,c=%ld,len=%d)",
+	xperror("Bad ack (diff=%ld,cru=%ld,c=%ld,len=%d)",
 	    diff, rel, connp->reliable_offset, connp->c.len);
 	Destroy_connection(ind, "bad ack");
 	return -1;
@@ -2571,7 +2571,7 @@ static int Receive_discard(int ind)
     connection_t	*connp = &Conn[ind];
 
     errno = 0;
-    error("Discarding packet %d while in state %02x",
+    xperror("Discarding packet %d while in state %02x",
 	  connp->r.ptr[0], connp->state);
     connp->r.ptr = connp->r.buf + connp->r.len;
 
@@ -2583,7 +2583,7 @@ static int Receive_undefined(int ind)
     connection_t	*connp = &Conn[ind];
 
     errno = 0;
-    error("Unknown packet type (%d,%02x)", connp->r.ptr[0], connp->state);
+    xperror("Unknown packet type (%d,%02x)", connp->r.ptr[0], connp->state);
     Destroy_connection(ind, "undefined packet");
     return -1;
 }

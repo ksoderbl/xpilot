@@ -68,21 +68,21 @@ int Picture_init(xp_picture_t *picture, int height, int width, int images)
     picture->data  = (RGB_COLOR **) malloc(images * sizeof(RGB_COLOR*));
 
     if (!picture->data) {
-	error("Not enough memory.");
+	xperror("Not enough memory.");
 	return -1;
     }
     for (i = 0; i < images; i++) {
 	picture->data[i] = (RGB_COLOR *) malloc(picture->width * picture->height * 
 						sizeof(RGB_COLOR));
 	if (!picture->data[i]) {
-	    error("Not enough memory.");
+	    xperror("Not enough memory.");
 	    return -1;
 	}
     }
 
     picture->bbox = (bbox_t *) malloc(images * sizeof(bbox_t));
     if (!picture->bbox) {
-	error("Not enough memory.");
+	xperror("Not enough memory.");
 	return -1;
     }
     for (i = 0; i < images; i++) {
@@ -144,7 +144,7 @@ static int Picture_find_path(const char *filename, char *path, size_t path_size)
 	}
     }
 
-    error("Can't find PPM file \"%s\"", filename);
+    xperror("Can't find PPM file \"%s\"", filename);
 	return(FALSE);
 }
 
@@ -220,18 +220,18 @@ int Picture_load(xp_picture_t *picture, const char *filename)
 
 
     if (!Picture_find_path(filename, path, sizeof(path))) {
-	error("Cannot find picture file \"%s\"", filename);
+	xperror("Cannot find picture file \"%s\"", filename);
 	return -1;
     }
     if ((f = fopen(path, "rb")) == NULL) {
-	error("Cannot open \"%s\"", path);
+	xperror("Cannot open \"%s\"", path);
 	return -1;
     }
 
     errno = 0;
     if ((c1 = Picture_getc(f)) != 'P' ||
 	(c2 = Picture_getc(f)) != '6') {
-	error("\"%s\" does not contain a valid binary PPM file.\n",
+	xperror("\"%s\" does not contain a valid binary PPM file.\n",
 	       path);
 	fclose(f);
 	return -1;
@@ -245,7 +245,7 @@ int Picture_load(xp_picture_t *picture, const char *filename)
     c = Picture_get_decimal(f, c, &maxval);
 
     if (!isspace(c) || maxval != 255) {
-	error("\"%s\" does not contain a valid binary PPM file.\n",
+	xperror("\"%s\" does not contain a valid binary PPM file.\n",
 	       path);
 	fclose(f);
 	return -1;
@@ -256,7 +256,7 @@ int Picture_load(xp_picture_t *picture, const char *filename)
     if (picture->width * picture->images == width || picture->width == width ) {
 	images = width / picture->width;
     } else  {
-	error("image size is wrong (%d %d) (%d %d)", 
+	xperror("image size is wrong (%d %d) (%d %d)", 
 	      picture->width, picture->height, width, height); 
 	fclose(f);
 	return -1;

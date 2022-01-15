@@ -125,7 +125,7 @@ static void Init_cell_dist(void)
 
     cell_dist = (cell_dist_t *)malloc(cell_dist_size * sizeof(cell_dist_t));
     if (cell_dist == NULL) {
-	error("No cell dist mem");
+	xperror("No cell dist mem");
 	End_game();
     }
 
@@ -165,7 +165,7 @@ void Alloc_cells(void)
     size = sizeof(cell_node *) * World.x;
     size += sizeof(cell_node) * World.x * World.y;
     if (!(Cells = (cell_node **) malloc(size))) {
-	error("No Cell mem");
+	xperror("No Cell mem");
 	End_game();
     }
     cell_ptr = (cell_node *) &Cells[World.x];

@@ -348,7 +348,7 @@ void Update_tanks(pl_fuel_t *ft)
 	    }
 	}
 	if (!check) {
-	    error("fuel problem");
+	    xperror("fuel problem");
 	    fuel = ft->sum;
 	    ft->sum =
 	    ft->max = 0;

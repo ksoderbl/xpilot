@@ -921,7 +921,7 @@ void do_lose_item(int ind)
 	return;
     item = pl->lose_item;
     if (item < 0 || item >= NUM_ITEMS) {
-	error("BUG: do_lose_item %d", item);
+	xperror("BUG: do_lose_item %d", item);
 	return;
     }
     if (BIT(1U << pl->lose_item, ITEM_BIT_FUEL | ITEM_BIT_TANK)) {

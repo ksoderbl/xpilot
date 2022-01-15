@@ -192,7 +192,7 @@ void Gui_paint_cannon(int x, int y, int type)
 	    break;
 	default:
 	    errno = 0;
-	    error("Unknown cannon type %d", type);
+	    xperror("Unknown cannon type %d", type);
 	    return;
 	}
 	points[3] = points[0];
@@ -223,7 +223,7 @@ void Gui_paint_cannon(int x, int y, int type)
 	    break;
 	default:
 	    errno = 0;
-	    error("Bad base dir.");
+	    xperror("Bad base dir.");
 	    return;
 	}
     }
@@ -360,7 +360,7 @@ void Gui_paint_base(int x, int y, int xi, int yi, int type)
 	    break;
 	default:
 	    errno = 0;
-	    error("Bad base dir.");
+	    xperror("Bad base dir.");
 	    return;
 	}
 	/* only draw base teams if ship naming is on, SKS 25/05/94 */
@@ -459,7 +459,7 @@ void Gui_paint_base(int x, int y, int xi, int yi, int type)
 	    break;
 	default:
 	    errno = 0;
-	    error("Bad base dir.");
+	    xperror("Bad base dir.");
 	    return;
 	}
 	/* only draw base teams if ship naming is on, SKS 25/05/94 */

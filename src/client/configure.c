@@ -356,7 +356,7 @@ static void Create_config(void)
     config_max = NELEM(config_creator);
     config_widget_desc = (int *) malloc(config_max * sizeof(int));
     if (config_widget_desc == NULL) {
-	error("No memory for config");
+	xperror("No memory for config");
 	return;
     }
 

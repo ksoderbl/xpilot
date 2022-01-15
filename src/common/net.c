@@ -92,34 +92,34 @@ int Sockbuf_advance(sockbuf_t *sbuf, int len)
      */
     if (sbuf->ptr > sbuf->buf + sbuf->len) {
 	errno = 0;
-	error("Sockbuf pointer too far");
+	xperror("Sockbuf pointer too far");
 	sbuf->ptr = sbuf->buf + sbuf->len;
     }
     if (sbuf->ptr < sbuf->buf) {
 	errno = 0;
-	error("Sockbuf pointer bad");
+	xperror("Sockbuf pointer bad");
 	sbuf->ptr = sbuf->buf;
     }
     if (sbuf->len > sbuf->size) {
 	errno = 0;
-	error("Sockbuf len too far");
+	xperror("Sockbuf len too far");
 	sbuf->len = sbuf->size;
     }
     if (sbuf->len < 0) {
 	errno = 0;
-	error("Sockbuf len bad");
+	xperror("Sockbuf len bad");
 	sbuf->len = 0;
     }
     if (len <= 0) {
 	if (len < 0) {
 	    errno = 0;
-	    error("Sockbuf advance negative (%d)", len);
+	    xperror("Sockbuf advance negative (%d)", len);
 	}
     }
     else if (len >= sbuf->len) {
 	if (len > sbuf->len) {
 	    errno = 0;
-	    error("Sockbuf advancing too far");
+	    xperror("Sockbuf advancing too far");
 	}
 	sbuf->len = 0;
 	sbuf->ptr = sbuf->buf;
@@ -146,8 +146,8 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 
     if (BIT(sbuf->state, SOCKBUF_WRITE) == 0) {
 	errno = 0;
-	error("No flush on non-writable socket buffer");
-	error("(state=%02x,buf=%08x,ptr=%08x,size=%d,len=%d,sock=%d)",
+	xperror("No flush on non-writable socket buffer");
+	xperror("(state=%02x,buf=%08x,ptr=%08x,size=%d,len=%d,sock=%d)",
 	    sbuf->state, sbuf->buf, sbuf->ptr, sbuf->size, sbuf->len,
 	    sbuf->sock);
 	return -1;
@@ -157,13 +157,13 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    sbuf->sock); */
     if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
 	errno = 0;
-	error("No flush on locked socket buffer (0x%02x)", sbuf->state);
+	xperror("No flush on locked socket buffer (0x%02x)", sbuf->state);
 	return -1;
     }
     if (sbuf->len <= 0) {
 	if (sbuf->len < 0) {
 	    errno = 0;
-	    error("Write socket buffer length negative");
+	    xperror("Write socket buffer length negative");
 	    sbuf->len = 0;
 	    sbuf->ptr = sbuf->buf;
 	}
@@ -208,30 +208,30 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    }
 #if 0
 	    if (errno == ECONNREFUSED) {
-		error("Send refused");
+		xperror("Send refused");
 		Sockbuf_clear(sbuf);
 		return -1;
 	    }
 #endif
 	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't send on socket (%d,%d)", sbuf->sock, sbuf->len);
+		xperror("Can't send on socket (%d,%d)", sbuf->sock, sbuf->len);
 		Sockbuf_clear(sbuf);
 		return -1;
 	    }
 	    { static int send_err;
 		if ((send_err++ & 0x3F) == 0) {
-		    error("send (%d)", i);
+		    xperror("send (%d)", i);
 		}
 	    }
 	    if (sock_get_error(&sbuf->sock) == -1) {
-		error("sock_get_error send");
+		xperror("sock_get_error send");
 		return -1;
 	    }
 	    errno = 0;
 	}
 	if (len != sbuf->len) {
 	    errno = 0;
-	    error("Can't write complete datagram (%d,%d)", len, sbuf->len);
+	    xperror("Can't write complete datagram (%d,%d)", len, sbuf->len);
 	}
 	Sockbuf_clear(sbuf);
     } else {
@@ -243,7 +243,7 @@ int Sockbuf_flush(sockbuf_t *sbuf)
 	    }
 	    if (errno != EWOULDBLOCK
 		&& errno != EAGAIN) {
-		error("Can't write on socket");
+		xperror("Can't write on socket");
 		return -1;
 	    }
 	    return 0;
@@ -257,13 +257,13 @@ int Sockbuf_write(sockbuf_t *sbuf, char *buf, int len)
 {
     if (BIT(sbuf->state, SOCKBUF_WRITE) == 0) {
 	errno = 0;
-	error("No write to non-writable socket buffer");
+	xperror("No write to non-writable socket buffer");
 	return -1;
     }
     if (sbuf->size - sbuf->len < len) {
 	if (BIT(sbuf->state, SOCKBUF_LOCK | SOCKBUF_DGRAM) != 0) {
 	    errno = 0;
-	    error("No write to locked socket buffer (%d,%d,%d,%d)",
+	    xperror("No write to locked socket buffer (%d,%d,%d,%d)",
 		sbuf->state, sbuf->size, sbuf->len, len);
 	    return -1;
 	}
@@ -288,7 +288,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 
     if (BIT(sbuf->state, SOCKBUF_READ) == 0) {
 	errno = 0;
-	error("No read from non-readable socket buffer (%d)", sbuf->state);
+	xperror("No read from non-readable socket buffer (%d)", sbuf->state);
 	return -1;
     }
     if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
@@ -301,7 +301,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	static int before;
 	if (before++ == 0) {
 	    errno = 0;
-	    error("Read socket buffer not big enough (%d,%d)",
+	    xperror("Read socket buffer not big enough (%d,%d)",
 		  sbuf->size, sbuf->len);
 	}
 	return -1;
@@ -331,7 +331,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    }
 #if 0
 	    if (errno == ECONNREFUSED) {
-		error("Receive refused");
+		xperror("Receive refused");
 		return -1;
 	    }
 #endif
@@ -340,16 +340,16 @@ int Sockbuf_read(sockbuf_t *sbuf)
 			errno, _GetWSockErrText(errno), len);
 */			
 	    if (++i > MAX_SOCKBUF_RETRIES) {
-		error("Can't recv on socket");
+		xperror("Can't recv on socket");
 		return -1;
 	    }
 	    { static int recv_err;
 		if ((recv_err++ & 0x3F) == 0) {
-		    error("recv (%d)", i);
+		    xperror("recv (%d)", i);
 		}
 	    }
 	    if (sock_get_error(&sbuf->sock) == -1) {
-		error("GetSocketError recv");
+		xperror("GetSocketError recv");
 		return -1;
 	    }
 	    errno = 0;
@@ -367,7 +367,7 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    }
 	    if (errno != EWOULDBLOCK
 		&& errno != EAGAIN) {
-		error("Can't read on socket");
+		xperror("Can't read on socket");
 		return -1;
 	    }
 	    return 0;
@@ -383,12 +383,12 @@ int Sockbuf_copy(sockbuf_t *dest, sockbuf_t *src, int len)
 {
     if (len < dest->size - dest->len) {
 	errno = 0;
-	error("Not enough room in destination copy socket buffer");
+	xperror("Not enough room in destination copy socket buffer");
 	return -1;
     }
     if (len < src->len) {
 	errno = 0;
-	error("Not enough data in source copy socket buffer");
+	xperror("Not enough data in source copy socket buffer");
 	return -1;
     }
     memcpy(dest->buf + dest->len, src->buf, len);
@@ -577,7 +577,7 @@ int Packet_printf(va_alist)
 	}
 	else if (failure == PRINTF_FMT) {
 	    errno = 0;
-	    error("Error in format string (\"%s\")", fmt);
+	    xperror("Error in format string (\"%s\")", fmt);
 	}
     } else {
 	count = buf - (sbuf->buf + sbuf->len);
@@ -784,7 +784,7 @@ int Packet_scanf(va_alist)
 			 */
 #ifndef SILENT
 			errno = 0;
-			error("String overflow while scanning (%d,%d)",
+			xperror("String overflow while scanning (%d,%d)",
 			      k, max_str_size);
 #endif
 			if (BIT(sbuf->state, SOCKBUF_LOCK) != 0) {
@@ -809,7 +809,7 @@ int Packet_scanf(va_alist)
     }
     if (failure == 1) {
 	errno = 0;
-	error("Error in format string (%s)", fmt);
+	xperror("Error in format string (%s)", fmt);
     }
     else if (failure == 3) {
 	/* Not enough input for one complete packet */
@@ -819,7 +819,7 @@ int Packet_scanf(va_alist)
     else if (failure == 0) {
 	if (&sbuf->buf[sbuf->len] < &sbuf->ptr[j]) {
 	    errno = 0;
-	    error("Input buffer exceeded (%s)", fmt);
+	    xperror("Input buffer exceeded (%s)", fmt);
 	    failure = 1;
 	} else {
 	    sbuf->ptr += j;

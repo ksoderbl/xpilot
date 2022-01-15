@@ -155,13 +155,13 @@ int audioDeviceInit(char *display)
 
     if ((aud = AFOpenAudioConn("")) == NULL)
     {
-	error ("Cannot open a connection to audio server.");
+	xperror("Cannot open a connection to audio server.");
 	return 1;
     }
 
     device = FindDefaultDevice(aud);
     if (device == -1) {
-	error ("Cannot find an 8kHz, mono, non-telephone device");
+	xperror("Cannot find an 8kHz, mono, non-telephone device");
 	AFCloseAudioConn(aud);
 	return 1;
     }
@@ -200,11 +200,11 @@ struct SoundCache *newCacheEntry(char *fn)
 
   /* Open the sound file for reading */
   if ((fd = open(fn, O_RDONLY, 0)) < 0) {
-    error("Unable to open sound file %s.", fn);
+    xperror("Unable to open sound file %s.", fn);
     return NULL;
   }
   if (fstat(fd, &sbuf) == -1) {
-    error("Unable to stat sound file %s.", fn);
+    xperror("Unable to stat sound file %s.", fn);
     close(fd);
     return NULL;
   }
@@ -212,13 +212,13 @@ struct SoundCache *newCacheEntry(char *fn)
   /* If we have a Sun audio file, strip the header and adjust size. */
   if (read(fd, (char *)&header, sizeof(Sun_Audio_Hdr))
     < sizeof(Sun_Audio_Hdr)) {
-    error("Warning: assuming no header in: %s.", fn);
+    xperror("Warning: assuming no header in: %s.", fn);
     close(fd);
     fd = open(fn, O_RDONLY, 0);
   }
   else if (header.magic != SUN_MAGIC && header.magic != SUN_INV_MAGIC
     /*|| header.encoding != SUN_AUDIO_ENCODING_ULAW*/ ) {
-    error("Warning: found %x, expected sound header %x or %x in %s.",
+    xperror("Warning: found %x, expected sound header %x or %x in %s.",
       header.magic, SUN_MAGIC, SUN_INV_MAGIC, fn);
     close(fd);
     fd = open(fn, O_RDONLY, 0);
@@ -242,7 +242,7 @@ struct SoundCache *newCacheEntry(char *fn)
   strcpy(ce->fn, fn);
   ce->sound = (unsigned char *) malloc(sbuf.st_size);
   if (read(fd, ce->sound, sbuf.st_size) != sbuf.st_size) {
-    error("Unable to read sound file %s.", fn);
+    xperror("Unable to read sound file %s.", fn);
     free(ce->sound);
     free(ce->fn);
     ce->fn = NULL;

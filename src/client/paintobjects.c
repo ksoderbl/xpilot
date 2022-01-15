@@ -682,7 +682,7 @@ int Init_wreckage(void)
     point_size = sizeof(position) * RES;
     total_size = point_size * NUM_WRECKAGE_POINTS * NUM_WRECKAGE_SHAPES;
     if ((dynmem = (char *) malloc(total_size)) == NULL) {
-	error("Not enough memory for wreckage shapes");
+	xperror("Not enough memory for wreckage shapes");
 	return -1;
     }
 
@@ -716,7 +716,7 @@ int Init_asteroids(void)
     point_size = sizeof(position) * RES;
     total_size = point_size * NUM_ASTEROID_POINTS * NUM_ASTEROID_SHAPES;
     if ((dynmem = (char *) malloc(total_size)) == NULL) {
-	error("Not enough memory for asteroid shapes");
+	xperror("Not enough memory for asteroid shapes");
 	return -1;
     }
 

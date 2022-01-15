@@ -121,7 +121,7 @@ static int Fake_setup(void)
 	const int x = 100, y = 100;
 
 	if ((Setup = (setup_t *) malloc(sizeof(setup_t) + x * y)) == NULL) {
-		error("No memory for setup data");
+		xperror("No memory for setup data");
 		return -1;
 	}
 	Setup->mode = WRAP_PLAY;

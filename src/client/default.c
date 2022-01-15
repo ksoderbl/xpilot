@@ -2198,7 +2198,7 @@ static int Find_resource(XrmDatabase db, const char *resource,
 	}
 	if (++i >= NELEM(options)) {
 	    errno = 0;
-	    error("BUG: Can't find option \"%s\"", resource);
+	    xperror("BUG: Can't find option \"%s\"", resource);
 	    exit(1);
 	}
     }
@@ -2266,7 +2266,7 @@ static void Get_int_resource(XrmDatabase db,
     Find_resource(db, resource, resValue, sizeof resValue, &index);
     if (sscanf(resValue, "%d", result) <= 0) {
 	errno = 0;
-	error("Bad value \"%s\" for option \"%s\", using default...",
+	xperror("Bad value \"%s\" for option \"%s\", using default...",
 	      resValue, resource);
 	sscanf(options[index].fallback, "%d", result);
     }
@@ -2284,7 +2284,7 @@ static void Get_float_resource(XrmDatabase db,
     Find_resource(db, resource, resValue, sizeof resValue, &index);
     if (sscanf(resValue, "%lf", &temp_result) <= 0) {
 	errno = 0;
-	error("Bad value \"%s\" for option \"%s\", using default...",
+	xperror("Bad value \"%s\" for option \"%s\", using default...",
 	      resValue, resource);
 	sscanf(options[index].fallback, "%lf", &temp_result);
     }
@@ -2498,7 +2498,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	size += 2 * (strlen(options[i].name) + 2);
     }
     if ((ptr = (char *)malloc(size)) == NULL) {
-	error("No memory for options");
+	xperror("No memory for options");
 	exit(1);
     }
     xopt = (XrmOptionDescRec *)ptr;
@@ -2532,8 +2532,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     for (i = 1; i < *argcp; i++) {
 	if (argvp[i][0] == '-' || argvp[i][0] == '+') {
 	    errno = 0;
-	    error("Unknown or incomplete option '%s'", argvp[i]);
-	    error("Type: %s -help to see a list of options", argvp[0]);
+	    xperror("Unknown or incomplete option '%s'", argvp[i]);
+	    xperror("Type: %s -help to see a list of options", argvp[0]);
 	    exit(1);
 	}
 	/* The rest of the arguments are hostnames of servers. */
@@ -2559,7 +2559,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	}
     }
     if ((dpy = XOpenDisplay(dispName)) == NULL) {
-	error("Can't open display '%s'", dispName);
+	xperror("Can't open display '%s'", dispName);
 	if (strcmp(dispName, "NO_X") == 0) {
 	    /* user does not want X stuff.  experimental.  use at own risk. */
 	    strlcpy(nickName, realName, MAX_NAME_LEN);
@@ -2585,7 +2585,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     if (resValue[0] == '\0') {
 	kdpy = NULL;
     } else if ((kdpy = XOpenDisplay(resValue)) == NULL) {
-	error("Can't open keyboard '%s'", resValue);
+	xperror("Can't open keyboard '%s'", resValue);
 	exit(1);
     }
 
@@ -2638,7 +2638,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     CAP_LETTER(nickName[0]);
     if (nickName[0] < 'A' || nickName[0] > 'Z') {
 	errno = 0;
-	error("Your player name \"%s\" should start with an uppercase letter",
+	xperror("Your player name \"%s\" should start with an uppercase letter",
 	    nickName);
 	exit(1);
     }
@@ -2867,7 +2867,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
      */
     maxKeyDefs = 2 * NUM_KEYS;
     if (!(keyDefs = (keydefs_t *)malloc(maxKeyDefs * sizeof(keydefs_t)))) {
-	error("No memory for key bindings");
+	xperror("No memory for key bindings");
 	exit(1);
     }
     num = 0;
@@ -2900,7 +2900,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		maxKeyDefs += NUM_KEYS;
 		if (!(keyDefs = (keydefs_t *)
 			realloc(keyDefs, maxKeyDefs * sizeof(keydefs_t)))) {
-		    error("No memory for key bindings");
+		    xperror("No memory for key bindings");
 		    exit(1);
 		}
 	    }
@@ -2925,7 +2925,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 	maxKeyDefs = num;
 	if (!(keyDefs = (keydefs_t *)
 		realloc(keyDefs, maxKeyDefs * sizeof(keydefs_t)))) {
-	    error("No memory for key bindings");
+	    xperror("No memory for key bindings");
 	    exit(1);
 	}
     }
@@ -2948,7 +2948,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 			if (!strcasecmp(ptr, options[j].name + 3)) {
 			    if (NUM_BUTTON_DEFS(i) == MAX_BUTTON_DEFS) {
 				errno = 0;
-				error("Can only have %d keys bound to"
+				xperror("Can only have %d keys bound to"
 				      " pointer button %d",
 				      MAX_BUTTON_DEFS, i);
 				break;
@@ -2961,7 +2961,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
 		}
 		if (j == NELEM(options)) {
 		    errno = 0;
-		    error("Unknown key \"%s\" for pointer button %d", ptr, i);
+		    xperror("Unknown key \"%s\" for pointer button %d", ptr, i);
 		}
 	    }
 	}

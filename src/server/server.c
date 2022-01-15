@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 	addr = sock_get_addr_by_name(serverHost);
 	if (addr == NULL) {
 	    errno = 0;
-	    error("Failed name lookup on: %s", serverHost);
+	    xperror("Failed name lookup on: %s", serverHost);
 	    return 1;
 	}
 	serverAddr = xp_strdup(addr);
@@ -275,7 +275,7 @@ void Main_loop(void)
 	    End_game();
 	}
 	if (serverTime + 5*60 < time(NULL)) {
-	    error("First player has yet to show his butt, I'm bored... Bye!");
+	    xperror("First player has yet to show his butt, I'm bored... Bye!");
 	    Log_game("NOSHOW");
 	    End_game();
 	}
@@ -295,7 +295,7 @@ int End_game(void)
 
     if (ShutdownServer == 0) {
 	errno = 0;
-	error("Shutting down...");
+	xperror("Shutting down...");
 	sprintf(msg, "shutting down: %s", ShutdownReason);
     } else {
 	sprintf(msg, "server exiting");
@@ -489,7 +489,7 @@ void Server_info(char *str, unsigned max_size)
 
     if (strlen(str) >= max_size) {
 	errno = 0;
-	error("Server_info string overflow (%d)", max_size);
+	xperror("Server_info string overflow (%d)", max_size);
 	str[max_size - 1] = '\0';
 	return;
     }
@@ -506,7 +506,7 @@ void Server_info(char *str, unsigned max_size)
     strlcat(str, msg, max_size);
 
     if ((order = (player **) malloc(NumPlayers * sizeof(player *))) == NULL) {
-	error("No memory for order");
+	xperror("No memory for order");
 	return;
     }
     for (i = 0; i < NumPlayers; i++) {
@@ -572,20 +572,20 @@ static void Handle_signal(int sig_no)
 	    signal(SIGHUP, SIG_IGN);
 	    return;
 	}
-	error("Caught SIGHUP, terminating.");
+	xperror("Caught SIGHUP, terminating.");
 	End_game();
 	break;
     case SIGINT:
-	error("Caught SIGINT, terminating.");
+	xperror("Caught SIGINT, terminating.");
 	End_game();
 	break;
     case SIGTERM:
-	error("Caught SIGTERM, terminating.");
+	xperror("Caught SIGTERM, terminating.");
 	End_game();
 	break;
 
     default:
-	error("Caught unkown signal: %d", sig_no);
+	xperror("Caught unkown signal: %d", sig_no);
 	End_game();
 	break;
     }
@@ -618,7 +618,7 @@ void Log_game(const char *heading)
 	    heading);
 
     if ((fp = fopen(Conf_logfile(), "a")) == NULL) {	/* Couldn't open file */
-	error("Couldn't open log file, contact %s", Conf_localguru());
+	xperror("Couldn't open log file, contact %s", Conf_localguru());
 	return;
     }
 
@@ -796,7 +796,7 @@ int plock_server(int onoff)
     if (plock(op) == -1) {
 	static int num_plock_errors;
 	if (++num_plock_errors <= 3) {
-	    error("Can't plock(%d)", op);
+	    xperror("Can't plock(%d)", op);
 	}
 	return -1;
     }
