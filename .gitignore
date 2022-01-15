@@ -57,3 +57,11 @@ dkms.conf
 
 # Generated makefiles
 Makefile
+
+# Other
+.deps
+.vscode
+autom4te.cache
+*~
+config.log
+config.status
