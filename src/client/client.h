@@ -25,17 +25,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#ifdef _WINDOWS
-#ifndef	_WINSOCKAPI_
-#include <winsock.h>
-#endif
-
-#ifndef	_WINX_H_
-#include "NT/winX.h"
-#endif
-#endif
-
-
 #ifndef DRAW_H
 /* need shipobj */
 #include "draw.h"

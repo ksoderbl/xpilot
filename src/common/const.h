@@ -1,5 +1,4 @@
-/* $Id: const.h,v 5.9 2001/11/29 14:48:11 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -25,10 +24,8 @@
 #ifndef CONST_H
 #define CONST_H
 
-#ifndef _WINDOWS
 #include <limits.h>
 #include <math.h>
-#endif
 
 #ifndef TYPES_H
 #include "types.h"

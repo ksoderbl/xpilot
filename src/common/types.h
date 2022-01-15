@@ -1,5 +1,4 @@
-/* $Id: types.h,v 5.0 2001/04/07 20:00:59 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -32,31 +31,17 @@ typedef unsigned char	u_byte;
  * On others bool is already a builtin type.
  * Using preprocessor macros to circumvent both situations.
  */
+#ifndef __cplusplus
 #define false	0
 #define true	1
-
-#ifndef	_XPMONNT_
 #define bool	int
 #endif
 
-/*
- * Windows does all its FPU work in doubles.  Using floats gives warnings
- * and causes everything to be promoted to doubles anyway...
- */
-#ifndef _WINDOWS
 typedef	float	DFLOAT;
-#else
-typedef	double	DFLOAT;
-#endif
 
 typedef struct { DFLOAT x, y; }	vector;
 typedef vector			position;
 typedef struct { int x, y; }	ivec;
 typedef ivec			ipos;
-
-#ifdef _WINDOWS
-# define strncasecmp(__s, __t, __l)	strnicmp(__s, __t, __l)
-# define strcasecmp(__s, __t)	stricmp(__s, __t)
-#endif
 
 #endif
