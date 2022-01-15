@@ -112,7 +112,7 @@ am_xpilot_OBJECTS = about.$(OBJEXT) blockbitmaps.$(OBJEXT) \
 	xevent.$(OBJEXT) xeventhandlers.$(OBJEXT) xinit.$(OBJEXT) \
 	xpilot.$(OBJEXT) xpmread.$(OBJEXT)
 xpilot_OBJECTS = $(am_xpilot_OBJECTS)
-xpilot_LDADD = $(LDADD)
+xpilot_DEPENDENCIES = ../common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -277,6 +277,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/src/common
 xpilot_SOURCES = about.c blockbitmaps.c client.c colors.c configure.c datagram.c dbuff.c default.c gfx2d.c gfx3d.c guimap.c guiobjects.c join.c ncdaudio.c netclient.c paint.c paintdata.c painthud.c paintmap.c paintobjects.c paintradar.c query.c record.c sim.c syslimit.c talk.c talkmacros.c textinterface.c texture.c usleep.c welcome.c widget.c xevent.c xeventhandlers.c xinit.c xpilot.c xpmread.c
+xpilot_LDADD = -lX11 -lm ../common/libxpcommon.a
 all: all-am
 
 .SUFFIXES:
