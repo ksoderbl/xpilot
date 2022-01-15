@@ -147,7 +147,7 @@ int Block_bitmaps_create(void)
 			    xp_pixmaps[i].rotations : 
 			    -xp_pixmaps[i].rotations;
 
-	xp_pixmaps[i].bitmaps = malloc(images * sizeof(xp_bitmap_t));
+	xp_pixmaps[i].bitmaps = (xp_bitmap_t *) malloc(images * sizeof(xp_bitmap_t));
 	if (!xp_pixmaps[i].bitmaps) {
 	    error("Not enough memory.");
 	    break;

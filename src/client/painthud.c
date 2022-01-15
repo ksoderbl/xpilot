@@ -957,46 +957,34 @@ void Paint_messages(void)
  * however, buffer new messages if there is a pending selection.
  * Add_pending_messages() will be called later in Talk_cut_from_messages().
  */
-void Add_message(char *message)
+void Add_message(const char *message)
 {
     int			i, len;
     message_t		*tmp, **msg_set;
-
-#ifndef _WINDOWS
     bool		is_drawn_talk_message	= false; /* not pending */
     int			last_msg_index;
     bool		show_reverse_scroll	= false;
     bool		scrolling		= false; /* really moving */
 
     show_reverse_scroll = BIT(instruments, SHOW_REVERSE_SCROLL);
-#endif
 
     len = strlen(message);
     if (message[len - 1] == ']' || strncmp(message, " <", 2) == 0) {
-#ifndef _WINDOWS
 	if (selectionAndHistory && selection.draw.state == SEL_PENDING) {
 	    /* the buffer for the pending messages */
 	    msg_set = TalkMsg_pending;
-	} else
-#endif
-	{
+	} else {
 	    msg_set = TalkMsg;
-#ifndef _WINDOWS
 	    is_drawn_talk_message = true;
-#endif
 	}
     } else {
-#ifndef _WINDOWS
 	if (selectionAndHistory && selection.draw.state == SEL_PENDING) {
 	    msg_set = GameMsg_pending;
-	} else
-#endif
-	{
+	} else {
 	    msg_set = GameMsg;
 	}
     }
 
-#ifndef _WINDOWS
     if (selectionAndHistory && is_drawn_talk_message) {
 	/* how many talk messages */
         last_msg_index = 0;
@@ -1030,7 +1018,6 @@ void Add_message(char *message)
 	    }
 	} /* talk window emphasized */
     } /* talk messages */
-#endif
 
     tmp = msg_set[maxMessages - 1];
     for (i = maxMessages - 1; i > 0; i--) {
@@ -1042,7 +1029,6 @@ void Add_message(char *message)
     strlcpy(msg_set[0]->txt, message, MSG_LEN);
     msg_set[0]->len = len;
 
-#ifndef _WINDOWS
     /*
      * scroll also the emphasizing
      */
@@ -1074,7 +1060,6 @@ void Add_message(char *message)
 	    }
 	}
     }
-#endif
 
 #ifdef DEVELOPMENT
     /* Anti-censor hack restores original 4 letter words.

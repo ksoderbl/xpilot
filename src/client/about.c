@@ -467,7 +467,7 @@ int Keys_callback(int widget_desc, void *data, const char **unused)
 
     if (keys_created == false) {
 	unsigned	bufsize = (maxKeyDefs * 64);
-	char		*buf = calloc(bufsize, 1),
+	char		*buf = (char *)calloc(bufsize, 1),
 			*end = buf,
 			*help,
 			*str;

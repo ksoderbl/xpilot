@@ -194,7 +194,7 @@ extern void	Init_scale_array(void);
  * Prototypes from the paint*.c files.
  */
 
-void Add_message(char *message);
+void Add_message(const char *message);
 int Handle_start(long server_loops);
 int Handle_end(long server_loops);
 int Handle_self(int x, int y, int vx, int vy, int dir,
