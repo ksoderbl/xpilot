@@ -34,27 +34,12 @@
 #ifndef	ERROR_H
 #define	ERROR_H
 
-# if (defined(__STDC__) && !defined(__sun__) || defined(__cplusplus) || defined(_WINDOWS))
-#  include <stdarg.h>
-    extern void warn(const char *fmt, ...);
-    extern void error(const char *fmt, ...);
-    extern void fatal(const char *fmt, ...);
-    extern void dumpcore(const char *fmt, ...);
-# else
-#  include <varargs.h>
-    extern void warn();
-    extern void error();
-    extern void fatal();
-    extern void dumpcore();
-# endif
+#include <stdarg.h>
 
-#ifdef _WINDOWS
-# ifdef	_DEBUG
-#  define	Trace _Trace
-# else
-#  define	Trace
-# endif
-#endif
+extern void warn(const char *fmt, ...);
+extern void error(const char *fmt, ...);
+extern void fatal(const char *fmt, ...);
+extern void dumpcore(const char *fmt, ...);
 
 extern void init_error(const char *prog);
 
