@@ -44,9 +44,9 @@
 */
 size_t strlcpy(char *dest, const char *src, size_t size)
 {
-    register char	*d = dest;
-    register const char	*s = src;
-    register char	*maxd = dest + (size - 1);
+    char		*d = dest;
+    const char		*s = src;
+    char		*maxd = dest + (size - 1);
 
     if (size > 0) {
 	while (*s && d < maxd) {
@@ -81,9 +81,9 @@ size_t strlcpy(char *dest, const char *src, size_t size)
 */
 size_t strlcat(char *dest, const char *src, size_t size)
 {
-    register char	*d = dest;
-    register const char	*s = src;
-    register char	*maxd = dest + (size - 1);
+    char		*d = dest;
+    const char		*s = src;
+    char		*maxd = dest + (size - 1);
     size_t		dlen = 0;
 
     if (size > 0) {

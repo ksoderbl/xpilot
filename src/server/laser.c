@@ -374,7 +374,7 @@ static list_t Laser_pulse_get_object_list(
 {
     list_t		output_obj_list;
     list_t		ast_list;
-    register DFLOAT	dx, dy;
+    DFLOAT		dx, dy;
     int			range;
     list_iter_t		iter;
     object		*ast;

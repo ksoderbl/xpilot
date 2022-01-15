@@ -637,13 +637,3 @@ void aboutCleanup(void)
 	motd_buf = NULL;
     }
 }
-
-#ifdef _WINDOWS
-int Credits_callback(int widget_desc, void *data, const char **unused)
-{
-    extern	void DoWinAboutBox();
-    DoWinAboutBox();
-    return(0);
-}
-#endif
-

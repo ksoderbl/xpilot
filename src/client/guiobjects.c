@@ -846,8 +846,8 @@ static int set_shipshape(int world_x, int world_y,
 		  int dir, shipobj *ship, XPoint *points)
 {
     int			cnt;
-    register position	*ship_point_pos;
-    register XPoint	*xpts = points;
+    position		*ship_point_pos;
+    XPoint		*xpts = points;
     int			window_x;
     int			window_y;
 

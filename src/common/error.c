@@ -41,7 +41,7 @@ static char		progname[MAX_PROG_LENGTH];
 
 static const char* prog_basename(const char *prog)
 {
-    char *p;
+    const char *p;
 
     p = strrchr(prog, '/');
 

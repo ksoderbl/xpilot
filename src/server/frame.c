@@ -718,7 +718,7 @@ static void Frame_shuffle(void)
 static void Frame_shots(int conn, int ind)
 {
     player			*pl = Players[ind];
-    register int		x, y;
+    int				x, y;
     int				i, k, color;
     int				fuzz = 0, teamshot, len;
     int				obj_count;
