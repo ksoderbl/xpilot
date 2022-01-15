@@ -35,10 +35,10 @@
 *.i*86
 *.x86_64
 *.hex
-src/client/xpilot
-src/server/xpilots
-src/replay/xp-replay
-src/mapedit/xp-mapedit
+src/client/xpilot-client
+src/server/xpilot-server
+src/replay/xpilot-replay
+src/mapedit/xpilot-mapedit
 
 # Debug files
 *.dSYM/
