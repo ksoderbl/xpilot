@@ -40,11 +40,6 @@
 #endif
 
 
-#ifdef SPARC_CMAP_HACK
-extern char   frameBuffer[MAX_CHARS]; /* frame buffer */
-#endif
-
-
 dbuff_state_t   *dbuf_state;	/* Holds current dbuff state */
 
 
@@ -221,20 +216,6 @@ dbuff_state_t *start_dbuff(Display *display, Colormap xcolormap,
 		     state->colormap_size);
     }
 
-    state->cmap_hack.fbfd = -1;
-#ifdef SPARC_CMAP_HACK
-    if (state->type == COLOR_SWITCH) {
-	state->cmap_hack.fbfd = open(frameBuffer, O_RDONLY, 0);
-	if (state->cmap_hack.fbfd != -1) {
-	    state->cmap_hack.hardcmap.index = state->pixel;
-	    state->cmap_hack.hardcmap.count = state->colormap_size;
-	    state->cmap_hack.hardcmap.red = malloc(state->colormap_size);
-	    state->cmap_hack.hardcmap.green = malloc(state->colormap_size);
-	    state->cmap_hack.hardcmap.blue = malloc(state->colormap_size);
-	}
-    }
-#endif
-
     return state;
 }
 
@@ -286,27 +267,6 @@ void dbuff_switch(dbuff_state_t *state)
     state->colormap_index ^= 1;
 
     if (state->type == COLOR_SWITCH) {
-#ifdef SPARC_CMAP_HACK
-	if (state->cmap_hack.fbfd != -1) {
-	    int		i;
-
-	    for (i = 0; i < state->colormap_size; i++) {
-		state->cmap_hack.hardcmap.red[i] =
-		    state->colormaps[state->colormap_index][i].red >> 8;
-		state->cmap_hack.hardcmap.green[i] =
-		    state->colormaps[state->colormap_index][i].green >> 8;
-		state->cmap_hack.hardcmap.blue[i] =
-		    state->colormaps[state->colormap_index][i].blue >> 8;
-	    }
-	    if (ioctl(state->cmap_hack.fbfd, FBIOPUTCMAP,
-		      &state->cmap_hack.hardcmap) == -1) {
-		pxperror("ioctl FBIOPUTCMAP");
-		close(state->cmap_hack.fbfd);
-		state->cmap_hack.fbfd = -1;
-	    }
-	} else
-#endif
-
 	XStoreColors(state->display, state->xcolormap,
 		     state->colormaps[state->colormap_index], state->colormap_size);
     }

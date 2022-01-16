@@ -140,11 +140,6 @@ OS2_XLIB = -L$(X11ROOT)/xfree86/lib -L$(LIBRARY_PATH) -lX11 -lXext
 #  SILENT          - makes the server real silent.
 #  SOUND           - for sound support (requires rplay 3.0 or NCDaudio)
 #  SERVER_SOUND    - for sound support in the server only, not in the client.
-#  SPARC_CMAP_HACK - try the alternate colormap swapping code
-#                    that talks directly to the sparc hardware.
-#                    WARNING: WILL NOT WORK ON ANY OTHER HARDWARE
-#                    CAUTION: dangerous if you don't know
-#                    what it does and how it works.
 #  JOYSTICK        - joystick support for Linux 1.0, needs joystick-0.7.
 #  PLOCKSERVER     - Use the plock(2) system call to lock the xpilots
 #                    server into memory to inhibit paging/swapping.

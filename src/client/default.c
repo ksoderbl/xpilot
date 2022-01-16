@@ -86,12 +86,6 @@ char			myName[] = "xpilot";
 char			myClass[] = "XPilot";
 
 
-#ifdef SPARC_CMAP_HACK
-char  frameBuffer[MAX_CHARS]; /* frame buffer */
-#endif
-
-
-
 extern char *talk_fast_msgs[];	/* talk macros */
 char talk_fast_temp_buf[7];		/* can handle up to 999 fast msgs */
 char *talk_fast_temp_buf_big;
@@ -1781,15 +1775,6 @@ option options[] = {
 	"Specifies the audio server to use.\n"
     },
 #endif
-#ifdef SPARC_CMAP_HACK
-    {
-	"frameBuffer",
-	NULL,
-	"/dev/fb",
-	KEY_DUMMY,
-	"Specifies the device name of the frame buffer.\n"
-    },
-#endif    
 #ifdef DEVELOPMENT
     {
         "test",
@@ -2848,10 +2833,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
     Get_int_resource(rDB, "maxVolume", &maxVolume);
     Get_resource(rDB, "audioServer", audioServer, sizeof audioServer);
-#endif
-
-#ifdef SPARC_CMAP_HACK
-    Get_string_resource(rDB, "frameBuffer", frameBuffer, sizeof frameBuffer);
 #endif
 
     Get_test_resources(rDB);

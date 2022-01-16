@@ -25,18 +25,6 @@
 #ifndef	DBUFF_H
 #define	DBUFF_H
 
-#ifdef SPARC_CMAP_HACK
-# if defined(sparc) || defined(__sparc)
-#  if defined(SVR4) || defined(__svr4__)
-#   include <sys/fbio.h>
-#  else
-#   include <sun/fbio.h>
-#  endif
-# else
-#  undef SPARC_CMAP_HACK
-# endif
-#endif
-
 #ifdef DBE
 # include <X11/extensions/Xdbe.h>
 # undef MBX
@@ -78,13 +66,6 @@ typedef struct {
 } dbuff_mbx_state_t;
 
 typedef struct {
-    int			fbfd;
-#ifdef SPARC_CMAP_HACK
-    struct fbcmap	hardcmap;
-#endif
-} dbuff_cmap_hack_t;
-
-typedef struct {
     Display		*display;
     dbuff_t		type;
     dbuff_multibuffer_t	multibuffer_type;
@@ -98,7 +79,6 @@ typedef struct {
     unsigned long	pixel;
     dbuff_dbe_state_t	dbe;
     dbuff_mbx_state_t	mbx;
-    dbuff_cmap_hack_t	cmap_hack;
 } dbuff_state_t;
 
 extern dbuff_state_t   *dbuf_state;    /* Holds current dbuff state */

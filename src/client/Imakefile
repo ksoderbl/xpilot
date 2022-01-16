@@ -65,9 +65,6 @@ COMMON = ../common/
 #ifdef Erase
 DEFS_ERASE = -DERASE=1
 #endif
-#ifdef SparcCmapHack
-DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
-#endif
 #ifdef MultibufferExtension
 DEFS_MBX = -DMBX
 #endif
@@ -95,7 +92,7 @@ DEFS_DEBUG = -DDEVELOPMENT
  *
  */
 DEFINES = \
-       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
+       $(DEFS_ERASE) $(DEFS_MBX) $(DEFS_DBE) \
        $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
        $(DEFS_OTHER) $(DEFS_DEBUG)
 INCLUDES = $(AUDIOINC) -I$(COMMON) -I../../lib/
