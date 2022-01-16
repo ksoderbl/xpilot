@@ -263,7 +263,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = common client server replay
+SUBDIRS = common client server replay mapedit
 all: all-recursive
 
 .SUFFIXES:

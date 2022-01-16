@@ -1,1 +1,1 @@
-SUBDIRS = common client server replay
+SUBDIRS = common client server replay mapedit
