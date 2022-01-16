@@ -783,7 +783,7 @@ static int Cmd_pause(char *arg, player *pl, int oper, char *msg)
 		== PLAYING) {
 		Kill_player(i);
 	    }
-	    Pause_player(i, 1);
+	    Pause_player(i, true);
 	    sprintf(msg, "%s was paused by %s.", Players[i]->name, pl->name);
 	    Set_message(msg);
 	    strcpy(msg, "");

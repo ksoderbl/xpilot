@@ -25,16 +25,15 @@
 #ifndef	PROTOCLIENT_H
 #define	PROTOCLIENT_H
 
+#ifndef TYPES_H
+#include "types.h"
+#endif
+
 /*
  * about.c
  */
 extern int Handle_motd(long off, char *buf, int len, long filesize);
 extern void aboutCleanup(void);
-
-#ifdef _WINDOWS
-extern	void Motd_destroy();
-extern	void Keys_destroy();
-#endif
 
 extern int motd_viewer;		/* so Windows can clean him up */
 extern int keys_viewer;
@@ -53,17 +52,14 @@ void Colors_debug(void);
  * default.c
  */
 extern void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-			  int *my_team, int *text, int *list,
-			  int *join, int *noLocalMotd,
+			  int *my_team, bool *text, bool *list,
+			  bool *join, bool *noLocalMotd,
 			  char *nickName, char *dispName, char *hostName,
 			  char *shut_msg);
 extern void defaultCleanup(void);				/* memory cleanup */
 
-#ifndef _WINDOWS
 extern void Get_xpilotrc_file(char *, unsigned);
-#else
-extern	char* Get_xpilotini_file(int level);
-#endif
+
 /*
  * join.c
  */

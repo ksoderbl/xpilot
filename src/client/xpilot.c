@@ -86,7 +86,7 @@ static void printfile(const char *filename)
 int main(int argc, char *argv[])
 {
     int				result;
-    int				auto_connect = false,
+    bool			auto_connect = false,
 				text = false,
 				list_servers = false,
 				auto_shutdown = false,

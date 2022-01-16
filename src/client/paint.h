@@ -162,7 +162,7 @@ extern int	ext_view_y_offset;	/* Offset of ext_view_height */
 extern u_byte	debris_colors;		/* Number of debris intensities */
 extern DFLOAT	charsPerTick;		/* Output speed of messages */
 extern bool	markingLights;		/* Marking lights on ships */
-extern int	titleFlip;		/* Do special titlebar flipping? */
+extern bool	titleFlip;		/* Do special titlebar flipping? */
 extern int	shieldDrawMode;		/* How to draw players shield */
 extern char	modBankStr[][MAX_CHARS];	/* modifier banks strings */
 extern char	*texturePath;		/* Path list of texture directories */

@@ -135,8 +135,8 @@ static list_iter_t	server_it;
 /*
  * Are we in the process of quitting, or joining a game.
  */
-extern int		quitting;
-static int		joining;
+extern bool		quitting;
+static bool		joining;
 
 
 /*
@@ -352,7 +352,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
     server_addrs = (char *) malloc(MAX_LOCAL_SERVERS * MAX_HOST_LEN);
     if (!server_names || !server_addrs) {
 	Not_enough_memory();
-	quitting = 1;
+	quitting = true;
 	return 0;
     }
     for (i = 0; i < MAX_LOCAL_SERVERS; i++) {
@@ -399,7 +399,7 @@ static int Localnet_cb(int widget, void *user_data, const char **text)
 	    Not_enough_memory();
 	    free(server_names);
 	    free(server_addrs);
-	    quitting = 1;
+	    quitting = true;
 	    return 0;
 	}
 	for (i = 0; i < n; i++) {
@@ -1767,7 +1767,7 @@ static int Quit_cb(int widget, void *user_data, const char **text)
 {
     Welcome_set_mode(ModeQuit);
 
-    quitting = 1;
+    quitting = true;
 
     return 0;
 }

@@ -59,8 +59,8 @@ extern bool		refreshMotd;
 extern char		sparkColors[MSG_LEN];
 extern int		spark_color[MAX_COLORS];
 extern int		num_spark_colors;
-extern int		ignoreWindowManager;
-extern int		quitting;
+extern bool		ignoreWindowManager;
+extern bool		quitting;
 
 /*
  * Prototypes for xinit.c

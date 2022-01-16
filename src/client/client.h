@@ -276,10 +276,10 @@ extern char	realname[MAX_CHARS];	/* Real name of player */
 extern char	servername[MAX_CHARS];	/* Name of server connecting to */
 extern unsigned	version;		/* Version of the server */
 extern int	scoresChanged;
-extern int	toggle_shield;		/* Are shields toggled by a press? */
+extern bool	toggle_shield;		/* Are shields toggled by a press? */
 extern int	shields;		/* When shields are considered up */
-extern int	auto_shield;            /* drops shield for fire */
-extern int	initialPointerControl;	/* Start by using mouse for control? */
+extern bool	auto_shield;            /* drops shield for fire */
+extern bool	initialPointerControl;	/* Start by using mouse for control? */
 extern int	pointerControl;		/* current state of mouse ship flying */
 extern bool	useErase;		/* use the Erase hack for slow X */
 
@@ -339,8 +339,8 @@ void Client_flush(void);
 void Client_sync(void);
 int Client_wrap_mode(void);
 void Reset_shields(void);
-void Set_toggle_shield(int onoff);
-void Set_auto_shield(int onoff);
+void Set_toggle_shield(bool valueOn);
+void Set_auto_shield(bool valueOn);
 
 #ifdef XlibSpecificationRelease
 void Key_event(XEvent *event);

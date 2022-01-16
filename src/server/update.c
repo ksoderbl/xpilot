@@ -1288,7 +1288,7 @@ void Update_objects(void)
 	    if (IS_HUMAN_PTR(pl)) {
 		if (frame_loops - pl->frame_last_busy > 60 * FPS) {
 		    if ((NumPlayers - NumRobots - NumPseudoPlayers) > 1) {
-			Pause_player(i, 1);
+			Pause_player(i, true);
 		    }
 		}
 	    }

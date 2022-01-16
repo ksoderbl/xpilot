@@ -2292,7 +2292,7 @@ static void Get_float_resource(XrmDatabase db,
 }
 
 
-static void Get_bool_resource(XrmDatabase db, const char *resource, int *result)
+static void Get_bool_resource(XrmDatabase db, const char *resource, bool *result)
 {
     int			index;
     char		resValue[MAX_CHARS];
@@ -2466,8 +2466,8 @@ static void Get_file_defaults(XrmDatabase *rDBptr)
 
 
 void Parse_options(int *argcp, char **argvp, char *realName, int *port,
-		   int *my_team, int *text, int *list,
-		   int *join, int *noLocalMotd,
+		   int *my_team, bool *text, bool *list,
+		   bool *join, bool *noLocalMotd,
 		   char *nickName, char *dispName, char *hostName,
 		   char *shut_msg)
 {
@@ -2668,10 +2668,8 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bool_resource(rDB, "list", list);
     Get_bool_resource(rDB, "join", join);
     Get_bool_resource(rDB, "noLocalMotd", noLocalMotd);
-    Get_bool_resource(rDB, "autoServerMotdPopup", &i);
-    autoServerMotdPopup = (i != 0) ? true : false;
-    Get_bool_resource(rDB, "refreshMotd", &i);
-    refreshMotd = (i != 0) ? true : false;
+    Get_bool_resource(rDB, "autoServerMotdPopup", &autoServerMotdPopup);
+    Get_bool_resource(rDB, "refreshMotd", &refreshMotd);
 
     Get_shipshape_resource(rDB, &shipShape);
     Validate_shape_str(shipShape);
@@ -2686,8 +2684,7 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_float_resource(rDB, "sparkProb", &spark_prob);
     spark_rand = (int)(spark_prob * MAX_SPARK_RAND + 0.5f);
     Get_int_resource(rDB, "charsPerSecond", &charsPerSecond);
-    Get_bool_resource(rDB, "markingLights", &i);
-    markingLights = (i == false) ? false : true;
+    Get_bool_resource(rDB, "markingLights", &markingLights);
 
     Get_int_resource(rDB, "backgroundPointDist", &map_point_distance);
     Get_int_resource(rDB, "backgroundPointSize", &map_point_size);
@@ -2722,12 +2719,9 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_resource(rDB, "modifierBank4", modBankStr[3], sizeof modBankStr[3]);
 
     Get_resource(rDB, "visual", visualName, sizeof visualName);
-    Get_bool_resource(rDB, "mono", &i);
-    mono = (i != 0) ? true : false;
-    Get_bool_resource(rDB, "colorSwitch", &i);
-    colorSwitch = (i != 0) ? true : false;
-    Get_bool_resource(rDB, "multibuffer", &i);
-    multibuffer = (i != 0) ? true : false;
+    Get_bool_resource(rDB, "mono", &mono);
+    Get_bool_resource(rDB, "colorSwitch", &colorSwitch);
+    Get_bool_resource(rDB, "multibuffer", &multibuffer);
 
     /* Windows already derived maxColors in InitWinX */
     IFNWINDOWS( Get_int_resource(rDB, "maxColors", &maxColors); )

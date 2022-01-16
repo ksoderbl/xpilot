@@ -108,7 +108,7 @@ Cursor			pointerControlCursor;
 char			sparkColors[MSG_LEN];
 int			spark_color[MAX_COLORS];
 int			num_spark_colors;
-int			ignoreWindowManager;
+bool			ignoreWindowManager;
 
 static message_t	*MsgBlock = NULL;
 static message_t	*MsgBlock_pending = NULL;

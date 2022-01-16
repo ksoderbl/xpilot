@@ -117,7 +117,7 @@ int Receive_time_left(void);
 int Receive_eyes(void);
 int Receive_motd(void);
 int Receive_magic(void);
-int Send_audio_request(int onoff);
+int Send_audio_request(bool valueOn);
 int Send_fps_request(int fps);
 int Receive_loseitem(void);
 

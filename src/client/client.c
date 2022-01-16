@@ -143,10 +143,10 @@ char	name[MAX_CHARS];	/* Nick-name of player */
 char	realname[MAX_CHARS];	/* Real name of player */
 char	servername[MAX_CHARS];	/* Name of server connecting to */
 unsigned	version;	/* Version of the server */
-int     toggle_shield;          /* Are shields toggled by a press? */
+bool	toggle_shield;          /* Are shields toggled by a press? */
 int     shields = 1;            /* When shields are considered up */
 
-int     auto_shield = 1;        /* shield drops for fire */
+bool    auto_shield = 1;        /* shield drops for fire */
 
 int	maxFPS;			/* Client's own FPS */
 int	oldMaxFPS;

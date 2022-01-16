@@ -63,7 +63,7 @@ extern setup_t		*Setup;
 
 static BITV_DECL(keyv, NUM_KEYS);
 
-int		initialPointerControl = false;
+bool		initialPointerControl = false;
 bool		pointerControl = false;
 extern Cursor	pointerControlCursor;
 
@@ -97,7 +97,7 @@ extern Cursor	pointerControlCursor;
 #define JS_BUTTON0	KEY_FIRE_SHOT
 #define JS_BUTTON1	KEY_SHIELD
 
-static int Key_set(int key, int onoff)
+static int Key_set(int key, bool valueOn)
 {
     if (onoff) {
 	if (!BITV_ISSET(keyv, key)) {
@@ -202,9 +202,9 @@ keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     return (ret);
 }
 
-void Pointer_control_set_state(int onoff)
+void Pointer_control_set_state(bool valueOn)
 {
-    if (onoff) {
+    if (valueOn) {
 	pointerControl = true;
 	XGrabPointer(dpy, draw, true, 0, GrabModeAsync,
 		     GrabModeAsync, draw, pointerControlCursor, CurrentTime);
@@ -700,14 +700,14 @@ void Reset_shields(void)
     }
 }
 
-void Set_auto_shield(int onoff)
+void Set_auto_shield(bool valueOn)
 {
-    auto_shield = onoff;
+    auto_shield = valueOn;
 }
 
-void Set_toggle_shield(int onoff)
+void Set_toggle_shield(bool valueOn)
 {
-    toggle_shield = onoff;
+    toggle_shield = valueOn;
     if (toggle_shield) {
 	if (auto_shield) {
 	    shields = 1;

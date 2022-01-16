@@ -782,7 +782,7 @@ static int plock(int op)
  * if this program has been compiled with the PLOCKSERVER flag.
  * Or unlock the server process if the argument is false.
  */
-int plock_server(int onoff)
+int plock_server(bool valueOn)
 {
 #ifdef PLOCKSERVER
     int			op;
@@ -802,7 +802,7 @@ int plock_server(int onoff)
     }
     return onoff;
 #else
-    if (onoff) {
+    if (valueOn) {
 	xpprintf("Can't plock: Server was not compiled with plock support\n");
     }
     return 0;
