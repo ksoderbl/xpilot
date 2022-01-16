@@ -94,7 +94,8 @@ char *talk_fast_temp_buf_big;
 static void Get_test_resources(XrmDatabase rDB);
 
 
-keys_t buttonDefs[MAX_POINTER_BUTTONS][MAX_BUTTON_DEFS+1];
+keys_t buttonDefs[MAX_POINTER_BUTTONS][MAX_BUTTON_DEFS];
+int numButtonDefs[MAX_POINTER_BUTTONS];
 
 /* from common/config.c */
 extern char conf_ship_file_string[];

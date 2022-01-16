@@ -36,7 +36,7 @@
 
 #define MAX_POINTER_BUTTONS	5
 #define MAX_BUTTON_DEFS		3
-#define NUM_BUTTON_DEFS(i)	(buttonDefs[(i)][MAX_BUTTON_DEFS])
+#define NUM_BUTTON_DEFS(i)	numButtonDefs[i]
 
 extern Atom		ProtocolAtom, KillAtom;
 extern int		buttonColor, windowColor, borderColor;
