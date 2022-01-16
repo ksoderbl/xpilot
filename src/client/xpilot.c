@@ -60,9 +60,6 @@ char			**Argv;
 int			Argc;
 
 
-static void Check_client_versions(void);
-
-
 static void printfile(const char *filename)
 {
     FILE		*fp;

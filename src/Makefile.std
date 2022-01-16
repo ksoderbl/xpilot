@@ -487,51 +487,49 @@ depend-replay:
 	cd replay && gcc -MM -I../common -I../client $(SRCS3) >> ../Makefile.std
 
 # DO NOT DELETE
-checknames.o: checknames.c version.h xpconfig.h const.h types.h error.h \
- pack.h checknames.h commonproto.h
-xpconfig.o: xpconfig.c version.h xpconfig.h
-error.o: error.c version.h xpconfig.h const.h types.h error.h \
- portability.h commonproto.h
+checknames.o: checknames.c xpconfig.h const.h types.h error.h pack.h \
+ checknames.h commonproto.h
+xpconfig.o: xpconfig.c xpconfig.h
+error.o: error.c xpconfig.h const.h types.h error.h portability.h \
+ commonproto.h
 list.o: list.c list.h
 math.o: math.c version.h xpconfig.h const.h types.h error.h commonproto.h
 net.o: net.c version.h xpconfig.h const.h types.h error.h net.h socklib.h \
  packet.h bit.h
-portability.o: portability.c version.h xpconfig.h portability.h \
- commonproto.h types.h
+portability.o: portability.c xpconfig.h portability.h commonproto.h \
+ types.h
 randommt.o: randommt.c
 shipshape.o: shipshape.c version.h xpconfig.h const.h types.h draw.h \
  error.h
-socklib.o: socklib.c version.h socklib.h commonproto.h types.h
+socklib.o: socklib.c socklib.h commonproto.h types.h
 strcasecmp.o: strcasecmp.c
 strdup.o: strdup.c error.h commonproto.h types.h
 strlcpy.o: strlcpy.c commonproto.h types.h
 xpmemory.o: xpmemory.c error.h commonproto.h types.h
-about.o: about.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/keys.h paint.h client.h \
- ../common/draw.h ../common/item.h xinit.h widget.h configure.h \
- ../common/error.h netclient.h dbuff.h protoclient.h
+about.o: about.c ../common/xpconfig.h ../common/const.h ../common/types.h \
+ ../common/keys.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h widget.h configure.h ../common/error.h netclient.h dbuff.h \
+ protoclient.h
 blockbitmaps.o: blockbitmaps.c blockbitmaps.h gfx2d.h ../common/version.h \
  ../common/error.h ../common/const.h ../common/types.h paint.h client.h \
  ../common/draw.h ../common/item.h ../common/portability.h paintdata.h
 caudio.o: caudio.c ../common/version.h
-client.o: client.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/setup.h ../common/error.h \
- ../common/rules.h ../common/bit.h netclient.h paint.h client.h \
- ../common/draw.h ../common/item.h xinit.h protoclient.h \
- ../common/portability.h talk.h ../common/commonproto.h
-colors.o: colors.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/types.h paint.h client.h \
- ../common/draw.h ../common/item.h xinit.h ../common/error.h dbuff.h \
- protoclient.h
-configure.o: configure.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h xinit.h ../common/bit.h ../common/keys.h netclient.h \
- widget.h configure.h ../common/setup.h ../common/error.h protoclient.h \
+client.o: client.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/setup.h ../common/error.h ../common/rules.h \
+ ../common/bit.h netclient.h paint.h client.h ../common/draw.h \
+ ../common/item.h xinit.h protoclient.h ../common/portability.h talk.h \
+ ../common/commonproto.h
+colors.o: colors.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/types.h paint.h client.h ../common/draw.h \
+ ../common/item.h xinit.h ../common/error.h dbuff.h protoclient.h
+configure.o: configure.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/bit.h ../common/keys.h netclient.h widget.h \
+ configure.h ../common/setup.h ../common/error.h protoclient.h \
  ../common/portability.h ../common/commonproto.h
-datagram.o: datagram.c ../common/version.h ../common/xpconfig.h \
- ../common/error.h client.h ../common/draw.h ../common/types.h \
- ../common/const.h ../common/item.h ../common/socklib.h protoclient.h \
- datagram.h ../common/portability.h
+datagram.o: datagram.c ../common/xpconfig.h ../common/error.h client.h \
+ ../common/draw.h ../common/types.h ../common/const.h ../common/item.h \
+ ../common/socklib.h protoclient.h datagram.h ../common/portability.h
 dbuff.o: dbuff.c ../common/version.h ../common/xpconfig.h \
  ../common/const.h ../common/types.h ../common/draw.h ../common/bit.h \
  dbuff.h
@@ -541,115 +539,111 @@ default.o: default.c ../common/version.h ../common/xpconfig.h \
  netclient.h xinit.h ../common/error.h ../common/types.h protoclient.h \
  ../common/audio.h ../common/commonproto.h ../common/portability.h talk.h \
  default.h ../common/checknames.h
-gfx2d.o: gfx2d.c ../common/version.h ../common/xpconfig.h gfx2d.h \
- ../common/error.h ../common/const.h ../common/types.h \
- ../common/portability.h ../common/commonproto.h
+gfx2d.o: gfx2d.c ../common/xpconfig.h gfx2d.h ../common/error.h \
+ ../common/const.h ../common/types.h ../common/portability.h \
+ ../common/commonproto.h
 gfx3d.o: gfx3d.c gfx3d.h ../common/const.h ../common/types.h
-guimap.o: guimap.c gfx2d.h ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
- texture.h paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- paintmacros.h record.h xinit.h protoclient.h blockbitmaps.h guimap.h
-guiobjects.o: guiobjects.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
- texture.h paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- paintmacros.h record.h xinit.h protoclient.h ../common/portability.h \
- blockbitmaps.h gfx2d.h ../common/wreckshape.h ../common/astershape.h \
- guiobjects.h ../common/pack.h ../common/commonproto.h
+guimap.o: guimap.c gfx2d.h ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/types.h \
+ ../common/keys.h ../common/rules.h ../common/setup.h texture.h paint.h \
+ client.h ../common/draw.h ../common/item.h paintdata.h paintmacros.h \
+ record.h xinit.h protoclient.h blockbitmaps.h guimap.h
+guiobjects.o: guiobjects.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/types.h \
+ ../common/keys.h ../common/rules.h ../common/setup.h texture.h paint.h \
+ client.h ../common/draw.h ../common/item.h paintdata.h paintmacros.h \
+ record.h xinit.h protoclient.h ../common/portability.h blockbitmaps.h \
+ gfx2d.h ../common/wreckshape.h ../common/astershape.h guiobjects.h \
+ ../common/pack.h ../common/commonproto.h
 join.o: join.c ../common/version.h ../common/xpconfig.h ../common/const.h \
  ../common/types.h ../common/error.h client.h ../common/draw.h \
  ../common/item.h ../common/types.h netclient.h protoclient.h \
  ../common/portability.h
-netclient.o: netclient.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/net.h \
- ../common/socklib.h netclient.h ../common/setup.h ../common/packet.h \
- ../common/bit.h paint.h client.h ../common/draw.h ../common/item.h \
- xinit.h ../common/pack.h ../common/types.h ../common/socklib.h \
- protoclient.h ../common/portability.h talk.h ../common/commonproto.h
+netclient.o: netclient.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/net.h ../common/socklib.h \
+ netclient.h ../common/setup.h ../common/packet.h ../common/bit.h paint.h \
+ client.h ../common/draw.h ../common/item.h xinit.h ../common/pack.h \
+ ../common/types.h ../common/socklib.h protoclient.h \
+ ../common/portability.h talk.h ../common/commonproto.h
 paint.o: paint.c ../common/version.h ../common/xpconfig.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
  ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
  dbuff.h texture.h paint.h client.h ../common/draw.h ../common/item.h \
  paintdata.h record.h xinit.h blockbitmaps.h gfx2d.h \
  ../common/portability.h ../common/commonproto.h
-paintdata.o: paintdata.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- client.h ../common/draw.h ../common/item.h ../common/setup.h \
- ../common/rules.h paint.h paintdata.h record.h xinit.h protoclient.h \
- dbuff.h ../common/commonproto.h
-painthud.o: painthud.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
- texture.h paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- paintmacros.h record.h xinit.h protoclient.h blockbitmaps.h gfx2d.h \
+paintdata.o: paintdata.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h client.h \
+ ../common/draw.h ../common/item.h ../common/setup.h ../common/rules.h \
+ paint.h paintdata.h record.h xinit.h protoclient.h dbuff.h \
  ../common/commonproto.h
-paintmap.o: paintmap.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
- texture.h paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- paintmacros.h record.h xinit.h protoclient.h guimap.h
-paintobjects.o: paintobjects.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/types.h ../common/keys.h ../common/rules.h ../common/setup.h \
- texture.h paint.h client.h ../common/draw.h ../common/item.h paintdata.h \
- paintmacros.h record.h xinit.h protoclient.h ../common/portability.h \
- guiobjects.h guimap.h gfx3d.h blockbitmaps.h gfx2d.h \
- ../common/wreckshape.h ../common/astershape.h
-paintradar.o: paintradar.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/error.h ../common/bit.h \
- ../common/keys.h ../common/rules.h ../common/setup.h paint.h client.h \
- ../common/draw.h ../common/item.h paintdata.h xinit.h
-query.o: query.c ../common/version.h ../common/xpconfig.h \
- ../common/error.h ../common/socklib.h protoclient.h
-record.o: record.c ../common/version.h ../common/xpconfig.h \
- ../common/error.h ../common/const.h ../common/types.h client.h \
- ../common/draw.h ../common/item.h paint.h ../common/setup.h record.h \
- recordfmt.h xpmread.h ../common/commonproto.h xinit.h
+painthud.o: painthud.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/types.h \
+ ../common/keys.h ../common/rules.h ../common/setup.h texture.h paint.h \
+ client.h ../common/draw.h ../common/item.h paintdata.h paintmacros.h \
+ record.h xinit.h protoclient.h blockbitmaps.h gfx2d.h \
+ ../common/commonproto.h
+paintmap.o: paintmap.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/types.h \
+ ../common/keys.h ../common/rules.h ../common/setup.h texture.h paint.h \
+ client.h ../common/draw.h ../common/item.h paintdata.h paintmacros.h \
+ record.h xinit.h protoclient.h guimap.h
+paintobjects.o: paintobjects.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/types.h \
+ ../common/keys.h ../common/rules.h ../common/setup.h texture.h paint.h \
+ client.h ../common/draw.h ../common/item.h paintdata.h paintmacros.h \
+ record.h xinit.h protoclient.h ../common/portability.h guiobjects.h \
+ guimap.h gfx3d.h blockbitmaps.h gfx2d.h ../common/wreckshape.h \
+ ../common/astershape.h
+paintradar.o: paintradar.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/error.h ../common/bit.h ../common/keys.h \
+ ../common/rules.h ../common/setup.h paint.h client.h ../common/draw.h \
+ ../common/item.h paintdata.h xinit.h
+query.o: query.c ../common/xpconfig.h ../common/error.h \
+ ../common/socklib.h protoclient.h ../common/types.h
+record.o: record.c ../common/xpconfig.h ../common/error.h \
+ ../common/const.h ../common/types.h client.h ../common/draw.h \
+ ../common/item.h paint.h ../common/setup.h record.h \
+ ../common/recordfmt.h xpmread.h ../common/commonproto.h xinit.h
 sim.o: sim.c
 syslimit.o: syslimit.c
-talk.o: talk.c ../common/version.h ../common/xpconfig.h ../common/const.h \
- ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
- xinit.h ../common/error.h netclient.h protoclient.h ../common/keys.h \
+talk.o: talk.c ../common/xpconfig.h ../common/const.h ../common/types.h \
+ paint.h client.h ../common/draw.h ../common/item.h xinit.h \
+ ../common/error.h netclient.h protoclient.h ../common/keys.h \
  ../common/bit.h ../common/commonproto.h
-talkmacros.o: talkmacros.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h client.h ../common/draw.h \
- ../common/item.h netclient.h ../common/setup.h ../common/bit.h \
- ../common/error.h protoclient.h ../common/portability.h talk.h \
- ../common/rules.h ../common/commonproto.h
-textinterface.o: textinterface.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h ../common/types.h ../common/pack.h \
- ../common/bit.h ../common/error.h ../common/socklib.h ../common/net.h \
- datagram.h ../common/portability.h ../common/checknames.h connectparam.h \
+talkmacros.o: talkmacros.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h client.h ../common/draw.h ../common/item.h netclient.h \
+ ../common/setup.h ../common/bit.h ../common/error.h protoclient.h \
+ ../common/portability.h talk.h ../common/rules.h ../common/commonproto.h
+textinterface.o: textinterface.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h ../common/types.h ../common/pack.h ../common/bit.h \
+ ../common/error.h ../common/socklib.h ../common/net.h datagram.h \
+ ../common/portability.h ../common/checknames.h connectparam.h \
  protoclient.h ../common/commonproto.h
-texture.o: texture.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h xinit.h ../common/error.h xpmread.h texture.h \
- ../common/portability.h ../../lib/textures/rock4.xpm \
- ../../lib/textures/ball.xpm
+texture.o: texture.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/error.h xpmread.h texture.h ../common/portability.h \
+ ../../lib/textures/rock4.xpm ../../lib/textures/ball.xpm
 usleep.o: usleep.c ../common/types.h
-welcome.o: welcome.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h xinit.h ../common/list.h widget.h ../common/error.h \
- dbuff.h ../common/socklib.h ../common/net.h ../common/pack.h \
- connectparam.h protoclient.h ../common/portability.h \
- ../common/commonproto.h
-widget.o: widget.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h paintdata.h xinit.h ../common/bit.h ../common/error.h \
- widget.h protoclient.h ../common/portability.h
-xeventhandlers.o: xeventhandlers.c ../common/version.h \
- ../common/xpconfig.h ../common/const.h ../common/types.h paint.h \
- client.h ../common/draw.h ../common/item.h xinit.h ../common/keys.h \
- ../common/packet.h ../common/bit.h ../common/setup.h netclient.h \
- widget.h ../common/error.h record.h ../common/portability.h paintdata.h \
- talk.h configure.h xeventhandlers.h
-xevent.o: xevent.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h xinit.h ../common/keys.h ../common/packet.h \
- ../common/bit.h ../common/setup.h netclient.h widget.h ../common/error.h \
- record.h ../common/portability.h paintdata.h talk.h configure.h \
- xeventhandlers.h xevent.h
+welcome.o: welcome.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/list.h widget.h ../common/error.h dbuff.h \
+ ../common/socklib.h ../common/net.h ../common/pack.h connectparam.h \
+ protoclient.h ../common/portability.h ../common/commonproto.h
+widget.o: widget.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ paintdata.h xinit.h ../common/bit.h ../common/error.h widget.h \
+ protoclient.h ../common/portability.h
+xeventhandlers.o: xeventhandlers.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/keys.h ../common/packet.h ../common/bit.h \
+ ../common/setup.h netclient.h widget.h ../common/error.h record.h \
+ ../common/portability.h paintdata.h talk.h configure.h xeventhandlers.h
+xevent.o: xevent.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/keys.h ../common/packet.h ../common/bit.h \
+ ../common/setup.h netclient.h widget.h ../common/error.h record.h \
+ ../common/portability.h paintdata.h talk.h configure.h xeventhandlers.h \
+ xevent.h
 xinit.o: xinit.c ../common/version.h ../common/xpconfig.h \
  ../common/const.h ../common/types.h ../common/keys.h icon.h paint.h \
  client.h ../common/draw.h ../common/item.h xinit.h widget.h configure.h \
@@ -669,87 +663,84 @@ xpilot.o: xpilot.c ../common/version.h ../common/xpconfig.h \
  ../common/bit.h ../common/error.h ../common/socklib.h ../common/net.h \
  connectparam.h protoclient.h ../common/portability.h \
  ../common/checknames.h ../common/commonproto.h
-xpmread.o: xpmread.c ../common/version.h ../common/xpconfig.h \
- ../common/const.h ../common/types.h paint.h client.h ../common/draw.h \
- ../common/item.h xinit.h ../common/error.h ../common/commonproto.h \
- xpmread.h
-alliance.o: alliance.c ../common/version.h ../common/xpconfig.h \
- serverconst.h ../common/const.h ../common/types.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h ../common/list.h proto.h netserver.h \
- ../common/error.h ../common/commonproto.h
-asteroid.o: asteroid.c ../common/version.h ../common/xpconfig.h \
- serverconst.h ../common/const.h ../common/types.h ../common/list.h \
- global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
- ../common/item.h click.h map.h ../common/rules.h proto.h saudio.h \
- objpos.h asteroid.h ../common/commonproto.h
-cannon.o: cannon.c ../common/version.h ../common/xpconfig.h serverconst.h \
+xpmread.o: xpmread.c ../common/xpconfig.h ../common/const.h \
+ ../common/types.h paint.h client.h ../common/draw.h ../common/item.h \
+ xinit.h ../common/error.h ../common/commonproto.h xpmread.h
+alliance.o: alliance.c ../common/xpconfig.h serverconst.h \
  ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
  ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h objpos.h cannon.h saudio.h \
+ ../common/rules.h ../common/list.h proto.h netserver.h ../common/error.h \
  ../common/commonproto.h
-cell.o: cell.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h ../common/error.h
-cmdline.o: cmdline.c ../common/version.h ../common/xpconfig.h \
- serverconst.h ../common/const.h ../common/types.h global.h object.h \
+asteroid.o: asteroid.c ../common/xpconfig.h serverconst.h \
+ ../common/const.h ../common/types.h ../common/list.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h ../common/list.h proto.h defaults.h \
- ../common/error.h ../common/portability.h ../common/checknames.h \
- ../common/commonproto.h tuner.h
-collision.o: collision.c ../common/version.h ../common/xpconfig.h \
- serverconst.h ../common/const.h ../common/types.h ../common/list.h \
- global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
- ../common/item.h click.h map.h ../common/rules.h proto.h score.h \
- saudio.h netserver.h ../common/pack.h ../common/error.h \
- ../common/portability.h objpos.h asteroid.h ../common/commonproto.h
+ click.h map.h ../common/rules.h proto.h saudio.h objpos.h asteroid.h \
+ ../common/commonproto.h
+cannon.o: cannon.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h objpos.h cannon.h saudio.h \
+ ../common/commonproto.h
+cell.o: cell.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h ../common/error.h
+cmdline.o: cmdline.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h defaults.h ../common/error.h \
+ ../common/portability.h ../common/checknames.h ../common/commonproto.h \
+ tuner.h
+collision.o: collision.c ../common/xpconfig.h serverconst.h \
+ ../common/const.h ../common/types.h ../common/list.h global.h object.h \
+ ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
+ click.h map.h ../common/rules.h proto.h score.h saudio.h netserver.h \
+ ../common/pack.h ../common/error.h ../common/portability.h objpos.h \
+ asteroid.h ../common/commonproto.h
 command.o: command.c ../common/version.h serverconst.h ../common/const.h \
  ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
  ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
  ../common/list.h proto.h ../common/error.h netserver.h \
  ../common/commonproto.h score.h
-contact.o: contact.c ../common/version.h ../common/xpconfig.h \
- ../common/types.h serverconst.h ../common/const.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h ../common/list.h proto.h \
- ../common/socklib.h ../common/pack.h ../common/net.h netserver.h sched.h \
- ../common/error.h ../common/checknames.h server.h \
- ../common/commonproto.h ../common/portability.h connection.h
-event.o: event.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h saudio.h netserver.h
-fileparser.o: fileparser.c ../common/version.h ../common/xpconfig.h \
- serverconst.h ../common/const.h ../common/types.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h ../common/list.h proto.h defaults.h \
- ../common/error.h ../common/types.h ../common/commonproto.h
-frame.o: frame.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h netserver.h saudio.h \
- ../common/error.h ../common/commonproto.h
-id.o: id.c ../common/version.h serverconst.h ../common/const.h \
+contact.o: contact.c ../common/xpconfig.h ../common/types.h serverconst.h \
+ ../common/const.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h ../common/socklib.h ../common/pack.h \
+ ../common/net.h netserver.h sched.h ../common/error.h \
+ ../common/checknames.h server.h ../common/commonproto.h \
+ ../common/portability.h connection.h
+event.o: event.c ../common/xpconfig.h serverconst.h ../common/const.h \
  ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
  ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
- ../common/list.h proto.h ../common/error.h
-item.o: item.c ../common/version.h ../common/xpconfig.h serverconst.h \
+ ../common/list.h proto.h score.h saudio.h netserver.h
+fileparser.o: fileparser.c ../common/xpconfig.h serverconst.h \
  ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
  ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h saudio.h score.h netserver.h \
- ../common/error.h objpos.h ../common/commonproto.h
-laser.o: laser.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h ../common/list.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h proto.h score.h saudio.h \
- ../common/error.h ../common/portability.h objpos.h asteroid.h \
+ ../common/rules.h ../common/list.h proto.h defaults.h ../common/error.h \
+ ../common/types.h ../common/commonproto.h
+frame.o: frame.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h netserver.h saudio.h ../common/error.h \
  ../common/commonproto.h
-map.o: map.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
+id.o: id.c serverconst.h ../common/const.h ../common/types.h global.h \
+ object.h ../common/keys.h ../common/bit.h ../common/draw.h \
+ ../common/item.h click.h map.h ../common/rules.h ../common/list.h \
+ proto.h ../common/error.h
+item.o: item.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h saudio.h score.h netserver.h ../common/error.h \
+ objpos.h ../common/commonproto.h
+laser.o: laser.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h ../common/list.h global.h object.h ../common/keys.h \
  ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h ../common/error.h \
- ../common/commonproto.h
+ ../common/rules.h proto.h score.h saudio.h ../common/error.h \
+ ../common/portability.h objpos.h asteroid.h ../common/commonproto.h
+map.o: map.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h ../common/error.h ../common/commonproto.h
 metaserver.o: metaserver.c ../common/xpconfig.h ../common/version.h \
  serverconst.h ../common/const.h ../common/types.h ../common/types.h \
  global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
@@ -764,55 +755,54 @@ netserver.o: netserver.c ../common/version.h ../common/xpconfig.h \
  ../common/net.h ../common/error.h netserver.h ../common/packet.h \
  ../common/setup.h connection.h saudio.h ../common/checknames.h server.h \
  ../common/commonproto.h asteroid.h score.h
-object.o: object.c ../common/version.h ../common/xpconfig.h \
- ../common/types.h serverconst.h ../common/const.h global.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h map.h ../common/rules.h ../common/list.h proto.h \
- ../common/error.h ../common/portability.h ../common/commonproto.h
-objpos.o: objpos.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h objpos.h
-option.o: option.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h defaults.h ../common/error.h \
- ../common/types.h ../common/commonproto.h
+object.o: object.c ../common/xpconfig.h ../common/types.h serverconst.h \
+ ../common/const.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h ../common/error.h ../common/portability.h \
+ ../common/commonproto.h
+objpos.o: objpos.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h objpos.h
+option.o: option.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h defaults.h ../common/error.h ../common/types.h \
+ ../common/commonproto.h
 parser.o: parser.c ../common/version.h ../common/xpconfig.h serverconst.h \
  ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
  ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
  ../common/rules.h ../common/list.h proto.h defaults.h ../common/error.h \
  ../common/portability.h ../common/checknames.h ../common/commonproto.h
-play.o: play.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h saudio.h score.h objpos.h \
+play.o: play.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h saudio.h score.h objpos.h \
  ../common/commonproto.h
-player.o: player.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h netserver.h saudio.h \
- ../common/error.h objpos.h ../common/commonproto.h
-robot.o: robot.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h saudio.h netserver.h \
- ../common/pack.h robot.h ../common/error.h server.h \
- ../common/commonproto.h
+player.o: player.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h score.h netserver.h saudio.h ../common/error.h \
+ objpos.h ../common/commonproto.h
+robot.o: robot.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h score.h saudio.h netserver.h ../common/pack.h \
+ robot.h ../common/error.h server.h ../common/commonproto.h
 robotdef.o: robotdef.c ../common/version.h ../common/xpconfig.h \
  serverconst.h ../common/const.h ../common/types.h global.h object.h \
  ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
  click.h map.h ../common/rules.h ../common/list.h proto.h score.h \
  saudio.h netserver.h ../common/pack.h robot.h ../common/error.h \
  ../common/portability.h ../common/commonproto.h
-rules.o: rules.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h cannon.h
-saudio.o: saudio.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h netserver.h saudio.h
+rules.o: rules.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h cannon.h
+saudio.o: saudio.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h netserver.h saudio.h
 sched.o: sched.c ../common/version.h ../common/xpconfig.h serverconst.h \
  ../common/const.h ../common/types.h ../common/error.h ../common/types.h \
  sched.h global.h object.h ../common/keys.h ../common/bit.h \
@@ -828,16 +818,16 @@ server.o: server.c ../common/version.h ../common/xpconfig.h \
  click.h map.h ../common/rules.h ../common/list.h proto.h \
  ../common/socklib.h sched.h netserver.h ../common/error.h \
  ../common/portability.h server.h ../common/commonproto.h
-ship.o: ship.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h saudio.h ../common/error.h \
- objpos.h netserver.h ../common/commonproto.h
-shot.o: shot.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h saudio.h cannon.h \
- objpos.h netserver.h ../common/error.h ../common/commonproto.h
+ship.o: ship.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h saudio.h ../common/error.h objpos.h netserver.h \
+ ../common/commonproto.h
+shot.o: shot.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h score.h saudio.h cannon.h objpos.h netserver.h \
+ ../common/error.h ../common/commonproto.h
 showtime.o: showtime.c proto.h object.h serverconst.h ../common/const.h \
  ../common/types.h ../common/keys.h ../common/bit.h ../common/draw.h \
  ../common/item.h click.h ../common/list.h
@@ -846,21 +836,21 @@ tuner.o: tuner.c serverconst.h ../common/const.h ../common/types.h \
  global.h object.h ../common/keys.h ../common/bit.h ../common/draw.h \
  ../common/item.h click.h map.h ../common/rules.h ../common/list.h \
  proto.h ../common/error.h ../common/commonproto.h
-update.o: update.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h saudio.h objpos.h \
- cannon.h asteroid.h ../common/commonproto.h netserver.h
-walls.o: walls.c ../common/version.h ../common/xpconfig.h serverconst.h \
- ../common/const.h ../common/types.h global.h object.h ../common/keys.h \
- ../common/bit.h ../common/draw.h ../common/item.h click.h map.h \
- ../common/rules.h ../common/list.h proto.h score.h saudio.h \
- ../common/error.h walls.h objpos.h ../common/commonproto.h
-wildmap.o: wildmap.c ../common/portability.h ../common/version.h \
- serverconst.h ../common/const.h ../common/types.h object.h \
- ../common/keys.h ../common/bit.h ../common/draw.h ../common/item.h \
- click.h proto.h ../common/list.h
-xp-replay.o: xp-replay.c ../client/recordfmt.h ../common/item.h buttons.h \
+update.o: update.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h score.h saudio.h objpos.h cannon.h asteroid.h \
+ ../common/commonproto.h netserver.h
+walls.o: walls.c ../common/xpconfig.h serverconst.h ../common/const.h \
+ ../common/types.h global.h object.h ../common/keys.h ../common/bit.h \
+ ../common/draw.h ../common/item.h click.h map.h ../common/rules.h \
+ ../common/list.h proto.h score.h saudio.h ../common/error.h walls.h \
+ objpos.h ../common/commonproto.h
+wildmap.o: wildmap.c ../common/portability.h serverconst.h \
+ ../common/const.h ../common/types.h object.h ../common/keys.h \
+ ../common/bit.h ../common/draw.h ../common/item.h click.h proto.h \
+ ../common/list.h
+xp-replay.o: xp-replay.c ../common/recordfmt.h ../common/item.h buttons.h \
  xp-replay.h ../client/items/itemRocketPack.xbm \
  ../client/items/itemCloakingDevice.xbm \
  ../client/items/itemEnergyPack.xbm ../client/items/itemWideangleShot.xbm \

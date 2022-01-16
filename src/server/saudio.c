@@ -103,9 +103,9 @@ int sound_player_init(player * pl)
  */
 void sound_player_onoff(player *pl, bool valueOn)
 {
-    SDBG(printf("sound_player_onoff %p, %d\n", pl, onoff);)
+    SDBG(printf("sound_player_onoff %p, %d\n", pl, valueOn);)
 
-    if (onoff) {
+    if (valueOn) {
 	if (!BIT(pl->status, WANT_AUDIO)) {
 	    SET_BIT(pl->status, WANT_AUDIO);
 	    sound_play_player(pl, START_SOUND);
