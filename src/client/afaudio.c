@@ -272,7 +272,7 @@ struct SoundCache *findCacheEntry(char *fn)
   return(ce);
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
     int			gain;
     AFSetACAttributes	acAttributes;

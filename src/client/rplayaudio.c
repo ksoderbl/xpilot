@@ -65,9 +65,9 @@ int audioDeviceInit(char *display)
     return 0;
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
-    RPLAY **p = (RPLAY **)private;
+    RPLAY **p = (RPLAY **)private_data;
     char *name;
 
     if (!*p) {

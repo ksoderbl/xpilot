@@ -213,6 +213,6 @@ extern	int	Handle_audio(int type, int volume);
 
 extern	int	audioDeviceInit(char *display);
 extern	void	audioDeviceEvents(void);
-extern	void	audioDevicePlay(char *filename, int type, int volume, void **private);
+extern	void	audioDevicePlay(char *filename, int type, int volume, void **private_data);
 
 #endif						/* _audio_h */

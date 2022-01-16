@@ -43,18 +43,18 @@ int audioDeviceInit(char *display)
     return 0;
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
-    if (((int *)private)[0] == 0) {
+    if (((int *)private_data)[0] == 0) {
 	/* sample has not been cached yet */
-	((int *)private)[0] = esd_file_cache(audioserver, "", filename);
+	((int *)private_data)[0] = esd_file_cache(audioserver, "", filename);
     }
     /*printf("esound audio: play file %s, type %d, vol %d, priv %d\n",
-	   filename, type, volume, ((int *)private)[0]);*/
+	   filename, type, volume, ((int *)private_data)[0]);*/
 
     volume = (int)(volume * 2.55);
-    esd_set_default_sample_pan(audioserver, ((int *)private)[0], volume, volume);
-    esd_sample_play(audioserver, ((int *)private)[0]);
+    esd_set_default_sample_pan(audioserver, ((int *)private_data)[0], volume, volume);
+    esd_sample_play(audioserver, ((int *)private_data)[0]);
 }
 
 void audioDeviceEvents()

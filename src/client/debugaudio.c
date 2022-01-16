@@ -45,10 +45,10 @@ int audioDeviceInit(char *display)
     return 0;
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
     printf("debug audio: play file %s, type %d, vol %d, priv %p\n",
-	    filename, type, volume, private);
+	    filename, type, volume, private_data);
 }
 
 void audioDeviceEvents(void)

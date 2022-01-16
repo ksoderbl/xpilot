@@ -103,9 +103,9 @@ int audioDeviceInit(char *display)
     return 0;
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
-    SBucket		**bucket_ptr = (SBucket **)private;
+    SBucket		**bucket_ptr = (SBucket **)private_data;
     long		status = AENoError;
     char		buf[256];
     int			vol;

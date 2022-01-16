@@ -79,9 +79,9 @@ static void doneCB(AuServer * aud,
     info->playing = 0;
 }
 
-void audioDevicePlay(char *filename, int type, int volume, void **private)
+void audioDevicePlay(char *filename, int type, int volume, void **private_data)
 {
-    audioPtr       *info = (audioPtr *) private;
+    audioPtr       *info = (audioPtr *) private_data;
 
     if (!*info) {
 	if (!(*info = (audioPtr) malloc(sizeof(audioRec))))
