@@ -9,10 +9,11 @@ AC_CONFIG_FILES([
 	doc/man/Makefile
 	lib/Makefile
 	src/Makefile
-	src/server/Makefile
-	src/replay/Makefile
 	src/common/Makefile
 	src/client/Makefile
+	src/server/Makefile
+	src/replay/Makefile
+	src/mapedit/Makefile
 ])
 AC_OUTPUT
 
