@@ -222,9 +222,9 @@ struct _object {
 
     OBJECT_EXTEND
 
-#ifdef __cplusplus
-			_object() {}
-#endif
+// #ifdef __cplusplus
+// 			_object() {}
+// #endif
 
 #define OBJ_IND(ind)	(Obj[(ind)])
 #define OBJ_PTR(ptr)	((object *)(ptr))
@@ -245,9 +245,9 @@ struct _mineobject {
     DFLOAT		ecm_range;	/* Range from last ecm center */
     int			spread_left;	/* how much spread time left */
 
-#ifdef __cplusplus
-			_mineobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_mineobject() {}
+// #endif
 
 #define MINE_IND(ind)	((mineobject *)Obj[(ind)])
 #define MINE_PTR(ptr)	((mineobject *)(ptr))
@@ -271,9 +271,9 @@ struct _missileobject {
 
     MISSILE_EXTEND
 
-#ifdef __cplusplus
-			_missileobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_missileobject() {}
+// #endif
 
 #define MISSILE_IND(ind)	((missileobject *)Obj[(ind)])
 #define MISSILE_PTR(ptr)	((missileobject *)(ptr))
@@ -295,9 +295,9 @@ struct _smartobject {
     int			new_info;	/* smart re-lock id */
     DFLOAT		ecm_range;	/* Range from last ecm center */
 
-#ifdef __cplusplus
-			_smartobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_smartobject() {}
+// #endif
 
 #define SMART_IND(ind)	((smartobject *)Obj[(ind)])
 #define SMART_PTR(ptr)	((smartobject *)(ptr))
@@ -318,9 +318,9 @@ struct _torpobject {
 
     int			spread_left;	/* how much spread time left */
 
-#ifdef __cplusplus
-			_torpobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_torpobject() {}
+// #endif
 
 #define TORP_IND(ind)	((torpobject *)Obj[(ind)])
 #define TORP_PTR(ptr)	((torpobject *)(ptr))
@@ -341,9 +341,9 @@ struct _ballobject {
     int			treasure;	/* treasure for ball */	
     DFLOAT		length;		/* distance ball to player */
 
-#ifdef __cplusplus
-			_ballobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_ballobject() {}
+// #endif
 
 #define BALL_IND(ind)	((ballobject *)Obj[(ind)])
 #define BALL_PTR(obj)	((ballobject *)(obj))
@@ -365,9 +365,9 @@ struct _wireobject {
     u_byte		size;		/* Size of object (wreckage) */
     u_byte		rotation;	/* Rotation direction */
 
-#ifdef __cplusplus
-			_wireobject() {}
-#endif
+// #ifdef __cplusplus
+// 			_wireobject() {}
+// #endif
 
 #define WIRE_IND(ind)	((wireobject *)Obj[(ind)])
 #define WIRE_PTR(obj)	((wireobject *)(obj))
@@ -595,9 +595,9 @@ struct player {
     int		isowner;		/* If player started this server. */
     int		isoperator;		/* If player has operator privileges. */
 
-#ifdef __cplusplus
-		player() {}
-#endif
+// #ifdef __cplusplus
+// 		player() {}
+// #endif
 };
 
 #endif
