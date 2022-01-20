@@ -1435,7 +1435,7 @@ static void AsteroidCollision(void)
     }
 
     for (iter = List_begin(list); iter != List_end(list); LI_FORWARD(iter)) {
-	ast = LI_DATA(iter);
+	ast = (object *)LI_DATA(iter);
 
 	assert(BIT(ast->type, OBJ_ASTEROID));
 

@@ -599,7 +599,7 @@ void Laser_pulse_collision(void)
 		     LI_FORWARD(iter))
 		{
 		    DFLOAT adx, ady;
-		    ast = LI_DATA(iter);
+		    ast = (object *)LI_DATA(iter);
 		    adx = x - ast->pos.x;
 		    ady = y - ast->pos.y;
 		    adx = WRAP_DX(adx);
