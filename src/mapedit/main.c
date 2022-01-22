@@ -695,7 +695,7 @@ void SetDefaults(int argc, char *argv[])
    if (map.comments)
       free(map.comments);
    map.comments = (char *) NULL;
-   map.mapName[0] = map.mapFileName[0] = (char ) NULL;
+   map.mapName[0] = map.mapFileName[0] = '\0';
    /*   strcpy(map.author,"Captain America (mbcaprt@mphhpd.ph.man.ac.uk)\0");*/
    map.width = DEFAULT_WIDTH;
    sprintf(map.width_str,"%d",map.width);

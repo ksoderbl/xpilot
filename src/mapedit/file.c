@@ -180,7 +180,7 @@ int SaveMap(char *file)
       fprintf(ofile,"%s\n",map.comments);
    }
 
-   if ( (map.worldLives != NULL) && (atoi(map.worldLives) != 0) )
+   if ( atoi(map.worldLives) != 0 )
       fprintf(ofile,"limitedlives : yes\n");
 
    for ( n=0; n< numprefs; n++ ) {
@@ -195,7 +195,7 @@ int SaveMap(char *file)
       case POSFLOAT:
       case COORD:
       
-         if ( strlen(prefs[n].charvar) != (int) NULL )
+         if ( strlen(prefs[n].charvar) != 0 )
             fprintf(ofile,"%s : %s\n",prefs[n].name,prefs[n].charvar);
          break;
 
@@ -246,7 +246,7 @@ int LoadPrompt(HandlerInfo info)
    if ( T_IsPopupOpen(filepromptwin) ) {
       T_PopupClose(filepromptwin);
    }
-   filepromptname[0] = (char) NULL;
+   filepromptname[0] = '\0';
    filepromptwin = T_PopupPrompt(-1,-1,300,150,"Load Map",
         "Enter file name to load:","Load",NULL,filepromptname,sizeof(max_str_t),
         LoadOk);
@@ -341,8 +341,8 @@ int LoadMap(char *file)
    if (map.comments)
       free(map.comments);
    map.comments = (char *) NULL;
-   map.mapName[0] = map.mapAuthor[0] = map.gravity[0] = map.shipMass[0] = (char) NULL;
-   map.maxRobots[0] = map.worldLives[0] = (char) NULL;
+   map.mapName[0] = map.mapAuthor[0] = map.gravity[0] = map.shipMass[0] = '\0';
+   map.maxRobots[0] = map.worldLives[0] = '\0';
    map.view_zoom = DEFAULT_MAP_ZOOM;
    map.changed = map.edgeWrap = map.edgeBounce = map.teamPlay = 0;
    map.timing = 0;
@@ -474,7 +474,7 @@ int LoadOldMap(char *file)
    map.height = atoi( tmpstr );
    strncpy(map.height_str,tmpstr, strlen(tmpstr)-1);
    tmpstr = (char *) strstr(line, "x");
-   (*tmpstr) = (char) NULL; 
+   (*tmpstr) = '\0'; 
    map.width = atoi( line );
    strcpy(map.width_str,line);
 /* read in map rule */
@@ -488,10 +488,10 @@ int LoadOldMap(char *file)
 /* get map name and author */
    fgets(line, sizeof(max_str_t), fp);
    strncpy(map.mapName, line, strlen(line) - 1);
-   map.mapName[strlen(line) - 1] = (char) NULL;
+   map.mapName[strlen(line) - 1] = '\0';
    fgets(line, sizeof(max_str_t), fp);
    strncpy(map.mapAuthor, line, strlen(line) - 1);
-   map.mapAuthor[strlen(line) - 1] = (char) NULL;
+   map.mapAuthor[strlen(line) - 1] = '\0';
  
 /* read in map */
    shortline = corrupted =0;
@@ -842,7 +842,7 @@ char *StrToNum(char *string, int len, int type)
    char                  *returnval;
 
    returnval = (char *) malloc(len+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
 
    if ( type == FLOAT || type == INT) {
 
@@ -854,7 +854,7 @@ char *StrToNum(char *string, int len, int type)
       sprintf(returnval,"%s%c",returnval,string[0]);
 
    string++;
-   while ( (string[0] != (char) NULL) && (strlen(returnval) <= (len-1) ) ) {
+   while ( (string[0] != '\0') && (strlen(returnval) <= (len-1) ) ) {
 
       if ( type == FLOAT || type == POSFLOAT ) {
 	/*         if ( ((string[0] >= '0') && (string[0] <= '9')) || (string[0] == '.'))*/

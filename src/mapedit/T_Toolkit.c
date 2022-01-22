@@ -484,9 +484,9 @@ void T_DrawText(Window win, int x, int y, int width, int height, GC gc,
    h = (T_Font->ascent+T_Font->descent);
    draw = next = curr = text;
    length = last = line = 0;
-   while ( (*curr) != (char) NULL ) {
+   while ( (*curr) != '\0' ) {
       while ( (XTextWidth(T_Font,draw,length+1) < width) &&
-           ((*curr) != (char) NULL) && ((*curr) != '\n') ) {
+           ((*curr) != '\0') && ((*curr) != '\n') ) {
          length++;
          curr++;
          if ((*curr) == ' ') {
@@ -499,7 +499,7 @@ void T_DrawText(Window win, int x, int y, int width, int height, GC gc,
          last = length;
          next = curr;
       }
-      if ( ((*curr) == '\n') || ((*curr) == (char) NULL) ) {
+      if ( ((*curr) == '\n') || ((*curr) == '\0') ) {
          last = length;
          next = curr;
          if ((*curr) == '\n') {

@@ -40,7 +40,7 @@ int ValidateFloatHandler(HandlerInfo info)
  
    charvar = info.field->charvar;
    returnval = malloc(strlen((char *) charvar)+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
    string = malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
@@ -50,7 +50,7 @@ int ValidateFloatHandler(HandlerInfo info)
    sprintf(returnval,"%s%c",returnval,string[0]);
    string++;
  
-   while (string[0] != (char) NULL) {
+   while (string[0] != '\0') {
       if ( ( (string[0] >= '0') && (string[0] <= '9') ) || (string[0] == '.') )
       sprintf(returnval,"%s%c",returnval,string[0]);
       string++;
@@ -74,12 +74,12 @@ int ValidatePositiveFloatHandler(HandlerInfo info)
  
    charvar = info.field->charvar;
    returnval = malloc(strlen((char *) charvar)+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
    string = malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
 
-   while (string[0] != (char) NULL) {
+   while (string[0] != '\0') {
       if ( ( (string[0] >= '0') && (string[0] <= '9') ) || (string[0] == '.') )
       sprintf(returnval,"%s%c",returnval,string[0]);
       string++;
@@ -103,7 +103,7 @@ int ValidateIntHandler(HandlerInfo info)
  
    charvar = info.field->charvar;
    returnval = malloc(strlen((char *) charvar)+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
    string = malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
@@ -112,7 +112,7 @@ int ValidateIntHandler(HandlerInfo info)
    sprintf(returnval,"%s%c",returnval,string[0]);
    string++;
  
-   while (string[0] != (char) NULL) {
+   while (string[0] != '\0') {
       if ( (string[0] >= '0') && (string[0] <= '9') )
       sprintf(returnval,"%s%c",returnval,string[0]);
       string++;
@@ -136,12 +136,12 @@ int ValidatePositiveIntHandler(HandlerInfo info)
  
    charvar = info.field->charvar;
    returnval = malloc(strlen((char *) charvar)+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
    string = malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
  
-   while (string[0] != (char) NULL) {
+   while (string[0] != '\0') {
       if ( (string[0] >= '0') && (string[0] <= '9') )
       sprintf(returnval,"%s%c",returnval,string[0]);
       string++;

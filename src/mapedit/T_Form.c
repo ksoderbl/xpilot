@@ -294,7 +294,7 @@ void T_FormKeyPress(XEvent *report)
       if (strlen(form->entry->charvar) <
          form->entry->charvar_length) {
          tmpstr = malloc(strlen(form->entry->charvar)+2);
-         tmpstr[0] = (char) NULL;
+         tmpstr[0] = '\0';
          tmpstr2 = form->entry->charvar;
          tmpstr2 += form->entry_cursor;
          strncat(tmpstr, form->entry->charvar,form->entry_cursor);
@@ -309,7 +309,7 @@ void T_FormKeyPress(XEvent *report)
 
       if (form->entry_cursor > 0) {
          tmpstr = malloc(strlen(form->entry->charvar));
-         tmpstr[0] = (char) NULL;
+         tmpstr[0] = '\0';
          tmpstr2 = form->entry->charvar;
          tmpstr2 += form->entry_cursor;
          strncat(tmpstr,form->entry->charvar,form->entry_cursor-1);

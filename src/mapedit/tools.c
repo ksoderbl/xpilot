@@ -598,8 +598,8 @@ int NewMap(HandlerInfo info)
    }
    free(map.comments);
    map.comments = (char *) NULL;
-   map.mapName[0] = map.mapAuthor[0] = map.mapFileName[0] = map.gravity[0] = (char)NULL;
-   map.shipMass[0] = map.maxRobots[0] = map.worldLives[0] = (char) NULL;
+   map.mapName[0] = map.mapAuthor[0] = map.mapFileName[0] = map.gravity[0] = '\0';
+   map.shipMass[0] = map.maxRobots[0] = map.worldLives[0] = '\0';
    map.width = DEFAULT_WIDTH;
    map.height = DEFAULT_HEIGHT;
    sprintf(map.width_str, "%d", map.width);
@@ -799,12 +799,12 @@ int ValidateCoordHandler(HandlerInfo info)
    char                  *string,*start;
  
    returnval = malloc(strlen(info.field->charvar)+1);
-   returnval[0] = (char) NULL;
+   returnval[0] = '\0';
    string = malloc(strlen(info.field->charvar)+1);
    start = string;
    strcpy(string,info.field->charvar);
  
-   while (string[0] != (char) NULL) {
+   while (string[0] != '\0') {
       if ( ( (string[0] >= '0') && (string[0] <= '9') ) || (string[0] == ',') )
       sprintf(returnval,"%s%c",returnval,string[0]);
       string++;
