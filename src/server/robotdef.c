@@ -1,5 +1,4 @@
-/* $Id: robotdef.c,v 5.33 2002/05/27 16:51:00 bertg Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -146,7 +145,7 @@ int Robot_default_setup(robot_type_t *type_ptr)
 static bool Check_robot_evade(int ind, int mine_i, int ship_i);
 static bool Check_robot_target(int ind, int item_x, int item_y, int new_mode);
 static bool Detect_hunt(int ind, int j);
-static int Rank_item_value(int ind, long itemtype);
+static int Rank_item_value(int ind, Item_t itemtype);
 static bool Ball_handler(int ind);
 
 
@@ -1549,7 +1548,7 @@ static bool Detect_hunt(int ind, int j)
 #define ROBOT_IGNORE_ITEM	0	/* ignore */
 /*
  */
-static int Rank_item_value(int ind, long itemtype)
+static int Rank_item_value(int ind, Item_t itemtype)
 {
     player	*pl = Players[ind];
 
@@ -2038,7 +2037,7 @@ static void Robot_default_play_check_objects(int ind,
 		    if (BIT(shot->status, RANDOM_ITEM)) {
 			imp = ROBOT_HANDY_ITEM;		/* It doesn't know what it is, so get it if it can */
 		    } else {
-			imp = Rank_item_value(ind, obj_list[j]->info);
+			imp = Rank_item_value(ind, (Item_t) obj_list[j]->info);
 		    }
 		    if (imp > ROBOT_IGNORE_ITEM && imp >= *item_imp) {
 			*item_imp = imp;

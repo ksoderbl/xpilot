@@ -140,7 +140,7 @@ static void Default_map(void)
 static void Option_map(int argc, char **argv)
 {
     struct map_opt {
-	char		*name;
+	const char	*name;
 	int		*intp;
 	unsigned	*unsp;
 	double		*dblp;

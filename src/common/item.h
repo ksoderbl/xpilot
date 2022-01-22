@@ -1,5 +1,4 @@
-/* $Id: item.h,v 5.0 2001/04/07 20:00:59 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -49,6 +48,7 @@ enum Item {
     ITEM_ARMOR			= 20,
     NUM_ITEMS			= 21
 };
+typedef enum Item Item_t;
 
 #define ITEM_BIT_FUEL			(1U << ITEM_FUEL)
 #define ITEM_BIT_WIDEANGLE		(1U << ITEM_WIDEANGLE)
