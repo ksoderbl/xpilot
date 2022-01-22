@@ -296,7 +296,7 @@ int Parser_list_option(int *index, char *buf)
 		for (iter = List_begin(list);
 		     iter != List_end(list);
 		     LI_FORWARD(iter)) {
-		    char *str = LI_DATA(iter);
+		    char *str = (char *)LI_DATA(iter);
 		    if (iter != List_begin(list)) {
 			strlcat(buf, ",", MSG_LEN);
 		    }

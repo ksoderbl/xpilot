@@ -125,8 +125,8 @@ void Pick_startpos(int ind)
 			World.baseorder[i].base_idx : i;
 	if (ind < NumPlayers) {
 	    for (i = 0; i < NumPlayers; i++) {
-		if (Players[i]->conn != NOT_CONNECTED) {
-		    Send_base(Players[i]->conn,
+		if (Players[i]->connp != NULL) {
+		    Send_base(Players[i]->connp,
 			      pl->id,
 			      pl->home_base);
 		}
@@ -531,7 +531,7 @@ int Init_player(int ind, shipobj *ship)
 
     pl->id		= peek_ID();
     GetInd[pl->id]	= ind;
-    pl->conn		= NOT_CONNECTED;
+    pl->connp		= NULL;
     pl->audio		= NULL;
 
     pl->lose_item	= 0;
@@ -620,8 +620,8 @@ void Update_score_table(void)
 	    pl->prev_mychar = pl->mychar;
 	    pl->prev_alliance = pl->alliance;
 	    for (i = 0; i < NumPlayers; i++) {
-		if (Players[i]->conn != NOT_CONNECTED) {
-		    Send_score(Players[i]->conn, pl->id,
+		if (Players[i]->connp != NULL) {
+		    Send_score(Players[i]->connp, pl->id,
 			       pl->score, pl->life,
 			       pl->mychar, pl->alliance);
 		}
@@ -638,8 +638,8 @@ void Update_score_table(void)
 				? (World.NumChecks - 1)
 				: (pl->check - 1);
 		for (i = 0; i < NumPlayers; i++) {
-		    if (Players[i]->conn != NOT_CONNECTED) {
-			Send_timing(Players[i]->conn, pl->id, check, pl->round);
+		    if (Players[i]->connp != NULL) {
+			Send_timing(Players[i]->connp, pl->id, check, pl->round);
 		    }
 		}
 	    }
@@ -652,17 +652,14 @@ void Update_score_table(void)
 	    if (team->score != team->prev_score) {
 		team->prev_score = team->score;
 		for (i = 0; i < NumPlayers; i++) {
-		    if (Players[i]->conn != NOT_CONNECTED) {
-			Send_team_score(Players[i]->conn, j, team->score);
+		    if (Players[i]->connp != NULL) {
+			Send_team_score(Players[i]->connp, j, team->score);
 		    }
 		}
 	    }
 	}
     }
     updateScores = false;
-#ifdef _WINDOWS
-    SendDialogUpdate();
-#endif
 }
 
 
@@ -1148,8 +1145,8 @@ void Race_game_over(void)
 	    if (pl->home_base != World.baseorder[i].base_idx) {
 		pl->home_base = World.baseorder[i].base_idx;
 		for (j = 0; j < NumPlayers; j++) {
-		    if (Players[j]->conn != NOT_CONNECTED) {
-			Send_base(Players[j]->conn,
+		    if (Players[j]->connp != NULL) {
+			Send_base(Players[j]->connp,
 				  pl->id,
 				  pl->home_base);
 		    }
@@ -1821,8 +1818,8 @@ void Delete_player(int ind)
     }
 
     for (i = NumPlayers - 1; i >= 0; i--) {
-	if (Players[i]->conn != NOT_CONNECTED) {
-	    Send_leave(Players[i]->conn, id);
+	if (Players[i]->connp != NULL) {
+	    Send_leave(Players[i]->connp, id);
 	}
 	else if (IS_TANK_IND(i)) {
 	    if (Players[i]->lock.pl_id == id) {

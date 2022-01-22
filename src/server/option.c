@@ -841,7 +841,7 @@ static void Option_parse_node(hash_node *np)
     case valIPos:
 	{
 	    ipos	*ptr = (ipos *)desc->variable;
-	    char	*s;
+	    const char	*s;
 
 	    s = strchr(value, ',');
 	    if (!s) {

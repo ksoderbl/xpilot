@@ -68,10 +68,6 @@
 
 char server_version[] = VERSION;
 
-#ifndef	lint
-char xpilots_versionid[] = "@(#)$" TITLE " $";
-#endif
-
 /*
  * Global variables
  */
@@ -303,10 +299,10 @@ int End_game(void)
 
     while (NumPlayers > 0) {	/* Kick out all remaining players */
 	pl = Players[NumPlayers - 1];
-	if (pl->conn == NOT_CONNECTED) {
+	if (pl->connp == NULL) {
 	    Delete_player(NumPlayers - 1);
 	} else {
-	    Destroy_connection(pl->conn, msg);
+	    Destroy_connection(pl->connp, msg);
 	}
     }
 
@@ -744,8 +740,8 @@ void Server_log_admin_message(int ind, const char *str)
 		showtime(),
 		pl->name,
 		pl->realname, pl->hostname,
-		Get_player_addr(ind),
-		Get_player_dpy(ind),
+		Get_player_addr(pl->connp),
+		Get_player_dpy(pl->connp),
 		str);
 	fclose(fp);
 	sprintf(msg, "%s [%s]:[%s]", str, pl->name, "GOD");

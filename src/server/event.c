@@ -563,8 +563,8 @@ int Handle_keyboard(int ind)
 			Set_message(msg);
 		    }
 		    for (i = 0; i < NumPlayers; i++) {
-			if (Players[i]->conn != NOT_CONNECTED) {
-			    Send_base(Players[i]->conn,
+			if (Players[i]->connp != NULL) {
+			    Send_base(Players[i]->connp,
 				      pl->id,
 				      pl->home_base);
 			}

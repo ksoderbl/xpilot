@@ -85,6 +85,7 @@
  * All the player connection state info.
  */
 typedef struct {
+    int			conn_index;		/* index of connection in Conn[] */
     int			state;			/* state of connection */
     int			drain_state;		/* state after draining done */
     unsigned		magic;			/* magic cookie */

@@ -216,13 +216,13 @@ static void debris_store(int xf, int yf, int color)
 #undef max_
 }
 
-static void fastshot_end(int conn)
+static void fastshot_end(connection_t *connp)
 {
     int			i;
 
     for (i = 0; i < DEBRIS_TYPES * 2; i++) {
 	if (fastshot_num[i] != 0) {
-	    Send_fastshot(conn, i,
+	    Send_fastshot(connp, i,
 			  (unsigned char *) fastshot_ptr[i],
 			  fastshot_num[i]);
 	    fastshot_num[i] = 0;
@@ -230,13 +230,13 @@ static void fastshot_end(int conn)
     }
 }
 
-static void debris_end(int conn)
+static void debris_end(connection_t *connp)
 {
     int			i;
 
     for (i = 0; i < DEBRIS_TYPES; i++) {
 	if (debris_num[i] != 0) {
-	    Send_debris(conn, i,
+	    Send_debris(connp, i,
 			(unsigned char *) debris_ptr[i],
 			debris_num[i]);
 	    debris_num[i] = 0;
@@ -260,7 +260,7 @@ static void Frame_radar_buffer_add(int x, int y, int s)
     p->size = s;
 }
 
-static void Frame_radar_buffer_send(int conn)
+static void Frame_radar_buffer_send(connection_t *connp)
 {
     int			i;
     int			dest;
@@ -294,14 +294,14 @@ static void Frame_radar_buffer_send(int conn)
 	radar_shuffle[dest] = tmp;
     }
 
-    if (Get_conn_version(conn) <= 0x4400) {
+    if (Get_conn_version(connp) <= 0x4400) {
 	for (i = 0; i < num_radar; i++) {
 	    p = &radar_ptr[radar_shuffle[i]];
 	    radar_x = (radar_width * p->x) / World.width;
 	    radar_y = (radar_height * p->y) / World.height;
 	    send_x = (World.width * radar_x) / radar_width;
 	    send_y = (World.height * radar_y) / radar_height;
-	    Send_radar(conn, send_x, send_y, p->size);
+	    Send_radar(connp, send_x, send_y, p->size);
 	}
     }
     else {
@@ -330,7 +330,7 @@ static void Frame_radar_buffer_send(int conn)
 	    fast_count++;
 	}
 	if (fast_count > 0) {
-	    Send_fastradar(conn, buf, fast_count);
+	    Send_fastradar(connp, buf, fast_count);
 	}
     }
 
@@ -371,7 +371,7 @@ static int num2str(int num, char *str, int i)
     return i + digits;
 }
 
-static int Frame_status(int conn, int ind)
+static int Frame_status(connection_t *connp, int ind)
 {
     static char		mods[MAX_CHARS];
     player		*pl = Players[ind];
@@ -459,52 +459,52 @@ static int Frame_status(int conn, int ind)
 	mods[i++] = (BIT(pl->mods.laser, STUN) ? 'S' : 'B');
     }
     mods[i] = '\0';
-    n = Send_self(conn,
+    n = Send_self(connp,
 		  pl,
 		  lock_id,
 		  lock_dist,
 		  lock_dir,
 		  showautopilot,
-		  Players[GetInd[Get_player_id(conn)]]->status,
+		  Players[GetInd[Get_player_id(connp)]]->status,
 		  mods);
     if (n <= 0) {
 	return 0;
     }
 
     if (BIT(pl->used, HAS_EMERGENCY_THRUST))
-	Send_thrusttime(conn,
+	Send_thrusttime(connp,
 			pl->emergency_thrust_left,
 			pl->emergency_thrust_max);
     if (BIT(pl->used, HAS_EMERGENCY_SHIELD))
-	Send_shieldtime(conn,
+	Send_shieldtime(connp,
 			pl->emergency_shield_left,
 			pl->emergency_shield_max);
     if (BIT(pl->status, SELF_DESTRUCT) && pl->count > 0) {
-	Send_destruct(conn, pl->count);
+	Send_destruct(connp, pl->count);
     }
     if (BIT(pl->used, HAS_PHASING_DEVICE))
-	Send_phasingtime(conn,
+	Send_phasingtime(connp,
 			 pl->phasing_left,
 			 pl->phasing_max);
     if (ShutdownServer != -1) {
-	Send_shutdown(conn, ShutdownServer, ShutdownDelay);
+	Send_shutdown(connp, ShutdownServer, ShutdownDelay);
     }
 
     if (round_delay_send > 0) {
-	Send_rounddelay(conn, round_delay, roundDelaySeconds * FPS);
+	Send_rounddelay(connp, round_delay, roundDelaySeconds * FPS);
     }
 
     return 1;
 }
 
-static void Frame_map(int conn, int ind)
+static void Frame_map(connection_t *connp, int ind)
 {
     player		*pl = Players[ind];
     int			i,
 			k,
 			x,
 			y,
-			conn_bit = (1 << conn);
+			conn_bit = (1 << connp->conn_index);
     block_visibility_t	bv;
     const int		fuel_packet_size = 5;
     const int		cannon_packet_size = 5;
@@ -546,7 +546,7 @@ static void Frame_map(int conn, int ind)
 	if (BIT(targ->update_mask, conn_bit)
 	    || (BIT(targ->conn_mask, conn_bit) == 0
 		&& block_inview(&bv, targ->pos.x, targ->pos.y))) {
-	    Send_target(conn, i, targ->dead_time, targ->damage);
+	    Send_target(connp, i, targ->dead_time, targ->damage);
 	    pl->last_target_update = i;
 	    bytes_left -= target_packet_size;
 	    if (++packet_count >= max_packet) {
@@ -566,7 +566,7 @@ static void Frame_map(int conn, int ind)
 			 World.cannon[i].blk_pos.x,
 			 World.cannon[i].blk_pos.y)) {
 	    if (BIT(World.cannon[i].conn_mask, conn_bit) == 0) {
-		Send_cannon(conn, i, World.cannon[i].dead_time);
+		Send_cannon(connp, i, World.cannon[i].dead_time);
 		pl->last_cannon_update = i;
 		bytes_left -= max_packet * cannon_packet_size;
 		if (++packet_count >= max_packet) {
@@ -589,7 +589,7 @@ static void Frame_map(int conn, int ind)
 		if (block_inview(&bv,
 				 World.fuel[i].blk_pos.x,
 				 World.fuel[i].blk_pos.y)) {
-		    Send_fuel(conn, i, (int) World.fuel[i].fuel);
+		    Send_fuel(connp, i, (int) World.fuel[i].fuel);
 		    pl->last_fuel_update = i;
 		    bytes_left -= max_packet * fuel_packet_size;
 		    if (++packet_count >= max_packet) {
@@ -621,7 +621,7 @@ static void Frame_map(int conn, int ind)
 	       This will fail on big maps. */
 	    int	x = (worm->pos.x * BLOCK_SZ) + BLOCK_SZ / 2,
 		y = (worm->pos.y * BLOCK_SZ) + BLOCK_SZ / 2;
-	    Send_wormhole(conn, x, y);
+	    Send_wormhole(connp, x, y);
 	    pl->last_wormhole_update = i;
 	    bytes_left -= max_packet * wormhole_packet_size;
 	    if (++packet_count >= max_packet) {
@@ -715,7 +715,7 @@ static void Frame_shuffle(void)
     }
 }
 
-static void Frame_shots(int conn, int ind)
+static void Frame_shots(connection_t *connp, int ind)
 {
     player			*pl = Players[ind];
     int				x, y;
@@ -794,14 +794,14 @@ static void Frame_shots(int conn, int ind)
 	case OBJ_WRECKAGE:
 	    if (spark_rand != 0 || wreckageCollisionMayKill) {
 		wireobject *wreck = WIRE_PTR(shot);
-		Send_wreckage(conn, x, y, (u_byte)wreck->info,
+		Send_wreckage(connp, x, y, (u_byte)wreck->info,
 			      wreck->size, wreck->rotation);
 	    }
 	    break;
 
 	case OBJ_ASTEROID: {
 		wireobject *ast = WIRE_PTR(shot);
-		Send_asteroid(conn, x, y,
+		Send_asteroid(connp, x, y,
 			      (u_byte)ast->info, ast->size, ast->rotation);
 	    }
 	    break;
@@ -834,18 +834,18 @@ static void Frame_shots(int conn, int ind)
 
 	case OBJ_TORPEDO:
 	    len =(distinguishMissiles ? TORPEDO_LEN : MISSILE_LEN);
-	    Send_missile(conn, x, y, len, shot->missile_dir);
+	    Send_missile(connp, x, y, len, shot->missile_dir);
 	    break;
 	case OBJ_SMART_SHOT:
 	    len =(distinguishMissiles ? SMART_SHOT_LEN : MISSILE_LEN);
-	    Send_missile(conn, x, y, len, shot->missile_dir);
+	    Send_missile(connp, x, y, len, shot->missile_dir);
 	    break;
 	case OBJ_HEAT_SHOT:
 	    len =(distinguishMissiles ? HEAT_SHOT_LEN : MISSILE_LEN);
-	    Send_missile(conn, x, y, len, shot->missile_dir);
+	    Send_missile(connp, x, y, len, shot->missile_dir);
 	    break;
 	case OBJ_BALL:
-	    Send_ball(conn, x, y, shot->id);
+	    Send_ball(connp, x, y, shot->id);
 	    break;
 	case OBJ_MINE:
 	    {
@@ -878,7 +878,7 @@ static void Frame_shots(int conn, int ind)
 			laid_by_team = (rfrac() < 0.5f);
 		    }
 		}
-		Send_mine(conn, x, y, laid_by_team, id);
+		Send_mine(connp, x, y, laid_by_team, id);
 	    }
 	    break;
 
@@ -890,7 +890,7 @@ static void Frame_shots(int conn, int ind)
 		    item_type = Choose_random_item();
 		}
 
-		Send_item(conn, x, y, item_type);
+		Send_item(connp, x, y, item_type);
 	    }
 	    break;
 
@@ -901,7 +901,7 @@ static void Frame_shots(int conn, int ind)
     }
 }
 
-static void Frame_ships(int conn, int ind)
+static void Frame_ships(connection_t *connp, int ind)
 {
     player			*pl = Players[ind],
 				*pl_i;
@@ -964,11 +964,11 @@ static void Frame_ships(int conn, int ind)
 	} else {
 	    color = RED;
 	}
-	Send_laser(conn, color, (int)x, (int)y, pulse->len, dir);
+	Send_laser(connp, color, (int)x, (int)y, pulse->len, dir);
     }
     for (i = 0; i < NumEcms; i++) {
 	ecm_t *ecm = Ecms[i];
-	Send_ecm(conn, (int)ecm->pos.x, (int)ecm->pos.y, ecm->size);
+	Send_ecm(connp, (int)ecm->pos.x, (int)ecm->pos.y, ecm->size);
     }
     for (i = 0; i < NumTransporters; i++) {
 	trans_t *trans = Transporters[i];
@@ -976,7 +976,7 @@ static void Frame_ships(int conn, int ind)
 		*pl = (trans->id == NO_ID ? NULL : Players[GetInd[trans->id]]);
 	DFLOAT 	x = (pl ? pl->pos.x : trans->pos.x),
 		y = (pl ? pl->pos.y : trans->pos.y);
-	Send_trans(conn, victim->pos.x, victim->pos.y, (int)x, (int)y);
+	Send_trans(connp, victim->pos.x, victim->pos.y, (int)x, (int)y);
     }
     for (i = 0; i < World.NumCannons; i++) {
 	cannon_t *cannon = World.cannon + i;
@@ -985,7 +985,7 @@ static void Frame_ships(int conn, int ind)
 	    if (inview(t->pos.x, t->pos.y)) {
 		int j;
 		for (j = 0; j < 3; j++) {
-		    Send_connector(conn,
+		    Send_connector(connp,
 				   (int)(t->pos.x + t->ship->pts[j][t->dir].x),
 				   (int)(t->pos.y + t->ship->pts[j][t->dir].y),
 				   (int)cannon->pix_pos.x,
@@ -1008,7 +1008,7 @@ static void Frame_ships(int conn, int ind)
 	    continue;
 	}
 	if (BIT(pl_i->status, PAUSE)) {
-	    Send_paused(conn,
+	    Send_paused(connp,
 			pl_i->pos.x,
 			pl_i->pos.y,
 			pl_i->count);
@@ -1023,7 +1023,7 @@ static void Frame_ships(int conn, int ind)
 	    /*
 	     * Transmit ship information
 	     */
-	    Send_ship(conn,
+	    Send_ship(connp,
 		      pl_i->pos.x,
 		      pl_i->pos.y,
 		      pl_i->id,
@@ -1038,7 +1038,7 @@ static void Frame_ships(int conn, int ind)
 	if (BIT(pl_i->used, HAS_REFUEL)) {
 	    if (inview(World.fuel[pl_i->fs].pix_pos.x,
 		       World.fuel[pl_i->fs].pix_pos.y)) {
-		Send_refuel(conn,
+		Send_refuel(connp,
 			    (int)World.fuel[pl_i->fs].pix_pos.x,
 			    (int)World.fuel[pl_i->fs].pix_pos.y,
 			    pl_i->pos.x,
@@ -1050,7 +1050,7 @@ static void Frame_ships(int conn, int ind)
 	    DFLOAT y = (DFLOAT)(World.targets[pl_i->repair_target].pos.y + 0.5) * BLOCK_SZ;
 	    if (inview(x, y)) {
 		/* same packet as refuel */
-		Send_refuel(conn, pl_i->pos.x, pl_i->pos.y, (int) x, (int) y);
+		Send_refuel(connp, pl_i->pos.x, pl_i->pos.y, (int) x, (int) y);
 	    }
 	}
 	if (BIT(pl_i->used, HAS_TRACTOR_BEAM)) {
@@ -1059,7 +1059,7 @@ static void Frame_ships(int conn, int ind)
 		int j;
 
 		for (j = 0; j < 3; j++) {
-		    Send_connector(conn,
+		    Send_connector(connp,
 				   (int)(t->pos.x + t->ship->pts[j][t->dir].x),
 				   (int)(t->pos.y + t->ship->pts[j][t->dir].y),
 				   pl_i->pos.x,
@@ -1070,7 +1070,7 @@ static void Frame_ships(int conn, int ind)
 
 	if (pl_i->ball != NULL
 	    && inview(pl_i->ball->pos.x, pl_i->ball->pos.y)) {
-	    Send_connector(conn,
+	    Send_connector(connp,
 			   pl_i->ball->pos.x,
 			   pl_i->ball->pos.y,
 			   pl_i->pos.x,
@@ -1079,7 +1079,7 @@ static void Frame_ships(int conn, int ind)
     }
 }
 
-static void Frame_radar(int conn, int ind)
+static void Frame_radar(connection_t* connp, int ind)
 {
     int			i, k, mask, shownuke, size;
     player		*pl = Players[ind];
@@ -1154,7 +1154,7 @@ static void Frame_radar(int conn, int ind)
 	     *		People in other teams or alliances if;
 	     *			no playersOnRadar or if not visible
 	     */
-	    if (Players[i]->conn == conn
+	    if (Players[i]->connp == connp
 		|| BIT(Players[i]->status, PLAYING|PAUSE|GAME_OVER) != PLAYING
 		|| (!TEAM(i, ind)
 		    && !ALLIANCE(ind, i)
@@ -1183,7 +1183,7 @@ static void Frame_radar(int conn, int ind)
 	}
     }
 
-    Frame_radar_buffer_send(conn);
+    Frame_radar_buffer_send(connp);
 }
 
 static void Frame_lose_item_state(int ind)
@@ -1191,7 +1191,7 @@ static void Frame_lose_item_state(int ind)
     player		*pl = Players[ind];
 
     if (pl->lose_item_state != 0) {
-	Send_loseitem(pl->lose_item, pl->conn);
+	Send_loseitem(pl->lose_item, pl->connp);
 	if (pl->lose_item_state == 1)
 	    pl->lose_item_state = -5;
 	if (pl->lose_item_state < 0)
@@ -1199,11 +1199,11 @@ static void Frame_lose_item_state(int ind)
     }
 }
 
-static void Frame_parameters(int conn, int ind)
+static void Frame_parameters(connection_t *connp, int ind)
 {
     player		*pl = Players[ind];
 
-    Get_display_parameters(conn, &view_width, &view_height,
+    Get_display_parameters(connp, &view_width, &view_height,
 			   &debris_colors, &spark_rand);
     debris_x_areas = (view_width + 255) >> 8;
     debris_y_areas = (view_height + 255) >> 8;
@@ -1233,8 +1233,8 @@ static void Frame_parameters(int conn, int ind)
 void Frame_update(void)
 {
     int			i,
-			conn,
 			ind;
+    connection_t	*connp;
     player		*pl;
     time_t		newTimeLeft = 0;
     static time_t	oldTimeLeft;
@@ -1260,8 +1260,8 @@ void Frame_update(void)
 
     for (i = 0; i < num_player_shuffle; i++) {
 	pl = Players[i];
-	conn = pl->conn;
-	if (conn == NOT_CONNECTED) {
+	connp = pl->connp;
+	if (connp == NULL) {
 	    continue;
 	}
 	if (BIT(pl->status, PAUSE|GAME_OVER)
@@ -1295,13 +1295,13 @@ void Frame_update(void)
 	    }
 	}
 
-	if (Send_start_of_frame(conn) == -1) {
+	if (Send_start_of_frame(connp) == -1) {
 	    continue;
 	}
 	if (newTimeLeft != oldTimeLeft) {
-	    Send_time_left(conn, newTimeLeft);
+	    Send_time_left(connp, newTimeLeft);
 	} else if (maxRoundTime > 0 && roundtime >= 0) {
-	    Send_time_left(conn, (roundtime + FPS - 1) / FPS);
+	    Send_time_left(connp, (roundtime + FPS - 1) / FPS);
 	}
 	/*
 	 * If status is GAME_OVER or PAUSE'd, the user may look through the
@@ -1329,22 +1329,22 @@ void Frame_update(void)
 	    ind = i;
 	}
 	if (Players[ind]->damaged > 0) {
-	    Send_damaged(conn, Players[ind]->damaged);
+	    Send_damaged(connp, Players[ind]->damaged);
 	} else {
-	    Frame_parameters(conn, ind);
-	    if (Frame_status(conn, ind) <= 0) {
+	    Frame_parameters(connp, ind);
+	    if (Frame_status(connp, ind) <= 0) {
 		continue;
 	    }
-	    Frame_map(conn, ind);
-	    Frame_ships(conn, ind);
-	    Frame_shots(conn, ind);
-	    Frame_radar(conn, ind);
+	    Frame_map(connp, ind);
+	    Frame_ships(connp, ind);
+	    Frame_shots(connp, ind);
+	    Frame_radar(connp, ind);
 	    Frame_lose_item_state(i);
-	    debris_end(conn);
-	    fastshot_end(conn);
+	    debris_end(connp);
+	    fastshot_end(connp);
 	}
 	sound_play_queued(Players[ind]);
-	Send_end_of_frame(conn);
+	Send_end_of_frame(connp);
     }
     oldTimeLeft = newTimeLeft;
 
@@ -1370,8 +1370,8 @@ void Set_message(const char *message)
     }
     for (i = 0; i < NumPlayers; i++) {
 	pl = Players[i];
-	if (pl->conn != NOT_CONNECTED) {
-	    Send_message(pl->conn, msg);
+	if (pl->connp != NULL) {
+	    Send_message(pl->connp, msg);
 	}
     }
 }
@@ -1393,8 +1393,8 @@ void Set_player_message(player *pl, const char *message)
     } else {
 	msg = message;
     }
-    if (pl->conn != NOT_CONNECTED) {
-	Send_message(pl->conn, msg);
+    if (pl->connp != NULL) {
+	Send_message(pl->connp, msg);
     }
     else if (IS_ROBOT_PTR(pl)) {
 	Robot_message(GetInd[pl->id], msg);

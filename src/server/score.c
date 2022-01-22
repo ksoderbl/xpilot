@@ -1,5 +1,4 @@
-/* $Id: score.c,v 5.7 2002/01/21 22:04:03 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -28,10 +27,6 @@
 #include <math.h>
 #include <limits.h>
 
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-#endif
-
 #define SERVER
 #include "version.h"
 #include "xpconfig.h"
@@ -40,9 +35,6 @@
 #include "proto.h"
 #include "score.h"
 #include "netserver.h"
-
-
-char score_version[] = VERSION;
 
 
 void SCORE(int ind, DFLOAT points, int x, int y, const char *msg)
@@ -62,8 +54,8 @@ void SCORE(int ind, DFLOAT points, int x, int y, const char *msg)
 	}
     }
 
-    if (pl->conn != NOT_CONNECTED)
-	Send_score_object(pl->conn, points, x, y, msg);
+    if (pl->connp != NULL)
+	Send_score_object(pl->connp, points, x, y, msg);
 
     updateScores = true;
 }

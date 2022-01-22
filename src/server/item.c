@@ -1196,8 +1196,8 @@ void Fire_general_ecm(int ind, unsigned short team, DFLOAT x, DFLOAT y)
 		     */
 		    Robot_program(i, pl->lock.pl_id);
 		    for (j = 0; j < NumPlayers; j++) {
-			if (Players[j]->conn != NOT_CONNECTED) {
-			    Send_seek(Players[j]->conn, pl->id,
+			if (Players[j]->connp != NULL) {
+			    Send_seek(Players[j]->connp, pl->id,
 				      p->id, pl->lock.pl_id);
 			}
 		    }

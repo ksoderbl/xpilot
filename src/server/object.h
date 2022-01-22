@@ -49,9 +49,8 @@
 /* need CLICK */
 #include "click.h"
 #endif
-
-#ifdef _WINDOWS
-#include "NT/winNet.h"
+#ifndef CONNECTION_H
+#include "connection.h"
 #endif
 
 /*
@@ -578,7 +577,7 @@ struct player {
 
     int		ecmcount;		/* number of active ecms */
 
-    int		conn;			/* connection index, -1 if robot */
+    connection_t		*connp;			/* connection pointer, NULL if robot */
     unsigned	version;		/* XPilot version number of client */
 
     BITV_DECL(last_keyv, NUM_KEYS);	/* Keyboard state */

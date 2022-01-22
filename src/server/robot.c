@@ -816,9 +816,9 @@ static void Robot_create(void)
     }
 
     for (i = 0; i < NumPlayers - 1; i++) {
-	if (Players[i]->conn != NOT_CONNECTED) {
-	    Send_player(Players[i]->conn, robot->id);
-	    Send_base(Players[i]->conn, robot->id, robot->home_base);
+	if (Players[i]->connp != NULL) {
+	    Send_player(Players[i]->connp, robot->id);
+	    Send_base(Players[i]->connp, robot->id, robot->home_base);
 	}
     }
 
@@ -970,8 +970,8 @@ void Robot_war(int ind, int killer)
 
 	if (Robot_war_on_player(killer) == pl->id)
 	    for (i = 0; i < NumPlayers; i++) {
-		if (Players[i]->conn != NOT_CONNECTED) {
-		    Send_war(Players[i]->conn, kp->id, NO_ID);
+		if (Players[i]->connp != NULL) {
+		    Send_war(Players[i]->connp, kp->id, NO_ID);
 		}
 	    }
 	Robot_set_war(killer, -1);
@@ -992,8 +992,8 @@ void Robot_war(int ind, int killer)
 
 	if (Robot_war_on_player(ind) != kp->id) {
 	    for (i = 0; i < NumPlayers; i++) {
-		if (Players[i]->conn != NOT_CONNECTED) {
-		    Send_war(Players[i]->conn, pl->id, kp->id);
+		if (Players[i]->connp != NULL) {
+		    Send_war(Players[i]->connp, pl->id, kp->id);
 		}
 	    }
 	    sound_play_all(DECLARE_WAR_SOUND);
