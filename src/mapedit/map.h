@@ -3,18 +3,18 @@
  *
  *      Aaron Averill           <averila@oes.orst.edu>
  *
- * This program is free software; you can redistribute it and/or modify
+ * This program is free software) you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation) either version 2 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY) without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program) if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * Modifications to XMapEdit
@@ -24,58 +24,63 @@
  *      William Docter          <wad2@lehigh.edu>
  */
 
+#ifndef MAP_H
+#define MAP_H
+
 /* Blank Space */
-const int MAP_SPACE	= ' ';
-const int MAP_NOTHIN    = ' ';
+#define MAP_SPACE	((int) ' ')
+#define MAP_NOTHIN      ((int) ' ')
 
 /* Wall */
-const int MAP_REC_RD	= 'q';
-const int MAP_REC_LD	= 'w';
-const int MAP_FILLED	= 'x';
-const int MAP_REC_RU	= 'a';
-const int MAP_REC_LU	= 's';
+#define MAP_REC_RD	((int) 'q')
+#define MAP_REC_LD	((int) 'w')
+#define MAP_FILLED	((int) 'x')
+#define MAP_REC_RU	((int) 'a')
+#define MAP_REC_LU	((int) 's')
 
 /* Cannon */
-const int MAP_CAN_LEFT	= 'd';
-const int MAP_CAN_UP	= 'r';
-const int MAP_CAN_DOWN	= 'c';
-const int MAP_CAN_RIGHT	= 'f';
+#define MAP_CAN_LEFT	((int) 'd')
+#define MAP_CAN_UP	((int) 'r')
+#define MAP_CAN_DOWN	((int) 'c')
+#define MAP_CAN_RIGHT	((int) 'f')
 
 /* Bases */
-const int MAP_BASE	= '_';
-const int MAP_BASE_ORNT = '$';
+#define MAP_BASE	((int) '_')
+#define MAP_BASE_ORNT ((int) '$')
 
 /* Misc */
-const int MAP_FUEL	= '#';
-const int MAP_TARGET	= '!';
-const int MAP_TREASURE	= '*';
-const int MAP_ITEM_CONC = '%';
-const int MAP_EMPTY_TREASURE = '^';
-const int MAP_FRICTION  = 'z';
-const int MAP_ASTEROID_CONC = '&';
+#define MAP_FUEL	((int) '#')
+#define MAP_TARGET	((int) '!')
+#define MAP_TREASURE	((int) '*')
+#define MAP_ITEM_CONC ((int) '%')
+#define MAP_EMPTY_TREASURE ((int) '^')
+#define MAP_FRICTION  ((int) 'z')
+#define MAP_ASTEROID_CONC ((int) '&')
 
 /* Gravity */
-const int MAP_GRAV_POS	= '+';
-const int MAP_GRAV_NEG	= '-';
-const int MAP_GRAV_ACWISE	= '<';
-const int MAP_GRAV_CWISE	= '>';
+#define MAP_GRAV_POS	((int) '+')
+#define MAP_GRAV_NEG	((int) '-')
+#define MAP_GRAV_ACWISE	((int) '<')
+#define MAP_GRAV_CWISE	((int) '>')
 
 /* Wormholes */
-const int MAP_WORM_NORMAL	= '@';
-const int MAP_WORM_OUT	= ')';
-const int MAP_WORM_IN	= '(';
+#define MAP_WORM_NORMAL	((int) '@')
+#define MAP_WORM_OUT	((int) ')')
+#define MAP_WORM_IN	((int) '(')
 
 /* Currents */
-const int MAP_CRNT_UP   = 'i';
-const int MAP_CRNT_LT   = 'j';
-const int MAP_CRNT_RT   = 'k';
-const int MAP_CRNT_DN   = 'm';
+#define MAP_CRNT_UP   ((int) 'i')
+#define MAP_CRNT_LT   ((int) 'j')
+#define MAP_CRNT_RT   ((int) 'k')
+#define MAP_CRNT_DN   ((int) 'm')
 
 /* Decor */
-const int MAP_DEC_RD	= 't';
-const int MAP_DEC_LD	= 'y';
-const int MAP_DEC_FLD	= 'b';
-const int MAP_DEC_RU	= 'g';
-const int MAP_DEC_LU	= 'h';
+#define MAP_DEC_RD	((int) 't')
+#define MAP_DEC_LD	((int) 'y')
+#define MAP_DEC_FLD	((int) 'b')
+#define MAP_DEC_RU	((int) 'g')
+#define MAP_DEC_LU	((int) 'h')
 
-const int MAP_MINER     = '^';
+#define MAP_MINER     ((int) '^')
+
+#endif
