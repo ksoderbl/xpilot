@@ -287,7 +287,7 @@ option options[] = {
     {
 	"power",
 	NULL,
-	"45.0",
+	"55.0", // used to be "45.0"
 	KEY_DUMMY,
 	"Set the engine power.\n"
 	"Valid values are in the range 5-55.\n"
@@ -295,7 +295,7 @@ option options[] = {
     {
 	"turnSpeed",
 	NULL,
-	"35.0",
+	"10.0", // used to be "35.0"
 	KEY_DUMMY,
 	"Set the ship's turn speed.\n"
 	"Valid values are in the range 4-64.\n"
@@ -304,7 +304,7 @@ option options[] = {
     {
 	"turnResistance",
 	NULL,
-	"0.12",
+	"0.0", // used to be "0.12"
 	KEY_DUMMY,
 	"Set the ship's turn resistance.\n"
 	"This determines the speed at which a ship stops turning\n"
@@ -1667,14 +1667,14 @@ option options[] = {
     {
 	"pointerButton2",
 	NULL,
-	"keyThrust",
+	"", // was "keyThrust"
 	KEY_DUMMY,
 	"The key to activate when pressing the second mouse button.\n"
     },
     {
 	"pointerButton3",
 	NULL,
-	"keyShield",
+	"keyThrust", // was "keyShield"
 	KEY_DUMMY,
 	"The key to activate when pressing the third mouse button.\n"
     },
