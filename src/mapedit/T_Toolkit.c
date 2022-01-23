@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: T_Toolkit.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "T_Toolkit.h"
@@ -37,10 +35,10 @@ Atom                     ProtocolAtom;
 Atom                     KillAtom;
 
 #ifdef MONO
-char                     *T_Background = COLOR_BACKGROUND,
+const char               *T_Background = COLOR_BACKGROUND,
                          *T_Foreground = COLOR_FOREGROUND;
 #else
-char                     *T_Background = COLOR_BACKGROUND,
+const char               *T_Background = COLOR_BACKGROUND,
                          *T_Highlight  = COLOR_HIGHLIGHT,
                          *T_Foreground = COLOR_FOREGROUND,
                          *T_Shadow     = COLOR_SHADOW;
@@ -54,7 +52,7 @@ char                     *T_Background = COLOR_BACKGROUND,
 /*           screennum, root_width, and root_height. Get toolkit GCs and   */
 /*           font.                                                         */
 /***************************************************************************/
-void T_ConnectToServer(char *display_name)
+void T_ConnectToServer(const char *display_name)
 {
    if (display_name == NULL ) {
       display_name = getenv("DISPLAY");
@@ -102,7 +100,7 @@ void T_CloseServerConnection(void)
 /* Purpose : Unload old toolkit font and load a new one with the name      */
 /*           specified in the argument font.                               */
 /***************************************************************************/
-void T_SetToolkitFont(char *font)
+void T_SetToolkitFont(const char *font)
 {
    XUnloadFont(display, T_Font->fid);
    T_FontInit(&T_Font, font);
@@ -116,7 +114,7 @@ void T_SetToolkitFont(char *font)
 /* Purpose : Set up a GC with the specified foreground color name, line    */
 /*           width 0. Return integer pixel value of allocated color.       */
 /***************************************************************************/
-int T_GetGC(GC *gc, char *foreground)
+int T_GetGC(GC *gc, const char *foreground)
 {
    XGCValues values;
    unsigned long valuemask;
@@ -152,7 +150,7 @@ int T_GetGC(GC *gc, char *foreground)
 /* Purpose : Load a font with the specified name into fontinfo. Return 0   */
 /*           if successful. If not, load font "9x15" and return 1.         */
 /***************************************************************************/
-int T_FontInit(XFontStruct **fontinfo, char *fontname)
+int T_FontInit(XFontStruct **fontinfo, const char *fontname)
 {
    if ((*fontinfo = XLoadQueryFont(display,fontname)) == NULL ) {
       *fontinfo = XLoadQueryFont(display,"9x15");
@@ -175,7 +173,7 @@ int T_FontInit(XFontStruct **fontinfo, char *fontname)
 /*           height. Set background and foreground to bg and fg. Set       */
 /*           window hints such that the window cannot be resized.          */
 /***************************************************************************/
-Window T_MakeWindow(int x, int y, int width,int height, char *fg, char *bg)
+Window T_MakeWindow(int x, int y, int width,int height, const char *fg, const char *bg)
 {
    Window                window;
    XColor                color;
@@ -217,15 +215,18 @@ Window T_MakeWindow(int x, int y, int width,int height, char *fg, char *bg)
 /*   iconname                                                              */
 /* Purpose : Sets window and icon name hints for window.                   */
 /***************************************************************************/
-void T_SetWindowName(Window window, char windowname[], char iconname[])
+void T_SetWindowName(Window window, const char *windowname, const char *iconname)
 {
    XTextProperty windowName, iconName;
 
-   if (XStringListToTextProperty(&windowname, 1, &windowName) == 0) {
+   char *windownameCopy = (char *) strdup(windowname);
+   char *iconnameCopy = (char *) strdup(iconname);
+
+   if (XStringListToTextProperty(&windownameCopy, 1, &windowName) == 0) {
       fprintf( stderr, "structure allocation for windowName failed.\n");
       exit(-1);
    }
-   if (XStringListToTextProperty(&iconname, 1, &iconName) == 0) {
+   if (XStringListToTextProperty(&iconnameCopy, 1, &iconName) == 0) {
       fprintf( stderr, "structure allocation for iconName failed.\n");
       exit(-1);
    }
@@ -234,6 +235,8 @@ void T_SetWindowName(Window window, char windowname[], char iconname[])
    XSetWMIconName(display, window, &iconName);
    XFree(windowName.value);
    XFree(iconName.value);
+   free(windownameCopy);
+   free(iconnameCopy);
 }
 
 /***************************************************************************/
@@ -415,7 +418,7 @@ void T_DrawTextButton(Window win, int x, int y, int width, int height,
 /*           character at curpos unless cursorpos is negative.             */
 /***************************************************************************/
 void T_DrawString(Window win, int x, int y, int width, int height, GC gc,
-     char *string, int justify, int crop, int cursorpos)
+     const char *string, int justify, int crop, int cursorpos)
 {
    int                   length,c;
  
@@ -474,7 +477,7 @@ void T_DrawString(Window win, int x, int y, int width, int height, GC gc,
 /*           constant BKGR.                                                */
 /***************************************************************************/
 void T_DrawText(Window win, int x, int y, int width, int height, GC gc,
-     char *text)
+     const char *text)
 {
    int                   length, last, h, line;
    char                  *draw, *next, *curr;
@@ -482,7 +485,7 @@ void T_DrawText(Window win, int x, int y, int width, int height, GC gc,
    XSetFont(display, gc, T_Font->fid);
 
    h = (T_Font->ascent+T_Font->descent);
-   draw = next = curr = text;
+   draw = next = curr = (char *)text;
    length = last = line = 0;
    while ( (*curr) != '\0' ) {
       while ( (XTextWidth(T_Font,draw,length+1) < width) &&

@@ -209,7 +209,7 @@ void BuildPrefsSheet(int num)
                 T_FormMultiButton(*temp,prefs[i].name,10+w+prefs[i].column*(w*2+20),
                                 10+prefs[i].row*h+prefs[i].space,w,h-2,2,1,"No;Yes",
                                 prefs[i].intvar,1);
-                tmpstr = malloc(strlen(prefs[i].name)+6);
+                tmpstr = (char *)malloc(strlen(prefs[i].name)+6);
                 strcpy(tmpstr,prefs[i].name);
                 strcat(tmpstr,"_text");
                 T_FormText(*temp,tmpstr,10+prefs[i].column*(w*2+20),10+

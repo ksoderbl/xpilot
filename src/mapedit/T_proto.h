@@ -27,15 +27,15 @@
  */
 
 /* T_Toolkit.c prototypes */
-void             T_ConnectToServer(char *display_name);
+void             T_ConnectToServer(const char *display_name);
 void             T_CloseServerConnection(void);
-void             T_SetToolkitFont(char *font);
-int              T_GetGC(GC *gc, char *foreground);
-int              T_FontInit(XFontStruct **fontinfo, char *fontname);
+void             T_SetToolkitFont(const char *font);
+int              T_GetGC(GC *gc, const char *foreground);
+int              T_FontInit(XFontStruct **fontinfo, const char *fontname);
 Window           T_MakeWindow(int x, int y, int width,int height,
-                 char *fg, char *bg);
-void             T_SetWindowName(Window window, char windowname[],
-                 char iconname[]);
+                 const char *fg, const char *bg);
+void             T_SetWindowName(Window window, const char *windowname,
+                 const char *iconname);
 void             T_SetWindowSizeLimits(Window window, int minwidth,
                  int minheight, int maxwidth, int maxheight,
                  int aspectx, int aspecty);
@@ -49,10 +49,10 @@ void             T_PopButton(Window win, int x, int y, int width,
 void             T_DrawTextButton(Window win, int x, int y, int width,
                  int height, int zheight,char *string);
 void             T_DrawString(Window win, int x, int y, int width,
-                 int height, GC gc, char *string, int justify,
+                 int height, GC gc, const char *string, int justify,
                  int crop, int cursorpos);
 void             T_DrawText(Window win, int x, int y, int width, int height,
-                 GC gc,  char *text);
+                 GC gc, const char *text);
 
 /* T_Form.c prototypes */
 void             T_FormEventCheck(XEvent *report);
@@ -60,40 +60,40 @@ void             T_FormExpose(XEvent *report);
 void             T_FormButtonPress(XEvent *report);
 void             T_FormKeyPress(XEvent *report);
 void             CallFieldHandler(T_Form_t *form, T_Field_t *field, int x,
-                 int y, unsigned int button, int count, int (*handler)());
+                 int y, unsigned int button, int count, int (*handler)(HandlerInfo));
 void             T_FormClear(Window win);
 void             T_FormCloseWindow(Window win);
 T_Form_t         **SeekForm(Window win, short add);
-void             ChangeField(Window win, char *name, char *label,
+void             ChangeField(Window win, const char *name, const char *label,
                  short type, short active, short x, short y, short width,
-                 short height, short x2, short y2, int (*handler)(),
-                 int *intvar, char *charvar, int charvar_length, short null);
-void             T_FormButton(Window win, char *name, short x, short y,
-                 short width, short height, char *label, int (*handler)());
-void             T_FormHoldButton(Window win, char *name, short x, short y,
-                 short width, short height, char *label, int (*handler)());
-void             T_FormMultiButton(Window win, char *name, short x, short y,
-                 short width, short height, short x2, short y2, char *label,
+                 short height, short x2, short y2, int (*handler)(HandlerInfo),
+                 int *intvar, const char *charvar, int charvar_length, short null);
+void             T_FormButton(Window win, const char *name, short x, short y,
+                 short width, short height, const char *label, int (*handler)(HandlerInfo));
+void             T_FormHoldButton(Window win, const char *name, short x, short y,
+                 short width, short height, const char *label, int (*handler)(HandlerInfo));
+void             T_FormMultiButton(Window win, const char *name, short x, short y,
+                 short width, short height, short x2, short y2, const char *label,
                  int *intvar, short no_null);
-void             T_FormScrollArea(Window win, char *name, short type, short x,
-                 short y, short width, short height, int (*handler)());
-void             T_FormText(Window win, char *name, short x, short y,
-                 short width, short height, char *label, short justify);
-void             T_FormStringEntry(Window win, char *name, short x, short y,
-                 short width, short height, short x2, short y2, char *label,
-                 char *charvar, int charvar_length, int (*handler)());
+void             T_FormScrollArea(Window win, const char *name, short type, short x,
+                 short y, short width, short height, int (*handler)(HandlerInfo));
+void             T_FormText(Window win, const char *name, short x, short y,
+                 short width, short height, const char *label, short justify);
+void             T_FormStringEntry(Window win, const char *name, short x, short y,
+                 short width, short height, short x2, short y2, const char *label,
+                 const char *charvar, int charvar_length, int (*handler)(HandlerInfo));
 void             T_DrawEntryField (T_Form_t *form, T_Field_t *field);
 void             T_SetEntryField(T_Form_t *form, T_Field_t *field, int x);
 void             T_FormRedrawEntryField(char *charvar);
 
 /* T_Popup.c prototypes */
 Window           T_PopupCreate(int x, int y, int width, int height,
-                 char *title);
-Window           T_PopupAlert(int type, char *message, char *btn1,
-                 char *btn2, int (*handler1)(), int (*handler2)());
+                 const char *title);
+Window           T_PopupAlert(int type, const char *message, const char *btn1,
+                 const char *btn2, int (*handler1)(HandlerInfo), int (*handler2)(HandlerInfo));
 Window           T_PopupPrompt(int x, int y, int width, int height,
-                 char *title, char *message, char *btn1, char *btn2,
-                 char *charvar, int length, int (*handler)());
+                 const char *title, const char *message, const char *btn1, const char *btn2,
+                 char *charvar, int length, int (*handler)(HandlerInfo));
 int              T_IsPopupOpen(Window win);
 void             T_PopupClose(Window win);
 

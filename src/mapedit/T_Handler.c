@@ -39,9 +39,9 @@ int ValidateFloatHandler(HandlerInfo info)
    char                  *string,*start;
  
    charvar = info.field->charvar;
-   returnval = malloc(strlen((char *) charvar)+1);
+   returnval = (char *) malloc(strlen((char *) charvar)+1);
    returnval[0] = '\0';
-   string = malloc(strlen((char *) charvar)+1);
+   string = (char *) malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
 
@@ -73,9 +73,9 @@ int ValidatePositiveFloatHandler(HandlerInfo info)
    char                  *string,*start;
  
    charvar = info.field->charvar;
-   returnval = malloc(strlen((char *) charvar)+1);
+   returnval = (char *) malloc(strlen((char *) charvar)+1);
    returnval[0] = '\0';
-   string = malloc(strlen((char *) charvar)+1);
+   string = (char *) malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
 
@@ -102,9 +102,9 @@ int ValidateIntHandler(HandlerInfo info)
    char                  *string,*start;
  
    charvar = info.field->charvar;
-   returnval = malloc(strlen((char *) charvar)+1);
+   returnval = (char *) malloc(strlen((char *) charvar)+1);
    returnval[0] = '\0';
-   string = malloc(strlen((char *) charvar)+1);
+   string = (char *) malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
  
@@ -135,9 +135,9 @@ int ValidatePositiveIntHandler(HandlerInfo info)
    char                  *string,*start;
  
    charvar = info.field->charvar;
-   returnval = malloc(strlen((char *) charvar)+1);
+   returnval = (char *) malloc(strlen((char *) charvar)+1);
    returnval[0] = '\0';
-   string = malloc(strlen((char *) charvar)+1);
+   string = (char *) malloc(strlen((char *) charvar)+1);
    start = (char *) string;
    strcpy(string,(char *) charvar);
  

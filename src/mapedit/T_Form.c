@@ -86,7 +86,7 @@ void T_FormExpose(XEvent *report)
                break;
 
             case T_MULTI_BUTTON:
-               label = malloc(strlen(field->label)+1);
+               label = (char *) malloc(strlen(field->label)+1);
                strcpy(label,field->label);
                label = strtok(label,";");
                multi = 1;
@@ -210,7 +210,7 @@ void T_FormButtonPress(XEvent *report)
                while (event.type != ButtonRelease) {
                   if ( (x != x2) || (y != y2) ) {
                      count++;
-                     if ( (field->type == T_SCROLL_UNBOUND) ) {
+                     if ( field->type == T_SCROLL_UNBOUND ) {
                         CallFieldHandler(form,field,x,y,btn,count,
                         field->handler);
                      }
@@ -293,9 +293,9 @@ void T_FormKeyPress(XEvent *report)
  
       if (strlen(form->entry->charvar) <
          form->entry->charvar_length) {
-         tmpstr = malloc(strlen(form->entry->charvar)+2);
+         tmpstr = (char *) malloc(strlen(form->entry->charvar)+2);
          tmpstr[0] = '\0';
-         tmpstr2 = form->entry->charvar;
+         tmpstr2 = (char *)form->entry->charvar;
          tmpstr2 += form->entry_cursor;
          strncat(tmpstr, form->entry->charvar,form->entry_cursor);
          strcat(tmpstr,buffer);
@@ -308,7 +308,7 @@ void T_FormKeyPress(XEvent *report)
    } else if ((keysym == XK_BackSpace) || (keysym == XK_Delete)) {
 
       if (form->entry_cursor > 0) {
-         tmpstr = malloc(strlen(form->entry->charvar));
+         tmpstr = (char *) malloc(strlen(form->entry->charvar));
          tmpstr[0] = '\0';
          tmpstr2 = form->entry->charvar;
          tmpstr2 += form->entry_cursor;
@@ -363,7 +363,7 @@ void T_FormKeyPress(XEvent *report)
 /* Purpose : Set up the HandlerInfo structure and call handler.            */
 /***************************************************************************/
 void CallFieldHandler(T_Form_t *form, T_Field_t *field, int x, int y,
-     unsigned int button, int count, int (*handler)())
+     unsigned int button, int count, int (*handler)(HandlerInfo))
 {
    HandlerInfo             info;
 
@@ -474,9 +474,9 @@ T_Form_t **SeekForm(Window win, short add)
 /* Arguments :                                                             */
 /* Purpose : Change or add a field with the specified information.         */
 /***************************************************************************/
-void ChangeField(Window win, char *name, char *label,
+void ChangeField(Window win, const char *name, const char *label,
      short type, short active, short x, short y, short width, short height, 
-     short x2, short y2, int (*handler)(), int *intvar, char *charvar,
+     short x2, short y2, int (*handler)(HandlerInfo), int *intvar, const char *charvar,
      int charvar_length, short null)
 {
    T_Form_t                     **form;
@@ -493,10 +493,10 @@ void ChangeField(Window win, char *name, char *label,
       free(*field);
    }
    (*field) = (T_Field_t *) malloc(sizeof(T_Field_t));
-   (*field)->name = malloc(strlen(name)+1);
+   (*field)->name = (char *) malloc(strlen(name)+1);
    strcpy((*field)->name, name);
    if ( label != NULL ) {
-      (*field)->label = malloc(strlen(label)+1);
+      (*field)->label = (char *) malloc(strlen(label)+1);
       strcpy((*field)->label, label);
    } else {
       (*field)->label = NULL;
@@ -511,7 +511,7 @@ void ChangeField(Window win, char *name, char *label,
    (*field)->y2 = y2;
    (*field)->handler = handler;
    (*field)->intvar = intvar;
-   (*field)->charvar = charvar;
+   (*field)->charvar = (char *)charvar;
    (*field)->charvar_length = charvar_length;
    (*field)->null = null;
    (*field)->next = next;
@@ -530,8 +530,8 @@ void ChangeField(Window win, char *name, char *label,
 /*   handler                                                               */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormHoldButton(Window win, char *name, short x, short y,
-     short width, short height, char *label, int (*handler)())
+void T_FormHoldButton(Window win, const char *name, short x, short y,
+     short width, short height, const char *label, int (*handler)(HandlerInfo))
 {
    ChangeField(win,name,label,T_HOLD_BUTTON,ACTIVE,x,y,width,height,0,0,
         handler,(int *) NULL,(char *) NULL,0,0);
@@ -550,8 +550,8 @@ void T_FormHoldButton(Window win, char *name, short x, short y,
 /*   handler                                                               */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormButton(Window win, char *name, short x, short y,
-     short width, short height, char *label, int (*handler)())
+void T_FormButton(Window win, const char *name, short x, short y,
+     short width, short height, const char *label, int (*handler)(HandlerInfo))
 {
    ChangeField(win,name,label,T_BUTTON,ACTIVE,x,y,width,height,0,0,
         handler,(int *) NULL,(char *) NULL,0,0);
@@ -573,8 +573,8 @@ void T_FormButton(Window win, char *name, short x, short y,
 /*   null                                                                  */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormMultiButton(Window win, char *name, short x, short y,
-     short width, short height, short x2, short y2, char *label,
+void T_FormMultiButton(Window win, const char *name, short x, short y,
+     short width, short height, short x2, short y2, const char *label,
      int *intvar, short null)
 {
    ChangeField(win,name,label,T_MULTI_BUTTON,ACTIVE,x,y,width,height,x2,y2,
@@ -594,8 +594,8 @@ void T_FormMultiButton(Window win, char *name, short x, short y,
 /*   handler                                                               */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormScrollArea(Window win, char *name, short type, short x, short y,
-     short width, short height, int (*handler)())
+void T_FormScrollArea(Window win, const char *name, short type, short x, short y,
+     short width, short height, int (*handler)(HandlerInfo))
 {
    ChangeField(win,name,NULL,type,ACTIVE,x,y,width,height,0,0,
         handler,(int *) NULL,(char *) NULL,0,0);
@@ -614,8 +614,8 @@ void T_FormScrollArea(Window win, char *name, short type, short x, short y,
 /*   justify                                                               */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormText(Window win, char *name, short x, short y,
-     short width, short height, char *label, short justify)
+void T_FormText(Window win, const char *name, short x, short y,
+     short width, short height, const char *label, short justify)
 {
    ChangeField(win,name,label,T_TEXT,ACTIVE,x,y,width,height,justify,0,
         NULL,(int *) NULL,(char *) NULL,0,0);
@@ -636,9 +636,9 @@ void T_FormText(Window win, char *name, short x, short y,
 /*   justify                                                               */
 /* Purpose : Add a button to form of window win.                           */
 /***************************************************************************/
-void T_FormStringEntry(Window win, char *name, short x, short y,
-     short width, short height, short x2, short y2, char *label,
-     char *charvar, int charvar_length, int (*handler)())
+void T_FormStringEntry(Window win, const char *name, short x, short y,
+     short width, short height, short x2, short y2, const char *label,
+     const char *charvar, int charvar_length, int (*handler)(HandlerInfo))
 {
    ChangeField(win,name,label,T_STRING_ENTRY,ACTIVE,x,y,width,height,x2,y2,
         handler, (int *) NULL, charvar, charvar_length, 0);
@@ -727,7 +727,7 @@ void T_SetEntryField(T_Form_t *form, T_Field_t *field, int x)
       form->entry = field;
       if ( form->entry == NULL ) return;
 
-      form->entry_restore = malloc (strlen(field->charvar) +1);
+      form->entry_restore = (char *) malloc(strlen(field->charvar) +1);
       strcpy(form->entry_restore, field->charvar);
       length = strlen( form->entry->charvar );
       while( (x<XTextWidth(T_Font,form->entry->charvar,length)) &&

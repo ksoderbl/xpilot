@@ -45,7 +45,7 @@ GC                       Wall_GC, Decor_GC, Treasure_GC, Target_GC;
 GC                       Item_Conc_GC, Fuel_GC, Gravity_GC, Current_GC;
 GC                       Wormhole_GC, Base_GC, Cannon_GC, Friction_GC;
 GC                       White_GC , Black_GC, xorgc;
-char                     *fontname = "*-times-bold-r-*-*-14-*-*-*-*-*-*-*";
+char                     *fontname = (char *) "*-times-bold-r-*-*-14-*-*-*-*-*-*-*";
 
 int                      drawicon,drawmode;
 int                      prefssheet;
@@ -721,7 +721,7 @@ void SetDefaults(int argc, char *argv[])
 /***************************************************************************/
 void ParseArgs(int argc, char *argv[])
 {
-   static char           *options[] = {
+   static const char     *options[] = {
       "-font",
       "-display",
       "-help"
@@ -744,7 +744,7 @@ void ParseArgs(int argc, char *argv[])
 
          case 1:
             free(display_name);
-            display_name = malloc(strlen(argv[++index])+1);
+            display_name = (char *) malloc(strlen(argv[++index])+1);
             strcpy(display_name,argv[index]);
             break;
 

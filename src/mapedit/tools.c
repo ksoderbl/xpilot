@@ -677,7 +677,7 @@ int OpenPreferencesPopup(HandlerInfo info)
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenMapInfoPopup()
+int OpenMapInfoPopup(HandlerInfo info)
 {
    Window *temp;
 
@@ -710,7 +710,7 @@ int OpenMapInfoPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenRobotsPopup()
+int OpenRobotsPopup(HandlerInfo info)
 {
    XMapWindow(display, robots);
    return 0;
@@ -720,7 +720,7 @@ int OpenRobotsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenVisibilityPopup()
+int OpenVisibilityPopup(HandlerInfo info)
 {
    XMapWindow(display, visibility);
    return 0;
@@ -730,7 +730,7 @@ int OpenVisibilityPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenCannonsPopup()
+int OpenCannonsPopup(HandlerInfo info)
 {
    XMapWindow(display, cannons);
    return 0;
@@ -740,7 +740,7 @@ int OpenCannonsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenRoundsPopup()
+int OpenRoundsPopup(HandlerInfo info)
 {
    XMapWindow(display, rounds);
    return 0;
@@ -750,7 +750,7 @@ int OpenRoundsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenInitItemsPopup()
+int OpenInitItemsPopup(HandlerInfo info)
 {
    XMapWindow(display, inititems);
    return 0;
@@ -760,7 +760,7 @@ int OpenInitItemsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenMaxItemsPopup()
+int OpenMaxItemsPopup(HandlerInfo info)
 {
    XMapWindow(display, maxitems);
    return 0;
@@ -770,7 +770,7 @@ int OpenMaxItemsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenProbsPopup()
+int OpenProbsPopup(HandlerInfo info)
 {
    XMapWindow(display, probs);
    return 0;
@@ -780,7 +780,7 @@ int OpenProbsPopup()
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int OpenScoringPopup()
+int OpenScoringPopup(HandlerInfo info)
 {
    XMapWindow(display, scoring);
    return 0;
@@ -798,9 +798,9 @@ int ValidateCoordHandler(HandlerInfo info)
    char                  *returnval;
    char                  *string,*start;
  
-   returnval = malloc(strlen(info.field->charvar)+1);
+   returnval = (char *)malloc(strlen(info.field->charvar)+1);
    returnval[0] = '\0';
-   string = malloc(strlen(info.field->charvar)+1);
+   string = (char *)malloc(strlen(info.field->charvar)+1);
    start = string;
    strcpy(string,info.field->charvar);
  
@@ -873,7 +873,7 @@ char MapData(int x, int y)
 /* Arguments :                                                             */
 /* Purpose :                                                               */
 /***************************************************************************/
-int ChangedPrompt(int (*handler)())
+int ChangedPrompt(int (*handler)(HandlerInfo))
 {
    if ( changedwin != (Window) NULL ) return 0;
    if ( map.changed == 0 ) return 0;

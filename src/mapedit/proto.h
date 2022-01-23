@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: proto.h,v 5.1 2001/05/19 23:08:37 millerjl Exp $
  */
 
 /*
@@ -70,19 +68,19 @@ int             NewMap(HandlerInfo info);
 int             ResizeWidth(HandlerInfo info);
 int             ResizeHeight(HandlerInfo info);
 int             OpenPreferencesPopup(HandlerInfo info);
-int             OpenMapInfoPopup(void);
-int             OpenRobotsPopup(void);
-int             OpenVisibilityPopup(void);
-int             OpenCannonsPopup(void);
-int             OpenRoundsPopup(void);
-int             OpenInitItemsPopup(void);
-int             OpenMaxItemsPopup(void);
-int             OpenProbsPopup(void);
-int             OpenScoringPopup(void);
+int             OpenMapInfoPopup(HandlerInfo info);
+int             OpenRobotsPopup(HandlerInfo info);
+int             OpenVisibilityPopup(HandlerInfo info);
+int             OpenCannonsPopup(HandlerInfo info);
+int             OpenRoundsPopup(HandlerInfo info);
+int             OpenInitItemsPopup(HandlerInfo info);
+int             OpenMaxItemsPopup(HandlerInfo info);
+int             OpenProbsPopup(HandlerInfo info);
+int             OpenScoringPopup(HandlerInfo info);
 int             ValidateCoordHandler(HandlerInfo info);
 int             ShowHoles(HandlerInfo info);
 char            MapData(int x, int y);
-int             ChangedPrompt(int (*handlen)());
+int             ChangedPrompt(int (*handlen)(HandlerInfo));
 void            ClearSelectArea(void);
 void            DrawSelectArea(void);
 int             FillMapArea(HandlerInfo info);
@@ -94,20 +92,20 @@ int             NegativeMapArea(HandlerInfo info);
 /* prototypes for file.c */
 int             SavePrompt(HandlerInfo info);
 int             SaveOk(HandlerInfo info);
-int             SaveMap(char *file);
+int             SaveMap(const char *file);
 int             LoadPrompt(HandlerInfo info);
 int             LoadOk(HandlerInfo info);
-int             LoadMap(char *file);
-int             LoadXbmFile(char *file);
-int             LoadOldMap(char *file);
+int             LoadMap(const char *file);
+int             LoadXbmFile(const char *file);
+int             LoadOldMap(const char *file);
 void            toeol(FILE *ifile);
 char            skipspace(FILE *ifile);
-char            *getMultilineValue(char *delimiter, FILE *ifile);
+char            *getMultilineValue(const char *delimiter, FILE *ifile);
 int             ParseLine(FILE *ifile);
-int             AddOption(char *name, char *value);
-int             YesNo(char *val);
-char            *StrToNum(char *string, int len, int type);
-int             LoadMapData(char *value);
+int             AddOption(const char *name, const char *value);
+int             YesNo(const char *val);
+char            *StrToNum(const char *string, int len, int type);
+int             LoadMapData(const char *value);
 char            *getMultilineValue();
 
 /* prototypes for round.c */

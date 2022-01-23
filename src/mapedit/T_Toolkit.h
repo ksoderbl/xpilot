@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: T_Toolkit.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 <X11/Xlib.h>
@@ -63,7 +61,7 @@ extern int               screennum, root_width, root_height;
 extern Display           *display;
 extern GC                T_Back_GC, T_Fore_GC, T_Hlgt_GC, T_Shdw_GC;
 extern XFontStruct       *T_Font;
-extern char              *T_Background,*T_Foreground,*T_Shadow,*T_Highlight;
+extern const char        *T_Background,*T_Foreground,*T_Shadow,*T_Highlight;
 extern Atom              ProtocolAtom;
 extern Atom              KillAtom;
 

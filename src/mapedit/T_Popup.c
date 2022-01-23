@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: T_Popup.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "T_Toolkit.h"
@@ -40,7 +38,7 @@ T_Popup_t                *T_Popup=NULL;
 /*   title                                                                 */
 /* Purpose :                                                               */
 /***************************************************************************/
-Window T_PopupCreate(int x, int y, int width, int height, char *title)
+Window T_PopupCreate(int x, int y, int width, int height, const char *title)
 {
    T_Popup_t      **popup;
 
@@ -76,8 +74,8 @@ Window T_PopupCreate(int x, int y, int width, int height, char *title)
 /*   function                                                              */
 /* Purpose :                                                               */
 /***************************************************************************/
-Window T_PopupAlert(int type, char *message, char *btn1, char *btn2,
-     int (*handler1)(), int (*handler2)())
+Window T_PopupAlert(int type, const char *message, const char *btn1, const char *btn2,
+     int (*handler1)(HandlerInfo), int (*handler2)(HandlerInfo))
 {
    int                   x,y,width,height;
    Window                win;
@@ -91,14 +89,14 @@ Window T_PopupAlert(int type, char *message, char *btn1, char *btn2,
       T_FormButton(win,"popup_btn",x,POPUPBTNHEIGHT*2+20,
            POPUPBTNWIDTH, POPUPBTNHEIGHT,"Ok",PopupCloseHandler);
    } else if (type == 2) {
-      if ( btn1 == NULL ) {
-         btn1 = malloc(3);
-         strcpy(btn1,"Ok");
-      }
-      if ( btn2 == NULL ) {
-         btn2 = malloc(7);
-         strcpy(btn2,"Cancel");
-      }
+      // if ( btn1 == NULL ) {
+      //    btn1 = (char *) malloc(3);
+      //    strcpy(btn1,"Ok");
+      // }
+      // if ( btn2 == NULL ) {
+      //    btn2 = (char *) malloc(7);
+      //    strcpy(btn2,"Cancel");
+      // }
       if ( handler2 == NULL ) {
          handler2 = PopupCloseHandler;
       }
@@ -132,9 +130,9 @@ Window T_PopupAlert(int type, char *message, char *btn1, char *btn2,
 /*   function                                                              */
 /* Purpose :                                                               */
 /***************************************************************************/
-Window T_PopupPrompt(int x, int y, int width, int height, char *title,
-     char *message, char *btn1, char *btn2, char *charvar, int length,
-     int (*handler)())
+Window T_PopupPrompt(int x, int y, int width, int height, const char *title,
+     const char *message, const char *btn1, const char *btn2, char *charvar, int length,
+     int (*handler)(HandlerInfo))
 {
    int                   x2,y2,x3,y3;
    Window                win;
@@ -142,14 +140,6 @@ Window T_PopupPrompt(int x, int y, int width, int height, char *title,
  
    win = T_PopupCreate(x,y,width,height,title);
  
-   if ( btn1 == NULL ) {
-      btn1 = (char *) malloc(3);
-      strcpy(btn1,"Ok");
-   }
-   if ( btn2 == NULL ) {
-      btn2 = (char *) malloc(7);
-      strcpy(btn2,"Cancel");
-   }
    x2 = width/2 - POPUPBTNWIDTH-5;
    y2 = height - POPUPBTNHEIGHT-5;
    T_FormButton(win,"popup_btn1",x2,y2,POPUPBTNWIDTH, POPUPBTNHEIGHT,

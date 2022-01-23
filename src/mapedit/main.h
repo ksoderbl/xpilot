@@ -332,8 +332,8 @@ typedef struct {
 
 /* RTT */
 typedef struct {
-  char                   *name;
-  char                   *value;
+  const char             *name;
+  const char             *value;
 } charlie;
 /* RTT */
 
@@ -358,7 +358,7 @@ extern map_data_t        clipdata;
 extern xpmap_t           map;
 
 typedef struct {
-   char                  *name, *altname, *label;
+   const char            *name, *altname, *label;
    int                   length, type;
    char                  *charvar;
    int                   *intvar;

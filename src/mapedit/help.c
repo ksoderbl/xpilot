@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: help.c,v 5.2 2002/02/26 00:41:18 millerjl Exp $
  */
 
 #include                 "main.h"
@@ -31,7 +29,7 @@
 Window                   helpwin;
 int                      helppage=0, helpsel, helpscreens=3;
 
-char                     *iconlabel[36] = {
+const char               *iconlabel[36] = {
    "Space"   , 
    "Block"   , "Block" , "Block" , "Block" , "Block", 
    "Decor"   , "Decor" , "Decor" , "Decor" , "Decor",

@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: T_Form.h,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #define                  INACTIVE          0
@@ -41,11 +39,14 @@
 #define                  T_HOLD_BUTTON     7
 
 
+struct HandlerInfo;
+typedef struct HandlerInfo HandlerInfo;
 typedef struct T_Field_t {
-   char                  *name, *label;
+   char                  *name;
+   char                  *label;
    short                 type, active;
    short                 x,y,width,height,x2,y2;
-   int                   (*handler)();
+   int                   (*handler)(HandlerInfo);
    int                   *intvar;
    char                  *charvar;
    int                   charvar_length;
@@ -62,11 +63,11 @@ typedef struct T_Form_t {
    struct T_Form_t       *next;
 } T_Form_t;
 
-typedef struct {
+struct HandlerInfo {
    T_Form_t              *form;
    T_Field_t             *field;
    unsigned int          button;
    int                   x,y,count;
-} HandlerInfo;
+};
 
 extern T_Form_t          *T_Form;

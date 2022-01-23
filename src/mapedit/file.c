@@ -104,7 +104,7 @@ int SavePrompt(HandlerInfo info)
 
    strcpy(filepromptname,map.mapFileName);
    filepromptwin = T_PopupPrompt(-1,-1,300,150,"Save Map",
-        "Enter file name to save:","Save",NULL,filepromptname,sizeof(max_str_t),
+        "Enter file name to save:","Save","Cancel",filepromptname,sizeof(max_str_t),
         SaveOk);
    return 0;
 }
@@ -156,7 +156,7 @@ int SaveOk(HandlerInfo info)
 /*   file                                                                  */
 /* Purpose :                                                               */
 /***************************************************************************/
-int SaveMap(char *file)
+int SaveMap(const char *file)
 {
    FILE      *ofile = NULL;
    int                   n, i,j;
@@ -170,7 +170,7 @@ int SaveMap(char *file)
    if ( ofile  == NULL ) {
       tmpstr = (char *) malloc(strlen(file)+20);
       sprintf(tmpstr,"Error saving file: %s",file);
-      T_PopupAlert(1,tmpstr,NULL,NULL,NULL,NULL);
+      T_PopupAlert(1,tmpstr,"Ok","Cancel",NULL,NULL);
       free(tmpstr);
       return 1;
    }
@@ -248,7 +248,7 @@ int LoadPrompt(HandlerInfo info)
    }
    filepromptname[0] = '\0';
    filepromptwin = T_PopupPrompt(-1,-1,300,150,"Load Map",
-        "Enter file name to load:","Load",NULL,filepromptname,sizeof(max_str_t),
+        "Enter file name to load:","Load","Cancel",filepromptname,sizeof(max_str_t),
         LoadOk);
    return 0;
 }
@@ -280,7 +280,7 @@ int LoadOk(HandlerInfo info)
 /*   file                                                                  */
 /* Purpose :                                                               */
 /***************************************************************************/
-int LoadMap(char *file)
+int LoadMap(const char *file)
 {
    FILE                  *ifile = NULL;
    int                   ich;
@@ -329,7 +329,7 @@ int LoadMap(char *file)
 		  if (ifile == NULL) {
 		     tmpstr = (char *) malloc(strlen(file)+21);
 		     sprintf(tmpstr,"Couldn't find file: %s",file);
-		     T_PopupAlert(1,tmpstr,NULL,NULL,NULL,NULL);
+		     T_PopupAlert(1,tmpstr,"Ok","Cancel",NULL,NULL);
 		     free(tmpstr);
 		     return 1;
 		  }
@@ -372,7 +372,7 @@ int LoadMap(char *file)
    }
    if (ifile) fclose(ifile); 
    if (corrupted) {
-      T_PopupAlert(1,"Corrupted map file.",NULL,NULL,NULL,NULL);
+      T_PopupAlert(1,"Corrupted map file.","Ok","Cancel",NULL,NULL);
    }
    return 0;
 }
@@ -383,7 +383,7 @@ int LoadMap(char *file)
 /*   file                                                                  */
 /* Purpose : Load a version 2 map                                          */
 /***************************************************************************/
-int LoadXbmFile(char *file)
+int LoadXbmFile(const char *file)
 {
    FILE                  *fp;
    max_str_t             line;
@@ -393,7 +393,7 @@ int LoadXbmFile(char *file)
    if ((fp = fopen(file, "r")) == NULL) {
       tmpstr = (char *) malloc(strlen(file)+21);
       sprintf(tmpstr,"Couldn't find file: %s",file);
-      T_PopupAlert(1,tmpstr,NULL,NULL,NULL,NULL);
+      T_PopupAlert(1,tmpstr,"Ok","Cancel",NULL,NULL);
       free(tmpstr);
       return 1;
    }
@@ -451,7 +451,7 @@ int LoadXbmFile(char *file)
 /*   file                                                                  */
 /* Purpose : Load a version 2 map                                          */
 /***************************************************************************/
-int LoadOldMap(char *file)
+int LoadOldMap(const char *file)
 {
    FILE                  *fp;
    max_str_t             line, filenm;
@@ -463,7 +463,7 @@ int LoadOldMap(char *file)
    if ((fp = fopen(filenm, "r")) == NULL) {
       tmpstr = (char *) malloc(strlen(file)+21);
       sprintf(tmpstr,"Couldn't find file: %s",file);
-      T_PopupAlert(1,tmpstr,NULL,NULL,NULL,NULL);
+      T_PopupAlert(1,tmpstr,"Ok","Cancel",NULL,NULL);
       free(tmpstr);
       return 1;
    }
@@ -514,7 +514,7 @@ int LoadOldMap(char *file)
    }
 
    if (corrupted == 1) {
-      T_PopupAlert(1,"Corrupted map file.",NULL,NULL,NULL,NULL);
+      T_PopupAlert(1,"Corrupted map file.","Ok","Cancel",NULL,NULL);
    }
    fclose(fp);
    return 0;
@@ -564,7 +564,7 @@ char skipspace(FILE *ifile)
 /*    ifile                                                                */
 /* Purpose :                                                               */
 /***************************************************************************/
-char *getMultilineValue(char *delimiter, FILE *ifile)
+char *getMultilineValue(const char *delimiter, FILE *ifile)
 {
    char                  *s = (char *) malloc(32768);
    int                   i = 0;
@@ -638,18 +638,18 @@ int ParseLine(FILE *ifile)
    }
    /* Skip lines that start with comment character... */
    if (ich == '#') {
-      commentline = malloc(2);
+      commentline = (char *)malloc(2);
       sprintf(commentline,"#");
       ich = getc(ifile);
       while ( (ich != EOF) && (ich != '\n') ) {
-         tmp = malloc(strlen(commentline)+2);
+         tmp = (char *)malloc(strlen(commentline)+2);
          sprintf(tmp,"%s%c",commentline,ich);
          free(commentline);
          commentline = tmp;
          ich = getc(ifile);
       }
       if (ich == '\n') {
-         tmp = malloc(strlen(commentline)+2);
+         tmp = (char *)malloc(strlen(commentline)+2);
          sprintf(tmp,"%s\n",commentline);
          free(commentline);
          commentline = tmp;
@@ -658,10 +658,10 @@ int ParseLine(FILE *ifile)
       /* only add comment lines not created by xmapedit */ 
       if (strstr(commentline,"Created by") == NULL) {
          if ( map.comments == NULL ) {
-            map.comments = malloc(strlen(commentline)+1);
+            map.comments = (char *)malloc(strlen(commentline)+1);
             map.comments = commentline;
          } else {
-            tmp = malloc(strlen(map.comments)+strlen(commentline)+1);
+            tmp = (char *)malloc(strlen(map.comments)+strlen(commentline)+1);
             sprintf(tmp, "%s%s",map.comments,commentline);
             free(map.comments);
             free(commentline);
@@ -755,33 +755,38 @@ int ParseLine(FILE *ifile)
 /*    value                                                                */
 /* Purpose :                                                               */
 /***************************************************************************/
-int AddOption(char *name, char *value)
+int AddOption(const char *name, const char *value)
 {
    int                   option, i;
    char                  *tmp;
+
+   char *nameCopy = (char *) strdup(name);
    
-   for (i=0; i< strlen(name); i++) {
-      if (isupper(name[i])) name[i] = tolower(name[i]);
+   for (i=0; i< strlen(nameCopy); i++) {
+      if (isupper(nameCopy[i])) nameCopy[i] = tolower(nameCopy[i]);
    }
    for (option = 0; option < numprefs; option++)
    {
-      if(!strcmp(name, prefs[option].name))
+      if(!strcmp(nameCopy, prefs[option].name))
          break;
-      if(!strcmp(name, prefs[option].altname))
+      if(!strcmp(nameCopy, prefs[option].altname))
          break;
    }
    if ( option >= numprefs ) {
       if (map.comments == NULL) {
-         map.comments = malloc(strlen(name)+strlen(value)+3);
-         sprintf(map.comments,"%s:%s\n",name,value);
+         map.comments = (char *)malloc(strlen(nameCopy)+strlen(value)+3);
+         sprintf(map.comments,"%s:%s\n",nameCopy,value);
       } else {
-         tmp = malloc(strlen(map.comments)+strlen(name)+strlen(value)+3);
-         sprintf(tmp,"%s%s:%s\n",map.comments,name,value);
+         tmp = (char *)malloc(strlen(map.comments)+strlen(nameCopy)+strlen(value)+3);
+         sprintf(tmp,"%s%s:%s\n",map.comments,nameCopy,value);
          free(map.comments);
          map.comments = tmp;
       }
+      free(nameCopy);
       return 0;
    }
+
+   free(nameCopy);
 
    switch(prefs[option].type) {
          
@@ -823,7 +828,7 @@ int AddOption(char *name, char *value)
 /*   val                                                                   */
 /* Purpose :                                                               */
 /***************************************************************************/
-int YesNo(char *val)
+int YesNo(const char *val)
 {
    if ( (tolower(val[0]) == 'y') || (tolower(val[0]) == 't') ) return 1;
    return 0;
@@ -837,7 +842,7 @@ int YesNo(char *val)
 /*   type                                                                  */
 /* Purpose :                                                               */
 /***************************************************************************/
-char *StrToNum(char *string, int len, int type)
+char *StrToNum(const char *string, int len, int type)
 {
    char                  *returnval;
 
@@ -874,7 +879,7 @@ char *StrToNum(char *string, int len, int type)
 /*   value                                                                 */
 /* Purpose :                                                               */
 /***************************************************************************/
-int LoadMapData(char *value)
+int LoadMapData(const char *value)
 {
    int                   x=0, y=0;
 

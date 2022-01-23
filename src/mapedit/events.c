@@ -22,8 +22,6 @@
  *      Robert Templeman        <mbcaprt@mphhpd.ph.man.ac.uk>
  * 1997:
  *      William Docter          <wad2@lehigh.edu>
- *
- * $Id: events.c,v 5.0 2001/04/07 20:01:00 dik Exp $
  */
 
 #include                 "main.h"
@@ -53,7 +51,7 @@ void MainEventLoop(void)
             if (report.xconfigure.window == mapwin) {
                mapwin_width = report.xconfigure.width;
                mapwin_height = report.xconfigure.height;
-               T_FormScrollArea(mapwin,"draw_map_icon",T_SCROLL_UNBOUND,
+               T_FormScrollArea(mapwin,(char *)"draw_map_icon",T_SCROLL_UNBOUND,
                TOOLSWIDTH,0,mapwin_width-TOOLSWIDTH,mapwin_height,DrawMapIcon);
                break;
             }
