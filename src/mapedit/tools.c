@@ -308,12 +308,12 @@ int MoveMapView(HandlerInfo info)
    int                   width,height, xclear, yclear;
    int                   xfrom, yfrom, xto, yto;
    int                   x,y,count;
-   unsigned int          btn;
+//    unsigned int          btn;
 
    x = info.x-info.field->x;
    y = info.y-info.field->y;
    count = info.count;
-   btn = info.button;
+//    btn = info.button;
    if ( count == 0 ) return 1;
    ClearSelectArea();
    oldx = map.view_x;
@@ -679,28 +679,28 @@ int OpenPreferencesPopup(HandlerInfo info)
 /***************************************************************************/
 int OpenMapInfoPopup(HandlerInfo info)
 {
-   Window *temp;
+//    Window *temp;
 
-   switch (prefssheet){
-   case 0: temp = &mapinfo;
-   break;
-   case 1: temp = &robots;
-   break;
-   case 2: temp = &visibility;
-   break;
-   case 3: temp = &cannons;
-   break;
-   case 4: temp = &rounds;
-   break;
-   case 5: temp = &inititems;
-   break;
-   case 6: temp = &maxitems;
-   break;
-   case 7: temp = &probs;
-   break;
-   case 8: temp = &scoring;
-   break;
-   }
+//    switch (prefssheet){
+//    case 0: temp = &mapinfo;
+//    break;
+//    case 1: temp = &robots;
+//    break;
+//    case 2: temp = &visibility;
+//    break;
+//    case 3: temp = &cannons;
+//    break;
+//    case 4: temp = &rounds;
+//    break;
+//    case 5: temp = &inititems;
+//    break;
+//    case 6: temp = &maxitems;
+//    break;
+//    case 7: temp = &probs;
+//    break;
+//    case 8: temp = &scoring;
+//    break;
+//    }
 
    XMapWindow(display, mapinfo);
    return 0;
@@ -825,11 +825,11 @@ int ValidateCoordHandler(HandlerInfo info)
 /***************************************************************************/
 int ShowHoles(HandlerInfo info)
 {
-   int i,j,w,h,x,y;
+   int i,j,w,/*h,*/x,y;
 
    ClearSelectArea();
    w = mapwin_width/map.view_zoom;
-   h = mapwin_height/map.view_zoom;
+//    h = mapwin_height/map.view_zoom;
    for (i=0; i<w; i++)
       for (j=0;j<w;j++) {
          x = i + map.view_x;

@@ -368,7 +368,7 @@ void Contact(int fd, void *arg)
     status = SUCCESS;
 
     if (reply_to & PRIVILEGE_PACK_MASK) {
-	long			key;
+	long			key = 0;
 	static long		credentials;
 
 	if (!credentials) {

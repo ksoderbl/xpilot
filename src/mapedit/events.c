@@ -107,7 +107,7 @@ void MapwinKeyPress(XEvent *report)
    int                   bufsize=1;
    KeySym                keysym;
    XComposeStatus        compose;
-   int                   count;
+   // int                   count;
 
    if ( (report->xkey.x < TOOLSWIDTH) || (report->xkey.window != mapwin) ) {
       return;
@@ -118,7 +118,8 @@ void MapwinKeyPress(XEvent *report)
    y /= map.view_zoom;
    x += map.view_x;
    y += map.view_y;
-   count = XLookupString(&report->xkey, buffer, bufsize, &keysym, &compose);
+   // count =
+   XLookupString(&report->xkey, buffer, bufsize, &keysym, &compose);
    icon = buffer[0];
    if ((icon >= 'a') && (icon <= 'z')) {
       ChangeMapData(x,y,toupper(icon),1);

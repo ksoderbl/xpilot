@@ -618,7 +618,7 @@ int ParseLine(FILE *ifile)
    char                  *tmp, *commentline;
    int                   slen = 128;
    int                   i=0;
-   int                   override = 0;
+   // int                   override = 0;
    int                   multiline = 0;
 
    ich = getc(ifile);
@@ -723,7 +723,7 @@ int ParseLine(FILE *ifile)
    --s;
    *++s = 0;
    if (!strncmp(value, "\\override:", 10)) {
-      override = 1;
+      // override = 1;
       value += 10;
    }
    while (*value && isascii(*value) && isspace(*value))

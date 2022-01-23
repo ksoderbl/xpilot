@@ -100,7 +100,7 @@ void BuildMapwinForm(void)
 /***************************************************************************/
 void BuildPrefsForm(void)
 {
-   int                   w,h,t,i;
+   int                   w,h,/*t,*/i;
 
    T_FormButton(prefwin,"close_prefs",10,PREFSEL_HEIGHT-10-PREF_BTN_HEIGHT,
         PREF_BTN_WIDTH,PREF_BTN_HEIGHT,"Close",FormCloseHandler);
@@ -108,7 +108,7 @@ void BuildPrefsForm(void)
    /* preference fields */
    w = (PREFSEL_WIDTH-20);
    h = PREF_BTN_HEIGHT+2;
-   t = (PREF_BTN_HEIGHT-20)/2;
+//    t = (PREF_BTN_HEIGHT-20)/2;
 
    T_FormButton(prefwin,"MapInfo",10,10,w-1,h-1,"Map Info",OpenMapInfoPopup);
    T_FormButton(prefwin,"Robots",10,10+h,w-1,h-1,"Robots, Bounce...",OpenRobotsPopup);

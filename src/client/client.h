@@ -170,14 +170,14 @@ typedef struct {
 typedef struct {
     /* a selection in the talk window */
     struct {
-        bool    state;	/* current state of the selection */
+        int     state;	/* current state of the selection */
         int     x1;	/* string indices */
         int     x2;
         bool    incl_nl;/* include a `\n'? */
     } talk ;
     /* a selection in the draw window */
     struct {
-        bool    state;
+        int     state;
         int     x1;	/* string indices (for TalkMsg[].txt) */
         int     x2;	/* they are modified when the emphasized area */
         int     y1;	/* is scrolled down by new messages coming in */
