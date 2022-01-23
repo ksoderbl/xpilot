@@ -124,8 +124,8 @@ LINUX_LPLUS = $(LINUX_CFLAGS)
 # Client can be single-threaded.
 #
 OS2_CC = gcc
-#OS2_CFLAGS = $(DEFS) $(INCS) -fno-strength-reduce -Zmtd -Zbsd-signals -I. -I$(X11ROOT)/xfree86/include -DWINDOWSCALING -DMBX -D__ST_MT_ERRNO__ -D_OS2_ -DFUNCPROTO=15 -DNARROWPROTO -Dstrncasecmp=strnicmp -Dstrcasecmp=stricmp
-OS2_CFLAGS = $(DEFS) $(INCS) -fno-strength-reduce -Zmtd -Zbsd-signals -I. -I$(X11ROOT)/xfree86/include -DWINDOWSCALING -DMBX -D__ST_MT_ERRNO__ -D_OS2_ -DFUNCPROTO=15 -DNARROWPROTO
+#OS2_CFLAGS = $(DEFS) $(INCS) -fno-strength-reduce -Zmtd -Zbsd-signals -I. -I$(X11ROOT)/xfree86/include -DMBX -D__ST_MT_ERRNO__ -D_OS2_ -DFUNCPROTO=15 -DNARROWPROTO -Dstrncasecmp=strnicmp -Dstrcasecmp=stricmp
+OS2_CFLAGS = $(DEFS) $(INCS) -fno-strength-reduce -Zmtd -Zbsd-signals -I. -I$(X11ROOT)/xfree86/include -DMBX -D__ST_MT_ERRNO__ -D_OS2_ -DFUNCPROTO=15 -DNARROWPROTO
 OS2_OPT = -O2
 OS2_MLIB = -lsocket -lbsd -lm -Zbin-files -Zexe
 OS2_XLIB = -L$(X11ROOT)/xfree86/lib -L$(LIBRARY_PATH) -lX11 -lXext

@@ -184,7 +184,6 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 	    { 0, -2 }
 	};
 
-#    ifdef WINDOWSCALING
 	if (lastScaleFactor != scaleFactor) {
 	    int			i;
 	    lastScaleFactor = scaleFactor;
@@ -193,12 +192,6 @@ void Gui_paint_mine(int x, int y, int teammine, char *name)
 		mine_points[i].y = WINSCALE(world_mine_points[i].y);
 	    }
 	}
-#    else
-	if (!lastScaleFactor) {
-	    lastScaleFactor = 1;
-	    memcpy(mine_points, world_mine_points, sizeof(world_mine_points));
-	}
-#    endif
 
 	x = X(x);
 	y = Y(y);

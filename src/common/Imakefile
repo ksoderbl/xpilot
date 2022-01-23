@@ -28,7 +28,7 @@ includes:: version.h
 depend:: includes
 
 # keep this variable consistent with its counterpart in ../Makefile.std
-SRCS = checknames.c config.c error.c \
+SRCS = checknames.c xpconfig.c error.c \
 	list.c math.c net.c \
 	portability.c randommt.c \
 	shipshape.c socklib.c \
@@ -36,7 +36,7 @@ SRCS = checknames.c config.c error.c \
 	xpmemory.c
 
 # keep this variable consistent with its counterpart in ../Makefile.std
-OBJS = checknames.o config.o error.o \
+OBJS = checknames.o xpconfig.o error.o \
 	list.o math.o net.o \
 	portability.o randommt.o \
 	shipshape.o socklib.o \
@@ -54,10 +54,10 @@ DependTarget()
  */
 #define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
 
-          SUBDIRS = NT 			/* make all */
-  MAKEFILESUBDIRS = NT 			/* make Makefiles */
-     CLEANSUBDIRS = NT		 	/* make clean */
-       DEPSUBDIRS = NT 			/* make depend */
+          SUBDIRS = 			/* make all */
+  MAKEFILESUBDIRS = 			/* make Makefiles */
+     CLEANSUBDIRS =		 	/* make clean */
+       DEPSUBDIRS = 			/* make depend */
    INSTALLSUBDIRS =        		/* make install */
   INCLUDESSUBDIRS = 			/* make includes */
 INSTALLMANSUBDIRS = 			/* make install.man */

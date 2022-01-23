@@ -196,7 +196,7 @@ void sound_play_queued(player * pl)
 
     while (p) {
 	n = p->next;
-	Send_audio(pl->conn, p->index, p->volume);
+	Send_audio(pl->connp, p->index, p->volume);
 	free(p);
 	p = n;
     }

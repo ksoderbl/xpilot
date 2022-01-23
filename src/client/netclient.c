@@ -1523,10 +1523,8 @@ static void Check_view_dimensions(void)
     int			height_wanted = draw_height;
     int			srv_width, srv_height;
 
-#ifdef	WINDOWSCALING
     width_wanted = (int)(width_wanted * scaleFactor + 0.5);
     height_wanted = (int)(height_wanted * scaleFactor + 0.5);
-#endif
 
     srv_width = width_wanted;
     srv_height = height_wanted;
@@ -2772,10 +2770,8 @@ int Send_display(void)
     int			width_wanted = draw_width;
     int			height_wanted = draw_height;
 
-#ifdef	WINDOWSCALING
     width_wanted = (int)(width_wanted * scaleFactor + 0.5);
     height_wanted = (int)(height_wanted * scaleFactor + 0.5);
-#endif
 
     LIMIT(width_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);
     LIMIT(height_wanted, MIN_VIEW_SIZE, MAX_VIEW_SIZE);

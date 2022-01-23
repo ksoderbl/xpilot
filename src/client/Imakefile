@@ -74,9 +74,6 @@ DEFS_DBE = -DDBE
 #ifdef Joystick
 DEFS_JOYSTICK = -DJOYSTICK
 #endif
-#ifdef WindowScaling
-DEFS_SCALING = -DWINDOWSCALING
-#endif
 #ifdef XPilotDevelopment
 DEFS_DEBUG = -DDEVELOPMENT
 #endif
@@ -93,7 +90,7 @@ DEFS_DEBUG = -DDEVELOPMENT
  */
 DEFINES = \
        $(DEFS_ERASE) $(DEFS_MBX) $(DEFS_DBE) \
-       $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
+       $(DEFS_JOYSTICK) $(AUDIODEF) \
        $(DEFS_OTHER) $(DEFS_DEBUG)
 INCLUDES = $(AUDIOINC) -I$(COMMON) -I../../lib/
 

@@ -355,17 +355,11 @@ int Arc_add(int color,
 {
     XArc t;
 
-#ifndef WINDOWSCALING
-    t.x = x;
-    t.y = y;
-    t.width = width;
-    t.height = height;
-#else
     t.x = WINSCALE(x);
     t.y = WINSCALE(y);
     t.width = WINSCALE(width+x) - t.x;
     t.height = WINSCALE(height+y) - t.y;
-#endif
+
     t.angle1 = angle1;
     t.angle2 = angle2;
     STORE(XArc, arc_ptr[color], num_arc[color], max_arc[color], t);
@@ -996,7 +990,6 @@ void paintdataCleanup(void)
     }
 }
 
-#ifdef	WINDOWSCALING
 #define SCALE_ARRAY_SIZE	32768
 short	scaleArray[SCALE_ARRAY_SIZE];
 
@@ -1058,4 +1051,3 @@ void Init_scale_array(void)
 	exit(1);
     }
 }
-#endif

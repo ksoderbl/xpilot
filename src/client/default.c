@@ -1737,7 +1737,6 @@ option options[] = {
 	"Specifies how many frames between radar window updates.\n"
 	},
 #endif
-#ifdef	WINDOWSCALING
     {
 	"scaleFactor",
 	NULL,
@@ -1752,7 +1751,6 @@ option options[] = {
         KEY_DUMMY,
         "Specifies alternative scaling factor for the drawing window.\n"
     },
-#endif
 #ifdef SOUND
     {
 	"sounds",
@@ -2817,7 +2815,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     IFWINDOWS( Get_int_resource(rDB, "radarDivisor", &RadarDivisor); )
     IFWINDOWS( Get_bool_resource(rDB, "threadedDraw", &ThreadedDraw); )
 
-#ifdef	WINDOWSCALING
     Get_float_resource(rDB, "scaleFactor", &scaleFactor);
     if (scaleFactor == 0.0) {
 	scaleFactor = 1.0;
@@ -2828,7 +2825,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
         scaleFactor_s = 2.0;
     }
     LIMIT(scaleFactor_s, MIN_SCALEFACTOR, MAX_SCALEFACTOR);
-#endif
 
 #ifdef SOUND
     Get_string_resource(rDB, "sounds", sounds, sizeof sounds);
