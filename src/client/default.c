@@ -347,7 +347,7 @@ option options[] = {
     {
 	"showHUDRadar",
 	NULL,
-	"No",
+	"Yes",
 	KEY_DUMMY,
 	"Should the HUD radar be displayed or not.\n"
     },
@@ -382,7 +382,7 @@ option options[] = {
     {
 	"horizontalHUDLine",
 	NULL,
-	"Yes",
+	"No",
 	KEY_DUMMY,
 	"Should the horizontal lines in the HUD be drawn.\n"
     },
@@ -463,7 +463,7 @@ option options[] = {
     {
 	"slidingRadar",
 	NULL,
-	"No",
+	"Yes",
 	KEY_DUMMY,
 	"If the game is in edgewrap mode then the radar will keep your\n"
 	"position on the radar in the center and raw the rest of the radar\n"
@@ -520,7 +520,7 @@ option options[] = {
     {
 	"markingLights",
 	NULL,
-	"Yes",
+	"No",
 	KEY_DUMMY,
 	"Should the fighters have marking lights, just like airplanes?\n"
     },
@@ -644,7 +644,6 @@ option options[] = {
 	KEY_DUMMY,
 	"Reverse scroll direction of messages.\n"
     },
-#ifndef _WINDOWS
     {
 	"selectionAndHistory",
 	NULL,
@@ -661,11 +660,10 @@ option options[] = {
 	"Number of your messages saved in the `history' of the talk window.\n"
 	"`history' is accessible with `keyTalkCursorUp/Down'.\n"
     },
-#endif
     {
 	"shotSize",
 	NULL,
-	"3",
+	"6",
 	KEY_DUMMY,
 	"The size of shots in pixels.\n"
     },
@@ -697,7 +695,7 @@ option options[] = {
     {
 	"backgroundPointSize",
 	NULL,
-	"2",
+	"0",
 	KEY_DUMMY,
 	"Specifies the size of the background points.  0 means no points.\n"
     },
@@ -1035,7 +1033,7 @@ option options[] = {
     {   
 	"oldMessagesColor",
 	NULL,
-	"1",
+	"2",
 	KEY_DUMMY,
 	"Which color number to use for drawing old messages.\n"
     },
