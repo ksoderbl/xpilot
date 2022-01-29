@@ -106,11 +106,11 @@ am_xpilot_client_OBJECTS = about.$(OBJEXT) blockbitmaps.$(OBJEXT) \
 	netclient.$(OBJEXT) paint.$(OBJEXT) paintdata.$(OBJEXT) \
 	painthud.$(OBJEXT) paintmap.$(OBJEXT) paintobjects.$(OBJEXT) \
 	paintradar.$(OBJEXT) query.$(OBJEXT) record.$(OBJEXT) \
-	sim.$(OBJEXT) syslimit.$(OBJEXT) talk.$(OBJEXT) \
-	talkmacros.$(OBJEXT) textinterface.$(OBJEXT) texture.$(OBJEXT) \
-	usleep.$(OBJEXT) welcome.$(OBJEXT) widget.$(OBJEXT) \
-	xevent.$(OBJEXT) xeventhandlers.$(OBJEXT) xinit.$(OBJEXT) \
-	xpilot.$(OBJEXT) xpmread.$(OBJEXT)
+	sim.$(OBJEXT) talk.$(OBJEXT) talkmacros.$(OBJEXT) \
+	textinterface.$(OBJEXT) texture.$(OBJEXT) usleep.$(OBJEXT) \
+	welcome.$(OBJEXT) widget.$(OBJEXT) xevent.$(OBJEXT) \
+	xeventhandlers.$(OBJEXT) xinit.$(OBJEXT) xpilot.$(OBJEXT) \
+	xpmread.$(OBJEXT)
 xpilot_client_OBJECTS = $(am_xpilot_client_OBJECTS)
 xpilot_client_DEPENDENCIES = ../common/libxpcommon.a
 AM_V_P = $(am__v_P_@AM_V@)
@@ -139,8 +139,7 @@ am__depfiles_remade = ./$(DEPDIR)/about.Po ./$(DEPDIR)/blockbitmaps.Po \
 	./$(DEPDIR)/paintdata.Po ./$(DEPDIR)/painthud.Po \
 	./$(DEPDIR)/paintmap.Po ./$(DEPDIR)/paintobjects.Po \
 	./$(DEPDIR)/paintradar.Po ./$(DEPDIR)/query.Po \
-	./$(DEPDIR)/record.Po ./$(DEPDIR)/sim.Po \
-	./$(DEPDIR)/syslimit.Po ./$(DEPDIR)/talk.Po \
+	./$(DEPDIR)/record.Po ./$(DEPDIR)/sim.Po ./$(DEPDIR)/talk.Po \
 	./$(DEPDIR)/talkmacros.Po ./$(DEPDIR)/textinterface.Po \
 	./$(DEPDIR)/texture.Po ./$(DEPDIR)/usleep.Po \
 	./$(DEPDIR)/welcome.Po ./$(DEPDIR)/widget.Po \
@@ -276,7 +275,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/src/common
-xpilot_client_SOURCES = about.c blockbitmaps.c client.c colors.c configure.c datagram.c dbuff.c default.c gfx2d.c gfx3d.c guimap.c guiobjects.c join.c ncdaudio.c netclient.c paint.c paintdata.c painthud.c paintmap.c paintobjects.c paintradar.c query.c record.c sim.c syslimit.c talk.c talkmacros.c textinterface.c texture.c usleep.c welcome.c widget.c xevent.c xeventhandlers.c xinit.c xpilot.c xpmread.c
+xpilot_client_SOURCES = about.c blockbitmaps.c client.c colors.c configure.c datagram.c dbuff.c default.c gfx2d.c gfx3d.c guimap.c guiobjects.c join.c ncdaudio.c netclient.c paint.c paintdata.c painthud.c paintmap.c paintobjects.c paintradar.c query.c record.c sim.c talk.c talkmacros.c textinterface.c texture.c usleep.c welcome.c widget.c xevent.c xeventhandlers.c xinit.c xpilot.c xpmread.c
 xpilot_client_LDADD = -lX11 -lm ../common/libxpcommon.a
 all: all-am
 
@@ -388,7 +387,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/query.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/record.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sim.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/syslimit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/talk.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/talkmacros.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/textinterface.Po@am__quote@ # am--include-marker
@@ -572,7 +570,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/query.Po
 	-rm -f ./$(DEPDIR)/record.Po
 	-rm -f ./$(DEPDIR)/sim.Po
-	-rm -f ./$(DEPDIR)/syslimit.Po
 	-rm -f ./$(DEPDIR)/talk.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
@@ -654,7 +651,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/query.Po
 	-rm -f ./$(DEPDIR)/record.Po
 	-rm -f ./$(DEPDIR)/sim.Po
-	-rm -f ./$(DEPDIR)/syslimit.Po
 	-rm -f ./$(DEPDIR)/talk.Po
 	-rm -f ./$(DEPDIR)/talkmacros.Po
 	-rm -f ./$(DEPDIR)/textinterface.Po
