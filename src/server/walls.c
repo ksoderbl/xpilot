@@ -1627,7 +1627,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 			somebody_flag = 0,
 			targets_remaining = 0,
 			targets_total = 0;
-    DFLOAT 		drainfactor;
+    int 		drainfactor;
 
     /* a normal shot or a direct mine hit work, cannons don't */
     /* KK: should shots/mines by cannons of opposing teams work? */
@@ -1645,7 +1645,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     switch(obj->type) {
     case OBJ_SHOT:
-	drainfactor = 1.0f;
+	drainfactor = 1;
 	targ->damage += (int)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
 	break;
     case OBJ_PULSE:

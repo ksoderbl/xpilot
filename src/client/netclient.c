@@ -1719,9 +1719,6 @@ int Receive_self(void)
 		num_items,
 		currentTank, fuelSum, fuelMax, rbuf.len);
 
-#ifdef _WINDOWS
-	received_self = TRUE;
-#endif
     return 1;
 }
 
@@ -2256,7 +2253,7 @@ int Receive_score_object(void)
 {
     int			n;
     unsigned short	x, y;
-    DFLOAT		score = 0;
+    int			score = 0;
     char		msg[MAX_CHARS];
     u_byte		ch;
 
@@ -2270,7 +2267,7 @@ int Receive_score_object(void)
 	int	rcv_score;
 	n = Packet_scanf(&cbuf, "%c%d%hu%hu%s",
 			 &ch, &rcv_score, &x, &y, msg);
-	score = (DFLOAT)rcv_score / 100;
+	score = rcv_score / 100;
     }
     if (n <= 0)
 	return n;
@@ -2285,7 +2282,7 @@ int Receive_score(void)
 {
     int			n;
     short		id, life;
-    DFLOAT		score = 0;
+    int			score = 0;
     u_byte		ch, mychar, alliance = ' ';
 
     if (version < 0x4500) {
@@ -2299,7 +2296,7 @@ int Receive_score(void)
 	int	rcv_score;
 	n = Packet_scanf(&cbuf, "%c%hd%d%hd%c%c", &ch,
 			 &id, &rcv_score, &life, &mychar, &alliance);
-	score = (DFLOAT)rcv_score / 100;
+	score = rcv_score / 100;
     }
     if (n <= 0) {
 	return n;
@@ -2315,15 +2312,10 @@ int Receive_team_score(void)
     int			n;
     u_byte		ch;
     short		team;
-    int			rcv_score;
-    DFLOAT		score;
+    int			rcv_score, score;
 
     if ((n = Packet_scanf(&cbuf, "%c%hd%d", &ch, &team, &rcv_score)) <= 0) {
 	return n;
-    }
-    score = (DFLOAT)rcv_score / 100;
-    if ((n = Handle_team_score(team, score)) == -1) {
-	return -1;
     }
     return 1;
 }

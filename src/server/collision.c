@@ -1189,7 +1189,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 {
     player	*pl = Players[ind];
     int   	sc;
-    DFLOAT   	drainfactor;
+    int   	drainfactor;
     long	drain;
     int		killer = NO_ID;
 
@@ -1252,7 +1252,7 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 			       PLAYER_EAT_SHOT_SOUND);
 	    if (BIT(pl->used, (HAS_SHIELD|HAS_EMERGENCY_SHIELD))
 		!= (HAS_SHIELD|HAS_EMERGENCY_SHIELD)) {
-	   	drainfactor = 1.0f;
+	   	drainfactor = 1;
 		drain = (long)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
 		Add_fuel(&(pl->fuel), drain);
 	    }

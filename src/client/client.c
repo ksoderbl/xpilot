@@ -1169,11 +1169,6 @@ int Handle_score(int id, int score, int life, int mychar, int alliance)
     return 0;
 }
 
-int Handle_team_score(int team, int score)
-{
-    return 0;
-}
-
 int Handle_timing(int id, int check, int round)
 {
     other_t		*other;

@@ -317,7 +317,6 @@ int Handle_player(int id, int team, int mychar, char *player_name,
 		  char *real_name, char *host_name, char *shape);
 int Handle_score(int id, int score, int life, int mychar, int alliance);
 int Handle_score_object(int score, int x, int y, char *msg);
-int Handle_team_score(int team, int score);
 int Handle_timing(int id, int check, int round);
 int Handle_war(int robot_id, int killer_id);
 int Handle_seek(int programmer_id, int robot_id, int sought_id);
