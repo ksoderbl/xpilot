@@ -48,7 +48,7 @@ int Punish_team(int ind, int t_destroyed, int t_target)
     int			win_score = 0,lose_score = 0;
     int			win_team_members = 0, lose_team_members = 0;
     int			somebody_flag = 0;
-    DFLOAT		sc, por;
+    int			sc, por;
 
     Check_team_members (td->team);
     if (td->team == pl->team)
@@ -215,14 +215,7 @@ void Make_debris(
 	debris->vel.y = vely + dy * speed;
 	debris->acc.x = 0;
 	debris->acc.y = 0;
-	if (shotHitFuelDrainUsesKineticEnergy
-	    && type == OBJ_SHOT) {
-	    /* compensate so that m*v^2 is constant */
-	    DFLOAT sp_shotsp = speed / ShotsSpeed;
-	    debris->mass = mass / (sp_shotsp * sp_shotsp);
-	} else {
-	    debris->mass = mass;
-	}
+	debris->mass = mass;
 	debris->type = type;
 	life = (int)(min_life + rfrac() * (max_life - min_life) + 1);
 	if (life * speed > World.hypotenuse) {

@@ -37,7 +37,7 @@
 #include "netserver.h"
 
 
-void SCORE(int ind, DFLOAT points, int x, int y, const char *msg)
+void SCORE(int ind, int points, int x, int y, const char *msg)
 {
     player	*pl = Players[ind];
 
@@ -60,7 +60,7 @@ void SCORE(int ind, DFLOAT points, int x, int y, const char *msg)
     updateScores = true;
 }
 
-void TEAM_SCORE(int team, DFLOAT points)
+void TEAM_SCORE(int team, int points)
 {
     if (team == TEAM_NOT_SET)	/* could happen if teamCannons is off */
 	return;
@@ -79,7 +79,7 @@ void TEAM_SCORE(int team, DFLOAT points)
     updateScores = true;
 }
 
-void Alliance_score(int id, DFLOAT points)
+void Alliance_score(int id, int points)
 {
     int		i;
     int		member_count = Get_alliance_member_count(id);

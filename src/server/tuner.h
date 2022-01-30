@@ -1,5 +1,4 @@
-/* $Id: tuner.h,v 1.4 2001/11/28 22:34:33 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell

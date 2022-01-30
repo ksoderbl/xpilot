@@ -74,8 +74,6 @@ DFLOAT	showItemsTime;		/* How long to show changed item count for */
 
 short	autopilotLight;
 
-int	showScoreDecimals;
-
 short	lock_id;		/* Id of player locked onto */
 short	lock_dir;		/* Direction of lock */
 short	lock_dist;		/* Distance to player locked onto */
@@ -170,7 +168,7 @@ static other_t		*Others = 0;
 static int		num_others = 0,
 			max_others = 0;
 
-static DFLOAT		teamscores[MAX_TEAMS];
+static int		teamscores[MAX_TEAMS];
 
 static fuelstation_t	*fuels = 0;
 static int		num_fuels = 0;
@@ -1149,16 +1147,14 @@ int Handle_seek(int programmer_id, int robot_id, int sought_id)
     return 0;
 }
 
-int Handle_score(int id, DFLOAT score, int life, int mychar, int alliance)
+int Handle_score(int id, int score, int life, int mychar, int alliance)
 {
     other_t		*other;
 
     if ((other = Other_by_id(id)) == NULL) {
-#ifndef _WINDOWS
 	errno = 0;
-	xperror("Can't update score for non-existing player %d,%.2f,%d",
+	xperror("Can't update score for non-existing player %d,%d,%d",
 	      id, score, life);
-#endif
 	return 0;
     }
     else if (other->score != score
@@ -1175,7 +1171,7 @@ int Handle_score(int id, DFLOAT score, int life, int mychar, int alliance)
     return 0;
 }
 
-int Handle_team_score(int team, DFLOAT score)
+int Handle_team_score(int team, int score)
 {
     if (teamscores[team] != score) {
 	teamscores[team] = score;
@@ -1206,7 +1202,7 @@ int Handle_timing(int id, int check, int round)
     return 0;
 }
 
-int Handle_score_object(DFLOAT score, int x, int y, char *msg)
+int Handle_score_object(int score, int x, int y, char *msg)
 {
     score_object_t*	sobj = &score_objects[score_object];
 
@@ -1217,12 +1213,7 @@ int Handle_score_object(DFLOAT score, int x, int y, char *msg)
 
     /* Initialize sobj->hud_msg (is shown on the HUD) */
     if (msg[0] != '\0') {
-	if (showScoreDecimals > 0 && version >= 0x4500) {
-	    sprintf(sobj->hud_msg, "%s %.*f", msg, showScoreDecimals, score);
-	}
-	else {
-	    sprintf(sobj->hud_msg, "%s %d", msg, (int) rint(score));
-	}
+	sprintf(sobj->hud_msg, "%s %d", msg, score);
 	sobj->hud_msg_len = strlen(sobj->hud_msg);
 	sobj->hud_msg_width = XTextWidth(gameFont,
 					 sobj->hud_msg, sobj->hud_msg_len);
@@ -1230,12 +1221,8 @@ int Handle_score_object(DFLOAT score, int x, int y, char *msg)
 	sobj->hud_msg_len = 0;
 
     /* Initialize sobj->msg data (is shown on game area) */
-    if (showScoreDecimals > 0 && version >= 0x4500) {
-	sprintf(sobj->msg, "%.*f", showScoreDecimals, score);
-    }
-    else {
-	sprintf(sobj->msg, "%d", (int) rint(score));
-    }
+    sprintf(sobj->msg, "%d", score);
+
     sobj->msg_len = strlen(sobj->msg);
     sobj->msg_width = XTextWidth(gameFont, sobj->msg, sobj->msg_len);
 
@@ -1248,7 +1235,7 @@ int Handle_score_object(DFLOAT score, int x, int y, char *msg)
 void Client_score_table(void)
 {
     struct team_score {
-	DFLOAT		score;
+	int		score;
 	int		life;
 	int		playing;
     };
@@ -1308,9 +1295,9 @@ void Client_score_table(void)
 	}
 	else {
 	    if (BIT(Setup->mode, LIMITED_LIVES)) {
-		ratio = other->score;
+		ratio = (float) other->score;
 	    } else {
-		ratio = other->score / (other->life + 1);
+		ratio = (float) other->score / (other->life + 1);
 	    }
 	    if (best == -1
 		|| ratio > best_ratio) {
@@ -1344,13 +1331,8 @@ void Client_score_table(void)
 		/*FALLTHROUGH*/
 	    default:
 		team[other->team].playing++;
-		if (version < 0x4500) {
-		    team[other->team].score += other->score;
-		}
+		team[other->team].score += other->score;
 		break;
-	    }
-	    if (version >= 0x4500) {
-		team[other->team].score = teamscores[other->team];
 	    }
 	}
     }

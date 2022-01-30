@@ -529,14 +529,7 @@ void Paint_score_entry(int entry_num,
 	if (BIT(Setup->mode, LIMITED_LIVES))
 	    sprintf(lifeStr, " %3d", other->life);
 
-	if (showScoreDecimals > 0 && version >= 0x4500) {
-	    sprintf(scoreStr, "%*.*f",
-		    8 - showScoreDecimals, showScoreDecimals,
-		    other->score);
-	}
-	else {
-	    sprintf(scoreStr, "%5d", (int) rint(other->score));
-	}
+	sprintf(scoreStr, "%5d", other->score);
 	sprintf(label, "%c %s%s%s%s  %s",
 		other->mychar, raceStr, teamStr,
 		scoreStr, lifeStr,

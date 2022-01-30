@@ -1617,11 +1617,10 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 {
     target_t		*targ = &World.targets[ms->target];
     object		*obj = ms->mip->obj;
-    int			j,
+    int			j, sc, por,
 			x, y,
 			killer;
-    DFLOAT		sc, por,
-			win_score = 0,
+    int			win_score = 0,
 			lose_score = 0;
     int			win_team_members = 0,
 			lose_team_members = 0,
@@ -1646,13 +1645,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
 
     switch(obj->type) {
     case OBJ_SHOT:
-	if (shotHitFuelDrainUsesKineticEnergy) {
-	    drainfactor = VECTOR_LENGTH(obj->vel);
-	    drainfactor = (drainfactor * drainfactor * ABS(obj->mass))
-			  / (ShotsSpeed * ShotsSpeed * ShotsMass);
-	} else {
-	    drainfactor = 1.0f;
-	}
+	drainfactor = 1.0f;
 	targ->damage += (int)(ED_SHOT_HIT * drainfactor * SHOT_MULT(obj));
 	break;
     case OBJ_PULSE:
@@ -1765,7 +1758,7 @@ static void Object_hits_target(move_state_t *ms, long player_cost)
     if (targets_remaining > 0) {
 	sc = Rate(Players[killer]->score, CANNON_SCORE)/4;
 	sc = sc * (targets_total - targets_remaining) / (targets_total + 1);
-	if (sc >= 0.01) {
+	if (sc > 0) {
 	    SCORE(killer, sc,
 		  targ->pos.x, targ->pos.y, "Target: ");
 	}
@@ -2103,9 +2096,9 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 	int		cnt[MAX_RECORDED_SHOVES];
 	int		num_pushers = 0;
 	int		total_pusher_count = 0;
-	DFLOAT		total_pusher_score = 0;
-	int		i, j;
-	DFLOAT		sc;
+	int		total_pusher_score = 0;
+	int		i, j, sc;
+
 
 	SET_BIT(pl->status, KILLED);
 	sprintf(msg, howfmt, pl->name, (!pt) ? " head first" : "");
@@ -2163,8 +2156,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		    msg_len += name_len;
 		    msg_ptr += name_len;
 		}
-		sc = cnt[i] * Rate(pusher->score, pl->score)
-				    * shoveKillScoreMult / total_pusher_count;
+		sc = cnt[i] * (int)floor(Rate(pusher->score, pl->score)
+				    * shoveKillScoreMult) / total_pusher_count;
 		SCORE(GetInd[pusher->id], sc,
 		      OBJ_X_IN_BLOCKS(pl),
 		      OBJ_Y_IN_BLOCKS(pl),
@@ -2174,8 +2167,8 @@ static void Player_crash(move_state_t *ms, int pt, bool turning)
 		}
 
 	    }
-	    sc = Rate(average_pusher_score, pl->score)
-		       * shoveKillScoreMult;
+	    sc = (int)floor(Rate(average_pusher_score, pl->score)
+		       * shoveKillScoreMult);
 	    SCORE(ind, -sc,
 		  OBJ_X_IN_BLOCKS(pl),
 		  OBJ_Y_IN_BLOCKS(pl),

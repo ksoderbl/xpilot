@@ -1,5 +1,4 @@
-/* $Id: score.h,v 5.6 2002/06/11 03:59:38 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -52,9 +51,9 @@
 
 /* score.c */
 
-void SCORE(int ind, DFLOAT points, int x, int y, const char *msg);
-void TEAM_SCORE(int team, DFLOAT points);
-void Alliance_score(int id, DFLOAT points);
+void SCORE(int ind, int points, int x, int y, const char *msg);
+void TEAM_SCORE(int team, int points);
+void Alliance_score(int id, int points);
 DFLOAT Rate(DFLOAT winner, DFLOAT loser);
 
 /*

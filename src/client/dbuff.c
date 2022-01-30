@@ -230,7 +230,7 @@ void dbuff_init_buffer(dbuff_state_t *state)
 				   MultibufferUpdateActionUndefined,
 				   MultibufferUpdateHintFrequent,
 				   state->mbx.mbx_draw) != 2) {
-		pxperror("Couldn't create double buffering buffers");
+		perror("Couldn't create double buffering buffers");
 		exit(1);
 	    }
 	}
@@ -246,7 +246,7 @@ void dbuff_init_buffer(dbuff_state_t *state)
 					   draw,
 					   XdbeBackground);
 	    if (state->dbe.dbe_draw == 0) {
-		pxperror("Couldn't create double buffering back buffer");
+		perror("Couldn't create double buffering back buffer");
 		exit(1);
 	    }
 	}
@@ -277,7 +277,7 @@ void dbuff_switch(dbuff_state_t *state)
 	swap.swap_window	= draw;
 	swap.swap_action	= XdbeBackground;
 	if (!XdbeSwapBuffers(state->display, &swap, 1)) {
-	    pxperror("XdbeSwapBuffers failed");
+	    perror("XdbeSwapBuffers failed");
 	    exit(1);
 	}
     }

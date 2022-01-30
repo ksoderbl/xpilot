@@ -49,7 +49,6 @@ DFLOAT		ShotsMass;		/* Default mass of shots */
 DFLOAT		ShotsSpeed;		/* Default speed of shots */
 int		ShotsLife;		/* Default number of ticks */
 					/* each shot will live */
-bool		shotHitFuelDrainUsesKineticEnergy;	/* see option name */
 int		maxRobots;		/* How many robots should enter */
 int		minRobots;		/* the game? */
 char		*robotFile;		/* Filename for robot parameters */
@@ -435,19 +434,6 @@ static option_desc options[] = {
 	tuner_dummy,
 	"Life of bullets in ticks.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
-    },
-    {
-	"shotHitFuelDrainUsesKineticEnergy",
-	"shotHitFuelDrainUsesKineticEnergy",
-	"yes",
-	&shotHitFuelDrainUsesKineticEnergy,
-	valBool,
-	tuner_dummy,
-	"Does the fuel drain from shot hits depend on their mass and speed?\n"
-	"This is a temporary option that will be removed in March 2002.\n",
-	/* we don't allow this option to be set from map files to discourage
-	   long term use of it */
-	OPT_DEFAULTS | OPT_COMMAND | OPT_VISIBLE
     },
     {
 	"fireRepeatRate",

@@ -114,7 +114,6 @@ static int Config_create_texturedObjects(int widget_desc, int *height);
 static int Config_create_slidingRadar(int widget_desc, int *height);
 static int Config_create_showItems(int widget_desc, int *height);
 static int Config_create_showItemsTime(int widget_desc, int *height);
-static int Config_create_showScoreDecimals(int widget_desc, int *height);
 static int Config_create_backgroundPointDist(int widget_desc, int *height);
 static int Config_create_backgroundPointSize(int widget_desc, int *height);
 static int Config_create_sparkSize(int widget_desc, int *height);
@@ -247,7 +246,6 @@ static int		(*config_creator[])(int widget_desc, int *height) = {
     Config_create_slidingRadar,
     Config_create_showItems,
     Config_create_showItemsTime,
-    Config_create_showScoreDecimals,
     Config_create_backgroundPointDist,
     Config_create_backgroundPointSize,
     Config_create_sparkSize,
@@ -846,15 +844,6 @@ static int Config_create_showItemsTime(int widget_desc, int *height)
 			     "showItemsTime", &showItemsTime,
 			     MIN_SHOW_ITEMS_TIME,
 			     MAX_SHOW_ITEMS_TIME,
-			     NULL, NULL);
-}
-
-static int Config_create_showScoreDecimals(int widget_desc, int *height)
-{
-    return Config_create_int(widget_desc, height,
-			     "showScoreDecimals", &showScoreDecimals,
-			     0,
-			     2,
 			     NULL, NULL);
 }
 
@@ -1596,7 +1585,6 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
     Config_save_bool(fp, "slidingRadar", BIT(instruments, SHOW_SLIDING_RADAR));
     Config_save_bool(fp, "showItems", BIT(instruments, SHOW_ITEMS));
     Config_save_float(fp, "showItemsTime", showItemsTime);
-    Config_save_int(fp, "showScoreDecimals", showScoreDecimals);
     Config_save_bool(fp, "outlineWorld", BIT(instruments, SHOW_OUTLINE_WORLD));
     Config_save_bool(fp, "filledWorld", BIT(instruments, SHOW_FILLED_WORLD));
     Config_save_bool(fp, "texturedWalls", BIT(instruments, SHOW_TEXTURED_WALLS));

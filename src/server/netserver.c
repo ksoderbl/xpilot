@@ -1629,7 +1629,7 @@ int Send_player(connection_t *connp, int id)
 /*
  * Send the new score for some player to a client.
  */
-int Send_score(connection_t *connp, int id, DFLOAT score,
+int Send_score(connection_t *connp, int id, int score,
 	       int life, int mychar, int alliance)
 {
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
@@ -1662,7 +1662,7 @@ int Send_score(connection_t *connp, int id, DFLOAT score,
 /*
  * Send the new score for some team to a client.
  */
-int Send_team_score(connection_t *connp, int team, DFLOAT score)
+int Send_team_score(connection_t *connp, int team, int score)
 {
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;
@@ -1719,7 +1719,7 @@ int Send_fuel(connection_t *connp, int num, int fuel)
 			 num, fuel >> FUEL_SCALE_BITS);
 }
 
-int Send_score_object(connection_t *connp, DFLOAT score, int x, int y, const char *string)
+int Send_score_object(connection_t *connp, int score, int x, int y, const char *string)
 {
     if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 	errno = 0;

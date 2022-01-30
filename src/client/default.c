@@ -769,13 +769,6 @@ option options[] = {
 	"it has changed and the showItems option is turned on.\n"
     },
     {
-	"showScoreDecimals",
-	NULL,
-	"1",
-	KEY_DUMMY,
-	"The number of decimals to use when displaying scores.\n"
-    },
-    {
 	"receiveWindowSize",
 	NULL,
 	"3",
@@ -2767,9 +2760,6 @@ void Parse_options(int *argcp, char **argvp, char *realName, int *port,
     Get_bool_resource(rDB, "erase", &useErase);
     Get_float_resource(rDB, "showItemsTime", &showItemsTime);
     LIMIT(showItemsTime, MIN_SHOW_ITEMS_TIME, MAX_SHOW_ITEMS_TIME);
-
-    Get_int_resource(rDB, "showScoreDecimals", &showScoreDecimals);
-    LIMIT(showScoreDecimals, 0, 2);
 
     Get_float_resource(rDB, "speedFactHUD", &hud_move_fact);
     Get_float_resource(rDB, "speedFactPTR", &ptr_move_fact);
