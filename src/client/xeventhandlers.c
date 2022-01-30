@@ -64,7 +64,7 @@ extern void Talk_event(XEvent *event);  /* xevent.c */
 extern void Key_event(XEvent *event);   /* xevent.c */
 extern bool Key_press(keys_t key);	/* xevent.c */
 extern bool Key_release(keys_t key);	/* xevent.c */
-extern void Pointer_control_set_state(bool valueOn); /* xevent.c */
+extern void Pointer_control_set_state(bool on); /* xevent.c */
 
 
 extern bool	initialPointerControl;

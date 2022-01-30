@@ -336,8 +336,8 @@ void Client_flush(void);
 void Client_sync(void);
 int Client_wrap_mode(void);
 void Reset_shields(void);
-void Set_toggle_shield(bool valueOn);
-void Set_auto_shield(bool valueOn);
+void Set_toggle_shield(bool on);
+void Set_auto_shield(bool on);
 
 #ifdef XlibSpecificationRelease
 void Key_event(XEvent *event);

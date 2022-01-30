@@ -97,7 +97,7 @@ extern Cursor	pointerControlCursor;
 #define JS_BUTTON0	KEY_FIRE_SHOT
 #define JS_BUTTON1	KEY_SHIELD
 
-static int Key_set(int key, bool valueOn)
+static int Key_set(int key, bool on)
 {
     if (onoff) {
 	if (!BITV_ISSET(keyv, key)) {
@@ -202,9 +202,9 @@ keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
     return (ret);
 }
 
-void Pointer_control_set_state(bool valueOn)
+void Pointer_control_set_state(bool on)
 {
-    if (valueOn) {
+    if (on) {
 	pointerControl = true;
 	XGrabPointer(dpy, draw, true, 0, GrabModeAsync,
 		     GrabModeAsync, draw, pointerControlCursor, CurrentTime);
@@ -698,14 +698,14 @@ void Reset_shields(void)
     }
 }
 
-void Set_auto_shield(bool valueOn)
+void Set_auto_shield(bool on)
 {
-    auto_shield = valueOn;
+    auto_shield = on;
 }
 
-void Set_toggle_shield(bool valueOn)
+void Set_toggle_shield(bool on)
 {
-    toggle_shield = valueOn;
+    toggle_shield = on;
     if (toggle_shield) {
 	if (auto_shield) {
 	    shields = 1;

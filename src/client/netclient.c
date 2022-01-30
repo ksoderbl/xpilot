@@ -2807,19 +2807,19 @@ int Send_pointer_move(int movement)
     return 0;
 }
 
-int Send_audio_request(bool valueOn)
+int Send_audio_request(bool on)
 {
 #ifdef DEBUG_SOUND
-    printf("Send_audio_request %d\n", valueOn);
+    printf("Send_audio_request %d\n", on);
 #endif
 
     if (version < 0x3250) {
 	return 0;
     }
 #ifndef SOUND
-    valueOn = false;
+    on = false;
 #endif
-    if (Packet_printf(&wbuf, "%c%c", PKT_REQUEST_AUDIO, (valueOn ? 1 : 0)) == -1) {
+    if (Packet_printf(&wbuf, "%c%c", PKT_REQUEST_AUDIO, (on ? 1 : 0)) == -1) {
 	return -1;
     }
     return 0;

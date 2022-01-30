@@ -219,12 +219,12 @@ int Player_lock_closest(int ind, int next)
 }
 
 
-void Pause_player(int ind, bool valueOn)
+void Pause_player(int ind, bool on)
 {
     player		*pl = Players[ind];
     int			i;
 
-    if (valueOn && !BIT(pl->status, PAUSE)) { /* Turn pause mode on */
+    if (on && !BIT(pl->status, PAUSE)) { /* Turn pause mode on */
 	pl->count = 10*FPS;
 	pl->updateVisibility = 1;
 	CLR_BIT(pl->status, SELF_DESTRUCT|PLAYING);
@@ -234,7 +234,7 @@ void Pause_player(int ind, bool valueOn)
 	if (BIT(pl->have, HAS_BALL))
 	    Detach_ball(ind, -1);
     }
-    else if (!valueOn && BIT(pl->status, PAUSE)) { /* Turn pause mode off */
+    else if (!on && BIT(pl->status, PAUSE)) { /* Turn pause mode off */
 	if (pl->count <= 0) {
 	    bool toolate = false;
 

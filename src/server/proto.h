@@ -76,7 +76,7 @@ void Turn_player(int ind);
  * Prototypes for event.c
  */
 int Handle_keyboard(int);
-void Pause_player(int ind, bool valueOn);
+void Pause_player(int ind, bool on);
 int Player_lock_closest(int ind, int next);
 bool team_dead(int team);
 void filter_mods(modifiers *mods);
@@ -303,7 +303,7 @@ void Server_info(char *str, unsigned max_size);
 void Log_game(const char *heading);
 void Game_Over(void);
 void Server_log_admin_message(int ind, const char *str);
-int plock_server(bool valueOn);
+int plock_server(bool on);
 void Main_loop(void);
 
 
