@@ -148,7 +148,6 @@ typedef struct {
    int          keepShots;
    int          teamAssign;
    int          teamImmunity;
-   int          teamShareScore;
    int          ecmsReprogramMines;
    int          ecmsReprogramRobots;
    int          targetKillTeam;

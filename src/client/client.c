@@ -168,8 +168,6 @@ static other_t		*Others = 0;
 static int		num_others = 0,
 			max_others = 0;
 
-static int		teamscores[MAX_TEAMS];
-
 static fuelstation_t	*fuels = 0;
 static int		num_fuels = 0;
 
@@ -1173,11 +1171,6 @@ int Handle_score(int id, int score, int life, int mychar, int alliance)
 
 int Handle_team_score(int team, int score)
 {
-    if (teamscores[team] != score) {
-	teamscores[team] = score;
-	scoresChanged = 1;
-    }
-
     return 0;
 }
 

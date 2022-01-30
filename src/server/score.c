@@ -42,16 +42,10 @@ void SCORE(int ind, int points, int x, int y, const char *msg)
     player	*pl = Players[ind];
 
     if (BIT(World.rules->mode, TEAM_PLAY)) {
-	if (!teamShareScore) {
-	    pl->score += points;
-	}
+	pl->score += points;
 	TEAM_SCORE(pl->team, points);
     } else {
-	if (pl->alliance != ALLIANCE_NOT_SET && teamShareScore) {
-	    Alliance_score(pl->alliance, points);
-	} else {
-	    pl->score += points;
-	}
+	pl->score += points;
     }
 
     if (pl->connp != NULL)
@@ -66,15 +60,6 @@ void TEAM_SCORE(int team, int points)
 	return;
     
     World.teams[team].score += points;
-    if (teamShareScore) {
-	int i;
-	DFLOAT share = World.teams[team].score / World.teams[team].NumMembers;
-	for (i = 0; i < NumPlayers; i++) {
-	    if (Players[i]->team == team) {
-		Players[i]->score = share;
-	    }
-	}
-    }
 
     updateScores = true;
 }

@@ -1760,8 +1760,6 @@ void Delete_player(int ind)
 
     if (pl->team != TEAM_NOT_SET && !IS_TANK_PTR(pl)) {
 	World.teams[pl->team].NumMembers--;
-	if (teamShareScore)
-	    TEAM_SCORE(pl->team, -(pl->score));	/* recalculate teamscores */
 	if (IS_ROBOT_PTR(pl))
 	    World.teams[pl->team].NumRobots--;
     }

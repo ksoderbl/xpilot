@@ -133,7 +133,6 @@ charlie                  default_settings[259] = {
 	{ "keepshots","no" },
 	{ "teamassign","yes" },
 	{ "teamimmunity","yes" },
-	{ "teamsharescore", "no" },
 	{ "ecmsreprogrammines","yes" },
 	{ "ecmsreprogramrobots","yes" },
 	{ "targetkillteam","no" },
@@ -586,7 +585,6 @@ prefs_t                  prefs[260] = {
 { "asteroidmaxscore","","AsteroidMaxScore:",19,FLOAT,map.asteroidMaxScore,0,2,1,8,0},
 { "cannonpoints","","Cannon Pts:",19,FLOAT,map.cannonPoints,0,3,1,8,0},
 { "cannonmaxscore","","CannonMaxScore:",19,FLOAT,map.cannonMaxScore,0,4,1,8,0},
-{ "teamsharescore","","TeamShareScore?",0,YESNO,0,&map.teamShareScore,6,1,8,0},
 
 { "mapdata","",NULL,0,MAPDATA,NULL,0,0,0,0,0 }
 };

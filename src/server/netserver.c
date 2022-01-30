@@ -1014,13 +1014,6 @@ static int Handle_login(connection_t *connp, char *errmsg, int errsize)
     Go_home(NumPlayers);
     if (pl->team != TEAM_NOT_SET) {
 	World.teams[pl->team].NumMembers++;
-	if (teamShareScore) {
-	    if (World.teams[pl->team].NumMembers == 1) {
-		/* reset team score on first player */
-		World.teams[pl->team].score = 0;
-	    }
-	    TEAM_SCORE(pl->team, 0);
-	}
     }
     NumPlayers++;
     request_ID();

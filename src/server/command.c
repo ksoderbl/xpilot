@@ -403,12 +403,8 @@ static int Cmd_team(char *arg, player *pl, int oper, char *msg)
 	Detach_ball(GetInd[pl->id], -1);
     }
     World.teams[pl->team].NumMembers--;
-    if (teamShareScore)
-	TEAM_SCORE(pl->team, -(pl->score));
     pl->team = team;
     World.teams[pl->team].NumMembers++;
-    if (teamShareScore)
-	TEAM_SCORE(pl->team, pl->score);
     if (BIT(World.rules->mode, LIMITED_LIVES)) {
 	for (i = 0; i < NumPlayers; i++) {
 	    if (!TEAM(ind, i) && !BIT(Players[i]->status, PAUSE)) {

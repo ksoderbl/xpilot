@@ -158,7 +158,6 @@ extern int		cannonDeadTime;
 extern bool		keepShots;
 extern bool		teamAssign;
 extern bool		teamImmunity;
-extern bool		teamShareScore;
 extern bool		timing;
 extern bool		ballrace;
 extern bool		ballrace_connect;

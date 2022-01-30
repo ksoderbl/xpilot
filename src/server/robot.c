@@ -807,14 +807,6 @@ static void Robot_create(void)
     NumPlayers++;
     NumRobots++;
 
-    if (BIT(World.rules->mode, TEAM_PLAY) && teamShareScore) {
-	if (World.teams[robot->team].NumMembers == 1) {
-	    /* reset team score on first player */
-	    World.teams[robot->team].score = 0;
-	}
-	TEAM_SCORE(robot->team, 0);
-    }
-
     for (i = 0; i < NumPlayers - 1; i++) {
 	if (Players[i]->connp != NULL) {
 	    Send_player(Players[i]->connp, robot->id);
