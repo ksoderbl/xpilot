@@ -1,5 +1,4 @@
-/* $Id: netclient.c,v 5.17 2002/09/07 17:16:57 dik Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -22,7 +21,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,18 +28,13 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/types.h>
-
-#if !defined(_WINDOWS)
-# include <unistd.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <netdb.h>
-# include <sys/param.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
-# include <X11/Xlib.h>
-#endif
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/param.h>
+#include <sys/time.h>
+#include <X11/Xlib.h>
 
 #include "xpconfig.h"
 #include "const.h"

@@ -198,7 +198,6 @@ extern DFLOAT		shoveKillScoreMult;
 extern DFLOAT		crashScoreMult;
 extern DFLOAT		mineScoreMult;
 extern DFLOAT		selfKillScoreMult;
-extern DFLOAT		selfDestructScoreMult;
 extern DFLOAT		unownedKillScoreMult;
 extern DFLOAT		asteroidPoints;
 extern DFLOAT		cannonPoints;

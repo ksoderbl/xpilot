@@ -760,13 +760,6 @@ void Update_objects(void)
 		Go_home(i);
 	    }
 	    if (BIT(pl->status, SELF_DESTRUCT)) {
-		if (selfDestructScoreMult != 0) {
-		    DFLOAT sc = Rate(0, pl->score) * selfDestructScoreMult;
-		    SCORE(GetInd[pl->id], -sc,
-			  OBJ_X_IN_BLOCKS(pl),
-			  OBJ_Y_IN_BLOCKS(pl),
-			  "Self-Destruct");
-		}
 		SET_BIT(pl->status, KILLED);
 		sprintf(msg, "%s has committed suicide.", pl->name);
 		Set_message(msg);
@@ -776,21 +769,13 @@ void Update_objects(void)
 	    }
 	}
 
-
 	if (BIT(pl->status, PLAYING|GAME_OVER|PAUSE) != PLAYING) {
-	    if (BIT(pl->status, PAUSE)) {
-		/* reduce paused player's score a little. */
-		pl->score -= 0.01;
-		/* only update paused score every 4 or 5 seconds. */
-		if ((frame_loops & 63) == 0) {
-		    updateScores = true;
-		}
-	    }
 	    continue;
 	}
 
-	if (round_delay > 0)
+	if (round_delay > 0) {
 	    continue;
+	}
 
 	if (pl->stunned > 0) {
 	    pl->stunned--;

@@ -178,7 +178,6 @@ DFLOAT		shoveKillScoreMult;
 DFLOAT		crashScoreMult;
 DFLOAT		mineScoreMult;
 DFLOAT		selfKillScoreMult;
-DFLOAT		selfDestructScoreMult;
 DFLOAT		unownedKillScoreMult;
 DFLOAT		asteroidPoints;
 DFLOAT		cannonPoints;
@@ -2207,16 +2206,6 @@ static option_desc options[] = {
 	valReal,
 	tuner_dummy,
 	"Multiplication factor to scale score for killing yourself.\n",
-	OPT_ORIGIN_ANY | OPT_VISIBLE
-    },
-    {
-	"selfDestructScoreMult",
-	"selfDestructScoreMult",
-	"0",
-	&selfDestructScoreMult,
-	valReal,
-	tuner_dummy,
-	"Multiplication factor to scale score for self-destructing.\n",
 	OPT_ORIGIN_ANY | OPT_VISIBLE
     },
     {
