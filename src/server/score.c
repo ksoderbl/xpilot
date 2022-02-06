@@ -41,12 +41,7 @@ void SCORE(int ind, int points, int x, int y, const char *msg)
 {
     player	*pl = Players[ind];
 
-    if (BIT(World.rules->mode, TEAM_PLAY)) {
-	pl->score += points;
-	TEAM_SCORE(pl->team, points);
-    } else {
-	pl->score += points;
-    }
+    pl->score += (points);
 
     if (pl->connp != NULL)
 	Send_score_object(pl->connp, points, x, y, msg);
@@ -54,32 +49,9 @@ void SCORE(int ind, int points, int x, int y, const char *msg)
     updateScores = true;
 }
 
-void TEAM_SCORE(int team, int points)
+int Rate(int winner, int loser)
 {
-    if (team == TEAM_NOT_SET)	/* could happen if teamCannons is off */
-	return;
-    
-    World.teams[team].score += points;
-
-    updateScores = true;
-}
-
-void Alliance_score(int id, int points)
-{
-    int		i;
-    int		member_count = Get_alliance_member_count(id);
-    DFLOAT	share = points / member_count;
-
-    for (i = 0; i < NumPlayers; i++) {
-	if (Players[i]->alliance == id) {
-	    Players[i]->score += share;
-	}
-    }
-}
-
-DFLOAT Rate(DFLOAT winner, DFLOAT loser)
-{
-    DFLOAT t;
+    int t;
 
     t = ((RATE_SIZE / 2) * RATE_RANGE) / (ABS(loser - winner) + RATE_RANGE);
     if (loser > winner)
@@ -102,8 +74,8 @@ DFLOAT Rate(DFLOAT winner, DFLOAT loser)
  * KK 28-4-98: Same for killing your own tank.
  * KK 7-11-1: And for killing a member of your alliance
  */
-void Score_players(int winner, DFLOAT winner_score, char *winner_msg,
-		   int loser, DFLOAT loser_score, char *loser_msg)
+void Score_players(int winner, int winner_score, char *winner_msg,
+		   int loser, int loser_score, char *loser_msg)
 {
     if (TEAM(winner, loser)
 	|| (Players[winner]->alliance != ALLIANCE_NOT_SET

@@ -1599,10 +1599,6 @@ static void Cannon_dies(move_state_t *ms)
     }
     if (pl) {
 	if (cannonPoints > 0) {
-	    if (BIT(World.rules->mode, TEAM_PLAY)
-		&& teamCannons) {
-		TEAM_SCORE(cannon->team, -cannonPoints);
-	    }
 	    if (pl->score <= cannonMaxScore
 		&& !(BIT(World.rules->mode, TEAM_PLAY)
 		     && pl->team == cannon->team)) {

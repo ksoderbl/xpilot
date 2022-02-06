@@ -1329,9 +1329,6 @@ static void Player_collides_with_killing_shot(int ind, object *obj)
 		      OBJ_X_IN_BLOCKS(pl),
 		      OBJ_Y_IN_BLOCKS(pl),
 		      "Cannon");
-		if (BIT(World.rules->mode, TEAM_PLAY)
-		    && pl->team != obj->team)
-		    TEAM_SCORE(obj->team, sc);
 	    } else if (obj->id == NO_ID || killer == ind) {
 		SCORE(ind, -sc,
 		      OBJ_X_IN_BLOCKS(pl),

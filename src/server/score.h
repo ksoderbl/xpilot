@@ -52,9 +52,7 @@
 /* score.c */
 
 void SCORE(int ind, int points, int x, int y, const char *msg);
-void TEAM_SCORE(int team, int points);
-void Alliance_score(int id, int points);
-DFLOAT Rate(DFLOAT winner, DFLOAT loser);
+int Rate(int winner, int loser);
 
 /*
  * Cause `winner' to get `winner_score' points added with message
@@ -71,7 +69,7 @@ DFLOAT Rate(DFLOAT winner, DFLOAT loser);
  * KK 28-4-98: Same for killing your own tank.
  * KK 7-11-1: And for killing a member of your alliance
  */
-void Score_players(int winner, DFLOAT winner_score, char *winner_msg,
-		   int loser, DFLOAT loser_score, char *loser_msg);
+void Score_players(int winner, int winner_score, char *winner_msg,
+		   int loser, int loser_score, char *loser_msg);
 
 #endif

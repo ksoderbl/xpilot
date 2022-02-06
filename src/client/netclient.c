@@ -2305,7 +2305,7 @@ int Receive_team_score(void)
     int			n;
     u_byte		ch;
     short		team;
-    int			rcv_score, score;
+    int			rcv_score;
 
     if ((n = Packet_scanf(&cbuf, "%c%hd%d", &ch, &team, &rcv_score)) <= 0) {
 	return n;

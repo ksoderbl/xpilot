@@ -284,9 +284,6 @@ static void Laser_pulse_hits_player(
 		      OBJ_X_IN_BLOCKS(vicpl),
 		      OBJ_Y_IN_BLOCKS(vicpl),
 		      "Cannon");
-		if (BIT(World.rules->mode, TEAM_PLAY)
-		    && vicpl->team != pulse->team)
-		    TEAM_SCORE(pulse->team, sc);
 		sprintf(msg,
 		    "%s got roasted alive by cannonfire.",
 		    vicpl->name);
