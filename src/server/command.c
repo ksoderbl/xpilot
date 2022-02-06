@@ -621,9 +621,6 @@ static int Cmd_reset(char *arg, player *pl, int oper, char *msg)
 	for (i = NumPlayers - 1; i >= 0; i--) {
 	    Players[i]->score = 0;
 	}
-	for (i = 0; i < MAX_TEAMS; i++) {
-	    World.teams[i].score = 0;
-	}
 	Reset_all_players();
 	if (gameDuration == -1) {
 	    gameDuration = 0;

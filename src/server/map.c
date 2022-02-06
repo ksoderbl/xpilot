@@ -28,10 +28,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#ifndef _WINDOWS
-# include <sys/file.h>
-#endif
+#include <sys/file.h>
 
 #define SERVER
 #include "xpconfig.h"
@@ -498,8 +495,6 @@ bool Grok_map(void)
 	World.teams[i].NumEmptyTreasures = 0;
 	World.teams[i].TreasuresDestroyed = 0;
 	World.teams[i].TreasuresLeft = 0;
-	World.teams[i].score = 0;
-	World.teams[i].prev_score = 0;
     }
 
     /*

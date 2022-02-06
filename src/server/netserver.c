@@ -1054,16 +1054,6 @@ static int Handle_login(connection_t *connp, char *errmsg, int errsize)
 	}
     }
     /*
-     * And about all the teams.
-     */
-    if (BIT(World.rules->mode, TEAM_PLAY)) {
-	for (i = 0; i < MAX_TEAMS; i++) {
-	    if (World.teams[i].NumMembers > 0) {
-		Send_team_score(pl->connp, i, World.teams[i].score);
-	    }
-	}
-    }
-    /*
      * And tell all the others about him.
      */
     for (i = 0; i < NumPlayers - 1; i++) {

@@ -645,20 +645,6 @@ void Update_score_table(void)
 	    }
 	}
     }
-    if (BIT(World.rules->mode, TEAM_PLAY)) {
-	team_t	*team;
-	for (j = 0; j < MAX_TEAMS; j++) {
-	    team = &(World.teams[j]);
-	    if (team->score != team->prev_score) {
-		team->prev_score = team->score;
-		for (i = 0; i < NumPlayers; i++) {
-		    if (Players[i]->connp != NULL) {
-			Send_team_score(Players[i]->connp, j, team->score);
-		    }
-		}
-	    }
-	}
-    }
     updateScores = false;
 }
 

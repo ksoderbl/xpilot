@@ -188,7 +188,7 @@ static void Laser_pulse_hits_player(
     player		*pl;
     player		*vicpl;
     int			ind;
-    DFLOAT		sc;
+    int			sc;
     char		msg[MSG_LEN];
 
     if (pulse->id != NO_ID) {

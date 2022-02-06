@@ -1,5 +1,4 @@
-/* $Id: map.h,v 5.7 2002/01/27 22:58:55 kimiko Exp $
- *
+/*
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
  *      Bjørn Stabell
@@ -204,8 +203,6 @@ typedef struct {
     int		NumEmptyTreasures;	/* Number of empty treasures owned */
     int		TreasuresDestroyed;	/* Number of destroyed treasures */
     int		TreasuresLeft;		/* Number of treasures left */
-    DFLOAT	score;
-    DFLOAT	prev_score;
 } team_t;
 
 typedef struct {

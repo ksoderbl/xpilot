@@ -485,8 +485,8 @@ struct player {
     DFLOAT	turnvel;		/* Current velocity of turn (right) */
     DFLOAT	oldturnvel;		/* Last velocity of turn (right) */
     DFLOAT	turnacc;		/* Current acceleration of turn */
-    DFLOAT	score;			/* Current score of player */
-    DFLOAT	prev_score;		/* Last score that has been updated */
+    int		score;			/* Current score of player */
+    int		prev_score;		/* Last score that has been updated */
     int		prev_life;		/* Last life that has been updated */
     shipobj	*ship;			/* wire model of ship shape */
     DFLOAT	power;			/* Force of thrust */
