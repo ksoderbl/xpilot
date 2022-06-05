@@ -34,9 +34,7 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <pwd.h>
 # include <sys/param.h>
 #endif

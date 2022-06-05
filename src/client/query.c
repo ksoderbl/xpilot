@@ -36,12 +36,7 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <netdb.h>
-# if defined(SVR4) || defined(__svr4__)
-#  include <sys/sockio.h>
-# endif
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <net/if.h>
 #endif
 

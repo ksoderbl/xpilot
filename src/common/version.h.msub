@@ -25,12 +25,6 @@
 #ifndef	VERSION_H
 #define	VERSION_H
 
-#if defined(__hpux)
-#   pragma COPYRIGHT_DATE	"@<COPYRIGHTDATE>@"
-#   pragma COPYRIGHT		"@<AUTHORS>@"
-#   pragma VERSIONID		"@<TITLE>@"
-#endif
-
 #define VERSION			"@<VERSION>@"
 #ifdef	_WINDOWS
 #define	TITLE			"@<WINVERSION>@"

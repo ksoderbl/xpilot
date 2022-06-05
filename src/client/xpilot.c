@@ -31,9 +31,7 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <sys/param.h>
 # include <netdb.h>
 #endif

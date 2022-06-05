@@ -49,12 +49,7 @@
 #include <sys/types.h>
 
 #ifndef _WINDOWS
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
-# ifdef _AIX
-#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
-# endif
+# include <sys/time.h>
 # include <stdarg.h>
 # include <X11/Xlib.h>
 # include <X11/Xutil.h>
@@ -62,13 +57,6 @@
 #  define select(N, R, W, E, T)   select((N),             \
         (fd_set*)(R), (fd_set*)(W), (fd_set*)(E), (T))
 # endif
-#endif
-
-#ifdef _SEQUENT_
-# include <sys/procstats.h>
-# define gettimeofday(T,X)	get_process_stats(T, PS_SELF, \
-					(struct process_stats *)NULL, \
-					(struct process_stats *)NULL)
 #endif
 
 #include "recordfmt.h"

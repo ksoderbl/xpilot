@@ -33,9 +33,7 @@
 # include <unistd.h>
 # include <sys/param.h>
 # include <netdb.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 #endif
 
 #include "xpconfig.h"

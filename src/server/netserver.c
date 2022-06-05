@@ -101,14 +101,7 @@
 #ifndef _WINDOWS
 # include <unistd.h>
 # include <sys/param.h>
-# ifdef _AIX
-#  ifndef _BSD_INCLUDES
-#   define _BSD_INCLUDES
-#  endif
-# endif
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netdb.h>

@@ -32,12 +32,7 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
-# ifdef _AIX
-#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
-# endif
+# include <sys/time.h>
 #endif
 
 #ifdef _OS2_

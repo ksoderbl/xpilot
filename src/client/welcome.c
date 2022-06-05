@@ -30,12 +30,7 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
-# ifdef _AIX
-#  include <sys/select.h>
-# endif
+# include <sys/time.h>
 # include <X11/Xlib.h>
 #endif
 

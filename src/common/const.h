@@ -38,10 +38,6 @@
 #ifndef	FLT_MAX
 #   if defined(__sgi) || defined(__FreeBSD__)
 #       include <float.h>	/* FLT_MAX for SGI Personal Iris or FreeBSD */
-#   else
-#	if defined(__sun__)
-#           include <values.h>	/* MAXFLOAT for suns */
-#	endif
 #   endif
 #   if !defined(FLT_MAX)
 #	if defined(MAXFLOAT)

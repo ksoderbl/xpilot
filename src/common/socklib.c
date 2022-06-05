@@ -58,11 +58,6 @@
 # include <fcntl.h>
 #endif
 
-#ifdef __sun__
-# include <arpa/nameser.h>
-# include <resolv.h>
-#endif
-
 #ifdef TERMNET
 /* support for running clients over term, but not servers please. */
 #include "termnet.h"
@@ -256,23 +251,12 @@ static int sock_open_tcp(sock_t *sock)
 
 int sock_set_non_blocking(sock_t *sock, int flag)
 {
-/*
- * There are some problems on some particular systems (suns) with
- * getting sockets to be non-blocking.  Just try all possible ways
- * until one of them succeeds.  Please keep us informed by e-mail
- * to xpilot@xpilot.org.
- */
-
 #ifndef USE_FCNTL_O_NONBLOCK
 # ifndef USE_FCNTL_O_NDELAY
 #  ifndef USE_FCNTL_FNDELAY
 #   ifndef USE_IOCTL_FIONBIO
 
-#    if defined(_SEQUENT_) || defined(__svr4__) || defined(SVR4)
-#     define USE_FCNTL_O_NDELAY
-#    elif defined(__sun__) && defined(FNDELAY)
-#     define USE_FCNTL_FNDELAY
-#    elif defined(FIONBIO)
+#    if defined(FIONBIO)
 #     define USE_IOCTL_FIONBIO
 #    elif defined(FNDELAY)
 #     define USE_FCNTL_FNDELAY

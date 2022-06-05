@@ -26,9 +26,7 @@
 #include <time.h>
 
 #ifndef _WINDOWS
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 #endif
 
 #define SERVER
