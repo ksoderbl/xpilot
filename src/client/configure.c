@@ -1632,8 +1632,6 @@ static int Config_save(int widget_desc, void *button_str, const char **strptr)
 	Config_save_resource(fp, buf, modBankStr[i]);
     }
 
-    IFWINDOWS( Config_save_window_positions(); )
-
 #ifndef _WINDOWS
     Xpilotrc_end(fp);
     fclose(fp);
@@ -1664,7 +1662,6 @@ static int Config_save_confirm_callback(int widget_desc, void *popup_desc, const
 
 int Config(bool doit)
 {
-    IFWINDOWS( Trace("***Config %d\n", doit); )
     if (config_created == false) {
 	if (doit == false) {
 	    return 0;

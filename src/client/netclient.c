@@ -421,7 +421,6 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 		return -1;
 	    }
 	    Sockbuf_clear(&wbuf);
-/*		IFWINDOWS( Trace("Verifying to sock=%d\n", wbuf.sock); ) */
 	    n = Packet_printf(&wbuf, "%c%s%s%s", PKT_VERIFY, real, nick, disp);
 	    if (n <= 0
 		|| Sockbuf_flush(&wbuf) <= 0) {
@@ -432,7 +431,6 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 #ifndef SILENT
 	    if (retries > 1) {
 		printf("Waiting for verify response\n");
-		IFWINDOWS( Progress("Waiting for verify response"); )
 	    }
 #endif
 	}
@@ -492,7 +490,6 @@ int Net_verify(char *real, char *nick, char *disp, int my_team)
 #ifndef SILENT
     if (retries > 1) {
 	printf("Verified correctly\n");
-	IFWINDOWS( Progress("Verified correctly"); )
     }
 #endif
     return 0;
@@ -1099,7 +1096,6 @@ static int Net_read(frame_buf_t *frame)
 	    Sockbuf_clear(&frame->sbuf);
 	    return 0;
 	}
-	/*IFWINDOWS( Trace("Net_read: read %d bytes type=%d\n", frame->sbuf.len, frame->sbuf.ptr[0]); ) */
 	if (frame->sbuf.ptr[0] != PKT_START) {
 	    /*
 	     * Don't know which type of packet this is
@@ -1110,7 +1106,6 @@ static int Net_read(frame_buf_t *frame)
 	}
 	/* Peek at the frame loop number. */
 	n = Packet_scanf(&frame->sbuf, "%c%ld", &ch, &loop);
-	/*IFWINDOWS( Trace("Net_read: frame # %d\n", loop); )*/
 	frame->sbuf.ptr = frame->sbuf.buf;
 	if (n <= 0) {
 	    if (n == -1) {
@@ -1131,7 +1126,6 @@ static int Net_read(frame_buf_t *frame)
 	     */
 	}
     }
-	/*IFWINDOWS( Trace("Net_read: wbuf->len=%d\n", wbuf.len); )*/
 }
 
 /*

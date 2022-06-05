@@ -173,8 +173,6 @@ keys_t Lookup_key(XEvent *event, KeySym ks, bool reset)
 	}
     }
 
-    IFWINDOWS( Trace("Lookup_key: got key ks=%04X ret=%d\n", ks, ret); )
-
 #ifdef DEVELOPMENT
     if (reset && ret == KEY_DUMMY) {
 	static XComposeStatus	compose;

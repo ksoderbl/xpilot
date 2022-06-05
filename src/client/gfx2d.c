@@ -123,8 +123,7 @@ static int Picture_find_path(const char *filename, char *path, size_t path_size)
      */
     if (!strchr(filename, PATHNAME_SEP) && texturePath != NULL) {
 	for (dir = texturePath; *dir; dir = colon) {
-	    if (is_this_windows() ||
-		!(colon = strchr(dir, ':'))) {
+	    if (!(colon = strchr(dir, ':'))) {
 		len = strlen(dir);
 		colon = &dir[len];
 	    } else {

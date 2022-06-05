@@ -366,7 +366,6 @@ int Sockbuf_read(sockbuf_t *sbuf)
 	    }
 	    return 0;
 	}
-/*	IFWINDOWS( Trace("Read stream %d bytes from %d\n", len, sbuf->sock); )*/
 	sbuf->len += len;
     }
 

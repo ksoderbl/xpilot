@@ -379,11 +379,7 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
     if (input_inited == false) {
 	input_inited = true;
 	FD_ZERO(&input_mask);
-#ifndef _WINDOWS
 	min_fd = fd;
-#else
-	min_fd = 0;
-#endif
 	max_fd = fd;
 	for (i = 0; i < NELEM(input_handlers); i++) {
 	    input_handlers[i].fd = -1;
@@ -391,14 +387,13 @@ void install_input(void (*func)(int, void *), int fd, void *arg)
 	    input_handlers[i].arg = 0;
 	}
     }
-	/* IFWINDOWS(xpprintf("install_input: fd %d min_fd=%d\n", fd, min_fd);) */
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
 	xperror("install illegal input handler fd %d (%d)", fd, min_fd);
-	ServerExit();
+	exit(1);
     }
     if (FD_ISSET(fd, &input_mask)) {
 	xperror("input handler %d busy", fd);
-	ServerExit();
+	exit(1);
     }
     input_handlers[fd - min_fd].fd = fd;
     input_handlers[fd - min_fd].func = func;
@@ -413,7 +408,7 @@ void remove_input(int fd)
 {
     if (fd < min_fd || fd >= min_fd + NUM_SELECT_FD) {
 	xperror("remove illegal input handler fd %d (%d)", fd, min_fd);
-	ServerExit();
+	exit(1);
     }
     if (FD_ISSET(fd, &input_mask)) {
 	input_handlers[fd - min_fd].fd = -1;

@@ -721,66 +721,12 @@ int Init_playing_windows(void)
 
     draw_width = top_width - (256 + 2);
     draw_height = top_height;
-#ifdef  _WINDOWS
-    /*
-     * What follows is poor code.  WinX needs to know beforehand if its
-     * dealing with draw because it might want to create 2 bitmaps for it.
-     * Since i know draw is the first window created (after top), i can cheat it.
-     */
-    draw = 1;
-#endif
     draw = XCreateSimpleWindow(dpy, top, 258, 0,
 			       draw_width, draw_height,
 			       0, 0, colors[BLACK].pixel);
-    IFWINDOWS( if (draw != 1) xperror("draw != 1"); )
     radar = XCreateSimpleWindow(dpy, top, 0, 0,
 				256, RadarHeight, 0, 0,
 				colors[BLACK].pixel);
-
-#ifdef _WINDOWS
-    WinXSetEventMask(draw, NoEventMask);
-    radar_exposures = 1;
-    radarGC = WinXCreateWinDC(radar);
-    gc = WinXCreateWinDC(draw);
-
-    textWindow = XCreateSimpleWindow(dpy, top, 0, 0,
-				0, 0, 0, 0,
-				colors[BLACK].pixel);
-    textGC = WinXCreateWinDC(textWindow);
-
-    msgWindow = XCreateSimpleWindow(dpy, top, 0, 0,
-				0, 0, 0, 0,
-				colors[BLACK].pixel);
-    messageGC = WinXCreateWinDC(msgWindow);
-    motdGC = WinXCreateWinDC(top);
-
-    for (i = 0; i < MAX_COLORS; i++) {
-	colors[i].pixel = i;
-    }
-    players_exposed = 1;
-    /* p_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth); */
-    s_radar = XCreatePixmap(dpy, radar, 256, RadarHeight, dispDepth);
-    /*
-     * Create item bitmaps AFTER the windows
-     */
-    WinXCreateItemBitmaps();
-    /* create the fonts AFTER the windows */
-    gameFont
-	= Set_font(dpy, gc, gameFontName, "gameFont");
-    messageFont
-	= Set_font(dpy, messageGC, messageFontName, "messageFont");
-    textFont
-	= Set_font(dpy, textGC, textFontName, "textFont");
-    motdFont
-	= Set_font(dpy, motdGC, motdFontName, "motdFont");
-
-    buttonWindow = XCreateSimpleWindow(dpy, top, 0, 0,
-				0, 0, 0, 0,
-				colors[BLACK].pixel);
-    buttonGC = WinXCreateWinDC(buttonWindow);
-    buttonFont
-	= Set_font(dpy, buttonGC, buttonFontName, "buttonFont");
-#endif
 
     /* Create buttons */
 #define BUTTON_WIDTH	84
@@ -816,10 +762,6 @@ int Init_playing_windows(void)
 			      "PLAYER", Player_callback, NULL);
     Widget_add_pulldown_entry(menu_button,
 			      "MOTD", Motd_callback, NULL);
-#ifdef _WINDOWS
-    Widget_add_pulldown_entry(menu_button,
-			      "CREDITS", Credits_callback, NULL);
-#endif
     Widget_map_sub(button_form);
 
     /* Create score list window */
@@ -831,12 +773,6 @@ int Init_playing_windows(void)
 			      players_width, players_height,
 			      0, 0,
 			      colors[windowColor].pixel);
-#ifdef _WINDOWS
-    scoreListGC = WinXCreateWinDC(players);
-    scoreListFont
-	= Set_font(dpy, scoreListGC, scoreListFontName, "scoreListFont");
-#endif
-
     /*
      * Selecting the events we can handle.
      */
@@ -914,26 +850,6 @@ int Init_playing_windows(void)
 
     return 0;
 }
-
-#ifdef _WINDOWS
-void WinXCreateItemBitmaps()
-{
-    int			i;
-
-    for (i = 0; i < NUM_ITEMS; i++) {
-	itemBitmaps[i][ITEM_HUD]
-	    = WinXCreateBitmapFromData(dpy, draw,
-				       (char *)itemBitmapData[i].data,
-				       ITEM_SIZE, ITEM_SIZE, colors[hudColor].pixel);
-	itemBitmaps[i][ITEM_PLAYFIELD]
-	    = WinXCreateBitmapFromData(dpy, draw,
-				       (char *)itemBitmapData[i].data,
-				       ITEM_SIZE, ITEM_SIZE, colors[RED].pixel);
-    }
-    Colors_init_block_bitmaps();
-    
-}
-#endif
 
 int Alloc_msgs(void)
 {

@@ -389,7 +389,6 @@ static void Widget_draw_button(widget_t *widget, bool inverse, const char *label
 static void Widget_draw_input(widget_t *widget, const char *str)
 {
     XClearWindow(dpy, widget->window);
-	IFWINDOWS( Trace("Widget_draw_input: w=%d <%s>\n", widget->window, str); )
     XDrawString(dpy, widget->window, textGC,
 		(widget->width
 		 - XTextWidth(textFont, str, strlen(str))) / 2,

@@ -1375,8 +1375,6 @@ void Client_score_table(void)
 
     free(order);
 
-    IFWINDOWS( MarkPlayersForRedraw(); )
-
     scoresChanged = 0;
 }
 

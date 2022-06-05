@@ -141,8 +141,6 @@ int Block_bitmaps_create(void)
     block_bitmaps_loaded = 1;
 
     for (i = 0 ; i < NUM_BITMAPS; i++) {
-	IFWINDOWS( Progress("Loading image: %s", xp_pixmaps[i].filename); )
-
 	images = (xp_pixmaps[i].rotations > 0 ) ? 
 			    xp_pixmaps[i].rotations : 
 			    -xp_pixmaps[i].rotations;

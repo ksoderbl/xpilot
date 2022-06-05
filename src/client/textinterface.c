@@ -639,7 +639,6 @@ static bool Process_commands(sockbuf_t *ibuf,
 			xperror("Incomplete queue reply from server");
 		    } else {
 			printf("... queued at position %2d\n", qpos);
-			IFWINDOWS(Progress("Queued at position %2d\n", qpos);)
 		    }
 		    /*
 		     * Acknowledge each 10 seconds that we are still
@@ -829,11 +828,9 @@ int Contact_servers(int count, char **servers,
 		exit(1);
 	    }
 	    if (retries == 0) {
-		printf("Searching for a \"xpilots\" server on the local net...\n");
-		IFWINDOWS( Progress("Searching for a \"xpilots\" server on the local net..."); )
+		printf("Searching for an XPilot server on the local net...\n");
 	    } else {
 		printf("Searching once more...\n");
-		IFWINDOWS( Progress("Searching once more..."); )
 	    }
 	    while (Get_contact_message(&sbuf, "", conpar)) {
 		contacted++;
@@ -875,7 +872,6 @@ int Contact_servers(int count, char **servers,
 	    retries = 0;
 	    contacted = 0;
 	    do {
-		IFWINDOWS( Progress("Contacting server %s", servers[i]); )
 		Sockbuf_clear(&sbuf);
 		Packet_printf(&sbuf, "%u%s%hu%c", MAGIC,
 			      conpar->real_name, sock_get_port(&sbuf.sock), CONTACT_pack);
@@ -884,7 +880,6 @@ int Contact_servers(int count, char **servers,
 			      sbuf.buf, sbuf.len) == -1) {
 		    if (sbuf.sock.error.call == SOCK_CALL_GETHOSTBYNAME) {
 			printf("Can't find %s\n", servers[i]);
-			IFWINDOWS( Progress("Can't find %s", servers[i]); )
 			break;
 		    }
 		    xperror("Can't contact %s on port %d",
@@ -892,11 +887,9 @@ int Contact_servers(int count, char **servers,
 		}
 		if (retries) {
 		    printf("Retrying %s...\n", servers[i]);
-		    IFWINDOWS( Progress("Retrying %s...", servers[i]); )
 		}
 		if (Get_contact_message(&sbuf, servers[i], conpar)) {
 		    contacted++;
-		    IFWINDOWS( Progress("Contacted %s", servers[i]); )
 		    connected = Connect_to_server(auto_connect, list_servers,
 						  auto_shutdown, shutdown_reason,
 						  conpar);

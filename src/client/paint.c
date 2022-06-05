@@ -395,10 +395,6 @@ static void Paint_score_background(int thisLine)
     } else {
 	XSetForeground(dpy, scoreListGC, colors[BLACK].pixel);
 
-	IFWINDOWS( XFillRectangle(dpy, players, scoreListGC, 
-				  0, 0, 
-				  players_width, BG_IMAGE_HEIGHT); )
-
 	PaintBitmap(players, BM_SCORE_BG,
 		    0, 0,
 		    players_width, BG_IMAGE_HEIGHT,

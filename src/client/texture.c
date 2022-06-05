@@ -121,8 +121,7 @@ static Pixmap Texture_load_from_file(char *filename)
      */
     if (*filename != '/' && texturePath != NULL) {
 	for (dir = texturePath; *dir; dir = colon) {
-	    if (is_this_windows() ||
-		!(colon = strchr(dir, ':'))) {
+	    if (!(colon = strchr(dir, ':'))) {
 		len = strlen(dir);
 		colon = &dir[len];
 	    } else {

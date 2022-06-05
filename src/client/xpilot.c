@@ -147,8 +147,6 @@ int main(int argc, char *argv[])
 	xpprintf("to \"%s\"\n", conpar->real_name);
     }
 
-    IFWINDOWS( conpar->disp_name[0] = '\0'; )
-
     /*
      * --- Check commandline arguments and resource files ---
      */
@@ -180,7 +178,7 @@ int main(int argc, char *argv[])
 
     Simulate();
 
-    if (text || auto_connect || argv[1] || is_this_windows()) {
+    if (text || auto_connect || argv[1]) {
 	if (list_servers)
 	    printf("LISTING AVAILABLE SERVERS:\n");
 
