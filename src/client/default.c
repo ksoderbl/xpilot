@@ -35,9 +35,6 @@
 # include <X11/keysym.h>
 # include <X11/Xlib.h>
 # include <X11/Xresource.h>
-# ifdef	__apollo
-#  include <X11/ap_keysym.h>
-# endif
 # include <sys/param.h>
 #endif
 

@@ -1182,7 +1182,7 @@ static int Get_meta_data(void)
 		    /* move partial data to the start of the buffer. */
 		    if (md[i].ptr > md[i].buf) {
 			int incomplete_data = (md[i].end - md[i].ptr);
-			move_memory(md[i].buf, md[i].ptr, incomplete_data);
+			memmove(md[i].buf, md[i].ptr, incomplete_data);
 			md[i].ptr = md[i].buf;
 			md[i].end = md[i].ptr + incomplete_data;
 		    }

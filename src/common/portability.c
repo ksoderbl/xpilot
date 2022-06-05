@@ -93,15 +93,6 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 }
 #endif	/* sony_news */
 
-void move_memory(void *dst, void *src, size_t len)
-{
-#if defined(__hpux) || defined(__apollo) || defined(SVR4) || defined(_SEQUENT_) || defined(SYSV) || defined(_WINDOWS)
-        memmove(dst, src, len);
-#else
-        bcopy(src, dst, len);
-#endif
-}
-
 
 int is_this_windows()
 {

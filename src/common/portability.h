@@ -110,11 +110,6 @@ extern int Get_process_id(void);	/* getpid */
 extern void Get_login_name(char *buf, int size);
 
 /*
- * Prototypes for other (ANSI C library) wrapper functions.
- */
-extern void move_memory(void *dst, void *src, size_t len);
-
-/*
  * Prototypes for testing if we are running under a certain OS.
  */
 extern int is_this_windows(void);

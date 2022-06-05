@@ -33,9 +33,6 @@
 # include <X11/keysym.h>
 # include <X11/Xatom.h>
 # include <X11/Xmd.h>
-# ifdef	__apollo
-#  include <X11/ap_keysym.h>
-# endif
 #endif
 
 #include "xpconfig.h"
