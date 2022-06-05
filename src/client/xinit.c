@@ -53,7 +53,7 @@
  * Item structures.
  *
  * If you add an item here then please make sure you also add
- * the item in the proper place in ../replay/xp-replay.c.
+ * the item in the proper place in ../replay/xpilot-replay.c.
  */
 #include "items/itemRocketPack.xbm"
 #include "items/itemCloakingDevice.xbm"

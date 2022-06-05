@@ -33,14 +33,9 @@
 
 #ifndef _WINDOWS
 # include <unistd.h>
-# ifdef _AIX
-#  include <sys/select.h> /* _BSD not defined in <sys/types.h>, so done by hand */
-# endif
 # include <sys/param.h>
 # include <sys/ioctl.h>
-# ifndef __hpux
-#  include <sys/time.h>
-# endif
+# include <sys/time.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netinet/tcp.h>
@@ -48,15 +43,7 @@
 # include <netdb.h>
 #endif
 
-#ifdef SVR4
-# include <sys/filio.h>
-#endif
-
-#ifdef _SEQUENT_
-# include <sys/fcntl.h>
-#else
-# include <fcntl.h>
-#endif
+#include <fcntl.h>
 
 #ifdef TERMNET
 /* support for running clients over term, but not servers please. */

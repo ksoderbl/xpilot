@@ -5,10 +5,10 @@ TOPDIR=../..
 #include "Local.config"
 
 SRCS = \
-	xp-replay.c buttons.c
+	xpilot-replay.c buttons.c
 
 OBJS = \
-	xp-replay.o buttons.o
+	xpilot-replay.o buttons.o
 
 INCLUDES = -I../common -I../client
 
@@ -26,7 +26,7 @@ X_LIB = $(XLIB)
 X_LIB = $(XLIBONLY)
 #endif
 
-PROGRAMS = xp-replay
+PROGRAMS = xpilot-replay
 
-ProgramTarget(xp-replay,,$(X_LIB) $(MATHLIB) $(EXTRALIB))
+ProgramTarget(xpilot-replay,,$(X_LIB) $(MATHLIB) $(EXTRALIB))
 

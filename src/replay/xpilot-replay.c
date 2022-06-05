@@ -1,6 +1,6 @@
-/* $Id: xp-replay.c,v 5.1 2001/04/24 13:51:06 bertg Exp $
+/* $Id: xpilot-replay.c,v 5.1 2001/04/24 13:51:06 bertg Exp $
  *
- * XP-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
+ * XPilot-Replay, playback an XPilot session.  Copyright (C) 1994-98 by
  *
  *      Bjørn Stabell
  *      Ken Ronny Schouten
@@ -62,7 +62,7 @@
 #include "recordfmt.h"
 #include "item.h"
 #include "buttons.h"
-#include "xp-replay.h"
+#include "xpilot-replay.h"
 
 #include "items/itemRocketPack.xbm"
 #include "items/itemCloakingDevice.xbm"
