@@ -1026,15 +1026,6 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 			    Widget_draw(sub_widget_desc);
 			}
 		    }
-#ifdef _WINDOWS
-		    {
-			widget_t* widget = Widget_pointer(sub_widget_desc);
-			WinXFlush(widget->window);
-			widget = Widget_pointer(widget_desc);
-			WinXFlush(widget->window);
-		    }
-#endif
-
 		}
 		break;
 	    case WIDGET_INPUT_FLOAT:
@@ -1088,15 +1079,6 @@ static void Widget_button(XEvent *event, int widget_desc, bool pressed)
 			    Widget_draw(sub_widget_desc);
 			}
 		    }
-#ifdef _WINDOWS
-		    {
-			widget_t* widget = Widget_pointer(sub_widget_desc);
-			WinXFlush(widget->window);
-			widget = Widget_pointer(widget_desc);
-			WinXFlush(widget->window);
-		    }
-#endif
-
 		}
 		break;
 	    default:
@@ -1198,7 +1180,6 @@ int Widget_event(XEvent *event)
 		    if (boolw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
-			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_ACTIVATE:
@@ -1206,7 +1187,6 @@ int Widget_event(XEvent *event)
 		    if (activw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
-			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_MENU:
@@ -1214,7 +1194,6 @@ int Widget_event(XEvent *event)
 		    if (menuw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
-			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case WIDGET_BUTTON_ARROW_RIGHT:
@@ -1231,7 +1210,6 @@ int Widget_event(XEvent *event)
 		    if (sliderw->pressed == true) {
 			count++;
 			Widget_button(event, i, false);
-			WinXFlush(event->xany.window);
 		    }
 		    break;
 		default:
@@ -1256,7 +1234,6 @@ int Widget_event(XEvent *event)
 		case ButtonPress:
 		    if (event->xbutton.button == Button1) {
 			Widget_button(event, i, true);
-			WinXFlush(event->xany.window);
 		    }
 		    break;
 		case MotionNotify:
@@ -1264,11 +1241,9 @@ int Widget_event(XEvent *event)
 		    break;
 		case EnterNotify:
 		    Widget_inside(event, i, true);
-			WinXFlush(event->xany.window);
 		    break;
 		case LeaveNotify:
 		    Widget_inside(event, i, false);
-			WinXFlush(event->xany.window);
 		    break;
 		case ConfigureNotify:
 		    if (widgets[i].name != NULL

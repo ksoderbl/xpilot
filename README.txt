@@ -32,4 +32,4 @@ Also try the mapeditor which is included in this XPilot distribution.
 It is a nifty graphical editor with which you can design a new XPilot world.
 
 
-$Id: README.txt,v 5.42 2010/02/21 15:58:43 bertg Exp $
+$Id: README.txt.msub,v 5.2 2010/02/21 15:55:17 bertg Exp $

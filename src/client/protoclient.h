@@ -129,11 +129,6 @@ int Contact_servers(int count, char **servers,
 #endif
 
 /*
- * usleep.c
- */
-extern int micro_delay(unsigned usec);
-
-/*
  * welcome.c
  */
 #ifdef CONNECTPARAM_H
@@ -148,18 +143,6 @@ void Widget_cleanup(void);
 /*
  * xinit.c
  */
-#ifdef _WINDOWS
-extern	void WinXCreateItemBitmaps();
-#endif
-
-/*
- * winX - The Windows X emulator
- */
-#ifdef _WINDOWS
-#define	WinXFlush(__w)	WinXFlush(__w)
-#else
-#define	WinXFlush(__w)
-#endif
 
 
 #endif	/* PROTOCLIENT_H */

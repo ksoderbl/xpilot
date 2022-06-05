@@ -104,7 +104,7 @@ SRCS = \
 	paint.c paintdata.c painthud.c paintmap.c \
 	paintobjects.c paintradar.c query.c record.c sim.c \
 	talk.c talkmacros.c textinterface.c texture.c \
-	usleep.c welcome.c widget.c xeventhandlers.c \
+	welcome.c widget.c xeventhandlers.c \
 	xevent.c xinit.c xpilot.c xpmread.c \
 	$(AUDIOSRC)
 
@@ -118,7 +118,7 @@ OBJS = \
 	paint.o paintdata.o painthud.o paintmap.o \
 	paintobjects.o paintradar.o query.o record.o sim.o \
 	talk.o talkmacros.o textinterface.o texture.o \
-	usleep.o welcome.o widget.o xeventhandlers.o \
+	welcome.o widget.o xeventhandlers.o \
 	xevent.o xinit.o xpilot.o xpmread.o \
 	$(AUDIOOBJ)
 

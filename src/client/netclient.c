@@ -623,7 +623,7 @@ void Net_cleanup(void)
 	    sock_get_error(&sock);
 	    sock_write(&sock, &ch, 1);
 	}
-	micro_delay((unsigned)50*1000);
+	usleep((unsigned)50*1000);
     }
     if (Frames != NULL) {
 	for (i = 0; i < receive_window_size; i++) {
@@ -648,7 +648,7 @@ void Net_cleanup(void)
 	    sock_get_error(&sock);
 	    sock_write(&sock, &ch, 1);
 	}
-	micro_delay((unsigned)50*1000);
+	usleep((unsigned)50*1000);
 	if (sock_write(&sock, &ch, 1) != 1) {
 	    sock_get_error(&sock);
 	    sock_write(&sock, &ch, 1);
