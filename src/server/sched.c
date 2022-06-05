@@ -35,18 +35,6 @@
 # include <sys/time.h>
 #endif
 
-#ifdef _OS2_
-	#define  INCL_DOSSEMAPHORES
-	#define  INCL_DOSDATETIME
-	#define  INCL_DOSPROCESS
-	#include <os2emx.h>
-#endif
-
-#ifdef _WINDOWS
-# include "NT/winServer.h"
-# include "NT/winSvrThread.h"
-#endif
-
 #define	SERVER
 #include "version.h"
 #include "xpconfig.h"
@@ -146,94 +134,6 @@ static void catch_timer_counts(int signum)
 }
 
 
-#ifdef _OS2_
-/*
- *  Thread to catch the OS/2 timer.  Raise a SIGALRM on the main thread
- *  at each timer tick.  I.e., perform the function of setitimer in Unix.
- */
-void timerThread( void *arg )
-{
-	ULONG count;         /*  Post count of hev.  Required by call.  */
-	ULONG pid = 0;       /*  Process ID for this process  */
-	PTIB  ptib = NULL;   /*  Thread Information Block     */
-	PPIB  ppib = NULL;   /*  Process Information Block    */
-
-	HEV     hev;         /*  Event semaphore handle  */
-	HTIMER  htimer;      /*  Timer handle            */
-
-	APIRET  rc;          /*  Return code for Dos* calls  */
-
-	#ifdef OS2DEBUG
-	        ULONG  aulSysInfo[1] = {0};
-		DosQuerySysInfo( 22, 22, (PVOID)aulSysInfo, sizeof(ULONG) );
-		printf( "Timer interval in tenths of milliseconds: %ld\n", aulSysInfo[0] );
-	#endif
-
-	#ifdef OS2DEBUG
-		printf( "Entering timer processing thread.  Will set for %ld FPS.\n", timer_freq );
-	#endif
-
-	/*  Get the ID of this process, so we can send a SIGALRM
-	 *  to the main thread.
-	 */
-	if( rc = DosGetInfoBlocks( &ptib, &ppib ) )
-	{
-		xperror("Error getting process information.  rc = %d", rc );
-		exit( 1 );
-	}
-
-	pid = ppib->pib_ulpid;
-
-	/*  Increase the priority of this thread to regular time critical.
-	 *  This should ensure that our timer ticks get delivered as quickly
-	 *  as possible.
-	 */
-	if( rc = DosSetPriority(  PRTYS_THREAD, PRTYC_TIMECRITICAL, 0L, 0L ) )
-	{
-		xperror("Error setting timer thread priority.  rc = %d", rc );
-		exit(1);
-	}
-
-	/*  Create the event semaphore that will be posted by the timer.  */
-	if( rc = DosCreateEventSem( NULL, &hev, DC_SEM_SHARED, FALSE ) )
-	{
-		xperror("DosCreateEventSem - error creating timer semaphore.  rc = %d", rc );
-		exit( 1 );
-	}
-
-	/*  Start the timer.  The semaphore hev will be posted at each
-	 *  timer tick.
-	 */
-	if( rc = DosStartTimer( 1000/timer_freq, (HSEM)hev, &htimer ) )
-	{
-		xperror("DosStartTimer - error starting timer.  rc = %d", rc );
-		exit( 1 );
-	}
-
-	/*  Now just loop forever, waiting for the timer and then
-	 *  signalling a SIGALRM on the main thread.
-	 */
-	while( 1 )
-	{
-		/*  Wait for the timer tick.  */
-		DosWaitEventSem( hev, SEM_INDEFINITE_WAIT );
-
-		/*  Reset the semaphore.  */
-		DosResetEventSem( hev, &count );
-
-		/*  raise( SIGALRM ) sends the signal to this thread,
-		 *  not to the main thread where we have the handler
-		 *  installed.  So, we must use kill( ) instead to raise
-		 *  the signal.
-		 */
-		kill( pid, SIGALRM );
-	}
-	return;
-}
-
-#endif
-
-
 /*
  * Setup the handling of the SIGALRM signal
  * and setup the real-time interval timer.
@@ -241,10 +141,7 @@ void timerThread( void *arg )
 static void setup_timer(void)
 {
 #ifndef _WINDOWS
-
-#ifndef _OS2_
     struct itimerval itv;
-#endif
     struct sigaction act;
 
     /*
@@ -274,7 +171,6 @@ static void setup_timer(void)
 	exit(1);
     }
 
-#ifndef _OS2_
     itv.it_interval.tv_sec = 0;
     itv.it_interval.tv_usec = 1000000 / timer_freq;
     itv.it_value = itv.it_interval;
@@ -282,24 +178,6 @@ static void setup_timer(void)
 	xperror("setitimer");
 	exit(1);
     }
-#else  /*  !defined( _OS2_ )  */
-
-    /*  setitimer  isn't implemented in EMX, so we must fake our
-     *  own.  Create a thread that starts a timer and raises SIGALRM
-     *  at each tick.
-     *
-     *  Of course, this timer is rather course, given the time-slicing
-     *  of OS/2, but it is the best we can do at the moment.  The next
-     *  step is to look into the high-resolution timer that Timur Tabi
-     *  wrote (which, I believe, is now part of OS/2?).
-     */
-
-    if( _beginthread( timerThread, NULL, 8192L, NULL ) == -1 ) {
-	xperror("_beginthread - error starting timer thread");
-	exit( 1 );
-    }
-
-#endif  /*  !defined( _OS2_ )  */
 
     timers_used = timer_ticks;
     time(&current_time);
