@@ -22,13 +22,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	METASERVER_H
-#define	METASERVER_H
+#ifndef METASERVER_H
+#define METASERVER_H
 
-#define META_PORT	5500
-#define META_HOST	"meta.xpilot.org"
-#define META_HOST_TWO	"meta2.xpilot.org"
-#define META_IP		"104.236.193.200"
-#define META_IP_TWO	"194.28.50.74"
+#define META_PORT 5500
+#define META_HOST "meta.xpilot.org"
+#define META_HOST_TWO "meta2.xpilot.org"
+#define META_IP "45.55.104.252"
+#define META_IP_TWO "194.28.50.74"
 
 #endif
