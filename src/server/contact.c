@@ -1169,11 +1169,11 @@ static int Queue_player(char *real, char *nick, char *disp, int team,
 		return E_SOCKET;
 	}
 	++*qpos;
-	strlcpy(qp->real_name, real, MAX_CHARS);
-	strlcpy(qp->nick_name, nick, MAX_CHARS);
-	strlcpy(qp->disp_name, disp, MAX_CHARS);
-	strlcpy(qp->host_name, host, MAX_CHARS);
-	strlcpy(qp->host_addr, addr, MAX_CHARS);
+	strlcpy(qp->real_name, real, sizeof(qp->real_name));
+	strlcpy(qp->nick_name, nick, sizeof(qp->nick_name));
+	strlcpy(qp->disp_name, disp, sizeof(qp->disp_name));
+	strlcpy(qp->host_name, host, sizeof(qp->host_name));
+	strlcpy(qp->host_addr, addr, sizeof(qp->host_addr));
 	qp->port = port;
 	qp->team = team;
 	qp->version = version;
