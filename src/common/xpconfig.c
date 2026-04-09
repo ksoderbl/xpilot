@@ -27,116 +27,112 @@
 
 #include "xpconfig.h"
 
-
 /*
  * Configure these, that's what they're here for.
  * Explanation about all these compile time configuration options
  * is in the Makefile.std and in the Imakefile.
  */
 #ifndef LOCALGURU
-#    define LOCALGURU		"xpilot@xpilot.org"
+#define LOCALGURU "xpilot@xpilot.org"
 #endif
 
-#ifndef	DEFAULT_MAP
-#    ifdef _WINDOWS
-#         define DEFAULT_MAP		"default.xp"
-#    else
-#         define DEFAULT_MAP		"globe.xp"
-#    endif
+#ifndef DEFAULT_MAP
+#ifdef _WINDOWS
+#define DEFAULT_MAP "default.xp"
+#else
+#define DEFAULT_MAP "globe.xp"
+#endif
 #endif
 
 #ifndef LIBDIR
-#    if defined(_WINDOWS)
-#        define LIBDIR		"lib/"
-#    else
-#        define LIBDIR		"/usr/local/games/lib/xpilot/"
-#    endif
+#if defined(_WINDOWS)
+#define LIBDIR "lib/"
+#else
+#define LIBDIR "/usr/local/share/xpilot/"
+#endif
 #endif
 
 #ifndef DEFAULTS_FILE_NAME
-#    if defined(_WINDOWS)
-#        define DEFAULTS_FILE_NAME	LIBDIR "defaults.txt"
-#    else
-#        define DEFAULTS_FILE_NAME	LIBDIR "defaults"
-#    endif
+#if defined(_WINDOWS)
+#define DEFAULTS_FILE_NAME LIBDIR "defaults.txt"
+#else
+#define DEFAULTS_FILE_NAME LIBDIR "defaults"
+#endif
 #endif
 #ifndef PASSWORD_FILE_NAME
-#    if defined(_WINDOWS)
-#        define PASSWORD_FILE_NAME	LIBDIR "password.txt"
-#    else
-#        define PASSWORD_FILE_NAME	LIBDIR "password"
-#    endif
+#if defined(_WINDOWS)
+#define PASSWORD_FILE_NAME LIBDIR "password.txt"
+#else
+#define PASSWORD_FILE_NAME LIBDIR "password"
+#endif
 #endif
 #ifndef ROBOTFILE
-#    if defined(_WINDOWS)
-#		 define	ROBOTFILE	LIBDIR "robots.txt"
-#    else
-#        define ROBOTFILE	LIBDIR "robots"
-#    endif
+#if defined(_WINDOWS)
+#define ROBOTFILE LIBDIR "robots.txt"
+#else
+#define ROBOTFILE LIBDIR "robots"
+#endif
 #endif
 #ifndef SERVERMOTDFILE
-#    if defined(_WINDOWS)
-#	 define	SERVERMOTDFILE	LIBDIR "servermotd.txt"
-#    else
-#        define SERVERMOTDFILE	LIBDIR "servermotd"
-#    endif
+#if defined(_WINDOWS)
+#define SERVERMOTDFILE LIBDIR "servermotd.txt"
+#else
+#define SERVERMOTDFILE LIBDIR "servermotd"
+#endif
 #endif
 #ifndef LOCALMOTDFILE
-#    if defined(_WINDOWS)
-#	 define	LOCALMOTDFILE	LIBDIR "localmotd.txt"
-#    else
-#        define LOCALMOTDFILE	LIBDIR "localmotd"
-#    endif
+#if defined(_WINDOWS)
+#define LOCALMOTDFILE LIBDIR "localmotd.txt"
+#else
+#define LOCALMOTDFILE LIBDIR "localmotd"
+#endif
 #endif
 #ifndef LOGFILE
-#    if defined(_WINDOWS)
-#	 define	LOGFILE		LIBDIR "log.txt"
-#    else
-#        define LOGFILE		LIBDIR "log"
-#    endif
+#if defined(_WINDOWS)
+#define LOGFILE LIBDIR "log.txt"
+#else
+#define LOGFILE LIBDIR "log"
+#endif
 #endif
 #ifndef MAPDIR
-#    define MAPDIR		LIBDIR "maps/"
+#define MAPDIR LIBDIR "maps/"
 #endif
 #ifndef SHIP_FILE
-#    if defined(_WINDOWS)
-#	 define SHIP_FILE	"XPilot.shp"
-#    else
-#        define SHIP_FILE       ""
-#    endif
+#if defined(_WINDOWS)
+#define SHIP_FILE "XPilot.shp"
+#else
+#define SHIP_FILE ""
+#endif
 #endif
 #ifndef TEXTUREDIR
-#    define TEXTUREDIR	LIBDIR "textures/"
+#define TEXTUREDIR LIBDIR "textures/"
 #endif
-#ifndef	SOUNDDIR
-#    define SOUNDDIR	LIBDIR "sound/"
+#ifndef SOUNDDIR
+#define SOUNDDIR LIBDIR "sound/"
 #endif
 
 #ifndef SOUNDFILE
-#    if defined(_WINDOWS)
-#        define SOUNDFILE	LIBDIR "sounds.txt"
-#    else
-#        define SOUNDFILE	LIBDIR "sounds"
-#    endif
+#if defined(_WINDOWS)
+#define SOUNDFILE LIBDIR "sounds.txt"
+#else
+#define SOUNDFILE LIBDIR "sounds"
+#endif
 #endif
 
 #ifndef ZCAT_EXT
-#    define ZCAT_EXT	".gz"
+#define ZCAT_EXT ".gz"
 #endif
 
 #ifndef ZCAT_FORMAT
-#    define ZCAT_FORMAT "gzip -d -c < %s"
+#define ZCAT_FORMAT "gzip -d -c < %s"
 #endif
 
 /*
  * Please don't change this one.
  */
 #ifndef CONTACTADDRESS
-#    define CONTACTADDRESS	"xpilot@xpilot.org"
+#define CONTACTADDRESS "xpilot@xpilot.org"
 #endif
-
-
-
 
 char *Conf_libdir(void)
 {
@@ -180,8 +176,9 @@ char *Conf_servermotdfile(void)
     char *filename;
 
     filename = getenv(env);
-    if (filename == NULL) {
-	filename = conf;
+    if (filename == NULL)
+    {
+        filename = conf;
     }
 
     return filename;
@@ -266,4 +263,3 @@ char *Conf_sounddir(void)
 
     return conf;
 }
-
