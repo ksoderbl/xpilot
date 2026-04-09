@@ -15,6 +15,33 @@ option(XPILOT_INSTALL_MAN "Install man pages" ON)
 find_package(X11 REQUIRED)
 find_library(M_LIB m REQUIRED)
 
+# add_compile_options(
+#     -Wall
+#     -Wextra
+#     -Wpedantic
+#     -Wno-missing-field-initializers
+#     -Wno-unused-parameter
+# )
+
+add_compile_options(
+    -Wall
+    -Wextra
+    -Wformat=2
+    -Wundef
+    -Wshadow
+    -Wpointer-arith
+    -Wcast-qual
+    -Wwrite-strings
+    -Wmissing-declarations
+    -Wuninitialized
+    -Winit-self
+    -Wredundant-decls
+    -Wstrict-prototypes
+    -Wmissing-prototypes
+    -Wold-style-definition
+    -Wno-unused-parameter
+)
+
 add_subdirectory(src)
 
 if(XPILOT_INSTALL_DATA)
